@@ -18,5 +18,14 @@ Features:
 - Market Directory
 - Pagination
 
+### v0.3
+Architecture milestone.
+
+Features:
+- External stylesheet
+- Asset structure
+- Favicon system
+
 Status:
-Prototype
+Foundation complete
+
