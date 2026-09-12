@@ -1,17 +1,200 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AstroCrown</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AstroCrown</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#0b1020;
+    color:white;
+}
+
+.header1{
+    position:fixed;
+    top:0;
+    width:100%;
+    height:60px;
+    background:#10182d;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 20px;
+    box-sizing:border-box;
+    z-index:1000;
+}
+
+.logo{
+    font-weight:bold;
+}
+
+.nav{
+    display:flex;
+    gap:20px;
+}
+
+.header2{
+    margin-top:60px;
+    background:#d97706;
+    padding:10px;
+    text-align:center;
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+    padding:20px;
+}
+
+.card{
+    background:#18233f;
+    padding:20px;
+    border-radius:10px;
+}
+
+.ticker{
+    background:#10182d;
+    padding:10px;
+    overflow:hidden;
+}
+
+.header39{
+    background:#16213a;
+    padding:12px;
+}
+
+.header4{
+    background:#1e2c4e;
+    padding:12px;
+}
+
+.directory{
+    padding:20px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th,td{
+    padding:12px;
+    border-bottom:1px solid #2e3c60;
+}
+
+.footer{
+    padding:20px;
+    text-align:center;
+}
+
+</style>
 </head>
+
 <body>
 
-<h1>AstroCrown</h1>
+<div class="header1">
 
-<p>AstroCrown Platform Website</p>
+<div class="logo">
+AstroCrown
+</div>
 
-<p>Version 0.1</p>
+<div class="nav">
+<span>Markets</span>
+<span>Swap</span>
+<span>NOVA</span>
+</div>
+
+<div class="nav">
+<span>Search</span>
+<span>Account</span>
+<span>🔔</span>
+<span>Wallet</span>
+</div>
+
+</div>
+
+<div class="header2">
+Priority Communication Bar
+</div>
+
+<div class="cards">
+
+<div class="card">
+Fear & Greed
+</div>
+
+<div class="card">
+Highest TVL Growth
+</div>
+
+<div class="card">
+Highest DEX Volume Growth
+</div>
+
+<div class="card">
+Winners / Losers
+</div>
+
+</div>
+
+<div class="ticker">
+BTC | ETH | SOL | ACROWN | Market Cap | Dominance
+</div>
+
+<div class="header39">
+All | AI | Gaming | Memes | RWA | DePIN | Stables | Reference: USD ▼
+</div>
+
+<div class="header4">
+📌 ★ # Asset
+</div>
+
+<div class="directory">
+
+<table>
+
+<tr>
+<th>#</th>
+<th>Asset</th>
+<th>Price</th>
+<th>24h%</th>
+</tr>
+
+<tr>
+<td>1</td>
+<td>Bitcoin</td>
+<td>$100,000</td>
+<td>+2%</td>
+</tr>
+
+<tr>
+<td>2</td>
+<td>Ethereum</td>
+<td>$8,000</td>
+<td>+1%</td>
+</tr>
+
+<tr>
+<td>3</td>
+<td>ACROWN</td>
+<td>$1.00</td>
+<td>0%</td>
+</tr>
+
+</table>
+
+</div>
+
+<div class="footer">
+
+Previous | 1 | 2 | 3 | Next
+
+</div>
 
 </body>
 </html>
