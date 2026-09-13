@@ -1,4 +1,7 @@
 body{
+    border:10px solid red !important;
+}
+body{
     margin:0;
     font-family:Arial, sans-serif;
     background:#0b1020;
