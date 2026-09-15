@@ -268,16 +268,12 @@ th,td{
 
 /* Actual touch/mobile: Logo | Markets | Swap | Account | Wallet. */
 @media (max-width:600px) and (hover:none) and (pointer:coarse){
-    html,
-    body{
-        overscroll-behavior-y:none;
-    }
-
     .header1{
         position:fixed !important;
         top:0 !important;
         left:0 !important;
         right:0 !important;
+        bottom:auto !important;
         width:100% !important;
         height:60px !important;
         padding:0 10px !important;
@@ -285,7 +281,6 @@ th,td{
         justify-content:flex-start !important;
         transform:none !important;
         backface-visibility:hidden;
-        -webkit-backface-visibility:hidden;
     }
 
     .header2{
