@@ -1,7 +1,4 @@
 body{
-    border:10px solid red !important;
-}
-body{
     margin:0;
     font-family:Arial, sans-serif;
     background:#0b1020;
@@ -272,7 +269,7 @@ th,td{
 /* Actual touch/mobile: Logo | Markets | Swap | Account | Wallet. */
 @media (max-width: 600px) and (hover:none) and (pointer:coarse){
     .header1{
-        position:fixed !important;
+        position:sticky !important;
         top:0 !important;
         left:0 !important;
         right:0 !important;
