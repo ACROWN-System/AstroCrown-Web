@@ -11,13 +11,15 @@ body{
 .header1{
     position:fixed;
     top:0;
-    width:100%;
+    left:0;
+    right:0;
+    width:auto;
     height:60px;
     background:#10182d;
     display:flex;
     flex-direction:row;
     align-items:center;
-    justify-content:flex-start;
+    justify-content:flex-start !important;
     flex-wrap:nowrap;
     padding:0 20px;
     box-sizing:border-box;
@@ -210,7 +212,7 @@ th,td{
 /* Desktop: remove primary navigation items progressively as width decreases. */
 @media (max-width: 900px) and (min-width: 601px){
     .header1{
-        gap:14px;
+        gap:14px !important;
     }
 
     .primary-nav{
@@ -247,10 +249,13 @@ th,td{
     }
 }
 
-/* Mobile: keep Account and Wallet as separate protected controls. */
+/* Mobile: keep Account and Wallet visibly separated. */
 @media (max-width: 600px){
     .header1{
-        gap:14px;
+        justify-content:flex-start !important;
+        gap:0 !important;
+        left:0;
+        right:0;
         padding:0 12px;
     }
 
@@ -259,10 +264,10 @@ th,td{
     }
 
     .utility-actions{
-        margin-left:auto;
-        flex:0 0 auto;
+        margin-left:auto !important;
+        flex:0 0 auto !important;
         min-width:0;
-        gap:14px;
+        gap:14px !important;
     }
 
     .search-control{
@@ -270,13 +275,18 @@ th,td{
     }
 
     .account-group{
-        flex:0 0 auto;
+        display:flex !important;
+        flex:0 0 auto !important;
+        width:auto;
         min-width:max-content;
+        margin:0 !important;
+        padding:0 !important;
     }
 
     .account-control{
         position:relative;
         display:block;
+        flex:0 0 auto;
         min-width:max-content;
     }
 
@@ -291,12 +301,17 @@ th,td{
     }
 
     .wallet-group{
-        flex:0 0 auto;
-        margin-left:0;
-        padding-left:16px;
+        display:flex !important;
+        flex:0 0 auto !important;
+        width:auto;
+        min-width:max-content;
+        margin:0 0 0 14px !important;
+        padding:0 0 0 14px !important;
+        border-left:1px solid #2e3c60;
     }
 
     .wallet-control{
         min-width:64px;
+        flex:0 0 auto;
     }
 }
