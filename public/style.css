@@ -67,13 +67,16 @@ body{
 .wallet-group{
     display:flex;
     align-items:center;
-    margin-left:24px;
-    padding-left:24px;
-    border-left:1px solid #2e3c60;
+    margin-left:32px;
+    padding-left:32px;
+    border-left:2px solid #2e3c60;
 }
 
 .wallet-control{
     min-width:64px;
+    padding:8px 14px;
+    border:1px solid #2e3c60;
+    border-radius:6px;
 }
 
 .mobile-notification-badge{
