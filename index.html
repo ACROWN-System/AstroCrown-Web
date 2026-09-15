@@ -101,26 +101,46 @@ th,td{
 
 <body>
 
-<div class="header1">
+<header class="header1">
 
 <div class="logo">
     <img src="public/logos/acrown-front-coin.png" alt="AstroCrown Logo">
 </div>
 
-<div class="nav">
+<nav class="nav primary-nav" aria-label="Primary navigation">
 <span>Markets</span>
 <span>Swap</span>
 <span>NOVA</span>
+</nav>
+
+<div class="header-actions">
+
+<div class="utility-actions">
+<button type="button" class="header-control search-control">Search</button>
+
+<div class="account-group">
+<button
+    type="button"
+    class="header-control account-control"
+    aria-expanded="false"
+    aria-controls="mobile-menu">
+    Account
+    <span class="mobile-notification-badge" aria-hidden="true">•</span>
+</button>
+
+<button type="button" class="header-control notification-control" aria-label="Notifications">
+    🔔
+</button>
+</div>
 </div>
 
-<div class="nav">
-<span>Search</span>
-<span>Account</span>
-<span>🔔</span>
-<span>Wallet</span>
+<div class="wallet-group">
+<button type="button" class="wallet-control">Wallet</button>
 </div>
 
 </div>
+
+</header>
 
 <div class="header2">
 Priority Communication Bar
