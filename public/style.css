@@ -249,36 +249,63 @@ th,td{
     }
 }
 
-/* Mobile: keep Account and Wallet visibly separated. */
+/* Mobile: keep the two primary links, Account, and Wallet visible. */
 @media (max-width: 600px){
     .header1{
+        position:fixed !important;
+        top:0 !important;
+        left:0 !important;
+        right:0 !important;
+        bottom:auto !important;
+        width:100% !important;
+        height:60px !important;
+        padding:0 10px !important;
+        gap:8px !important;
         justify-content:flex-start !important;
-        gap:0 !important;
-        left:0;
-        right:0;
-        padding:0 12px;
+        transform:none !important;
+    }
+
+    .logo{
+        flex:0 0 auto !important;
+    }
+
+    .logo img{
+        height:42px;
     }
 
     .primary-nav{
+        display:flex !important;
+        flex:0 1 auto !important;
+        gap:8px !important;
+        min-width:0 !important;
+        overflow:hidden;
+    }
+
+    .primary-nav span:nth-child(1),
+    .primary-nav span:nth-child(2){
+        display:inline !important;
+    }
+
+    .primary-nav span:nth-child(3){
         display:none !important;
     }
 
     .utility-actions{
         margin-left:auto !important;
         flex:0 0 auto !important;
-        min-width:0;
-        gap:14px !important;
+        min-width:0 !important;
+        gap:0 !important;
     }
 
     .search-control{
-        display:none;
+        display:none !important;
     }
 
     .account-group{
         display:flex !important;
         flex:0 0 auto !important;
-        width:auto;
-        min-width:max-content;
+        width:auto !important;
+        min-width:max-content !important;
         margin:0 !important;
         padding:0 !important;
     }
@@ -303,15 +330,15 @@ th,td{
     .wallet-group{
         display:flex !important;
         flex:0 0 auto !important;
-        width:auto;
-        min-width:max-content;
-        margin:0 0 0 14px !important;
-        padding:0 0 0 14px !important;
+        width:auto !important;
+        min-width:max-content !important;
+        margin:0 0 0 8px !important;
+        padding:0 0 0 10px !important;
         border-left:1px solid #2e3c60;
     }
 
     .wallet-control{
-        min-width:64px;
+        min-width:56px;
         flex:0 0 auto;
     }
 }
