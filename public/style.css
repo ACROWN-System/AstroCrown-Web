@@ -38,16 +38,6 @@ body{
     white-space:nowrap;
 }
 
-.header-actions{
-    display:flex;
-    flex:0 0 auto;
-    flex-direction:row;
-    flex-wrap:nowrap;
-    align-items:center;
-    margin-left:auto;
-    white-space:nowrap;
-}
-
 .utility-actions,
 .account-group{
     display:flex;
@@ -57,7 +47,9 @@ body{
 }
 
 .utility-actions{
+    flex:0 0 auto;
     gap:20px;
+    white-space:nowrap;
 }
 
 .account-group{
@@ -152,4 +144,37 @@ th,td{
 .footer{
     padding:20px;
     text-align:center;
+}
+
+@media (max-width: 600px){
+    .notification-control{
+        display:none;
+    }
+
+    .account-control{
+        position:relative;
+    }
+
+    .mobile-notification-badge{
+        display:block;
+        position:absolute;
+        top:-6px;
+        right:-8px;
+        color:#ff3b30;
+        font-size:18px;
+        line-height:1;
+    }
+
+    .account-group{
+        gap:0;
+    }
+
+    .utility-actions{
+        gap:12px;
+    }
+
+    .wallet-group{
+        margin-left:12px;
+        padding-left:12px;
+    }
 }
