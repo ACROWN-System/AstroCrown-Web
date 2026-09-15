@@ -239,3 +239,33 @@ th,td{
         padding-left:12px;
     }
 }
+
+/* Reduced desktop: preserve Search and Wallet; progressively remove primary navigation. */
+@media (max-width: 900px) and (min-width: 601px){
+    .search-control{
+        display:block !important;
+        flex:0 0 220px !important;
+        min-width:220px !important;
+    }
+
+    .search-control input,
+    .search-suggestions{
+        width:220px !important;
+    }
+
+    .primary-nav span:nth-child(3){
+        display:none !important;
+    }
+}
+
+@media (max-width: 780px) and (min-width: 601px){
+    .primary-nav span:nth-child(2){
+        display:none !important;
+    }
+}
+
+@media (max-width: 690px) and (min-width: 601px){
+    .primary-nav span:nth-child(1){
+        display:none !important;
+    }
+}
