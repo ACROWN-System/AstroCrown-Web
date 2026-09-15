@@ -14,19 +14,13 @@
         --surface-4:#1e2c4e;
         --line:#2e3c60;
         --text:#ffffff;
-        --muted:#aab4cc;
         --accent:#d97706;
         --alert:#ff3b30;
     }
 
-    *{ box-sizing:border-box; }
+    *{box-sizing:border-box;}
 
-    html{
-        margin:0;
-        min-height:100%;
-        background:var(--page-bg);
-    }
-
+    html,
     body{
         margin:0;
         min-height:100%;
@@ -35,16 +29,16 @@
         font-family:Arial,sans-serif;
     }
 
-    /* Fresh mobile header implementation: CSS Grid, single fixed layer, no nested flex layout. */
+    /* Fresh mobile header: one fixed grid with no nested flex containers. */
     .mobile-header{
         position:fixed;
         inset:0 0 auto 0;
         height:60px;
         z-index:1000;
         display:grid;
-        grid-template-columns:auto auto auto 1fr auto;
+        grid-template-columns:auto auto auto minmax(0,1fr) auto auto;
         align-items:center;
-        gap:10px;
+        gap:8px;
         padding:0 10px;
         background:var(--surface-2);
         border-bottom:1px solid var(--line);
@@ -74,10 +68,6 @@
         font:inherit;
         white-space:nowrap;
         cursor:pointer;
-    }
-
-    .header-spacer{
-        min-width:0;
     }
 
     .account-button{
@@ -152,7 +142,8 @@
         border-collapse:collapse;
     }
 
-    th,td{
+    th,
+    td{
         padding:12px;
         border-bottom:1px solid var(--line);
         text-align:left;
@@ -163,28 +154,33 @@
         text-align:center;
     }
 
-    /* Search exists as the same function, but is intentionally omitted from the mobile header. */
-    .mobile-search{
+    /* Search is intentionally hidden until Account opens the mobile menu. */
+    .account-menu{
+        display:none;
         margin:0 20px 20px;
+        padding:12px;
+        background:var(--surface-2);
+        border:1px solid var(--line);
+        border-radius:10px;
     }
 
-    .mobile-search label{
+    .account-menu.open{
         display:block;
     }
 
-    .mobile-search input{
+    .account-menu input{
         width:100%;
         height:40px;
         padding:0 12px;
         border:1px solid var(--line);
         border-radius:20px;
-        background:var(--surface-2);
+        background:var(--page-bg);
         color:var(--text);
         font:inherit;
         outline:none;
     }
 
-    .mobile-search input:focus{
+    .account-menu input:focus{
         border-color:#5b6f9f;
     }
 
@@ -229,7 +225,6 @@
         main{
             width:min(600px,100%);
             margin:36px auto 0;
-            padding-top:60px;
         }
     }
 </style>
@@ -241,23 +236,21 @@
     </a>
     <button class="primary-link" type="button">Markets</button>
     <button class="primary-link" type="button">Swap</button>
-    <span class="header-spacer" aria-hidden="true"></span>
-    <div class="wallet-wrap">
-        <button class="wallet-button" type="button">Wallet</button>
-    </div>
-    <button class="account-button" type="button">
+    <span aria-hidden="true"></span>
+    <button class="account-button" id="account-button" type="button" aria-expanded="false" aria-controls="account-menu">
         Account
         <span class="notification-dot" aria-hidden="true">•</span>
     </button>
+    <div class="wallet-wrap">
+        <button class="wallet-button" type="button">Wallet</button>
+    </div>
 </header>
 
 <main id="top">
     <div class="priority-bar">Priority Communication Bar</div>
 
-    <section class="mobile-search" aria-label="Search">
-        <label>
-            <input id="site-search" type="search" placeholder="Search" autocomplete="off" aria-controls="search-results" aria-autocomplete="list">
-        </label>
+    <section class="account-menu" id="account-menu" aria-label="Account menu">
+        <input id="site-search" type="search" placeholder="Search" autocomplete="off" aria-controls="search-results" aria-autocomplete="list">
         <div id="search-results" class="search-results" hidden></div>
     </section>
 
@@ -269,40 +262,18 @@
     </section>
 
     <div class="ticker">BTC | ETH | SOL | ACROWN | Market Cap | Dominance</div>
-
     <div class="categories">All | AI | Gaming | Memes | RWA | DePIN | Stables | Reference: USD ▼</div>
-
     <div class="table-heading">📌 ★ # Asset</div>
 
     <section class="directory">
         <table>
             <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Asset</th>
-                    <th>Price</th>
-                    <th>24h%</th>
-                </tr>
+                <tr><th>#</th><th>Asset</th><th>Price</th><th>24h%</th></tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>Bitcoin</td>
-                    <td>$100,000</td>
-                    <td>+2%</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>Ethereum</td>
-                    <td>$8,000</td>
-                    <td>+1%</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>ACROWN</td>
-                    <td>$1.00</td>
-                    <td>0%</td>
-                </tr>
+                <tr><td>1</td><td>Bitcoin</td><td>$100,000</td><td>+2%</td></tr>
+                <tr><td>2</td><td>Ethereum</td><td>$8,000</td><td>+1%</td></tr>
+                <tr><td>3</td><td>ACROWN</td><td>$1.00</td><td>0%</td></tr>
             </tbody>
         </table>
     </section>
@@ -311,38 +282,46 @@
 </main>
 
 <script>
+const accountButton = document.getElementById('account-button');
+const accountMenu = document.getElementById('account-menu');
 const searchInput = document.getElementById('site-search');
 const searchResults = document.getElementById('search-results');
 
 const searchItems = [
-    'Markets', 'Swap', 'NOVA', 'Bitcoin', 'Ethereum', 'ACROWN',
-    'BTC', 'ETH', 'SOL', 'Market Cap', 'Dominance', 'Fear & Greed',
-    'Highest TVL Growth', 'Highest DEX Volume Growth', 'Winners / Losers',
-    'AI', 'Gaming', 'Memes', 'RWA', 'DePIN', 'Stables'
+    'Markets','Swap','NOVA','Bitcoin','Ethereum','ACROWN','BTC','ETH','SOL',
+    'Market Cap','Dominance','Fear & Greed','Highest TVL Growth',
+    'Highest DEX Volume Growth','Winners / Losers','AI','Gaming','Memes','RWA','DePIN','Stables'
 ];
+
+accountButton.addEventListener('click', () => {
+    const open = !accountMenu.classList.contains('open');
+    accountMenu.classList.toggle('open', open);
+    accountButton.setAttribute('aria-expanded', String(open));
+    if(open) searchInput.focus();
+});
 
 searchInput.addEventListener('input', () => {
     const query = searchInput.value.trim().toLowerCase();
     searchResults.replaceChildren();
 
-    if (query.length < 2) {
+    if(query.length < 2){
         searchResults.hidden = true;
         return;
     }
 
     searchItems
         .filter(item => item.toLowerCase().includes(query))
-        .slice(0, 6)
+        .slice(0,6)
         .forEach(item => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'search-result';
-            button.textContent = item;
-            button.addEventListener('click', () => {
+            const result = document.createElement('button');
+            result.type = 'button';
+            result.className = 'search-result';
+            result.textContent = item;
+            result.addEventListener('click', () => {
                 searchInput.value = item;
                 searchResults.hidden = true;
             });
-            searchResults.appendChild(button);
+            searchResults.appendChild(result);
         });
 
     searchResults.hidden = searchResults.childElementCount === 0;
