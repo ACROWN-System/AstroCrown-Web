@@ -28,6 +28,58 @@ body{
     display:block;
 }
 
+.primary-nav{
+    display:flex;
+    gap:20px;
+    align-items:center;
+}
+
+.header-actions{
+    display:flex;
+    align-items:center;
+    margin-left:auto;
+}
+
+.utility-actions,
+.account-group{
+    display:flex;
+    align-items:center;
+}
+
+.utility-actions{
+    gap:20px;
+}
+
+.account-group{
+    gap:20px;
+}
+
+.header-control,
+.wallet-control{
+    background:none;
+    border:0;
+    color:inherit;
+    font:inherit;
+    padding:0;
+    cursor:pointer;
+}
+
+.wallet-group{
+    display:flex;
+    align-items:center;
+    margin-left:24px;
+    padding-left:24px;
+    border-left:1px solid #2e3c60;
+}
+
+.wallet-control{
+    min-width:64px;
+}
+
+.mobile-notification-badge{
+    display:none;
+}
+
 .nav{
     display:flex;
     gap:20px;
