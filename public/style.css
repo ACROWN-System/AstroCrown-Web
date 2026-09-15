@@ -232,7 +232,7 @@ th,td{
 }
 
 /* Actual touch/mobile: Logo | Markets | Swap | Account | Wallet. */
-@media (max-width:600px) and (hover:none) and (pointer:coarse){
+@media (max-width:600px) and (pointer:coarse){
     html{
         width:100%;
         overflow-x:hidden;
@@ -244,15 +244,20 @@ th,td{
     }
 
     .header1{
-        position:static !important;
+        position:fixed !important;
+        top:0 !important;
+        left:0 !important;
+        right:0 !important;
+        bottom:auto !important;
         width:100% !important;
         height:60px !important;
         padding:0 10px !important;
         gap:8px !important;
         justify-content:flex-start !important;
+        transform:none !important;
     }
 
-    .header2{ margin-top:0 !important; }
+    .header2{ margin-top:60px !important; }
     .logo{ flex:0 0 auto !important; }
     .logo img{ height:42px; }
 
