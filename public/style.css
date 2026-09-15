@@ -208,66 +208,41 @@ th,td{
 
 /* Desktop: remove primary navigation items progressively as width decreases. */
 @media (max-width: 900px) and (min-width: 601px){
-    .header1{
-        gap:14px !important;
-    }
-
-    .primary-nav{
-        gap:14px;
-    }
-
-    .utility-actions{
-        gap:12px;
-        flex:1 1 auto;
-    }
-
-    .search-control{
-        min-width:140px;
-    }
-
-    .wallet-group{
-        padding-left:12px;
-    }
-
-    .primary-nav span:nth-child(3){
-        display:none !important;
-    }
+    .header1{ gap:14px !important; }
+    .primary-nav{ gap:14px; }
+    .utility-actions{ gap:12px; flex:1 1 auto; }
+    .search-control{ min-width:140px; }
+    .wallet-group{ padding-left:12px; }
+    .primary-nav span:nth-child(3){ display:none !important; }
 }
 
 @media (max-width: 780px) and (min-width: 601px){
-    .primary-nav span:nth-child(2){
-        display:none !important;
-    }
+    .primary-nav span:nth-child(2){ display:none !important; }
 }
 
 @media (max-width: 690px) and (min-width: 601px){
-    .primary-nav span:nth-child(1){
-        display:none !important;
-    }
+    .primary-nav span:nth-child(1){ display:none !important; }
 }
 
 /* Narrow desktop: keep Search, Account, and Wallet; remove desktop navigation. */
 @media (max-width:600px) and (hover:hover) and (pointer:fine){
-    .primary-nav{
-        display:none !important;
-    }
-
-    .utility-actions{
-        margin-left:auto;
-        flex:1 1 auto;
-        min-width:0;
-        gap:12px;
-    }
-
-    .search-control{
-        display:block !important;
-        flex:1 1 420px;
-        min-width:140px;
-    }
+    .primary-nav{ display:none !important; }
+    .utility-actions{ margin-left:auto; flex:1 1 auto; min-width:0; gap:12px; }
+    .search-control{ display:block !important; flex:1 1 420px; min-width:140px; }
 }
 
 /* Actual touch/mobile: Logo | Markets | Swap | Account | Wallet. */
 @media (max-width:600px) and (hover:none) and (pointer:coarse){
+    html{
+        width:100%;
+        overflow-x:hidden;
+    }
+
+    body{
+        width:100%;
+        overflow-x:hidden;
+    }
+
     .header1{
         position:fixed !important;
         top:0 !important;
@@ -281,19 +256,12 @@ th,td{
         justify-content:flex-start !important;
         transform:none !important;
         backface-visibility:hidden;
+        -webkit-backface-visibility:hidden;
     }
 
-    .header2{
-        margin-top:60px !important;
-    }
-
-    .logo{
-        flex:0 0 auto !important;
-    }
-
-    .logo img{
-        height:42px;
-    }
+    .header2{ margin-top:60px !important; }
+    .logo{ flex:0 0 auto !important; }
+    .logo img{ height:42px; }
 
     .primary-nav{
         display:flex !important;
@@ -304,13 +272,8 @@ th,td{
     }
 
     .primary-nav span:nth-child(1),
-    .primary-nav span:nth-child(2){
-        display:inline !important;
-    }
-
-    .primary-nav span:nth-child(3){
-        display:none !important;
-    }
+    .primary-nav span:nth-child(2){ display:inline !important; }
+    .primary-nav span:nth-child(3){ display:none !important; }
 
     .utility-actions{
         margin-left:auto !important;
@@ -319,9 +282,7 @@ th,td{
         gap:0 !important;
     }
 
-    .search-control{
-        display:none !important;
-    }
+    .search-control{ display:none !important; }
 
     .account-group{
         display:flex !important;
