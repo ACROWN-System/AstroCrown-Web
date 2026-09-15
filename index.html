@@ -97,6 +97,103 @@ th,td{
 }
 
 </style>
+
+<style>
+.header1{
+    justify-content:flex-start;
+    gap:28px;
+}
+
+.primary-nav{
+    flex:0 0 auto;
+}
+
+.utility-actions{
+    margin-left:auto;
+}
+
+.search-control{
+    position:relative;
+    display:block;
+    flex:0 0 auto;
+}
+
+.search-control input{
+    width:220px;
+    height:36px;
+    box-sizing:border-box;
+    padding:0 12px;
+    border:1px solid #2e3c60;
+    border-radius:18px;
+    background:#0b1020;
+    color:white;
+    font:inherit;
+    outline:none;
+}
+
+.search-control input::placeholder{
+    color:#aab4cc;
+}
+
+.search-control input:focus{
+    border-color:#5b6f9f;
+}
+
+.search-suggestions{
+    position:absolute;
+    top:42px;
+    left:0;
+    width:220px;
+    background:#10182d;
+    border:1px solid #2e3c60;
+    border-radius:8px;
+    overflow:hidden;
+    box-sizing:border-box;
+    z-index:1100;
+}
+
+.search-suggestion{
+    display:block;
+    width:100%;
+    padding:10px 12px;
+    border:0;
+    background:transparent;
+    color:white;
+    text-align:left;
+    font:inherit;
+    cursor:pointer;
+}
+
+.search-suggestion:hover,
+.search-suggestion:focus{
+    background:#18233f;
+    outline:none;
+}
+
+@media (max-width: 900px) and (min-width: 601px){
+    .header1{
+        gap:18px;
+    }
+
+    .primary-nav{
+        gap:14px;
+    }
+
+    .utility-actions{
+        gap:12px;
+    }
+
+    .search-control input,
+    .search-suggestions{
+        width:170px;
+    }
+
+    .wallet-group{
+        margin-left:12px;
+        padding-left:12px;
+    }
+}
+</style>
 </head>
 
 <body>
@@ -114,7 +211,10 @@ th,td{
 </nav>
 
 <div class="utility-actions">
-<button type="button" class="header-control search-control">Search</button>
+<label class="search-control" aria-label="Search AstroCrown">
+    <input type="search" id="site-search" placeholder="Search" autocomplete="off" aria-controls="search-suggestions" aria-autocomplete="list">
+    <span class="search-suggestions" id="search-suggestions" role="listbox" aria-label="Search suggestions" hidden></span>
+</label>
 
 <div class="account-group">
 <button
@@ -211,6 +311,73 @@ All | AI | Gaming | Memes | RWA | DePIN | Stables | Reference: USD ▼
 Previous | 1 | 2 | 3 | Next
 
 </div>
+
+<script>
+const searchInput = document.getElementById('site-search');
+const suggestionBox = document.getElementById('search-suggestions');
+
+const searchItems = [
+    'Markets',
+    'Swap',
+    'NOVA',
+    'Bitcoin',
+    'Ethereum',
+    'ACROWN',
+    'BTC',
+    'ETH',
+    'SOL',
+    'Market Cap',
+    'Dominance',
+    'Fear & Greed',
+    'Highest TVL Growth',
+    'Highest DEX Volume Growth',
+    'Winners / Losers',
+    'AI',
+    'Gaming',
+    'Memes',
+    'RWA',
+    'DePIN',
+    'Stables'
+];
+
+searchInput.addEventListener('input', () => {
+    const query = searchInput.value.trim().toLowerCase();
+    suggestionBox.innerHTML = '';
+
+    if (query.length < 2) {
+        suggestionBox.hidden = true;
+        return;
+    }
+
+    const matches = searchItems
+        .filter(item => item.toLowerCase().includes(query))
+        .slice(0, 6);
+
+    matches.forEach(item => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'search-suggestion';
+        option.setAttribute('role', 'option');
+        option.textContent = item;
+
+        option.addEventListener('click', () => {
+            searchInput.value = item;
+            suggestionBox.hidden = true;
+            searchInput.focus();
+        });
+
+        suggestionBox.appendChild(option);
+    });
+
+    suggestionBox.hidden = matches.length === 0;
+});
+
+document.addEventListener('click', event => {
+    if (!event.target.closest('.search-control')) {
+        suggestionBox.hidden = true;
+    }
+});
+</script>
 
 </body>
 </html>
