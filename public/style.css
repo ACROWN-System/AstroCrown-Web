@@ -282,8 +282,6 @@ th,td{
         padding:0 10px !important;
         gap:8px !important;
         justify-content:flex-start !important;
-        transform:translate3d(0,0,0) !important;
-        will-change:transform;
         backface-visibility:hidden;
     }
 
