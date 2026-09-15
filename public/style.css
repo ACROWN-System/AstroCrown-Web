@@ -247,25 +247,37 @@ th,td{
     }
 }
 
-/* Once the desktop window reaches mobile width, never restore the desktop navigation. */
+/* Mobile: keep Account and Wallet as separate protected controls. */
 @media (max-width: 600px){
+    .header1{
+        gap:14px;
+        padding:0 12px;
+    }
+
     .primary-nav{
         display:none !important;
     }
 
     .utility-actions{
         margin-left:auto;
-        flex:1 1 auto;
+        flex:0 0 auto;
         min-width:0;
-        gap:12px;
+        gap:14px;
     }
 
     .search-control{
         display:none;
     }
 
+    .account-group{
+        flex:0 0 auto;
+        min-width:max-content;
+    }
+
     .account-control{
         position:relative;
+        display:block;
+        min-width:max-content;
     }
 
     .mobile-notification-badge{
@@ -279,7 +291,12 @@ th,td{
     }
 
     .wallet-group{
+        flex:0 0 auto;
         margin-left:0;
-        padding-left:12px;
+        padding-left:16px;
+    }
+
+    .wallet-control{
+        min-width:64px;
     }
 }
