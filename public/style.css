@@ -253,7 +253,6 @@ th,td{
         gap:8px !important;
         justify-content:flex-start !important;
         transform:none !important;
-        isolation:isolate;
     }
 
     .header2{ margin-top:60px !important; }
