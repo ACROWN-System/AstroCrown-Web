@@ -17,11 +17,12 @@ body{
     display:flex;
     flex-direction:row;
     align-items:center;
-    justify-content:space-between;
+    justify-content:flex-start;
     flex-wrap:nowrap;
     padding:0 20px;
     box-sizing:border-box;
     z-index:1000;
+    gap:20px;
 }
 
 .logo img{
@@ -47,13 +48,14 @@ body{
 }
 
 .utility-actions{
-    flex:0 0 auto;
+    flex:1 1 auto;
     gap:20px;
     white-space:nowrap;
+    min-width:0;
 }
 
 .account-group{
-    gap:20px;
+    gap:0;
 }
 
 .header-control,
@@ -68,12 +70,69 @@ body{
     white-space:nowrap;
 }
 
+.search-control{
+    position:relative;
+    flex:0 1 360px;
+    min-width:180px;
+}
+
+.search-control input{
+    width:100%;
+    box-sizing:border-box;
+    background:#18233f;
+    border:1px solid #2e3c60;
+    border-radius:6px;
+    color:white;
+    font:inherit;
+    padding:8px 12px;
+    outline:none;
+}
+
+.search-control input::placeholder{
+    color:#9aa7c2;
+}
+
+.search-control input:focus{
+    border-color:#5f79b8;
+}
+
+.search-suggestions{
+    position:absolute;
+    top:calc(100% + 6px);
+    left:0;
+    width:100%;
+    background:#18233f;
+    border:1px solid #2e3c60;
+    border-radius:6px;
+    overflow:hidden;
+    box-sizing:border-box;
+    z-index:1100;
+}
+
+.search-suggestion{
+    display:block;
+    width:100%;
+    padding:9px 12px;
+    border:0;
+    background:none;
+    color:inherit;
+    text-align:left;
+    font:inherit;
+    cursor:pointer;
+}
+
+.search-suggestion:hover,
+.search-suggestion:focus{
+    background:#243354;
+    outline:none;
+}
+
 .wallet-group{
     display:flex;
     flex:0 0 auto;
     flex-direction:row;
     align-items:center;
-    margin-left:24px;
+    margin-left:auto;
     padding-left:24px;
     border-left:1px solid #2e3c60;
 }
@@ -146,11 +205,17 @@ th,td{
     text-align:center;
 }
 
-@media (max-width: 600px){
-    .notification-control{
+@media (max-width: 900px){
+    .search-control{
         display:none;
     }
 
+    .utility-actions{
+        flex:0 0 auto;
+    }
+}
+
+@media (max-width: 600px){
     .account-control{
         position:relative;
     }
@@ -165,16 +230,12 @@ th,td{
         line-height:1;
     }
 
-    .account-group{
-        gap:0;
-    }
-
     .utility-actions{
         gap:12px;
     }
 
     .wallet-group{
-        margin-left:12px;
+        margin-left:auto;
         padding-left:12px;
     }
 }
