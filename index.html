@@ -263,7 +263,7 @@ th,td{
 /* Touch/mobile: keep two high-value primary links and the authorization boundary; Search lives in Account/menu. */
 @media (max-width:600px) and (pointer:coarse){
     .header1{
-        position:fixed !important;
+        position:sticky !important;
         top:0 !important;
         left:0 !important;
         right:0 !important;
@@ -275,6 +275,10 @@ th,td{
         backface-visibility:hidden;
         -webkit-backface-visibility:hidden;
         overflow:hidden;
+    }
+
+    .header2{
+        margin-top:0 !important;
     }
 
     .logo{
