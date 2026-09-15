@@ -255,6 +255,9 @@ th,td{
         gap:8px !important;
         justify-content:flex-start !important;
         transform:none !important;
+        backface-visibility:hidden;
+        -webkit-backface-visibility:hidden;
+        isolation:isolate;
     }
 
     .header2{ margin-top:60px !important; }
@@ -321,10 +324,5 @@ th,td{
     .wallet-control{
         min-width:56px;
         flex:0 0 auto;
-    }
-
-    /* Diagnostic: preserve layout while removing only the first card's visual paint. */
-    .cards .card:first-child{
-        visibility:hidden;
     }
 }
