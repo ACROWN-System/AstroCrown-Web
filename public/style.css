@@ -52,10 +52,12 @@ body{
     gap:20px;
     white-space:nowrap;
     min-width:0;
+    margin-left:auto;
 }
 
 .account-group{
     gap:0;
+    flex:0 0 auto;
 }
 
 .header-control,
@@ -72,8 +74,10 @@ body{
 
 .search-control{
     position:relative;
-    flex:0 1 360px;
+    display:block;
+    flex:1 1 400px;
     min-width:180px;
+    max-width:420px;
 }
 
 .search-control input{
@@ -132,7 +136,7 @@ body{
     flex:0 0 auto;
     flex-direction:row;
     align-items:center;
-    margin-left:auto;
+    margin-left:0;
     padding-left:24px;
     border-left:1px solid #2e3c60;
 }
@@ -205,13 +209,34 @@ th,td{
     text-align:center;
 }
 
-@media (max-width: 900px){
+/* Reduced desktop: preserve Search and Wallet; progressively remove primary navigation. */
+@media (max-width: 900px) and (min-width: 601px){
     .search-control{
-        display:none;
+        display:block !important;
+        flex:1 1 300px !important;
+        min-width:160px !important;
+        max-width:none !important;
     }
 
-    .utility-actions{
-        flex:0 0 auto;
+    .search-control input,
+    .search-suggestions{
+        width:100% !important;
+    }
+
+    .primary-nav span:nth-child(3){
+        display:none !important;
+    }
+}
+
+@media (max-width: 780px) and (min-width: 601px){
+    .primary-nav span:nth-child(2){
+        display:none !important;
+    }
+}
+
+@media (max-width: 690px) and (min-width: 601px){
+    .primary-nav span:nth-child(1){
+        display:none !important;
     }
 }
 
@@ -237,35 +262,5 @@ th,td{
     .wallet-group{
         margin-left:auto;
         padding-left:12px;
-    }
-}
-
-/* Reduced desktop: preserve Search and Wallet; progressively remove primary navigation. */
-@media (max-width: 900px) and (min-width: 601px){
-    .search-control{
-        display:block !important;
-        flex:0 0 220px !important;
-        min-width:220px !important;
-    }
-
-    .search-control input,
-    .search-suggestions{
-        width:220px !important;
-    }
-
-    .primary-nav span:nth-child(3){
-        display:none !important;
-    }
-}
-
-@media (max-width: 780px) and (min-width: 601px){
-    .primary-nav span:nth-child(2){
-        display:none !important;
-    }
-}
-
-@media (max-width: 690px) and (min-width: 601px){
-    .primary-nav span:nth-child(1){
-        display:none !important;
     }
 }
