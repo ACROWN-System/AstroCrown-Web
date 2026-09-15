@@ -249,8 +249,28 @@ th,td{
     }
 }
 
-/* Mobile: keep the two primary links, Account, and Wallet visible. */
-@media (max-width: 600px){
+/* Narrow desktop: keep Search, Account, and Wallet; remove desktop navigation. */
+@media (max-width: 600px) and (hover:hover) and (pointer:fine){
+    .primary-nav{
+        display:none !important;
+    }
+
+    .utility-actions{
+        margin-left:auto;
+        flex:1 1 auto;
+        min-width:0;
+        gap:12px;
+    }
+
+    .search-control{
+        display:block !important;
+        flex:1 1 420px;
+        min-width:140px;
+    }
+}
+
+/* Actual touch/mobile: Logo | Markets | Swap | Account | Wallet. */
+@media (max-width: 600px) and (hover:none) and (pointer:coarse){
     .header1{
         position:fixed !important;
         top:0 !important;
@@ -262,7 +282,9 @@ th,td{
         padding:0 10px !important;
         gap:8px !important;
         justify-content:flex-start !important;
-        transform:none !important;
+        transform:translate3d(0,0,0) !important;
+        will-change:transform;
+        backface-visibility:hidden;
     }
 
     .logo{
