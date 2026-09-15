@@ -235,12 +235,12 @@ th,td{
 @media (max-width:600px) and (hover:none) and (pointer:coarse){
     html{
         width:100%;
-        overflow-x:clip;
+        overflow-x:hidden;
     }
 
     body{
         width:100%;
-        overflow-x:clip;
+        overflow-x:hidden;
     }
 
     .header1{
