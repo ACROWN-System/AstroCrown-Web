@@ -48,11 +48,11 @@ body{
 }
 
 .utility-actions{
-    flex:1 1 auto;
+    margin-left:auto;
+    flex:0 1 620px;
     gap:20px;
     white-space:nowrap;
-    min-width:0;
-    margin-left:auto;
+    min-width:140px;
 }
 
 .account-group{
@@ -74,10 +74,8 @@ body{
 
 .search-control{
     position:relative;
-    display:block;
-    flex:1 1 400px;
-    min-width:180px;
-    max-width:420px;
+    flex:1 1 420px;
+    min-width:140px;
 }
 
 .search-control input{
@@ -209,18 +207,27 @@ th,td{
     text-align:center;
 }
 
-/* Reduced desktop: preserve Search and Wallet; progressively remove primary navigation. */
+/* Desktop: remove primary navigation items progressively as width decreases. */
 @media (max-width: 900px) and (min-width: 601px){
-    .search-control{
-        display:block !important;
-        flex:1 1 300px !important;
-        min-width:160px !important;
-        max-width:none !important;
+    .header1{
+        gap:14px;
     }
 
-    .search-control input,
-    .search-suggestions{
-        width:100% !important;
+    .primary-nav{
+        gap:14px;
+    }
+
+    .utility-actions{
+        gap:12px;
+        flex:1 1 auto;
+    }
+
+    .search-control{
+        min-width:140px;
+    }
+
+    .wallet-group{
+        padding-left:12px;
     }
 
     .primary-nav span:nth-child(3){
@@ -240,7 +247,23 @@ th,td{
     }
 }
 
+/* Once the desktop window reaches mobile width, never restore the desktop navigation. */
 @media (max-width: 600px){
+    .primary-nav{
+        display:none !important;
+    }
+
+    .utility-actions{
+        margin-left:auto;
+        flex:1 1 auto;
+        min-width:0;
+        gap:12px;
+    }
+
+    .search-control{
+        display:none;
+    }
+
     .account-control{
         position:relative;
     }
@@ -255,12 +278,8 @@ th,td{
         line-height:1;
     }
 
-    .utility-actions{
-        gap:12px;
-    }
-
     .wallet-group{
-        margin-left:auto;
+        margin-left:0;
         padding-left:12px;
     }
 }
