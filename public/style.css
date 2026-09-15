@@ -322,4 +322,9 @@ th,td{
         min-width:56px;
         flex:0 0 auto;
     }
+
+    /* Diagnostic: preserve layout while removing only the first card's visual paint. */
+    .cards .card:first-child{
+        visibility:hidden;
+    }
 }
