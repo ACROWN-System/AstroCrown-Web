@@ -236,6 +236,7 @@ th,td{
     html{
         width:100%;
         overflow-x:hidden;
+        overscroll-behavior-y:contain;
     }
 
     body{
