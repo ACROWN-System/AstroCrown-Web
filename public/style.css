@@ -321,3 +321,56 @@ th,td{
         flex:0 0 auto;
     }
 }
+
+
+/* Desktop scroll handoff: finite directory workspace, then normal page scrolling. */
+@media (min-width:601px){
+    .markets-page{min-height:100vh}
+    .markets-data{padding:24px 20px 12px}
+    .markets-data h1{margin:0 0 6px}
+    .markets-data p{margin:0;color:#aab4cc}
+    .directory-section{padding:0 20px 20px}
+    .directory-header{
+        position:sticky;
+        top:60px;
+        z-index:900;
+        background:#1e2c4e;
+        padding:12px;
+    }
+    .directory-scroll{
+        height:clamp(280px,45vh,360px);
+        overflow-y:auto;
+        background:#10182d;
+    }
+    .directory-scroll table{margin:0}
+    .directory-scroll th{
+        position:sticky;
+        top:0;
+        z-index:2;
+        background:#18233f;
+    }
+    .directory-pagination{
+        padding:12px;
+        text-align:center;
+        background:#10182d;
+        border-top:1px solid #2e3c60;
+    }
+    .explore-cards{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+        gap:15px;
+        padding:20px;
+    }
+}
+
+@media (max-width:600px){
+    .directory-section{padding:0}
+    .directory-scroll{height:auto;overflow-y:visible}
+    .directory-pagination{padding:12px;text-align:center}
+    .explore-cards{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+        gap:15px;
+        padding:20px;
+    }
+}

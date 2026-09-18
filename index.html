@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="public/style.css?v=20260915-4">
+<link rel="stylesheet" href="public/style.css?v=20260918-1">
 <link rel="icon" type="image/png" href="public/favicon/acrown-front-coin.png.png">
 <title>AstroCrown</title>
 
@@ -35,13 +35,49 @@ body{margin:0;font-family:Arial,sans-serif;background:#0b1020;color:white}
 </div>
 <div class="wallet-group"><button type="button" class="wallet-control">Wallet</button></div>
 </header>
+<main class="markets-page">
 <div class="header2">Priority Communication Bar</div>
-<div class="cards"><div class="card">Fear &amp; Greed</div><div class="card">Highest TVL Growth</div><div class="card">Highest DEX Volume Growth</div><div class="card">Winners / Losers</div></div>
-<div class="ticker">BTC | ETH | SOL | ACROWN | Market Cap | Dominance</div>
-<div class="header39">All | AI | Gaming | Memes | RWA | DePIN | Stables | Reference: USD ▼</div>
-<div class="header4">📌 ★ # Asset</div>
-<div class="directory"><table><tr><th>#</th><th>Asset</th><th>Price</th><th>24h%</th></tr><tr><td>1</td><td>Bitcoin</td><td>$100,000</td><td>+2%</td></tr><tr><td>2</td><td>Ethereum</td><td>$8,000</td><td>+1%</td></tr><tr><td>3</td><td>ACROWN</td><td>$1.00</td><td>0%</td></tr></table></div>
-<div class="footer">Previous | 1 | 2 | 3 | Next</div>
+<section class="cards" aria-label="Market overview"><div class="card">Fear &amp; Greed</div><div class="card">Highest TVL Growth</div><div class="card">Highest DEX Volume Growth</div><div class="card">Winners / Losers</div></section>
+<section class="markets-data"><h1>Markets &amp; Data</h1><p>Explore, track and discover market activity.</p></section>
+<div class="ticker market-summary">BTC | ETH | SOL | ACROWN | Market Cap | Dominance</div>
+<div class="header39 filter-bar">All | AI | Gaming | Memes | RWA | DePIN | Stables | Reference: USD ▼</div>
+<section class="directory-section" aria-label="Market directory">
+<div class="directory-header">📌 ★ # Asset</div>
+<div class="directory-scroll">
+<table><thead><tr><th>#</th><th>Asset</th><th>Price</th><th>24h%</th></tr></thead><tbody>
+<tr><td>1</td><td>Bitcoin</td><td>$100,000</td><td>+2%</td></tr>
+<tr><td>2</td><td>Ethereum</td><td>$8,000</td><td>+1%</td></tr>
+<tr><td>3</td><td>Solana</td><td>—</td><td>—</td></tr>
+<tr><td>4</td><td>BNB</td><td>—</td><td>—</td></tr>
+<tr><td>5</td><td>XRP</td><td>—</td><td>—</td></tr>
+<tr><td>6</td><td>Cardano</td><td>—</td><td>—</td></tr>
+<tr><td>7</td><td>Dogecoin</td><td>—</td><td>—</td></tr>
+<tr><td>8</td><td>TRON</td><td>—</td><td>—</td></tr>
+<tr><td>9</td><td>Avalanche</td><td>—</td><td>—</td></tr>
+<tr><td>10</td><td>Chainlink</td><td>—</td><td>—</td></tr>
+<tr><td>11</td><td>Polkadot</td><td>—</td><td>—</td></tr>
+<tr><td>12</td><td>Polygon</td><td>—</td><td>—</td></tr>
+<tr><td>13</td><td>Litecoin</td><td>—</td><td>—</td></tr>
+<tr><td>14</td><td>Uniswap</td><td>—</td><td>—</td></tr>
+<tr><td>15</td><td>Stellar</td><td>—</td><td>—</td></tr>
+<tr><td>16</td><td>Aptos</td><td>—</td><td>—</td></tr>
+<tr><td>17</td><td>Sui</td><td>—</td><td>—</td></tr>
+<tr><td>18</td><td>NEAR</td><td>—</td><td>—</td></tr>
+<tr><td>19</td><td>Arbitrum</td><td>—</td><td>—</td></tr>
+<tr><td>20</td><td>Optimism</td><td>—</td><td>—</td></tr>
+<tr><td>21</td><td>Cosmos</td><td>—</td><td>—</td></tr>
+<tr><td>22</td><td>Filecoin</td><td>—</td><td>—</td></tr>
+<tr><td>23</td><td>Algorand</td><td>—</td><td>—</td></tr>
+<tr><td>24</td><td>ACROWN</td><td>$1.00</td><td>0%</td></tr>
+</tbody></table>
+</div>
+<div class="directory-pagination">Previous | 1 | 2 | 3 | Next</div>
+</section>
+<section class="explore-cards" aria-label="Explore more">
+<div class="card">Whale Flow</div><div class="card">Stablecoin Flows</div><div class="card">DEX Activity</div><div class="card">AI &amp; DePIN</div>
+</section>
+</main>
+<footer class="footer">AstroCrown</footer>
 <div class="mobile-overflow-diagnostic" id="mobile-overflow-diagnostic" aria-hidden="true"></div>
 <script>
 const searchInput=document.getElementById('site-search');const suggestionBox=document.getElementById('search-suggestions');const searchItems=['Markets','Swap','NOVA','Bitcoin','Ethereum','ACROWN','BTC','ETH','SOL','Market Cap','Dominance','Fear & Greed','Highest TVL Growth','Highest DEX Volume Growth','Winners / Losers','AI','Gaming','Memes','RWA','DePIN','Stables'];
