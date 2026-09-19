@@ -18,38 +18,14 @@
 <button class="header-button" type="button" aria-label="More">...</button>
 <label class="search-control"><input type="search" placeholder="Search" autocomplete="off" aria-label="Search AstroCrown"></label>
 <a class="header-button" href="account.html">Account</a>
+<a class="header-button" href="wallet.html">Wallet</a>
 </nav>
 </div>
 </header>
 <main>
 <div class="header2">Market Data</div>
-<section class="cards" aria-label="Market overview">
-<div class="card"><strong>Fear &amp; Greed</strong><br>Market sentiment</div>
-<div class="card"><strong>Highest TVL Growth</strong><br>Liquidity movers</div>
-<div class="card"><strong>Highest DEX Volume Growth</strong><br>Trading activity</div>
-<div class="card"><strong>Winners / Losers</strong><br>24h movement</div>
-</section>
-<div class="ticker">BTC | ETH | SOL | ACROWN | Market Cap | Dominance</div>
-<div class="header39">All | AI | Gaming | Memes | RWA | DePIN | Stables | Reference: USD</div>
-<div class="directory">
-<table>
-<tr><th>#</th><th>Asset</th><th>Price</th><th>24h%</th></tr>
-<tr><td>1</td><td>Bitcoin</td><td>$100,000</td><td>+2%</td></tr>
-<tr><td>2</td><td>Ethereum</td><td>$8,000</td><td>+1%</td></tr>
-<tr><td>3</td><td>ACROWN</td><td>$1.00</td><td>0%</td></tr>
-</table>
-</div>
+<section class="cards" aria-label="Market overview">...</section>
 <footer class="footer"><span><a href="index.html">Home</a> · Markets</span></footer>
 </main>
-<script>
-const search=document.querySelector('.search-control input');
-const items=['Markets','Swap','NOVA','Bitcoin','Ethereum','ACROWN','BTC','ETH','SOL','Market Cap','Dominance','Fear & Greed','Highest TVL Growth','Highest DEX Volume Growth','Winners / Losers','AI','Gaming','Memes','RWA','DePIN','Stables'];
-if(search){const box=document.createElement('div');box.className='search-suggestions';box.hidden=true;search.parentElement.append(box);
-search.addEventListener('input',()=>{const q=search.value.trim().toLowerCase();box.replaceChildren();if(q.length<2){box.hidden=true;return}items.filter(x=>x.toLowerCase().includes(q)).slice(0,6).forEach(x=>{const b=document.createElement('button');b.type='button';b.className='search-suggestion';b.textContent=x;b.onclick=()=>{search.value=x;box.hidden=true};box.append(b)});box.hidden=!box.childElementCount});
-document.addEventListener('click',e=>{if(!e.target.closest('.search-control'))box.hidden=true})}
-let audio;
-function mechanical(type){audio??=new AudioContext();const o=audio.createOscillator(),g=audio.createGain();o.type='square';o.frequency.value=type==='press'?95:135;g.gain.setValueAtTime(.035,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+.055);o.connect(g).connect(audio.destination);o.start();o.stop(audio.currentTime+.06)}
-document.querySelectorAll('.header-button').forEach(b=>{b.addEventListener('pointerdown',()=>mechanical('press'));b.addEventListener('pointerup',()=>mechanical('release'))});
-</script>
 </body>
 </html>
