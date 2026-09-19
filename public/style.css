@@ -84,7 +84,7 @@ main{padding:79px 0 78px;min-height:100vh}
 .directory-section{padding:0 20px 20px}
 .directory-header{position:sticky;top:75px;z-index:900;background:rgba(30,44,78,.88);padding:12px}
 .directory-scroll{height:clamp(280px,45vh,360px);overflow-y:auto;background:rgba(16,24,45,.72);scrollbar-width:none}
-.directory-scroll::-webkit-scrollbar{width:0;height:0}
+.directory-scroll::-webkit-scrollbar{display:none}
 table{width:100%;border-collapse:collapse}
 th,td{padding:12px;border-bottom:1px solid rgba(46,60,96,.8);text-align:left}
 .directory-scroll th{position:sticky;top:0;z-index:2;background:rgba(24,35,63,.96)}
