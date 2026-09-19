@@ -100,7 +100,7 @@ th,td{padding:12px;border-bottom:1px solid rgba(46,60,96,.8);text-align:left}
 }
 .footer::before{content:"";position:absolute;inset:2px;border-radius:12px;background:var(--blue)}
 .footer::after{content:"";position:absolute;inset:4px;border-radius:10px;background:var(--black)}
-.footer>*{position:relative;z-index:1}
+.footer>span{position:relative;z-index:1}
 
 @media (max-width:900px) and (min-width:601px){
   .primary-nav{gap:2px}.header-button{padding:0 7px}.search-control{min-width:120px}
