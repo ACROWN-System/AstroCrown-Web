@@ -32,16 +32,16 @@
 | T-002 | C-002 | Inspect metadata. | PASS | `<meta charset="UTF-8">` and `<meta name="viewport" content="width=device-width, initial-scale=1.0">` are present. |
 | T-003 | C-003 | Inspect document title. | PASS | `<title>AstroCrown</title>` is present. |
 | T-004 | C-004 | Inspect source for inherited CSS, JavaScript, external dependencies, and retired implementation structures. | PASS | The document contains only the new minimal HTML foundation; no CSS, JavaScript, external dependency, or retired implementation code is present. |
-| T-005 | C-005 | Compare the current artifact against the information presently defined for the homepage. Check whether the requirements needed to build the intended page are explicitly captured. | BLOCKED | The current file is intentionally only a foundation. A sufficiently complete homepage requirement specification is not yet present in the audited artifact set. |
-| T-006 | C-006 | Determine which NIST IR 8397 verification techniques are applicable at this stage and record non-applicable techniques. | BLOCKED | No project-specific verification plan yet maps the applicable techniques to the new homepage implementation. |
+| T-005 | C-005 | Compare the current artifact against the information presently defined for the homepage. Check whether the requirements needed to build the intended page are explicitly captured. | PASS | `development/HOMEPAGE-REQUIREMENTS.md` now establishes the auditable minimum homepage requirements and explicitly identifies remaining undefined items that must be resolved before the relevant implementation. |
+| T-006 | C-006 | Determine which NIST IR 8397 verification techniques are applicable at this stage and record non-applicable techniques. | PASS | `development/audit/tests/HOMEPAGE-BASELINE.md` maps the homepage requirements to verification methods and records NIST IR 8397 technique applicability, including conditional techniques. |
 | T-007 | C-007 | Inspect the implementation for unnecessary code or mechanisms. | PASS | Current implementation is 13 lines and contains only required document-foundation elements. |
 
 ## Findings
 
 | Finding ID | Test ID | Condition | Status |
 |---|---|---|---|
-| F-001 | T-005 | The intended homepage requirements are not yet sufficiently specified in the development environment to verify whether the page contains everything required. | Open |
-| F-002 | T-006 | The audit system has not yet established the first concrete verification matrix for the homepage implementation beyond the foundation checks. | Open |
+| F-001 | T-005 | The intended homepage requirements were initially missing. They are now explicitly recorded in `development/HOMEPAGE-REQUIREMENTS.md`. | Remediated |
+| F-002 | T-006 | The initial homepage verification matrix was missing. It is now recorded in `development/audit/tests/HOMEPAGE-BASELINE.md`. | Remediated |
 
 ## Remediation
 
@@ -49,17 +49,17 @@ No implementation changes are made by this audit.
 
 Required next work:
 
-1. Define the minimum required homepage structure and behavior before adding implementation code.
-2. Convert those requirements into auditable criteria and test cases.
-3. Identify applicable security, accessibility, functional, responsive, and quality verification methods.
-4. Only then implement the next homepage element.
+1. Defined the minimum auditable homepage requirements in `development/HOMEPAGE-REQUIREMENTS.md`.
+2. Converted those requirements into a verification matrix in `development/audit/tests/HOMEPAGE-BASELINE.md`.
+3. Identified applicable and conditional verification techniques, including NIST IR 8397 techniques.
+4. No substantive homepage implementation was added.
 
 ## Re-test
 
 | Finding ID | Re-test | Result | Evidence |
 |---|---|---|---|
-| F-001 | Re-run requirements-completeness audit after the homepage requirements are explicitly recorded. | BLOCKED | Requirements are not yet established as a complete auditable baseline. |
-| F-002 | Re-run verification-matrix audit after the first concrete homepage requirements and test cases exist. | BLOCKED | Verification matrix is intentionally not complete yet. |
+| F-001 | Re-run requirements-completeness audit after the homepage requirements are explicitly recorded. | PASS | `development/HOMEPAGE-REQUIREMENTS.md` provides the auditable baseline and explicitly separates known requirements from unresolved decisions. |
+| F-002 | Re-run verification-matrix audit after the first concrete homepage requirements and test cases exist. | PASS | `development/audit/tests/HOMEPAGE-BASELINE.md` provides the initial requirement-to-test matrix and applicability record. |
 
 ## Closure
 
@@ -67,9 +67,6 @@ This audit establishes the initial condition of the new development homepage.
 
 The HTML foundation passes the checks that can currently be verified. The audit does **not** authorize further implementation as if the homepage specification were complete.
 
-The two open findings identify the principal missing prerequisites before substantive implementation:
-
-- a sufficiently complete, auditable homepage requirement baseline;
-- a corresponding verification/test matrix.
+The two initial findings have been remediated before substantive implementation. The requirement baseline and verification matrix now exist.
 
 No root/public website files were changed by this audit.
