@@ -38,10 +38,10 @@ BLOCKED
 
 The baseline cannot be declared complete until:
 
-2. Account MFA is verified.
-3. A comprehensive secret-exposure check is completed, with evidence recorded.
-4. Backup visibility/exposure is explicitly reviewed and accepted or remediated.
-5. Developer-machine security controls are verified or the boundary is explicitly documented as an external prerequisite.
+1. Account MFA is verified.
+2. A comprehensive secret-exposure check is completed, with evidence recorded.
+3. Backup visibility/exposure is explicitly reviewed and accepted or remediated.
+4. Developer-machine security controls are verified or the boundary is explicitly documented as an external prerequisite.
 
 ## Current Limitation
 
