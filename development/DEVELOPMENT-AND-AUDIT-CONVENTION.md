@@ -205,7 +205,43 @@ Avoid:
 
 Every added mechanism should have an identifiable purpose.
 
-## 11. Development / Regular Website Boundary
+## 11. Technology and Implementation Candidate Evaluation
+
+When multiple technologies, libraries, implementation approaches, or code candidates are considered, evaluate them using evidence-based verification rather than numerical scoring.
+
+Use only these result states:
+
+- PASS — the candidate satisfies the applicable criterion and the evidence supports that conclusion.
+- FAIL — the candidate was tested and does not satisfy the applicable criterion.
+- N/A — the criterion genuinely does not apply; record the reason.
+- BLOCKED — the criterion could not be verified because required evidence, capability, or environment was unavailable.
+
+Do not use:
+
+- point scores;
+- weighted averages;
+- compensating scores;
+- percentage-based acceptance;
+- rankings or tiers as substitutes for requirement verification.
+
+Mandatory criteria are eligibility gates. A candidate with a mandatory FAIL is not eligible for implementation. A mandatory BLOCKED result prevents a final acceptance decision until the missing evidence is obtained or the criterion is otherwise resolved. N/A requires a recorded justification.
+
+Candidate evaluation follows:
+
+Requirement
+→ Candidate
+→ Test
+→ Evidence
+→ PASS / FAIL / BLOCKED / N/A
+→ Eligibility decision
+→ Implementation
+→ Re-test
+
+Where several candidates satisfy all mandatory requirements, the decision should be based on the documented project requirements and evidence, including simplicity, maintainability, security, performance, compatibility, and unnecessary complexity where applicable. The purpose is to identify a candidate that satisfies the requirements with the least unnecessary mechanism, not to manufacture a numerical measure of quality.
+
+Candidate evaluations should use the template in development/audit/templates/CANDIDATE-EVALUATION.md.
+
+## 12. Development / Regular Website Boundary
 
 Development work belongs under:
 
@@ -217,7 +253,7 @@ Development files must not be treated as production/public website files merely 
 
 Promotion from development to the regular website is a separate controlled action and requires verification against the applicable criteria before promotion.
 
-## 12. Audit Record Convention
+## 13. Audit Record Convention
 
 When an audit record is created, use the following minimum structure:
 
@@ -257,7 +293,7 @@ What was tested after remediation and what was the result?
 
 Why is the finding considered closed, or why does it remain open?
 
-## 13. Reference Version Policy
+## 14. Reference Version Policy
 
 Use stable, explicitly identified versions for audit baselines.
 
@@ -271,7 +307,7 @@ If a reference standard changes, do not silently replace the baseline.
 
 Record the new version and determine whether existing verification records need re-evaluation.
 
-## 14. Important Limitations
+## 15. Important Limitations
 
 Using these references does not constitute certification or accreditation.
 
@@ -285,7 +321,7 @@ merely because these references are used.
 
 The project may state that its development and verification process uses the identified standards as reference criteria when that statement is accurate.
 
-## 15. Core Rule
+## 16. Core Rule
 
 The audit system exists to establish evidence, not reassurance.
 
