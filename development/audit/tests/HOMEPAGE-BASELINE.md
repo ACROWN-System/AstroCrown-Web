@@ -19,6 +19,8 @@ Translate the homepage requirements into concrete verification work before subst
 | HT-009 | R-009 | Static inspection, dependency review, secret scan, and applicable web security scanning. | Security |
 | HT-010 | R-010 | Code review focused on redundant mechanisms and unnecessary complexity. | Quality |
 | HT-011 | R-011 | Audit-record review confirming evidence exists for applicable requirements and blocking findings are resolved. | Release |
+| HT-012 | R-012 | Manual desktop black-box scroll test: verify page scrolling, persistent header behavior, independent market-directory scrolling, confinement while the directory can scroll, and natural handoff to surrounding page scrolling at the directory boundary in both scroll directions. Record viewport, input method, observed states, and evidence. | Functional / Responsive |
+| HT-013 | R-013 | Manual desktop presentation and functional test: verify the primary scrollbar may be visually hidden while wheel/trackpad/keyboard page scrolling remains functional; verify nested scroll regions remain usable and no scroll trap or obscured content is introduced. Record viewport, input method, and evidence. | Functional / Visual |
 
 ## NIST IR 8397 Applicability
 
