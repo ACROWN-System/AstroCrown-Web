@@ -695,7 +695,7 @@ Before header implementation:
 
 The candidate process must not assume that the arithmetic midpoint between the two existing colors is the correct value. The selected value is a design decision derived from the required semantic hierarchy and verification evidence.
 
-For accessibility, interactive component and state indicators must meet the applicable WCAG contrast requirements. WCAG 2.2 identifies a 3:1 minimum for applicable non-text UI components and states, while text contrast requirements are separately applicable; visible keyboard focus must also remain discernible. citeturn0search2turn0search3
+For accessibility, interactive component and state indicators must meet the applicable WCAG 2.2 contrast requirements. WCAG 2.2 identifies a 3:1 minimum for applicable non-text UI components and states, while text contrast requirements are separately applicable; visible keyboard focus must also remain discernible. The detailed accessibility verification should use the project's WCAG/WAI-ARIA references rather than treating the palette decision itself as sufficient evidence.
 
 ## Design Constraint
 
