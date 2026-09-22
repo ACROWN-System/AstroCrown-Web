@@ -282,12 +282,20 @@ The homepage must use the approved AstroCrown palette:
 |---|---|---|
 | AstroCrown Gold | `#FFD700` | Brand identity and primary emphasis |
 | AstroCrown Black | `#050914` | Deepest background |
-| AstroCrown Deep Space Blue | `#081426` | Main dark surfaces |
+| AstroCrown Deep Space Blue | `#081426` | Foundational deep-space environment |
+| AstroCrown Space Blue | TBD | Primary dark UI surfaces, including the homepage header and navigation controls |
 | AstroCrown Light Space Blue | `#16345A` | Borders, demarcation, separators |
 | AstroCrown Green | `#20C878` | Positive financial state |
 | AstroCrown Red | `#E5484D` | Negative financial state |
 | AstroCrown Warning Yellow | `#FFD24A` | Warning, alert, caution |
 | AstroCrown Warm White | `#FFF7E0` | Primary readable text |
+
+The three blue levels form a deliberate visual hierarchy:
+- AstroCrown Deep Space Blue `#081426` is the darkest blue environment layer.
+- AstroCrown Space Blue is the intermediate UI-surface blue and must remain visually distinct from both adjacent blue levels.
+- AstroCrown Light Space Blue `#16345A` is the lightest structural blue and is used primarily for borders, demarcation, and separators.
+
+The AstroCrown Space Blue HEX value remains TBD until a candidate is evaluated for visual hierarchy, text/UI contrast, header use, navigation-control use, and compatibility with the established palette. It must be darker than `#16345A` and lighter than `#081426` when evaluated by the chosen color model and visual result.
 
 Gold and Warning Yellow must remain semantically distinct.
 
@@ -397,7 +405,6 @@ The layer shall:
 - participate in homepage background composition;
 - support transition from introductory presentation mode to workspace mode;
 - provide a visually stable environment once workspace mode becomes active.
-
 #### Known Techniques and Patterns for Future Evaluation
 
 - Persistent background.
@@ -675,6 +682,21 @@ Separating visual environment components into independent assets can permit reus
 
 This is an implementation consideration to be compared against the complete homepage requirement set. It does not yet mandate a specific delivery mechanism.
 
+## Palette and Header Color Decision Gate
+
+The homepage palette and header requirements are coupled because the header introduces AstroCrown Space Blue as a required intermediate UI-surface color.
+
+Before header implementation:
+1. define candidate AstroCrown Space Blue values;
+2. evaluate each candidate against AstroCrown Deep Space Blue `#081426` and AstroCrown Light Space Blue `#16345A`;
+3. verify the candidate's intended header/navigation text and UI-state contrast;
+4. verify that the candidate remains visually distinguishable from the adjacent blue levels at the intended rendered sizes and surfaces;
+5. record the selected value and evidence in the applicable design decision/audit record.
+
+The candidate process must not assume that the arithmetic midpoint between the two existing colors is the correct value. The selected value is a design decision derived from the required semantic hierarchy and verification evidence.
+
+For accessibility, interactive component and state indicators must meet the applicable WCAG contrast requirements. WCAG 2.2 identifies a 3:1 minimum for applicable non-text UI components and states, while text contrast requirements are separately applicable; visible keyboard focus must also remain discernible. citeturn0search2turn0search3
+
 ## Design Constraint
 
 The homepage should be developed from this requirement baseline and its test definitions. Existing pre-reset website code is reference/recovery material only and must not become an implicit requirement source.
@@ -701,7 +723,7 @@ The header shall:
 - use a transparent or partially transparent treatment for the bottom border;
 - provide subtle visual delimitation between header and background without excessive contrast.
 
-The exact HEX value of AstroCrown Space Blue remains to be established before implementation.
+The header shall use the approved AstroCrown Space Blue as its primary opaque surface. The Space Blue value must be established before implementation and must satisfy the R-005 three-level blue hierarchy and the applicable accessibility verification requirements. It must not be selected solely by name, midpoint arithmetic, or visual preference without evaluation evidence.
 
 #### R-019.3 — Brand Elements
 
@@ -753,7 +775,7 @@ The initial navigation order shall be:
 
 The navigation buttons shall:
 
-- use AstroCrown Space Blue;
+- use the same approved AstroCrown Space Blue surface as the header unless a later requirement explicitly establishes a distinct navigation-surface color;
 - have approximately 49 px height;
 - have width greater than 49 px;
 - use a rounded-corner rectangular form;
@@ -798,7 +820,6 @@ The search system shall:
 - allow arrow-key navigation of suggestions where applicable;
 - allow Escape to close the suggestion list without unexpectedly clearing the query;
 - avoid presenting fake functionality when no corresponding search system exists.
-
 The exact runtime search source remains undefined until the search system is specified.
 
 #### R-019.8 — Wallet Control
@@ -990,7 +1011,7 @@ Each candidate must be evaluated against the actual requirements, compatibility,
 
 The following remain intentionally undefined until candidate evaluation and evidence are completed:
 
-- Exact AstroCrown Space Blue HEX value.
+- Exact AstroCrown Space Blue HEX value, subject to the R-005/R-019 hierarchy and accessibility evaluation.
 - Exact logo asset/version.
 - Exact typography family selections from the approved candidate families.
 - Exact font delivery mechanism.
@@ -1016,7 +1037,8 @@ Header implementation shall be verified against at least:
 
 - approximately 59 px rendered height;
 - full viewport-width coverage;
-- approved header/background color relationship;
+- approved three-level blue hierarchy and header/background color relationship;
+- sufficient text and UI-control contrast for the selected Space Blue surface;
 - bottom border treatment;
 - logo size and placement;
 - separate Logo and Title controls;
@@ -1074,4 +1096,3 @@ Before final implementation and before promotion, the header shall be reviewed t
 - a newly introduced mechanism can simplify another homepage system.
 
 Any intentional duplication must have a documented requirement or technical justification.
-
