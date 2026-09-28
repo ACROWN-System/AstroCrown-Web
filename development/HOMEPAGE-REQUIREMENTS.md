@@ -244,6 +244,167 @@ When comparing AstroCrown with an industry reference system, identify:
 Do not create subjective overall rankings of AstroCrown against reference systems as a substitute for requirement verification.
 
 
+## Intent Preservation, Evidence, and Verification Governance
+
+### Intent Preservation Principle
+
+The homepage requirements are a controlled expression of product intent. Development may add evidence, resolve uncertainty, refine implementation, and improve quality, but no later stage may silently change the meaning, scope, certainty, or intended outcome established by an earlier stage.
+
+The controlled development chain is:
+
+Intent → Discovery → Requirement / Candidate Requirement → Evaluation → Decision → Implementation → Verification → Audit / Evidence → Promotion
+
+Each stage has a distinct purpose:
+
+- **Intent** defines why the homepage or subsystem exists and what outcome it is intended to provide.
+- **Discovery** records useful knowledge, observed behavior, evidence, constraints, benchmarks, or opportunities without automatically making them mandatory.
+- **Requirement** defines an approved outcome or constraint that implementation must satisfy.
+- **Candidate Requirement** identifies a plausible requirement that still requires evaluation.
+- **Evaluation** tests candidates, alternatives, compatibility, quality, risk, and evidence.
+- **Decision** records the explicit resolution of an evaluated uncertainty or choice.
+- **Implementation** expresses approved requirements and decisions in the product.
+- **Verification** determines whether the implementation conforms to applicable requirements and decisions.
+- **Audit / Evidence** preserves the basis for verification and traceability.
+- **Promotion** moves a sufficiently verified implementation toward the regular/public website.
+
+Implementation convenience, common industry practice, a technology recommendation, an AI-generated suggestion, or an evaluator preference must not silently become a requirement.
+
+### Requirement Maturity and Status
+
+Use these distinctions where useful:
+
+- **Approved Requirement** — implementation must satisfy it.
+- **Candidate Requirement** — potential requirement awaiting evidence and decision.
+- **Discovery** — useful or verified finding that should be preserved without automatically imposing implementation.
+- **Research Question** — unresolved question requiring investigation.
+- **Explicitly Undefined** — known decision intentionally left open.
+- **Implementation Decision** — evaluated and selected implementation approach.
+- **Verification Result** — evidence-backed result for an implemented requirement.
+- **Historical Regression Target** — previous failure/behavior that must be re-tested when relevant.
+- **N/A** — demonstrably not applicable in the tested scope.
+- **BLOCKED** — verification cannot responsibly be completed because required evidence, environment, dependency, or decision is missing.
+
+These are maturity/status labels, not quality scores.
+
+### No Silent Inference Rule
+
+A statement shall not acquire additional meaning merely because implementation requires a concrete value.
+
+Examples:
+
+- "consensus" does not mean arithmetic mean unless explicitly decided;
+- "capital activity" does not automatically mean TVL growth;
+- "influence" does not automatically mean causation;
+- "responsive" does not automatically mean a particular breakpoint;
+- "accessible" does not automatically mean one technique;
+- "fast" does not automatically mean an arbitrary performance threshold.
+
+Concrete interpretations must be evaluated and explicitly decided.
+
+### Evidence Sufficiency Rule
+
+Absence of evidence is not PASS.
+
+Verification results shall be:
+
+- PASS
+- FAIL
+- N/A — with applicability reason
+- BLOCKED — with blocking reason
+
+PASS requires evidence sufficient to understand the tested condition and result.
+
+### Reproducible Verification Rule
+
+Where reasonably possible, verification shall identify:
+
+- requirement/test identifier;
+- implementation/version;
+- viewport/device/browser;
+- relevant input method;
+- initial state;
+- test action;
+- expected and observed result;
+- data/source state;
+- date/time;
+- evidence location;
+- result and limitations.
+
+### Historical Regression Rule
+
+When a homepage behavior has a relevant historical defect, failed implementation, or previous regression, that condition shall be preserved as a regression target when the behavior is rebuilt or modified.
+
+A new implementation is not verified merely because it behaves differently. The relevant historical failure condition shall be re-tested where applicable.
+
+### Edge, Failure, and Boundary-State Rule
+
+Interactive and data-bearing systems shall be evaluated under applicable:
+
+- empty;
+- missing-data;
+- stale-data;
+- unavailable-source;
+- conflicting-source;
+- invalid-input;
+- boundary;
+- overflow;
+- loading;
+- failure;
+- recovery;
+- reduced-motion/accessibility;
+- degraded-dependency states.
+
+The applicable states depend on the subsystem.
+
+### External Evaluation Conflict Rule
+
+External standards, benchmarks, audits, rankings, and evaluator recommendations should be incorporated when they improve, protect, or appropriately measure quality, usability, reliability, discoverability, accessibility, security, interoperability, or operational performance.
+
+Where an external criterion conflicts with established AstroCrown purpose or materially reduces quality, it shall not be followed automatically. The conflict, evidence, alternatives, and decision shall be documented.
+
+The objective is not to optimize for an external score at the expense of product purpose.
+
+### Compliance, Quality, and Optimization
+
+Distinguish:
+
+- **Compliance** — satisfying an applicable standard/rule/requirement.
+- **Quality** — improving the actual product or technical outcome.
+- **Optimization** — improving a measurable result within established product purpose.
+
+Compliance is not proof of overall quality, and optimization does not override approved product intent.
+
+### Verification Applicability Rule
+
+Applicable verification techniques shall be explicitly assessed rather than silently omitted.
+
+Potential techniques include requirements review, source/structural inspection, HTML validation, accessibility inspection, keyboard testing, black-box functional testing, negative/boundary testing, automated testing, static analysis, dependency review, secret scanning, threat modeling, security scanning, web-application scanning where applicable, historical regression testing, fuzzing where meaningful, included-software verification, performance testing, real-user performance measurement where sufficient data exists, and visual/responsive verification.
+
+The detailed audit system remains authoritative for test records and evidence.
+
+### External Quality Frameworks
+
+Relevant current references include:
+
+- WCAG 2.2 and WAI accessibility guidance.
+- WAI-ARIA Authoring Practices where applicable.
+- Lighthouse and PageSpeed Insights.
+- Core Web Vitals, including LCP, INP, and CLS.
+- NIST SP 800-218 Secure Software Development Framework (SSDF) 1.1.
+- OWASP Application Security Verification Standard (ASVS) 5.0.0.
+- ISO/IEC 25010:2023 product quality model.
+- Relevant browser/platform standards and compatibility documentation.
+
+These are evaluation inputs, not automatic adoption of every criterion.
+
+### External Reference Integrity
+
+External results shall be interpreted with applicable date/version, population/dataset, methodology, and limitations.
+
+A public ranking is not automatically a quality measure. A performance score is not an overall product-quality score. A conformance result is not certification. An industry reference product is not automatically an implementation requirement.
+
+Where an external reference adequately verifies a criterion, do not create an equivalent internal metric merely to duplicate it.
+
 ## Required Outcomes
 
 ### R-001 — Valid document foundation
@@ -1408,3 +1569,471 @@ Candidate references include:
 - supported-browser compatibility references for CSS layout, animation, and accessibility features.
 
 Any AstroCrown-specific internal benchmark should be created only where an external reference does not adequately verify an information-bar-specific behavior, such as synchronized two-region motion or project-specific redundancy controls.
+## R-021 — Homepage Hero Card System
+
+### Purpose
+
+The hero card system shall provide a compact, high-information discovery layer between the homepage information bar and market data bar. Cards shall answer high-value market questions quickly and provide direct navigation into deeper information.
+
+Initial three-card architecture:
+
+1. **Fear & Greed Consensus** — How does the market feel?
+2. **Winners & Losers** — What is moving?
+3. **Top Influences / Influence Map** — What appears to be influencing movement?
+
+Names may be refined without changing the underlying intent.
+
+### R-021.1 — Card Composition and Information Hierarchy
+
+Card composition shall be determined from user task, information density, decision/action value, comprehension, retention/discovery value, interaction cost, evidence, relationship to deeper sections, and responsive constraints.
+
+Dimensions shall not be selected solely as arbitrary viewport percentages.
+
+Fear & Greed Consensus may receive a larger visual area where required by its gauge/speedometer and information hierarchy.
+
+### R-021.2 — Whole-Card Interaction
+
+Actionable cards shall behave as coherent interactive surfaces.
+
+For navigation cards:
+
+- the card should be the primary interaction;
+- a small generic downward arrowhead may sit partly inside/partly outside the lower border;
+- the arrowhead shall not create a competing destination;
+- a separate large CTA shall not be introduced unless a distinct action exists;
+- keyboard/assistive-technology users shall have an equivalent accessible interaction;
+- hover, focus, pressed, and unavailable states shall remain distinguishable.
+
+### R-021.3 — Fear & Greed Consensus
+
+#### Product intent
+
+The card shall summarize market sentiment across multiple independent sentiment sources rather than presenting one provider as the complete market view.
+
+The principal value is the relationship among source scores, consensus, agreement, spread, and evidenced direction/trend.
+
+#### Candidate sources
+
+Candidate systems include Alternative.me, CoinMarketCap, CoinGecko, CFGI, and other publicly accessible sources discovered and evaluated later.
+
+Selection depends on data availability, usage/licensing conditions, methodology transparency, update reliability, historical availability, semantic compatibility, access constraints, reproducibility, cost, security, and reuse potential.
+
+#### Information model
+
+Candidate displayed information includes:
+
+- consensus score;
+- classification;
+- source scores;
+- agreement;
+- spread;
+- short evidence-based insight;
+- methodology access.
+
+#### Consensus methodology
+
+"Consensus" is intentionally undefined until evaluated.
+
+Candidate methods include arithmetic mean, median, weighted mean, robust/normalized aggregation, or another evidence-supported method.
+
+The selected method must account for differences in provider scales, classifications, update times, and semantic meaning. Numeric values shall not be combined merely because they are numeric.
+
+#### Agreement and spread
+
+Agreement and spread shall be explicitly defined before implementation. Normalization, calculation, missing-source behavior, edge cases, and tests must be established first.
+
+#### Data integrity
+
+The system shall distinguish, where relevant, current, stale, missing, conflicting, and insufficient source data. A missing provider shall not silently become zero or otherwise distort the result.
+
+### R-021.4 — Winners & Losers
+
+The card shall identify meaningful positive and negative market movers without relying on price change alone.
+
+Preferred compact composition:
+
+- Winners;
+- Losers;
+- Price Change;
+- Volume Change;
+- compact overlaid mini-chart.
+
+Price Change and Volume Change should be beside the chart rather than automatically stacked when space permits.
+
+The exact ranking methodology remains undefined pending evaluation of:
+
+- timeframe;
+- eligible universe;
+- liquidity/volume minimums;
+- price-change calculation;
+- volume-change calculation;
+- outlier handling;
+- stale/missing data;
+- wrapped/duplicate assets;
+- update cadence.
+
+The system shall not imply that the largest percentage move is automatically the most meaningful mover.
+
+### R-021.5 — Top Influences / Influence Map
+
+The card shall summarize observable market influence signals and connect them to meaningful categories/themes that users can explore further.
+
+It shall communicate **observed influence**, not unverified causation.
+
+Candidate dimensions include:
+
+- Trend;
+- Capital Activity;
+- Derivatives;
+- Whale Activity;
+- ETF Flow;
+- News;
+- Regulation;
+- Technology;
+- Macro;
+- Narrative.
+
+Candidate evidence inputs include TVL growth, capital flows, whale activity, ETF activity, derivatives activity, sector rotation, narrative activity, news, and other evidence-backed signals.
+
+These inputs are candidates, not automatic definitions. Capital Activity must not silently become TVL growth; influence must not silently become causation or correlation.
+
+Where useful, thematic outputs should align with directory filters, for example:
+
+- Capital Activity → DeFi;
+- Technology → AI;
+- News → Gaming;
+- Macro → BTC;
+- Regulation → Payments.
+
+Individual tokens may be shown when they are the appropriate evidence-bearing entity, but influence should not be reduced to individual tokens by default.
+
+The final influence model must define score/strength, evidence sources, lookback period, weighting, confidence, minimum evidence, conflict handling, and stale-data behavior before implementation.
+
+### R-021.6 — Card Data Provenance
+
+For all data-bearing cards:
+
+- each externally derived value shall have an identifiable source;
+- calculations shall have documented methodology;
+- derived values shall be distinguishable from source values;
+- relevant timestamps/freshness shall be considered;
+- licensing/usage conditions shall be reviewed;
+- unavailable/stale behavior shall be defined;
+- source substitution shall not silently change metric meaning.
+
+### R-021.7 — Card Failure and Boundary States
+
+Each card shall be evaluated for applicable loading, no-data, partial-source, stale, conflicting, malformed, insufficient-data, calculation-failure, source/API-failure, delayed-update, unavailable-destination, reduced-motion, keyboard/focus, and recovery states.
+
+Missing evidence shall not be represented as zero, neutral, healthy, or positive unless the approved methodology explicitly defines that meaning.
+
+### R-021.8 — Card Reuse and Data Architecture
+
+Card data should be reusable by homepage cards, market directory, analytics, research, NOVA evidence systems, and future intelligence/governance services.
+
+Preferred pattern where justified:
+
+**validated fetch/evidence → normalized data → reusable derived data → multiple consumers**
+
+Reuse must not become premature centralization or complexity.
+
+### R-021.9 — Card Explicitly Undefined Items
+
+Remain intentionally undefined pending evidence:
+
+- exact dimensions/ratios/width distribution;
+- responsive stacking/contraction;
+- typography;
+- chart implementation;
+- Fear & Greed aggregation/weighting;
+- agreement/spread formulas;
+- Winners & Losers ranking, universe, timeframe, outlier policy;
+- Influence Map score, weighting, confidence, evidence threshold;
+- exact source set;
+- update cadence/cache policy;
+- fetch architecture;
+- animation;
+- arrowhead geometry;
+- destinations.
+
+### R-021.10 — Card Verification
+
+Verification shall cover, as applicable, visual hierarchy, data correctness, provenance, calculation correctness, edge/failure states, stale/missing behavior, keyboard/focus, screen-reader semantics, responsive behavior, reduced motion, destination behavior, performance, dependency/redundancy, and historical regression.
+
+## R-022 — Homepage Market Data Bar
+
+### Purpose
+
+The Market Data Bar shall provide compact current market context between discovery cards and the working directory.
+
+### Candidate information
+
+Candidate information includes Market Cap, BTC Dominance, ETH Dominance where useful, BTC, ETH, ACROWN, 24h Volume, and other approved market-state indicators.
+
+The final information set remains subject to information-density and usability evaluation.
+
+### Data integrity
+
+Market values shall identify source, freshness expectations, source-vs-derived status, unavailable/stale behavior, and reference conventions.
+
+### Reuse
+
+Market data should be normalized once where practical and reused by the Market Data Bar, Influence Map, market-state classification, sector analysis, market directory, analytics/research, and NOVA evidence systems.
+
+### Explicitly Undefined
+
+Exact metric set, ordering, layout, update cadence, providers, reference currency/device, market-state calculation, stale threshold, and compact responsive behavior remain undefined.
+
+## R-023 — Homepage Working Market Directory
+
+### Purpose
+
+The working section shall provide the primary market exploration and action workspace.
+
+### Required structure
+
+Current architecture:
+
+Filter Bar → Directory ID Bar/Header → Directory Pages / Market Views → Pagination
+
+Discovery content and the working market workspace shall remain clearly distinguishable.
+
+### Filter taxonomy
+
+Current candidate taxonomy:
+
+- All;
+- AI;
+- Gaming;
+- Meme;
+- RWA;
+- DePIN;
+- Stable.
+
+### Filter intelligence
+
+Where reliable data supports it, filters may expose compact market intelligence such as AI ▲ +8%, Gaming ▼ -2%, Meme ▲ +12%, RWA ▲ +1%.
+
+Such values require defined timeframe, universe, methodology, and source before implementation.
+
+Filter intelligence may be reused by Influence Map, sector analysis, analytics, research, and NOVA evidence systems.
+
+### Directory row information
+
+Candidate/required fields include:
+
+- pin;
+- favorite;
+- row number;
+- token logo;
+- symbol;
+- name;
+- price;
+- selected reference-device/currency value;
+- 1h/24h/7d change;
+- market cap;
+- 24h volume;
+- circulating supply;
+- price-line chart;
+- buy;
+- sell.
+
+A row click shall navigate to the corresponding token/market section where such a destination exists.
+
+### Reference device and market execution
+
+The selected reference device/currency shall affect displayed price and percentage interpretation consistently.
+
+The NOVA Meta-DEX & Swap concept may expose lowest buy offers, highest sell demand, DEX/swap sources, estimated gas, and paymaster estimates.
+
+Execution-related data shall not be presented as guaranteed executable pricing unless current availability is verified.
+
+### Directory scroll integration
+
+The directory shall conform to R-012/R-013: nested scrolling remains usable, does not trap users, hands off naturally at boundaries, preserves page/header behavior, and works with standard desktop input methods.
+
+### Directory explicitly undefined
+
+Exact layout, row height, columns, sorting, pagination, filtering, search, provider architecture, real-time model, execution integration, chart implementation, and mobile layout remain undefined.
+
+## R-024 — Discovery Section #2
+
+The second discovery section shall provide navigation into deeper AstroCrown areas after the primary market workspace without duplicating hero-card or directory information.
+
+Candidate destinations may include market, research, analytics, exchange/swap, knowledge, ecosystem, and NOVA-powered systems.
+
+Destinations shall be based on established information architecture and not invented merely to populate navigation.
+
+Exact number, destinations, visual composition, content, ordering, and responsive behavior remain undefined.
+
+## R-025 — Homepage Footer
+
+The footer shall provide supporting navigation, identity, legal/trust information, and applicable ecosystem links without competing with primary discovery and market workspace.
+
+Candidate information includes AstroCrown identity, navigation, legal/privacy/terms, contact/support, ecosystem links, attribution, and status/system information as applicable.
+
+Links shall only be presented when their destination and purpose are established.
+
+The footer shall be keyboard accessible, semantically structured, visually consistent, readable, non-redundant, and compatible with the homepage scroll model.
+
+## R-026 — Shared Data, Evidence, and Reuse Architecture
+
+The homepage shall avoid unnecessary duplication of data fetching, normalization, calculation, visualization logic, and evidence handling.
+
+Before adding a mechanism, evaluate whether an approved mechanism can provide the same data, calculation, visualization, interaction, provenance, or accessibility behavior.
+
+Where technically and operationally appropriate:
+
+**source → validation → normalization → derived calculation → reusable evidence/data → multiple consumers**
+
+Potential reusable inputs include:
+
+- BTC dominance → Market Data Bar + Influence Map + market classification;
+- sentiment data → Fear & Greed Consensus + historical sentiment research;
+- ETF flows → Influence Map + analytics + research;
+- sector performance → filters + Influence Map + market analysis;
+- normalized market data → directory + cards + analytics.
+
+These are reuse opportunities, not mandatory architecture.
+
+Data-bearing systems shall consider source identity, retrieval/source timestamps, freshness, transformation, methodology, confidence/limitations, errors, and licensing.
+
+## R-027 — Homepage Information Integrity and Trust
+
+The homepage shall avoid false impressions of certainty, freshness, completeness, causation, or execution capability.
+
+It shall:
+
+- distinguish source from derived data;
+- avoid unsupported causal claims;
+- identify materially relevant limitations;
+- avoid fabricated/placeholder values presented as live;
+- avoid incompatible source substitution;
+- avoid implying real-time freshness when data is delayed;
+- avoid presenting unavailable data as zero/neutral without approved semantic meaning;
+- avoid implying executable action unless availability is verified;
+- preserve provenance for important externally derived metrics.
+
+This applies especially to cards, market data, influence information, and execution-related directory information.
+
+## R-028 — Homepage Performance and Resource Efficiency
+
+The homepage shall provide a high-quality experience without unnecessary asset, script, dependency, network, or rendering cost.
+
+The implementation shall minimize unnecessary JavaScript/dependencies, duplicate requests, oversized media, long main-thread work, excessive reflow, and unnecessary animation; reuse assets where practical; use responsive asset delivery where beneficial; and remain usable when non-essential remote resources fail.
+
+Performance shall be evaluated using appropriate evidence rather than a single arbitrary score, including applicable Core Web Vitals and Lighthouse/PageSpeed measurements.
+
+## R-029 — Homepage Accessibility and Inclusive Interaction
+
+The homepage shall be evaluated against applicable WCAG 2.2 requirements and relevant WAI-ARIA guidance.
+
+Verification shall consider semantic structure, accessible names, heading hierarchy, keyboard operation, visible focus, contrast, text scaling/reflow, meaningful alternative text, non-color-only communication, motion preferences, dynamic announcements where genuinely necessary, interactive-state clarity, and usable error/empty states.
+
+The implementation shall prefer native HTML semantics over unnecessary ARIA.
+
+## R-030 — Homepage Security and Supply-Chain Baseline
+
+The homepage shall minimize executable code/dependencies; avoid client-side secrets; safely handle untrusted external data; avoid unsafe HTML insertion; use secure external-resource practices; review third-party dependencies/scripts and their trust implications; avoid unnecessary network destinations; preserve appropriate browser security controls; consider CSP and related controls when supported by deployment architecture; undergo applicable OWASP ASVS verification; and integrate applicable NIST SSDF practices.
+
+Controls shall be determined by actual architecture rather than mechanically copied from an external standard.
+
+## R-031 — Browser Compatibility and Progressive Degradation
+
+The homepage shall identify its supported desktop browser baseline before release.
+
+Prefer broadly supported platform capabilities when they adequately satisfy requirements.
+
+Advanced capabilities require compatibility evaluation and, where appropriate, graceful degradation. Essential content/navigation must not silently break in supported environments.
+
+Mobile refinement remains a later verification stage where device access is available, but desktop architecture shall not unnecessarily obstruct later responsive adaptation.
+
+## R-032 — Search, Account, and Wallet Trust Boundaries
+
+Where search, avatar/account, or wallet controls exist:
+
+- purpose shall be defined;
+- disconnected/loading/connected/unavailable/error states shall be distinguished where applicable;
+- authentication/account state shall not be inferred from visual presentation;
+- wallet UI shall not imply connection/signing authority without actual provider state;
+- external search data shall have an identified trust boundary;
+- external wallet/provider scripts require dependency/security evaluation.
+
+These controls remain governed by R-019.
+
+## R-033 — Motion, Animation, and Timing Integrity
+
+All animation shall have a product/communication purpose.
+
+The implementation shall support reduced-motion preferences, avoid unnecessary continuous motion, avoid obscuring essential information, avoid timing drift where elements form one coordinated presentation, avoid independent timers where a shared state/timeline is required, verify normal/reduced-motion states, and preserve usability when motion is reduced or disabled.
+
+## R-034 — Homepage Regression and Change Control
+
+A change to approved behavior shall identify affected requirements/subsystems, dependencies/data sources, expected behavioral change, regression risks, verification required, and resulting evidence.
+
+A change shall not silently invalidate an existing requirement. If intended behavior changes, the requirement or decision shall be explicitly updated before or with implementation.
+
+## R-035 — Homepage Release Readiness
+
+Before promotion to the regular/public website, applicable requirements shall have implementation state and verification evidence; findings shall be classified; blocking findings shall be resolved or explicitly accepted through applicable governance; relevant historical regression tests completed; applicable accessibility/security/performance checks completed; external evaluation criteria assessed where applicable; data-source/licensing issues resolved; no silent placeholder/live-data ambiguity; and no unexplained requirement-to-implementation deviation.
+
+Release readiness is a traceable evidence state, not a single score.
+
+## Additional Explicitly Undefined Product-Level Items
+
+In addition to subsystem-specific undefined items, these remain intentionally unresolved until evidence supports a decision:
+
+- exact homepage card geometry and data methodologies;
+- exact provider selection;
+- exact market aggregation architecture;
+- exact real-time/update and caching model;
+- exact data licensing model;
+- exact mobile implementation;
+- exact supported-browser matrix;
+- exact SEO information architecture beyond approved navigation;
+- exact structured-data strategy;
+- exact analytics/telemetry strategy;
+- exact privacy/consent model for future analytics;
+- exact third-party dependency set;
+- exact performance budgets where evidence has not established appropriate values;
+- exact internal quality metrics;
+- exact external evaluation schedule;
+- exact release thresholds beyond mandatory requirements;
+- exact implementation framework/component boundaries.
+
+These are not omissions to be silently resolved during coding.
+
+## Validated / Preserved Product Discoveries
+
+### D-007 — Requirements must preserve intent across development stages
+
+The requirements document preserves product intent and reasoning boundaries, not merely UI dimensions.
+
+### D-008 — Card purpose and methodology are separate decisions
+
+A card can have a defined user purpose while its calculation methodology remains intentionally undefined.
+
+### D-009 — Data aggregation is not automatically averaging
+
+A multi-source metric requires explicit normalization, weighting, aggregation, missing-source behavior, and semantic compatibility before an aggregation method is selected.
+
+### D-010 — Observed influence is not demonstrated causation
+
+Influence surfaces may summarize evidence associated with movement without asserting causation unless causal evidence exists.
+
+### D-011 — External evaluation is a quality input, not product purpose
+
+External standards/evaluators can reveal gaps, but their criteria must not silently override established product purpose.
+
+### D-012 — Verification quality is part of development quality
+
+A requirement that cannot be meaningfully verified should be reconsidered for clarity, observability, or testability rather than given an unsupported PASS.
+
+### D-013 — One validated data source may support multiple surfaces
+
+Where data can be fetched, validated, normalized, and reused without unnecessary complexity, reuse can reduce redundancy and improve consistency.
+
+### D-014 — Failure states are part of product behavior
+
+A data-bearing or interactive component is not fully specified until applicable missing, stale, unavailable, conflicting, boundary, and failure states are understood.
+
