@@ -2083,6 +2083,147 @@ This prevents unnecessary architectural dependence on a particular provider.
 
 A provider-specific restriction should therefore normally produce an **access constraint**, **source substitution investigation**, or **legal-review state**, rather than automatically producing a product-level prohibition unless the applicable legal analysis actually supports such a conclusion.
 
+
+### R-026C — Provider Interdictions, Anti-Automation Controls, and Access-State Evidence
+
+A provider's statement, banner, terms page, `robots.txt` entry, API refusal, HTTP response, CAPTCHA, JavaScript challenge, WAF rule, bot score, rate limit, IP restriction, authentication gate, session requirement, or other anti-automation mechanism is an **access-state observation** that must be recorded separately from the legal conclusion about the underlying information or intended use.
+
+A provider's explicit statement that a use is "not allowed" shall therefore not automatically be represented by AstroCrown as a definitive statement of applicable law.
+
+The opposite assumption is equally prohibited: a potentially applicable legal right or exception shall not automatically be represented as technical authorization to bypass a provider-controlled access mechanism.
+
+The system shall distinguish at least:
+
+- **Provider says no** — a provider has communicated a restriction.
+- **Technical access blocked** — the current acquisition attempt is technically prevented.
+- **Robots restriction observed** — a `robots.txt` rule requests crawler behavior restrictions.
+- **Automated-client challenge** — the service requires a browser/user challenge or other automated-traffic verification.
+- **Rate limited** — requests are being constrained by a rate-limit mechanism.
+- **Authentication required** — the intended resource requires credentials or an authenticated session.
+- **Access-control restriction** — a technical control limits access to a resource.
+- **Legal prohibition identified** — applicable law has been sufficiently established as prohibiting the specific intended action.
+- **Contractual/provider restriction identified** — an applicable agreement or legally relevant provider term governs the intended use.
+- **Legal status unresolved** — legal evidence is insufficient.
+- **Alternative acquisition path available** — the information objective can be pursued through another source/channel.
+
+### Provider interdiction is not automatically law
+
+The system shall not infer:
+
+**provider says prohibited → law prohibits it**
+
+nor:
+
+**law may permit it → provider must technically permit it**
+
+nor:
+
+**publicly visible → automated retrieval is authorized**
+
+nor:
+
+**robots.txt permits/disallows → complete legal authorization/prohibition has been established**
+
+RFC 9309, which standardizes the Robots Exclusion Protocol, explicitly describes robots.txt as rules that crawlers are requested to honor and states that the protocol is **not a form of access authorization**. Therefore a robots.txt observation must be recorded as its own access/operational state rather than being silently translated into a legal conclusion.  
+Source: https://www.rfc-editor.org/rfc/rfc9309.html
+
+Provider policies and technical controls remain operationally important even where they are not themselves legislation. They can determine whether a particular automated acquisition method works, whether access requires a different channel, whether a contractual relationship exists, whether a service will permit requests, and whether an intended implementation is operationally sustainable.
+
+### Anti-automation and access-control mechanisms
+
+Modern web services can distinguish automated clients and may present a challenge, rate-limit, block, or otherwise alter access.
+
+Current Cloudflare documentation, for example, describes WAF, Bot Management, rate limiting, interstitial challenge pages, JavaScript detections, bot scores, and other mechanisms that can hold a request before the destination is reached or challenge traffic identified as automated.  
+Sources:
+- https://developers.cloudflare.com/cloudflare-challenges/concepts/how-challenges-work/
+- https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/
+- https://developers.cloudflare.com/waf/custom-rules/use-cases/challenge-bad-bots/
+
+These mechanisms create genuine **technical/operational constraints** even though their existence does not, by itself, determine the legal status of accessing or using the underlying information.
+
+AstroCrown shall not treat anti-automation research as an invitation to defeat, circumvent, disable, or evade access controls.
+
+Where a route is challenged or blocked, investigate instead:
+
+1. whether an official API or public download exists;
+2. whether a documented non-API route is expressly available;
+3. whether the provider offers an authorized automated-access mechanism;
+4. whether the same underlying information is available from an original or independent source;
+5. whether manual verification is sufficient for the research objective;
+6. whether a different acquisition path provides equivalent or better evidence;
+7. whether the intended use requires legal or contractual review.
+
+A technical block may therefore increase acquisition cost or reduce operational feasibility without establishing that the information itself is legally unavailable.
+
+### Access-state evidence versus legal evidence
+
+For auditability, evidence should identify whether a finding came from:
+
+- legislation/regulation/case law;
+- an official government or standards publication;
+- provider terms/agreement;
+- provider documentation;
+- provider support statement;
+- `robots.txt`;
+- HTTP/network behavior;
+- an observed challenge/block/rate limit;
+- a documented API specification;
+- an independently tested runtime;
+- human observation;
+- another source.
+
+These evidence classes shall not be silently treated as equivalent.
+
+For example, an HTTP 403, CAPTCHA page, or bot challenge establishes an observed technical response. It does not, by itself, establish why the response occurred or whether the underlying use is legally prohibited.
+
+Likewise, a provider's "do not scrape" statement establishes a provider position. It does not, by itself, settle every question of statutory rights, contractual enforceability, jurisdiction, database rights, copyright exceptions, or other applicable law.
+
+### Access-path decision rule
+
+When a source is blocked or restricted, the next decision shall be based on the **information objective**, not on the desire to defeat the particular control.
+
+The evaluation should ask:
+
+**What information is actually required?**
+
+→ **What part of the provider's product supplies it?**
+
+→ **Can an original/independent source supply the same underlying information?**
+
+→ **Can a public file, feed, filing, blockchain, exchange endpoint, or other channel supply it?**
+
+→ **Is that channel technically accessible?**
+
+→ **What provider/contractual conditions apply?**
+
+→ **What legal basis or unresolved legal question applies?**
+
+→ **What provenance and reproducibility can be maintained?**
+
+This preserves the possibility of discovering new acquisition routes without treating technical circumvention as a normal engineering strategy.
+
+### Boundary-state rule for automated acquisition
+
+Automated acquisition shall recognize and preserve at least:
+
+- success;
+- empty result;
+- stale result;
+- changed schema;
+- partial result;
+- rate limited;
+- authentication required;
+- challenge presented;
+- blocked;
+- robots restriction observed;
+- terms/policy restriction observed;
+- network/tool failure;
+- provider unavailable;
+- alternative source selected;
+- legal review required.
+
+A system must not silently convert any of these states into an empty dataset, zero value, neutral result, or successful acquisition.
+
 ### Operational source registry candidate
 
 A future implementation should investigate a machine-readable source registry with fields such as:
@@ -2639,6 +2780,27 @@ A source may be free to view but paid to automate, free to automate but restrict
 
 "$0" must therefore be attached to the exact scope being evaluated.
 
+
+
+### D-031 — Site interdiction, technical blocking, and legal prohibition are distinct findings
+
+A provider statement, robots.txt directive, CAPTCHA, JavaScript challenge, WAF/bot-management decision, HTTP block, rate limit, or other technical mechanism may materially restrict AstroCrown's ability to acquire information, but none should automatically be represented as a complete legal conclusion.
+
+Conversely, a potentially applicable legal right does not automatically provide a technical means of access or authorize defeating a provider-controlled access mechanism.
+
+### D-032 — Anti-automation controls can make access more restrictive than the legal information question
+
+The legal status of an information use and the practical ability to acquire the information can diverge.
+
+A lawful information objective may nevertheless be operationally infeasible through a particular provider channel because the provider blocks automation, requires a challenge, limits requests, requires authentication, or does not offer a suitable machine-readable route.
+
+This should be recorded as an **access/operability constraint**, not silently converted into either a legal prohibition or an assertion that the information cannot be obtained elsewhere.
+
+### D-033 — Access-control observation needs provenance
+
+Observed technical behavior should be preserved with the acquisition environment, request/channel, timestamp, response state, and available evidence.
+
+This prevents a temporary block, research-tool limitation, or anti-bot response from becoming an undocumented permanent assumption.
 
 ## Additional Explicitly Undefined Product-Level Items
 
