@@ -2037,3 +2037,163 @@ Where data can be fetched, validated, normalized, and reused without unnecessary
 
 A data-bearing or interactive component is not fully specified until applicable missing, stale, unavailable, conflicting, boundary, and failure states are understood.
 
+## Active Hero-Card Candidate and Discovery Register
+
+### Status
+
+**Current state:** CANDIDATE / UNDER INVESTIGATION.
+
+This register preserves the current homepage hero-card discoveries that have been established during exploration but must not be interpreted as final approved implementation requirements merely because they are documented here.
+
+The preferred hero architecture remains **three cards**, with each card answering a different high-value user question:
+
+1. **How does the market feel?** → Fear & Greed Consensus
+2. **What is moving?** → Winners & Losers
+3. **What appears to be influencing movement?** → Top Influences / Influence Map
+
+The three-card structure is the current preferred direction. The detailed composition, data methodology, exact dimensions, provider selection, and implementation remain subject to evidence and verification.
+
+### Candidate Hero-Row Composition
+
+The current design discovery is that the hero row should remain a compact horizontal discovery layer rather than a vertical stack.
+
+Candidate visual/layout principles:
+
+- Cards should be sized from information density, readability, user behavior, retention/discovery value, action triggers, interaction efficiency, and available viewport space rather than arbitrary equal-width percentages.
+- The row should preserve meaningful background visibility toward the right side.
+- A current layout target under investigation is to preserve approximately **20% or more of the desktop viewport as intentional visual space between the right edge of the final card and the viewport edge**, subject to later visual/layout verification.
+- The hero-card region should retain a horizontal rounded/rectangular presentation; vertical card composition is not the current direction.
+- The left edge of the card row should remain aligned with the homepage's established content geometry.
+- The space retained to the right of the card row should help preserve visibility of the homepage's background/nebula composition rather than being treated as unused accidental space.
+
+These are candidate layout discoveries and shall not be promoted to fixed pixel dimensions or final proportions until evaluated against the actual homepage composition.
+
+### Candidate Interaction Pattern
+
+The current preferred interaction model is whole-card interaction rather than a conventional CTA-button model.
+
+Additional interaction discoveries to preserve:
+
+- The entire actionable card should communicate one coherent destination/action.
+- The lower arrowhead/chevron is a visual affordance associated with the card, not a separate competing CTA.
+- A candidate treatment places the arrowhead partly inside and partly outside the lower card boundary, using the card's fill so that it reads as part of the card rather than as an independent button.
+- The lower-border treatment may visually terminate around the crossing arrowhead rather than creating a conventional button/container separation.
+- Exact arrowhead geometry, border treatment, hover/pressed/focus treatment, and responsive behavior remain undefined pending implementation-independent evaluation.
+- Any visual affordance must have an equivalent accessible interaction for keyboard and assistive-technology users.
+
+### Card 1 — Fear & Greed Consensus: Additional Candidate Discoveries
+
+**Status:** CANDIDATE / UNDER INVESTIGATION.
+
+Potential information hierarchy remains:
+
+- consensus sentiment;
+- individual provider observations;
+- agreement;
+- spread;
+- evidence-based directional/change insight;
+- methodology access.
+
+Candidate source set remains:
+
+- Alternative.me;
+- CoinMarketCap;
+- CoinGecko;
+- CFGI;
+- additional publicly accessible sources discovered during future research.
+
+For methodology comparison, established market interfaces including **TradingView** and **Binance** may also be inspected as reference systems. Reference comparison does not make them approved data providers for the consensus calculation.
+
+The candidate should make it possible to distinguish provider observations from the derived consensus and to inspect how provider methodologies differ.
+
+A **$0 external-data-acquisition target** may be investigated for the prototype where technically, legally, and operationally feasible. Cost is an evaluation criterion, not a presumption that every source is free or unrestricted.
+
+Previously discussed example numerical scores are exploratory examples only and shall not be treated as requirements, historical facts, or fixed test values unless independently verified and explicitly adopted.
+
+### Card 2 — Winners & Losers: Additional Candidate Discoveries
+
+**Status:** CANDIDATE / UNDER INVESTIGATION.
+
+The current preferred compact composition remains:
+
+- Winner information;
+- Loser information;
+- Price Change;
+- Volume Change;
+- compact line/mini-chart relationship.
+
+Additional visual candidate:
+
+- positive and negative mover states may use distinct semantic treatments (for example, green/positive and red/negative) supplemented by text/icon semantics so that meaning is not communicated by color alone;
+- short broken separators may be used to preserve compact grouping without creating unnecessary full borders;
+- a generic directional arrow may serve as a visual cue where it does not compete with the whole-card interaction model.
+
+The exact visual treatment is not approved and remains subject to accessibility, contrast, readability, and user-task evaluation.
+
+The ranking methodology remains explicitly undefined until timeframe, eligible universe, minimum liquidity/volume, outlier handling, duplicate/wrapped-asset handling, missing/stale-data behavior, and update cadence are established and tested.
+
+### Card 3 — Top Influences / Influence Map: Additional Candidate Discoveries
+
+**Status:** CANDIDATE / UNDER INVESTIGATION.
+
+The current direction is to express **measurable influence dimensions and evidence-backed themes/categories**, not to claim proven causality.
+
+Candidate dimensions currently preserved include:
+
+- Trend;
+- Capital Activity;
+- Derivatives;
+- Whale Activity;
+- ETF Flow;
+- News;
+- Regulation;
+- Technology;
+- Macro;
+- Narrative.
+
+For an initial prototype, investigation may prioritize approximately **4–5 dimensions with sufficiently accessible, measurable, and reproducible data**, including a $0-cost acquisition target where feasible, rather than assuming all candidate dimensions must be implemented simultaneously.
+
+This narrowing is a prototype investigation strategy, not a final exclusion of the remaining dimensions.
+
+Category/theme relationships remain an important candidate because they can connect the influence system to the homepage directory taxonomy. Examples already identified include:
+
+- Capital Activity → DeFi;
+- Technology → AI;
+- News → Gaming;
+- Macro → BTC;
+- Regulation → Payments.
+
+Such relationships must remain evidence-bearing associations or observed influence relationships unless sufficient evidence exists for a stronger causal claim.
+
+Individual tokens may appear when they are the appropriate evidence-bearing entity, but prominent-token selection alone must not become the definition of market influence.
+
+### Preserved Alternative and Predecessor Candidates
+
+The following concepts remain preserved as useful knowledge even though they are not currently the preferred standalone third hero card:
+
+- **TVL Growth** — retained as a potential evidence input to broader capital-activity/influence analysis.
+- **Sector Rotation** — retained as a potential influence/category/directory relationship.
+- **Wallet / Giant Flows** — retained as a potential evidence input where sufficiently verifiable.
+- **Market Drivers** — retained as a predecessor framing for the influence problem.
+- **Why It's Moving** — retained as a user-question framing and explanatory objective, while avoiding an automatic causal claim.
+- **Investigative / AI-assisted market analysis** — retained as a future research/intelligence opportunity or deeper destination rather than automatically increasing homepage-card complexity.
+
+Preservation of these concepts does not imply rejection of their future use. Their status may be promoted, merged, deferred, or rejected later based on evidence and compatibility analysis.
+
+### Candidate Promotion Safeguard
+
+No item in this register shall become an approved homepage requirement solely because it appears in the current candidate state.
+
+Promotion should continue through:
+
+**Discovery → Candidate → Evidence / Research → Composition / Methodology → Compatibility → Reuse / Redundancy Analysis → Verification → Decision → Approved Requirement or Preserved Alternative → Implementation → Testing → Evidence**
+
+This register exists to prevent loss of newly discovered homepage knowledge while preserving the distinction between **current direction**, **candidate requirement**, and **approved requirement**.
+
+### Continuity and Historical Preservation
+
+The current homepage specification remains a living knowledge-preservation artifact.
+
+New homepage discoveries should be added without deleting or rewriting historical knowledge merely to make the document shorter.
+
+Historical backups remain read-only knowledge assets. They must not be altered, overwritten, or deleted during this update cycle.
