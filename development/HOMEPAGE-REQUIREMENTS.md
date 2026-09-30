@@ -2802,6 +2802,227 @@ Observed technical behavior should be preserved with the acquisition environment
 
 This prevents a temporary block, research-tool limitation, or anti-bot response from becoming an undocumented permanent assumption.
 
+
+## Homepage Development Methodology and Prompt-Efficiency Discoveries
+
+This section preserves development-methodology discoveries that directly affect the completeness, efficiency, auditability, continuity, source research, and quality of the first homepage development task.
+
+These methodology discoveries are preserved here intentionally so that the homepage requirements remain the concentrated working source of truth during this first development cycle. They are not automatically approved product requirements merely because they are documented here.
+
+### Methodology principle
+
+Treat the working prompt and development workflow as part of the development architecture when they materially affect:
+
+- what is inspected;
+- what is preserved;
+- what is assumed;
+- what is verified;
+- which tools or sources are considered;
+- how conflicting evidence is handled;
+- whether discovery is separated from decision;
+- whether continuity survives across conversations;
+- whether important research is lost or unnecessarily repeated.
+
+### M-001 — Source of truth first
+
+Before making a substantive conclusion about homepage repository content:
+
+**identify the authoritative source → inspect it directly → establish its current version/state → reason from that evidence**
+
+Do not reconstruct repository state from memory when the source of truth is accessible.
+
+### M-002 — Capability/tool availability before claiming impossibility
+
+Before stating that a repository, connector, external source, or capability is unavailable:
+
+**inspect available tools/connectors → identify the relevant action → attempt the supported route → classify the result precisely**
+
+Distinguish, where applicable:
+
+- unavailable;
+- inaccessible;
+- unauthorized;
+- unsupported;
+- blocked;
+- not found;
+- temporarily failing;
+- environment-limited;
+- genuinely unavailable.
+
+### M-003 — Current or niche research requires current evidence
+
+When a homepage decision depends on information that may have changed or is specialized:
+
+**search current authoritative sources → compare relevant sources → record date/version → preserve limitations**
+
+Do not convert stale knowledge into current operational fact.
+
+### M-004 — Preserve uncertainty explicitly
+
+Do not fill information gaps with plausible assumptions.
+
+Use explicit states such as:
+
+- candidate;
+- unresolved;
+- blocked;
+- unknown;
+- not applicable;
+- verified;
+- superseded.
+
+### M-005 — Separate discovery from approval
+
+A useful discovery should be preserved before deciding whether it becomes:
+
+- an approved requirement;
+- a candidate requirement;
+- a design/implementation decision;
+- a reusable capability;
+- a rejected approach;
+- a deferred opportunity.
+
+Do not delete a discovery because the immediate implementation chooses another path.
+
+### M-006 — Investigate the information objective before the preferred mechanism
+
+When a desired capability is blocked, restricted, expensive, or unavailable through one mechanism:
+
+**define the information objective → identify its underlying information → enumerate acquisition paths → compare sources → evaluate technical/legal/contractual status → determine whether a derived result can be constructed**
+
+Do not let the availability of one API define the boundary of the homepage information capability.
+
+### M-007 — Separate legal analysis from access analysis
+
+Treat independently:
+
+**what applicable law permits**
+
+**what a provider contractually permits or restricts**
+
+**what the provider technically exposes**
+
+**what anti-automation controls permit operationally**
+
+**what the research environment can retrieve**
+
+**what the intended AstroCrown runtime can retrieve**
+
+A disagreement in one layer does not automatically resolve another.
+
+### M-008 — Preserve provenance in synthesis
+
+For derived information preserve, where applicable:
+
+**source → observation → transformation → calculation → synthesis → result**
+
+Record source identity, timestamps, methodology, freshness, dependencies, conflicts, and uncertainty.
+
+### M-009 — Search for complementary sources, not only substitutes
+
+When one source fails, investigate:
+
+- original/first-party sources;
+- independent aggregators;
+- public archives;
+- downloadable datasets;
+- official filings;
+- protocol-native data;
+- human-verifiable public evidence.
+
+The objective is not always to replace one provider with an equivalent provider. Complementary evidence may be more valuable.
+
+### M-010 — Use evidence before optimization
+
+Do not prematurely optimize architecture, code, data flows, prompts, or visual composition before the relevant requirement and evidence are understood.
+
+Preserve candidates and rejected alternatives when they contain reusable reasoning.
+
+### Prompt-efficiency pattern
+
+For substantial homepage work, the working prompt should make the following explicit:
+
+**Objective** — what is being solved.
+
+**Source of truth** — which repository/document/version is authoritative.
+
+**Mode** — audit only, research only, candidate analysis, or authorized implementation.
+
+**Preservation constraints** — what must not be deleted, simplified, overwritten, or silently reinterpreted.
+
+**Evidence expectations** — what facts require current verification.
+
+**Tool expectations** — which available tools/connectors should be inspected and attempted before declaring a limitation.
+
+**Status model** — which items are approved, candidate, unresolved, blocked, historical, deferred, or rejected.
+
+**Decision boundary** — what may be concluded now and what must remain open.
+
+**Deliverable** — what exact artifact or evidence should be produced.
+
+This structure reduces repeated clarification and prevents the working method from silently changing as the conversation grows.
+
+### Homepage continuity pattern
+
+For a new development conversation, the working prompt should preferably identify:
+
+- repository;
+- source-of-truth files;
+- relevant historical state;
+- current objective;
+- established conventions;
+- current candidate/decision state;
+- known unresolved questions;
+- preservation constraints;
+- allowed modification scope;
+- required verification;
+- next intended stage.
+
+The prompt should not rely on model memory when the authoritative artifact can state these facts explicitly.
+
+### Handoff pattern
+
+A substantial homepage-development handoff should preserve:
+
+**Objective → verified facts → discoveries → decisions → assumptions → unresolved questions → risks → sources → reusable assets → methodology improvements → repository state → next actions**
+
+This makes continuity an explicit artifact rather than a memory assumption.
+
+### Avoided failure patterns
+
+The homepage workflow should avoid:
+
+- claiming repository access is unavailable before inspecting available connectors;
+- treating memory as more authoritative than the repository;
+- silently turning a candidate into a requirement;
+- silently turning a provider policy into law;
+- silently turning a technical block into source unavailability;
+- silently turning a legal possibility into technical authorization;
+- replacing unknown values with zero/neutral values;
+- using source-count as a substitute for evidence independence;
+- optimizing for benchmark scores instead of product purpose;
+- compressing away rejected candidates or useful uncertainty;
+- treating a research-tool failure as proof of application-runtime failure.
+
+### M-011 — Continuous methodology improvement
+
+When a repeated development problem is solved by a better workflow, preserve:
+
+1. the original failure mode;
+2. the observed cause;
+3. the improved method;
+4. evidence that the method improves the workflow;
+5. applicability and limitations;
+6. whether the method should become an established repository convention.
+
+A methodology improvement remains a candidate practice until sufficiently established. If later promoted to a repository convention, its historical origin should remain preserved.
+
+### Concentration rule for the first homepage development task
+
+During the first real homepage-development cycle, homepage-specific requirements, candidate discoveries, source/access findings, evidence methodology, relevant development methodology, prompt-efficiency discoveries, unresolved questions, and related decision boundaries should remain traceable from this document without requiring a separate discovery archive to understand the current task.
+
+A separate cross-project discovery system may be reconsidered after the first homepage development cycle if evidence shows that it improves rather than dilutes concentration and continuity.
+
 ## Additional Explicitly Undefined Product-Level Items
 
 In addition to subsystem-specific undefined items, these remain intentionally unresolved until evidence supports a decision:
