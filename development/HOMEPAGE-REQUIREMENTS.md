@@ -1898,9 +1898,364 @@ These are reuse opportunities, not mandatory architecture.
 
 Data-bearing systems shall consider source identity, retrieval/source timestamps, freshness, transformation, methodology, confidence/limitations, errors, and licensing.
 
+
+### R-026A — External Information Access, Legal Status, and Multi-Source Evidence Synthesis
+
+The homepage data architecture shall distinguish **information existence**, **technical accessibility**, **lawful use**, **provider permission/contractual terms**, **data licensing**, and **redistribution/display conditions** rather than collapsing them into one status.
+
+AstroCrown's purpose of educating users, improving understanding, comparing observations, and synthesizing evidence is a material product-purpose factor, but it shall not be treated as an automatic legal exemption. The applicable legal analysis depends on the information, use, jurisdiction, access method, contractual relationship, and other facts.
+
+Likewise, a provider's terms or policy shall not automatically be represented as legislation or as the complete statement of what applicable law permits or prohibits.
+
+The system shall therefore distinguish at least:
+
+- **Publicly visible** — information can be viewed by a person through a public interface.
+- **Technically accessible** — information can be obtained by an identified technical mechanism.
+- **API accessible** — an identified API/endpoint can return the information under its current access conditions.
+- **Free-tier accessible** — a current free/public access route has been verified.
+- **Paid/licensed access** — access requires a paid plan or separate license.
+- **Provider-authorized use** — a provider explicitly grants the relevant use.
+- **Contractual restriction** — an applicable agreement may restrict the intended use.
+- **Provider policy/recommendation** — the provider communicates a restriction or preference whose legal/contractual status still requires interpretation.
+- **Potential statutory/legal basis** — an applicable law may independently permit or protect the proposed use.
+- **Unresolved legal status** — available evidence is insufficient to determine the legal status responsibly.
+- **Unavailable / unsupported** — the required data cannot currently be obtained through an identified lawful/usable route.
+- **Alternative-source required** — the information objective remains valid but must be sourced elsewhere.
+
+These states are intentionally separate. In particular:
+
+**publicly visible ≠ automatically machine-accessible**
+
+**technically accessible ≠ automatically lawful to reuse**
+
+**provider prohibition ≠ automatically a statement of statutory law**
+
+**provider authorization ≠ automatically permission to do something prohibited by law**
+
+**educational purpose ≠ automatically fair use/fair dealing or another exception**
+
+**one source's restriction ≠ automatically a restriction on the underlying factual information from every other lawful source**
+
+### Legal and contractual boundary principle
+
+AstroCrown development shall investigate the applicable legal framework before labeling an external-data use as either permitted or prohibited.
+
+For every material external-data use, consider as applicable:
+
+1. the underlying information and whether it is factual, expressive, analytical, compiled, branded, or otherwise protected;
+2. the relevant jurisdiction(s);
+3. copyright and related rights;
+4. database rights where applicable;
+5. trademark and branding considerations where applicable;
+6. privacy/data-protection requirements where applicable;
+7. computer-access, anti-circumvention, or technical-access restrictions where applicable;
+8. financial-market or other regulatory requirements where applicable;
+9. contractual terms that actually govern AstroCrown's access/use;
+10. applicable statutory exceptions, defenses, permissions, or other legal rights;
+11. the exact proposed use, including display, quotation, transformation, aggregation, caching, analysis, teaching, research, redistribution, or creation of a derived result;
+12. whether the proposed use substitutes for, competes with, or materially republishes the provider's protected product/content;
+13. whether a lower-risk alternative source can provide the same underlying factual observation.
+
+U.S. fair-use doctrine and India's statutory fair-dealing framework demonstrate why educational, research, criticism, review, or similar purposes can be legally relevant without creating a universal permission. The U.S. Copyright Office describes fair use as a fact-specific doctrine and identifies teaching, scholarship, and research as examples of uses that may qualify; India's Copyright Office identifies fair dealing for private/personal use including research, criticism/review, and reporting of current events under Section 52. These examples shall be treated as jurisdiction-specific legal evidence, not as a universal AstroCrown authorization.
+
+Sources:
+- https://copyright.gov/fair-use/
+- https://copyright.gov.in/Copyright_Act_1957/chapter_xi.html
+
+Where AstroCrown is intended for users or operations spanning multiple jurisdictions, the jurisdictional basis of a proposed use shall not be silently assumed. A right or exception in one jurisdiction does not automatically establish the same right everywhere.
+
+### Facts, expression, database, and derived information
+
+The evidence layer shall distinguish the **underlying fact or observation** from the provider's **expression or presentation** of that information.
+
+Potentially distinct objects include:
+
+- raw factual observations such as a reported price, timestamp, volume, open interest, or public event;
+- a provider's written explanation;
+- provider-created labels, rankings, classifications, or scores;
+- provider-generated charts, graphics, interfaces, or visual compositions;
+- databases or compilations and their original selection/arrangement;
+- proprietary methodology;
+- normalized or derived metrics;
+- AstroCrown's own calculations, transformations, comparisons, classifications, and explanations;
+- trademarks, logos, and other provider identifiers.
+
+The system shall not silently treat these categories as legally interchangeable.
+
+India's official copyright guidance states that copyright protects original expression rather than ideas and notes that factual information is generally not protected as such; U.S. case law likewise distinguishes uncopyrightable facts from original selection/arrangement. These sources are legal background, not a conclusion about any particular AstroCrown use.
+
+Sources:
+- https://copyright.gov.in/documents/handbook.html
+- https://www.law.cornell.edu/supremecourt/text/499/340
+
+### Multi-source evidence synthesis
+
+Where lawful and technically feasible, AstroCrown should investigate using multiple heterogeneous sources rather than selecting one provider as the sole authority.
+
+The intended conceptual architecture is:
+
+**multiple external observations**
+→ **provenance capture**
+→ **validation**
+→ **normalization**
+→ **semantic compatibility check**
+→ **source-independence / overlap analysis**
+→ **conflict detection**
+→ **evidence evaluation**
+→ **synthesis / derivation**
+→ **uncertainty-aware result**
+→ **reusable evidence**
+
+The objective is not simply to maximize the number of inputs.
+
+The system shall consider whether apparently independent sources actually depend on the same upstream exchanges, datasets, methodology, or reporting chain. Correlated sources shall not be treated as fully independent confirmations merely because they have different brand names.
+
+Agreement may strengthen support for an observation, but:
+
+**agreement ≠ truth**
+
+**majority vote ≠ correctness**
+
+**more sources ≠ automatically better evidence**
+
+Disagreement is itself valuable information and shall be preserved when materially relevant.
+
+A source contributing unique evidence shall not be discarded merely because no other source confirms it.
+
+### Source-specific feasibility and access snapshot
+
+The following is a **research snapshot dated 2026-09-30**. It is evidence for planning and discovery, not a permanent license determination. Provider documentation, pricing, APIs, policies, product terms, regional availability, and legal circumstances can change and must be re-verified before implementation or release.
+
+| Source / system | Current technical access finding | Current provider-access posture observed | Candidate AstroCrown use | Operational implication |
+|---|---|---|---|---|
+| **CoinMarketCap** | Current API documentation advertises a keyless public trial endpoint and a free Basic plan with 15K monthly call credits / 50 requests per minute; higher plans provide broader access. | Current commercial terms provide a license for specified use on one product and permit temporary storage necessary to make content available, while restricting standalone redistribution and automated scraping/copying outside the licensed scope. | Market listings, quotes, rankings, sentiment/market observations, comparison and derived calculations where the applicable plan/terms permit. | Technically accessible for prototype exploration; exact product/user scenario, caching, display, derived-data treatment and redistribution boundaries require verification against the current agreement. |
+| **CoinGecko** | Public API access exists; current documentation describes a Demo/public tier and commercial API plans. The current public-plan documentation states a rate limit of 5–15 calls/minute and 30 calls/minute for a registered Demo account. | Current commercial documentation permits commercial products on specified plans with prominent CoinGecko attribution but prohibits selling/renting/sub-licensing/re-distributing/syndicating raw API access/data under standard terms; custom licensing is described for redistribution/white-label cases. | Broad market data, asset/exchange information, market categories, sentiment-related observations, reusable normalized market data. | Strong prototype candidate; attribution and raw-data redistribution constraints must be treated as explicit operational metadata, not inferred away. |
+| **CoinGlass** | Current API documentation exposes extensive Futures, Spot, Options, ETF, On-Chain and Index endpoints; API access uses an API key. | Current pricing shows Hobbyist/Startup plans marked personal use and Standard/Professional marked commercial use, with higher endpoint/rate-limit/history capacity. Current site Terms state commercial use without authorization and bulk scraping/extraction are restricted. | Derivatives, open interest, funding, liquidations, ETF, on-chain, whale/institutional-related signals and other advanced market evidence where the applicable plan and terms permit. | Highly valuable but not a $0 commercial API assumption. Commercial acquisition cost, rate limits and permitted downstream use must be recorded before dependence. |
+| **Binance market APIs** | Current Binance developer documentation identifies multiple spot market-data endpoints with security type **NONE**, including ticker, depth, klines, trades and exchange information through the documented market-data API infrastructure. Other endpoint families require API keys. | Technical API accessibility is clear for the identified public market-data endpoints. Binance Terms and product terms govern use of Binance services/IP and must be reviewed separately from the existence of public factual market observations. | Exchange-native spot market data, order-book/trade observations, symbols, market status and cross-checking of other data. | Strong technical source candidate for raw market observations; maintain separate technical-access and legal/contractual-status fields. |
+| **TradingView** | TradingView is readily accessible as a human-facing market-analysis reference system and provides extensive market information and analytical interfaces. | Current TradingView policy states that its market data/content is licensed for display-only use and expressly prohibits non-display uses including machine-driven processing and products/services based on its content, subject to the exact current policy/agreements. | Human benchmark/reference, methodology comparison, UI/analysis reference, discovery of candidate information objectives; direct machine ingestion only where an independently verified lawful and contractually permitted route exists. | Do not silently use TradingView page output as a backend data feed. Prefer original/alternative lawful sources for the same underlying observations where available. |
+| **Alternative.me Fear & Greed / Crypto API** | Current public API exposes latest and historical crypto data and a Fear & Greed endpoint; current API documentation specifies a 60 requests/minute limit and five-minute update cadence for relevant endpoints. | Current Fear & Greed page says commercial use is allowed with attribution next to the displayed data; the broader API page describes commercial use as permitted and asks for project reference while describing it as optional. Because wording differs across the provider's current pages, the exact use/attribution rule must be rechecked at implementation. | Fear & Greed source observation, historical sentiment, methodology comparison and multi-source consensus. | Excellent candidate for $0 prototype testing, subject to current endpoint behavior, attribution interpretation, and availability verification. |
+
+Research sources for the snapshot:
+
+- CoinMarketCap API: https://coinmarketcap.com/api/ ; https://pro.coinmarketcap.com/user-agreement-commercial/
+- CoinGecko API: https://www.coingecko.com/en/api ; https://support.coingecko.com/hc/en-us/articles/4538771776153-What-is-the-rate-limit-for-CoinGecko-API-public-plan ; https://support.coingecko.com/hc/en-us/articles/16760512207257-What-Are-the-Differences-Between-Commercial-and-Custom-Licenses
+- CoinGlass API: https://docs.coinglass.com/reference/endpoint-overview ; https://www.coinglass.com/pricing ; https://www.coinglass.com/terms
+- Binance developer/API documentation: https://developers.binance.com/en/docs/products/derivatives-trading-portfolio-margin-pro/general-info ; https://www.binance.com/en-AE/support/faq/detail/865f0fe3cb6a4d73a21609b3b7326f31
+- TradingView policy: https://www.tradingview.com/policies/
+- Alternative.me: https://alternative.me/crypto/api/ ; https://alternative.me/crypto/fear-and-greed-index/
+
+### Important interpretation of the source snapshot
+
+The table shall not be converted into a simplistic provider ranking.
+
+A source may be:
+
+- technically easy but legally/contractually narrow;
+- legally usable for one purpose but technically expensive;
+- rich in unique information but unsuitable for automated ingestion;
+- valuable as a methodology reference but not as a machine-data provider;
+- available through a public page but not through a reusable API;
+- usable for display but not for backend processing;
+- licensed for integrated product use but not standalone redistribution;
+- available under different conditions by region, plan, product, or user type.
+
+The architecture should therefore evaluate **source suitability for the exact information objective**, not assign a permanent global "allowed" or "not allowed" status to an entire provider.
+
+### Source selection and substitution rule
+
+When a desired observation is restricted through one provider, AstroCrown should not automatically discard the information objective.
+
+Instead investigate:
+
+**What exact information do we need?**
+
+→ **What is its underlying factual/analytical nature?**
+
+→ **Which original or alternative sources can provide it?**
+
+→ **Can those sources be accessed and used lawfully?**
+
+→ **Can multiple sources cross-check it?**
+
+→ **Can AstroCrown derive the required result itself?**
+
+This prevents unnecessary architectural dependence on a particular provider.
+
+A provider-specific restriction should therefore normally produce an **access constraint**, **source substitution investigation**, or **legal-review state**, rather than automatically producing a product-level prohibition unless the applicable legal analysis actually supports such a conclusion.
+
+### Operational source registry candidate
+
+A future implementation should investigate a machine-readable source registry with fields such as:
+
+- source_id;
+- provider;
+- source_category;
+- information_type;
+- exact_endpoint_or_url;
+- acquisition_method;
+- authentication_requirement;
+- plan/tier;
+- rate_limit;
+- update_frequency;
+- historical_depth;
+- geographic/region constraints;
+- public_visibility;
+- technical_access_status;
+- provider_permission_status;
+- contractual_status;
+- known statutory/legal_basis;
+- legal_review_status;
+- attribution_requirement;
+- display_requirement;
+- transformation_allowed/status;
+- caching_allowed/status;
+- redistribution_allowed/status;
+- raw_data_retention_status;
+- downstream_use_status;
+- source_of_source/upstream dependencies;
+- provenance requirements;
+- fallback source;
+- last_verified_at;
+- verification_evidence;
+- uncertainty/notes.
+
+The purpose is to prevent engineers, humans, or AI systems from inferring legal or operational permissions from incomplete metadata.
+
+### Recommended status vocabulary for machine reasoning
+
+Where practical, source and legal status should use explicit values rather than ambiguous Boolean fields such as **allowed=true** or **allowed=false**.
+
+Candidate controlled values include:
+
+**Technical access**
+
+**PUBLIC_PAGE**
+
+**PUBLIC_API**
+
+**REGISTERED_API**
+
+**PAID_API**
+
+**AUTHENTICATED_API**
+
+**MANUAL_ONLY**
+
+**DISPLAY_ONLY**
+
+**UNAVAILABLE**
+
+**UNKNOWN**
+
+**Provider/contract status**
+
+**PROVIDER_AUTHORIZED**
+
+**LICENSED_FOR_DEFINED_USE**
+
+**CONTRACTUAL_RESTRICTION**
+
+**PROVIDER_POLICY_RESTRICTION**
+
+**NO_PROVIDER_STATEMENT_FOUND**
+
+**UNKNOWN**
+
+**Legal status**
+
+**LEGAL_BASIS_IDENTIFIED**
+
+**POTENTIAL_EXCEPTION_OR_RIGHT**
+
+**LEGAL_REVIEW_REQUIRED**
+
+**CONTRACT_REVIEW_REQUIRED**
+
+**JURISDICTION_DEPENDENT**
+
+**PROHIBITED_AFTER_REVIEW**
+
+**UNRESOLVED**
+
+**NOT_APPLICABLE**
+
+These values must not be interpreted as interchangeable.
+
+In particular, **PROVIDER_POLICY_RESTRICTION** must not be automatically converted to **PROHIBITED_AFTER_REVIEW**, and **POTENTIAL_EXCEPTION_OR_RIGHT** must not be automatically converted to **LEGAL_BASIS_IDENTIFIED**.
+
+### Legal-review escalation rule
+
+Escalate for qualified legal review when the intended implementation would materially involve:
+
+- large-scale automated extraction or copying;
+- substantial reproduction of provider content;
+- copying or redistributing provider databases/feeds;
+- commercial redistribution or white-label use;
+- use of restricted data in a new commercial product;
+- jurisdictionally uncertain statutory exceptions;
+- access-control circumvention;
+- protected personal information;
+- financial/regulatory decision-making;
+- disagreement between provider contract terms and a claimed statutory right;
+- conflicting legal requirements between jurisdictions;
+- any source for which the evidence is insufficient to responsibly classify the intended use.
+
+The absence of legal review shall not be recorded as proof that the use is unlawful. It shall be recorded as **UNRESOLVED / LEGAL REVIEW REQUIRED** until the relevant question is answered.
+
+### Educational-use principle
+
+AstroCrown's educational purpose should be preserved as part of the intended use because it can materially affect legal analysis, transformative character, public benefit, and information design.
+
+However, educational purpose shall never be used as a shortcut for:
+
+- assuming all copying is lawful;
+- assuming commercial context is irrelevant;
+- assuming provider terms have no contractual significance;
+- assuming database rights do not exist;
+- assuming attribution cures every legal issue;
+- assuming transformation makes every use lawful.
+
+The document must therefore preserve both propositions simultaneously:
+
+**Education can matter legally.**
+
+**Education does not automatically authorize every use.**
+
+### Homepage hero-card application
+
+The multi-source architecture directly applies to the candidate hero cards.
+
+**Fear & Greed Consensus** should investigate multiple independently sourced observations and derive a transparent consensus rather than selecting one provider as the unquestioned truth.
+
+**Winners & Losers** should investigate whether price movement can be enriched with volume, liquidity, derivatives, exchange, category, and other evidence from lawful sources.
+
+**Top Influences / Influence Map** should investigate cross-source evidence across capital activity, derivatives, ETF flows, whale activity, news, regulation, technology, macro, narrative, and other measurable dimensions.
+
+In all three cases, the system should preserve source provenance and source-status metadata so that a temporary loss of one provider does not silently change the meaning of the derived result.
+
+### Re-verification rule
+
+External-source facts in this section are time-sensitive operational discoveries.
+
+Before implementation, acquisition, or release:
+
+- re-open the current provider documentation and applicable terms;
+- verify exact endpoint behavior and authentication;
+- verify current plan/price/rate limits;
+- verify regional availability where relevant;
+- verify attribution and display conditions;
+- verify caching/retention/redistribution conditions;
+- verify that the proposed use remains within the documented or legally established basis;
+- record the verification evidence and date.
+
+Historical source snapshots should be preserved as historical discoveries even when current provider rules later change.
+
+
 ## R-027 — Homepage Information Integrity and Trust
 
-The homepage shall avoid false impressions of certainty, freshness, completeness, causation, or execution capability.
+The homepage shall avoid false impressions of certainty, freshness, completeness, causation, execution capability, or legal permission.
+
+It shall distinguish provider terms/policies from applicable law and shall not silently treat either provider restrictions or claimed legal exceptions as definitive without the relevant evidence.
 
 It shall:
 
@@ -1975,9 +2330,87 @@ A change shall not silently invalidate an existing requirement. If intended beha
 
 ## R-035 — Homepage Release Readiness
 
-Before promotion to the regular/public website, applicable requirements shall have implementation state and verification evidence; findings shall be classified; blocking findings shall be resolved or explicitly accepted through applicable governance; relevant historical regression tests completed; applicable accessibility/security/performance checks completed; external evaluation criteria assessed where applicable; data-source/licensing issues resolved; no silent placeholder/live-data ambiguity; and no unexplained requirement-to-implementation deviation.
+Before promotion to the regular/public website, applicable requirements shall have implementation state and verification evidence; findings shall be classified; blocking findings shall be resolved or explicitly accepted through applicable governance; relevant historical regression tests completed; applicable accessibility/security/performance checks completed; external evaluation criteria assessed where applicable; data-source technical access, provider permission/contract, licensing, and legal-review status resolved or explicitly governed; no silent placeholder/live-data ambiguity; and no unexplained requirement-to-implementation deviation.
 
 Release readiness is a traceable evidence state, not a single score.
+
+
+### D-015 — External-source capability is not equivalent to provider ownership
+
+A higher-level information system does not need to reproduce every underlying database, data center, analytical subsystem, or proprietary infrastructure of every specialized provider in order to potentially produce a stronger user-facing result.
+
+AstroCrown can investigate consuming multiple lawful external observations and synthesizing them into a new evidence layer.
+
+The relevant benchmark is therefore not only raw data ownership or dataset size, but the quality of the resulting evidence-backed answer for a defined user question.
+
+### D-016 — Legal right, provider permission, contract, and technical access are separate dimensions
+
+Provider terms, provider policy, contractual restrictions, statutory rights/exceptions, and technical accessibility are distinct evidence objects.
+
+None should be silently substituted for another.
+
+A provider saying "not permitted" does not, by itself, establish the complete content of applicable law.
+
+A claimed statutory right does not, by itself, prove that a particular access method, contract, database, or jurisdictional situation is lawful.
+
+### D-017 — Educational purpose is relevant but not self-executing
+
+AstroCrown's educational purpose can be an important fact in evaluating the legality and character of a proposed use, but it cannot be used as a universal shortcut to permission.
+
+The system should preserve this nuance explicitly to prevent both unnecessary self-restriction and unjustified assumptions of legality.
+
+### D-018 — Public visibility, machine access, and reuse must not be conflated
+
+Information can be publicly visible while a particular API, automated-access route, or redistribution mechanism is restricted.
+
+Conversely, an API can be technically accessible while downstream use is limited by contract, licensing, law, or plan.
+
+These distinctions should become part of source metadata and machine reasoning.
+
+### D-019 — Multi-source synthesis changes the competitive benchmark
+
+A competitor's specialized depth does not necessarily limit AstroCrown's resulting information quality if AstroCrown can lawfully combine complementary observations from multiple specialized systems.
+
+The appropriate future benchmark is:
+
+**individual-source result vs AstroCrown multi-source result for the same defined user question**
+
+rather than simply:
+
+**AstroCrown-owned raw dataset vs competitor-owned raw dataset**.
+
+This does not guarantee superiority; it creates a testable hypothesis.
+
+### D-020 — Source diversity requires upstream-independence analysis
+
+Different providers can report the same upstream information.
+
+Therefore source count must not be treated as evidence count without considering shared exchanges, feeds, methodologies, copying relationships, or common source dependencies.
+
+### D-021 — Provider restrictions should often trigger source-substitution research
+
+When one provider restricts the intended use, the first question should be whether the underlying information objective can be fulfilled from an original, public, licensed, statutory, or otherwise independently lawful source.
+
+This avoids turning a provider-specific restriction into an unnecessary product-level limitation.
+
+### D-022 — Legal status should be represented as a state, not a Boolean
+
+A source should not be modeled simply as **allowed=true/false** because the answer may depend on purpose, jurisdiction, plan, endpoint, acquisition mechanism, transformation, audience, retention, redistribution, and contractual facts.
+
+Explicit multi-dimensional status is more suitable for both human audit and machine reasoning.
+
+### D-023 — External-source research itself is a reusable capability
+
+Source accessibility, licensing, provenance, update cadence, API behavior, rate limits, attribution, legal status, and fallback paths are reusable knowledge that can benefit the homepage, analytics, research systems, NOVA evidence, and future services.
+
+The resulting source registry should therefore be designed as reusable evidence infrastructure rather than a card-specific implementation detail.
+
+### D-024 — Source restrictions and legal rights must remain historically traceable
+
+Provider policies, pricing, API limits, contracts, and legal circumstances can change.
+
+When a source is reclassified later, the earlier verified state should remain preserved as historical knowledge, with a new verification date and evidence basis rather than silently rewriting history.
+
 
 ## Additional Explicitly Undefined Product-Level Items
 
