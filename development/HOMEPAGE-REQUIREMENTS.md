@@ -2083,6 +2083,147 @@ This prevents unnecessary architectural dependence on a particular provider.
 
 A provider-specific restriction should therefore normally produce an **access constraint**, **source substitution investigation**, or **legal-review state**, rather than automatically producing a product-level prohibition unless the applicable legal analysis actually supports such a conclusion.
 
+
+### R-026C — Provider Interdictions, Anti-Automation Controls, and Access-State Evidence
+
+A provider's statement, banner, terms page, `robots.txt` entry, API refusal, HTTP response, CAPTCHA, JavaScript challenge, WAF rule, bot score, rate limit, IP restriction, authentication gate, session requirement, or other anti-automation mechanism is an **access-state observation** that must be recorded separately from the legal conclusion about the underlying information or intended use.
+
+A provider's explicit statement that a use is "not allowed" shall therefore not automatically be represented by AstroCrown as a definitive statement of applicable law.
+
+The opposite assumption is equally prohibited: a potentially applicable legal right or exception shall not automatically be represented as technical authorization to bypass a provider-controlled access mechanism.
+
+The system shall distinguish at least:
+
+- **Provider says no** — a provider has communicated a restriction.
+- **Technical access blocked** — the current acquisition attempt is technically prevented.
+- **Robots restriction observed** — a `robots.txt` rule requests crawler behavior restrictions.
+- **Automated-client challenge** — the service requires a browser/user challenge or other automated-traffic verification.
+- **Rate limited** — requests are being constrained by a rate-limit mechanism.
+- **Authentication required** — the intended resource requires credentials or an authenticated session.
+- **Access-control restriction** — a technical control limits access to a resource.
+- **Legal prohibition identified** — applicable law has been sufficiently established as prohibiting the specific intended action.
+- **Contractual/provider restriction identified** — an applicable agreement or legally relevant provider term governs the intended use.
+- **Legal status unresolved** — legal evidence is insufficient.
+- **Alternative acquisition path available** — the information objective can be pursued through another source/channel.
+
+### Provider interdiction is not automatically law
+
+The system shall not infer:
+
+**provider says prohibited → law prohibits it**
+
+nor:
+
+**law may permit it → provider must technically permit it**
+
+nor:
+
+**publicly visible → automated retrieval is authorized**
+
+nor:
+
+**robots.txt permits/disallows → complete legal authorization/prohibition has been established**
+
+RFC 9309, which standardizes the Robots Exclusion Protocol, explicitly describes robots.txt as rules that crawlers are requested to honor and states that the protocol is **not a form of access authorization**. Therefore a robots.txt observation must be recorded as its own access/operational state rather than being silently translated into a legal conclusion.  
+Source: https://www.rfc-editor.org/rfc/rfc9309.html
+
+Provider policies and technical controls remain operationally important even where they are not themselves legislation. They can determine whether a particular automated acquisition method works, whether access requires a different channel, whether a contractual relationship exists, whether a service will permit requests, and whether an intended implementation is operationally sustainable.
+
+### Anti-automation and access-control mechanisms
+
+Modern web services can distinguish automated clients and may present a challenge, rate-limit, block, or otherwise alter access.
+
+Current Cloudflare documentation, for example, describes WAF, Bot Management, rate limiting, interstitial challenge pages, JavaScript detections, bot scores, and other mechanisms that can hold a request before the destination is reached or challenge traffic identified as automated.  
+Sources:
+- https://developers.cloudflare.com/cloudflare-challenges/concepts/how-challenges-work/
+- https://developers.cloudflare.com/cloudflare-challenges/challenge-types/challenge-pages/
+- https://developers.cloudflare.com/waf/custom-rules/use-cases/challenge-bad-bots/
+
+These mechanisms create genuine **technical/operational constraints** even though their existence does not, by itself, determine the legal status of accessing or using the underlying information.
+
+AstroCrown shall not treat anti-automation research as an invitation to defeat, circumvent, disable, or evade access controls.
+
+Where a route is challenged or blocked, investigate instead:
+
+1. whether an official API or public download exists;
+2. whether a documented non-API route is expressly available;
+3. whether the provider offers an authorized automated-access mechanism;
+4. whether the same underlying information is available from an original or independent source;
+5. whether manual verification is sufficient for the research objective;
+6. whether a different acquisition path provides equivalent or better evidence;
+7. whether the intended use requires legal or contractual review.
+
+A technical block may therefore increase acquisition cost or reduce operational feasibility without establishing that the information itself is legally unavailable.
+
+### Access-state evidence versus legal evidence
+
+For auditability, evidence should identify whether a finding came from:
+
+- legislation/regulation/case law;
+- an official government or standards publication;
+- provider terms/agreement;
+- provider documentation;
+- provider support statement;
+- `robots.txt`;
+- HTTP/network behavior;
+- an observed challenge/block/rate limit;
+- a documented API specification;
+- an independently tested runtime;
+- human observation;
+- another source.
+
+These evidence classes shall not be silently treated as equivalent.
+
+For example, an HTTP 403, CAPTCHA page, or bot challenge establishes an observed technical response. It does not, by itself, establish why the response occurred or whether the underlying use is legally prohibited.
+
+Likewise, a provider's "do not scrape" statement establishes a provider position. It does not, by itself, settle every question of statutory rights, contractual enforceability, jurisdiction, database rights, copyright exceptions, or other applicable law.
+
+### Access-path decision rule
+
+When a source is blocked or restricted, the next decision shall be based on the **information objective**, not on the desire to defeat the particular control.
+
+The evaluation should ask:
+
+**What information is actually required?**
+
+→ **What part of the provider's product supplies it?**
+
+→ **Can an original/independent source supply the same underlying information?**
+
+→ **Can a public file, feed, filing, blockchain, exchange endpoint, or other channel supply it?**
+
+→ **Is that channel technically accessible?**
+
+→ **What provider/contractual conditions apply?**
+
+→ **What legal basis or unresolved legal question applies?**
+
+→ **What provenance and reproducibility can be maintained?**
+
+This preserves the possibility of discovering new acquisition routes without treating technical circumvention as a normal engineering strategy.
+
+### Boundary-state rule for automated acquisition
+
+Automated acquisition shall recognize and preserve at least:
+
+- success;
+- empty result;
+- stale result;
+- changed schema;
+- partial result;
+- rate limited;
+- authentication required;
+- challenge presented;
+- blocked;
+- robots restriction observed;
+- terms/policy restriction observed;
+- network/tool failure;
+- provider unavailable;
+- alternative source selected;
+- legal review required.
+
+A system must not silently convert any of these states into an empty dataset, zero value, neutral result, or successful acquisition.
+
 ### Operational source registry candidate
 
 A future implementation should investigate a machine-readable source registry with fields such as:
@@ -2251,6 +2392,200 @@ Before implementation, acquisition, or release:
 Historical source snapshots should be preserved as historical discoveries even when current provider rules later change.
 
 
+
+### R-026B — Acquisition-Path Independence and Non-API Information Retrieval
+
+The data architecture shall treat the **acquisition method** as a separate dimension from the source, information type, provider permission, contractual status, legal status, and downstream-use status.
+
+The existence of an API is not a prerequisite for investigating whether an information objective can be fulfilled.
+
+Candidate acquisition paths include:
+
+- documented API/REST/GraphQL endpoint;
+- public web page or document retrievable through ordinary HTTP;
+- publicly downloadable CSV, JSON, XML, ZIP, PDF, image, or other static file;
+- RSS/Atom or other documented public feed;
+- official public data archive or historical data file;
+- public regulatory filing or government statistical release;
+- public blockchain/network data or protocol-native data source;
+- licensed third-party or original-source mirror;
+- manually obtained data used for research/verification;
+- user-provided or user-exported data;
+- AstroCrown-derived data calculated from independently obtained underlying observations.
+
+The system shall investigate the least complex acquisition path that can satisfy the information objective while preserving provenance, reproducibility, reliability, and applicable legal/contractual constraints.
+
+### Non-API retrieval is not a permission bypass
+
+A provider-specific API restriction shall not automatically mean that the same underlying information is unavailable through every other channel.
+
+However, changing the technical acquisition method solely to evade a provider's restriction is not an approved architecture.
+
+Before using a non-API route to obtain information from a provider-controlled service, determine:
+
+1. whether the restriction applies only to the API or to the provider's broader service/content;
+2. whether the alternate route is publicly provided or otherwise expressly accessible;
+3. whether the provider's applicable terms govern that route;
+4. whether automated retrieval is prohibited;
+5. whether authentication, access controls, rate limits, robots directives, or other technical controls apply;
+6. whether the information is factual, expressive, analytical, compiled, or otherwise protected;
+7. whether a statutory/legal basis independently affects the proposed use;
+8. whether the intended display, transformation, caching, redistribution, or derived use is covered;
+9. whether a first-party or alternative source provides the same underlying observation through a clearer lawful route.
+
+The system shall therefore distinguish:
+
+**API unavailable**
+from
+**source unavailable**
+
+and:
+
+**API use restricted**
+from
+**all possible use of the provider's information is prohibited**
+
+and:
+
+**alternate acquisition route exists**
+from
+**alternate acquisition route is lawful and operationally usable**
+
+### Example of acquisition-path diversification
+
+Current public documentation demonstrates that relevant information can sometimes be obtained without relying on a conventional provider API.
+
+Examples include:
+
+- Binance documents downloadable historical public market-data files through data.binance.vision, in addition to public market-data API endpoints.
+- Farside publishes a public Bitcoin ETF-flow table and an all-data page directly as web-accessible tabular information.
+- The U.S. SEC provides public HTTPS access to EDGAR filing data and also exposes RSS feeds for certain EDGAR searches.
+- The Federal Reserve publishes downloadable statistical-release data in CSV and XML formats through its Data Download Program.
+- Alternative.me's Fear & Greed endpoint supports both JSON and CSV response formats through its documented public endpoint.
+
+Sources:
+- https://www.binance.com/en/academy/articles/how-to-get-trading-data-via-the-binance-api
+- https://farside.co.uk/bitcoin-etf-flow-all-data/
+- https://www.sec.gov/about/developer-resources
+- https://www.federalreserve.gov/datadownload/default.htm
+- https://alternative.me/crypto/fear-and-greed-index/
+
+These examples demonstrate acquisition-path diversity; they do **not** establish that every available page/file may be freely scraped, redistributed, or incorporated into a commercial product.
+
+### Public-page and static-file evidence
+
+A publicly accessible page or downloadable file may be useful even when no API exists.
+
+Potential uses include:
+
+- human verification;
+- historical research;
+- source cross-checking;
+- extraction where automated use is expressly permitted;
+- transformation into AstroCrown-derived evidence where lawful;
+- fallback data acquisition;
+- reconciliation against API output;
+- detecting discrepancies between a provider's API and displayed information.
+
+Static files can also have operational advantages over APIs, including:
+
+- lower request frequency;
+- easier archival;
+- deterministic snapshots;
+- reduced API-key dependency;
+- simpler reproducibility;
+- batch processing;
+- historical backfill;
+- easier integrity checking.
+
+These advantages must be evaluated against freshness, file size, update cadence, parsing reliability, terms, attribution, and redistribution constraints.
+
+### Source-channel hierarchy candidate
+
+For each information objective, the system should investigate candidate channels in an order appropriate to the objective rather than assuming that an API is always preferred.
+
+A possible evaluation sequence is:
+
+**First-party structured source**
+→ **first-party public static/downloadable source**
+→ **first-party documented public page/feed**
+→ **other original/public source**
+→ **licensed third-party source**
+→ **manual/user-provided evidence**
+
+This is a candidate methodology, not a mandatory sequence.
+
+A source with poorer technical structure may still be preferred when it provides a more authoritative original observation or clearer lawful-use basis.
+
+### Research-environment limitation rule
+
+Failure to retrieve a public page, API, file, feed, or endpoint from a particular research environment shall not automatically be recorded as source unavailability.
+
+The system shall distinguish:
+
+- **source exists**;
+- **source is publicly reachable**;
+- **source is reachable from the current tool/environment**;
+- **source is technically retrievable by the intended AstroCrown runtime**;
+- **source can be lawfully used for the intended purpose**;
+- **source is sufficiently reliable for the intended calculation**.
+
+This prevents environment-specific network/tool limitations from becoming false product constraints.
+
+### Acquisition reproducibility
+
+For externally acquired information, where reasonably possible preserve:
+
+- source URL/endpoint;
+- acquisition channel;
+- acquisition timestamp;
+- retrieval status;
+- response/file format;
+- relevant request parameters;
+- authentication state without storing secrets;
+- provider/version documentation reference;
+- file checksum or equivalent integrity identifier where useful;
+- transformation steps;
+- source licensing/terms evidence;
+- legal-review status;
+- fallback channel;
+- re-fetch/reproduction method.
+
+A source that is technically retrievable only through an opaque or non-reproducible manual process should not silently be represented as equivalent to a stable machine-readable source.
+
+### $0 acquisition interpretation
+
+"$0 budget" shall be evaluated at multiple levels:
+
+- **$0 provider fee** — no direct subscription/license fee for the tested route;
+- **$0 authentication cost** — no paid API key/account requirement;
+- **$0 infrastructure cost** — no additional paid infrastructure required;
+- **$0 prototype cost** — the combination of source, retrieval, processing, storage, and hosting can operate within the project's current $0 objective;
+- **$0 production cost** — the same remains true under expected public usage and operational scale.
+
+One level shall not be silently represented as another.
+
+Free access may still have limits such as rate limits, attribution requirements, personal/non-commercial scope, storage limits, regional restrictions, terms of use, or inadequate historical coverage.
+
+### Source-channel resilience
+
+Where a derived metric materially depends on one external source, investigate whether a second acquisition path or independent source can provide the same or complementary evidence.
+
+Potential resilience patterns include:
+
+**API → static file fallback**
+
+**Provider A → Provider B**
+
+**first-party data → independent cross-check**
+
+**current feed → historical archive**
+
+**automated acquisition → human verification**
+
+A fallback must not silently substitute materially different information. The system shall record when a fallback changes source, methodology, freshness, coverage, or semantic meaning.
+
+
 ## R-027 — Homepage Information Integrity and Trust
 
 The homepage shall avoid false impressions of certainty, freshness, completeness, causation, execution capability, or legal permission.
@@ -2411,6 +2746,282 @@ Provider policies, pricing, API limits, contracts, and legal circumstances can c
 
 When a source is reclassified later, the earlier verified state should remain preserved as historical knowledge, with a new verification date and evidence basis rather than silently rewriting history.
 
+
+
+### D-025 — Acquisition method is independent from source availability
+
+The absence, restriction, cost, or instability of an API does not by itself establish that the underlying information cannot be obtained through another channel.
+
+### D-026 — Non-API retrieval can expand the source universe
+
+Public static files, downloadable datasets, public filings, web-accessible tables, RSS/Atom feeds, official archives, and other documented channels can provide useful information without a conventional API.
+
+### D-027 — Alternate technical channels must not become a circumvention assumption
+
+Changing from an API to webpage retrieval, scraping, reverse-engineered endpoints, or another channel may still be restricted by provider terms, technical controls, contract, law, or other constraints.
+
+The architecture must investigate the status of the exact route rather than treating the route change as either automatically permitted or automatically prohibited.
+
+### D-028 — Research-tool failure is not evidence of source unavailability
+
+An information source may be inaccessible to the current browsing/research environment while remaining publicly reachable or technically usable from the intended application runtime.
+
+Tool-environment limitations therefore require their own status and must not silently become product limitations.
+
+### D-029 — Static and downloadable data can improve operational resilience
+
+Public historical files and static datasets can reduce dependency on API keys, lower request frequency, simplify reproducibility, enable batch backfills, and provide stable historical snapshots.
+
+Their freshness, terms, data integrity, coverage, and maintenance burden must still be evaluated.
+
+### D-030 — $0 is a multidimensional operational objective
+
+A source may be free to view but paid to automate, free to automate but restricted to personal use, free for a prototype but unsuitable at public scale, or free in provider fees while still requiring paid infrastructure.
+
+"$0" must therefore be attached to the exact scope being evaluated.
+
+
+
+### D-031 — Site interdiction, technical blocking, and legal prohibition are distinct findings
+
+A provider statement, robots.txt directive, CAPTCHA, JavaScript challenge, WAF/bot-management decision, HTTP block, rate limit, or other technical mechanism may materially restrict AstroCrown's ability to acquire information, but none should automatically be represented as a complete legal conclusion.
+
+Conversely, a potentially applicable legal right does not automatically provide a technical means of access or authorize defeating a provider-controlled access mechanism.
+
+### D-032 — Anti-automation controls can make access more restrictive than the legal information question
+
+The legal status of an information use and the practical ability to acquire the information can diverge.
+
+A lawful information objective may nevertheless be operationally infeasible through a particular provider channel because the provider blocks automation, requires a challenge, limits requests, requires authentication, or does not offer a suitable machine-readable route.
+
+This should be recorded as an **access/operability constraint**, not silently converted into either a legal prohibition or an assertion that the information cannot be obtained elsewhere.
+
+### D-033 — Access-control observation needs provenance
+
+Observed technical behavior should be preserved with the acquisition environment, request/channel, timestamp, response state, and available evidence.
+
+This prevents a temporary block, research-tool limitation, or anti-bot response from becoming an undocumented permanent assumption.
+
+
+## Homepage Development Methodology and Prompt-Efficiency Discoveries
+
+This section preserves development-methodology discoveries that directly affect the completeness, efficiency, auditability, continuity, source research, and quality of the first homepage development task.
+
+These methodology discoveries are preserved here intentionally so that the homepage requirements remain the concentrated working source of truth during this first development cycle. They are not automatically approved product requirements merely because they are documented here.
+
+### Methodology principle
+
+Treat the working prompt and development workflow as part of the development architecture when they materially affect:
+
+- what is inspected;
+- what is preserved;
+- what is assumed;
+- what is verified;
+- which tools or sources are considered;
+- how conflicting evidence is handled;
+- whether discovery is separated from decision;
+- whether continuity survives across conversations;
+- whether important research is lost or unnecessarily repeated.
+
+### M-001 — Source of truth first
+
+Before making a substantive conclusion about homepage repository content:
+
+**identify the authoritative source → inspect it directly → establish its current version/state → reason from that evidence**
+
+Do not reconstruct repository state from memory when the source of truth is accessible.
+
+### M-002 — Capability/tool availability before claiming impossibility
+
+Before stating that a repository, connector, external source, or capability is unavailable:
+
+**inspect available tools/connectors → identify the relevant action → attempt the supported route → classify the result precisely**
+
+Distinguish, where applicable:
+
+- unavailable;
+- inaccessible;
+- unauthorized;
+- unsupported;
+- blocked;
+- not found;
+- temporarily failing;
+- environment-limited;
+- genuinely unavailable.
+
+### M-003 — Current or niche research requires current evidence
+
+When a homepage decision depends on information that may have changed or is specialized:
+
+**search current authoritative sources → compare relevant sources → record date/version → preserve limitations**
+
+Do not convert stale knowledge into current operational fact.
+
+### M-004 — Preserve uncertainty explicitly
+
+Do not fill information gaps with plausible assumptions.
+
+Use explicit states such as:
+
+- candidate;
+- unresolved;
+- blocked;
+- unknown;
+- not applicable;
+- verified;
+- superseded.
+
+### M-005 — Separate discovery from approval
+
+A useful discovery should be preserved before deciding whether it becomes:
+
+- an approved requirement;
+- a candidate requirement;
+- a design/implementation decision;
+- a reusable capability;
+- a rejected approach;
+- a deferred opportunity.
+
+Do not delete a discovery because the immediate implementation chooses another path.
+
+### M-006 — Investigate the information objective before the preferred mechanism
+
+When a desired capability is blocked, restricted, expensive, or unavailable through one mechanism:
+
+**define the information objective → identify its underlying information → enumerate acquisition paths → compare sources → evaluate technical/legal/contractual status → determine whether a derived result can be constructed**
+
+Do not let the availability of one API define the boundary of the homepage information capability.
+
+### M-007 — Separate legal analysis from access analysis
+
+Treat independently:
+
+**what applicable law permits**
+
+**what a provider contractually permits or restricts**
+
+**what the provider technically exposes**
+
+**what anti-automation controls permit operationally**
+
+**what the research environment can retrieve**
+
+**what the intended AstroCrown runtime can retrieve**
+
+A disagreement in one layer does not automatically resolve another.
+
+### M-008 — Preserve provenance in synthesis
+
+For derived information preserve, where applicable:
+
+**source → observation → transformation → calculation → synthesis → result**
+
+Record source identity, timestamps, methodology, freshness, dependencies, conflicts, and uncertainty.
+
+### M-009 — Search for complementary sources, not only substitutes
+
+When one source fails, investigate:
+
+- original/first-party sources;
+- independent aggregators;
+- public archives;
+- downloadable datasets;
+- official filings;
+- protocol-native data;
+- human-verifiable public evidence.
+
+The objective is not always to replace one provider with an equivalent provider. Complementary evidence may be more valuable.
+
+### M-010 — Use evidence before optimization
+
+Do not prematurely optimize architecture, code, data flows, prompts, or visual composition before the relevant requirement and evidence are understood.
+
+Preserve candidates and rejected alternatives when they contain reusable reasoning.
+
+### Prompt-efficiency pattern
+
+For substantial homepage work, the working prompt should make the following explicit:
+
+**Objective** — what is being solved.
+
+**Source of truth** — which repository/document/version is authoritative.
+
+**Mode** — audit only, research only, candidate analysis, or authorized implementation.
+
+**Preservation constraints** — what must not be deleted, simplified, overwritten, or silently reinterpreted.
+
+**Evidence expectations** — what facts require current verification.
+
+**Tool expectations** — which available tools/connectors should be inspected and attempted before declaring a limitation.
+
+**Status model** — which items are approved, candidate, unresolved, blocked, historical, deferred, or rejected.
+
+**Decision boundary** — what may be concluded now and what must remain open.
+
+**Deliverable** — what exact artifact or evidence should be produced.
+
+This structure reduces repeated clarification and prevents the working method from silently changing as the conversation grows.
+
+### Homepage continuity pattern
+
+For a new development conversation, the working prompt should preferably identify:
+
+- repository;
+- source-of-truth files;
+- relevant historical state;
+- current objective;
+- established conventions;
+- current candidate/decision state;
+- known unresolved questions;
+- preservation constraints;
+- allowed modification scope;
+- required verification;
+- next intended stage.
+
+The prompt should not rely on model memory when the authoritative artifact can state these facts explicitly.
+
+### Handoff pattern
+
+A substantial homepage-development handoff should preserve:
+
+**Objective → verified facts → discoveries → decisions → assumptions → unresolved questions → risks → sources → reusable assets → methodology improvements → repository state → next actions**
+
+This makes continuity an explicit artifact rather than a memory assumption.
+
+### Avoided failure patterns
+
+The homepage workflow should avoid:
+
+- claiming repository access is unavailable before inspecting available connectors;
+- treating memory as more authoritative than the repository;
+- silently turning a candidate into a requirement;
+- silently turning a provider policy into law;
+- silently turning a technical block into source unavailability;
+- silently turning a legal possibility into technical authorization;
+- replacing unknown values with zero/neutral values;
+- using source-count as a substitute for evidence independence;
+- optimizing for benchmark scores instead of product purpose;
+- compressing away rejected candidates or useful uncertainty;
+- treating a research-tool failure as proof of application-runtime failure.
+
+### M-011 — Continuous methodology improvement
+
+When a repeated development problem is solved by a better workflow, preserve:
+
+1. the original failure mode;
+2. the observed cause;
+3. the improved method;
+4. evidence that the method improves the workflow;
+5. applicability and limitations;
+6. whether the method should become an established repository convention.
+
+A methodology improvement remains a candidate practice until sufficiently established. If later promoted to a repository convention, its historical origin should remain preserved.
+
+### Concentration rule for the first homepage development task
+
+During the first real homepage-development cycle, homepage-specific requirements, candidate discoveries, source/access findings, evidence methodology, relevant development methodology, prompt-efficiency discoveries, unresolved questions, and related decision boundaries should remain traceable from this document without requiring a separate discovery archive to understand the current task.
+
+A separate cross-project discovery system may be reconsidered after the first homepage development cycle if evidence shows that it improves rather than dilutes concentration and continuity.
 
 ## Additional Explicitly Undefined Product-Level Items
 
