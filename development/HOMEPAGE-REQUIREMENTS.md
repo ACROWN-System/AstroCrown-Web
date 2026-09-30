@@ -2251,6 +2251,200 @@ Before implementation, acquisition, or release:
 Historical source snapshots should be preserved as historical discoveries even when current provider rules later change.
 
 
+
+### R-026B — Acquisition-Path Independence and Non-API Information Retrieval
+
+The data architecture shall treat the **acquisition method** as a separate dimension from the source, information type, provider permission, contractual status, legal status, and downstream-use status.
+
+The existence of an API is not a prerequisite for investigating whether an information objective can be fulfilled.
+
+Candidate acquisition paths include:
+
+- documented API/REST/GraphQL endpoint;
+- public web page or document retrievable through ordinary HTTP;
+- publicly downloadable CSV, JSON, XML, ZIP, PDF, image, or other static file;
+- RSS/Atom or other documented public feed;
+- official public data archive or historical data file;
+- public regulatory filing or government statistical release;
+- public blockchain/network data or protocol-native data source;
+- licensed third-party or original-source mirror;
+- manually obtained data used for research/verification;
+- user-provided or user-exported data;
+- AstroCrown-derived data calculated from independently obtained underlying observations.
+
+The system shall investigate the least complex acquisition path that can satisfy the information objective while preserving provenance, reproducibility, reliability, and applicable legal/contractual constraints.
+
+### Non-API retrieval is not a permission bypass
+
+A provider-specific API restriction shall not automatically mean that the same underlying information is unavailable through every other channel.
+
+However, changing the technical acquisition method solely to evade a provider's restriction is not an approved architecture.
+
+Before using a non-API route to obtain information from a provider-controlled service, determine:
+
+1. whether the restriction applies only to the API or to the provider's broader service/content;
+2. whether the alternate route is publicly provided or otherwise expressly accessible;
+3. whether the provider's applicable terms govern that route;
+4. whether automated retrieval is prohibited;
+5. whether authentication, access controls, rate limits, robots directives, or other technical controls apply;
+6. whether the information is factual, expressive, analytical, compiled, or otherwise protected;
+7. whether a statutory/legal basis independently affects the proposed use;
+8. whether the intended display, transformation, caching, redistribution, or derived use is covered;
+9. whether a first-party or alternative source provides the same underlying observation through a clearer lawful route.
+
+The system shall therefore distinguish:
+
+**API unavailable**
+from
+**source unavailable**
+
+and:
+
+**API use restricted**
+from
+**all possible use of the provider's information is prohibited**
+
+and:
+
+**alternate acquisition route exists**
+from
+**alternate acquisition route is lawful and operationally usable**
+
+### Example of acquisition-path diversification
+
+Current public documentation demonstrates that relevant information can sometimes be obtained without relying on a conventional provider API.
+
+Examples include:
+
+- Binance documents downloadable historical public market-data files through data.binance.vision, in addition to public market-data API endpoints.
+- Farside publishes a public Bitcoin ETF-flow table and an all-data page directly as web-accessible tabular information.
+- The U.S. SEC provides public HTTPS access to EDGAR filing data and also exposes RSS feeds for certain EDGAR searches.
+- The Federal Reserve publishes downloadable statistical-release data in CSV and XML formats through its Data Download Program.
+- Alternative.me's Fear & Greed endpoint supports both JSON and CSV response formats through its documented public endpoint.
+
+Sources:
+- https://www.binance.com/en/academy/articles/how-to-get-trading-data-via-the-binance-api
+- https://farside.co.uk/bitcoin-etf-flow-all-data/
+- https://www.sec.gov/about/developer-resources
+- https://www.federalreserve.gov/datadownload/default.htm
+- https://alternative.me/crypto/fear-and-greed-index/
+
+These examples demonstrate acquisition-path diversity; they do **not** establish that every available page/file may be freely scraped, redistributed, or incorporated into a commercial product.
+
+### Public-page and static-file evidence
+
+A publicly accessible page or downloadable file may be useful even when no API exists.
+
+Potential uses include:
+
+- human verification;
+- historical research;
+- source cross-checking;
+- extraction where automated use is expressly permitted;
+- transformation into AstroCrown-derived evidence where lawful;
+- fallback data acquisition;
+- reconciliation against API output;
+- detecting discrepancies between a provider's API and displayed information.
+
+Static files can also have operational advantages over APIs, including:
+
+- lower request frequency;
+- easier archival;
+- deterministic snapshots;
+- reduced API-key dependency;
+- simpler reproducibility;
+- batch processing;
+- historical backfill;
+- easier integrity checking.
+
+These advantages must be evaluated against freshness, file size, update cadence, parsing reliability, terms, attribution, and redistribution constraints.
+
+### Source-channel hierarchy candidate
+
+For each information objective, the system should investigate candidate channels in an order appropriate to the objective rather than assuming that an API is always preferred.
+
+A possible evaluation sequence is:
+
+**First-party structured source**
+→ **first-party public static/downloadable source**
+→ **first-party documented public page/feed**
+→ **other original/public source**
+→ **licensed third-party source**
+→ **manual/user-provided evidence**
+
+This is a candidate methodology, not a mandatory sequence.
+
+A source with poorer technical structure may still be preferred when it provides a more authoritative original observation or clearer lawful-use basis.
+
+### Research-environment limitation rule
+
+Failure to retrieve a public page, API, file, feed, or endpoint from a particular research environment shall not automatically be recorded as source unavailability.
+
+The system shall distinguish:
+
+- **source exists**;
+- **source is publicly reachable**;
+- **source is reachable from the current tool/environment**;
+- **source is technically retrievable by the intended AstroCrown runtime**;
+- **source can be lawfully used for the intended purpose**;
+- **source is sufficiently reliable for the intended calculation**.
+
+This prevents environment-specific network/tool limitations from becoming false product constraints.
+
+### Acquisition reproducibility
+
+For externally acquired information, where reasonably possible preserve:
+
+- source URL/endpoint;
+- acquisition channel;
+- acquisition timestamp;
+- retrieval status;
+- response/file format;
+- relevant request parameters;
+- authentication state without storing secrets;
+- provider/version documentation reference;
+- file checksum or equivalent integrity identifier where useful;
+- transformation steps;
+- source licensing/terms evidence;
+- legal-review status;
+- fallback channel;
+- re-fetch/reproduction method.
+
+A source that is technically retrievable only through an opaque or non-reproducible manual process should not silently be represented as equivalent to a stable machine-readable source.
+
+### $0 acquisition interpretation
+
+"$0 budget" shall be evaluated at multiple levels:
+
+- **$0 provider fee** — no direct subscription/license fee for the tested route;
+- **$0 authentication cost** — no paid API key/account requirement;
+- **$0 infrastructure cost** — no additional paid infrastructure required;
+- **$0 prototype cost** — the combination of source, retrieval, processing, storage, and hosting can operate within the project's current $0 objective;
+- **$0 production cost** — the same remains true under expected public usage and operational scale.
+
+One level shall not be silently represented as another.
+
+Free access may still have limits such as rate limits, attribution requirements, personal/non-commercial scope, storage limits, regional restrictions, terms of use, or inadequate historical coverage.
+
+### Source-channel resilience
+
+Where a derived metric materially depends on one external source, investigate whether a second acquisition path or independent source can provide the same or complementary evidence.
+
+Potential resilience patterns include:
+
+**API → static file fallback**
+
+**Provider A → Provider B**
+
+**first-party data → independent cross-check**
+
+**current feed → historical archive**
+
+**automated acquisition → human verification**
+
+A fallback must not silently substitute materially different information. The system shall record when a fallback changes source, methodology, freshness, coverage, or semantic meaning.
+
+
 ## R-027 — Homepage Information Integrity and Trust
 
 The homepage shall avoid false impressions of certainty, freshness, completeness, causation, execution capability, or legal permission.
@@ -2410,6 +2604,40 @@ The resulting source registry should therefore be designed as reusable evidence 
 Provider policies, pricing, API limits, contracts, and legal circumstances can change.
 
 When a source is reclassified later, the earlier verified state should remain preserved as historical knowledge, with a new verification date and evidence basis rather than silently rewriting history.
+
+
+
+### D-025 — Acquisition method is independent from source availability
+
+The absence, restriction, cost, or instability of an API does not by itself establish that the underlying information cannot be obtained through another channel.
+
+### D-026 — Non-API retrieval can expand the source universe
+
+Public static files, downloadable datasets, public filings, web-accessible tables, RSS/Atom feeds, official archives, and other documented channels can provide useful information without a conventional API.
+
+### D-027 — Alternate technical channels must not become a circumvention assumption
+
+Changing from an API to webpage retrieval, scraping, reverse-engineered endpoints, or another channel may still be restricted by provider terms, technical controls, contract, law, or other constraints.
+
+The architecture must investigate the status of the exact route rather than treating the route change as either automatically permitted or automatically prohibited.
+
+### D-028 — Research-tool failure is not evidence of source unavailability
+
+An information source may be inaccessible to the current browsing/research environment while remaining publicly reachable or technically usable from the intended application runtime.
+
+Tool-environment limitations therefore require their own status and must not silently become product limitations.
+
+### D-029 — Static and downloadable data can improve operational resilience
+
+Public historical files and static datasets can reduce dependency on API keys, lower request frequency, simplify reproducibility, enable batch backfills, and provide stable historical snapshots.
+
+Their freshness, terms, data integrity, coverage, and maintenance burden must still be evaluated.
+
+### D-030 — $0 is a multidimensional operational objective
+
+A source may be free to view but paid to automate, free to automate but restricted to personal use, free for a prototype but unsuitable at public scale, or free in provider fees while still requiring paid infrastructure.
+
+"$0" must therefore be attached to the exact scope being evaluated.
 
 
 ## Additional Explicitly Undefined Product-Level Items
