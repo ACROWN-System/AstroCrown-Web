@@ -335,3 +335,51 @@ If a requirement does not apply, record N/A with its reason.
 
 If a change is made to resolve a failure, re-test it.
 
+
+## 17. Discovery and Methodology Preservation
+
+Development discoveries that materially affect requirements, research, source acquisition, operability, verification, human-AI collaboration, prompt/workflow efficiency, or future capability should be preserved under:
+
+`development/discoveries/`
+
+The discovery archive is supplementary to the authoritative requirement and audit records. A discovery is not an approved requirement merely because it is archived.
+
+Discovery records should preserve, where material:
+
+- discovery ID;
+- date or relevant time period;
+- objective/context;
+- observed finding;
+- evidence/source;
+- acquisition or verification method;
+- limitations/uncertainty;
+- status;
+- affected requirements/components;
+- reusable implication;
+- relationship to superseded or later findings.
+
+### 17.1 Historical preservation
+
+Do not delete historical discovery knowledge merely because a later decision changes the preferred implementation.
+
+When a discovery is superseded, rejected, deferred, or reinterpreted, preserve the historical record and add the later state with its new evidence.
+
+### 17.2 Methodology and prompt records
+
+Reusable improvements to development prompts, research workflows, tool usage, evidence collection, source discovery, handoffs, and human-AI collaboration may be recorded as methodology discoveries.
+
+A methodology improvement should not silently become a permanent project rule. Where it becomes established practice, promote it explicitly into the appropriate governing convention.
+
+### 17.3 Machine-use requirements
+
+Humans and machines using discovery records shall distinguish:
+
+- discovery from requirement;
+- evidence from interpretation;
+- current state from historical state;
+- technical access from legal status;
+- provider policy from applicable law;
+- source unavailability from environment/tool failure;
+- candidate methodology from approved practice.
+
+Unknown or insufficiently verified information remains unresolved or blocked rather than being filled by inference.
