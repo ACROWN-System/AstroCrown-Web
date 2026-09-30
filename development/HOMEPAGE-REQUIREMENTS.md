@@ -697,7 +697,8 @@ A Rocky Planet Layer shall provide a secondary introductory composition element 
 The layer shall contain:
 
 - a rocky planetary body;
-- colored atmospheric gases;- golden solar reflection on the upper-right region.
+- colored atmospheric gases;
+- golden solar reflection on the upper-right region.
 
 The planet shall present approximately:
 
@@ -1396,6 +1397,7 @@ Candidate content-management patterns include:
 - structured message objects containing priority, type, icon, message, destination, active state, and timing metadata.
 
 These are candidates only. A more complex content-management system shall not be introduced unless an actual operational requirement justifies it.
+
 #### R-020.8 — Candidate Technologies, Patterns, and APIs
 
 The following candidates may be evaluated against the specification baseline. Listing them does not approve their implementation.
@@ -2038,7 +2040,7 @@ Research sources for the snapshot:
 - CoinMarketCap API: https://coinmarketcap.com/api/ ; https://pro.coinmarketcap.com/user-agreement-commercial/
 - CoinGecko API: https://www.coingecko.com/en/api ; https://support.coingecko.com/hc/en-us/articles/4538771776153-What-is-the-rate-limit-for-CoinGecko-API-public-plan ; https://support.coingecko.com/hc/en-us/articles/16760512207257-What-Are-the-Differences-Between-Commercial-and-Custom-Licenses
 - CoinGlass API: https://docs.coinglass.com/reference/endpoint-overview ; https://www.coinglass.com/pricing ; https://www.coinglass.com/terms
-- Binance developer/API documentation: https://developers.binance.com/en/docs/derivatives/portfolio-margin-pro/general-info ; https://www.binance.com/en-AE/support/faq/detail/865f0fe3cb6a4d73a21609b3b7326f31
+- Binance developer/API documentation: https://developers.binance.com/en/docs/products/derivatives-trading-portfolio-margin-pro/general-info ; https://www.binance.com/en-AE/support/faq/detail/865f0fe3cb6a4d73a21609b3b7326f31
 - TradingView policy: https://www.tradingview.com/policies/
 - Alternative.me: https://alternative.me/crypto/api/ ; https://alternative.me/crypto/fear-and-greed-index/
 
@@ -2251,7 +2253,9 @@ Historical source snapshots should be preserved as historical discoveries even w
 
 ## R-027 — Homepage Information Integrity and Trust
 
-The homepage shall avoid false impressions of certainty, freshness, completeness, causation, or execution capability.
+The homepage shall avoid false impressions of certainty, freshness, completeness, causation, execution capability, or legal permission.
+
+It shall distinguish provider terms/policies from applicable law and shall not silently treat either provider restrictions or claimed legal exceptions as definitive without the relevant evidence.
 
 It shall:
 
@@ -2326,7 +2330,7 @@ A change shall not silently invalidate an existing requirement. If intended beha
 
 ## R-035 — Homepage Release Readiness
 
-Before promotion to the regular/public website, applicable requirements shall have implementation state and verification evidence; findings shall be classified; blocking findings shall be resolved or explicitly accepted through applicable governance; relevant historical regression tests completed; applicable accessibility/security/performance checks completed; external evaluation criteria assessed where applicable; data-source/licensing issues resolved; no silent placeholder/live-data ambiguity; and no unexplained requirement-to-implementation deviation.
+Before promotion to the regular/public website, applicable requirements shall have implementation state and verification evidence; findings shall be classified; blocking findings shall be resolved or explicitly accepted through applicable governance; relevant historical regression tests completed; applicable accessibility/security/performance checks completed; external evaluation criteria assessed where applicable; data-source technical access, provider permission/contract, licensing, and legal-review status resolved or explicitly governed; no silent placeholder/live-data ambiguity; and no unexplained requirement-to-implementation deviation.
 
 Release readiness is a traceable evidence state, not a single score.
 
