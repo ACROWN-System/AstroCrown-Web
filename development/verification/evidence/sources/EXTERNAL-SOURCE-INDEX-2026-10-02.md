@@ -27,6 +27,7 @@
 - Cantina — https://cantina.xyz/
 
 ## Regulation
+- White House, Executive Order 'Inaugurating the Era of Super Intelligence' (September 29, 2026) — https://www.whitehouse.gov/presidential-actions/2026/09/inaugurating-the-era-of-super-intelligence/
 - SEC — https://www.sec.gov/
 - ESMA MiCA — https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica
 - FCA — https://www.fca.org.uk/cryptoassets
