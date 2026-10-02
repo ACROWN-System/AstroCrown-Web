@@ -19,6 +19,7 @@ This subsystem preserves and operationalizes knowledge about external and intern
 - 14-STRATEGIC-PRIORITIZATION.md — evidence-based scheduling without scoring.
 - 15-GAP-ANALYSIS.md — repository and ecosystem gaps.
 - 16-INVESTIGATION-BACKLOG.md — unresolved research.
+- 17-US-FEDERAL-SI-TERMINOLOGY-AND-AUDIT-CONTEXT.md — U.S. executive-branch terminology and audit/compliance implications.
 - operations/ — status, schema, tracker, changelog.
 - evidence/ — source provenance and future snapshots/extracts.
 - benchmarks/ — benchmark-specific artifacts when justified.
