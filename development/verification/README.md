@@ -20,15 +20,25 @@ This subsystem preserves and operationalizes knowledge about external and intern
 - 15-GAP-ANALYSIS.md — repository and ecosystem gaps.
 - 16-INVESTIGATION-BACKLOG.md — unresolved research.
 - 17-US-FEDERAL-SI-TERMINOLOGY-AND-AUDIT-CONTEXT.md — U.S. executive-branch terminology and audit/compliance implications.
-- 18-X-ACCOUNT-REGISTRY-2026-10-03.md — initial X-account verification.
-- 19-X-SOURCE-INDEX-ACCOUNT-AND-LEADERSHIP-REGISTRY-2026-10-03.md — source-index X accounts and leadership layer.
-- 20-X-RESEARCH-TARGET-UNIVERSE-2026-10-03.md — broader X research universe covering capital, decision-makers, media, influencers, strategic distribution, space, AI and future relationship discovery.
 - operations/ — status, schema, tracker, changelog.
 - evidence/ — source provenance and future snapshots/extracts.
 - benchmarks/ — benchmark-specific artifacts when justified.
 - assessments/ — AstroCrown-specific pathway assessments.
 - paths/ — detailed external execution routes.
-- archive/ — dated historical snapshots.
+- archive/ — dated historical snapshots, including the October 2026 X research lineage.
+
+## Public Relations boundary
+
+Strategic Public Relations research for AstroCrown and the Space Empire is maintained separately under:
+`development/public-relations/`
+
+The active target universe is:
+`development/public-relations/ASTROCROWN-SPACE-EMPIRE-STRATEGIC-TARGET-UNIVERSE-2026-10-03.md`
+
+This separation is intentional. Verification asks who can provide evidence, assurance or authoritative evaluation. Public Relations asks who can materially affect visibility, relationships, capital access, introductions, partnerships, listings, media attention, research exposure or amplification.
+
+The historical October 2–3 X snapshots are indexed at:
+`archive/X-RESEARCH-SNAPSHOTS-2026-10-03.md`
 
 ## Boundary with development/audit/
 
