@@ -20,6 +20,9 @@ This subsystem preserves and operationalizes knowledge about external and intern
 - 15-GAP-ANALYSIS.md — repository and ecosystem gaps.
 - 16-INVESTIGATION-BACKLOG.md — unresolved research.
 - 17-US-FEDERAL-SI-TERMINOLOGY-AND-AUDIT-CONTEXT.md — U.S. executive-branch terminology and audit/compliance implications.
+- 18-X-ACCOUNT-REGISTRY-2026-10-03.md — initial X-account verification.
+- 19-X-SOURCE-INDEX-ACCOUNT-AND-LEADERSHIP-REGISTRY-2026-10-03.md — source-index X accounts and leadership layer.
+- 20-X-RESEARCH-TARGET-UNIVERSE-2026-10-03.md — broader X research universe covering capital, decision-makers, media, influencers, strategic distribution, space, AI and future relationship discovery.
 - operations/ — status, schema, tracker, changelog.
 - evidence/ — source provenance and future snapshots/extracts.
 - benchmarks/ — benchmark-specific artifacts when justified.
