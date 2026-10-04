@@ -3,8 +3,624 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AstroCrown</title>
+  <meta name="description" content="AstroCrown homepage development prototype">
+  <title>AstroCrown — Development</title>
+  <style>
+    :root {
+      --acrown-gold: #FFD700;
+      --acrown-black: #050914;
+      --acrown-deep-space-blue: #081426;
+      /* Candidate only — not yet an approved palette value. */
+      --acrown-space-blue-candidate: #10243D;
+      --acrown-light-space-blue: #16345A;
+      --acrown-green: #20C878;
+      --acrown-red: #E5484D;
+      --acrown-warning-yellow: #FFD24A;
+      --acrown-warm-white: #FFF7E0;
+      --header-height: 59px;
+      --header-control-height: 49px;
+      --header-edge-gap: 18px;
+      --environment-width: 130vw;
+      --environment-height: 245vh;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      min-height: 100%;
+      background: var(--acrown-black);
+    }
+
+    body {
+      margin: 0;
+      min-height: 245vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 50% 12%, rgba(22, 52, 90, 0.20), transparent 36%),
+        linear-gradient(180deg, var(--acrown-deep-space-blue) 0%, var(--acrown-black) 100%);
+      color: var(--acrown-warm-white);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    button, input, a { font: inherit; }
+    a { color: inherit; text-decoration: none; }
+    button { color: inherit; }
+
+    :focus-visible {
+      outline: 2px solid var(--acrown-gold);
+      outline-offset: 3px;
+    }
+
+    .homepage {
+      position: relative;
+      min-height: 245vh;
+      isolation: isolate;
+    }
+
+    /* First-pass calibration artwork. Final approved imagery is still undefined. */
+    .space-environment {
+      position: absolute;
+      z-index: 0;
+      top: 0;
+      left: 50%;
+      width: var(--environment-width);
+      min-width: 100%;
+      height: var(--environment-height);
+      transform: translateX(-50%);
+      overflow: hidden;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 19% 10%, rgba(255, 210, 74, 0.035), transparent 16%),
+        radial-gradient(circle at 70% 21%, rgba(117, 54, 196, 0.12), transparent 20%),
+        radial-gradient(circle at 84% 52%, rgba(40, 115, 180, 0.09), transparent 18%),
+        radial-gradient(circle at 35% 74%, rgba(22, 52, 90, 0.14), transparent 26%),
+        repeating-radial-gradient(circle at 38% 18%, rgba(255, 255, 255, 0.18) 0 1px, rgba(255, 255, 255, 0) 1px 9px),
+        repeating-radial-gradient(circle at 77% 49%, rgba(255, 255, 255, 0.11) 0 1px, rgba(255, 255, 255, 0) 1px 13px),
+        linear-gradient(180deg, #07111f 0%, #050914 45%, #04070f 100%);
+      background-size: auto, auto, auto, auto, 420px 360px, 610px 530px, auto;
+    }
+
+    .nebula {
+      position: absolute;
+      width: 41vw;
+      height: 41vw;
+      min-width: 310px;
+      min-height: 310px;
+      max-width: 650px;
+      max-height: 650px;
+      border-radius: 50%;
+      opacity: 0.52;
+      background:
+        radial-gradient(circle at center, rgba(255, 176, 66, 0.72) 0 3%, rgba(255, 135, 48, 0.18) 6%, transparent 12%),
+        conic-gradient(from 15deg,
+          transparent 0 13%, rgba(215, 102, 255, 0.42) 13% 20%,
+          transparent 20% 34%, rgba(61, 96, 213, 0.42) 34% 41%,
+          transparent 41% 57%, rgba(255, 161, 51, 0.42) 57% 65%,
+          transparent 65% 79%, rgba(150, 69, 214, 0.38) 79% 86%, transparent 86% 100%);
+      box-shadow: 0 0 55px rgba(255, 136, 43, 0.22), 0 0 115px rgba(122, 62, 198, 0.18);
+      transform: rotate(-20deg);
+    }
+
+    .nebula::before {
+      content: "";
+      position: absolute;
+      inset: 16%;
+      border-radius: 50%;
+      background: repeating-conic-gradient(from 0deg, rgba(255, 134, 42, 0.24) 0 6deg, transparent 6deg 18deg);
+      filter: blur(2px);
+      opacity: 0.85;
+    }
+
+    .nebula::after {
+      content: "";
+      position: absolute;
+      inset: 46%;
+      border-radius: 50%;
+      background: rgba(255, 203, 102, 0.94);
+      box-shadow: 0 0 35px 12px rgba(255, 163, 47, 0.46), 0 0 75px 28px rgba(165, 72, 220, 0.28);
+    }
+
+    .nebula.top { top: 8%; right: 3%; }
+    .nebula.middle {
+      top: 37%;
+      left: -5%;
+      width: 33vw;
+      height: 33vw;
+      opacity: 0.25;
+      transform: rotate(31deg) scale(0.86);
+    }
+
+    .planet {
+      position: absolute;
+      border-radius: 50%;
+      box-shadow: inset -28px -28px 55px rgba(0, 0, 0, 0.68);
+    }
+
+    .earth-system {
+      position: absolute;
+      top: 15%;
+      left: 15%;
+      width: min(34vw, 500px);
+      height: min(34vw, 500px);
+    }
+
+    .earth {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 29% 28%, rgba(255, 255, 255, 0.24), transparent 18%),
+        radial-gradient(circle at 44% 45%, rgba(88, 142, 91, 0.95) 0 9%, transparent 10%),
+        radial-gradient(circle at 56% 36%, rgba(68, 117, 76, 0.82) 0 7%, transparent 8%),
+        radial-gradient(circle at 49% 65%, rgba(86, 126, 76, 0.82) 0 12%, transparent 13%),
+        radial-gradient(circle at 35% 71%, rgba(58, 99, 67, 0.82) 0 8%, transparent 9%),
+        radial-gradient(circle at 34% 36%, #355f9c 0 36%, #1e3f79 55%, #102b57 76%, #071425 100%);
+      box-shadow:
+        inset 22px 18px 35px rgba(255, 226, 180, 0.13),
+        inset -42px -52px 80px rgba(0, 0, 0, 0.75),
+        0 0 32px rgba(83, 126, 185, 0.18);
+    }
+
+    .earth::after {
+      content: "";
+      position: absolute;
+      inset: 8% 10% 10% 6%;
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse at 28% 28%, rgba(255,255,255,0.16) 0 6%, transparent 7%),
+        radial-gradient(ellipse at 64% 44%, rgba(255,255,255,0.12) 0 5%, transparent 6%),
+        radial-gradient(ellipse at 47% 70%, rgba(255,255,255,0.10) 0 4%, transparent 5%);
+      transform: rotate(-22deg);
+      mix-blend-mode: screen;
+    }
+
+    .moon {
+      position: absolute;
+      width: 19%;
+      height: 19%;
+      right: 1%;
+      top: 18%;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 32% 27%, rgba(255,255,255,0.68), transparent 7%),
+        radial-gradient(circle at 62% 60%, #7a7b84 0 8%, transparent 9%),
+        radial-gradient(circle at 43% 38%, #999aa2 0 10%, transparent 11%),
+        radial-gradient(circle at 50% 50%, #c5c5c7 0 68%, #777981 69% 100%);
+      box-shadow: inset -8px -8px 14px rgba(0,0,0,0.46), 0 0 18px rgba(255,255,255,0.08);
+    }
+
+    .debris {
+      position: absolute;
+      left: 0;
+      bottom: 8%;
+      width: 68%;
+      height: 31%;
+      transform: rotate(-17deg);
+    }
+
+    .debris span {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(195, 178, 142, 0.78);
+      box-shadow: 0 0 8px rgba(213, 175, 112, 0.16);
+    }
+
+    .debris span:nth-child(1) { left: 7%; top: 64%; transform: scale(1.6); }
+    .debris span:nth-child(2) { left: 17%; top: 49%; transform: scale(0.8); }
+    .debris span:nth-child(3) { left: 24%; top: 71%; transform: scale(2.2); }
+    .debris span:nth-child(4) { left: 32%; top: 40%; transform: scale(0.7); }
+    .debris span:nth-child(5) { left: 42%; top: 58%; transform: scale(1.4); }
+    .debris span:nth-child(6) { left: 54%; top: 32%; transform: scale(0.9); }
+    .debris span:nth-child(7) { left: 61%; top: 48%; transform: scale(1.8); }
+    .debris span:nth-child(8) { left: 74%; top: 23%; transform: scale(0.75); }
+
+    .rocky-planet {
+      top: 54%;
+      right: 10%;
+      width: min(26vw, 390px);
+      height: min(26vw, 390px);
+      background:
+        radial-gradient(circle at 72% 23%, rgba(255, 220, 120, 0.88), transparent 6%),
+        radial-gradient(circle at 56% 33%, rgba(255, 160, 74, 0.56), transparent 20%),
+        radial-gradient(circle at 31% 45%, rgba(106, 48, 119, 0.72), transparent 21%),
+        radial-gradient(circle at 50% 50%, #605264 0 24%, #3f344c 48%, #1f2433 76%, #080f1c 100%);
+      transform: rotate(-9deg);
+      box-shadow: inset 26px -18px 48px rgba(0, 0, 0, 0.68), 0 0 45px rgba(201, 112, 70, 0.10);
+    }
+
+    .rocky-planet::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: repeating-linear-gradient(165deg, rgba(255, 210, 121, 0.12) 0 2px, transparent 2px 16px);
+      opacity: 0.55;
+      mask-image: radial-gradient(circle at 44% 48%, black 0 62%, transparent 73%);
+    }
+
+    .rays {
+      position: absolute;
+      top: 72%;
+      left: 23%;
+      width: min(24vw, 320px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      opacity: 0.16;
+      background: repeating-conic-gradient(from 5deg,
+        rgba(255, 151, 56, 0.65) 0 2deg, transparent 2deg 11deg,
+        rgba(172, 73, 214, 0.54) 11deg 13deg, transparent 13deg 20deg);
+      mask-image: radial-gradient(circle, black 0 48%, transparent 74%);
+    }
+
+    .site-header {
+      position: fixed;
+      inset: 0 0 auto 0;
+      z-index: 100;
+      height: var(--header-height);
+      width: 100%;
+      background: var(--acrown-space-blue-candidate);
+      border-bottom: 1px solid color-mix(in srgb, var(--acrown-light-space-blue) 72%, transparent);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.16);
+    }
+
+    .header-inner {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 var(--header-edge-gap) 0 18px;
+      overflow: hidden;
+    }
+
+    .brand-group {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex: 0 1 auto;
+      min-width: 180px;
+      white-space: nowrap;
+    }
+
+    .brand-control {
+      position: relative;
+      height: 51px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      transition: transform 90ms ease, background-color 120ms ease;
+    }
+
+    .brand-control::before {
+      content: "";
+      position: absolute;
+      inset: 5px 2px;
+      border-radius: 10px;
+      background: transparent;
+      z-index: -1;
+    }
+
+    .brand-control:hover::before,
+    .brand-group[data-state="hover"] .brand-control::before {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .brand-group[data-state="pressed"] .brand-control {
+      transform: scale(0.975);
+    }
+
+    .brand-mark-control {
+      width: 51px;
+      flex: 0 0 51px;
+      padding: 0;
+    }
+
+    .brand-mark {
+      width: 47px;
+      height: 47px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 215, 0, 0.78);
+      background:
+        radial-gradient(circle at 50% 45%, rgba(255, 215, 0, 0.18), transparent 33%),
+        #050914;
+      display: grid;
+      place-items: center;
+      color: var(--acrown-gold);
+      font-weight: 800;
+      font-size: 24px;
+      letter-spacing: -0.08em;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+    }
+
+    .brand-title-control {
+      min-width: 0;
+      max-width: clamp(90px, 13vw, 190px);
+      padding: 0 8px;
+      justify-content: flex-start;
+      text-align: left;
+      overflow: hidden;
+    }
+
+    .brand-title {
+      color: var(--acrown-warm-white);
+      font-size: clamp(17px, 1.8vw, 23px);
+      font-weight: 700;
+      letter-spacing: 0.015em;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    .primary-navigation {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+    }
+
+    .nav-control {
+      position: relative;
+      height: var(--header-control-height);
+      flex: 0 0 auto;
+      min-width: 90px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 0;
+      border-radius: 9px;
+      background: var(--acrown-space-blue-candidate);
+      cursor: pointer;
+      color: var(--acrown-warm-white);
+      transition: transform 90ms ease, background-color 120ms ease;
+    }
+
+    .nav-control:hover,
+    .nav-control[aria-expanded="true"] {
+      transform: scale(1.025);
+      background: color-mix(in srgb, var(--acrown-light-space-blue) 20%, var(--acrown-space-blue-candidate));
+    }
+
+    .nav-control:active { transform: scale(0.975); }
+
+    .nav-control[aria-expanded="true"] .nav-chevron { transform: rotate(180deg); }
+    .nav-chevron { display: inline-block; transition: transform 120ms ease; font-size: 12px; opacity: 0.82; }
+
+    .header-right {
+      min-width: 0;
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .search-shell {
+      min-width: 0;
+      width: clamp(120px, 18vw, 300px);
+      flex: 1 1 190px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      height: var(--header-control-height);
+      padding: 0 14px;
+      border: 1px solid rgba(22, 52, 90, 0.84);
+      border-radius: 9px;
+      background: rgba(5, 9, 20, 0.34);
+      color: var(--acrown-warm-white);
+      opacity: 0.58;
+    }
+
+    .search-input::placeholder { color: var(--acrown-warm-white); opacity: 0.72; }
+
+    .disabled-control {
+      height: var(--header-control-height);
+      min-width: 49px;
+      padding: 0 12px;
+      border: 1px solid rgba(22, 52, 90, 0.84);
+      border-radius: 9px;
+      background: rgba(5, 9, 20, 0.24);
+      color: var(--acrown-warm-white);
+      opacity: 0.56;
+      cursor: not-allowed;
+    }
+
+    .avatar-control {
+      width: 49px;
+      padding: 0;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+    }
+
+    .avatar-dot {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 247, 224, 0.54);
+      background:
+        radial-gradient(circle at 50% 36%, rgba(255, 247, 224, 0.78) 0 19%, transparent 20%),
+        radial-gradient(circle at 50% 84%, rgba(255, 247, 224, 0.58) 0 29%, transparent 30%),
+        rgba(5, 9, 20, 0.60);
+    }
+
+    .wallet-control { min-width: 76px; }
+
+    .nav-menu {
+      position: fixed;
+      z-index: 120;
+      top: 64px;
+      min-width: 220px;
+      max-width: min(330px, calc(100vw - 24px));
+      padding: 12px;
+      border: 1px solid rgba(22, 52, 90, 0.92);
+      border-radius: 10px;
+      background: rgba(5, 9, 20, 0.97);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, 0.42);
+      color: var(--acrown-warm-white);
+    }
+
+    .nav-menu[hidden] { display: none; }
+    .nav-menu p { margin: 0; font-size: 13px; line-height: 1.4; opacity: 0.84; }
+    .nav-menu strong { display: block; margin-bottom: 5px; color: var(--acrown-gold); font-size: 14px; }
+
+    .workspace {
+      position: relative;
+      z-index: 2;
+      min-height: 245vh;
+      padding-top: 59px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { transition-duration: 0.001ms !important; }
+    }
+
+    @media (max-width: 1050px) {
+      .brand-group { min-width: 170px; }
+      .nav-control { min-width: 86px; }
+      .search-shell { width: clamp(100px, 16vw, 220px); flex-basis: 150px; }
+    }
+  </style>
 </head>
 <body>
+  <div class="homepage" id="top">
+    <div class="space-environment" aria-hidden="true">
+      <div class="nebula top"></div>
+      <div class="nebula middle"></div>
+      <div class="earth-system">
+        <div class="earth planet"></div>
+        <div class="moon"></div>
+        <div class="debris">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="rocky-planet planet"></div>
+      <div class="rays"></div>
+    </div>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="brand-group" data-state="normal">
+          <a class="brand-control brand-mark-control" href="#top" aria-label="AstroCrown home" data-brand-control>
+            <span class="brand-mark" aria-hidden="true">A</span>
+          </a>
+          <a class="brand-control brand-title-control" href="#top" data-brand-control>
+            <span class="brand-title">AstroCrown</span>
+          </a>
+        </div>
+
+        <nav class="primary-navigation" aria-label="Primary">
+          <button class="nav-control" type="button" aria-expanded="false" aria-controls="nav-menu-markets" data-menu-button="nav-menu-markets">Markets &amp; Data <span class="nav-chevron" aria-hidden="true">⌄</span></button>
+          <button class="nav-control" type="button" aria-expanded="false" aria-controls="nav-menu-swap" data-menu-button="nav-menu-swap">Swap &amp; Trade <span class="nav-chevron" aria-hidden="true">⌄</span></button>
+          <button class="nav-control" type="button" aria-expanded="false" aria-controls="nav-menu-wallet" data-menu-button="nav-menu-wallet">Wallet Tracker <span class="nav-chevron" aria-hidden="true">⌄</span></button>
+          <button class="nav-control" type="button" aria-expanded="false" aria-controls="nav-menu-studio" data-menu-button="nav-menu-studio">Token Studio <span class="nav-chevron" aria-hidden="true">⌄</span></button>
+          <button class="nav-control" type="button" aria-expanded="false" aria-controls="nav-menu-nova" data-menu-button="nav-menu-nova">NOVA <span class="nav-chevron" aria-hidden="true">⌄</span></button>
+          <button class="nav-control" type="button" aria-expanded="false" aria-controls="nav-menu-more" data-menu-button="nav-menu-more">… <span class="nav-chevron" aria-hidden="true">⌄</span></button>
+        </nav>
+
+        <div class="header-right">
+          <label class="search-shell" aria-label="Search is not connected in this development stage">
+            <input class="search-input" type="search" placeholder="Search" disabled aria-disabled="true">
+          </label>
+          <button class="disabled-control avatar-control" type="button" aria-label="Account unavailable in this development stage" disabled>
+            <span class="avatar-dot" aria-hidden="true"></span>
+          </button>
+          <button class="disabled-control wallet-control" type="button" aria-label="Wallet unavailable in this development stage" disabled>Wallet</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="nav-menu" id="nav-menu-markets" role="dialog" aria-label="Markets &amp; Data menu" hidden>
+      <strong>Markets &amp; Data</strong><p>The navigation state is implemented; destination content will be connected when the corresponding homepage subsystem is implemented.</p>
+    </div>
+    <div class="nav-menu" id="nav-menu-swap" role="dialog" aria-label="Swap &amp; Trade menu" hidden>
+      <strong>Swap &amp; Trade</strong><p>The navigation state is implemented; execution destinations remain undefined at this stage.</p>
+    </div>
+    <div class="nav-menu" id="nav-menu-wallet" role="dialog" aria-label="Wallet Tracker menu" hidden>
+      <strong>Wallet Tracker</strong><p>The navigation state is implemented; wallet-provider behavior remains undefined at this stage.</p>
+    </div>
+    <div class="nav-menu" id="nav-menu-studio" role="dialog" aria-label="Token Studio menu" hidden>
+      <strong>Token Studio</strong><p>The navigation state is implemented; studio destinations remain undefined at this stage.</p>
+    </div>
+    <div class="nav-menu" id="nav-menu-nova" role="dialog" aria-label="NOVA menu" hidden>
+      <strong>NOVA</strong><p>The navigation state is implemented; NOVA-related homepage destinations will be connected as their systems are implemented.</p>
+    </div>
+    <div class="nav-menu" id="nav-menu-more" role="dialog" aria-label="More menu" hidden>
+      <strong>More</strong><p>Additional navigation entries remain to be defined by the evolving homepage architecture.</p>
+    </div>
+
+    <main class="workspace" id="homepage-workspace"></main>
+  </div>
+
+  <script>
+    (() => {
+      const brandGroup = document.querySelector('.brand-group');
+      const brandControls = [...document.querySelectorAll('[data-brand-control]')];
+      const menuButtons = [...document.querySelectorAll('[data-menu-button]')];
+      const menus = [...document.querySelectorAll('.nav-menu')];
+      let activeMenuButton = null;
+
+      const closeMenus = () => {
+        menus.forEach(menu => { menu.hidden = true; });
+        menuButtons.forEach(button => button.setAttribute('aria-expanded', 'false'));
+        activeMenuButton = null;
+      };
+
+      const positionMenu = (button, menu) => {
+        const rect = button.getBoundingClientRect();
+        const maxLeft = window.innerWidth - Math.min(menu.offsetWidth, window.innerWidth - 24);
+        menu.style.left = Math.max(12, Math.min(rect.left, maxLeft)) + 'px';
+      };
+
+      menuButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          const menu = document.getElementById(button.getAttribute('aria-controls'));
+          const isOpen = !menu.hidden;
+          closeMenus();
+          if (!isOpen) {
+            menu.hidden = false;
+            button.setAttribute('aria-expanded', 'true');
+            activeMenuButton = button;
+            positionMenu(button, menu);
+          }
+        });
+      });
+
+      document.addEventListener('pointerdown', event => {
+        if (activeMenuButton && !event.target.closest('.nav-menu') && !event.target.closest('[data-menu-button]')) closeMenus();
+      });
+
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && activeMenuButton) {
+          const button = activeMenuButton;
+          closeMenus();
+          button.focus();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if (activeMenuButton) positionMenu(activeMenuButton, document.getElementById(activeMenuButton.getAttribute('aria-controls')));
+      });
+
+      brandControls.forEach(control => {
+        control.addEventListener('mouseenter', () => { brandGroup.dataset.state = 'hover'; });
+        control.addEventListener('mouseleave', () => { if (!brandGroup.matches(':hover')) brandGroup.dataset.state = 'normal'; });
+        control.addEventListener('pointerdown', () => { brandGroup.dataset.state = 'pressed'; });
+        control.addEventListener('pointerup', () => { brandGroup.dataset.state = brandGroup.matches(':hover') ? 'hover' : 'normal'; });
+        control.addEventListener('focus', () => { brandGroup.dataset.state = 'hover'; });
+        control.addEventListener('blur', () => { if (!brandGroup.matches(':hover')) brandGroup.dataset.state = 'normal'; });
+      });
+    })();
+  </script>
 </body>
 </html>
