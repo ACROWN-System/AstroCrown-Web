@@ -316,3 +316,28 @@ The layer shall:
 - Asset compositing.
 - Atmospheric composition layer.
 
+
+
+## Implementation discoveries — 2026-10-04 first coupled pass
+
+### D-BG-001 — First implementation is a calibration environment, not final artwork
+
+The active repository currently contains no confirmed homepage background artwork assets for the Deep Space, Primitive Earth/Moon, Rocky Planet, and Spiral Nebula systems. The first real `index.html` implementation therefore uses CSS-composited environmental forms as a calibration surface.
+
+The prototype contains:
+
+- a deep-space foundational gradient with sparse star fields;
+- a nebula composition using gold, orange, purple, and deep-blue forms;
+- a Primitive Earth / Moon system with debris;
+- a secondary rocky planet with an illuminated upper-right region;
+- a tertiary radial-ray field.
+
+This implementation preserves the structural composition intent of R-014 through R-018 without asserting that the CSS artwork is the final approved visual asset set.
+
+### D-BG-002 — Background and header must be calibrated together
+
+The first implementation confirms the practical need to evaluate the environment and header as one visual composition. The header's opaque Space Blue surface, 59 px geometry, bottom delimitation, protected brand area, and environmental objects must be inspected together at representative desktop viewport dimensions so that the background remains atmospheric without competing with header/content readability.
+
+### D-BG-003 — Final object positions remain implementation evidence
+
+The initial object positions are deliberately provisional. They provide a concrete visual field for testing the documented 2.45× viewport-height and 1.3× viewport-width design envelope, negative space, edge safety, and progressive composition. Rendered inspection is still required before treating any exact object position as final.
