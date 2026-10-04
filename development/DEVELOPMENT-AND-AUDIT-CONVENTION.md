@@ -57,7 +57,26 @@ https://committee.iso.org/standard/78176.html
 
 ISO/IEC 25010 is a reference model, not a claim of ISO certification.
 
-## 3. Methodology
+## 3. Pre-Implementation Reconciliation Gate
+
+Before substantive implementation of a requirement-bearing subsystem, reconcile the intended implementation scope against all applicable current and originating sources.
+
+The reconciliation pass must check, as applicable:
+
+- the active subsystem requirements document;
+- the preserved originating or archived source from which the active document was derived;
+- validated discoveries and decisions that constrain the subsystem;
+- relevant cross-section reference documents;
+- the applicable audit/test matrix;
+- explicitly undefined, candidate, unresolved, deferred, rejected, or blocked items.
+
+A migrated or extracted subsystem document must not be assumed complete merely because it exists as the active implementation-facing document. Where an originating source or validated discovery contains an applicable constraint that is absent from the active document, the omission must be corrected or explicitly recorded as unresolved before implementation proceeds.
+
+Implementation must not silently promote an omitted requirement into an assumption, and it must not silently discard an architectural constraint merely because the immediate visual outcome can be approximated without it.
+
+This gate is specifically intended to prevent loss of requirements during document migration, summarization, extraction, or section-based implementation.
+
+## 4. Methodology
 
 Development follows this traceable sequence:
 
@@ -335,3 +354,19 @@ If a requirement does not apply, record N/A with its reason.
 
 If a change is made to resolve a failure, re-test it.
 
+
+
+## 18. Migration and Layered-Requirement Integrity
+
+When a document is created by migration, extraction, consolidation, or decomposition, preserve the relationship to the originating source and validated discoveries. A section document is an implementation aid, not permission to drop constraints that remain applicable in the originating record.
+
+For visual systems specifically, distinguish between:
+
+- visual appearance;
+- compositional architecture;
+- reusability requirements;
+- interaction/movement behavior;
+- asset/delivery architecture;
+- implementation technique.
+
+Matching appearance alone does not satisfy a requirement when the requirement also establishes composability, independent reuse, continuity, or other architectural behavior.
