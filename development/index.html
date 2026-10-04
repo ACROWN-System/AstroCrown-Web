@@ -57,10 +57,29 @@
       isolation: isolate;
     }
 
-    /* First-pass calibration artwork. Final approved imagery is still undefined. */
-    .space-environment {
+    /*
+     * BACKGROUND COMPOSITION ARCHITECTURE
+     *
+     * Each visual system is an independent layer sharing one spatial envelope.
+     * This is intentional: layers can be repositioned, replaced, reused, hidden,
+     * or recombined for other AstroCrown pages and future media compositions.
+     *
+     * Current forms are calibration prototypes only. Final artwork assets and
+     * exact delivery formats remain unresolved by the requirements.
+     */
+
+    .background-composition {
       position: absolute;
+      inset: 0;
       z-index: 0;
+      width: 100%;
+      height: 245vh;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .background-layer {
+      position: absolute;
       top: 0;
       left: 50%;
       width: var(--environment-width);
@@ -69,15 +88,39 @@
       transform: translateX(-50%);
       overflow: hidden;
       pointer-events: none;
+    }
+
+    .background-layer--deep-space {
+      background:
+        linear-gradient(180deg, #07111f 0%, #050914 45%, #04070f 100%);
+    }
+
+    .background-layer--dimmed-space {
+      opacity: 0.92;
       background:
         radial-gradient(circle at 19% 10%, rgba(255, 210, 74, 0.035), transparent 16%),
-        radial-gradient(circle at 70% 21%, rgba(117, 54, 196, 0.12), transparent 20%),
-        radial-gradient(circle at 84% 52%, rgba(40, 115, 180, 0.09), transparent 18%),
-        radial-gradient(circle at 35% 74%, rgba(22, 52, 90, 0.14), transparent 26%),
-        repeating-radial-gradient(circle at 38% 18%, rgba(255, 255, 255, 0.18) 0 1px, rgba(255, 255, 255, 0) 1px 9px),
-        repeating-radial-gradient(circle at 77% 49%, rgba(255, 255, 255, 0.11) 0 1px, rgba(255, 255, 255, 0) 1px 13px),
-        linear-gradient(180deg, #07111f 0%, #050914 45%, #04070f 100%);
-      background-size: auto, auto, auto, auto, 420px 360px, 610px 530px, auto;
+        radial-gradient(circle at 70% 21%, rgba(117, 54, 196, 0.10), transparent 20%),
+        radial-gradient(circle at 84% 52%, rgba(40, 115, 180, 0.08), transparent 18%),
+        repeating-radial-gradient(
+          circle at 38% 18%,
+          rgba(255, 255, 255, 0.18) 0 1px,
+          rgba(255, 255, 255, 0) 1px 9px
+        ),
+        repeating-radial-gradient(
+          circle at 77% 49%,
+          rgba(255, 255, 255, 0.11) 0 1px,
+          rgba(255, 255, 255, 0) 1px 13px
+        );
+      background-size: auto, auto, auto, 420px 360px, 610px 530px;
+    }
+
+    .background-layer--space-cloud {
+      opacity: 0.44;
+      background:
+        radial-gradient(ellipse 38% 17% at 30% 29%, rgba(91, 78, 177, 0.24), transparent 70%),
+        radial-gradient(ellipse 31% 14% at 72% 38%, rgba(42, 114, 164, 0.18), transparent 72%),
+        radial-gradient(ellipse 35% 19% at 57% 73%, rgba(119, 54, 165, 0.14), transparent 72%);
+      filter: blur(8px);
     }
 
     .nebula {
@@ -92,12 +135,21 @@
       opacity: 0.52;
       background:
         radial-gradient(circle at center, rgba(255, 176, 66, 0.72) 0 3%, rgba(255, 135, 48, 0.18) 6%, transparent 12%),
-        conic-gradient(from 15deg,
-          transparent 0 13%, rgba(215, 102, 255, 0.42) 13% 20%,
-          transparent 20% 34%, rgba(61, 96, 213, 0.42) 34% 41%,
-          transparent 41% 57%, rgba(255, 161, 51, 0.42) 57% 65%,
-          transparent 65% 79%, rgba(150, 69, 214, 0.38) 79% 86%, transparent 86% 100%);
-      box-shadow: 0 0 55px rgba(255, 136, 43, 0.22), 0 0 115px rgba(122, 62, 198, 0.18);
+        conic-gradient(
+          from 15deg,
+          transparent 0 13%,
+          rgba(215, 102, 255, 0.42) 13% 20%,
+          transparent 20% 34%,
+          rgba(61, 96, 213, 0.42) 34% 41%,
+          transparent 41% 57%,
+          rgba(255, 161, 51, 0.42) 57% 65%,
+          transparent 65% 79%,
+          rgba(150, 69, 214, 0.38) 79% 86%,
+          transparent 86% 100%
+        );
+      box-shadow:
+        0 0 55px rgba(255, 136, 43, 0.22),
+        0 0 115px rgba(122, 62, 198, 0.18);
       transform: rotate(-20deg);
     }
 
@@ -106,7 +158,12 @@
       position: absolute;
       inset: 16%;
       border-radius: 50%;
-      background: repeating-conic-gradient(from 0deg, rgba(255, 134, 42, 0.24) 0 6deg, transparent 6deg 18deg);
+      background:
+        repeating-conic-gradient(
+          from 0deg,
+          rgba(255, 134, 42, 0.24) 0 6deg,
+          transparent 6deg 18deg
+        );
       filter: blur(2px);
       opacity: 0.85;
     }
@@ -117,10 +174,13 @@
       inset: 46%;
       border-radius: 50%;
       background: rgba(255, 203, 102, 0.94);
-      box-shadow: 0 0 35px 12px rgba(255, 163, 47, 0.46), 0 0 75px 28px rgba(165, 72, 220, 0.28);
+      box-shadow:
+        0 0 35px 12px rgba(255, 163, 47, 0.46),
+        0 0 75px 28px rgba(165, 72, 220, 0.28);
     }
 
     .nebula.top { top: 8%; right: 3%; }
+
     .nebula.middle {
       top: 37%;
       left: -5%;
@@ -185,7 +245,9 @@
         radial-gradient(circle at 62% 60%, #7a7b84 0 8%, transparent 9%),
         radial-gradient(circle at 43% 38%, #999aa2 0 10%, transparent 11%),
         radial-gradient(circle at 50% 50%, #c5c5c7 0 68%, #777981 69% 100%);
-      box-shadow: inset -8px -8px 14px rgba(0,0,0,0.46), 0 0 18px rgba(255,255,255,0.08);
+      box-shadow:
+        inset -8px -8px 14px rgba(0,0,0,0.46),
+        0 0 18px rgba(255,255,255,0.08);
     }
 
     .debris {
@@ -226,7 +288,9 @@
         radial-gradient(circle at 31% 45%, rgba(106, 48, 119, 0.72), transparent 21%),
         radial-gradient(circle at 50% 50%, #605264 0 24%, #3f344c 48%, #1f2433 76%, #080f1c 100%);
       transform: rotate(-9deg);
-      box-shadow: inset 26px -18px 48px rgba(0, 0, 0, 0.68), 0 0 45px rgba(201, 112, 70, 0.10);
+      box-shadow:
+        inset 26px -18px 48px rgba(0, 0, 0, 0.68),
+        0 0 45px rgba(201, 112, 70, 0.10);
     }
 
     .rocky-planet::after {
@@ -234,7 +298,12 @@
       position: absolute;
       inset: 0;
       border-radius: 50%;
-      background: repeating-linear-gradient(165deg, rgba(255, 210, 121, 0.12) 0 2px, transparent 2px 16px);
+      background:
+        repeating-linear-gradient(
+          165deg,
+          rgba(255, 210, 121, 0.12) 0 2px,
+          transparent 2px 16px
+        );
       opacity: 0.55;
       mask-image: radial-gradient(circle at 44% 48%, black 0 62%, transparent 73%);
     }
@@ -247,9 +316,14 @@
       aspect-ratio: 1;
       border-radius: 50%;
       opacity: 0.16;
-      background: repeating-conic-gradient(from 5deg,
-        rgba(255, 151, 56, 0.65) 0 2deg, transparent 2deg 11deg,
-        rgba(172, 73, 214, 0.54) 11deg 13deg, transparent 13deg 20deg);
+      background:
+        repeating-conic-gradient(
+          from 5deg,
+          rgba(255, 151, 56, 0.65) 0 2deg,
+          transparent 2deg 11deg,
+          rgba(172, 73, 214, 0.54) 11deg 13deg,
+          transparent 13deg 20deg
+        );
       mask-image: radial-gradient(circle, black 0 48%, transparent 74%);
     }
 
@@ -493,19 +567,39 @@
 </head>
 <body>
   <div class="homepage" id="top">
-    <div class="space-environment" aria-hidden="true">
-      <div class="nebula top"></div>
-      <div class="nebula middle"></div>
-      <div class="earth-system">
-        <div class="earth planet"></div>
-        <div class="moon"></div>
-        <div class="debris">
-          <span></span><span></span><span></span><span></span>
-          <span></span><span></span><span></span><span></span>
+    <div class="background-composition" aria-hidden="true">
+      <!-- Layer 1: persistent foundational environment -->
+      <div class="background-layer background-layer--deep-space" data-background-layer="deep-space"></div>
+
+      <!-- Layer 2a: reusable dimmed stars / dust / light variations -->
+      <div class="background-layer background-layer--dimmed-space" data-background-layer="dimmed-space-objects"></div>
+
+      <!-- Layer 2b: reusable diffuse space-cloud system -->
+      <div class="background-layer background-layer--space-cloud" data-background-layer="space-cloud"></div>
+
+      <!-- Layer 3: reusable Primitive Earth / Moon / debris introductory system -->
+      <div class="background-layer" data-background-layer="primitive-earth-system">
+        <div class="earth-system">
+          <div class="earth planet"></div>
+          <div class="moon"></div>
+          <div class="debris">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+          </div>
         </div>
       </div>
-      <div class="rocky-planet planet"></div>
-      <div class="rays"></div>
+
+      <!-- Layer 4: reusable rocky planet introductory system -->
+      <div class="background-layer" data-background-layer="rocky-planet">
+        <div class="rocky-planet planet"></div>
+      </div>
+
+      <!-- Layer 5: reusable Spiral Nebula system + its rays -->
+      <div class="background-layer" data-background-layer="spiral-nebula">
+        <div class="nebula top"></div>
+        <div class="nebula middle"></div>
+        <div class="rays"></div>
+      </div>
     </div>
 
     <header class="site-header">
