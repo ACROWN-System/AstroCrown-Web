@@ -24,6 +24,7 @@
 | HDR-005 | R-019.7–R-019.9 | Search, account, and wallet are not presented as connected runtime services while their source systems remain undefined. |
 | HDR-006 | R-019.11 / R-019.16 | Adaptive header space uses native layout first; JavaScript is not used for manual viewport breakpoints. |
 | Q-001 | R-007 / R-010 | No unnecessary external dependency was introduced; implemented controls have identifiable behavior or explicit unavailable state. |
+| ARCH-001 | D-003 / new reconciliation gate | Background systems are independently addressable layers rather than one flattened page-specific background. |
 
 ## Verification
 
@@ -38,6 +39,7 @@
 | HT-DEV-002-07 | HDR-005 | Static source inspection. | PASS | Search is disabled, and Avatar/Wallet are disabled with truthful accessible labels rather than being represented as connected services. |
 | HT-DEV-002-08 | HDR-006 | Static source inspection. | PASS | Header uses flex/overflow/native layout; no viewport-measurement JavaScript or breakpoint state manager was introduced. |
 | HT-DEV-002-09 | Q-001 | Dependency/source inspection. | PASS | The page uses no third-party package, external script, client-side secret, or unnecessary runtime dependency. |
+| HT-DEV-002-10 | ARCH-001 | Static source inspection of the corrected prototype. | PASS | The background now uses independently named layer containers for deep space, dimmed space, space cloud, Primitive Earth system, Rocky Planet, and Spiral Nebula. The systems are not flattened into one background asset or one visual container. |
 
 ## Findings
 
@@ -48,6 +50,8 @@
 | F-2026.10.04-003 | HT-DEV-002-05 | Exact approved logo asset/version remains unresolved; the prototype uses a clearly provisional CSS-built mark. | Open |
 | F-2026.10.04-004 | HT-DEV-002-06 | Header keyboard/pointer interaction and responsive visual behavior remain to be verified in a real browser. | Open |
 | F-2026.10.04-005 | HT-DEV-002-01/02 | CSS environmental artwork is a calibration prototype rather than final approved artwork. | Open |
+| F-2026.10.04-006 | ARCH-001 | The first implementation pass did not sufficiently encode the already-established reusable background-layer architecture; this was corrected on the review branch. | Remediated |
+| F-2026.10.04-007 | ARCH-001 | Pre-implementation reconciliation did not catch the omission before the first implementation pass. The development convention has now been amended with an explicit reconciliation gate. | Remediated |
 
 ## Remediation
 
@@ -62,7 +66,20 @@ No remediation has been claimed yet. The open items are expected next-stage veri
 | F-2026.10.04-003 | Confirm approved logo asset/version | BLOCKED | Approval evidence is not yet present in the active development source. |
 | F-2026.10.04-004 | Desktop pointer/keyboard/responsive interaction test | BLOCKED | Browser interaction evidence not yet captured. |
 | F-2026.10.04-005 | Visual composition calibration against representative desktop viewports | BLOCKED | Browser visual evidence not yet captured. |
+| F-2026.10.04-006 | Re-check independent layer architecture after correction | PASS | Static source verification on commit `fe00646c4f16720aaaddadd15ca853687dac6f98`. |
+| F-2026.10.04-007 | Verify new pre-implementation reconciliation gate is recorded in development convention | PASS | Static source verification on convention commit `f9091014d2c52008cc0daf63995ef3cfdccefa95`. |
+
+## Methodology Correction
+
+The initial implementation exposed a process defect: the migration-derived active background document was treated as though it fully represented the applicable source and validated discoveries. The preserved originating source contained D-003, which explicitly established reusable visual-layer composition. The implementation initially captured the visual forms but not the architectural independence strongly enough.
+
+The defect is remediated by:
+
+1. correcting the `BACKGROUND.md` architecture baseline and discoveries;
+2. separating the background into independently addressable layer containers in `development/index.html`;
+3. adding HT-014 to the homepage verification matrix;
+4. adding a pre-implementation reconciliation gate to the development/audit convention.
 
 ## Closure
 
-The audit scope is intentionally incomplete. The first implementation establishes a concrete testable baseline and records unresolved items rather than treating the prototype as final. Open/BLOCKED findings remain active until rendered and interaction evidence supports closure.
+The audit scope is intentionally incomplete. The corrected implementation establishes a concrete testable baseline and records unresolved items rather than treating the prototype as final. Open/BLOCKED findings remain active until rendered and interaction evidence supports closure. The reusable-layer architecture itself is statically verified PASS; visual fidelity, exact asset architecture, browser behavior, and final palette/logo decisions remain open or BLOCKED pending evidence.
