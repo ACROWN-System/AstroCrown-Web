@@ -21,6 +21,7 @@ Translate the homepage requirements into concrete verification work before subst
 | HT-011 | R-011 | Audit-record review confirming evidence exists for applicable requirements and blocking findings are resolved. | Release |
 | HT-012 | R-012 | Manual desktop black-box scroll test: verify page scrolling, persistent header behavior, independent market-directory scrolling, confinement while the directory can scroll, and natural handoff to surrounding page scrolling at the directory boundary in both scroll directions. Record viewport, input method, observed states, and evidence. | Functional / Responsive |
 | HT-013 | R-013 | Manual desktop presentation and functional test: verify the primary scrollbar may be visually hidden while wheel/trackpad/keyboard page scrolling remains functional; verify nested scroll regions remain usable and no scroll trap or obscured content is introduced. Record viewport, input method, and evidence. | Functional / Visual |
+| HT-014 | D-003 / R-014–R-018 | Static and rendered architecture verification: verify the foundational environment and major reusable visual systems are represented as independently addressable layers, are not irreversibly flattened into one page-specific background, and can be independently replaced/repositioned/disabled for composition testing. | Architecture / Visual |
 
 ## NIST IR 8397 Applicability
 
@@ -50,3 +51,10 @@ Allowed result states:
 - FAIL
 - N/A — with reason
 - BLOCKED — with reason
+
+
+## Layered Background Architecture Verification
+
+HT-014 is intentionally separate from appearance-only checks. A visually accurate composite can still fail the architectural requirement if the visual systems cannot be independently reused, replaced, or recomposed.
+
+The exact final asset format and delivery mechanism remain undefined and are not prerequisites for verifying the existence of independently addressable prototype layers.
