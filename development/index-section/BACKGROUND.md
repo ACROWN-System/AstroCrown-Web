@@ -10,6 +10,25 @@ This document preserves source material and does not promote candidates, discove
 
 R-012 through R-018 and the related validated discoveries are preserved here as the background/environment subsystem material.
 
+## Current implementation architecture baseline
+
+The homepage background is a compositional system rather than a monolithic page-specific artwork.
+
+The current intended layer model is:
+
+1. **Deep Space Environment Layer** — foundational/base environment.
+2. **Dimmed Deep-Space Objects Layer** — reusable sparse stars, dust, gas, and diffuse light variation.
+3. **Space Cloud Layer** — independently composable atmospheric/cloud treatment where used.
+4. **Primitive Earth System Layer** — reusable Earth, Moon, debris, and associated dust/asteroid composition.
+5. **Rocky Planet Layer** — independently reusable secondary planetary composition.
+6. **Spiral Nebula Layer** — independently reusable spiral-nebula composition, including its radiation-ray treatment.
+
+Each layer should remain independently replaceable, repositionable, enabled/disabled, delivered, and reusable where the target composition requires it. The exact final asset format, dimensions, delivery strategy, and rendering mechanism remain implementation decisions and must be evaluated rather than guessed.
+
+The background architecture is intended to support continuity of AstroCrown visual identity across different website pages, alternate compositions, and future non-page media uses where appropriate. Reuse must not require flattening independent layers into one irreversible page-specific image.
+
+The layers share a common compositional coordinate envelope where this is useful, but they do not thereby become one asset or one implementation mechanism.
+
 ## Source material
 
 ### Source excerpt: lines 497–526
@@ -322,17 +341,18 @@ The layer shall:
 
 ### D-BG-001 — First implementation is a calibration environment, not final artwork
 
-The active repository currently contains no confirmed homepage background artwork assets for the Deep Space, Primitive Earth/Moon, Rocky Planet, and Spiral Nebula systems. The first real `index.html` implementation therefore uses CSS-composited environmental forms as a calibration surface.
+The active repository currently contains no confirmed homepage background artwork assets for the Deep Space, Primitive Earth/Moon, Rocky Planet, and Spiral Nebula systems. The first real `index.html` implementation therefore uses CSS-generated prototype forms **inside separate reusable background-layer containers** as a calibration surface.
 
-The prototype contains:
+The prototype currently represents:
 
-- a deep-space foundational gradient with sparse star fields;
-- a nebula composition using gold, orange, purple, and deep-blue forms;
-- a Primitive Earth / Moon system with debris;
-- a secondary rocky planet with an illuminated upper-right region;
-- a tertiary radial-ray field.
+- a foundational deep-space environment layer;
+- an independent dimmed-space/stars layer;
+- an independent diffuse space-cloud layer;
+- an independent Primitive Earth / Moon / debris layer;
+- an independent rocky-planet layer;
+- an independent Spiral Nebula layer with its associated rays.
 
-This implementation preserves the structural composition intent of R-014 through R-018 without asserting that the CSS artwork is the final approved visual asset set.
+This implementation preserves the structural composition intent of R-014 through R-018 while explicitly avoiding a monolithic background implementation. The CSS forms are still calibration representations, not final approved artwork assets.
 
 ### D-BG-002 — Background and header must be calibrated together
 
@@ -341,3 +361,15 @@ The first implementation confirms the practical need to evaluate the environment
 ### D-BG-003 — Final object positions remain implementation evidence
 
 The initial object positions are deliberately provisional. They provide a concrete visual field for testing the documented 2.45× viewport-height and 1.3× viewport-width design envelope, negative space, edge safety, and progressive composition. Rendered inspection is still required before treating any exact object position as final.
+
+### D-BG-004 — Reusable background-layer architecture is an implementation requirement
+
+The first prototype exposed an architectural omission: representing the visual objects inside one general environment container was not sufficient to demonstrate the reusable-layer model already established by D-003.
+
+The corrected implementation now gives each major visual system its own background-layer container and explicit layer identity. This makes the conceptual base environment, dimmed objects, space cloud, Primitive Earth system, Rocky Planet, and Spiral Nebula independently addressable for later asset replacement, composition, scroll treatment, selective reuse, and testing.
+
+The layer identities are intentionally decoupled from the current CSS artwork. Future approved assets may replace individual layer contents without requiring the entire homepage background to be flattened or rebuilt as one asset.
+
+### D-BG-005 — Reuse extends beyond a single homepage composition
+
+The purpose of the layered architecture is not limited to this homepage. The same visual components may be reused in other AstroCrown pages, alternate page compositions, and future media compositions where appropriate. This is a brand-continuity and maintainability objective, while exact reuse mechanisms remain subject to later evidence and asset architecture decisions.
