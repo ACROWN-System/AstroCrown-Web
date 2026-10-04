@@ -429,3 +429,35 @@ Before final implementation and before promotion, the header shall be reviewed t
 Any intentional duplication must have a documented requirement or technical justification.
 
 
+
+
+## Implementation discoveries — 2026-10-04 first coupled pass
+
+This section records implementation evidence from the first real homepage background/header prototype. It does not promote unresolved items to approved requirements.
+
+### D-HDR-001 — AstroCrown Space Blue candidate
+
+The first implementation evaluated a candidate intermediate UI surface color of `#10243D`.
+
+Using sRGB relative-luminance contrast calculations:
+
+- `#10243D` against AstroCrown Warm White `#FFF7E0`: approximately 14.63:1.
+- `#10243D` against AstroCrown Gold `#FFD700`: approximately 11.16:1.
+- `#10243D` against AstroCrown Deep Space Blue `#081426`: approximately 1.18:1.
+- `#10243D` against AstroCrown Light Space Blue `#16345A`: approximately 1.25:1.
+
+The candidate is therefore retained as an implementation candidate only. It remains **unapproved** until rendered visual hierarchy, UI-state contrast, and the applicable accessibility verification are completed.
+
+### D-HDR-002 — Logo asset remains unresolved
+
+The repository does not currently expose a confirmed active homepage logo asset/version outside preserved historical material. The first implementation therefore uses a provisional CSS-built mark rather than claiming an unverified asset is approved.
+
+This is an explicit verification item, not a silent substitution. The provisional mark must be replaced when the approved logo asset/version is established.
+
+### D-HDR-003 — Unimplemented services are not presented as functional
+
+The first header prototype implements navigation disclosure state because that behavior is defined, while Search, Account/Avatar, and Wallet are visibly unavailable because their corresponding runtime systems are not yet defined. This avoids presenting non-functional controls as if they were connected services.
+
+### D-HDR-004 — Native layout is the first adaptive mechanism
+
+The first header pass uses ordinary flex layout, protected brand/control groups, overflow handling, and a continuously adaptable search region. JavaScript is limited to disclosure-state behavior, menu positioning, and coordinated brand interaction states rather than manual viewport-state management.
