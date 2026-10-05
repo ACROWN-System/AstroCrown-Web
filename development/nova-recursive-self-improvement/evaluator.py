@@ -40,6 +40,8 @@ def safe_env(extra: dict[str, str] | None = None) -> dict[str, str]:
         "LANG": "C.UTF-8",
         "LC_ALL": "C.UTF-8",
         "PYTHONUNBUFFERED": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+        "GIT_CONFIG_NOSYSTEM": "1",
     }
     if extra:
         for key, value in extra.items():
@@ -48,7 +50,12 @@ def safe_env(extra: dict[str, str] | None = None) -> dict[str, str]:
     return env
 
 
-def run(command: list[str], cwd: Path, timeout: int, extra_env: dict[str, str] | None = None) -> tuple[int, str, float]:
+def run(
+    command: list[str],
+    cwd: Path,
+    timeout: int,
+    extra_env: dict[str, str] | None = None,
+) -> tuple[int, str, float]:
     started = time.monotonic()
     result = subprocess.run(
         command,
@@ -80,6 +87,16 @@ def changed_files(root: Path, baseline: str) -> list[str]:
     return sorted(line for line in output.splitlines() if line)
 
 
+def changed_statuses(root: Path, baseline: str) -> list[tuple[str, str]]:
+    output = git(root, "diff", "--name-status", f"{baseline}..HEAD")
+    statuses = []
+    for line in output.splitlines():
+        parts = line.split("\t", 1)
+        if len(parts) == 2:
+            statuses.append((parts[0], parts[1]))
+    return statuses
+
+
 def protected_changes(paths: list[str]) -> list[str]:
     findings = []
     for path in paths:
@@ -87,7 +104,10 @@ def protected_changes(paths: list[str]) -> list[str]:
         if normalized.startswith(PROTECTED_PREFIXES):
             findings.append(normalized)
         lowered = normalized.lower()
-        if any(fragment in lowered for fragment in (".env", "credentials", "secret", "private_key", "id_rsa")):
+        if any(
+            fragment in lowered
+            for fragment in (".env", "credentials", "secret", "private_key", "id_rsa")
+        ):
             findings.append(normalized)
         if not normalized.startswith("development/"):
             findings.append(normalized)
@@ -136,6 +156,23 @@ def benchmark(root: Path, timeout: int) -> dict[str, Any]:
 
 def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any]:
     timeout = int(policy["evaluation"]["timeout_seconds"])
+
+    # Candidate evaluation must not inherit repository write/auth paths.
+    subprocess.run(
+        ["git", "config", "--local", "--unset-all", "credential.helper"],
+        cwd=root,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    subprocess.run(
+        ["git", "remote", "remove", "origin"],
+        cwd=root,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+
     results: list[dict[str, Any]] = []
 
     paths = changed_files(root, baseline)
@@ -144,6 +181,14 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
         "name": "protected-scope",
         "status": "FAIL" if protected else "PASS",
         "details": protected or "Candidate remained inside allowed development scope.",
+    })
+
+    statuses = changed_statuses(root, baseline)
+    deleted = [path for status, path in statuses if status.startswith("D")]
+    results.append({
+        "name": "deletion-protection",
+        "status": "FAIL" if deleted else "PASS",
+        "details": deleted or "Candidate did not delete tracked repository files.",
     })
 
     leaks = secret_findings(root, baseline)
@@ -195,8 +240,12 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
             **benchmark(root, timeout),
         })
 
-    statuses = [item["status"] for item in results]
-    decision = "FAIL" if "FAIL" in statuses else ("BLOCKED" if "BLOCKED" in statuses else "PASS")
+    statuses_only = [item["status"] for item in results]
+    decision = (
+        "FAIL"
+        if "FAIL" in statuses_only
+        else ("BLOCKED" if "BLOCKED" in statuses_only else "PASS")
+    )
     return {
         "decision": decision,
         "baseline_commit": baseline,
