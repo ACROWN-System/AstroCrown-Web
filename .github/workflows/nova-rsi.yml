@@ -52,6 +52,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           BRANCH="rsi/candidate-${GITHUB_RUN_ID}"
+          if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          else
+            git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          fi
+          gh auth setup-git
           git fetch origin main
           git switch -c "$BRANCH" "$GITHUB_SHA"
           git apply .rsi-evidence/candidate.patch
