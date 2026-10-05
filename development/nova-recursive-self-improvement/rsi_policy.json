@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "candidate_scope": {
+    "allowed_prefixes": ["development/"],
+    "protected_paths": [
+      "development/nova-recursive-self-improvement/evaluator.py",
+      "development/nova-recursive-self-improvement/rsi_engine.py",
+      "development/nova-recursive-self-improvement/rsi_policy.json",
+      "development/nova-recursive-self-improvement/candidate.schema.json",
+      "development/nova-recursive-self-improvement/tests/",
+      ".github/"
+    ],
+    "forbidden_path_fragments": [".env", "credentials", "secret", "private_key", "id_rsa"]
+  },
+  "evaluation": {
+    "timeout_seconds": 300,
+    "require_benchmark": true,
+    "benchmark_command_env": "RSI_BENCHMARK_COMMAND"
+  },
+  "promotion": {
+    "mode": "candidate-branch",
+    "allow_main": false,
+    "require_benchmark_pass": true
+  }
+}
