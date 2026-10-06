@@ -27,10 +27,9 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
 
     def test_benchmark_passes_machine_verifiable_success(self):
         os.environ["RSI_BENCHMARK_COMMAND"] = (
-            "python -c "import json,os; "
-            "print(json.dumps({'candidate_better': True, "
-            "'baseline': os.environ['RSI_BASELINE_COMMIT'], "
-            "'candidate': os.environ['RSI_CANDIDATE_COMMIT']}))""
+            'python -c \'import json,os; print(json.dumps({"candidate_better": True, '
+            '"baseline": os.environ["RSI_BASELINE_COMMIT"], '
+            '"candidate": os.environ["RSI_CANDIDATE_COMMIT"]}))\''
         )
         result = benchmark(self.ROOT, "baseline-sha", "candidate-sha", 30)
         self.assertEqual(result["status"], "PASS")
@@ -40,8 +39,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
 
     def test_benchmark_fails_when_candidate_is_not_better(self):
         os.environ["RSI_BENCHMARK_COMMAND"] = (
-            "python -c "import json; "
-            "print(json.dumps({'candidate_better': False}))""
+            'python -c \'import json; print(json.dumps({"candidate_better": False}))\''
         )
         result = benchmark(self.ROOT, "baseline-sha", "candidate-sha", 30)
         self.assertEqual(result["status"], "FAIL")
