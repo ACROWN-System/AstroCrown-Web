@@ -9,6 +9,7 @@ produces machine-readable evidence. It never writes to main by itself.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -16,8 +17,6 @@ import shutil
 import subprocess
 import tempfile
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -186,14 +185,21 @@ def implementation_ready(policy: dict[str, Any]) -> bool:
 def repository_context(
     root: Path,
     max_context_chars: int,
-    forbidden_fragments: tuple[str, ...],
+    excluded_prefixes: tuple[str, ...],
+    priority_prefixes: tuple[str, ...],
 ) -> tuple[str, int]:
     files = git(root, 'ls-files', 'development').splitlines()
+    priority = [
+        f for f in files
+        if any(f.startswith(prefix) for prefix in priority_prefixes)
+    ]
+    remainder = [f for f in files if f not in priority]
+    ordered = priority + remainder
+
     chunks: list[str] = []
     total = 0
-    for relative in files:
-        lower = relative.lower()
-        if any(fragment.lower() in lower for fragment in forbidden_fragments):
+    for relative in ordered:
+        if any(relative.startswith(prefix) for prefix in excluded_prefixes):
             continue
         path = root / relative
         if not path.is_file():
@@ -206,10 +212,11 @@ def repository_context(
         if remaining <= 0:
             break
         clipped = data[:remaining]
-        chunks.append(f'\n===== {relative} =====\n{clipped}')
+        chunks.append(f'
+===== {relative} =====
+{clipped}')
         total += len(clipped)
     return ''.join(chunks), total
-
 
 
 def proposer_prompt(
@@ -222,10 +229,12 @@ def proposer_prompt(
     allowed_scope = ", ".join(scope["allowed_prefixes"])
     protected_paths = ", ".join(scope["protected_paths"])
     forbidden_paths = ", ".join(scope["forbidden_path_fragments"])
+    context_policy = policy.get("context", {})
     context, context_chars = repository_context(
         root,
         max_context_chars,
-        tuple(scope["forbidden_path_fragments"]),
+        tuple(context_policy.get("excluded_prefixes", [])),
+        tuple(context_policy.get("priority_prefixes", [])),
     )
     prompt = f'''You are the improvement proposer inside NOVA's recursive self-improvement system.
 
@@ -401,8 +410,28 @@ def apply_and_evaluate(
 
 
 
+def write_manifest(evidence_dir: Path) -> None:
+    files = {}
+    for path in sorted(evidence_dir.iterdir()):
+        if path.is_file() and path.name != "manifest.json":
+            files[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (evidence_dir / "manifest.json").write_text(
+        json.dumps(
+            {"schema_version": 1, "evidence_sha256": files},
+            indent=2,
+            sort_keys=True,
+        ) + "
+",
+        encoding="utf-8",
+    )
+
+
 def cycle(root: Path, evidence_dir: Path) -> int:
     evidence_dir.mkdir(parents=True, exist_ok=True)
+    if any(evidence_dir.iterdir()):
+        raise RuntimeError("RSI evidence directory must be empty at cycle start.")
+    if git(root, 'status', '--porcelain'):
+        raise RuntimeError("RSI requires a clean working tree before a cycle starts.")
     baseline = git(root, 'rev-parse', 'HEAD')
     policy = load_policy(root)
     budget = policy['budget']
@@ -417,7 +446,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
 
     started = time.monotonic()
     evidence: dict[str, Any] = {
-        'schema_version': 2,
+        'schema_version': 3,
         'baseline_commit': baseline,
         'started_at': time.time(),
         'budget': {
@@ -452,6 +481,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
                 json.dumps(evidence, indent=2, sort_keys=True) + '\n',
                 encoding='utf-8',
             )
+            write_manifest(evidence_dir)
             print(json.dumps(evidence, indent=2, sort_keys=True))
             return 1
 
@@ -530,6 +560,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
         json.dumps(evidence, indent=2, sort_keys=True) + '\n',
         encoding='utf-8',
     )
+    write_manifest(evidence_dir)
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0 if evidence['decision'] == 'PASS' else 1
 
