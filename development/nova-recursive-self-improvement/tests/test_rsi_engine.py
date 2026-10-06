@@ -1,4 +1,9 @@
+import sys
 import unittest
+from pathlib import Path
+
+# Keep the test runnable both through unittest discovery and directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from rsi_engine import (
     classify_decision,
@@ -19,9 +24,18 @@ class RsiEngineTests(unittest.TestCase):
 
     def test_extract_diff_fallback(self):
         payload = extract_candidate_payload(
-            "```diff\\ndiff --git a/development/x.txt b/development/x.txt\\n```"
+            """```diff
+diff --git a/development/x.txt b/development/x.txt
+--- a/development/x.txt
++++ b/development/x.txt
+@@ -1 +1 @@
+-old
++new
+```"""
         )
         self.assertIn("diff --git", payload["patch"])
+        self.assertIn("--- a/development/x.txt", payload["patch"])
+        self.assertIn("+++ b/development/x.txt", payload["patch"])
 
     def test_protected_paths_are_rejected(self):
         errors = validate_patch_paths([
@@ -35,7 +49,9 @@ class RsiEngineTests(unittest.TestCase):
         self.assertTrue(errors)
 
     def test_usage_is_normalized(self):
-        usage = normalize_usage({"prompt_tokens": 4000, "completion_tokens": 800, "total_tokens": 4800})
+        usage = normalize_usage(
+            {"prompt_tokens": 4000, "completion_tokens": 800, "total_tokens": 4800}
+        )
         self.assertEqual(usage["total_tokens"], 4800)
 
     def test_missing_usage_is_not_fabricated(self):
