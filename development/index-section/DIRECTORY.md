@@ -2,7 +2,7 @@
 
 ## Migration status
 
-Active subsystem requirements document created from the pre-migration homepage requirements. The historical source remains preserved verbatim in `development/index-archive/HOMEPAGE-REQUIREMENTS.md`.
+Active subsystem requirements document created from the pre-migration homepage requirements. The historical source remains preserved verbatim in `backup/2026.10.04-11h43mn00sc-system/development/index-archive/HOMEPAGE-REQUIREMENTS.md`.
 
 This document preserves source material and does not promote candidates, discoveries, or undefined items into approved requirements.
 
