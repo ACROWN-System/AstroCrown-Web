@@ -423,8 +423,7 @@ def write_manifest(evidence_dir: Path) -> None:
             {"schema_version": 1, "evidence_sha256": files},
             indent=2,
             sort_keys=True,
-        ) + "
-",
+        ) + "\n",
         encoding="utf-8",
     )
 
