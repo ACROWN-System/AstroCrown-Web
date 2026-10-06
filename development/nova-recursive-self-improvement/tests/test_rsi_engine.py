@@ -39,7 +39,7 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertIn("+++ b/development/x.txt", payload["patch"])
 
     def test_protected_paths_are_rejected(self):
-        policy = load_policy(Path(__file__).resolve().parents[2])
+        policy = load_policy(Path(__file__).resolve().parents[3])
         errors = validate_patch_paths(
             [
                 "development/nova-recursive-self-improvement/evaluator.py",
@@ -50,7 +50,7 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertTrue(errors)
 
     def test_policy_defines_candidate_scope(self):
-        policy = load_policy(Path(__file__).resolve().parents[2])
+        policy = load_policy(Path(__file__).resolve().parents[3])
         scope = policy["candidate_scope"]
         self.assertIn("development/", scope["allowed_prefixes"])
         self.assertIn(
