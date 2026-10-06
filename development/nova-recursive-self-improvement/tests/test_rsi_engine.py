@@ -3,6 +3,7 @@ import unittest
 from rsi_engine import (
     classify_decision,
     extract_candidate_payload,
+    normalize_usage,
     validate_patch_content,
     validate_patch_paths,
 )
@@ -32,6 +33,13 @@ class RsiEngineTests(unittest.TestCase):
     def test_secret_patterns_are_rejected(self):
         errors = validate_patch_content("api_key = 'not-a-real-secret'")
         self.assertTrue(errors)
+
+    def test_usage_is_normalized(self):
+        usage = normalize_usage({"prompt_tokens": 4000, "completion_tokens": 800, "total_tokens": 4800})
+        self.assertEqual(usage["total_tokens"], 4800)
+
+    def test_missing_usage_is_not_fabricated(self):
+        self.assertIsNone(normalize_usage(None))
 
     def test_decision_precedence(self):
         self.assertEqual(classify_decision(["PASS", "PASS"]), "PASS")
