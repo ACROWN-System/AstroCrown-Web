@@ -3,10 +3,11 @@
 ## Implemented components
 
 - `rsi_engine.py` — autonomous candidate proposal, bounded context/output generation, patch validation, isolated worktree execution, and evidence generation.
-- `evaluator.py` — protected evaluator used from the baseline evaluator/policy rather than candidate-controlled evaluation code.
+- `evaluator.py` — protected evaluator using the protected policy and enforcing machine-verifiable benchmark evidence rather than candidate-controlled evaluation code.
 - `rsi_policy.json` — protected scope, evaluation, promotion, and resource-budget policy.
 - `candidate.schema.json` — candidate payload contract.
-- `tests/test_rsi_engine.py` — deterministic tests for candidate parsing, protected-path enforcement, secret-pattern rejection, and decision precedence.
+- `tests/test_rsi_engine.py` — deterministic tests for candidate parsing, protected-path enforcement, secret-pattern rejection, usage accounting, and decision precedence.
+- `tests/test_evaluator.py` — protected benchmark-contract tests, including baseline/candidate commit propagation and machine-verifiable success/failure.
 - `.github/workflows/nova-rsi.yml` — scheduled/manual autonomous cycle with a separate read-only evaluation phase and write-capable candidate-retention phase.
 
 ## Runtime flow
@@ -62,7 +63,7 @@ The actual API key must never be committed to the repository.
 
 The capability benchmark is mandatory in the current policy. Because the repository does not yet have an approved NOVA capability benchmark, an RSI cycle without `RSI_BENCHMARK_COMMAND` is intentionally recorded as `BLOCKED` rather than accepted as an improvement.
 
-The benchmark must compare the candidate against an explicit baseline and return a machine-verifiable success result. It should test the capability that the candidate claims to improve rather than merely checking whether the candidate code runs.
+The benchmark must compare the candidate against an explicit baseline and return a machine-verifiable JSON result containing boolean `candidate_better`. The evaluator supplies `RSI_BASELINE_COMMIT` and `RSI_CANDIDATE_COMMIT`; a benchmark that does not produce a valid JSON object with `candidate_better: true` on successful execution cannot yield PASS. It should test the capability that the candidate claims to improve rather than merely checking whether the candidate code runs.
 
 ## Promotion behavior
 
