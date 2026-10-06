@@ -202,9 +202,34 @@ def benchmark(
     }
 
 
+def implementation_ready(policy: dict[str, Any]) -> bool:
+    readiness = policy.get("implementation_readiness", {})
+    return (
+        readiness.get("status") == "READY"
+        and readiness.get("require_explicit_ready") is True
+        and readiness.get("promotion_blocked_until_ready") is True
+    )
+
+
 def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any]:
     timeout = int(policy["evaluation"]["timeout_seconds"])
     candidate_commit = git(root, "rev-parse", "HEAD")
+
+    if not implementation_ready(policy):
+        return {
+            "decision": "BLOCKED",
+            "baseline_commit": baseline,
+            "changed_files": changed_files(root, baseline),
+            "results": [{
+                "name": "implementation-readiness",
+                "status": "BLOCKED",
+                "details": (
+                    "RSI implementation is not declared READY in the protected policy. "
+                    "No candidate may be accepted or promoted until all mandatory implementation "
+                    "components are implemented and independently verified."
+                ),
+            }],
+        }
 
     # Candidate evaluation must not inherit repository write/auth paths.
     subprocess.run(
