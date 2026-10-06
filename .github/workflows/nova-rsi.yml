@@ -1,0 +1,81 @@
+name: NOVA Recursive Self-Improvement
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+
+concurrency:
+  group: nova-rsi
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  rsi-cycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Enforce proposer commercial-use eligibility
+        env:
+          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+        run: |
+          test "$RSI_AI_COMMERCIAL_ELIGIBILITY" = "PASS"
+
+      - name: Run autonomous RSI cycle
+        env:
+          RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
+          RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
+          RSI_AI_API_KEY: ${{ secrets.RSI_AI_API_KEY }}
+          RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+        run: |
+          python development/nova-recursive-self-improvement/rsi_engine.py cycle \
+            --repo . \
+            --evidence-dir .rsi-evidence
+
+      - name: Retain qualified candidate
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          BRANCH="rsi/candidate-${GITHUB_RUN_ID}"
+          if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          else
+            git remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          fi
+          gh auth setup-git
+          git fetch origin main
+          git switch -c "$BRANCH" "$GITHUB_SHA"
+          git apply .rsi-evidence/candidate.patch
+          git config user.name "NOVA RSI"
+          git config user.email "nova-rsi@localhost"
+          git add development/
+          git commit -m "rsi: retain verified candidate ${GITHUB_RUN_ID}"
+          git push --set-upstream origin "$BRANCH"
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "NOVA RSI candidate ${GITHUB_RUN_ID}" \
+            --body "Automated NOVA RSI candidate retained after protected evaluation. See the workflow artifact for the evidence package."
+
+      - name: Upload RSI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nova-rsi-evidence-${{ github.run_id }}
+          path: .rsi-evidence/
+          if-no-files-found: warn
