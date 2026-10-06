@@ -115,17 +115,17 @@ jobs:
     permissions:
       contents: read
     env:
-      RSI_AI_API_KEY: ${{ secrets.RSI_AI_API_KEY }}
+      NOVA_RSI_NOSANA_LLM_API_KEY: ${{ secrets.NOVA_RSI_NOSANA_LLM_API_KEY }}
 
     steps:
       - name: Validate provider secret is configured
         run: |
           set -euo pipefail
-          if [ -z "${RSI_AI_API_KEY:-}" ]; then
-            echo "RSI_AI_API_KEY is not configured. This is the next protected credential boundary."
+          if [ -z "${NOVA_RSI_NOSANA_LLM_API_KEY:-}" ]; then
+            echo "NOVA_RSI_NOSANA_LLM_API_KEY is not configured. This is the next protected credential boundary."
             exit 2
           fi
-          echo "RSI_AI_API_KEY is configured; the value is not printed."
+          echo "NOVA_RSI_NOSANA_LLM_API_KEY is configured; the value is not printed."
 
   rsi-cycle:
     needs: provider-secret-boundary
@@ -151,7 +151,7 @@ jobs:
           RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
           RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
           RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
-          RSI_AI_API_KEY: ${{ secrets.RSI_AI_API_KEY }}
+          NOVA_RSI_NOSANA_LLM_API_KEY: ${{ secrets.NOVA_RSI_NOSANA_LLM_API_KEY }}
           RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
         run: |
           python development/nova-recursive-self-improvement/rsi_engine.py cycle             --repo .             --evidence-dir .rsi-evidence
