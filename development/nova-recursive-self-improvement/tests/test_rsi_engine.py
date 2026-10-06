@@ -69,13 +69,7 @@ diff --git a/development/x.txt b/development/x.txt
             "baseline_commit": "different",
             "hypothesis": "improve",
             "rationale": "testable",
-            "patch": "diff --git a/development/x b/development/x
---- a/development/x
-+++ b/development/x
-@@ -1 +1 @@
--a
-+b
-",
+            "patch": "diff --git a/development/x b/development/x\\n--- a/development/x\\n+++ b/development/x\\n@@ -1 +1 @@\\n-a\\n+b\\n",
         }
         self.assertTrue(validate_candidate_payload(candidate, "baseline", policy))
         candidate["baseline_commit"] = "baseline"
