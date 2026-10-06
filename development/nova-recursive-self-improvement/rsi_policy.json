@@ -1,7 +1,9 @@
 {
   "schema_version": 2,
   "candidate_scope": {
-    "allowed_prefixes": ["development/"],
+    "allowed_prefixes": [
+      "development/"
+    ],
     "protected_paths": [
       "development/nova-recursive-self-improvement/evaluator.py",
       "development/nova-recursive-self-improvement/rsi_engine.py",
@@ -10,7 +12,13 @@
       "development/nova-recursive-self-improvement/tests/",
       ".github/"
     ],
-    "forbidden_path_fragments": [".env", "credentials", "secret", "private_key", "id_rsa"]
+    "forbidden_path_fragments": [
+      ".env",
+      "credentials",
+      "secret",
+      "private_key",
+      "id_rsa"
+    ]
   },
   "evaluation": {
     "timeout_seconds": 300,
@@ -30,5 +38,11 @@
     "mode": "candidate-branch",
     "allow_main": false,
     "require_benchmark_pass": true
+  },
+  "implementation_readiness": {
+    "status": "INCOMPLETE",
+    "require_explicit_ready": true,
+    "promotion_blocked_until_ready": true,
+    "note": "The RSI subsystem is still under implementation. This flag must remain INCOMPLETE until all mandatory implementation components are implemented and independently verified."
   }
 }

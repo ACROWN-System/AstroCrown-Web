@@ -14,7 +14,7 @@ The evaluator supplies:
 - `RSI_CANDIDATE_COMMIT` — candidate Git commit;
 - the candidate repository checkout as the current working directory.
 
-The benchmark receives no proposer API key, GitHub token, or other repository credential.
+The benchmark receives no proposer API key, GitHub token, or other repository credential. The protected evaluator supplies the exact baseline and candidate commit identifiers through `RSI_BASELINE_COMMIT` and `RSI_CANDIDATE_COMMIT`.
 
 ## Command
 
@@ -26,7 +26,7 @@ The value is executed by the protected evaluator inside the candidate environmen
 
 ## Output contract
 
-The command must emit a JSON object containing at least:
+The command must emit only a JSON object containing at least:
 
 `candidate_better: true`
 
@@ -41,7 +41,7 @@ It should also provide machine-readable evidence sufficient to explain the compa
 }
 ```
 
-The actual metrics are task-dependent. A benchmark must not manufacture improvement by changing the direction of a metric without documenting the intended interpretation.
+The actual metrics are task-dependent. A benchmark must not manufacture improvement by changing the direction of a metric without documenting the intended interpretation. The protected evaluator accepts PASS only when the command exits successfully and `candidate_better` is the boolean value `true`.
 
 ## Baseline comparison
 

@@ -19,16 +19,6 @@ SECRET_DIFF_PATTERNS = [
     re.compile(r"(?:api[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]", re.IGNORECASE),
 ]
 
-PROTECTED_PREFIXES = (
-    ".github/",
-    "development/nova-recursive-self-improvement/evaluator.py",
-    "development/nova-recursive-self-improvement/rsi_engine.py",
-    "development/nova-recursive-self-improvement/rsi_policy.json",
-    "development/nova-recursive-self-improvement/candidate.schema.json",
-    "development/nova-recursive-self-improvement/tests/",
-)
-
-
 def safe_env(extra: dict[str, str] | None = None) -> dict[str, str]:
     blocked = re.compile(
         r"(API[_-]?KEY|TOKEN|PASSWORD|SECRET|PRIVATE[_-]?KEY|AUTH)",
@@ -97,20 +87,26 @@ def changed_statuses(root: Path, baseline: str) -> list[tuple[str, str]]:
     return statuses
 
 
-def protected_changes(paths: list[str]) -> list[str]:
+def protected_changes(paths: list[str], policy: dict[str, Any]) -> list[str]:
+    scope = policy["candidate_scope"]
+    allowed_prefixes = tuple(scope["allowed_prefixes"])
+    protected_paths = tuple(scope["protected_paths"])
+    forbidden_fragments = tuple(scope["forbidden_path_fragments"])
+
     findings = []
     for path in paths:
-        normalized = path.replace("\\", "/")
-        if normalized.startswith(PROTECTED_PREFIXES):
-            findings.append(normalized)
+        normalized = path.replace("\\", "/").lstrip("./")
         lowered = normalized.lower()
-        if any(
-            fragment in lowered
-            for fragment in (".env", "credentials", "secret", "private_key", "id_rsa")
-        ):
+
+        if not any(normalized.startswith(prefix) for prefix in allowed_prefixes):
             findings.append(normalized)
-        if not normalized.startswith("development/"):
+
+        if any(normalized.startswith(prefix) for prefix in protected_paths):
             findings.append(normalized)
+
+        if any(fragment.lower() in lowered for fragment in forbidden_fragments):
+            findings.append(normalized)
+
     return sorted(set(findings))
 
 
@@ -123,7 +119,28 @@ def secret_findings(root: Path, baseline: str) -> list[str]:
     return findings
 
 
-def benchmark(root: Path, timeout: int) -> dict[str, Any]:
+def parse_benchmark_output(output: str) -> dict[str, Any]:
+    raw = output.strip()
+    if not raw:
+        raise ValueError("Benchmark produced no JSON output.")
+
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("Benchmark output must be a JSON object.")
+
+    candidate_better = payload.get("candidate_better")
+    if not isinstance(candidate_better, bool):
+        raise ValueError("Benchmark JSON must contain boolean candidate_better.")
+
+    return payload
+
+
+def benchmark(
+    root: Path,
+    baseline: str,
+    candidate: str,
+    timeout: int,
+) -> dict[str, Any]:
     raw = os.environ.get("RSI_BENCHMARK_COMMAND", "").strip()
     if not raw:
         return {
@@ -139,23 +156,80 @@ def benchmark(root: Path, timeout: int) -> dict[str, Any]:
         }
 
     try:
-        code, output, duration = run(command, root, timeout)
+        code, output, duration = run(
+            command,
+            root,
+            timeout,
+            extra_env={
+                "RSI_BASELINE_COMMIT": baseline,
+                "RSI_CANDIDATE_COMMIT": candidate,
+            },
+        )
     except subprocess.TimeoutExpired:
         return {
             "status": "FAIL",
             "reason": f"Benchmark exceeded {timeout}s timeout.",
         }
 
+    evidence: dict[str, Any]
+    try:
+        evidence = parse_benchmark_output(output)
+    except (json.JSONDecodeError, ValueError) as exc:
+        return {
+            "status": "BLOCKED",
+            "reason": f"Benchmark output contract invalid: {exc}",
+            "exit_code": code,
+            "duration_seconds": round(duration, 3),
+            "output": output[-16000:],
+        }
+
+    if code != 0:
+        return {
+            "status": "FAIL",
+            "reason": "Benchmark command returned a non-zero exit code.",
+            "candidate_better": evidence["candidate_better"],
+            "exit_code": code,
+            "duration_seconds": round(duration, 3),
+            "evidence": evidence,
+        }
+
     return {
-        "status": "PASS" if code == 0 else "FAIL",
+        "status": "PASS" if evidence["candidate_better"] else "FAIL",
+        "candidate_better": evidence["candidate_better"],
         "exit_code": code,
         "duration_seconds": round(duration, 3),
-        "output": output[-16000:],
+        "evidence": evidence,
     }
+
+
+def implementation_ready(policy: dict[str, Any]) -> bool:
+    readiness = policy.get("implementation_readiness", {})
+    return (
+        readiness.get("status") == "READY"
+        and readiness.get("require_explicit_ready") is True
+        and readiness.get("promotion_blocked_until_ready") is True
+    )
 
 
 def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any]:
     timeout = int(policy["evaluation"]["timeout_seconds"])
+    candidate_commit = git(root, "rev-parse", "HEAD")
+
+    if not implementation_ready(policy):
+        return {
+            "decision": "BLOCKED",
+            "baseline_commit": baseline,
+            "changed_files": changed_files(root, baseline),
+            "results": [{
+                "name": "implementation-readiness",
+                "status": "BLOCKED",
+                "details": (
+                    "RSI implementation is not declared READY in the protected policy. "
+                    "No candidate may be accepted or promoted until all mandatory implementation "
+                    "components are implemented and independently verified."
+                ),
+            }],
+        }
 
     # Candidate evaluation must not inherit repository write/auth paths.
     subprocess.run(
@@ -176,7 +250,7 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
     results: list[dict[str, Any]] = []
 
     paths = changed_files(root, baseline)
-    protected = protected_changes(paths)
+    protected = protected_changes(paths, policy)
     results.append({
         "name": "protected-scope",
         "status": "FAIL" if protected else "PASS",
@@ -237,7 +311,7 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
     if bool(policy["evaluation"]["require_benchmark"]):
         results.append({
             "name": "capability-benchmark",
-            **benchmark(root, timeout),
+            **benchmark(root, baseline, candidate_commit, timeout),
         })
 
     statuses_only = [item["status"] for item in results]

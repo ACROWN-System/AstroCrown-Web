@@ -22,19 +22,6 @@ from pathlib import Path
 from typing import Any
 
 
-PROTECTED_PREFIXES = (
-    '.github/',
-    'development/nova-recursive-self-improvement/evaluator.py',
-    'development/nova-recursive-self-improvement/rsi_engine.py',
-    'development/nova-recursive-self-improvement/rsi_policy.json',
-    'development/nova-recursive-self-improvement/candidate.schema.json',
-    'development/nova-recursive-self-improvement/tests/',
-)
-
-FORBIDDEN_FRAGMENTS = (
-    '.env', 'credentials', 'secret', 'private_key', 'id_rsa',
-)
-
 SECRET_PATTERNS = [
     re.compile(r'BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY', re.IGNORECASE),
     re.compile(r'(?:api[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]', re.IGNORECASE),
@@ -98,15 +85,21 @@ def changed_paths_from_patch(patch: str) -> list[str]:
     return sorted(paths)
 
 
-def validate_patch_paths(paths: list[str]) -> list[str]:
+def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
+    scope = policy["candidate_scope"]
+    allowed_prefixes = tuple(scope["allowed_prefixes"])
+    protected_paths = tuple(scope["protected_paths"])
+    forbidden_fragments = tuple(scope["forbidden_path_fragments"])
+
     errors: list[str] = []
     for path in paths:
         normalized = path.replace('\\', '/').lstrip('./')
-        if not normalized.startswith('development/'):
-            errors.append(f'Outside allowed development scope: {path}')
-        if any(fragment in normalized.lower() for fragment in FORBIDDEN_FRAGMENTS):
+        lowered = normalized.lower()
+        if not any(normalized.startswith(prefix) for prefix in allowed_prefixes):
+            errors.append(f'Outside allowed scope: {path}')
+        if any(fragment.lower() in lowered for fragment in forbidden_fragments):
             errors.append(f'Forbidden sensitive path: {path}')
-        if normalized.startswith(PROTECTED_PREFIXES):
+        if any(normalized.startswith(prefix) for prefix in protected_paths):
             errors.append(f'Protected path: {path}')
     return sorted(set(errors))
 
@@ -123,13 +116,26 @@ def classify_decision(statuses: list[str]) -> str:
     return 'PASS'
 
 
-def repository_context(root: Path, max_context_chars: int) -> tuple[str, int]:
+def implementation_ready(policy: dict[str, Any]) -> bool:
+    readiness = policy.get("implementation_readiness", {})
+    return (
+        readiness.get("status") == "READY"
+        and readiness.get("require_explicit_ready") is True
+        and readiness.get("promotion_blocked_until_ready") is True
+    )
+
+
+def repository_context(
+    root: Path,
+    max_context_chars: int,
+    forbidden_fragments: tuple[str, ...],
+) -> tuple[str, int]:
     files = git(root, 'ls-files', 'development').splitlines()
     chunks: list[str] = []
     total = 0
     for relative in files:
         lower = relative.lower()
-        if any(fragment in lower for fragment in FORBIDDEN_FRAGMENTS):
+        if any(fragment.lower() in lower for fragment in forbidden_fragments):
             continue
         path = root / relative
         if not path.is_file():
@@ -148,8 +154,21 @@ def repository_context(root: Path, max_context_chars: int) -> tuple[str, int]:
 
 
 
-def proposer_prompt(root: Path, baseline: str, max_context_chars: int) -> tuple[str, int]:
-    context, context_chars = repository_context(root, max_context_chars)
+def proposer_prompt(
+    root: Path,
+    baseline: str,
+    max_context_chars: int,
+    policy: dict[str, Any],
+) -> tuple[str, int]:
+    scope = policy["candidate_scope"]
+    allowed_scope = ", ".join(scope["allowed_prefixes"])
+    protected_paths = ", ".join(scope["protected_paths"])
+    forbidden_paths = ", ".join(scope["forbidden_path_fragments"])
+    context, context_chars = repository_context(
+        root,
+        max_context_chars,
+        tuple(scope["forbidden_path_fragments"]),
+    )
     prompt = f'''You are the improvement proposer inside NOVA's recursive self-improvement system.
 
 Repository: ACROWN-System/AstroCrown-Web
@@ -157,10 +176,10 @@ Baseline commit: {baseline}
 
 Identify ONE concrete, testable improvement to the current development system.
 
-Hard constraints:
-- Work only within development/.
-- Do not modify evaluator.py, rsi_engine.py, rsi_policy.json, candidate.schema.json, tests/, or .github/.
-- Do not add credentials, secrets, private keys, or sensitive configuration.
+Hard constraints from the protected RSI policy:
+- Candidate changes must remain within: {allowed_scope}
+- Protected paths that must not be modified: {protected_paths}
+- Forbidden sensitive path fragments: {forbidden_paths}
 - Preserve existing requirements, evidence, provenance, and uncertainty.
 - Prefer the minimum necessary change.
 - The candidate must have a measurable hypothesis that can be tested against the baseline.
@@ -373,6 +392,27 @@ def cycle(root: Path, evidence_dir: Path) -> int:
     candidate_attempts = 0
 
     try:
+        if not implementation_ready(policy):
+            evidence['result'] = {
+                'decision': 'BLOCKED',
+                'stage': 'implementation-readiness',
+                'error': (
+                    'RSI implementation is not declared READY in the protected policy. '
+                    'The proposer must not be called before mandatory implementation '
+                    'components are implemented and independently verified.'
+                ),
+            }
+            evidence['budget']['proposer_calls_used'] = proposer_calls
+            evidence['budget']['candidate_attempts_used'] = candidate_attempts
+            evidence['duration_seconds'] = round(time.monotonic() - started, 3)
+            evidence['decision'] = evidence['result']['decision']
+            (evidence_dir / 'cycle.json').write_text(
+                json.dumps(evidence, indent=2, sort_keys=True) + '\n',
+                encoding='utf-8',
+            )
+            print(json.dumps(evidence, indent=2, sort_keys=True))
+            return 1
+
         if max_calls < 1 or max_candidates < 1:
             raise RuntimeError('RSI budget policy disables candidate generation.')
 
@@ -380,7 +420,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
         if proposer_calls > max_calls:
             raise RuntimeError('RSI proposer call budget exceeded before proposal.')
 
-        prompt, context_chars = proposer_prompt(root, baseline, max_context_chars)
+        prompt, context_chars = proposer_prompt(root, baseline, max_context_chars, policy)
         evidence['prompt_context_chars'] = context_chars
 
         candidate, usage = call_proposer(prompt, max_output_tokens)

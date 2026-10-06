@@ -3,10 +3,11 @@
 ## Implemented components
 
 - `rsi_engine.py` — autonomous candidate proposal, bounded context/output generation, patch validation, isolated worktree execution, and evidence generation.
-- `evaluator.py` — protected evaluator used from the baseline evaluator/policy rather than candidate-controlled evaluation code.
+- `evaluator.py` — protected evaluator using the protected policy and enforcing machine-verifiable benchmark evidence rather than candidate-controlled evaluation code.
 - `rsi_policy.json` — protected scope, evaluation, promotion, and resource-budget policy.
 - `candidate.schema.json` — candidate payload contract.
-- `tests/test_rsi_engine.py` — deterministic tests for candidate parsing, protected-path enforcement, secret-pattern rejection, and decision precedence.
+- `tests/test_rsi_engine.py` — deterministic tests for candidate parsing, protected-path enforcement, secret-pattern rejection, usage accounting, and decision precedence.
+- `tests/test_evaluator.py` — protected benchmark-contract tests, including baseline/candidate commit propagation and machine-verifiable success/failure.
 - `.github/workflows/nova-rsi.yml` — scheduled/manual autonomous cycle with a separate read-only evaluation phase and write-capable candidate-retention phase.
 
 ## Runtime flow
@@ -58,11 +59,23 @@ Repository variables:
 
 The actual API key must never be committed to the repository.
 
+## Implementation readiness gate
+
+The autonomous RSI path is intentionally **not operational while implementation is incomplete**.
+
+The protected `rsi_policy.json` currently declares `implementation_readiness.status = INCOMPLETE`. This state is enforced at three layers:
+
+- the workflow refuses to start the proposer/evaluation lifecycle;
+- `rsi_engine.py` stops before making an AI proposer call;
+- `evaluator.py` returns `BLOCKED` rather than PASS.
+
+The readiness state must remain `INCOMPLETE` until all mandatory RSI implementation components have been implemented and independently verified. Changing the readiness field to `READY` is therefore a release/readiness decision, not a candidate-generated result.
+
 ## Benchmark requirement
 
 The capability benchmark is mandatory in the current policy. Because the repository does not yet have an approved NOVA capability benchmark, an RSI cycle without `RSI_BENCHMARK_COMMAND` is intentionally recorded as `BLOCKED` rather than accepted as an improvement.
 
-The benchmark must compare the candidate against an explicit baseline and return a machine-verifiable success result. It should test the capability that the candidate claims to improve rather than merely checking whether the candidate code runs.
+The benchmark must compare the candidate against an explicit baseline and return a machine-verifiable JSON result containing boolean `candidate_better`. The evaluator supplies `RSI_BASELINE_COMMIT` and `RSI_CANDIDATE_COMMIT`; a benchmark that does not produce a valid JSON object with `candidate_better: true` on successful execution cannot yield PASS. It should test the capability that the candidate claims to improve rather than merely checking whether the candidate code runs.
 
 ## Promotion behavior
 
@@ -83,7 +96,7 @@ Candidate patches may not modify:
 - `development/nova-recursive-self-improvement/candidate.schema.json`;
 - `development/nova-recursive-self-improvement/tests/`.
 
-Candidate patches are also restricted to `development/` and are rejected if they delete tracked files or contain configured secret indicators.
+Candidate patches are also restricted by the protected `rsi_policy.json` scope and are rejected if they delete tracked files or contain configured sensitive path or content indicators. The engine and protected evaluator load the policy rather than maintaining separate copies of the candidate scope and protected-path lists.
 
 ## Security limitation
 
@@ -93,8 +106,8 @@ This is not an OS-level security sandbox. Stronger filesystem, process, network,
 
 ## Development status
 
-Status: **implemented / benchmark-gated candidate engine**
+Status: **incomplete / implementation-gated candidate engine**
 
-The autonomous proposal, isolation, evaluation, evidence, and candidate-retention mechanics are implemented.
+The autonomous proposal, isolation, evaluation, evidence, and candidate-retention mechanics are partially implemented, but the autonomous RSI lifecycle is intentionally blocked while required implementation work remains incomplete.
 
-Full autonomous promotion of an intelligence improvement cannot be considered operational until a protected NOVA capability benchmark is implemented and validated.
+Full autonomous operation and promotion of an intelligence improvement cannot be considered operational until all mandatory RSI components are implemented, independently verified, and the protected policy is explicitly advanced to READY.

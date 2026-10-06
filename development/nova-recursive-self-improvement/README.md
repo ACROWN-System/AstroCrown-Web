@@ -342,11 +342,11 @@ Accordingly, this repository treats strong RSI as an engineering target subject 
 
 ## Development Status
 
-Status: **candidate / initial subsystem structure**
+Status: **incomplete / implementation-gated**
 
-The subsystem boundary and autonomous RSI objective are established.
+The subsystem boundary and autonomous RSI objective are established, but the implementation is not yet complete.
 
-Specific self-modification mechanisms, evaluators, benchmark suites, sandbox technologies, deployment mechanisms, and automation policies remain candidates until evaluated against project requirements.
+Specific self-modification mechanisms, evaluator hardening, benchmark suites, sandbox technologies, deployment mechanisms, and automation policies remain incomplete or candidate-stage until evaluated against project requirements. The protected RSI policy explicitly blocks autonomous operation and promotion while implementation readiness remains incomplete.
 
 ## Verification
 
