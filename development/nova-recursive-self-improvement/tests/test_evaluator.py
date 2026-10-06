@@ -1,6 +1,10 @@
 import os
+import sys
 import unittest
 from pathlib import Path
+
+# Keep the test runnable both through unittest discovery and directly.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from evaluator import benchmark, parse_benchmark_output
 
