@@ -19,16 +19,6 @@ SECRET_DIFF_PATTERNS = [
     re.compile(r"(?:api[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]", re.IGNORECASE),
 ]
 
-PROTECTED_PREFIXES = (
-    ".github/",
-    "development/nova-recursive-self-improvement/evaluator.py",
-    "development/nova-recursive-self-improvement/rsi_engine.py",
-    "development/nova-recursive-self-improvement/rsi_policy.json",
-    "development/nova-recursive-self-improvement/candidate.schema.json",
-    "development/nova-recursive-self-improvement/tests/",
-)
-
-
 def safe_env(extra: dict[str, str] | None = None) -> dict[str, str]:
     blocked = re.compile(
         r"(API[_-]?KEY|TOKEN|PASSWORD|SECRET|PRIVATE[_-]?KEY|AUTH)",
@@ -97,20 +87,26 @@ def changed_statuses(root: Path, baseline: str) -> list[tuple[str, str]]:
     return statuses
 
 
-def protected_changes(paths: list[str]) -> list[str]:
+def protected_changes(paths: list[str], policy: dict[str, Any]) -> list[str]:
+    scope = policy["candidate_scope"]
+    allowed_prefixes = tuple(scope["allowed_prefixes"])
+    protected_paths = tuple(scope["protected_paths"])
+    forbidden_fragments = tuple(scope["forbidden_path_fragments"])
+
     findings = []
     for path in paths:
-        normalized = path.replace("\\", "/")
-        if normalized.startswith(PROTECTED_PREFIXES):
-            findings.append(normalized)
+        normalized = path.replace("\\", "/").lstrip("./")
         lowered = normalized.lower()
-        if any(
-            fragment in lowered
-            for fragment in (".env", "credentials", "secret", "private_key", "id_rsa")
-        ):
+
+        if not any(normalized.startswith(prefix) for prefix in allowed_prefixes):
             findings.append(normalized)
-        if not normalized.startswith("development/"):
+
+        if any(normalized.startswith(prefix) for prefix in protected_paths):
             findings.append(normalized)
+
+        if any(fragment.lower() in lowered for fragment in forbidden_fragments):
+            findings.append(normalized)
+
     return sorted(set(findings))
 
 
@@ -176,7 +172,7 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
     results: list[dict[str, Any]] = []
 
     paths = changed_files(root, baseline)
-    protected = protected_changes(paths)
+    protected = protected_changes(paths, policy)
     results.append({
         "name": "protected-scope",
         "status": "FAIL" if protected else "PASS",
