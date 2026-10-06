@@ -56,7 +56,7 @@ def check_non_secret_configuration(root: Path, policy: dict) -> list[str]:
     return errors
 
 
-def run(root: Path, require_secret: bool) -> int:
+def run(root: Path, require_secret: bool = False, check_non_secret_only: bool = False) -> int:
     policy = load_policy(root)
     readiness = policy.get("implementation_readiness", {})
     if readiness.get("status") != "READY":
@@ -76,6 +76,20 @@ def run(root: Path, require_secret: bool) -> int:
             "errors": errors,
         }, indent=2, sort_keys=True))
         return 1
+
+    if check_non_secret_only:
+        print(json.dumps({
+            "decision": "PASS",
+            "stage": "non-secret-configuration",
+            "provider_base_url": os.environ.get(
+                policy["provider"]["base_url_env"],
+                policy["provider"].get("default_base_url"),
+            ),
+            "model": os.environ.get(policy["provider"]["model_env"], "auto") or "auto",
+            "provider_secret_present": False,
+            "next_stage": "provider-secret-boundary",
+        }, indent=2, sort_keys=True))
+        return 0
 
     api_key_env = policy["provider"]["api_key_env"]
     api_key_present = bool(os.environ.get(api_key_env, "").strip())
@@ -124,9 +138,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", default=".")
     parser.add_argument("--require-secret", action="store_true")
+    parser.add_argument("--check-non-secret", action="store_true")
     args = parser.parse_args()
     try:
-        return run(Path(args.repo).resolve(), args.require_secret)
+        return run(
+            Path(args.repo).resolve(),
+            require_secret=args.require_secret,
+            check_non_secret_only=args.check_non_secret,
+        )
     except Exception as exc:
         print(f"RSI preflight blocked: {exc}", file=sys.stderr)
         return 1
