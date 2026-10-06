@@ -29,7 +29,7 @@ class RsiEngineTests(unittest.TestCase):
 
     def test_extract_diff_fallback(self):
         payload = extract_candidate_payload(
-            """\`\`\`diff
+            """```diff
 diff --git a/development/x.txt b/development/x.txt
 --- a/development/x.txt
 +++ b/development/x.txt
