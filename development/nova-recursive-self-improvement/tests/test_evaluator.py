@@ -6,7 +6,7 @@ from pathlib import Path
 # Keep the test runnable both through unittest discovery and directly.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from evaluator import benchmark, parse_benchmark_output
+from evaluator import benchmark, implementation_ready, parse_benchmark_output
 
 
 class EvaluatorBenchmarkTests(unittest.TestCase):
@@ -20,6 +20,16 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
             os.environ.pop("RSI_BENCHMARK_COMMAND", None)
         else:
             os.environ["RSI_BENCHMARK_COMMAND"] = self.previous_command
+
+    def test_incomplete_policy_blocks_operational_readiness(self):
+        policy = {
+            "implementation_readiness": {
+                "status": "INCOMPLETE",
+                "require_explicit_ready": True,
+                "promotion_blocked_until_ready": True,
+            }
+        }
+        self.assertFalse(implementation_ready(policy))
 
     def test_benchmark_requires_boolean_candidate_better(self):
         with self.assertRaises(ValueError):
