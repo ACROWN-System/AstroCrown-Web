@@ -116,6 +116,15 @@ def classify_decision(statuses: list[str]) -> str:
     return 'PASS'
 
 
+def implementation_ready(policy: dict[str, Any]) -> bool:
+    readiness = policy.get("implementation_readiness", {})
+    return (
+        readiness.get("status") == "READY"
+        and readiness.get("require_explicit_ready") is True
+        and readiness.get("promotion_blocked_until_ready") is True
+    )
+
+
 def repository_context(
     root: Path,
     max_context_chars: int,
@@ -383,6 +392,27 @@ def cycle(root: Path, evidence_dir: Path) -> int:
     candidate_attempts = 0
 
     try:
+        if not implementation_ready(policy):
+            evidence['result'] = {
+                'decision': 'BLOCKED',
+                'stage': 'implementation-readiness',
+                'error': (
+                    'RSI implementation is not declared READY in the protected policy. '
+                    'The proposer must not be called before mandatory implementation '
+                    'components are implemented and independently verified.'
+                ),
+            }
+            evidence['budget']['proposer_calls_used'] = proposer_calls
+            evidence['budget']['candidate_attempts_used'] = candidate_attempts
+            evidence['duration_seconds'] = round(time.monotonic() - started, 3)
+            evidence['decision'] = evidence['result']['decision']
+            (evidence_dir / 'cycle.json').write_text(
+                json.dumps(evidence, indent=2, sort_keys=True) + '\n',
+                encoding='utf-8',
+            )
+            print(json.dumps(evidence, indent=2, sort_keys=True))
+            return 1
+
         if max_calls < 1 or max_candidates < 1:
             raise RuntimeError('RSI budget policy disables candidate generation.')
 
