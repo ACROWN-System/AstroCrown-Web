@@ -125,7 +125,14 @@ def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
 
 
 def validate_patch_content(patch: str) -> list[str]:
-    return [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(patch)]
+    findings = [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(patch)]
+    if "GIT binary patch" in patch:
+        findings.append("Binary patches are not permitted in RSI candidates.")
+    if re.search(r"^rename (?:from|to) ", patch, re.MULTILINE | re.IGNORECASE):
+        findings.append("Renames are not permitted in RSI candidates.")
+    if re.search(r"^copy (?:from|to) ", patch, re.MULTILINE | re.IGNORECASE):
+        findings.append("Copies are not permitted in RSI candidates.")
+    return sorted(set(findings))
 
 
 
