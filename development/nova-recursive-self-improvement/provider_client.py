@@ -36,7 +36,7 @@ class ProviderConfig:
         *,
         base_url_env: str = "RSI_AI_BASE_URL",
         model_env: str = "RSI_AI_MODEL",
-        api_key_env: str = "RSI_AI_API_KEY",
+        api_key_env: str = "NOVA_RSI_NOSANA_LLM_API_KEY",
         default_base_url: str | None = None,
         timeout_seconds: int = 120,
         max_response_bytes: int = 262_144,
