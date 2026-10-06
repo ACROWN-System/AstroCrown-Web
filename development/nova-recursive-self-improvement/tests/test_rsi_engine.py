@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from rsi_engine import (
     classify_decision,
     extract_candidate_payload,
+    implementation_ready,
     load_policy,
     normalize_usage,
     validate_patch_content,
@@ -48,6 +49,11 @@ diff --git a/development/x.txt b/development/x.txt
             policy,
         )
         self.assertTrue(errors)
+
+    def test_incomplete_policy_blocks_rsi(self):
+        policy = load_policy(Path(__file__).resolve().parents[3])
+        self.assertFalse(implementation_ready(policy))
+        self.assertEqual(policy["implementation_readiness"]["status"], "INCOMPLETE")
 
     def test_policy_defines_candidate_scope(self):
         policy = load_policy(Path(__file__).resolve().parents[3])
