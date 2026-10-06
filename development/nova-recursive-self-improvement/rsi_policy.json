@@ -74,7 +74,7 @@
     ]
   },
   "provider": {
-    "api_key_env": "NOVA_RSI_NOSANA_LLM_API_KEY",
+    "api_key_env": "NOSANA_LLM_API_KEY_01",
     "base_url_env": "RSI_AI_BASE_URL",
     "model_env": "RSI_AI_MODEL",
     "max_response_bytes": 262144,
