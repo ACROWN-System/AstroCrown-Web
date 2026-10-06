@@ -59,6 +59,18 @@ Repository variables:
 
 The actual API key must never be committed to the repository.
 
+## Implementation readiness gate
+
+The autonomous RSI path is intentionally **not operational while implementation is incomplete**.
+
+The protected `rsi_policy.json` currently declares `implementation_readiness.status = INCOMPLETE`. This state is enforced at three layers:
+
+- the workflow refuses to start the proposer/evaluation lifecycle;
+- `rsi_engine.py` stops before making an AI proposer call;
+- `evaluator.py` returns `BLOCKED` rather than PASS.
+
+The readiness state must remain `INCOMPLETE` until all mandatory RSI implementation components have been implemented and independently verified. Changing the readiness field to `READY` is therefore a release/readiness decision, not a candidate-generated result.
+
 ## Benchmark requirement
 
 The capability benchmark is mandatory in the current policy. Because the repository does not yet have an approved NOVA capability benchmark, an RSI cycle without `RSI_BENCHMARK_COMMAND` is intentionally recorded as `BLOCKED` rather than accepted as an improvement.
@@ -94,8 +106,8 @@ This is not an OS-level security sandbox. Stronger filesystem, process, network,
 
 ## Development status
 
-Status: **implemented / benchmark-gated candidate engine**
+Status: **incomplete / implementation-gated candidate engine**
 
-The autonomous proposal, isolation, evaluation, evidence, and candidate-retention mechanics are implemented.
+The autonomous proposal, isolation, evaluation, evidence, and candidate-retention mechanics are partially implemented, but the autonomous RSI lifecycle is intentionally blocked while required implementation work remains incomplete.
 
-Full autonomous promotion of an intelligence improvement cannot be considered operational until a protected NOVA capability benchmark is implemented and validated.
+Full autonomous operation and promotion of an intelligence improvement cannot be considered operational until all mandatory RSI components are implemented, independently verified, and the protected policy is explicitly advanced to READY.
