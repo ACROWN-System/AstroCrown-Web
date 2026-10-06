@@ -48,7 +48,7 @@ These controls protect RSI from becoming an uncontrolled consumer of NOVA's AI a
 
 Repository secret:
 
-`NOVA_RSI_NOSANA_LLM_API_KEY`
+`NOSANA_LLM_API_KEY_01`
 
 Repository variables:
 
@@ -116,13 +116,13 @@ Full autonomous operation and promotion of an intelligence improvement cannot be
 
 The provider access layer is implemented in `provider_client.py` and is intentionally dependency-free. It supports the OpenAI-compatible model-list and chat-completions endpoints, enforces HTTPS except for localhost tests, caps response size, and never exposes the credential through normal object representation or provider error text.
 
-`preflight.py` is non-mutating. It checks implementation readiness first, then validates the base URL, model configuration, explicit commercial-eligibility state, and required benchmark command. Only after those checks does it inspect whether `NOVA_RSI_NOSANA_LLM_API_KEY` exists; it does not print or transmit the secret.
+`preflight.py` is non-mutating. It checks implementation readiness first, then validates the base URL, model configuration, explicit commercial-eligibility state, and required benchmark command. Only after those checks does it inspect whether `NOSANA_LLM_API_KEY_01` exists; it does not print or transmit the secret.
 
-The engine removes `NOVA_RSI_NOSANA_LLM_API_KEY` from its own process environment immediately after the proposer request and launches protected candidate evaluation with a separate sanitized environment. Candidate-controlled tests therefore do not inherit the provider credential.
+The engine removes `NOSANA_LLM_API_KEY_01` from its own process environment immediately after the proposer request and launches protected candidate evaluation with a separate sanitized environment. Candidate-controlled tests therefore do not inherit the provider credential.
 
 ## Credential boundary
 
-The intended GitHub Actions boundary is the dedicated `provider-secret-boundary` job. The preceding `configuration-preflight` job is secretless. Only after readiness and non-secret configuration pass does GitHub Actions inject `NOVA_RSI_NOSANA_LLM_API_KEY` into the boundary job; the key is then made available to the proposer job and never stored in repository source.
+The intended GitHub Actions boundary is the dedicated `provider-secret-boundary` job. The preceding `configuration-preflight` job is secretless. Only after readiness and non-secret configuration pass does GitHub Actions inject `NOSANA_LLM_API_KEY_01` into the boundary job; the key is then made available to the proposer job and never stored in repository source.
 
 No real provider key has been added by this implementation. The first sensitive external value still required for an actual proposer request is the provider API key.
 
