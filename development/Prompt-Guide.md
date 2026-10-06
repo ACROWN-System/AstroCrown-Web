@@ -4,7 +4,7 @@
 
 Standalone reference for creating, selecting, testing, improving, versioning, and reusing prompts and prompt systems.
 
-This file is intentionally separate from HOMEPAGE-REQUIREMENTS.md.
+This file is intentionally separate from the active homepage documentation under `development/index-section/` and `development/index-reference/`.
 
 Use this guide for:
 - prompt construction;
@@ -15,7 +15,7 @@ Use this guide for:
 - prompt evaluation and optimization;
 - prompt continuity and versioning.
 
-Use HOMEPAGE-REQUIREMENTS.md for homepage-specific requirements, discoveries, decisions, candidate states, source findings, and implementation scope.
+Use `development/index-section/` for active homepage section requirements, discoveries, decisions, candidate states, source findings, and implementation scope. Use `development/index-reference/` for shared visual/design conventions.
 
 A technique documented here is not automatically mandatory.
 

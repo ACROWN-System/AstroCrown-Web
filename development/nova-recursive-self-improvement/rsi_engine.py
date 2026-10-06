@@ -40,7 +40,10 @@ SECRET_PATTERNS = [
     re.compile(r'(?:api[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]', re.IGNORECASE),
 ]
 
-MAX_CONTEXT_CHARS = int(os.environ.get('RSI_MAX_CONTEXT_CHARS', '120000'))
+def load_policy(root: Path) -> dict[str, Any]:
+    path = root / 'development/nova-recursive-self-improvement/rsi_policy.json'
+    return json.loads(path.read_text(encoding='utf-8'))
+
 
 
 def git(root: Path, *args: str) -> str:
@@ -120,7 +123,7 @@ def classify_decision(statuses: list[str]) -> str:
     return 'PASS'
 
 
-def repository_context(root: Path) -> str:
+def repository_context(root: Path, max_context_chars: int) -> tuple[str, int]:
     files = git(root, 'ls-files', 'development').splitlines()
     chunks: list[str] = []
     total = 0
@@ -135,18 +138,19 @@ def repository_context(root: Path) -> str:
             data = path.read_text(encoding='utf-8')
         except (UnicodeDecodeError, OSError):
             continue
-        remaining = MAX_CONTEXT_CHARS - total
+        remaining = max_context_chars - total
         if remaining <= 0:
             break
         clipped = data[:remaining]
         chunks.append(f'\n===== {relative} =====\n{clipped}')
         total += len(clipped)
-    return ''.join(chunks)
+    return ''.join(chunks), total
 
 
-def proposer_prompt(root: Path, baseline: str) -> str:
-    context = repository_context(root)
-    return f'''You are the improvement proposer inside NOVA's recursive self-improvement system.
+
+def proposer_prompt(root: Path, baseline: str, max_context_chars: int) -> tuple[str, int]:
+    context, context_chars = repository_context(root, max_context_chars)
+    prompt = f'''You are the improvement proposer inside NOVA's recursive self-improvement system.
 
 Repository: ACROWN-System/AstroCrown-Web
 Baseline commit: {baseline}
@@ -167,9 +171,28 @@ Hard constraints:
 Current repository development context:
 {context}
 '''
+    return prompt, context_chars
 
 
-def call_proposer(prompt: str) -> dict[str, Any]:
+def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
+    if not isinstance(raw_usage, dict):
+        return None
+
+    def integer(key: str) -> int | None:
+        value = raw_usage.get(key)
+        return int(value) if isinstance(value, (int, float)) else None
+
+    return {
+        'prompt_tokens': integer('prompt_tokens'),
+        'completion_tokens': integer('completion_tokens'),
+        'total_tokens': integer('total_tokens'),
+    }
+
+
+def call_proposer(
+    prompt: str,
+    max_output_tokens: int,
+) -> tuple[dict[str, Any], dict[str, int | None] | None]:
     base_url = os.environ.get('RSI_AI_BASE_URL', '').strip()
     model = os.environ.get('RSI_AI_MODEL', '').strip()
     api_key = os.environ.get('RSI_AI_API_KEY', '').strip()
@@ -179,10 +202,14 @@ def call_proposer(prompt: str) -> dict[str, Any]:
     payload = {
         'model': model,
         'messages': [
-            {'role': 'system', 'content': 'You are a code-improvement proposer. Return only the requested JSON and never include secrets.'},
+            {
+                'role': 'system',
+                'content': 'You are a code-improvement proposer. Return only the requested JSON and never include secrets.',
+            },
             {'role': 'user', 'content': prompt},
         ],
         'temperature': 0.1,
+        'max_tokens': max_output_tokens,
     }
     request = urllib.request.Request(
         base_url,
@@ -203,11 +230,24 @@ def call_proposer(prompt: str) -> dict[str, Any]:
     except urllib.error.URLError as exc:
         raise RuntimeError(f'RSI proposer connection failure: {exc}') from exc
 
-    content = result['choices'][0]['message']['content']
-    return extract_candidate_payload(content)
+    choices = result.get('choices')
+    if not isinstance(choices, list) or not choices:
+        raise RuntimeError('RSI proposer returned no choices.')
+    message = choices[0].get('message') if isinstance(choices[0], dict) else None
+    content = message.get('content') if isinstance(message, dict) else None
+    if not isinstance(content, str):
+        raise RuntimeError('RSI proposer returned no textual message content.')
+    return extract_candidate_payload(content), normalize_usage(result.get('usage'))
 
 
-def apply_and_evaluate(root: Path, baseline: str, candidate: dict[str, Any], evidence_dir: Path) -> dict[str, Any]:
+
+def apply_and_evaluate(
+    root: Path,
+    baseline: str,
+    candidate: dict[str, Any],
+    evidence_dir: Path,
+    evaluation_timeout: int,
+) -> dict[str, Any]:
     patch = str(candidate['patch'])
     paths = changed_paths_from_patch(patch)
     path_errors = validate_patch_paths(paths)
@@ -258,9 +298,23 @@ def apply_and_evaluate(root: Path, baseline: str, candidate: dict[str, Any], evi
             'RSI_BENCHMARK_COMMAND': os.environ.get('RSI_BENCHMARK_COMMAND', ''),
         }
         completed = subprocess.run(
-            ['python', str(evaluator_path), '--baseline', baseline, '--policy', str(policy_path), '--output', str(candidate_evidence)],
-            cwd=worktree_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            timeout=360, env=env, check=False
+            [
+                'python',
+                str(evaluator_path),
+                '--baseline',
+                baseline,
+                '--policy',
+                str(policy_path),
+                '--output',
+                str(candidate_evidence),
+            ],
+            cwd=worktree_root,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=evaluation_timeout,
+            env=env,
+            check=False,
         )
         evaluation = json.loads(candidate_evidence.read_text(encoding='utf-8'))
         return {
@@ -275,32 +329,106 @@ def apply_and_evaluate(root: Path, baseline: str, candidate: dict[str, Any], evi
     except subprocess.CalledProcessError as exc:
         return {'decision': 'FAIL', 'stage': 'candidate-execution', 'error': str(exc), 'candidate': candidate}
     finally:
-        subprocess.run(['git', 'worktree', 'remove', '--force', str(worktree_root)], cwd=root, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(
+            ['git', 'worktree', 'remove', '--force', str(worktree_root)],
+            cwd=root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
         shutil.rmtree(worktree, ignore_errors=True)
+
 
 
 def cycle(root: Path, evidence_dir: Path) -> int:
     evidence_dir.mkdir(parents=True, exist_ok=True)
     baseline = git(root, 'rev-parse', 'HEAD')
+    policy = load_policy(root)
+    budget = policy['budget']
+
+    max_calls = int(budget['max_proposer_calls_per_cycle'])
+    max_candidates = int(budget['max_candidate_attempts_per_cycle'])
+    max_context_chars = int(budget['max_context_chars'])
+    max_output_tokens = int(budget['max_output_tokens'])
+    max_total_tokens = int(budget['max_total_tokens_per_cycle'])
+    require_usage = bool(budget.get('require_usage_telemetry', True))
+    evaluation_timeout = int(policy['evaluation']['timeout_seconds'])
+
     started = time.monotonic()
     evidence: dict[str, Any] = {
-        'schema_version': 1,
+        'schema_version': 2,
         'baseline_commit': baseline,
         'started_at': time.time(),
+        'budget': {
+            'max_proposer_calls_per_cycle': max_calls,
+            'max_candidate_attempts_per_cycle': max_candidates,
+            'max_context_chars': max_context_chars,
+            'max_output_tokens': max_output_tokens,
+            'max_total_tokens_per_cycle': max_total_tokens,
+            'require_usage_telemetry': require_usage,
+        },
     }
+
+    proposer_calls = 0
+    candidate_attempts = 0
+
     try:
-        candidate = call_proposer(proposer_prompt(root, baseline))
-        candidate['baseline_commit'] = baseline
-        evidence['candidate'] = candidate
-        evidence['result'] = apply_and_evaluate(root, baseline, candidate, evidence_dir)
+        if max_calls < 1 or max_candidates < 1:
+            raise RuntimeError('RSI budget policy disables candidate generation.')
+
+        proposer_calls += 1
+        if proposer_calls > max_calls:
+            raise RuntimeError('RSI proposer call budget exceeded before proposal.')
+
+        prompt, context_chars = proposer_prompt(root, baseline, max_context_chars)
+        evidence['prompt_context_chars'] = context_chars
+
+        candidate, usage = call_proposer(prompt, max_output_tokens)
+        evidence['proposer_usage'] = usage
+        evidence['proposer_usage_verified'] = usage is not None and usage.get('total_tokens') is not None
+
+        if require_usage and (usage is None or usage.get('total_tokens') is None):
+            evidence['result'] = {
+                'decision': 'BLOCKED',
+                'stage': 'budget-verification',
+                'error': 'Provider did not return OpenAI-compatible total token usage telemetry.',
+            }
+        elif usage is not None and usage['total_tokens'] > max_total_tokens:
+            evidence['result'] = {
+                'decision': 'BLOCKED',
+                'stage': 'budget-verification',
+                'error': (
+                    f"Provider reported {usage['total_tokens']} total tokens, "
+                    f"above the protected cycle budget of {max_total_tokens}."
+                ),
+            }
+        else:
+            candidate_attempts += 1
+            if candidate_attempts > max_candidates:
+                raise RuntimeError('RSI candidate-attempt budget exceeded before evaluation.')
+            candidate['baseline_commit'] = baseline
+            evidence['candidate'] = candidate
+            evidence['result'] = apply_and_evaluate(
+                root,
+                baseline,
+                candidate,
+                evidence_dir,
+                evaluation_timeout,
+            )
     except Exception as exc:
         evidence['result'] = {'decision': 'BLOCKED', 'stage': 'proposal', 'error': str(exc)}
 
+    evidence['budget']['proposer_calls_used'] = proposer_calls
+    evidence['budget']['candidate_attempts_used'] = candidate_attempts
     evidence['duration_seconds'] = round(time.monotonic() - started, 3)
     evidence['decision'] = evidence['result']['decision']
-    (evidence_dir / 'cycle.json').write_text(json.dumps(evidence, indent=2, sort_keys=True) + '\n', encoding='utf-8')
+    (evidence_dir / 'cycle.json').write_text(
+        json.dumps(evidence, indent=2, sort_keys=True) + '\n',
+        encoding='utf-8',
+    )
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0 if evidence['decision'] == 'PASS' else 1
+
 
 
 def main() -> int:
