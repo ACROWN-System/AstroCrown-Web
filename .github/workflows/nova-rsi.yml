@@ -97,7 +97,6 @@ jobs:
       RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
       RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
       RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
-      RSI_AI_API_KEY: ${{ secrets.RSI_AI_API_KEY }}
 
     steps:
       - name: Checkout protected configuration
@@ -106,12 +105,30 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Validate configuration without provider access
+      - name: Validate non-secret configuration
         run: |
-          python development/nova-recursive-self-improvement/preflight.py --repo . --require-secret
+          python development/nova-recursive-self-improvement/preflight.py --repo . --check-non-secret
+
+  provider-secret-boundary:
+    needs: configuration-preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      RSI_AI_API_KEY: ${{ secrets.RSI_AI_API_KEY }}
+
+    steps:
+      - name: Validate provider secret is configured
+        run: |
+          set -euo pipefail
+          if [ -z "${RSI_AI_API_KEY:-}" ]; then
+            echo "RSI_AI_API_KEY is not configured. This is the next protected credential boundary."
+            exit 2
+          fi
+          echo "RSI_AI_API_KEY is configured; the value is not printed."
 
   rsi-cycle:
-    needs: configuration-preflight
+    needs: provider-secret-boundary
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
