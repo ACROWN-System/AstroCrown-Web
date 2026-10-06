@@ -111,3 +111,27 @@ Status: **incomplete / implementation-gated candidate engine**
 The autonomous proposal, isolation, evaluation, evidence, and candidate-retention mechanics are partially implemented, but the autonomous RSI lifecycle is intentionally blocked while required implementation work remains incomplete.
 
 Full autonomous operation and promotion of an intelligence improvement cannot be considered operational until all mandatory RSI components are implemented, independently verified, and the protected policy is explicitly advanced to READY.
+
+## Provider adapter and preflight
+
+The provider access layer is implemented in `provider_client.py` and is intentionally dependency-free. It supports the OpenAI-compatible model-list and chat-completions endpoints, enforces HTTPS except for localhost tests, caps response size, and never exposes the credential through normal object representation or provider error text.
+
+`preflight.py` is non-mutating. It checks implementation readiness first, then validates the base URL, model configuration, explicit commercial-eligibility state, and required benchmark command. Only after those checks does it inspect whether `RSI_AI_API_KEY` exists; it does not print or transmit the secret.
+
+The engine removes `RSI_AI_API_KEY` from its own process environment immediately after the proposer request and launches protected candidate evaluation with a separate sanitized environment. Candidate-controlled tests therefore do not inherit the provider credential.
+
+## Credential boundary
+
+The intended GitHub Actions boundary is the `configuration-preflight` job. The workflow passes `RSI_AI_API_KEY` only as a secret environment variable to this preflight and later RSI cycle, never as repository source.
+
+No real provider key has been added by this implementation. The first sensitive external value still required for an actual proposer request is the provider API key.
+
+## Remaining evidence-dependent readiness gates
+
+The protected policy intentionally remains `INCOMPLETE`. The following cannot be honestly converted into PASS merely by code compilation:
+
+- an approved capability benchmark/workload that can establish an actual intelligence or capability improvement;
+- independent validation that the protected evaluation remains trustworthy for the actual NOVA workloads;
+- an acceptable OS-level sandbox or an explicit, evidence-backed decision limiting candidate execution to the current process isolation model.
+
+Until those conditions are independently verified, the proposer/evaluator lifecycle remains blocked even when a provider credential is available.
