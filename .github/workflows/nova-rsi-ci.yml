@@ -1,0 +1,32 @@
+name: NOVA RSI Engine CI
+
+on:
+  push:
+    paths:
+      - "development/nova-recursive-self-improvement/**"
+      - ".github/workflows/nova-rsi-ci.yml"
+  pull_request:
+    paths:
+      - "development/nova-recursive-self-improvement/**"
+      - ".github/workflows/nova-rsi-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Compile development Python
+        run: python -m compileall -q development
+
+      - name: Run RSI unit tests
+        run: python -m unittest discover -s development/nova-recursive-self-improvement/tests -p "test_*.py" -v
