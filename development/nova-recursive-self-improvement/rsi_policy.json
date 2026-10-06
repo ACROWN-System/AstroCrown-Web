@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "candidate_scope": {
     "allowed_prefixes": ["development/"],
     "protected_paths": [
@@ -17,7 +17,7 @@
     "require_benchmark": true,
     "benchmark_command_env": "RSI_BENCHMARK_COMMAND"
   },
-  "promotion": {
+  "budget": {\n    "max_proposer_calls_per_cycle": 1,\n    "max_candidate_attempts_per_cycle": 1,\n    "max_context_chars": 24000,\n    "max_output_tokens": 1536,\n    "max_total_tokens_per_cycle": 8000,\n    "require_usage_telemetry": true,\n    "max_cycles_per_utc_day": 1\n  },\n  "promotion": {
     "mode": "candidate-branch",
     "allow_main": false,
     "require_benchmark_pass": true
