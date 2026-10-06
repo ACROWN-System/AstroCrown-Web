@@ -21,6 +21,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from provider_client import ProviderConfig, ProviderError, chat_completion
+
 
 SECRET_PATTERNS = [
     re.compile(r'BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY', re.IGNORECASE),
@@ -208,57 +210,46 @@ def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
     }
 
 
-def call_proposer(
-    prompt: str,
-    max_output_tokens: int,
-) -> tuple[dict[str, Any], dict[str, int | None] | None]:
-    base_url = os.environ.get('RSI_AI_BASE_URL', '').strip()
-    model = os.environ.get('RSI_AI_MODEL', '').strip()
-    api_key = os.environ.get('RSI_AI_API_KEY', '').strip()
-    if not base_url or not model or not api_key:
-        raise RuntimeError('RSI_AI_BASE_URL, RSI_AI_MODEL, and RSI_AI_API_KEY must be configured.')
+def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
+    if not isinstance(raw_usage, dict):
+        return None
+    def integer(key: str) -> int | None:
+        value = raw_usage.get(key)
+        return int(value) if isinstance(value, (int, float)) else None
+    prompt_tokens = integer("prompt_tokens")
+    completion_tokens = integer("completion_tokens")
+    total_tokens = integer("total_tokens")
+    if total_tokens is None and prompt_tokens is not None and completion_tokens is not None:
+        total_tokens = prompt_tokens + completion_tokens
+    if prompt_tokens is None and completion_tokens is None and total_tokens is None:
+        return None
+    return {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens, "total_tokens": total_tokens}
 
-    payload = {
-        'model': model,
-        'messages': [
-            {
-                'role': 'system',
-                'content': 'You are a code-improvement proposer. Return only the requested JSON and never include secrets.',
-            },
-            {'role': 'user', 'content': prompt},
-        ],
-        'temperature': 0.1,
-        'max_tokens': max_output_tokens,
-    }
-    request = urllib.request.Request(
-        base_url,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {api_key}',
-            'User-Agent': 'NOVA-RSI/1.0',
-        },
-        method='POST',
+def call_proposer(prompt: str, max_output_tokens: int, policy: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None] | None, str]:
+    provider = policy["provider"]
+    config = ProviderConfig.from_environment(
+        base_url_env=provider["base_url_env"],
+        model_env=provider["model_env"],
+        api_key_env=provider["api_key_env"],
+        default_base_url=provider.get("default_base_url"),
+        timeout_seconds=int(policy["evaluation"].get("provider_timeout_seconds", 120)),
+        max_response_bytes=int(provider.get("max_response_bytes", 262144)),
     )
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            result = json.loads(response.read().decode('utf-8'))
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode('utf-8', errors='ignore')
-        raise RuntimeError(f'RSI proposer HTTP {exc.code}: {body[:1000]}') from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f'RSI proposer connection failure: {exc}') from exc
-
-    choices = result.get('choices')
-    if not isinstance(choices, list) or not choices:
-        raise RuntimeError('RSI proposer returned no choices.')
-    message = choices[0].get('message') if isinstance(choices[0], dict) else None
-    content = message.get('content') if isinstance(message, dict) else None
-    if not isinstance(content, str):
-        raise RuntimeError('RSI proposer returned no textual message content.')
-    return extract_candidate_payload(content), normalize_usage(result.get('usage'))
-
-
+    result, model = chat_completion(
+        config,
+        [
+            {"role": "system", "content": "You are a code-improvement proposer. Return only the requested JSON and never include secrets."},
+            {"role": "user", "content": prompt},
+        ],
+        max_output_tokens,
+        temperature=0.1,
+    )
+    choices = result.get("choices")
+    message = choices[0].get("message") if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        raise ProviderError("RSI provider returned no textual proposer content.")
+    return extract_candidate_payload(content), normalize_usage(result.get("usage")), model
 
 def apply_and_evaluate(
     root: Path,
@@ -266,10 +257,11 @@ def apply_and_evaluate(
     candidate: dict[str, Any],
     evidence_dir: Path,
     evaluation_timeout: int,
+    policy: dict[str, Any],
 ) -> dict[str, Any]:
     patch = str(candidate['patch'])
     paths = changed_paths_from_patch(patch)
-    path_errors = validate_patch_paths(paths)
+    path_errors = validate_patch_paths(paths, policy)
     content_errors = validate_patch_content(patch)
     if path_errors or content_errors:
         return {
@@ -454,6 +446,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
                 candidate,
                 evidence_dir,
                 evaluation_timeout,
+                policy,
             )
     except Exception as exc:
         evidence['result'] = {'decision': 'BLOCKED', 'stage': 'proposal', 'error': str(exc)}
