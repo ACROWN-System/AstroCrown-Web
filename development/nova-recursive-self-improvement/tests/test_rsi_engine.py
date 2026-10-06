@@ -10,7 +10,9 @@ from rsi_engine import (
     extract_candidate_payload,
     implementation_ready,
     load_policy,
+    normalize_repo_path,
     normalize_usage,
+    validate_candidate_payload,
     validate_patch_content,
     validate_patch_paths,
 )
@@ -55,6 +57,30 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertFalse(implementation_ready(policy))
         self.assertEqual(policy["implementation_readiness"]["status"], "INCOMPLETE")
 
+    def test_path_traversal_is_rejected(self):
+        self.assertEqual(normalize_repo_path("../../.github/workflows/x.yml"), "")
+        policy = load_policy(Path(__file__).resolve().parents[3])
+        self.assertTrue(validate_patch_paths(["../../.github/workflows/x.yml"], policy))
+
+    def test_candidate_contract_requires_exact_baseline(self):
+        policy = load_policy(Path(__file__).resolve().parents[3])
+        candidate = {
+            "candidate_id": "c1",
+            "baseline_commit": "different",
+            "hypothesis": "improve",
+            "rationale": "testable",
+            "patch": "diff --git a/development/x b/development/x
+--- a/development/x
++++ b/development/x
+@@ -1 +1 @@
+-a
++b
+",
+        }
+        self.assertTrue(validate_candidate_payload(candidate, "baseline", policy))
+        candidate["baseline_commit"] = "baseline"
+        self.assertFalse(validate_candidate_payload(candidate, "baseline", policy))
+
     def test_policy_defines_candidate_scope(self):
         policy = load_policy(Path(__file__).resolve().parents[3])
         scope = policy["candidate_scope"]
@@ -64,10 +90,17 @@ diff --git a/development/x.txt b/development/x.txt
             scope["protected_paths"],
         )
         self.assertIn("secret", scope["forbidden_path_fragments"])
+        self.assertIn(
+            "development/nova-recursive-self-improvement/provider_client.py",
+            scope["protected_paths"],
+        )
+        self.assertEqual(policy["provider"]["default_base_url"], "https://inference.nosana.com/v1")
 
-    def test_secret_patterns_are_rejected(self):
-        errors = validate_patch_content("api_key = 'not-a-real-secret'")
-        self.assertTrue(errors)
+    def test_secret_patterns_and_unsafe_patch_features_are_rejected(self):
+        self.assertTrue(validate_patch_content("api_key = 'not-a-real-secret'"))
+        self.assertTrue(validate_patch_content("GIT binary patch"))
+        self.assertTrue(validate_patch_content("rename from development/a
+rename to development/b"))
 
     def test_usage_is_normalized(self):
         usage = normalize_usage(
