@@ -458,21 +458,19 @@ def cycle(root: Path, evidence_dir: Path) -> int:
         prompt, context_chars = proposer_prompt(root, baseline, max_context_chars, policy)
         evidence['prompt_context_chars'] = context_chars
 
-        provider_secret_env = policy['provider']['api_key_env']
-        provider_secret = os.environ.get(provider_secret_env, '')
-        try:
-            provider_secret_env = policy["provider"]["api_key_env"]
+        provider_secret_env = policy["provider"]["api_key_env"]
         provider_secret = os.environ.get(provider_secret_env, "")
         try:
             candidate, usage, model = call_proposer(prompt, max_output_tokens, policy)
         finally:
+            # Do not leave the provider credential in this process while
+            # candidate-controlled evaluation is running.
             os.environ.pop(provider_secret_env, None)
         evidence["proposer_model"] = model
-        finally:
-            os.environ.pop(provider_secret_env, None)
-        evidence['proposer_model'] = model
-        evidence['proposer_usage'] = usage
-        evidence['proposer_usage_verified'] = usage is not None and usage.get('total_tokens') is not None
+        evidence["proposer_usage"] = usage
+        evidence["proposer_usage_verified"] = (
+            usage is not None and usage.get("total_tokens") is not None
+        )
         candidate_text = json.dumps(candidate, sort_keys=True)
         leaks = [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(candidate_text)]
         if provider_secret and provider_secret in candidate_text:
