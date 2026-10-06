@@ -25,7 +25,12 @@ from provider_client import ProviderConfig, ProviderError, chat_completion
 
 SECRET_PATTERNS = [
     re.compile(r'BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY', re.IGNORECASE),
-    re.compile(r'(?:api[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]', re.IGNORECASE),
+    re.compile(
+        r'(?:api[_-]?key|access[_-]?token|auth[_-]?token|password|client[_-]?secret)\s*[:=]',
+        re.IGNORECASE,
+    ),
+    re.compile(r'(?:ghp_|github_pat_|sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16})'),
+    re.compile(r'Authorization\s*:\s*Bearer\s+[A-Za-z0-9._-]{12,}', re.IGNORECASE),
 ]
 
 def load_policy(root: Path) -> dict[str, Any]:
@@ -212,9 +217,7 @@ def repository_context(
         if remaining <= 0:
             break
         clipped = data[:remaining]
-        chunks.append(f'
-===== {relative} =====
-{clipped}')
+        chunks.append(f'\n===== {relative} =====\n{clipped}')
         total += len(clipped)
     return ''.join(chunks), total
 
