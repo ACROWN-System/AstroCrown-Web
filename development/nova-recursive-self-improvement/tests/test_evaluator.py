@@ -86,7 +86,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         })
         self.assertNotIn("AWS_ACCESS_KEY_ID", env)
         self.assertNotIn("GITHUB_TOKEN", env)
-        self.assertNotIn("CUSTOM_VALUE", env) if "custom_value" in env else None
+        self.assertEqual(env.get("CUSTOM_VALUE"), "allowed")
 
     def test_repo_path_normalization_rejects_traversal(self):
         self.assertEqual(normalize_repo_path("../../.github/workflows/x.yml"), "")
