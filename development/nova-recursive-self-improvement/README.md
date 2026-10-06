@@ -378,7 +378,7 @@ The RSI runtime uses a dependency-free OpenAI-compatible provider client. The cu
 Current technical defaults:
 - base URL: `https://inference.nosana.com/v1`;
 - model: configurable, with `auto` discovery supported;
-- credential environment name: `NOVA_RSI_NOSANA_LLM_API_KEY`.
+- credential environment name: `NOSANA_LLM_API_KEY_01`.
 
 The actual credential is never stored in tracked source. A configuration preflight validates readiness and non-secret configuration before accepting the secret boundary.
 
