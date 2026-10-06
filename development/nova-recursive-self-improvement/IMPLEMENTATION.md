@@ -122,7 +122,7 @@ The engine removes `RSI_AI_API_KEY` from its own process environment immediately
 
 ## Credential boundary
 
-The intended GitHub Actions boundary is the `configuration-preflight` job. The workflow passes `RSI_AI_API_KEY` only as a secret environment variable to this preflight and later RSI cycle, never as repository source.
+The intended GitHub Actions boundary is the dedicated `provider-secret-boundary` job. The preceding `configuration-preflight` job is secretless. Only after readiness and non-secret configuration pass does GitHub Actions inject `RSI_AI_API_KEY` into the boundary job; the key is then made available to the proposer job and never stored in repository source.
 
 No real provider key has been added by this implementation. The first sensitive external value still required for an actual proposer request is the provider API key.
 
