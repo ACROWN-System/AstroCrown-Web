@@ -370,3 +370,24 @@ For autonomous RSI, the most important additional requirement is that the system
 ## Core Rule
 
 **NOVA may propose and test changes to NOVA, but a change earns the right to become the new NOVA only through evidence that is sufficiently independent of the change being tested.**
+
+## Provider integration and credential boundary
+
+The RSI runtime uses a dependency-free OpenAI-compatible provider client. The current external provider candidate is Nosana's LLM inference API because its documented interface is OpenAI-compatible and exposes a dynamic model list. Provider selection remains a candidate decision and is not permanent architecture.
+
+Current technical defaults:
+- base URL: `https://inference.nosana.com/v1`;
+- model: configurable, with `auto` discovery supported;
+- credential environment name: `RSI_AI_API_KEY`.
+
+The actual credential is never stored in tracked source. A configuration preflight validates readiness and non-secret configuration before accepting the secret boundary.
+
+Nosana's current documentation describes the inference service as credit-metered rather than an unlimited free resource. Any free credits or promotional access must be verified at the time of use rather than assumed as an architectural property.
+
+## Current implementation boundary
+
+The provider adapter, protected preflight, secret isolation, candidate validation, evaluator isolation, and automated tests are implemented.
+
+The autonomous RSI lifecycle remains blocked because the protected policy is still explicitly `INCOMPLETE`. In particular, an approved capability workload/corpus that demonstrates actual NOVA intelligence improvement has not yet been established. Deterministic code-health tests are not treated as a substitute for that benchmark.
+
+The repository therefore stops before autonomous provider use and before changing the readiness state to `READY`.
