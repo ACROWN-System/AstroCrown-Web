@@ -10,7 +10,47 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  implementation-readiness:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout protected policy
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Block RSI until implementation is explicitly ready
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy = json.loads(
+              Path("development/nova-recursive-self-improvement/rsi_policy.json")
+              .read_text(encoding="utf-8")
+          )
+          readiness = policy.get("implementation_readiness", {})
+          status = readiness.get("status")
+          required = readiness.get("require_explicit_ready")
+          promotion_blocked = readiness.get("promotion_blocked_until_ready")
+
+          print(f"RSI implementation readiness: {status}")
+          if not (
+              status == "READY"
+              and required is True
+              and promotion_blocked is True
+          ):
+              raise SystemExit(
+                  "RSI implementation is incomplete; autonomous proposal/evaluation/promotion is blocked."
+              )
+          PY
+
   budget-gate:
+    needs: implementation-readiness
     runs-on: ubuntu-latest
     permissions:
       contents: read
