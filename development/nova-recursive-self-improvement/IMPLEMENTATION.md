@@ -83,7 +83,7 @@ Candidate patches may not modify:
 - `development/nova-recursive-self-improvement/candidate.schema.json`;
 - `development/nova-recursive-self-improvement/tests/`.
 
-Candidate patches are also restricted to `development/` and are rejected if they delete tracked files or contain configured secret indicators.
+Candidate patches are also restricted by the protected `rsi_policy.json` scope and are rejected if they delete tracked files or contain configured sensitive path or content indicators. The engine and protected evaluator load the policy rather than maintaining separate copies of the candidate scope and protected-path lists.
 
 ## Security limitation
 
