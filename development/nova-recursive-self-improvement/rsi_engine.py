@@ -71,21 +71,36 @@ def extract_candidate_payload(text: str) -> dict[str, Any]:
     }
 
 
+def normalize_repo_path(path: str) -> str:
+    candidate = path.replace('\\\\', '/')
+    if candidate.startswith('/') or re.match(r'^[A-Za-z]:/', candidate):
+        return ''
+    parts = []
+    for part in candidate.split('/'):
+        if part in {'', '.'}:
+            continue
+        if part == '..':
+            return ''
+        parts.append(part)
+    return '/'.join(parts)
+
 def changed_paths_from_patch(patch: str) -> list[str]:
-    paths: set[str] = set()
+    raw_paths = set()
     for line in patch.splitlines():
-        if line.startswith('+++ b/'):
-            paths.add(line[6:])
-        elif line.startswith('--- a/') and line[6:] != '/dev/null':
-            paths.add(line[6:])
+        if line.startswith(('--- ', '+++ ')):
+            raw = line[4:]
+            if raw != '/dev/null':
+                raw_paths.add(raw)
         elif line.startswith('diff --git '):
             parts = line.split()
-            if len(parts) >= 4:
-                for item in parts[2:4]:
-                    if item.startswith(('a/', 'b/')):
-                        paths.add(item[2:])
-    return sorted(paths)
-
+            for item in parts[2:4]:
+                if item.startswith(('a/', 'b/')):
+                    raw_paths.add(item[2:])
+    paths = []
+    for raw in sorted(raw_paths):
+        normalized = normalize_repo_path(raw)
+        paths.append(normalized if normalized else f'UNSAFE_PATH:{raw}')
+    return sorted(set(paths))
 
 def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
     scope = policy["candidate_scope"]
@@ -193,21 +208,6 @@ Current repository development context:
 {context}
 '''
     return prompt, context_chars
-
-
-def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
-    if not isinstance(raw_usage, dict):
-        return None
-
-    def integer(key: str) -> int | None:
-        value = raw_usage.get(key)
-        return int(value) if isinstance(value, (int, float)) else None
-
-    return {
-        'prompt_tokens': integer('prompt_tokens'),
-        'completion_tokens': integer('completion_tokens'),
-        'total_tokens': integer('total_tokens'),
-    }
 
 
 def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
@@ -415,7 +415,13 @@ def cycle(root: Path, evidence_dir: Path) -> int:
         prompt, context_chars = proposer_prompt(root, baseline, max_context_chars, policy)
         evidence['prompt_context_chars'] = context_chars
 
-        candidate, usage = call_proposer(prompt, max_output_tokens)
+        provider_secret_env = policy['provider']['api_key_env']
+        provider_secret = os.environ.get(provider_secret_env, '')
+        try:
+            candidate, usage, model = call_proposer(prompt, max_output_tokens, policy)
+        finally:
+            os.environ.pop(provider_secret_env, None)
+        evidence['proposer_model'] = model
         evidence['proposer_usage'] = usage
         evidence['proposer_usage_verified'] = usage is not None and usage.get('total_tokens') is not None
 
