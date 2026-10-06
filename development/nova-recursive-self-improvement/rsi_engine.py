@@ -110,7 +110,10 @@ def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
 
     errors: list[str] = []
     for path in paths:
-        normalized = path.replace('\\', '/').lstrip('./')
+        normalized = normalize_repo_path(path)
+        if not normalized:
+            errors.append(f'Unsafe path: {path}')
+            continue
         lowered = normalized.lower()
         if not any(normalized.startswith(prefix) for prefix in allowed_prefixes):
             errors.append(f'Outside allowed scope: {path}')
@@ -124,6 +127,37 @@ def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
 def validate_patch_content(patch: str) -> list[str]:
     return [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(patch)]
 
+
+
+def validate_candidate_payload(
+    candidate: dict[str, Any], baseline: str, policy: dict[str, Any]
+) -> list[str]:
+    errors: list[str] = []
+    required = ("candidate_id", "baseline_commit", "hypothesis", "rationale", "patch")
+    for field in required:
+        if field not in candidate:
+            errors.append(f"Missing candidate field: {field}")
+    if errors:
+        return errors
+    if not isinstance(candidate["candidate_id"], str) or not re.fullmatch(
+        r"[A-Za-z0-9._-]+", candidate["candidate_id"]
+    ):
+        errors.append("candidate_id contains unsupported characters.")
+    if candidate["baseline_commit"] != baseline:
+        errors.append("Candidate baseline_commit does not match the actual RSI baseline.")
+    for field in ("hypothesis", "rationale", "expected_improvement", "risks", "patch"):
+        if field in candidate and not isinstance(candidate[field], str):
+            errors.append(f"Candidate field {field} must be a string.")
+    patch = candidate.get("patch", "")
+    limits = policy.get("candidate_limits", {})
+    if isinstance(patch, str):
+        if len(patch) > int(limits.get("max_patch_chars", 120000)):
+            errors.append("Candidate patch exceeds the protected character limit.")
+        if len(patch.splitlines()) > int(limits.get("max_patch_lines", 5000)):
+            errors.append("Candidate patch exceeds the protected line limit.")
+        if len(changed_paths_from_patch(patch)) > int(limits.get("max_patch_files", 20)):
+            errors.append("Candidate patch changes more files than the protected file limit.")
+    return sorted(set(errors))
 
 def classify_decision(statuses: list[str]) -> str:
     if 'FAIL' in statuses:
@@ -263,12 +297,14 @@ def apply_and_evaluate(
     paths = changed_paths_from_patch(patch)
     path_errors = validate_patch_paths(paths, policy)
     content_errors = validate_patch_content(patch)
-    if path_errors or content_errors:
+    payload_errors = validate_candidate_payload(candidate, baseline, policy)
+    if path_errors or content_errors or payload_errors:
         return {
             'decision': 'FAIL',
             'stage': 'candidate-validation',
             'path_errors': path_errors,
             'content_errors': content_errors,
+            'payload_errors': payload_errors,
             'candidate': candidate,
         }
 
@@ -300,12 +336,19 @@ def apply_and_evaluate(
         evaluator_path = worktree_root / 'development/nova-recursive-self-improvement/evaluator.py'
         policy_path = worktree_root / 'development/nova-recursive-self-improvement/rsi_policy.json'
         candidate_evidence = evidence_dir / 'evaluation.json'
+        control_home = worktree / 'home'
+        control_home.mkdir()
         env = {
             'PATH': os.environ.get('PATH', ''),
-            'HOME': str(Path.home()),
+            'HOME': str(control_home),
+            'XDG_CONFIG_HOME': str(control_home / '.config'),
+            'XDG_CACHE_HOME': str(control_home / '.cache'),
             'LANG': 'C.UTF-8',
             'LC_ALL': 'C.UTF-8',
             'PYTHONUNBUFFERED': '1',
+            'PYTHONNOUSERSITE': '1',
+            'GIT_TERMINAL_PROMPT': '0',
+            'GIT_CONFIG_NOSYSTEM': '1',
             'RSI_BENCHMARK_COMMAND': os.environ.get('RSI_BENCHMARK_COMMAND', ''),
         }
         completed = subprocess.run(
@@ -418,14 +461,30 @@ def cycle(root: Path, evidence_dir: Path) -> int:
         provider_secret_env = policy['provider']['api_key_env']
         provider_secret = os.environ.get(provider_secret_env, '')
         try:
+            provider_secret_env = policy["provider"]["api_key_env"]
+        provider_secret = os.environ.get(provider_secret_env, "")
+        try:
             candidate, usage, model = call_proposer(prompt, max_output_tokens, policy)
+        finally:
+            os.environ.pop(provider_secret_env, None)
+        evidence["proposer_model"] = model
         finally:
             os.environ.pop(provider_secret_env, None)
         evidence['proposer_model'] = model
         evidence['proposer_usage'] = usage
         evidence['proposer_usage_verified'] = usage is not None and usage.get('total_tokens') is not None
+        candidate_text = json.dumps(candidate, sort_keys=True)
+        leaks = [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(candidate_text)]
+        if provider_secret and provider_secret in candidate_text:
+            leaks.append('provider secret value appeared in proposer output')
 
-        if require_usage and (usage is None or usage.get('total_tokens') is None):
+        if leaks:
+            evidence['result'] = {
+                'decision': 'FAIL',
+                'stage': 'candidate-validation',
+                'secret_findings': sorted(set(leaks)),
+            }
+        elif require_usage and (usage is None or usage.get('total_tokens') is None):
             evidence['result'] = {
                 'decision': 'BLOCKED',
                 'stage': 'budget-verification',
@@ -444,7 +503,8 @@ def cycle(root: Path, evidence_dir: Path) -> int:
             candidate_attempts += 1
             if candidate_attempts > max_candidates:
                 raise RuntimeError('RSI candidate-attempt budget exceeded before evaluation.')
-            candidate['baseline_commit'] = baseline
+            if 'baseline_commit' not in candidate:
+                candidate['baseline_commit'] = baseline
             evidence['candidate'] = candidate
             evidence['result'] = apply_and_evaluate(
                 root,
