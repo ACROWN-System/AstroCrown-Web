@@ -21,11 +21,7 @@ The homepage is decomposed into independent section documents so that requiremen
 
 These documents are the active homepage section sources. Shared visual and interaction conventions belong in `../index-reference/`.
 
-The historical pre-migration monolithic homepage source remains preserved in:
-
-`backup/2026.10.04-11h43mn00sc-system/development/index-archive/HOMEPAGE-REQUIREMENTS.md`
-
-The backup is historical provenance only. It is not an active requirements location.
+The pre-migration monolithic homepage source remains preserved in repository backup snapshots for historical consultation only. Consult it only when needed to resolve provenance, verify migration history, or recover historical context. It is not an active requirements location.
 
 ## Status discipline
 
