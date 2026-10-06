@@ -9,6 +9,7 @@ produces machine-readable evidence. It never writes to main by itself.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -16,15 +17,20 @@ import shutil
 import subprocess
 import tempfile
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 from typing import Any
+
+from provider_client import ProviderConfig, ProviderError, chat_completion
 
 
 SECRET_PATTERNS = [
     re.compile(r'BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY', re.IGNORECASE),
-    re.compile(r'(?:api[_-]?key|access[_-]?token|auth[_-]?token)\s*[:=]', re.IGNORECASE),
+    re.compile(
+        r'(?:api[_-]?key|access[_-]?token|auth[_-]?token|password|client[_-]?secret)\s*[:=]',
+        re.IGNORECASE,
+    ),
+    re.compile(r'(?:ghp_|github_pat_|sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16})'),
+    re.compile(r'Authorization\s*:\s*Bearer\s+[A-Za-z0-9._-]{12,}', re.IGNORECASE),
 ]
 
 def load_policy(root: Path) -> dict[str, Any]:
@@ -69,21 +75,36 @@ def extract_candidate_payload(text: str) -> dict[str, Any]:
     }
 
 
+def normalize_repo_path(path: str) -> str:
+    candidate = path.replace('\\\\', '/')
+    if candidate.startswith('/') or re.match(r'^[A-Za-z]:/', candidate):
+        return ''
+    parts = []
+    for part in candidate.split('/'):
+        if part in {'', '.'}:
+            continue
+        if part == '..':
+            return ''
+        parts.append(part)
+    return '/'.join(parts)
+
 def changed_paths_from_patch(patch: str) -> list[str]:
-    paths: set[str] = set()
+    raw_paths = set()
     for line in patch.splitlines():
-        if line.startswith('+++ b/'):
-            paths.add(line[6:])
-        elif line.startswith('--- a/') and line[6:] != '/dev/null':
-            paths.add(line[6:])
+        if line.startswith(('--- ', '+++ ')):
+            raw = line[4:]
+            if raw != '/dev/null':
+                raw_paths.add(raw)
         elif line.startswith('diff --git '):
             parts = line.split()
-            if len(parts) >= 4:
-                for item in parts[2:4]:
-                    if item.startswith(('a/', 'b/')):
-                        paths.add(item[2:])
-    return sorted(paths)
-
+            for item in parts[2:4]:
+                if item.startswith(('a/', 'b/')):
+                    raw_paths.add(item[2:])
+    paths = []
+    for raw in sorted(raw_paths):
+        normalized = normalize_repo_path(raw)
+        paths.append(normalized if normalized else f'UNSAFE_PATH:{raw}')
+    return sorted(set(paths))
 
 def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
     scope = policy["candidate_scope"]
@@ -93,7 +114,10 @@ def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
 
     errors: list[str] = []
     for path in paths:
-        normalized = path.replace('\\', '/').lstrip('./')
+        normalized = normalize_repo_path(path)
+        if not normalized:
+            errors.append(f'Unsafe path: {path}')
+            continue
         lowered = normalized.lower()
         if not any(normalized.startswith(prefix) for prefix in allowed_prefixes):
             errors.append(f'Outside allowed scope: {path}')
@@ -105,8 +129,46 @@ def validate_patch_paths(paths: list[str], policy: dict[str, Any]) -> list[str]:
 
 
 def validate_patch_content(patch: str) -> list[str]:
-    return [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(patch)]
+    findings = [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(patch)]
+    if "GIT binary patch" in patch:
+        findings.append("Binary patches are not permitted in RSI candidates.")
+    if re.search(r"^rename (?:from|to) ", patch, re.MULTILINE | re.IGNORECASE):
+        findings.append("Renames are not permitted in RSI candidates.")
+    if re.search(r"^copy (?:from|to) ", patch, re.MULTILINE | re.IGNORECASE):
+        findings.append("Copies are not permitted in RSI candidates.")
+    return sorted(set(findings))
 
+
+
+def validate_candidate_payload(
+    candidate: dict[str, Any], baseline: str, policy: dict[str, Any]
+) -> list[str]:
+    errors: list[str] = []
+    required = ("candidate_id", "baseline_commit", "hypothesis", "rationale", "patch")
+    for field in required:
+        if field not in candidate:
+            errors.append(f"Missing candidate field: {field}")
+    if errors:
+        return errors
+    if not isinstance(candidate["candidate_id"], str) or not re.fullmatch(
+        r"[A-Za-z0-9._-]+", candidate["candidate_id"]
+    ):
+        errors.append("candidate_id contains unsupported characters.")
+    if candidate["baseline_commit"] != baseline:
+        errors.append("Candidate baseline_commit does not match the actual RSI baseline.")
+    for field in ("hypothesis", "rationale", "expected_improvement", "risks", "patch"):
+        if field in candidate and not isinstance(candidate[field], str):
+            errors.append(f"Candidate field {field} must be a string.")
+    patch = candidate.get("patch", "")
+    limits = policy.get("candidate_limits", {})
+    if isinstance(patch, str):
+        if len(patch) > int(limits.get("max_patch_chars", 120000)):
+            errors.append("Candidate patch exceeds the protected character limit.")
+        if len(patch.splitlines()) > int(limits.get("max_patch_lines", 5000)):
+            errors.append("Candidate patch exceeds the protected line limit.")
+        if len(changed_paths_from_patch(patch)) > int(limits.get("max_patch_files", 20)):
+            errors.append("Candidate patch changes more files than the protected file limit.")
+    return sorted(set(errors))
 
 def classify_decision(statuses: list[str]) -> str:
     if 'FAIL' in statuses:
@@ -128,14 +190,21 @@ def implementation_ready(policy: dict[str, Any]) -> bool:
 def repository_context(
     root: Path,
     max_context_chars: int,
-    forbidden_fragments: tuple[str, ...],
+    excluded_prefixes: tuple[str, ...],
+    priority_prefixes: tuple[str, ...],
 ) -> tuple[str, int]:
     files = git(root, 'ls-files', 'development').splitlines()
+    priority = [
+        f for f in files
+        if any(f.startswith(prefix) for prefix in priority_prefixes)
+    ]
+    remainder = [f for f in files if f not in priority]
+    ordered = priority + remainder
+
     chunks: list[str] = []
     total = 0
-    for relative in files:
-        lower = relative.lower()
-        if any(fragment.lower() in lower for fragment in forbidden_fragments):
+    for relative in ordered:
+        if any(relative.startswith(prefix) for prefix in excluded_prefixes):
             continue
         path = root / relative
         if not path.is_file():
@@ -153,7 +222,6 @@ def repository_context(
     return ''.join(chunks), total
 
 
-
 def proposer_prompt(
     root: Path,
     baseline: str,
@@ -164,10 +232,12 @@ def proposer_prompt(
     allowed_scope = ", ".join(scope["allowed_prefixes"])
     protected_paths = ", ".join(scope["protected_paths"])
     forbidden_paths = ", ".join(scope["forbidden_path_fragments"])
+    context_policy = policy.get("context", {})
     context, context_chars = repository_context(
         root,
         max_context_chars,
-        tuple(scope["forbidden_path_fragments"]),
+        tuple(context_policy.get("excluded_prefixes", [])),
+        tuple(context_policy.get("priority_prefixes", [])),
     )
     prompt = f'''You are the improvement proposer inside NOVA's recursive self-improvement system.
 
@@ -196,69 +266,43 @@ Current repository development context:
 def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
     if not isinstance(raw_usage, dict):
         return None
-
     def integer(key: str) -> int | None:
         value = raw_usage.get(key)
         return int(value) if isinstance(value, (int, float)) else None
+    prompt_tokens = integer("prompt_tokens")
+    completion_tokens = integer("completion_tokens")
+    total_tokens = integer("total_tokens")
+    if total_tokens is None and prompt_tokens is not None and completion_tokens is not None:
+        total_tokens = prompt_tokens + completion_tokens
+    if prompt_tokens is None and completion_tokens is None and total_tokens is None:
+        return None
+    return {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens, "total_tokens": total_tokens}
 
-    return {
-        'prompt_tokens': integer('prompt_tokens'),
-        'completion_tokens': integer('completion_tokens'),
-        'total_tokens': integer('total_tokens'),
-    }
-
-
-def call_proposer(
-    prompt: str,
-    max_output_tokens: int,
-) -> tuple[dict[str, Any], dict[str, int | None] | None]:
-    base_url = os.environ.get('RSI_AI_BASE_URL', '').strip()
-    model = os.environ.get('RSI_AI_MODEL', '').strip()
-    api_key = os.environ.get('RSI_AI_API_KEY', '').strip()
-    if not base_url or not model or not api_key:
-        raise RuntimeError('RSI_AI_BASE_URL, RSI_AI_MODEL, and RSI_AI_API_KEY must be configured.')
-
-    payload = {
-        'model': model,
-        'messages': [
-            {
-                'role': 'system',
-                'content': 'You are a code-improvement proposer. Return only the requested JSON and never include secrets.',
-            },
-            {'role': 'user', 'content': prompt},
-        ],
-        'temperature': 0.1,
-        'max_tokens': max_output_tokens,
-    }
-    request = urllib.request.Request(
-        base_url,
-        data=json.dumps(payload).encode('utf-8'),
-        headers={
-            'Content-Type': 'application/json',
-            'Authorization': f'Bearer {api_key}',
-            'User-Agent': 'NOVA-RSI/1.0',
-        },
-        method='POST',
+def call_proposer(prompt: str, max_output_tokens: int, policy: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None] | None, str]:
+    provider = policy["provider"]
+    config = ProviderConfig.from_environment(
+        base_url_env=provider["base_url_env"],
+        model_env=provider["model_env"],
+        api_key_env=provider["api_key_env"],
+        default_base_url=provider.get("default_base_url"),
+        timeout_seconds=int(policy["evaluation"].get("provider_timeout_seconds", 120)),
+        max_response_bytes=int(provider.get("max_response_bytes", 262144)),
     )
-    try:
-        with urllib.request.urlopen(request, timeout=120) as response:
-            result = json.loads(response.read().decode('utf-8'))
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode('utf-8', errors='ignore')
-        raise RuntimeError(f'RSI proposer HTTP {exc.code}: {body[:1000]}') from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f'RSI proposer connection failure: {exc}') from exc
-
-    choices = result.get('choices')
-    if not isinstance(choices, list) or not choices:
-        raise RuntimeError('RSI proposer returned no choices.')
-    message = choices[0].get('message') if isinstance(choices[0], dict) else None
-    content = message.get('content') if isinstance(message, dict) else None
-    if not isinstance(content, str):
-        raise RuntimeError('RSI proposer returned no textual message content.')
-    return extract_candidate_payload(content), normalize_usage(result.get('usage'))
-
-
+    result, model = chat_completion(
+        config,
+        [
+            {"role": "system", "content": "You are a code-improvement proposer. Return only the requested JSON and never include secrets."},
+            {"role": "user", "content": prompt},
+        ],
+        max_output_tokens,
+        temperature=0.1,
+    )
+    choices = result.get("choices")
+    message = choices[0].get("message") if isinstance(choices, list) and choices and isinstance(choices[0], dict) else None
+    content = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(content, str) or not content.strip():
+        raise ProviderError("RSI provider returned no textual proposer content.")
+    return extract_candidate_payload(content), normalize_usage(result.get("usage")), model
 
 def apply_and_evaluate(
     root: Path,
@@ -266,17 +310,20 @@ def apply_and_evaluate(
     candidate: dict[str, Any],
     evidence_dir: Path,
     evaluation_timeout: int,
+    policy: dict[str, Any],
 ) -> dict[str, Any]:
     patch = str(candidate['patch'])
     paths = changed_paths_from_patch(patch)
-    path_errors = validate_patch_paths(paths)
+    path_errors = validate_patch_paths(paths, policy)
     content_errors = validate_patch_content(patch)
-    if path_errors or content_errors:
+    payload_errors = validate_candidate_payload(candidate, baseline, policy)
+    if path_errors or content_errors or payload_errors:
         return {
             'decision': 'FAIL',
             'stage': 'candidate-validation',
             'path_errors': path_errors,
             'content_errors': content_errors,
+            'payload_errors': payload_errors,
             'candidate': candidate,
         }
 
@@ -308,12 +355,19 @@ def apply_and_evaluate(
         evaluator_path = worktree_root / 'development/nova-recursive-self-improvement/evaluator.py'
         policy_path = worktree_root / 'development/nova-recursive-self-improvement/rsi_policy.json'
         candidate_evidence = evidence_dir / 'evaluation.json'
+        control_home = worktree / 'home'
+        control_home.mkdir()
         env = {
             'PATH': os.environ.get('PATH', ''),
-            'HOME': str(Path.home()),
+            'HOME': str(control_home),
+            'XDG_CONFIG_HOME': str(control_home / '.config'),
+            'XDG_CACHE_HOME': str(control_home / '.cache'),
             'LANG': 'C.UTF-8',
             'LC_ALL': 'C.UTF-8',
             'PYTHONUNBUFFERED': '1',
+            'PYTHONNOUSERSITE': '1',
+            'GIT_TERMINAL_PROMPT': '0',
+            'GIT_CONFIG_NOSYSTEM': '1',
             'RSI_BENCHMARK_COMMAND': os.environ.get('RSI_BENCHMARK_COMMAND', ''),
         }
         completed = subprocess.run(
@@ -359,8 +413,27 @@ def apply_and_evaluate(
 
 
 
+def write_manifest(evidence_dir: Path) -> None:
+    files = {}
+    for path in sorted(evidence_dir.iterdir()):
+        if path.is_file() and path.name != "manifest.json":
+            files[path.name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (evidence_dir / "manifest.json").write_text(
+        json.dumps(
+            {"schema_version": 1, "evidence_sha256": files},
+            indent=2,
+            sort_keys=True,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+
 def cycle(root: Path, evidence_dir: Path) -> int:
     evidence_dir.mkdir(parents=True, exist_ok=True)
+    if any(evidence_dir.iterdir()):
+        raise RuntimeError("RSI evidence directory must be empty at cycle start.")
+    if git(root, 'status', '--porcelain'):
+        raise RuntimeError("RSI requires a clean working tree before a cycle starts.")
     baseline = git(root, 'rev-parse', 'HEAD')
     policy = load_policy(root)
     budget = policy['budget']
@@ -375,7 +448,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
 
     started = time.monotonic()
     evidence: dict[str, Any] = {
-        'schema_version': 2,
+        'schema_version': 3,
         'baseline_commit': baseline,
         'started_at': time.time(),
         'budget': {
@@ -410,6 +483,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
                 json.dumps(evidence, indent=2, sort_keys=True) + '\n',
                 encoding='utf-8',
             )
+            write_manifest(evidence_dir)
             print(json.dumps(evidence, indent=2, sort_keys=True))
             return 1
 
@@ -423,11 +497,31 @@ def cycle(root: Path, evidence_dir: Path) -> int:
         prompt, context_chars = proposer_prompt(root, baseline, max_context_chars, policy)
         evidence['prompt_context_chars'] = context_chars
 
-        candidate, usage = call_proposer(prompt, max_output_tokens)
-        evidence['proposer_usage'] = usage
-        evidence['proposer_usage_verified'] = usage is not None and usage.get('total_tokens') is not None
+        provider_secret_env = policy["provider"]["api_key_env"]
+        provider_secret = os.environ.get(provider_secret_env, "")
+        try:
+            candidate, usage, model = call_proposer(prompt, max_output_tokens, policy)
+        finally:
+            # Do not leave the provider credential in this process while
+            # candidate-controlled evaluation is running.
+            os.environ.pop(provider_secret_env, None)
+        evidence["proposer_model"] = model
+        evidence["proposer_usage"] = usage
+        evidence["proposer_usage_verified"] = (
+            usage is not None and usage.get("total_tokens") is not None
+        )
+        candidate_text = json.dumps(candidate, sort_keys=True)
+        leaks = [pattern.pattern for pattern in SECRET_PATTERNS if pattern.search(candidate_text)]
+        if provider_secret and provider_secret in candidate_text:
+            leaks.append('provider secret value appeared in proposer output')
 
-        if require_usage and (usage is None or usage.get('total_tokens') is None):
+        if leaks:
+            evidence['result'] = {
+                'decision': 'FAIL',
+                'stage': 'candidate-validation',
+                'secret_findings': sorted(set(leaks)),
+            }
+        elif require_usage and (usage is None or usage.get('total_tokens') is None):
             evidence['result'] = {
                 'decision': 'BLOCKED',
                 'stage': 'budget-verification',
@@ -446,7 +540,8 @@ def cycle(root: Path, evidence_dir: Path) -> int:
             candidate_attempts += 1
             if candidate_attempts > max_candidates:
                 raise RuntimeError('RSI candidate-attempt budget exceeded before evaluation.')
-            candidate['baseline_commit'] = baseline
+            if 'baseline_commit' not in candidate:
+                candidate['baseline_commit'] = baseline
             evidence['candidate'] = candidate
             evidence['result'] = apply_and_evaluate(
                 root,
@@ -454,6 +549,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
                 candidate,
                 evidence_dir,
                 evaluation_timeout,
+                policy,
             )
     except Exception as exc:
         evidence['result'] = {'decision': 'BLOCKED', 'stage': 'proposal', 'error': str(exc)}
@@ -466,6 +562,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
         json.dumps(evidence, indent=2, sort_keys=True) + '\n',
         encoding='utf-8',
     )
+    write_manifest(evidence_dir)
     print(json.dumps(evidence, indent=2, sort_keys=True))
     return 0 if evidence['decision'] == 'PASS' else 1
 

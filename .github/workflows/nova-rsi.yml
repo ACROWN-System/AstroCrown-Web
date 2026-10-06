@@ -87,8 +87,48 @@ jobs:
             exit 1
           fi
 
-  rsi-cycle:
+  configuration-preflight:
     needs: budget-gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
+      RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
+      RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+      RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+
+    steps:
+      - name: Checkout protected configuration
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate non-secret configuration
+        run: |
+          python development/nova-recursive-self-improvement/preflight.py --repo . --check-non-secret
+
+  provider-secret-boundary:
+    needs: configuration-preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      RSI_AI_API_KEY: ${{ secrets.RSI_AI_API_KEY }}
+
+    steps:
+      - name: Validate provider secret is configured
+        run: |
+          set -euo pipefail
+          if [ -z "${RSI_AI_API_KEY:-}" ]; then
+            echo "RSI_AI_API_KEY is not configured. This is the next protected credential boundary."
+            exit 2
+          fi
+          echo "RSI_AI_API_KEY is configured; the value is not printed."
+
+  rsi-cycle:
+    needs: provider-secret-boundary
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -106,16 +146,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Enforce proposer commercial-use eligibility
-        env:
-          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
-        run: |
-          test "$RSI_AI_COMMERCIAL_ELIGIBILITY" = "PASS"
-
       - name: Run bounded autonomous RSI cycle
         env:
           RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
           RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
+          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
           RSI_AI_API_KEY: ${{ secrets.RSI_AI_API_KEY }}
           RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
         run: |

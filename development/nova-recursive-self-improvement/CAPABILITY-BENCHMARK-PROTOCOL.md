@@ -81,3 +81,11 @@ Benchmark output becomes part of the RSI evidence package and must be retained w
 Status: **protocol defined / benchmark implementation required**
 
 Until a protected benchmark command implementing this protocol exists, the RSI evaluator deliberately returns `BLOCKED`.
+
+## Benchmark implementation status
+
+The evaluator contract is implemented, including exact baseline/candidate commit propagation and strict JSON validation.
+
+The remaining gap is not the transport protocol. It is the protected measurement workload itself: the repository must define an evidence-backed workload/corpus that measures the capability a candidate claims to improve. A syntax check, unit-test pass, file count, or other code-health signal alone is insufficient to establish intelligence improvement.
+
+The benchmark command should therefore remain a protected configuration item until such a workload is selected and independently reviewed.
