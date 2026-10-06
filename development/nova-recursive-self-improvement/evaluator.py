@@ -8,6 +8,7 @@ import json
 import os
 import re
 import shlex
+import stat
 import subprocess
 import tempfile
 import time
@@ -17,12 +18,18 @@ from typing import Any
 
 SECRET_DIFF_PATTERNS = [
     re.compile(r"BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY", re.IGNORECASE),
-    re.compile(r"(?:api[_-]?key|access[_-]?token|auth[_-]?token|password|client[_-]?secret)\s*[:=]", re.IGNORECASE),
+    re.compile(
+        r"(?:api[_-]?key|access[_-]?token|auth[_-]?token|password|client[_-]?secret)\s*[:=]",
+        re.IGNORECASE,
+    ),
     re.compile(r"(?:ghp_|github_pat_|sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16})"),
     re.compile(r"Authorization\s*:\s*Bearer\s+[A-Za-z0-9._-]{12,}", re.IGNORECASE),
 ]
 
-def safe_env(extra: dict[str, str] | None = None, *, home: Path | None = None) -> dict[str, str]:
+
+def safe_env(
+    extra: dict[str, str] | None = None, *, home: Path | None = None
+) -> dict[str, str]:
     blocked = re.compile(
         r"(API[_-]?KEY|TOKEN|PASSWORD|SECRET|PRIVATE[_-]?KEY|AUTH|CREDENTIAL|COOKIE|GITHUB|AWS|AZURE|GOOGLE)",
         re.IGNORECASE,
@@ -89,6 +96,7 @@ def run(
     max_output = int((policy or {}).get("sandbox", {}).get("max_output_bytes", 32000))
     return result.returncode, result.stdout[-max_output:], time.monotonic() - started
 
+
 def git(root: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", *args],
@@ -145,7 +153,11 @@ def protected_changes(paths: list[str], policy: dict[str, Any]) -> list[str]:
         lowered = normalized.lower()
         if not any(normalized.startswith(prefix) for prefix in allowed_prefixes):
             findings.append(normalized)
-        if any(normalized == prefix.rstrip("/") or normalized.startswith(prefix) for prefix in protected_paths):
+        if any(
+            normalized == prefix.rstrip("/")
+            or normalized.startswith(prefix)
+            for prefix in protected_paths
+        ):
             findings.append(normalized)
         if any(fragment.lower() in lowered for fragment in forbidden_fragments):
             findings.append(normalized)
@@ -157,7 +169,7 @@ def unsafe_file_types(root: Path, paths: list[str], baseline: str) -> list[str]:
     summary = git(root, "diff", "--summary", f"{baseline}..HEAD")
     for line in summary.splitlines():
         lowered = line.lower()
-        if "mode change" in lowered or "typechange" in lowered or "rename" in lowered or "copy" in lowered:
+        if any(token in lowered for token in ("mode change", "rename", "copy", "typechange")):
             findings.append(line)
     for relative in paths:
         path = root / relative
@@ -165,20 +177,18 @@ def unsafe_file_types(root: Path, paths: list[str], baseline: str) -> list[str]:
             mode = path.lstat().st_mode
         except FileNotFoundError:
             continue
-        import stat
         if stat.S_ISLNK(mode):
             findings.append(f"symlink:{relative}")
         elif not stat.S_ISREG(mode):
             findings.append(f"non-regular:{relative}")
     return sorted(set(findings))
 
+
 def secret_findings(root: Path, baseline: str) -> list[str]:
     diff = git(root, "diff", "--unified=0", f"{baseline}..HEAD")
-    findings = []
-    for pattern in SECRET_DIFF_PATTERNS:
-        if pattern.search(diff):
-            findings.append(pattern.pattern)
-    return findings
+    return sorted(
+        set(pattern.pattern for pattern in SECRET_DIFF_PATTERNS if pattern.search(diff))
+    )
 
 
 def parse_benchmark_output(
@@ -192,7 +202,15 @@ def parse_benchmark_output(
         raise ValueError("Benchmark output must be a JSON object.")
     candidate_better = payload.get("candidate_better")
     if not isinstance(candidate_better, bool):
-        raise ValueError("Benchmark JSON must contain boolean candiddef benchmark(
+        raise ValueError("Benchmark JSON must contain boolean candidate_better.")
+    if payload.get("baseline_commit") != baseline:
+        raise ValueError("Benchmark baseline_commit does not match RSI_BASELINE_COMMIT.")
+    if payload.get("candidate_commit") != candidate:
+        raise ValueError("Benchmark candidate_commit does not match RSI_CANDIDATE_COMMIT.")
+    return payload
+
+
+def benchmark(
     root: Path,
     baseline: str,
     candidate: str,
@@ -224,7 +242,10 @@ def parse_benchmark_output(
                 policy=policy,
             )
         except subprocess.TimeoutExpired:
-            return {"status": "FAIL", "reason": f"Benchmark exceeded {timeout}s timeout."}
+            return {
+                "status": "FAIL",
+                "reason": f"Benchmark exceeded {timeout}s timeout.",
+            }
 
         try:
             evidence = parse_benchmark_output(output, baseline, candidate)
@@ -257,6 +278,7 @@ def parse_benchmark_output(
     finally:
         shutil.rmtree(home, ignore_errors=True)
 
+
 def implementation_ready(policy: dict[str, Any]) -> bool:
     readiness = policy.get("implementation_readiness", {})
     return (
@@ -275,34 +297,18 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
             "decision": "BLOCKED",
             "baseline_commit": baseline,
             "changed_files": changed_files(root, baseline),
-            "results": [{
-                "name": "implementation-readiness",
-                "status": "BLOCKED",
-                "details": (
-                    "RSI implementation is not declared READY in the protected policy. "
-                    "No candidate may be accepted or promoted until all mandatory implementation "
-                    "components are implemented and independently verified."
-                ),
-            }],
+            "results": [
+                {
+                    "name": "implementation-readiness",
+                    "status": "BLOCKED",
+                    "details": (
+                        "RSI implementation is not declared READY in the protected policy. "
+                        "No candidate may be accepted or promoted until all mandatory implementation "
+                        "components are implemented and independently verified."
+                    ),
+                }
+            ],
         }
-
-    # Candidate evaluation must not inherit repository write/auth paths.
-    subprocess.run(
-        ["git", "config", "--local", "--unset-all", "credential.helper"],
-        cwd=root,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-        env=safe_env(home=root / ".rsi-control-home"),
-    )
-    subprocess.run(
-        ["git", "remote", "remove", "origin"],
-        cwd=root,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-        env=safe_env(home=root / ".rsi-control-home"),
-    )
 
     results: list[dict[str, Any]] = []
 
@@ -357,7 +363,13 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
 
     for name, command in commands:
         try:
-            code, output, duration = run(command, root, timeout, home=root / ".rsi-control-home", policy=policy)
+            code, output, duration = run(
+                command,
+                root,
+                timeout,
+                home=root / ".rsi-control-home",
+                policy=policy,
+            )
             results.append({
                 "name": name,
                 "status": "PASS" if code == 0 else "FAIL",
