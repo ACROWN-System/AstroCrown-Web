@@ -119,7 +119,28 @@ def secret_findings(root: Path, baseline: str) -> list[str]:
     return findings
 
 
-def benchmark(root: Path, timeout: int) -> dict[str, Any]:
+def parse_benchmark_output(output: str) -> dict[str, Any]:
+    raw = output.strip()
+    if not raw:
+        raise ValueError("Benchmark produced no JSON output.")
+
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("Benchmark output must be a JSON object.")
+
+    candidate_better = payload.get("candidate_better")
+    if not isinstance(candidate_better, bool):
+        raise ValueError("Benchmark JSON must contain boolean candidate_better.")
+
+    return payload
+
+
+def benchmark(
+    root: Path,
+    baseline: str,
+    candidate: str,
+    timeout: int,
+) -> dict[str, Any]:
     raw = os.environ.get("RSI_BENCHMARK_COMMAND", "").strip()
     if not raw:
         return {
@@ -135,23 +156,55 @@ def benchmark(root: Path, timeout: int) -> dict[str, Any]:
         }
 
     try:
-        code, output, duration = run(command, root, timeout)
+        code, output, duration = run(
+            command,
+            root,
+            timeout,
+            extra_env={
+                "RSI_BASELINE_COMMIT": baseline,
+                "RSI_CANDIDATE_COMMIT": candidate,
+            },
+        )
     except subprocess.TimeoutExpired:
         return {
             "status": "FAIL",
             "reason": f"Benchmark exceeded {timeout}s timeout.",
         }
 
+    evidence: dict[str, Any]
+    try:
+        evidence = parse_benchmark_output(output)
+    except (json.JSONDecodeError, ValueError) as exc:
+        return {
+            "status": "BLOCKED",
+            "reason": f"Benchmark output contract invalid: {exc}",
+            "exit_code": code,
+            "duration_seconds": round(duration, 3),
+            "output": output[-16000:],
+        }
+
+    if code != 0:
+        return {
+            "status": "FAIL",
+            "reason": "Benchmark command returned a non-zero exit code.",
+            "candidate_better": evidence["candidate_better"],
+            "exit_code": code,
+            "duration_seconds": round(duration, 3),
+            "evidence": evidence,
+        }
+
     return {
-        "status": "PASS" if code == 0 else "FAIL",
+        "status": "PASS" if evidence["candidate_better"] else "FAIL",
+        "candidate_better": evidence["candidate_better"],
         "exit_code": code,
         "duration_seconds": round(duration, 3),
-        "output": output[-16000:],
+        "evidence": evidence,
     }
 
 
 def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any]:
     timeout = int(policy["evaluation"]["timeout_seconds"])
+    candidate_commit = git(root, "rev-parse", "HEAD")
 
     # Candidate evaluation must not inherit repository write/auth paths.
     subprocess.run(
@@ -233,7 +286,7 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
     if bool(policy["evaluation"]["require_benchmark"]):
         results.append({
             "name": "capability-benchmark",
-            **benchmark(root, timeout),
+            **benchmark(root, baseline, candidate_commit, timeout),
         })
 
     statuses_only = [item["status"] for item in results]
