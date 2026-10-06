@@ -2,15 +2,42 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "NOVA RSI Candidate",
   "type": "object",
-  "required": ["candidate_id", "baseline_commit", "hypothesis", "rationale", "patch"],
+  "required": [
+    "candidate_id",
+    "baseline_commit",
+    "hypothesis",
+    "rationale",
+    "patch"
+  ],
   "properties": {
-    "candidate_id": {"type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9._-]+$"},
-    "baseline_commit": {"type": "string", "minLength": 7},
-    "hypothesis": {"type": "string", "minLength": 1},
-    "rationale": {"type": "string", "minLength": 1},
-    "expected_improvement": {"type": "string"},
-    "risks": {"type": "string"},
-    "patch": {"type": "string", "minLength": 1}
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9._-]+$"
+    },
+    "baseline_commit": {
+      "type": "string",
+      "minLength": 7
+    },
+    "hypothesis": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rationale": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expected_improvement": {
+      "type": "string"
+    },
+    "risks": {
+      "type": "string"
+    },
+    "patch": {
+      "type": "string",
+      "minLength": 1
+    }
   },
-  "additionalProperties": true
+  "additionalProperties": false,
+  "description": "Protected candidate contract. baseline_commit must equal the exact RSI cycle baseline; patch content and scope are independently validated before evaluation."
 }
