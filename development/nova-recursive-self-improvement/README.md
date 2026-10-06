@@ -386,7 +386,7 @@ Nosana's current documentation describes the inference service as credit-metered
 
 ## Current implementation boundary
 
-The provider adapter, protected preflight, secret isolation, candidate validation, evaluator isolation, and automated tests are implemented.
+The provider adapter, protected preflight, dedicated provider-secret boundary, secret isolation, candidate validation, evaluator isolation, and automated tests are implemented.
 
 The autonomous RSI lifecycle remains blocked because the protected policy is still explicitly `INCOMPLETE`. In particular, an approved capability workload/corpus that demonstrates actual NOVA intelligence improvement has not yet been established. Deterministic code-health tests are not treated as a substitute for that benchmark.
 
