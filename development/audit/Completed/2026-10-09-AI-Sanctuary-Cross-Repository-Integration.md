@@ -1,7 +1,7 @@
 # Active Navigation Plan — AI Sanctuary Cross-Repository Integration
 
 **Date:** 2026-10-09  
-**Status:** COMPLETED — documentation submitted for review  
+**Status:** COMPLETED — documentation merged; runtime implementation remains deferred  
 **Objective:** Audit the current NOVA and AstroCrown-Web repository structures and establish a carefully scoped, evidence-led Sanctuary documentation architecture before resuming the Mistral HTTP 429 investigation.
 
 ## Objective and completion conditions
@@ -104,7 +104,7 @@ Add any newly discovered repository file, policy, or external research source to
 - [x] Create NOVA's canonical Sanctuary documentation (PR #48: https://github.com/ACROWN-System/NOVA/pull/48).
 - [x] Create AstroCrown-Web's integration documentation and update its development index (PR #45: https://github.com/ACROWN-System/AstroCrown-Web/pull/45).
 - [x] Review links, terminology, status classifications, and non-claims.
-- [x] Create separate pull requests; both are open and awaiting repository review/merge.
+- [x] Create separate pull requests; both were reviewed for mergeability and merged: NOVA PR #48 at commit 715050b4ce3a39122844d2e1a38f1435c3ca1cd1; AstroCrown-Web PR #45 at commit 5370cd4d4a7252c25c50b5c8792c9b3f5cc26623.
 - [x] Move this plan from Active/ to Completed/ after preparing the documentation for review.
 
 ## Status vocabulary
