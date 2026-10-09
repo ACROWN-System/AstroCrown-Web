@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "accounting": {
+    "public_price_independent_of_provider": true,
+    "free_capacity_cash_cost": "0",
+    "free_capacity_resource_cost_is_tracked": true,
+    "backend_cost_is_separate_from_public_price": true,
+    "crypto_settlement_supported": true
+  },
+  "continuity": {
+    "preferred_behavior": "CONTINUOUS_INTERNAL_TRANSITION",
+    "preemptive_replenishment": true,
+    "do_not_wait_for_quota_exhaustion_before_replenishing": true,
+    "minimum_runway_ratio": 1,
+    "warning_ratio": 2,
+    "target_ratio": 3,
+    "price_change_headroom": {
+      "required": true,
+      "default_notice_period_days": 30,
+      "must_cover_notice_period_cost": true,
+      "must_cover_next_replenishment_target": true,
+      "emergency_reserve_ratio": 1,
+      "prefer_preemptive_replenishment": true
+    }
+  },
+  "payments": {
+    "payment_intent_creation": "AUTONOMOUSLY_ALLOWED",
+    "payment_execution": "HUMAN_GATE_BY_DEFAULT",
+    "irreversible_transfer": "HUMAN_GATE",
+    "provider_address_must_be_verified": true,
+    "network_and_asset_must_match_invoice": true,
+    "payment_confirmation_required": true
+  },
+  "price_adjustments": {
+    "backend_cost_change_does_not_immediately_change_public_price": true,
+    "recommendation_before_change": true,
+    "minimum_observation_window": 100,
+    "human_approval_required": true
+  }
+}

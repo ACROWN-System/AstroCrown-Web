@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "measurement_principle": "USE_PROVIDER_EXPOSED_MEASUREMENTS_WHEN_AVAILABLE",
+  "missing_measurement_state": "UNKNOWN",
+  "never_assume_unlimited": true,
+  "never_assume_zero_cost": true,
+  "measurement_sources": [
+    "http_response_headers",
+    "provider_api",
+    "provider_dashboard",
+    "provider_invoice",
+    "manual_verified_record"
+  ],
+  "resource_metrics": [
+    "credits",
+    "neurons",
+    "gpu_seconds",
+    "gpu_hours",
+    "storage_bytes",
+    "bandwidth_bytes"
+  ],
+  "call_allowance_metrics": [
+    "requests",
+    "tokens",
+    "input_tokens",
+    "output_tokens",
+    "time_window"
+  ],
+  "dimension_rule": "CALL_ALLOWANCE_LIMITS_MUST_NOT_BE_TREATED_AS_TOTAL_RESOURCE_BALANCE",
+  "renewal": {
+    "track_reset_after": true,
+    "track_next_reset_at": true,
+    "unknown_reset_is_allowed": true
+  },
+  "providers": {
+    "groq": {
+      "automatic_header_measurement": true,
+      "token_measurement": "headers",
+      "request_measurement": "headers"
+    },
+    "gemini": {
+      "automatic_header_measurement": false,
+      "quota_measurement": "provider_account_or_dashboard"
+    },
+    "cloudflare": {
+      "automatic_header_measurement": false,
+      "quota_measurement": "provider_dashboard_or_account_api",
+      "unit": "neurons"
+    },
+    "gpu_marketplace": {
+      "automatic_header_measurement": "provider_specific_adapter",
+      "quota_measurement": "credits_or_invoice"
+    }
+  },
+  "scope_levels": [
+    "credential",
+    "project",
+    "organization",
+    "account",
+    "subscription",
+    "workspace",
+    "provider"
+  ],
+  "measurement_record_requirements": {
+    "scope_required": true,
+    "source_required": true,
+    "observed_at_required": true,
+    "unit_required": true,
+    "reset_or_expiration_if_exposed": true,
+    "remaining_must_not_be_inferred_as_authoritative": true
+  },
+  "allocation_engine": {
+    "enabled": true,
+    "selection_method": "PARETO_FRONTIER",
+    "no_universal_weighted_score": true,
+    "hard_dimensions": [
+      "health_validity",
+      "call_allowance_fit",
+      "total_resource_fit"
+    ],
+    "optimization_dimensions": [
+      "economic_priority",
+      "expiry_priority",
+      "renewability",
+      "quality",
+      "latency",
+      "negative_effects"
+    ],
+    "unknown_values_must_not_create_positive_priority": true
+  },
+  "runtime_allocation": {
+    "expiry_aware": true,
+    "renewability_aware": true,
+    "economic_guard": true,
+    "urgency_window_seconds": 300,
+    "minimum_remaining_reserve_fraction": 0.2,
+    "maximum_capacity_observation_age_seconds": 900,
+    "require_non_negative_economic_case_for_expiry_boost": true,
+    "never_generate_work_only_to_consume_expiring_capacity": true,
+    "unknown_economics_priority": 0,
+    "principle": "Prefer usable capacity approaching reset or expiration only for work that is already required and only when the observed economic case is non-negative. Consider renewal frequency, paid cost, protected reserve, and downstream negative effects before increasing priority. Never infer missing capacity or economics.",
+    "required_work_reuse": {
+      "enabled": true,
+      "eligible_work": [
+        "provider_health_probe"
+      ],
+      "must_not_create_new_work": true,
+      "must_not_claim_monetary_value_without_comparable_evidence": true,
+      "principle": "An already-required health probe may be advanced to reuse observed capacity that would otherwise expire. The scheduler records preserved/avoided expiry opportunity separately from cash economics."
+    }
+  },
+  "development_test_protection": {
+    "separate_budget_required": true,
+    "unit_tests_must_not_call_live_providers": true,
+    "live_tests_use_minimal_requests": true,
+    "preserve_minimum_free_quota_reserve": true
+  }
+}
