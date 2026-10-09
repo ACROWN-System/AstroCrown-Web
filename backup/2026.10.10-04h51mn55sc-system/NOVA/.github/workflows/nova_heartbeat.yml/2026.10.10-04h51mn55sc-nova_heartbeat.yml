@@ -1,0 +1,67 @@
+name: NOVA Autonomous Heartbeat
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nova-heartbeat
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Test NOVA health and observer primitives
+        run: python -m unittest discover -s NOVA/tests -p 'test_*.py' -v
+
+      - name: Observe external operational annotations
+        run: python NOVA/operational_observer.py
+
+      - name: Execute NOVA AI Heart
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GROQ_API_KEY_01: ${{ secrets.GROQ_API_KEY_01 }}
+          GEMINI_API_KEY_01: ${{ secrets.GEMINI_API_KEY_01 }}
+          CEREBRAS_API_KEY_01: ${{ secrets.CEREBRAS_API_KEY_01 }}
+          CLOUDFLARE_API_KEY_01: ${{ secrets.CLOUDFLARE_API_KEY_01 }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NOVA_ADVANCE_PROVIDER_ROTATION: 'true'
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
+          TWILIO_TO_NUMBER: ${{ secrets.TWILIO_TO_NUMBER }}
+        run: python NOVA/router.py
+
+      - name: Analyze newly changed operational annotations
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GROQ_API_KEY_01: ${{ secrets.GROQ_API_KEY_01 }}
+          GEMINI_API_KEY_01: ${{ secrets.GEMINI_API_KEY_01 }}
+          CEREBRAS_API_KEY_01: ${{ secrets.CEREBRAS_API_KEY_01 }}
+          CLOUDFLARE_API_KEY_01: ${{ secrets.CLOUDFLARE_API_KEY_01 }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NOVA_REASONING_PROVIDER_ROTATION_INDEX: ${{ github.run_number }}
+        run: python NOVA/reasoning.py --pending
+
+      - name: Commit NOVA structured state
+        run: |
+          git config --global user.name "NOVA Autonomous Engine"
+          git config --global user.email "nova@haan.system"
+          git add NOVA/roster.json NOVA/health_state.json
+          git diff --staged --quiet || (git commit -m "chore(nova): update AI heart health state [skip ci]" && git push)

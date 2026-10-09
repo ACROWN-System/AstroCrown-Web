@@ -1,0 +1,45 @@
+name: NOVA GPU Heartbeat
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nova-gpu-heartbeat
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  gpu-heartbeat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Test NOVA health primitives
+        run: python -m unittest discover -s NOVA/tests -p 'test_*.py' -v
+
+      - name: Execute NOVA GPU Heart
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          NOSANA_GPU_API_KEY_01: ${{ secrets.NOSANA_GPU_API_KEY_01 }}
+          HF_ZEROGPU_TOKEN_01: ${{ secrets.HF_ZEROGPU_TOKEN_01 }}
+          NOVA_GPU_PROVIDER_ROTATION_INDEX: ${{ github.run_number }}
+        run: python NOVA/gpu_heartbeat.py
+
+      - name: Commit NOVA GPU heart state
+        run: |
+          git config --global user.name "NOVA Autonomous Engine"
+          git config --global user.email "nova@haan.system"
+          git add NOVA/health_state.json
+          git diff --staged --quiet || (git commit -m "chore(nova): update GPU heart health state [skip ci]" && git push)

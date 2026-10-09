@@ -1,0 +1,98 @@
+{
+  "_comment": "NOVA provider roster. Priority = order in this list. 'status' is set to 'down' automatically by router.py when a provider's models are all permanently dead (e.g. decommissioned) — the HAAN Council restores it to 'active' after approving a replacement. Model IDs drift often; verify against each provider's live docs periodically.",
+  "candidates_not_in_roster": [
+    "OpenRouter — OPENROUTER_API_KEY_01; aggregator; official free plan currently lists 25+ free models and 50 requests/day; free upstream availability changes; https://openrouter.ai/pricing/",
+    "Hugging Face Inference Providers — HF_INFERENCE_API_KEY_01; current Free-plan included credit is CONFLICTED: earlier source says $0.10/month, latest 2026-10-08 catalog audit of official pricing says no credit on Free and credits must be purchased; UNKNOWN until current account/official page discrepancy is resolved; https://huggingface.co/docs/inference-providers/en/pricing",
+    "NVIDIA NIM / API Catalog — NVIDIA_NIM_API_KEY_01; no-charge/API Catalog access may exist under applicable license, but free access is evaluation-only, phone verification is required, and hosted endpoint quota, data terms and continuing production rights are unverified; https://build.nvidia.com/",
+    "Cohere trial — COHERE_TRIAL_API_KEY_01; free trial keys are development-only and not permitted for production/commercial use; https://docs.cohere.com/v2/docs/rate-limits",
+    "SambaNova Cloud — SAMBANOVA_API_KEY_01; official docs conflict: plans says add payment method and purchase credits, while official rate-limit docs reportedly describe free tier when no payment method is linked; UNKNOWN/BLOCKED until official/account flow discrepancy is resolved; https://cloud.sambanova.ai/plans ; https://docs.sambanova.ai/docs/en/models/rate-limits",
+    "GitHub Models — RETIRED as of 2026-07-30; do not add as a candidate; https://github.blog/changelog/2026-07-30-github-models-is-now-retired/",
+    "Requesty Gateway — REQUESTY_API_KEY_01; official $0 plan with free models, 200 requests/day, no card; aggregator/router, not independent capacity; https://www.requesty.ai/pricing",
+    "Kilo AI Gateway — anonymous free-model access needs no key and is documented at 200 requests/hour/IP; some upstream trial endpoints may log/use data for improvement; check selected model route/privacy before use; https://kilo.ai/docs/gateway/authentication",
+    "Nous Portal — NOUS_PORTAL_API_KEY_01; secondary-directory lead only; verify official API, free quota, payment method and data terms before use",
+    "OVHcloud AI Endpoints — OVHCLOUD_AI_ENDPOINTS_API_KEY_01; secondary-directory lead only; verify official free model scope/quota and auth requirements",
+    "Aion Labs API — AION_API_KEY_01; secondary-directory lead only; verify current official API and terms before use",
+    "OpenCode Zen / Console — OPENCODE_ZEN_API_KEY_01; do not assume free promotions are durable; official console requires billing details/credits for paid endpoint; https://opencode.ai/v2/docs/console/models/",
+    "Z.ai / GLM — ZAI_API_KEY_01; discovery catalog reports ongoing $0 GLM-4.5-Flash, GLM-4.7-Flash text and GLM-4.6V-Flash vision; official price https://docs.z.ai/guides/overview/pricing; verify terms restricting competing technology",
+    "Poolside Platform — POOLSIDE_API_KEY_01; official docs advertise free developer API access for Laguna coding models, but exact free limits/production entitlement UNKNOWN; https://docs.poolside.ai/api/overview",
+    "Alibaba Cloud Model Studio — ALIBABA_MODEL_STUDIO_API_KEY_01; catalog reports ~1M free tokens per model for eligible new accounts in Singapore/international region, one-time and subject to account completion; https://www.alibabacloud.com/help/en/model-studio/new-free-quota",
+    "Sarvam AI — SARVAM_API_KEY_01; catalog reports ₹100 signup credits across LLM/speech, but current payment-method requirement UNKNOWN; https://docs.sarvam.ai/api/getting-started/pricing",
+    "Vercel AI Gateway — VERCEL_AI_GATEWAY_API_KEY_01; monthly free credit for selected models, amount not stated; gateway aggregator, free access and terms need current account verification; https://vercel.com/docs/ai-gateway/pricing",
+    "AI Horde — anonymous access may use documented public key 0000000000; volunteer-hosted text/image service with queue-dependent availability, no SLA; https://aihorde.net/",
+    "Typhoon / SCB 10X — TYPHOON_API_KEY_01; free research showcase API for Thai-oriented LLM/audio/OCR, terms and service guarantees need verification; https://docs.opentyphoon.ai/en/faq/",
+    "SiliconFlow — SILICONFLOW_API_KEY_01; free international terms differ from siliconflow.cn perpetual-free models; latter may require mainland-China real-name verification; eligibility unclear; https://docs.siliconflow.cn/docs/userguide/faqs/rate-limit-and-upgradation",
+    "Fireworks AI — FIREWORKS_API_KEY_01; reported $1 trial credit without card; one-time only, exhaustion/top-up behavior must be verified; https://docs.fireworks.ai/faq-new/billing-pricing/",
+    "AI21 Labs — AI21_API_KEY_01; reported $10 trial credit valid 3 months and no card for trial; future account access may require a card; https://docs.ai21.com/docs/usage-cost",
+    "Scaleway Generative APIs — SCALEWAY_API_KEY_01; reported 1M free tokens plus 60 minutes Whisper one-time, no card; verify region and ensure over-quota requests fail closed; https://www.scaleway.com/en/pricing/model-as-a-service/",
+    "Upstage — UPSTAGE_API_KEY_01; reported $10 signup credit for LLM, OCR and embeddings, no card; one-time, and model pricing changes are time-sensitive; https://console.upstage.ai/docs/getting-started",
+    "Voyage AI — VOYAGE_API_KEY_01; reported one-time 200M free tokens for eligible embedding/reranker models; retrieval-focused, not general chat; https://docs.voyageai.com/docs/pricing",
+    "Contextual AI — CONTEXTUAL_API_KEY_01; reported one-time $25 credit for Generate/Rerank, no card listed; commercial rights and exhaustion behavior need verification; https://contextual.ai/pricing/",
+    "Mixedbread — MIXEDBREAD_API_KEY_01; reported one-time $5 for embedding/reranking/multimodal search, no card; finite credit; https://www.mixedbread.com/pricing",
+    "Tencent Hunyuan — TENCENT_HUNYUAN_API_KEY_01; reported one-time 1M tokens for eligible models plus separate embedding package; real-name verification/regional constraints may apply; https://cloud.tencent.com/document/product/1729/97731"
+  ],
+  "credential_policy": {
+    "future_multiple_key_slots": "Use suffixed environment names such as PROVIDER_API_KEY_01, _02 without changing routing contracts.",
+    "never_commit_credentials": true,
+    "one_environment_slot_per_provider": true,
+    "rotation_ready": true,
+    "secret_names_only": true
+  },
+  "providers": [
+    {
+      "api_key_env": "GROQ_API_KEY_01",
+      "base_url": "https://api.groq.com/openai/v1/chat/completions",
+      "kind": "openai_compatible",
+      "models": [
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b"
+      ],
+      "name": "groq",
+      "status": "active"
+    },
+    {
+      "api_key_env": "GEMINI_API_KEY_01",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/models",
+      "kind": "gemini",
+      "models": [
+        "gemini-3.8-flash",
+        "gemini-3.1-flash-lite"
+      ],
+      "name": "gemini",
+      "status": "active"
+    },
+    {
+      "api_key_env": "CEREBRAS_API_KEY_01",
+      "base_url": "https://api.cerebras.ai/v1/chat/completions",
+      "kind": "openai_compatible",
+      "models": [
+        "gpt-oss-120b"
+      ],
+      "name": "cerebras",
+      "status": "active"
+    },
+    {
+      "account_id_env": "CLOUDFLARE_ACCOUNT_ID",
+      "api_key_env": "CLOUDFLARE_API_KEY_01",
+      "base_url": "https://api.cloudflare.com/client/v4/accounts/{CF_ACCOUNT_ID}/ai/v1/chat/completions",
+      "kind": "openai_compatible",
+      "models": [
+        "@cf/zai-org/glm-4.7-flash"
+      ],
+      "name": "cloudflare",
+      "status": "active"
+    }
+  ],
+  "deferred_providers": [
+    {
+      "name": "mistral",
+      "status": "DEFERRED",
+      "models": [
+        "mistral-small-latest"
+      ],
+      "credential_env": "MISTRAL_API_KEY_01",
+      "decision_date": "2026-10-10",
+      "reason": "User decision to pause Mistral Free API after repeated HTTP 429/code 1300 failures under negligible reported usage and the provider chatbot's Free-mode capacity-prioritization explanation. The exact cause of the individual rejection and any broader intent remain unverified.",
+      "requalification_gate": "Do not restore to active providers or live health/failover probes unless the user explicitly requests requalification and objective availability, quality, and reliability criteria are satisfied."
+    }
+  ]
+}
