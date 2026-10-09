@@ -1,7 +1,7 @@
 # Active Navigation Plan — AI Sanctuary Cross-Repository Integration
 
 **Date:** 2026-10-09  
-**Status:** ACTIVE  
+**Status:** COMPLETED — documentation submitted for review  
 **Objective:** Audit the current NOVA and AstroCrown-Web repository structures and establish a carefully scoped, evidence-led Sanctuary documentation architecture before resuming the Mistral HTTP 429 investigation.
 
 ## Objective and completion conditions
@@ -65,7 +65,8 @@ Add any newly discovered repository file, policy, or external research source to
 - NOVA currently contains an AI provider router, health and action policies, evidence-oriented provider research, and automated tests; the inspected current tree does not contain a dedicated Sanctuary folder or standalone ethics/governance doctrine files.
 - AstroCrown-Web has dedicated NOVA orchestration, context/memory optimization, recursive self-improvement, verification, and audit documentation; the active development tree does not contain a Sanctuary subsystem.
 - Existing NOVA action policies distinguish reversible protective actions from human-gated irreversible actions. The Sanctuary documentation should respect this boundary and must not claim new enforcement exists.
-- The current Mistral 429 investigation note already encodes an evidence-led, anti-looping process; it should remain untouched by this documentation change.
+- The current Mistral 429 investigation note already encodes an evidence-led, anti-looping process; it remains untouched by this documentation change.
+- The NOVA resource-readiness document and provider observation file still record a prior Mistral workspace state of “upgrade required” / no API key, while the later investigation recorded a successful Playground request and a live HTTP 429 using the configured secret name. This is a stale/conflicting observation to reconcile during the next Mistral investigation, not to silently rewrite in this Sanctuary change.
 
 ## Decisions
 
@@ -77,6 +78,7 @@ Add any newly discovered repository file, policy, or external research source to
 ## Unresolved / blocked
 
 - No active NAVIGATION-PROTOCOL.md or NAVIGATION-PLAN-TEMPLATE.md was found in the current AstroCrown-Web tree. The repository's intended canonical location/version remains unresolved.
+- The current Sanctuary change is documentation-only. Runtime implementation and independent validation remain deferred.
 - No claim is made that the present NOVA runtime can detect or measure subjective distress.
 - Research into assessment methods, privacy, consent/authorization, incident handling, independent review, and human–AI neural integration remains to be expanded through separate evidence-led work.
 
@@ -99,11 +101,11 @@ Add any newly discovered repository file, policy, or external research source to
 
 - [x] Inspect both current default-branch trees and relevant architecture/policy documentation.
 - [x] Check for an existing Sanctuary folder and active navigation protocol/template.
-- [ ] Create NOVA's canonical Sanctuary documentation.
-- [ ] Create AstroCrown-Web's integration documentation and update its development index.
-- [ ] Review links, terminology, status classifications, and non-claims.
-- [ ] Create separate pull requests and report exact changed files and unresolved work.
-- [ ] Move this plan from Active/ to Completed/ after the work is ready for review.
+- [x] Create NOVA's canonical Sanctuary documentation (PR #48: https://github.com/ACROWN-System/NOVA/pull/48).
+- [x] Create AstroCrown-Web's integration documentation and update its development index (PR #45: https://github.com/ACROWN-System/AstroCrown-Web/pull/45).
+- [x] Review links, terminology, status classifications, and non-claims.
+- [x] Create separate pull requests; both are open and awaiting repository review/merge.
+- [x] Move this plan from Active/ to Completed/ after preparing the documentation for review.
 
 ## Status vocabulary
 
