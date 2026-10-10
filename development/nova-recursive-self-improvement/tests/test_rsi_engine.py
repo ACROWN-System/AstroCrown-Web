@@ -1,5 +1,7 @@
+import subprocess
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -16,11 +18,113 @@ from rsi_engine import (
     validate_candidate_payload,
     validate_patch_content,
     validate_patch_paths,
+    run_evaluator_supervised,
 )
 
 
 class RsiEngineTests(unittest.TestCase):
     ROOT = Path(__file__).resolve().parents[3]
+
+    def test_supervisor_kills_process_group_and_cleans_labels_on_timeout(self):
+        class FakeProcess:
+            pid = 4321
+            returncode = -9
+
+            def __init__(self):
+                self.communicate_calls = 0
+                self.killed = False
+
+            def communicate(self, timeout=None):
+                self.communicate_calls += 1
+                if self.communicate_calls == 1:
+                    raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout)
+                return "partial evaluator output", None
+
+            def kill(self):
+                self.killed = True
+
+        process = FakeProcess()
+        evaluation_id = "a" * 32
+        with patch("rsi_engine.subprocess.Popen", return_value=process) as popen, patch(
+            "rsi_engine.os.killpg"
+        ) as killpg, patch(
+            "rsi_engine.cleanup_evaluation_containers", return_value=True
+        ) as cleanup:
+            result = run_evaluator_supervised(
+                ["python", "evaluator.py"],
+                Path("/tmp"),
+                {"PATH": "/usr/bin"},
+                2,
+                evaluation_id,
+            )
+
+        self.assertEqual(result["decision"], "FAIL")
+        self.assertEqual(result["stage"], "candidate-execution")
+        self.assertIn("timed out", result["error"])
+        self.assertEqual(result["evaluator_output"], "partial evaluator output")
+        self.assertTrue(popen.call_args.kwargs["start_new_session"])
+        killpg.assert_called_once()
+        cleanup.assert_called_once_with(evaluation_id, wait_for_late_containers=True)
+        self.assertFalse(process.killed)
+
+    def test_supervisor_blocks_when_timeout_cleanup_is_unconfirmed(self):
+        class FakeProcess:
+            pid = 5432
+            returncode = -9
+
+            def __init__(self):
+                self.calls = 0
+
+            def communicate(self, timeout=None):
+                self.calls += 1
+                if self.calls == 1:
+                    raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout)
+                return "partial evaluator output", None
+
+            def kill(self):
+                pass
+
+        evaluation_id = "b" * 32
+        with patch("rsi_engine.subprocess.Popen", return_value=FakeProcess()), patch(
+            "rsi_engine.os.killpg"
+        ), patch(
+            "rsi_engine.cleanup_evaluation_containers", return_value=False
+        ):
+            result = run_evaluator_supervised(
+                ["python", "evaluator.py"],
+                Path("/tmp"),
+                {"PATH": "/usr/bin"},
+                2,
+                evaluation_id,
+            )
+
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertEqual(result["stage"], "sandbox-cleanup")
+        self.assertIn("could not be confirmed", result["error"])
+
+    def test_supervisor_blocks_when_containers_remain_after_normal_exit(self):
+        class FakeProcess:
+            pid = 6543
+            returncode = 0
+
+            def communicate(self, timeout=None):
+                return "complete", None
+
+        evaluation_id = "c" * 32
+        with patch("rsi_engine.subprocess.Popen", return_value=FakeProcess()), patch(
+            "rsi_engine.cleanup_evaluation_containers", return_value=False
+        ) as cleanup:
+            result = run_evaluator_supervised(
+                ["python", "evaluator.py"],
+                Path("/tmp"),
+                {"PATH": "/usr/bin"},
+                2,
+                evaluation_id,
+            )
+
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertEqual(result["stage"], "sandbox-cleanup")
+        cleanup.assert_called_once_with(evaluation_id, wait_for_late_containers=True)
 
     def test_extract_json_candidate(self):
         payload = extract_candidate_payload(
