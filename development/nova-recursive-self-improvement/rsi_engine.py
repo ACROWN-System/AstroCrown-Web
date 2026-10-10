@@ -581,6 +581,7 @@ def apply_and_evaluate(
             cwd=worktree_root, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
         )
         candidate_commit = git(worktree_root, 'rev-parse', 'HEAD')
+        candidate_tree = git(worktree_root, 'rev-parse', 'HEAD^{tree}')
 
         control_files = materialize_trusted_control_plane(
             root,
@@ -640,6 +641,7 @@ def apply_and_evaluate(
         return {
             'decision': evaluation['decision'],
             'candidate_commit': candidate_commit,
+            'candidate_tree': candidate_tree,
             'candidate': candidate,
             'evaluator_exit_code': supervised['returncode'],
             'evaluator_output': supervised['stdout'][-16000:],
