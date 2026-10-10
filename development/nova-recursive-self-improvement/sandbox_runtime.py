@@ -646,14 +646,32 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--policy", default="development/nova-recursive-self-improvement/rsi_policy.json")
     parser.add_argument("--self-test", action="store_true")
+    parser.add_argument("--cleanup-evaluation-id")
     args = parser.parse_args()
     try:
+        # Cleanup does not need the sandbox policy or image: it only queries the
+        # trusted Docker daemon for containers carrying the validated run label.
+        # Keep this branch ahead of policy loading so it remains usable after a
+        # failed or malformed candidate/evaluator configuration.
+        if args.cleanup_evaluation_id is not None:
+            cleaned = cleanup_evaluation_containers(
+                args.cleanup_evaluation_id,
+                wait_for_late_containers=True,
+            )
+            result = {
+                "status": "PASS" if cleaned else "BLOCKED",
+                "stage": "evaluation-container-cleanup",
+                "cleanup_confirmed": cleaned,
+            }
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 0 if cleaned else 2
+
         policy = json.loads(Path(args.policy).read_text(encoding="utf-8"))
         if args.self_test:
             result = self_test(policy)
             print(json.dumps(result, indent=2, sort_keys=True))
             return 0 if result.get("status") == "PASS" else 1
-        parser.error("Specify --self-test.")
+        parser.error("Specify --self-test or --cleanup-evaluation-id.")
     except (OSError, json.JSONDecodeError, SandboxUnavailableError) as exc:
         print(json.dumps({"status": "BLOCKED", "reason": str(exc)}, sort_keys=True))
         return 2
