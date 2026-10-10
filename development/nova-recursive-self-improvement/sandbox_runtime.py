@@ -103,11 +103,14 @@ def build_docker_command(
     extra_env: dict[str, str] | None = None,
     readonly_mounts: Sequence[tuple[Path, str]] = (),
     run_id: str | None = None,
+    evaluation_id: str | None = None,
 ) -> list[str]:
     image, _expected_id, sandbox = _validated_image(policy)
     run_id = run_id or uuid.uuid4().hex
     if not re.fullmatch(r"[0-9a-f]{32}", run_id):
         raise SandboxUnavailableError("Sandbox run identifier must be a 32-character lowercase hex token.")
+    if evaluation_id is not None and not re.fullmatch(r"[0-9a-f]{32}", evaluation_id):
+        raise SandboxUnavailableError("Sandbox evaluation identifier must be a 32-character lowercase hex token.")
     if not command or any(not isinstance(arg, str) or "\x00" in arg for arg in command):
         raise SandboxUnavailableError("Sandbox command must be a non-empty argument list.")
 
@@ -165,6 +168,8 @@ def build_docker_command(
         "--workdir", "/workspace",
         "--label", f"nova.rsi.run_id={run_id}",
     ]
+    if evaluation_id is not None:
+        args.extend(["--label", f"nova.rsi.evaluation_id={evaluation_id}"])
     for source, target in sources:
         args.extend(["--mount", f"type=bind,source={source},target={target},readonly"])
 
@@ -334,6 +339,106 @@ def _stop_container(docker: str, cidfile: Path, run_id: str) -> bool:
     return False
 
 
+def cleanup_evaluation_containers(
+    evaluation_id: str, docker: str | None = None
+) -> bool:
+    """Remove and verify all containers tagged with one outer evaluation ID.
+
+    This supervisor-level cleanup is used when the host evaluator process itself
+    times out or dies before its in-process per-container cleanup handler can run.
+    """
+    if not re.fullmatch(r"[0-9a-f]{32}", evaluation_id):
+        return False
+    docker_executable = docker or shutil.which("docker")
+    if not docker_executable:
+        return False
+
+    label = f"nova.rsi.evaluation_id={evaluation_id}"
+    container_ids: set[str] = set()
+    for attempt in range(3):
+        try:
+            listed = subprocess.run(
+                [docker_executable, "ps", "-aq", "--filter", f"label={label}"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=5,
+                check=False,
+                env=_host_env(),
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            listed = None
+        if listed is not None and listed.returncode == 0:
+            found = {
+                value.strip()
+                for value in listed.stdout.splitlines()
+                if value.strip()
+            }
+            if all(re.fullmatch(r"[0-9a-f]{12,64}", value) for value in found):
+                container_ids.update(found)
+                if found:
+                    break
+            else:
+                return False
+        if attempt < 2:
+            time.sleep(0.1)
+
+    for container_id in sorted(container_ids):
+        for operation in ("kill", "rm"):
+            try:
+                subprocess.run(
+                    [docker_executable, operation, "-f", container_id]
+                    if operation == "rm"
+                    else [docker_executable, operation, container_id],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    timeout=10,
+                    check=False,
+                    env=_host_env(),
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+
+    for attempt in range(3):
+        try:
+            remaining = subprocess.run(
+                [docker_executable, "ps", "-aq", "--filter", f"label={label}"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=5,
+                check=False,
+                env=_host_env(),
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+        if remaining.returncode != 0:
+            return False
+        values = {value.strip() for value in remaining.stdout.splitlines() if value.strip()}
+        if not values:
+            return True
+        if any(not re.fullmatch(r"[0-9a-f]{12,64}", value) for value in values):
+            return False
+        for container_id in sorted(values):
+            for operation in ("kill", "rm"):
+                try:
+                    subprocess.run(
+                        [docker_executable, operation, "-f", container_id]
+                        if operation == "rm"
+                        else [docker_executable, operation, container_id],
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        timeout=10,
+                        check=False,
+                        env=_host_env(),
+                    )
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+        if attempt < 2:
+            time.sleep(0.1)
+    return False
+
+
 def run_sandboxed(
     command: Sequence[str],
     cwd: Path,
@@ -343,6 +448,7 @@ def run_sandboxed(
     policy: dict[str, Any],
     readonly_mounts: Sequence[tuple[Path, str]] = (),
     run_id: str | None = None,
+    evaluation_id: str | None = None,
 ) -> tuple[int, str, float]:
     if timeout <= 0:
         raise SandboxUnavailableError("Sandbox timeout must be positive.")
@@ -354,6 +460,9 @@ def run_sandboxed(
     run_id = run_id or uuid.uuid4().hex
     if not re.fullmatch(r"[0-9a-f]{32}", run_id):
         raise SandboxUnavailableError("Sandbox run identifier must be a 32-character lowercase hex token.")
+    evaluation_id = evaluation_id or os.environ.get("RSI_SANDBOX_EVALUATION_ID", "").strip() or None
+    if evaluation_id is not None and not re.fullmatch(r"[0-9a-f]{32}", evaluation_id):
+        raise SandboxUnavailableError("Sandbox evaluation identifier must be a 32-character lowercase hex token.")
     docker_command = build_docker_command(
         docker,
         policy,
@@ -362,6 +471,7 @@ def run_sandboxed(
         extra_env,
         readonly_mounts,
         run_id=run_id,
+        evaluation_id=evaluation_id,
     )
     max_output = _positive_int(sandbox, "max_output_bytes")
     with tempfile.TemporaryDirectory(prefix="nova-rsi-docker-control-") as control_dir:
