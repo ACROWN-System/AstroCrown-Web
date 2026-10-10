@@ -76,6 +76,21 @@ Mandatory regressions in correctness, security, privacy, reliability, provenance
 
 Benchmark output becomes part of the RSI evidence package and must be retained with the candidate cycle.
 
+## Initial workload implementation candidate
+
+A narrow, deterministic workload is being developed for query-aware repository context packing at:
+
+- Runner: `benchmarks/run_context_packing_benchmark.py`
+- Fixed synthetic corpus: `benchmarks/context-packing-cases.json`
+- Implementation candidate: `../nova-context-memory-optimization/context_packer.py`
+- Conformance tests: `tests/test_context_packing_benchmark.py`
+
+The workload compares the exact baseline and candidate versions of `context_packer.py` using `RSI_BASELINE_COMMIT` and `RSI_CANDIDATE_COMMIT`. It measures retrieval of required complete records under fixed character budgets, and validates provenance metadata and non-truncation. Its workload includes synthetic examples for provider-rotation rules, temporal supersession, and RSI readiness/isolation caveats.
+
+A positive result means only that the candidate improved this defined context-packing workload without losing required-evidence coverage per case, increasing unrequired records per case, exceeding the budget, or altering record content/provenance. It is not a general-intelligence benchmark or approval for unrelated candidate types.
+
+**Status: IMPLEMENTED CANDIDATE / INDEPENDENT REVIEW REQUIRED.** Do not configure or rely on this workload as the approved `RSI_BENCHMARK_COMMAND` until its integrity, corpus adequacy, baseline behavior, and execution isolation have been independently reviewed. A successful unit-test run is necessary but not sufficient. The protected RSI readiness gate remains `INCOMPLETE`.
+
 ## Current status
 
 Status: **protocol defined / benchmark implementation required**
