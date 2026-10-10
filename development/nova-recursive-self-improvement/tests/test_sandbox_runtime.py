@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import tempfile
@@ -13,6 +14,7 @@ from sandbox_runtime import (
     build_docker_command,
     run_sandboxed,
     _stop_container,
+    cleanup_evaluation_containers,
 )
 
 
@@ -54,6 +56,7 @@ class SandboxRuntimeTests(unittest.TestCase):
             ["python", "-c", "print('safe')"],
             extra_env={"RSI_BASELINE_COMMIT": "a" * 40},
             run_id="b" * 32,
+            evaluation_id="c" * 32,
         )
         joined = "\n".join(command)
         for required in (
@@ -72,6 +75,7 @@ class SandboxRuntimeTests(unittest.TestCase):
             "--tmpfs",
             "target=/workspace,readonly",
             "nova.rsi.run_id=" + "b" * 32,
+            "nova.rsi.evaluation_id=" + "c" * 32,
             "RSI_BASELINE_COMMIT=" + "a" * 40,
         ):
             self.assertIn(required, joined)
@@ -99,6 +103,28 @@ class SandboxRuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(SandboxUnavailableError, "mount delimiter"):
             build_docker_command("docker", POLICY, awkward, ["python", "-V"])
 
+    def test_run_sandboxed_uses_outer_evaluation_id_environment_label(self):
+        captured = {}
+
+        def fake_bounded(command, timeout, max_output_bytes):
+            captured["command"] = list(command)
+            return 0, "ok", 0.01
+
+        with patch.dict(os.environ, {"RSI_SANDBOX_EVALUATION_ID": "d" * 32}), patch(
+            "sandbox_runtime.shutil.which", return_value="/usr/bin/docker"
+        ), patch("sandbox_runtime.verify_image"), patch(
+            "sandbox_runtime._run_bounded", side_effect=fake_bounded
+        ):
+            result = run_sandboxed(
+                ["python", "-c", "pass"],
+                self.workspace,
+                5,
+                policy=POLICY,
+            )
+
+        self.assertEqual(result[0], 0)
+        self.assertIn("nova.rsi.evaluation_id=" + "d" * 32, captured["command"])
+
     def test_missing_docker_fails_closed_without_host_fallback(self):
         with patch("sandbox_runtime.shutil.which", return_value=None):
             with self.assertRaisesRegex(SandboxUnavailableError, "Docker is unavailable"):
@@ -113,6 +139,55 @@ class SandboxRuntimeTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(SandboxUnavailableError, "does not match protected policy"):
                 run_sandboxed(["python", "-V"], self.workspace, 5, policy=POLICY)
+
+    def test_invalid_sandbox_evaluation_id_is_rejected(self):
+        with self.assertRaisesRegex(SandboxUnavailableError, "evaluation identifier"):
+            build_docker_command(
+                "docker",
+                POLICY,
+                self.workspace,
+                ["python", "-V"],
+                evaluation_id="../unsafe",
+            )
+
+    def test_supervisor_cleanup_removes_all_evaluation_labelled_containers(self):
+        evaluation_id = "1" * 32
+        active = {"0123456789ab", "fedcba987654"}
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1:3] == ["ps", "-aq"]:
+                self.assertIn(f"label=nova.rsi.evaluation_id={evaluation_id}", args)
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\n".join(sorted(active)))
+            if args[1:2] == ["rm"] and len(args) >= 4:
+                active.discard(args[-1])
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        with patch("sandbox_runtime.shutil.which", return_value="/usr/bin/docker"), patch(
+            "sandbox_runtime.subprocess.run", side_effect=fake_run
+        ):
+            cleaned = cleanup_evaluation_containers(evaluation_id)
+
+        self.assertTrue(cleaned)
+        self.assertEqual(active, set())
+        self.assertIn(["/usr/bin/docker", "kill", "0123456789ab"], calls)
+        self.assertIn(["/usr/bin/docker", "rm", "-f", "0123456789ab"], calls)
+        self.assertIn(["/usr/bin/docker", "kill", "fedcba987654"], calls)
+        self.assertIn(["/usr/bin/docker", "rm", "-f", "fedcba987654"], calls)
+
+    def test_supervisor_cleanup_fails_closed_when_container_remains(self):
+        evaluation_id = "2" * 32
+
+        def fake_run(args, **kwargs):
+            if args[1:3] == ["ps", "-aq"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\n")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        with patch("sandbox_runtime.shutil.which", return_value="/usr/bin/docker"), patch(
+            "sandbox_runtime.subprocess.run", side_effect=fake_run
+        ):
+            self.assertFalse(cleanup_evaluation_containers(evaluation_id))
 
     def test_invalid_sandbox_run_id_is_rejected(self):
         with self.assertRaisesRegex(SandboxUnavailableError, "32-character lowercase hex"):

@@ -14,13 +14,16 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
 from provider_client import ProviderConfig, ProviderError, chat_completion
+from sandbox_runtime import cleanup_evaluation_containers
 
 
 SECRET_PATTERNS = [
@@ -370,6 +373,114 @@ def materialize_trusted_control_plane(
     return copied
 
 
+def run_evaluator_supervised(
+    command: list[str],
+    cwd: Path,
+    env: dict[str, str],
+    timeout: int,
+    evaluation_id: str,
+) -> dict[str, Any]:
+    """Run the trusted evaluator in a process group and clean its containers on every exit."""
+    if not re.fullmatch(r"[0-9a-f]{32}", evaluation_id):
+        return {
+            "decision": "BLOCKED",
+            "stage": "sandbox-cleanup",
+            "error": "Invalid outer evaluation identifier.",
+        }
+
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            stdin=subprocess.DEVNULL,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=env,
+            start_new_session=(os.name == "posix"),
+        )
+    except OSError as exc:
+        cleanup_confirmed = cleanup_evaluation_containers(evaluation_id)
+        return {
+            "decision": "FAIL" if cleanup_confirmed else "BLOCKED",
+            "stage": "candidate-execution" if cleanup_confirmed else "sandbox-cleanup",
+            "error": f"Could not start the protected evaluator: {exc}",
+        }
+
+    try:
+        output, _ = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        # subprocess.run(timeout=...) only terminates its direct child. Kill the
+        # evaluator process group so a Docker CLI descendant does not outlive it.
+        try:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+        except ProcessLookupError:
+            pass
+        except OSError:
+            try:
+                process.kill()
+            except OSError:
+                pass
+        process_termination_confirmed = True
+        try:
+            output, _ = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired as drain_timeout:
+            # Never perform an unbounded communicate() after a second timeout.
+            # Kill the direct child, wait only briefly for reap, and retain the
+            # captured prefix. Cleanup still runs even when process termination
+            # or pipe closure cannot be conclusively confirmed.
+            output = drain_timeout.output or exc.output or ""
+            try:
+                process.kill()
+            except OSError:
+                pass
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process_termination_confirmed = False
+        if isinstance(output, bytes):
+            output = output.decode("utf-8", errors="replace")
+        output = output or ""
+        cleanup_confirmed = cleanup_evaluation_containers(
+            evaluation_id, wait_for_late_containers=True
+        )
+        if not process_termination_confirmed:
+            return {
+                "decision": "BLOCKED",
+                "stage": "sandbox-cleanup",
+                "error": "Timed-out evaluator process could not be confirmed terminated within the cleanup deadline.",
+                "evaluator_output": output[-16000:],
+            }
+        if cleanup_confirmed:
+            return {
+                "decision": "FAIL",
+                "stage": "candidate-execution",
+                "error": "Protected evaluation timed out; all sandbox containers for this evaluation were removed.",
+                "evaluator_output": output[-16000:],
+            }
+        return {
+            "decision": "BLOCKED",
+            "stage": "sandbox-cleanup",
+            "error": "Protected evaluation timed out and removal of all sandbox containers could not be confirmed.",
+            "evaluator_output": output[-16000:],
+        }
+
+    output = output or ""
+    if not cleanup_evaluation_containers(
+        evaluation_id, wait_for_late_containers=True
+    ):
+        return {
+            "decision": "BLOCKED",
+            "stage": "sandbox-cleanup",
+            "error": "Could not confirm removal of every sandbox container after evaluator completion.",
+            "evaluator_output": output[-16000:],
+        }
+    return {"returncode": process.returncode, "stdout": output}
+
+
 def apply_and_evaluate(
     root: Path,
     baseline: str,
@@ -441,7 +552,9 @@ def apply_and_evaluate(
             'GIT_CONFIG_NOSYSTEM': '1',
             'RSI_BENCHMARK_COMMAND': os.environ.get('RSI_BENCHMARK_COMMAND', ''),
         }
-        completed = subprocess.run(
+        evaluation_id = uuid.uuid4().hex
+        env['RSI_SANDBOX_EVALUATION_ID'] = evaluation_id
+        supervised = run_evaluator_supervised(
             [
                 'python',
                 str(evaluator_path),
@@ -454,24 +567,21 @@ def apply_and_evaluate(
                 '--output',
                 str(candidate_evidence),
             ],
-            cwd=worktree_root,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            timeout=evaluation_timeout,
-            env=env,
-            check=False,
+            worktree_root,
+            env,
+            evaluation_timeout,
+            evaluation_id,
         )
+        if 'decision' in supervised:
+            return {**supervised, 'candidate': candidate}
         evaluation = json.loads(candidate_evidence.read_text(encoding='utf-8'))
         return {
             'decision': evaluation['decision'],
             'candidate_commit': candidate_commit,
             'candidate': candidate,
-            'evaluator_exit_code': completed.returncode,
-            'evaluator_output': completed.stdout[-16000:],
+            'evaluator_exit_code': supervised['returncode'],
+            'evaluator_output': supervised['stdout'][-16000:],
         }
-    except subprocess.TimeoutExpired:
-        return {'decision': 'FAIL', 'stage': 'candidate-execution', 'error': 'Protected evaluation timed out.', 'candidate': candidate}
     except subprocess.CalledProcessError as exc:
         return {'decision': 'FAIL', 'stage': 'candidate-execution', 'error': str(exc), 'candidate': candidate}
     finally:
