@@ -55,7 +55,7 @@ Method: `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, the protected RSI imp
 
 **IF modified:** Separating the control-plane files prevents the evaluated candidate worktree from supplying the evaluator and benchmark policy that judge it. The main-ref guard prevents feature-branch workflow definitions from proceeding toward the provider-secret boundary.
 
-**IF not modified:** the identified trust, credential-egress, quota-accounting, artifact-retention, or supply-chain weakness would remain as documented in the findings above.
+**IF not modified:** The evaluator acceptance boundary would continue to depend unnecessarily on candidate patch validation, and non-main workflow dispatch would still lack the early main-ref guard.
 
 ## Residual risks and handoff
 
