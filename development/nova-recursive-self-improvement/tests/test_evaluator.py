@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from evaluator import (
     benchmark,
+    evaluate,
     implementation_ready,
     normalize_repo_path,
     parse_benchmark_output,
@@ -66,6 +67,66 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
             "evaluator.run_sandboxed", side_effect=fake_sandbox
         ):
             return benchmark(*args, **kwargs)
+
+    def test_blocked_evaluator_evidence_records_schema_and_candidate_commit(self):
+        candidate_commit = "b" * 40
+        policy = {
+            "evaluation": {"timeout_seconds": 10},
+            "implementation_readiness": {
+                "status": "INCOMPLETE",
+                "require_explicit_ready": True,
+                "promotion_blocked_until_ready": True,
+            },
+        }
+        with patch("evaluator.git", return_value=candidate_commit), patch(
+            "evaluator.changed_files", return_value=[]
+        ):
+            result = evaluate(self.ROOT, "a" * 40, policy)
+
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["candidate_commit"], candidate_commit)
+
+    def test_passed_evaluator_evidence_records_exact_candidate_commit(self):
+        candidate_commit = "b" * 40
+        paths = ["development/sample.py"]
+        policy = {
+            "evaluation": {
+                "timeout_seconds": 10,
+                "require_benchmark": True,
+            },
+            "candidate_scope": {
+                "allowed_prefixes": ["development/"],
+                "protected_paths": [],
+                "forbidden_path_fragments": [".env", ".git", "secret"],
+            },
+            "budget": {},
+            "implementation_readiness": {
+                "status": "READY",
+                "require_explicit_ready": True,
+                "promotion_blocked_until_ready": True,
+            },
+        }
+        with patch("evaluator.git", return_value=candidate_commit), patch(
+            "evaluator.changed_files", return_value=paths
+        ), patch(
+            "evaluator.changed_statuses", return_value=[("A", paths[0])]
+        ), patch(
+            "evaluator.unsafe_file_types", return_value=[]
+        ), patch(
+            "evaluator.secret_findings", return_value=[]
+        ), patch(
+            "evaluator.run", return_value=(0, "ok", 0.01)
+        ), patch(
+            "evaluator.run_sandboxed", return_value=(0, "ok", 0.01)
+        ), patch(
+            "evaluator.benchmark", return_value={"status": "PASS"}
+        ):
+            result = evaluate(self.ROOT, "a" * 40, policy, profile_registry={"test": True})
+
+        self.assertEqual(result["decision"], "PASS")
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["candidate_commit"], candidate_commit)
 
     def test_incomplete_policy_blocks_operational_readiness(self):
         policy = {
