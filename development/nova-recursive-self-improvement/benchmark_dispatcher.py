@@ -71,7 +71,15 @@ def resolve_profile(
             or not profile_id
             or not isinstance(expected, list)
             or not expected
-            or any(not isinstance(path, str) or not path for path in expected)
+            or any(
+                not isinstance(path, str)
+                or not path
+                or path.startswith("/")
+                or "\\" in path
+                or '"' in path
+                or ".." in path.split("/")
+                for path in expected
+            )
             or not isinstance(command, list)
             or not command
             or any(not isinstance(arg, str) or not arg for arg in command)
