@@ -165,6 +165,25 @@ diff --git a/development/x.txt b/development/x.txt
         )
         self.assertEqual(usage["total_tokens"], 4800)
 
+    def test_usage_rejects_invalid_or_inconsistent_token_counts(self):
+        invalid_cases = (
+            {"prompt_tokens": -1, "completion_tokens": 10, "total_tokens": 9},
+            {"prompt_tokens": True, "completion_tokens": 10, "total_tokens": 11},
+            {"prompt_tokens": 1.5, "completion_tokens": 2, "total_tokens": 3},
+            {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 25},
+            {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+            {"total_tokens": 0},
+            {"prompt_tokens": "10", "completion_tokens": 2, "total_tokens": 12},
+        )
+        for raw_usage in invalid_cases:
+            with self.subTest(raw_usage=raw_usage):
+                self.assertIsNone(normalize_usage(raw_usage))
+
+    def test_usage_derives_total_only_from_complete_valid_counts(self):
+        usage = normalize_usage({"prompt_tokens": 100, "completion_tokens": 25})
+        self.assertEqual(usage["total_tokens"], 125)
+        self.assertIsNone(normalize_usage({"prompt_tokens": 100}))
+
     def test_missing_usage_is_not_fabricated(self):
         self.assertIsNone(normalize_usage(None))
 
