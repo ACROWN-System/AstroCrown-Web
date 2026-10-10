@@ -1,7 +1,9 @@
-# RSI Evaluator Supervisor Cleanup — Navigation Plan
+# Completed Navigation Plan — RSI Evaluator Supervisor Cleanup
+
+**Canonical completed record:** [Completed evaluator supervisor cleanup](../Completed/2026-10-11-RSI-Evaluator-Supervisor-Cleanup.md)
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — outer-timeout recovery implementation under verification  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; independent sandbox approval remains BLOCKED  
 **Objective:** Ensure a host-side timeout of the protected evaluator does not prevent Docker cleanup from running. Tag every candidate container with a unique outer evaluation identifier, terminate the evaluator process group on timeout, and have the outer supervisor independently remove/verify all containers tagged to that evaluation.
 
 ## Mission and method
@@ -30,6 +32,13 @@ The outer trusted process used a host `subprocess.run(timeout=...)` with a timeo
 - Enabling RSI or the context-packing benchmark.
 - Calling any external provider or changing credentials, secrets, billing, or workflow permissions.
 - Claiming this removes Docker daemon/kernel or image supply-chain risks.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #75](https://github.com/ACROWN-System/AstroCrown-Web/pull/75) merged as `6889085e80cd08b29ae5924dfce9932e8f0efc2a`.
+- Latest code-change CI [run #38094554904](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38094554904/job/114337667734) passed **94 RSI tests**, compilation, pinned-image verification, and real Docker tests for timeout cleanup and a detached evaluation-labelled container.
+- A later commit only amended this plan's bounded-timeout acceptance wording.
+- Readiness remains INCOMPLETE and the context-packing profile remains disabled/unapproved.
 
 ## Acceptance criteria
 
