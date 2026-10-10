@@ -388,6 +388,12 @@ The actual credential is never stored in tracked source. A configuration preflig
 
 Nosana's current documentation describes the inference service as credit-metered rather than an unlimited free resource. Any free credits or promotional access must be verified at the time of use rather than assumed as an architectural property.
 
+## Candidate execution isolation
+
+`sandbox_runtime.py` now provides a fail-closed Docker isolation adapter candidate for candidate-controlled compilation, unit tests, and benchmark commands. It requires the immutable image digest and expected image ID in the protected policy, uses a read-only workspace and benchmark-input mount, disables container networking, drops capabilities, enables no-new-privileges, runs as a non-root UID, applies resource/output/time limits, and stops the container if it times out or exceeds output limits.
+
+CI pulls and verifies the pinned image before running a smoke test for read-only workspace, host-path separation, and network denial. This is implementation evidence for the configured boundary, not a claim that container escape, kernel, Docker-daemon, or supply-chain risks are eliminated. Independent security review is still required; RSI readiness remains `INCOMPLETE`.
+
 ## Initial context-packing workload
 
 A first bounded benchmark workload is being implemented for provenance-preserving context packing. See the protected [Capability Benchmark Protocol](CAPABILITY-BENCHMARK-PROTOCOL.md), [workload runner](benchmarks/run_context_packing_benchmark.py), and fixed [synthetic case set](benchmarks/context-packing-cases.json). It evaluates one defined retrieval/context-budget capability and must not be represented as a general-intelligence benchmark.
