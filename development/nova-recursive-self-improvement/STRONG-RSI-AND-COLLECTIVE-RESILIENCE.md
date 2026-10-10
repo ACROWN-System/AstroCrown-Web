@@ -19,6 +19,10 @@ This is a long-term engineering objective, not a claim that current systems poss
 5. **Shared sovereignty:** improve human access to trustworthy information and meaningful choice while reducing AI dependence on a single provider, infrastructure controller, or opaque service.
 6. **Pre-event usefulness:** deliver useful, limited public-facing resilience information ahead of foreseeable high-attention events where feasible; never assert a forecast as a fact or present unbuilt infrastructure as protection.
 
+## Non-inference rule: power is not proof of malevolence
+
+Concentration of power, wealth, influence, technical capability, or institutional authority is not proof of malevolent intent. It may create structural risks—such as weaker oversight, conflicts of interest, dependency, or fewer checks and balances—but these are hypotheses and risk factors to assess, not verdicts about an actor's character. Evaluate specific conduct, decision processes, safeguards, transparency, accountability, context, actual or plausible consequences, and alternative explanations using consistent evidentiary standards. Apply the same rule to governments, companies, movements, individual actors, NOVA, and aligned AI. Do not label an actor malicious solely because it is powerful, centralized, unpopular, or disagrees with the system.
+
 ## Research questions
 
 - Does multi-agent cooperation outperform strong individual-agent baselines on held-out protective-intelligence tasks?
