@@ -96,6 +96,15 @@ The supervisor now kills its evaluator process group, bounds post-timeout drain/
 
 The [workflow cleanup finalizer review](./2026-10-11-RSI-Workflow-Cleanup-Finalizer.md) was completed with [PR #79](https://github.com/ACROWN-System/AstroCrown-Web/pull/79), merged as `ff1938cd1b1dc1c3a6b98053729d4c4bb19c1f6a`. CI [run #38095114681](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38095114681) passed 98 tests, compilation, pinned-image checks, and a real Docker smoke test through the exact standalone cleanup CLI used by the workflow. The RSI job now has an `if: always()` cleanup finalizer with a separate cycle timeout and job-level buffer. This remains a same-runner best-effort cleanup step, not a guarantee against total runner loss or Docker daemon/kernel failure.
 
+### Evidence commit and tree provenance
+
+Two further evidence-integrity findings have been remediated:
+
+- [Evidence commit binding](./2026-10-11-RSI-Evidence-Commit-Binding.md) via PR #81, merged as 0d0fce5575a69a92629961934e38da50c7999292. CI run #38095491875 passed 103 tests.
+- [Evaluated-tree/retained-tree binding](./2026-10-11-RSI-Evidence-Commit-Binding.md) via PR #82, merged as 92f635b79fe8d981e14c6b085cd30e219ad100bc. CI run #38095741210 passed 106 tests.
+
+Evaluator and cycle reports now independently record candidate commit and tree identifiers. Before creating a candidate commit, the write-capable retention job stages the proposed changes and the protected verifier checks that the staged Git tree matches the tree recorded by the isolated evaluator, with no unstaged changes. This closes a provenance consistency gap; it does not establish benchmark validity or independent evaluator independence.
+
 ## Remaining blockers and residual risks
 
 This targeted review does **not** close the independent security approval gate. Remaining work includes an independent threat-model and configuration review covering at least:
