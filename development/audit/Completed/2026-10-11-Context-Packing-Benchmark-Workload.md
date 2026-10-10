@@ -1,8 +1,7 @@
 # Completed Navigation Plan — Context Packing Benchmark and RSI Workload
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as a detailed archival mirror; independent benchmark approval remains BLOCKED  
-**Canonical completed record:** [Completed context-packing benchmark plan](../Completed/2026-10-11-Context-Packing-Benchmark-Workload.md)  
+**Status:** COMPLETED — bounded context-packing candidate merged; independent benchmark approval remains BLOCKED  
 **Objective:** Close part of the RSI capability-benchmark gap by implementing and testing one deterministic, zero-cost workload for query-aware context packing that preserves complete source records, provenance, temporal status, and hard character budgets.
 
 ## Mode and source of truth
