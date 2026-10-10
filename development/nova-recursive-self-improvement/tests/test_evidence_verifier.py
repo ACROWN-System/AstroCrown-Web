@@ -134,7 +134,7 @@ def refresh_manifest(evidence_dir):
             {"schema_version": 1, "evidence_sha256": hashes},
             indent=2,
             sort_keys=True,
-        ) + "\\n",
+        ) + "\n",
         encoding="utf-8",
     )
 
