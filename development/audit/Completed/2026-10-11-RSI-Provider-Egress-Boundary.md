@@ -44,7 +44,7 @@
 
 **IF modified:** The protected allowlist and redirect rejection reduce the paths by which URL misconfiguration or endpoint-controlled redirects could send the bearer key away from the intended provider.
 
-**IF not modified:** the identified trust, credential-egress, quota-accounting, artifact-retention, or supply-chain weakness would remain as documented in the findings above.
+**IF not modified:** A provider URL misconfiguration or endpoint redirect would remain an avoidable way to expand the bearer credential's destination trust.
 
 ## Residual risks and handoff
 
