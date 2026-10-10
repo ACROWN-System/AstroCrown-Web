@@ -147,6 +147,16 @@ def verify_evidence(
 
     cycle = _read_json(evidence_dir / "cycle.json", "RSI cycle evidence")
     evaluation = _read_json(evidence_dir / "evaluation.json", "Protected evaluator evidence")
+    if (
+        type(cycle.get("schema_version")) is not int
+        or cycle.get("schema_version") != 3
+    ):
+        raise EvidenceVerificationError("RSI cycle evidence schema version is unsupported.")
+    if (
+        type(evaluation.get("schema_version")) is not int
+        or evaluation.get("schema_version") != 1
+    ):
+        raise EvidenceVerificationError("Protected evaluator evidence schema version is unsupported.")
     if cycle.get("decision") != "PASS":
         raise EvidenceVerificationError("RSI cycle evidence does not record PASS.")
     result = cycle.get("result")
@@ -167,6 +177,16 @@ def verify_evidence(
         raise EvidenceVerificationError("Evaluator baseline does not match cycle baseline.")
     if not isinstance(candidate_commit, str) or not _GIT_SHA_RE.fullmatch(candidate_commit):
         raise EvidenceVerificationError("Candidate commit is not a full Git commit SHA.")
+    evaluator_candidate_commit = evaluation.get("candidate_commit")
+    if (
+        not isinstance(evaluator_candidate_commit, str)
+        or not _GIT_SHA_RE.fullmatch(evaluator_candidate_commit)
+    ):
+        raise EvidenceVerificationError("Evaluator candidate commit is not a full Git commit SHA.")
+    if evaluator_candidate_commit != candidate_commit:
+        raise EvidenceVerificationError(
+            "Evaluator candidate commit does not match the cycle candidate commit."
+        )
 
     candidate = cycle.get("candidate")
     if not isinstance(candidate, dict):
@@ -251,6 +271,7 @@ def verify_evidence(
         "checks": [
             "manifest and exact evidence inventory verified",
             "cycle and protected evaluator decisions both PASS",
+            "cycle/evaluator schemas and candidate commit binding verified",
             "candidate payload and patch integrity verified",
             "protected candidate scope/content verified",
             "evaluator changed-file set matches patch",
