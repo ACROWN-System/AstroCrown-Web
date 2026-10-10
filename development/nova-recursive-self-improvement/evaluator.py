@@ -359,6 +359,7 @@ def evaluate(
 ) -> dict[str, Any]:
     timeout = int(policy["evaluation"]["timeout_seconds"])
     candidate_commit = git(root, "rev-parse", "HEAD")
+    candidate_tree = git(root, "rev-parse", "HEAD^{tree}")
 
     if not implementation_ready(policy):
         return {
@@ -366,6 +367,7 @@ def evaluate(
             "decision": "BLOCKED",
             "baseline_commit": baseline,
             "candidate_commit": candidate_commit,
+            "candidate_tree": candidate_tree,
             "changed_files": changed_files(root, baseline),
             "results": [
                 {
@@ -495,6 +497,7 @@ def evaluate(
         "decision": decision,
         "baseline_commit": baseline,
         "candidate_commit": candidate_commit,
+        "candidate_tree": candidate_tree,
         "changed_files": paths,
         "results": results,
     }

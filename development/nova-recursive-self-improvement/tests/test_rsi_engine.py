@@ -326,6 +326,22 @@ diff --git a/development/x.txt b/development/x.txt
             2,
         )
 
+    def test_retention_verifies_staged_tree_before_candidate_commit(self):
+        workflow = (
+            self.ROOT / ".github/workflows/nova-rsi.yml"
+        ).read_text(encoding="utf-8")
+        retain = workflow.split("      - name: Retain qualified candidate", 1)[1]
+        apply_index = retain.index("git apply .rsi-evidence/candidate.patch")
+        add_index = retain.index("git add development/")
+        cached_check_index = retain.index("git diff --cached --check")
+        verify_index = retain.index("--check-applied")
+        commit_index = retain.index("git commit -m")
+
+        self.assertLess(apply_index, add_index)
+        self.assertLess(add_index, cached_check_index)
+        self.assertLess(cached_check_index, verify_index)
+        self.assertLess(verify_index, commit_index)
+
     def test_rsi_workflow_is_restricted_to_main_ref(self):
         workflow = (
             self.ROOT / ".github/workflows/nova-rsi.yml"

@@ -78,7 +78,10 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
                 "promotion_blocked_until_ready": True,
             },
         }
-        with patch("evaluator.git", return_value=candidate_commit), patch(
+        def fake_git(root, *args):
+            return "c" * 40 if args and args[-1] == "HEAD^{tree}" else candidate_commit
+
+        with patch("evaluator.git", side_effect=fake_git), patch(
             "evaluator.changed_files", return_value=[]
         ):
             result = evaluate(self.ROOT, "a" * 40, policy)
@@ -86,6 +89,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         self.assertEqual(result["decision"], "BLOCKED")
         self.assertEqual(result["schema_version"], 1)
         self.assertEqual(result["candidate_commit"], candidate_commit)
+        self.assertEqual(result["candidate_tree"], "c" * 40)
 
     def test_passed_evaluator_evidence_records_exact_candidate_commit(self):
         candidate_commit = "b" * 40
@@ -107,7 +111,10 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
                 "promotion_blocked_until_ready": True,
             },
         }
-        with patch("evaluator.git", return_value=candidate_commit), patch(
+        def fake_git(root, *args):
+            return "c" * 40 if args and args[-1] == "HEAD^{tree}" else candidate_commit
+
+        with patch("evaluator.git", side_effect=fake_git), patch(
             "evaluator.changed_files", return_value=paths
         ), patch(
             "evaluator.changed_statuses", return_value=[("A", paths[0])]
@@ -127,6 +134,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         self.assertEqual(result["decision"], "PASS")
         self.assertEqual(result["schema_version"], 1)
         self.assertEqual(result["candidate_commit"], candidate_commit)
+        self.assertEqual(result["candidate_tree"], "c" * 40)
 
     def test_incomplete_policy_blocks_operational_readiness(self):
         policy = {

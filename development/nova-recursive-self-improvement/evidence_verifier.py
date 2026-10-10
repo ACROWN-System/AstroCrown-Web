@@ -187,6 +187,19 @@ def verify_evidence(
         raise EvidenceVerificationError(
             "Evaluator candidate commit does not match the cycle candidate commit."
         )
+    candidate_tree = result.get("candidate_tree")
+    if not isinstance(candidate_tree, str) or not _GIT_SHA_RE.fullmatch(candidate_tree):
+        raise EvidenceVerificationError("Candidate tree is not a full Git tree SHA.")
+    evaluator_candidate_tree = evaluation.get("candidate_tree")
+    if (
+        not isinstance(evaluator_candidate_tree, str)
+        or not _GIT_SHA_RE.fullmatch(evaluator_candidate_tree)
+    ):
+        raise EvidenceVerificationError("Evaluator candidate tree is not a full Git tree SHA.")
+    if evaluator_candidate_tree != candidate_tree:
+        raise EvidenceVerificationError(
+            "Evaluator candidate tree does not match the cycle candidate tree."
+        )
 
     candidate = cycle.get("candidate")
     if not isinstance(candidate, dict):
@@ -265,6 +278,7 @@ def verify_evidence(
         "status": "PASS",
         "baseline_commit": baseline,
         "candidate_commit": candidate_commit,
+        "candidate_tree": candidate_tree,
         "verified_evidence_files": len(file_hashes),
         "candidate_changed_paths": paths,
         "candidate_patch_sha256": file_hashes["candidate.patch"],
@@ -286,9 +300,10 @@ def verify_applied_worktree(
     expected_paths: list[str],
     policy: dict[str, Any],
     *,
+    expected_tree: str | None = None,
     ignored_paths: tuple[str, ...] = (),
 ) -> dict[str, Any]:
-    """Revalidate the actual worktree after git apply, before staging or commit."""
+    """Revalidate applied candidate paths and, when supplied, the staged Git tree."""
     result = subprocess.run(
         ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
         cwd=repo_root,
@@ -338,7 +353,44 @@ def verify_applied_worktree(
         if mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH):
             raise EvidenceVerificationError("Candidate retention does not permit executable file modes.")
 
-    return {"status": "PASS", "verified_changed_paths": sorted(actual_paths)}
+    if expected_tree is not None:
+        if not isinstance(expected_tree, str) or not _GIT_SHA_RE.fullmatch(expected_tree):
+            raise EvidenceVerificationError("Expected candidate tree is not a full Git tree SHA.")
+        unstaged = subprocess.run(
+            ["git", "diff", "--quiet"],
+            cwd=repo_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if unstaged.returncode != 0:
+            raise EvidenceVerificationError(
+                "Applied candidate has unstaged modifications; tree verification is not trustworthy."
+            )
+        tree_result = subprocess.run(
+            ["git", "write-tree"],
+            cwd=repo_root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if tree_result.returncode != 0:
+            raise EvidenceVerificationError("Could not compute the staged candidate tree.")
+        try:
+            actual_tree = tree_result.stdout.decode("ascii").strip()
+        except UnicodeDecodeError as exc:
+            raise EvidenceVerificationError("Git returned a non-ASCII tree SHA.") from exc
+        if not _GIT_SHA_RE.fullmatch(actual_tree):
+            raise EvidenceVerificationError("Git returned an invalid staged tree SHA.")
+        if actual_tree != expected_tree:
+            raise EvidenceVerificationError(
+                "Applied candidate tree does not match the independently evaluated candidate tree."
+            )
+
+    result = {"status": "PASS", "verified_changed_paths": sorted(actual_paths)}
+    if expected_tree is not None:
+        result["verified_candidate_tree"] = actual_tree
+    return result
 
 
 def main() -> int:
@@ -367,6 +419,7 @@ def main() -> int:
                 repo_root,
                 result["candidate_changed_paths"],
                 load_policy(repo_root),
+                expected_tree=result["candidate_tree"],
                 ignored_paths=(evidence_relative,),
             )
         print(json.dumps(result, indent=2, sort_keys=True))

@@ -17,6 +17,7 @@ from evidence_verifier import (
 
 BASELINE = "a" * 40
 CANDIDATE = "b" * 40
+CANDIDATE_TREE = "d" * 40
 CHANGED_PATH = "development/sample.txt"
 PATCH = "\n".join(
     (
@@ -83,6 +84,7 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
         "result": {
             "decision": cycle_decision,
             "candidate_commit": CANDIDATE,
+            "candidate_tree": CANDIDATE_TREE,
         },
         "candidate": candidate,
         "proposer_usage": {
@@ -101,6 +103,7 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
         "decision": "PASS",
         "baseline_commit": evaluation_baseline,
         "candidate_commit": CANDIDATE,
+        "candidate_tree": CANDIDATE_TREE,
         "changed_files": [CHANGED_PATH],
         "results": [{"name": name, "status": "PASS"} for name in REQUIRED_RESULTS],
     }
@@ -200,6 +203,19 @@ class EvidenceVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(EvidenceVerificationError, "evaluator evidence schema version is unsupported"):
             verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
+    def test_evaluator_candidate_tree_must_match_cycle_candidate_tree(self):
+        evaluation_path = self.evidence / "evaluation.json"
+        evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+        evaluation["candidate_tree"] = "e" * 40
+        evaluation_path.write_text(
+            json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        refresh_manifest(self.evidence)
+
+        with self.assertRaisesRegex(EvidenceVerificationError, "does not match the cycle candidate tree"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
+
     def test_evaluator_candidate_commit_must_match_cycle_candidate_commit(self):
         evaluation_path = self.evidence / "evaluation.json"
         evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
@@ -217,6 +233,7 @@ class EvidenceVerifierTests(unittest.TestCase):
         result = verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["candidate_changed_paths"], [CHANGED_PATH])
+        self.assertEqual(result["candidate_tree"], CANDIDATE_TREE)
         self.assertEqual(result["verified_evidence_files"], 3)
 
     def test_modified_file_fails_manifest_hash(self):
@@ -328,17 +345,42 @@ class EvidenceVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(EvidenceVerificationError, "not READY"):
             verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=policy)
 
-    def test_applied_worktree_paths_match_verified_patch(self):
+    def test_applied_worktree_paths_and_tree_match_verified_candidate(self):
         init_repo(self.root)
         (self.root / CHANGED_PATH).write_text("new\n", encoding="utf-8")
         (self.root / "development/new.txt").write_text("new file\n", encoding="utf-8")
+        subprocess.run(["git", "add", "development/"], cwd=self.root, check=True)
+        expected_tree = subprocess.run(
+            ["git", "write-tree"],
+            cwd=self.root,
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        ).stdout.strip()
+
         result = verify_applied_worktree(
             self.root,
             [CHANGED_PATH, "development/new.txt"],
             self.policy,
+            expected_tree=expected_tree,
             ignored_paths=(".rsi-evidence",),
         )
         self.assertEqual(result["status"], "PASS")
+        self.assertEqual(result["verified_candidate_tree"], expected_tree)
+
+    def test_applied_worktree_tree_mismatch_is_rejected(self):
+        init_repo(self.root)
+        (self.root / CHANGED_PATH).write_text("new\n", encoding="utf-8")
+        subprocess.run(["git", "add", "development/"], cwd=self.root, check=True)
+
+        with self.assertRaisesRegex(EvidenceVerificationError, "does not match the independently evaluated candidate tree"):
+            verify_applied_worktree(
+                self.root,
+                [CHANGED_PATH],
+                self.policy,
+                expected_tree="f" * 40,
+                ignored_paths=(".rsi-evidence",),
+            )
 
     def test_applied_worktree_extra_path_is_rejected(self):
         init_repo(self.root)
