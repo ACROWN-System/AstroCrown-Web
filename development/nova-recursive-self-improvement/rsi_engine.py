@@ -433,7 +433,9 @@ def run_evaluator_supervised(
                 pass
             output, _ = process.communicate()
         output = output or ""
-        cleanup_confirmed = cleanup_evaluation_containers(evaluation_id)
+        cleanup_confirmed = cleanup_evaluation_containers(
+            evaluation_id, wait_for_late_containers=True
+        )
         if cleanup_confirmed:
             return {
                 "decision": "FAIL",
@@ -449,7 +451,9 @@ def run_evaluator_supervised(
         }
 
     output = output or ""
-    if not cleanup_evaluation_containers(evaluation_id):
+    if not cleanup_evaluation_containers(
+        evaluation_id, wait_for_late_containers=True
+    ):
         return {
             "decision": "BLOCKED",
             "stage": "sandbox-cleanup",
