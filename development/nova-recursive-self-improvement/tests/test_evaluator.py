@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -11,6 +12,7 @@ from evaluator import (
     normalize_repo_path,
     parse_benchmark_output,
     safe_env,
+    run as host_run,
 )
 
 
@@ -29,6 +31,16 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
                 os.environ.pop(name, None)
             else:
                 os.environ[name] = value
+
+    def _run_benchmark_with_fake_sandbox(self, *args, **kwargs):
+        def fake_sandbox(command, cwd, timeout, extra_env=None, *, policy=None, readonly_mounts=()):
+            return host_run(command, cwd, timeout, extra_env=extra_env, policy=policy)
+
+        with patch(
+            "evaluator.git",
+            return_value="def pack_context(items, query, max_chars):\n    return {}\n",
+        ), patch("evaluator.run_sandboxed", side_effect=fake_sandbox):
+            return benchmark(*args, **kwargs)
 
     def test_incomplete_policy_blocks_operational_readiness(self):
         policy = {
@@ -61,10 +73,10 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
             "\"baseline_commit\": os.environ[\"RSI_BASELINE_COMMIT\"], "
             "\"candidate_commit\": os.environ[\"RSI_CANDIDATE_COMMIT\"]}))'"
         )
-        result = benchmark(
+        result = self._run_benchmark_with_fake_sandbox(
             self.ROOT,
-            "baseline-sha",
-            "candidate-sha",
+            "a" * 40,
+            "b" * 40,
             30,
             {"sandbox": {"max_output_bytes": 32000}},
         )
@@ -77,10 +89,10 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
             "\"baseline_commit\": os.environ[\"RSI_BASELINE_COMMIT\"], "
             "\"candidate_commit\": os.environ[\"RSI_CANDIDATE_COMMIT\"]}))'"
         )
-        result = benchmark(
+        result = self._run_benchmark_with_fake_sandbox(
             self.ROOT,
-            "baseline-sha",
-            "candidate-sha",
+            "a" * 40,
+            "b" * 40,
             30,
             {"sandbox": {"max_output_bytes": 32000}},
         )
