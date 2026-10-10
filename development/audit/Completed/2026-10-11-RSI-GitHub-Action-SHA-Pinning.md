@@ -51,7 +51,7 @@ Observed on 2026-10-11 via the official GitHub repository refs API:
 
 **IF modified:** Workflow files now identify the exact action implementations consumed, rather than relying on mutable major-version tags.
 
-**IF not modified:** the identified trust, credential-egress, quota-accounting, artifact-retention, or supply-chain weakness would remain as documented in the findings above.
+**IF not modified:** A major-version tag could move and change the action implementation without a source change in this repository.
 
 ## Residual risks and handoff
 
