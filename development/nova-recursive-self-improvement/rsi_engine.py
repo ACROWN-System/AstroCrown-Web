@@ -424,18 +424,36 @@ def run_evaluator_supervised(
                 process.kill()
             except OSError:
                 pass
+        process_termination_confirmed = True
         try:
-            output, _ = process.communicate(timeout=10)
-        except subprocess.TimeoutExpired:
+            output, _ = process.communicate(timeout=5)
+        except subprocess.TimeoutExpired as drain_timeout:
+            # Never perform an unbounded communicate() after a second timeout.
+            # Kill the direct child, wait only briefly for reap, and retain the
+            # captured prefix. Cleanup still runs even when process termination
+            # or pipe closure cannot be conclusively confirmed.
+            output = drain_timeout.output or exc.output or ""
             try:
                 process.kill()
             except OSError:
                 pass
-            output, _ = process.communicate()
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                process_termination_confirmed = False
+        if isinstance(output, bytes):
+            output = output.decode("utf-8", errors="replace")
         output = output or ""
         cleanup_confirmed = cleanup_evaluation_containers(
             evaluation_id, wait_for_late_containers=True
         )
+        if not process_termination_confirmed:
+            return {
+                "decision": "BLOCKED",
+                "stage": "sandbox-cleanup",
+                "error": "Timed-out evaluator process could not be confirmed terminated within the cleanup deadline.",
+                "evaluator_output": output[-16000:],
+            }
         if cleanup_confirmed:
             return {
                 "decision": "FAIL",
