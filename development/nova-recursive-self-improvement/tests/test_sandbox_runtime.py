@@ -136,7 +136,7 @@ class SandboxRuntimeTests(unittest.TestCase):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
                 self.assertIn(f"label=nova.rsi.evaluation_id={evaluation_id}", args)
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\\n".join(sorted(active)))
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\n".join(sorted(active)))
             if args[1:2] == ["rm"] and len(args) >= 4:
                 active.discard(args[-1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
@@ -158,7 +158,7 @@ class SandboxRuntimeTests(unittest.TestCase):
 
         def fake_run(args, **kwargs):
             if args[1:3] == ["ps", "-aq"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\\n")
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\n")
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
 
         with patch("sandbox_runtime.shutil.which", return_value="/usr/bin/docker"), patch(
