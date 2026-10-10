@@ -1,7 +1,9 @@
-# RSI Candidate Tree Binding — Navigation Plan
+# Completed Navigation Plan — RSI Candidate Tree Binding
+
+**Canonical completed record:** [Completed evidence commit/tree binding](../Completed/2026-10-11-RSI-Evidence-Commit-Binding.md)
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — staged-tree reproduction and commit binding under verification  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; independent security approval remains BLOCKED  
 **Objective:** Prove that the candidate tree evaluated in the isolated worktree is exactly the staged Git tree that the write-capable retention job will commit.
 
 ## Mission and method
@@ -29,6 +31,13 @@ The prior evidence hardening cross-checked cycle and evaluator candidate commit 
 - Enabling RSI or the context-packing benchmark.
 - Treating tree equality alone as proof that an evaluation is correct; it only closes a provenance consistency gap.
 - Changing credentials, secrets, billing, workflow permissions, or runtime providers.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #81](https://github.com/ACROWN-System/AstroCrown-Web/pull/81) merged as 0d0fce5575a69a92629961934e38da50c7999292; CI run #38095491875 passed 103 tests, compilation, immutable image verification and Docker smoke testing.
+- AstroCrown-Web [PR #82](https://github.com/ACROWN-System/AstroCrown-Web/pull/82) merged as 92f635b79fe8d981e14c6b085cd30e219ad100bc; CI run #38095741210 passed 106 tests, compilation, immutable image verification and Docker smoke testing.
+- The retention workflow now stages the candidate and confirms the staged tree hash equals the tree that the evaluator recorded before creating the candidate commit.
+- The protected RSI readiness remains INCOMPLETE; promotion stays disabled and the benchmark remains unapproved/disabled.
 
 ## Acceptance criteria
 
