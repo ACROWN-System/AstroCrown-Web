@@ -1,7 +1,8 @@
-# RSI Trusted Evaluator and Workflow Ref Guard
+# Completed Audit — Trusted RSI Evaluator and Main-Ref Guard
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — control-plane separation and workflow dispatch guard  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror
+**Canonical completed record:** [Completed audit](../Completed/2026-10-11-RSI-Trusted-Evaluator-Control-Plane.md)
 **Objective:** Ensure candidate-controlled source cannot supply the evaluator/dispatcher/sandbox implementation that judges it, and ensure the credential-bearing autonomous RSI workflow only runs from the protected main branch.
 
 ## Mission and source of truth
@@ -38,3 +39,26 @@ Method: `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, the protected RSI imp
 - Non-main `workflow_dispatch` runs are blocked before the provider-secret boundary.
 - All unit tests, compilation, immutable-image validation and Docker isolation/timeout-cleanup smoke tests pass.
 - Readiness stays INCOMPLETE; `promotion.allow_main` stays false; the production benchmark registry/profile stay unapproved and disabled.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #64](https://github.com/ACROWN-System/AstroCrown-Web/pull/64) merged as `f0d302429bc4a4c2270acaff48e66290d9c3d884`.
+- GitHub Actions [run #38089860304](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38089860304) is the recorded CI evidence for this change.
+- Protected evaluator, dispatcher, sandbox adapter, RSI policy, and benchmark registry are copied from the trusted checkout to a separate control directory outside the candidate worktree.
+- The evaluator receives explicit paths for trusted policy and benchmark registry.
+- The workflow's first job requires `github.ref == 'refs/heads/main'`, so dependent credential-bearing jobs do not proceed for non-main dispatches.
+- CI passed compilation, 58 RSI unit tests, pinned-image verification, and Docker isolation/timeout-cleanup smoke tests.
+- Readiness remains `implementation_readiness.status = INCOMPLETE`; `promotion.allow_main = false`; the production benchmark registry remains unapproved and the context-packing profile remains disabled.
+- No secrets/credentials, billing, workflow permissions, or provider usage were changed by the reviewed work.
+
+## Impact Analysis
+
+**IF modified:** Separating the control-plane files prevents the evaluated candidate worktree from supplying the evaluator and benchmark policy that judge it. The main-ref guard prevents feature-branch workflow definitions from proceeding toward the provider-secret boundary.
+
+**IF not modified:** the identified trust, credential-egress, quota-accounting, artifact-retention, or supply-chain weakness would remain as documented in the findings above.
+
+## Residual risks and handoff
+
+This is not a third-party security certification. Docker daemon/kernel risks, GitHub Actions supply-chain risk, and broader evaluator integration still need independent review.
+
+Keep the readiness and benchmark gates closed until all remaining required evidence and independent review gates are satisfied.
