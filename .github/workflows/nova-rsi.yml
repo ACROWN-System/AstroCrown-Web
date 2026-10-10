@@ -254,11 +254,13 @@ jobs:
           git switch -c "$BRANCH" "$GITHUB_SHA"
           git apply --check .rsi-evidence/candidate.patch
           git apply .rsi-evidence/candidate.patch
-          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA" --check-applied
           git diff --check
           git config user.name "NOVA RSI"
           git config user.email "nova-rsi@localhost"
           git add development/
+          git diff --cached --check
+          # The index must reproduce the exact tree independently evaluated.
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA" --check-applied
           git commit -m "rsi: retain verified candidate $GITHUB_RUN_ID"
           git push --set-upstream origin "$BRANCH"
           gh pr create             --base main             --head "$BRANCH"             --title "NOVA RSI candidate $GITHUB_RUN_ID"             --body "Automated NOVA RSI candidate retained after protected evaluation. See the workflow artifact for the evidence package."
