@@ -67,7 +67,15 @@ def test_policy():
 
 
 def refresh_manifest(evidence_dir):
-    refresh_manifest(evidence_dir)
+    hashes = {
+        item.name: hashlib.sha256(item.read_bytes()).hexdigest()
+        for item in sorted(evidence_dir.iterdir())
+        if item.is_file() and item.name != "manifest.json"
+    }
+    (evidence_dir / "manifest.json").write_text(
+        json.dumps({"schema_version": 1, "evidence_sha256": hashes}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluation_baseline=BASELINE):
@@ -116,15 +124,7 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
     (evidence_dir / "evaluation.json").write_text(
         json.dumps(evaluation, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
-    hashes = {
-        item.name: hashlib.sha256(item.read_bytes()).hexdigest()
-        for item in sorted(evidence_dir.iterdir())
-        if item.is_file() and item.name != "manifest.json"
-    }
-    (evidence_dir / "manifest.json").write_text(
-        json.dumps({"schema_version": 1, "evidence_sha256": hashes}, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    refresh_manifest(evidence_dir)
 
 
 def init_repo(root):
