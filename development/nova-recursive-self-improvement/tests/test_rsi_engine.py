@@ -87,6 +87,15 @@ diff --git a/development/x.txt b/development/x.txt
                     path.read_text(encoding="utf-8"),
                 )
 
+    def test_retention_workflow_binds_both_verifier_calls_to_github_sha(self):
+        workflow = (
+            self.ROOT / ".github/workflows/nova-rsi.yml"
+        ).read_text(encoding="utf-8")
+        self.assertEqual(
+            workflow.count('--expected-baseline "$GITHUB_SHA"'),
+            2,
+        )
+
     def test_rsi_workflow_is_restricted_to_main_ref(self):
         workflow = (
             self.ROOT / ".github/workflows/nova-rsi.yml"
