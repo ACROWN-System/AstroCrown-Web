@@ -24,6 +24,7 @@ from rsi_engine import (
 
 
 _REQUIRED_EVIDENCE = {"candidate.patch", "cycle.json", "evaluation.json"}
+_ALLOWED_EVIDENCE_FILES = frozenset(_REQUIRED_EVIDENCE)
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 _REQUIRED_EVALUATION_RESULTS = {
@@ -91,8 +92,8 @@ def _verify_manifest(evidence_dir: Path) -> dict[str, str]:
             raise EvidenceVerificationError("Evidence manifest contains an unsafe entry.")
         expected[name] = digest
 
-    if not _REQUIRED_EVIDENCE.issubset(expected):
-        raise EvidenceVerificationError("Evidence manifest omits a required evidence file.")
+    if set(expected) != _ALLOWED_EVIDENCE_FILES:
+        raise EvidenceVerificationError("Evidence manifest file inventory is not the exact approved set.")
 
     actual: set[str] = set()
     for entry in evidence_dir.iterdir():
@@ -126,10 +127,12 @@ def verify_evidence(
     policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Verify package integrity, gate decisions, budgets, and candidate scope."""
+    repo_root = repo_root.resolve()
+    if not evidence_dir.is_absolute():
+        evidence_dir = repo_root / evidence_dir
     if evidence_dir.is_symlink():
         raise EvidenceVerificationError("Evidence directory must not be a symlink.")
     evidence_dir = evidence_dir.resolve()
-    repo_root = repo_root.resolve()
     if evidence_dir == repo_root or repo_root not in evidence_dir.parents:
         raise EvidenceVerificationError("Evidence directory must be a distinct subdirectory of the repository.")
     file_hashes = _verify_manifest(evidence_dir)
@@ -314,7 +317,7 @@ def main() -> int:
     parser.add_argument("--check-applied", action="store_true")
     args = parser.parse_args()
     repo_root = Path(args.repo).resolve()
-    evidence_dir = Path(args.evidence_dir).resolve()
+    evidence_dir = Path(args.evidence_dir)
     try:
         result = verify_evidence(evidence_dir, repo_root)
         if args.check_applied:
