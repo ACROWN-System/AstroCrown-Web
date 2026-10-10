@@ -238,6 +238,30 @@ def _run_bounded(
         process.stdout.close()
 
 
+def _stop_container(docker: str, cidfile: Path) -> None:
+    try:
+        container_id = cidfile.read_text(encoding="utf-8").strip()
+    except OSError:
+        return
+    if not re.fullmatch(r"[0-9a-f]{12,64}", container_id):
+        return
+    # A timed-out Docker client does not prove its container has stopped.
+    # Kill the daemon-managed container explicitly before removing the cid file.
+    for operation in ("kill", "rm",):
+        try:
+            subprocess.run(
+                [docker, operation, "-f", container_id] if operation == "rm"
+                else [docker, operation, container_id],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                check=False,
+                env=_host_env(),
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+
+
 def run_sandboxed(
     command: Sequence[str],
     cwd: Path,
@@ -249,10 +273,13 @@ def run_sandboxed(
 ) -> tuple[int, str, float]:
     if timeout <= 0:
         raise SandboxUnavailableError("Sandbox timeout must be positive.")
-    _image, _expected, sandbox = _validated_image(policy)
-    verify_image(policy)
+    image, _expected, sandbox = _validated_image(policy)
+    docker = shutil.which("docker")
+    if not docker:
+        raise SandboxUnavailableError("Docker is unavailable; candidate execution is blocked.")
+    verify_image(policy, docker=docker)
     docker_command = build_docker_command(
-        shutil.which("docker") or "docker",
+        docker,
         policy,
         cwd,
         command,
@@ -260,10 +287,18 @@ def run_sandboxed(
         readonly_mounts,
     )
     max_output = _positive_int(sandbox, "max_output_bytes")
-    try:
-        return _run_bounded(docker_command, timeout, max_output)
-    except subprocess.TimeoutExpired:
-        raise
+    with tempfile.TemporaryDirectory(prefix="nova-rsi-docker-control-") as control_dir:
+        cidfile = Path(control_dir) / "container.cid"
+        image_index = docker_command.index(image)
+        docker_command[image_index:image_index] = ["--cidfile", str(cidfile)]
+        try:
+            result = _run_bounded(docker_command, timeout, max_output)
+        except subprocess.TimeoutExpired:
+            _stop_container(docker, cidfile)
+            raise
+        if result[0] == 125:
+            _stop_container(docker, cidfile)
+        return result
 
 
 def self_test(policy: dict[str, Any]) -> dict[str, Any]:
@@ -274,6 +309,7 @@ def self_test(policy: dict[str, Any]) -> dict[str, Any]:
         workspace.mkdir()
         host_sentinel = root / "host-sentinel.txt"
         host_sentinel.write_text("host-only-sentinel", encoding="utf-8")
+        workspace.chmod(0o755)
 
         code = (
             "from pathlib import Path; import socket,sys; "
