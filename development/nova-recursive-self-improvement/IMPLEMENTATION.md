@@ -78,6 +78,8 @@ The capability benchmark is mandatory in the current policy. Because the reposit
 
 The benchmark must compare the candidate against an explicit baseline and return a machine-verifiable JSON result containing boolean `candidate_better`. The evaluator supplies `RSI_BASELINE_COMMIT` and `RSI_CANDIDATE_COMMIT`; a benchmark that does not produce a valid JSON object with `candidate_better: true` on successful execution cannot yield PASS. It should test the capability that the candidate claims to improve rather than merely checking whether the candidate code runs.
 
+The protected evaluator resolves the configured command through `benchmark_dispatcher.py` and the protected `benchmark_profiles.json` before execution. Only an exact match to a reviewed profile's entire changed-file set and command may proceed. The only registered profile is the context-packing workload, scoped to a single source file, and it remains disabled pending independent review. Mixed-scope and unknown candidates are BLOCKED rather than evaluated against a misleading benchmark. Do not enable a profile by changing a registry flag alone; profile enablement requires documented workload adequacy, independent evaluator-integrity review, and acceptable isolation.
+
 ## Promotion behavior
 
 The current workflow retains a PASS candidate on an `rsi/candidate-<run-id>` branch and opens a pull request to `main`.
@@ -96,6 +98,8 @@ Candidate patches may not modify:
 - `development/nova-recursive-self-improvement/rsi_policy.json`;
 - `development/nova-recursive-self-improvement/candidate.schema.json`;
 - `development/nova-recursive-self-improvement/tests/`.
+- `development/nova-recursive-self-improvement/benchmark_dispatcher.py`.
+- `development/nova-recursive-self-improvement/benchmark_profiles.json`.
 
 Candidate patches are also restricted by the protected `rsi_policy.json` scope and are rejected if they delete tracked files or contain configured sensitive path or content indicators. The engine and protected evaluator load the policy rather than maintaining separate copies of the candidate scope and protected-path lists.
 

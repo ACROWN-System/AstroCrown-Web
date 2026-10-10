@@ -95,6 +95,14 @@ A positive result means only that the candidate improved this defined context-pa
 
 **Status: IMPLEMENTED CANDIDATE / INDEPENDENT REVIEW REQUIRED.** Do not configure or rely on this workload as the approved `RSI_BENCHMARK_COMMAND` until its integrity, corpus adequacy, baseline behavior, and execution isolation have been independently reviewed. A successful unit-test run is necessary but not sufficient. The protected RSI readiness gate remains `INCOMPLETE`.
 
+## Task-specific benchmark routing
+
+The protected evaluator now resolves the configured command through `benchmark_dispatcher.py` and `benchmark_profiles.json` before execution. A profile is selectable only when its complete changed-file set matches exactly and the configured command is an exact match for the protected profile. Unknown, mixed, malformed, disabled, or mismatched scopes return BLOCKED without running a benchmark.
+
+The only currently registered profile is `context-packing-v1`, scoped to the single file `development/nova-context-memory-optimization/context_packer.py`. It is explicitly disabled pending independent review of the workload, corpus, evaluator integrity, and Docker isolation. The implementation does not approve that profile simply by adding the dispatcher.
+
+A future capability area must have its own task-appropriate workload, scope, command, acceptance criteria, and independent review before a new profile is enabled. Do not enable a profile by changing a JSON flag alone; this is a readiness/review decision. The protected RSI readiness gate stays `INCOMPLETE`.
+
 ## Current status
 
 Status: **first workload candidate implemented / independent review required**

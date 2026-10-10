@@ -17,7 +17,10 @@
       "development/nova-recursive-self-improvement/benchmarks/",
       "development/nova-recursive-self-improvement/sandbox_runtime.py",
       "development/nova-recursive-self-improvement/README.md",
-      "development/nova-recursive-self-improvement/IMPLEMENTATION.md"
+      "development/nova-recursive-self-improvement/IMPLEMENTATION.md",
+      "development/nova-recursive-self-improvement/benchmark_dispatcher.py",
+      "development/nova-recursive-self-improvement/benchmark_profiles.json",
+      "development/nova-recursive-self-improvement/tests/test_benchmark_dispatcher.py"
     ],
     "forbidden_path_fragments": [
       ".env",
