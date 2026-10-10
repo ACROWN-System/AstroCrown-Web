@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 from pathlib import Path
 from typing import Any, Callable
 
@@ -213,23 +212,25 @@ def compare_implementations(
     }
 
 
-def _load_packer(commit: str) -> Callable[[list[dict[str, Any]], str, int], dict[str, Any]]:
+def _load_packer(
+    commit: str, env_name: str, role: str
+) -> Callable[[list[dict[str, Any]], str, int], dict[str, Any]]:
     if not _SHA_RE.fullmatch(commit):
         raise ValueError("baseline and candidate commits must be full 40-character lowercase SHAs.")
+    source_name = f"{role}-{commit}.py"
+    source_path = Path(os.environ.get(env_name, ""))
+    # These files are materialized by the protected host evaluator and mounted
+    # read-only at this exact directory. Do not run git or trust a workspace path
+    # supplied by candidate-controlled code.
+    if source_path.parent != Path("/benchmark-input") or source_path.name != source_name:
+        raise RuntimeError(f"{env_name} does not identify the expected immutable source snapshot.")
+    try:
+        source = source_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise RuntimeError(f"Required benchmark source snapshot is unavailable: {source_name}") from exc
     ref = f"{commit}:{PACKER_PATH}"
-    completed = subprocess.run(
-        ["git", "show", ref],
-        cwd=ROOT,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        timeout=10,
-        check=False,
-    )
-    if completed.returncode != 0 or not completed.stdout:
-        raise RuntimeError(f"Cannot load required benchmark implementation from {ref}.")
     namespace: dict[str, Any] = {"__name__": f"_context_packer_{commit[:12]}"}
-    exec(compile(completed.stdout, ref, "exec"), namespace)
+    exec(compile(source, ref, "exec"), namespace)
     function = namespace.get("pack_context")
     if not callable(function):
         raise RuntimeError(f"{ref} does not expose pack_context.")
@@ -245,8 +246,12 @@ def main() -> int:
     payload = json.loads(CASES_PATH.read_text(encoding="utf-8"))
     if payload.get("benchmark_id") != "nova-context-packing-v1":
         raise ValueError("Unexpected context-packing benchmark identity.")
-    baseline_pack = _load_packer(baseline_commit)
-    candidate_pack = _load_packer(candidate_commit)
+    baseline_pack = _load_packer(
+        baseline_commit, "RSI_BASELINE_PACKER_FILE", "baseline"
+    )
+    candidate_pack = _load_packer(
+        candidate_commit, "RSI_CANDIDATE_PACKER_FILE", "candidate"
+    )
     result = compare_implementations(
         baseline_pack,
         candidate_pack,
