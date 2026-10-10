@@ -340,7 +340,7 @@ def run_sandboxed(
             _stop_container(docker, cidfile, run_id)
             raise
         if result[0] == 125:
-            _stop_container(docker, cidfile)
+            _stop_container(docker, cidfile, run_id)
         return result
 
 
