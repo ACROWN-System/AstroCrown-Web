@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from benchmark_dispatcher import resolve_profile
 from sandbox_runtime import SandboxUnavailableError, run_sandboxed
 
 
@@ -234,16 +235,28 @@ def benchmark(
     candidate: str,
     timeout: int,
     policy: dict[str, Any],
+    *,
+    profile_registry: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     raw = os.environ.get("RSI_BENCHMARK_COMMAND", "").strip()
     if not raw:
         return {"status": "BLOCKED", "reason": "RSI_BENCHMARK_COMMAND is not configured."}
+
     try:
-        command = shlex.split(raw)
-    except ValueError as exc:
-        return {"status": "BLOCKED", "reason": f"Benchmark command cannot be parsed: {exc}"}
-    if not command:
-        return {"status": "BLOCKED", "reason": "RSI_BENCHMARK_COMMAND is empty after parsing."}
+        if profile_registry is None:
+            profile_path = root / "development/nova-recursive-self-improvement/benchmark_profiles.json"
+            profile_registry = json.loads(profile_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"status": "BLOCKED", "reason": f"Protected benchmark profile registry is unavailable or invalid: {exc}"}
+
+    selected = resolve_profile(profile_registry, changed_files(root, baseline), raw)
+    if selected.get("status") != "READY":
+        return {
+            "status": "BLOCKED",
+            "reason": selected.get("reason", "No approved task-specific benchmark profile matched."),
+            "profile_id": selected.get("profile_id"),
+        }
+    command = selected["command"]
 
     input_dir = Path(tempfile.mkdtemp(prefix="nova-rsi-benchmark-input-"))
     try:
