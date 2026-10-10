@@ -306,6 +306,8 @@ def verify_applied_worktree(
             raise EvidenceVerificationError("A changed candidate path is missing.") from exc
         if not stat.S_ISREG(mode):
             raise EvidenceVerificationError("Candidate worktree contains a symlink or non-regular file.")
+        if mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH):
+            raise EvidenceVerificationError("Candidate retention does not permit executable file modes.")
 
     return {"status": "PASS", "verified_changed_paths": sorted(actual_paths)}
 
