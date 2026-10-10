@@ -13,6 +13,7 @@ from evaluator import (
     normalize_repo_path,
     parse_benchmark_output,
     safe_env,
+    unsafe_file_types,
     run as host_run,
 )
 
@@ -132,6 +133,25 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         self.assertNotIn("AWS_ACCESS_KEY_ID", env)
         self.assertNotIn("GITHUB_TOKEN", env)
         self.assertEqual(env.get("CUSTOM_VALUE"), "allowed")
+
+    def test_new_executable_file_fails_filesystem_integrity(self):
+        import tempfile
+
+        relative = "development/new_tool.py"
+        with tempfile.TemporaryDirectory(prefix="nova-executable-mode-test-") as temp:
+            root = Path(temp)
+            file_path = root / relative
+            file_path.parent.mkdir(parents=True)
+            file_path.write_text("print('must not be retained')\\n", encoding="utf-8")
+            file_path.chmod(0o755)
+
+            with patch(
+                "evaluator.git",
+                return_value=f" create mode 100755 {relative}",
+            ):
+                findings = unsafe_file_types(root, [relative], "a" * 40)
+
+        self.assertIn(f"executable-mode:{relative}", findings)
 
     def test_repo_path_normalization_rejects_traversal(self):
         self.assertEqual(normalize_repo_path("../../.github/workflows/x.yml"), "")
