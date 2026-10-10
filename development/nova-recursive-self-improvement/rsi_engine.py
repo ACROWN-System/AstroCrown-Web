@@ -93,7 +93,7 @@ def changed_paths_from_patch(patch: str) -> list[str]:
     raw_paths = set()
     for line in patch.splitlines():
         if line.startswith(('--- ', '+++ ')):
-            raw = line[4:].split("\\t", 1)[0]
+            raw = line[4:].split("\t", 1)[0]
             if raw == '/dev/null':
                 continue
             if raw.startswith(('a/', 'b/')):
