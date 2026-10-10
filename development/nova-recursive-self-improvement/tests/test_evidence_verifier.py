@@ -165,6 +165,29 @@ class EvidenceVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(EvidenceVerificationError, "complete file inventory"):
             verify_evidence(self.evidence, self.root, policy=self.policy)
 
+    def test_manifest_cannot_authorize_an_extra_file(self):
+        extra = self.evidence / "extra.json"
+        extra.write_text('{"unexpected": true}', encoding="utf-8")
+        hashes = {
+            item.name: hashlib.sha256(item.read_bytes()).hexdigest()
+            for item in sorted(self.evidence.iterdir())
+            if item.name != "manifest.json" and item.is_file()
+        }
+        (self.evidence / "manifest.json").write_text(
+            json.dumps({"schema_version": 1, "evidence_sha256": hashes}, indent=2, sort_keys=True) + "\\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(EvidenceVerificationError, "exact approved set"):
+            verify_evidence(self.evidence, self.root, policy=self.policy)
+
+    def test_evidence_directory_symlink_is_rejected(self):
+        actual = self.root / "actual-evidence"
+        build_evidence(actual)
+        linked = self.root / "linked-evidence"
+        linked.symlink_to(actual, target_is_directory=True)
+        with self.assertRaisesRegex(EvidenceVerificationError, "must not be a symlink"):
+            verify_evidence(linked, self.root, policy=self.policy)
+
     def test_cycle_must_record_pass(self):
         build_evidence(self.evidence, cycle_decision="FAIL")
         with self.assertRaisesRegex(EvidenceVerificationError, "does not record PASS"):
