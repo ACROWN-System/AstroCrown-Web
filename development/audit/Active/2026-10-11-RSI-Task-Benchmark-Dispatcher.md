@@ -1,7 +1,8 @@
-# Active Navigation Plan — Task-Specific RSI Benchmark Dispatcher
+# Completed Navigation Plan — Task-Specific RSI Benchmark Dispatcher
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — dispatcher candidate; no benchmark profile approved or enabled  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; benchmark profile remains disabled and unapproved  
+**Canonical completed record:** [Completed task-specific benchmark dispatcher plan](../Completed/2026-10-11-RSI-Task-Benchmark-Dispatcher.md)  
 **Objective:** Prevent a narrow benchmark from being applied to an unrelated RSI candidate. Introduce a protected dispatcher that accepts only an exact approved changed-file scope and matching benchmark command, while leaving the current context-packing profile disabled pending independent review.
 
 ## Mission and source of truth
@@ -44,6 +45,15 @@ Method: development/Prompt-Guide.md and development/DEVELOPMENT-AND-AUDIT-CONVEN
 - The context-packing profile remains disabled and carries an explicit independent-review requirement.
 - Tests verify that a synthetic enabled profile matches only its exact scope; production configuration still blocks.
 - implementation_readiness.status remains INCOMPLETE and promotion.allow_main remains false.
+
+## Execution outcome
+
+- AstroCrown-Web PR [#60](https://github.com/ACROWN-System/AstroCrown-Web/pull/60) merged as `1c3b9d6a6572d44820589433cb578d9e8726261e`.
+- The complete RSI CI suite passed on the PR head: 50 unit tests, compilation, image verification, and Docker isolation smoke test.
+- The post-merge RSI test passed; the site build completed successfully during archive verification.
+- Verified that the single context-packing profile remains `enabled: false`, is marked `BLOCKED_PENDING_INDEPENDENT_BENCHMARK_AND_EXECUTION_REVIEW`, and the dispatcher/profile registry are protected paths.
+- Verified that `implementation_readiness.status` remains `INCOMPLETE` and `promotion.allow_main` remains `false`.
+- No provider calls, secrets, billing changes, permissions, or RSI activation state changed.
 
 ## Impact Analysis
 
