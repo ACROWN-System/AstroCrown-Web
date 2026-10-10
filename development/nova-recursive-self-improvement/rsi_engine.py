@@ -89,12 +89,16 @@ def normalize_repo_path(path: str) -> str:
     return '/'.join(parts)
 
 def changed_paths_from_patch(patch: str) -> list[str]:
+    """Return normalized repository paths from Git unified/diff headers."""
     raw_paths = set()
     for line in patch.splitlines():
         if line.startswith(('--- ', '+++ ')):
-            raw = line[4:]
-            if raw != '/dev/null':
-                raw_paths.add(raw)
+            raw = line[4:].split("\\t", 1)[0]
+            if raw == '/dev/null':
+                continue
+            if raw.startswith(('a/', 'b/')):
+                raw = raw[2:]
+            raw_paths.add(raw)
         elif line.startswith('diff --git '):
             parts = line.split()
             for item in parts[2:4]:

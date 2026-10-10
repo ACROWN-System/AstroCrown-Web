@@ -5,6 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from rsi_engine import (
+    changed_paths_from_patch,
     classify_decision,
     extract_candidate_payload,
     implementation_ready,
@@ -94,6 +95,42 @@ diff --git a/development/x.txt b/development/x.txt
             "  implementation-readiness:", 1
         )[1].split("\n  budget-gate:", 1)[0]
         self.assertIn("if: github.ref == 'refs/heads/main'", readiness_job)
+
+    def test_changed_paths_from_patch_strips_diff_prefixes_and_ignores_dev_null(self):
+        patch = "\n".join(
+            (
+                "diff --git a/development/sample.txt b/development/sample.txt",
+                "--- a/development/sample.txt",
+                "+++ b/development/sample.txt",
+                "@@ -1 +1 @@",
+                "-old",
+                "+new",
+                "diff --git a/development/added.txt b/development/added.txt",
+                "--- /dev/null",
+                "+++ b/development/added.txt",
+                "@@ -0,0 +1 @@",
+                "+added",
+            )
+        )
+        self.assertEqual(
+            changed_paths_from_patch(patch),
+            ["development/added.txt", "development/sample.txt"],
+        )
+
+    def test_changed_paths_preserve_unsafe_traversal_as_unsafe(self):
+        patch = "\n".join(
+            (
+                "diff --git a/development/../.github/workflows/x.yml b/development/../.github/workflows/x.yml",
+                "--- a/development/../.github/workflows/x.yml",
+                "+++ b/development/../.github/workflows/x.yml",
+                "@@ -1 +1 @@",
+                "-old",
+                "+new",
+            )
+        )
+        self.assertTrue(
+            any(path.startswith("UNSAFE_PATH:") for path in changed_paths_from_patch(patch))
+        )
 
     def test_protected_paths_are_rejected(self):
         policy = load_policy(self.ROOT)

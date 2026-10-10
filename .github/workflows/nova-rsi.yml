@@ -207,12 +207,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Download RSI evidence
         uses: actions/download-artifact@v4
         with:
           name: nova-rsi-evidence-${{ github.run_id }}
           path: .rsi-evidence
+
+      - name: Verify evidence before write-capable retention
+        run: |
+          set -euo pipefail
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence
 
       - name: Retain qualified candidate
         env:
@@ -229,7 +235,10 @@ jobs:
           gh auth setup-git
           git fetch origin main
           git switch -c "$BRANCH" "$GITHUB_SHA"
+          git apply --check .rsi-evidence/candidate.patch
           git apply .rsi-evidence/candidate.patch
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --check-applied
+          git diff --check
           git config user.name "NOVA RSI"
           git config user.email "nova-rsi@localhost"
           git add development/
