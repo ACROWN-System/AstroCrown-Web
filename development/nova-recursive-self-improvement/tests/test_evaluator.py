@@ -142,7 +142,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
             root = Path(temp)
             file_path = root / relative
             file_path.parent.mkdir(parents=True)
-            file_path.write_text("print('must not be retained')\\n", encoding="utf-8")
+            file_path.write_text("print('must not be retained')\n", encoding="utf-8")
             file_path.chmod(0o755)
 
             with patch(
