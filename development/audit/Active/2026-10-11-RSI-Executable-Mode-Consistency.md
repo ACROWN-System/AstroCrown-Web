@@ -1,7 +1,9 @@
-# RSI Evaluator Executable-Mode Consistency — Navigation Plan
+# Completed Navigation Plan — RSI Executable-Mode Consistency
+
+**Canonical completed record:** [Completed executable-mode consistency review](../Completed/2026-10-11-RSI-Executable-Mode-Consistency.md)
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — targeted filesystem-integrity consistency fix  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror  
 **Objective:** Ensure protected evaluation rejects candidate files with executable permission bits at evaluation time, matching the write-capable retention verifier.
 
 ## Mission and method
@@ -27,6 +29,12 @@ This is a consistency and evidence-quality issue. It does not bypass the write-c
 - Supporting executable candidates.
 - Changing retention rules or repository permissions.
 - Activating RSI or modifying credentials, billing, or provider settings.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #72](https://github.com/ACROWN-System/AstroCrown-Web/pull/72) merged as `866923a9fbcb173ba90adb508048faa4248b2690`.
+- GitHub Actions [run #38093982235](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38093982235) passed: 86 RSI unit tests, compilation, pinned image verification, and real Docker isolation/timeout-cleanup smoke test.
+- The policy remains INCOMPLETE with `promotion.allow_main = false`; context-packing remains disabled/unapproved.
 
 ## Acceptance criteria
 
