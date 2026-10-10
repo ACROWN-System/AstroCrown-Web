@@ -1,8 +1,7 @@
-# Completed Plan Mirror — HAAN Foundational Mission Integration
+# Completed Navigation Plan — HAAN Foundational Mission Integration
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — mission integration merged; RSI remains blocked  
-**Canonical completed record:** [HAAN Foundational Mission Integration](../Completed/2026-10-11-HAAN-Foundational-Mission-Integration.md)  
+**Status:** COMPLETED — mission integration merged; RSI implementation remains blocked  
 **Objective:** Make the HAAN foundational mission explicit in the AstroCrown-Web RSI architecture so RSI remains subordinate to the collective mission and preserves both foundational contributions without assuming a universal operational priority by category.
 
 ## Mode and source of truth
@@ -53,10 +52,10 @@ The expected standalone `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.m
 
 ## Execution outcome
 
-- NOVA [PR #67](https://github.com/ACROWN-System/NOVA/pull/67) merged as `a35bf2e64977702f9bd1d755be7a9095ebebd66c`; NOVA Health Tests passed.
-- AstroCrown-Web [PR #54](https://github.com/ACROWN-System/AstroCrown-Web/pull/54) merged as `4dc28414a4ebf0a4c4b46c8fba8472983bd69ab5`; test checks passed.
-- Verified the canonical doctrine exists on NOVA `main` and RSI policy remains `INCOMPLETE` with `allow_main: false`.
-- This Active-path copy is retained as a completed mirror because physical removal was blocked; it is not active work.
+- NOVA [PR #67](https://github.com/ACROWN-System/NOVA/pull/67) merged successfully as `a35bf2e64977702f9bd1d755be7a9095ebebd66c`; NOVA Health Tests passed.
+- AstroCrown-Web [PR #54](https://github.com/ACROWN-System/AstroCrown-Web/pull/54) merged successfully as `4dc28414a4ebf0a4c4b46c8fba8472983bd69ab5`; AstroCrown test checks passed.
+- Verified the mission doctrine is on NOVA `main`, the RSI architecture links to it, and the protected policy remains `INCOMPLETE` with `allow_main: false`.
+- No runtime code, provider calls, secrets, permissions, billing, or readiness state changed.
 
 ## Verification and handoff
 
@@ -64,4 +63,4 @@ The expected standalone `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.m
 - Confirm the change is documentation-only and within the stated scope.
 - Verify that `rsi_policy.json` still says `INCOMPLETE`, with main-branch promotion disabled.
 - Verify the existing power-is-not-proof-of-malevolence safeguard remains unchanged in NOVA.
-- This plan is completed. The canonical final record is stored under `development/audit/Completed/`; future implementation work requires a new Active plan when its scope materially expands.
+- This plan is recorded as Completed. Future implementation work with expanded scope must create a new Active plan.
