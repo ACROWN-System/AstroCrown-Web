@@ -66,6 +66,10 @@ def test_policy():
     }
 
 
+def refresh_manifest(evidence_dir):
+    refresh_manifest(evidence_dir)
+
+
 def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluation_baseline=BASELINE):
     candidate = {
         "candidate_id": "candidate-1",
@@ -83,6 +87,8 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
         "result": {
             "decision": cycle_decision,
             "candidate_commit": CANDIDATE,
+            "candidate": candidate,
+            "evaluator_exit_code": 0,
         },
         "candidate": candidate,
         "proposer_usage": {
@@ -187,6 +193,24 @@ class EvidenceVerifierTests(unittest.TestCase):
         linked.symlink_to(actual, target_is_directory=True)
         with self.assertRaisesRegex(EvidenceVerificationError, "must not be a symlink"):
             verify_evidence(linked, self.root, expected_baseline=BASELINE, policy=self.policy)
+
+    def test_evaluated_candidate_must_match_retained_candidate(self):
+        cycle_path = self.evidence / "cycle.json"
+        cycle = json.loads(cycle_path.read_text(encoding="utf-8"))
+        cycle["result"]["candidate"]["candidate_id"] = "different-candidate"
+        cycle_path.write_text(json.dumps(cycle, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+        refresh_manifest(self.evidence)
+        with self.assertRaisesRegex(EvidenceVerificationError, "evaluated candidate object does not match"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
+
+    def test_nonzero_evaluator_exit_code_is_rejected(self):
+        cycle_path = self.evidence / "cycle.json"
+        cycle = json.loads(cycle_path.read_text(encoding="utf-8"))
+        cycle["result"]["evaluator_exit_code"] = 1
+        cycle_path.write_text(json.dumps(cycle, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+        refresh_manifest(self.evidence)
+        with self.assertRaisesRegex(EvidenceVerificationError, "did not exit successfully"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_cycle_must_record_pass(self):
         build_evidence(self.evidence, cycle_decision="FAIL")
