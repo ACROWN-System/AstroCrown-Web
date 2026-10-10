@@ -1,8 +1,7 @@
 # Completed Navigation Plan — RSI Docker Isolation Candidate
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path file is retained as an archival mirror; independent security verification remains BLOCKED  
-**Canonical completed record:** [Completed RSI Docker Isolation plan](../Completed/2026-10-11-RSI-Docker-Isolation.md)  
+**Status:** COMPLETED — Docker isolation implementation candidate merged; independent security verification remains BLOCKED  
 **Objective:** Replace host execution of candidate-controlled RSI tests and benchmark commands with a fail-closed, resource-bounded Docker isolation boundary, while preserving independent control logic and the `INCOMPLETE` readiness state.
 
 ## Mission and source of truth
