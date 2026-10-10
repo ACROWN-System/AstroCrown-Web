@@ -97,7 +97,9 @@ A positive result means only that the candidate improved this defined context-pa
 
 ## Task-specific benchmark routing
 
-The protected evaluator now resolves the configured command through `benchmark_dispatcher.py` and `benchmark_profiles.json` before execution. A profile is selectable only when its complete changed-file set matches exactly and the configured command is an exact match for the protected profile. Unknown, mixed, malformed, disabled, or mismatched scopes return BLOCKED without running a benchmark.
+The protected evaluator resolves the configured command through `benchmark_dispatcher.py` and `benchmark_profiles.json` before execution. A profile is selectable only when its complete changed-file set and command match exactly, the profile is explicitly enabled, and both the registry-level `status` and profile-level `review_status` equal `INDEPENDENT_REVIEW_APPROVED`. Missing or unknown approval states return BLOCKED without running a benchmark.
+
+These approval strings are fail-closed control-plane states, not cryptographic proof that independent review occurred. The review must be evidenced through the repository's actual review trail and security evidence. Do not set the states merely to make a benchmark runnable. The production registry remains explicitly unapproved, and its profile remains disabled.
 
 The only currently registered profile is `context-packing-v1`, scoped to the single file `development/nova-context-memory-optimization/context_packer.py`. It is explicitly disabled pending independent review of the workload, corpus, evaluator integrity, and Docker isolation. The implementation does not approve that profile simply by adding the dispatcher.
 
