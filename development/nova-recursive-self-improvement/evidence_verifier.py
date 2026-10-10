@@ -126,8 +126,12 @@ def verify_evidence(
     policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Verify package integrity, gate decisions, budgets, and candidate scope."""
+    if evidence_dir.is_symlink():
+        raise EvidenceVerificationError("Evidence directory must not be a symlink.")
     evidence_dir = evidence_dir.resolve()
     repo_root = repo_root.resolve()
+    if evidence_dir == repo_root or repo_root not in evidence_dir.parents:
+        raise EvidenceVerificationError("Evidence directory must be a distinct subdirectory of the repository.")
     file_hashes = _verify_manifest(evidence_dir)
 
     trusted_policy = policy if policy is not None else load_policy(repo_root)
@@ -162,7 +166,10 @@ def verify_evidence(
     if payload_errors:
         raise EvidenceVerificationError("Candidate payload failed protected validation.")
 
-    patch_text = (evidence_dir / "candidate.patch").read_text(encoding="utf-8")
+    try:
+        patch_text = _read_regular_file(evidence_dir / "candidate.patch", "Candidate patch").decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise EvidenceVerificationError("Candidate patch must be UTF-8 text.") from exc
     candidate_patch = candidate.get("patch")
     if not isinstance(candidate_patch, str) or patch_text.rstrip("\n") != candidate_patch.rstrip("\n"):
         raise EvidenceVerificationError("Standalone patch does not match the candidate recorded in cycle evidence.")
@@ -176,7 +183,11 @@ def verify_evidence(
         raise EvidenceVerificationError("Candidate patch failed protected content validation.")
 
     evaluator_paths = evaluation.get("changed_files")
-    if not isinstance(evaluator_paths, list) or sorted(set(evaluator_paths)) != sorted(set(paths)):
+    if (
+        not isinstance(evaluator_paths, list)
+        or any(not isinstance(path, str) for path in evaluator_paths)
+        or sorted(set(evaluator_paths)) != sorted(set(paths))
+    ):
         raise EvidenceVerificationError("Evaluator changed-file set does not match the candidate patch.")
 
     results = evaluation.get("results")
@@ -242,6 +253,8 @@ def verify_applied_worktree(
     repo_root: Path,
     expected_paths: list[str],
     policy: dict[str, Any],
+    *,
+    ignored_paths: tuple[str, ...] = (),
 ) -> dict[str, Any]:
     """Revalidate the actual worktree after git apply, before staging or commit."""
     result = subprocess.run(
@@ -268,6 +281,8 @@ def verify_applied_worktree(
             raise EvidenceVerificationError("Candidate worktree contains a non-UTF-8 path.") from exc
         if "R" in status_code or "C" in status_code or "U" in status_code:
             raise EvidenceVerificationError("Candidate worktree contains a rename, copy, or unmerged path.")
+        if any(relative == ignored or relative.startswith(ignored.rstrip("/") + "/") for ignored in ignored_paths):
+            continue
         actual_paths.add(relative)
         statuses.append((status_code, relative))
 
@@ -303,10 +318,15 @@ def main() -> int:
     try:
         result = verify_evidence(evidence_dir, repo_root)
         if args.check_applied:
+            try:
+                evidence_relative = evidence_dir.relative_to(repo_root).as_posix()
+            except ValueError as exc:
+                raise EvidenceVerificationError("Evidence directory must be inside the repository.") from exc
             result["applied_worktree"] = verify_applied_worktree(
                 repo_root,
                 result["candidate_changed_paths"],
                 load_policy(repo_root),
+                ignored_paths=(evidence_relative,),
             )
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
