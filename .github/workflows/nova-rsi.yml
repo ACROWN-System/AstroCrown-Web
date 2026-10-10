@@ -11,6 +11,9 @@ concurrency:
 
 jobs:
   implementation-readiness:
+    # workflow_dispatch may target any ref; sensitive RSI jobs must originate
+    # from the protected main branch, not a candidate or feature branch.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read

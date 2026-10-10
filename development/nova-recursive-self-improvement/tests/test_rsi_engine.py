@@ -9,6 +9,7 @@ from rsi_engine import (
     extract_candidate_payload,
     implementation_ready,
     load_policy,
+    materialize_trusted_control_plane,
     normalize_repo_path,
     normalize_usage,
     validate_candidate_payload,
@@ -41,6 +42,58 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertIn("diff --git", payload["patch"])
         self.assertIn("--- a/development/x.txt", payload["patch"])
         self.assertIn("+++ b/development/x.txt", payload["patch"])
+
+    def test_trusted_control_plane_is_copied_from_trusted_checkout(self):
+        import tempfile
+        import shutil
+        import stat
+
+        with tempfile.TemporaryDirectory(prefix="nova-control-plane-test-") as temp:
+            root = Path(temp)
+            trusted_dir = root / "trusted" / "development/nova-recursive-self-improvement"
+            trusted_dir.mkdir(parents=True)
+            candidate_dir = root / "candidate" / "development/nova-recursive-self-improvement"
+            candidate_dir.mkdir(parents=True)
+            filenames = (
+                "evaluator.py",
+                "benchmark_dispatcher.py",
+                "sandbox_runtime.py",
+                "rsi_policy.json",
+                "benchmark_profiles.json",
+            )
+            for filename in filenames:
+                (trusted_dir / filename).write_text(
+                    f"trusted:{filename}", encoding="utf-8"
+                )
+                (candidate_dir / filename).write_text(
+                    f"candidate-controlled:{filename}", encoding="utf-8"
+                )
+
+            control_dir = root / "trusted-control"
+            copied = materialize_trusted_control_plane(root / "trusted", control_dir)
+            self.assertEqual(set(copied), set(filenames))
+            for filename, path in copied.items():
+                self.assertEqual(
+                    path.read_text(encoding="utf-8"),
+                    f"trusted:{filename}",
+                )
+                self.assertFalse(
+                    stat.S_IMODE(path.stat().st_mode) & stat.S_IWUSR,
+                    f"{filename} must not be owner-writable",
+                )
+                self.assertNotIn(
+                    "candidate-controlled",
+                    path.read_text(encoding="utf-8"),
+                )
+
+    def test_rsi_workflow_is_restricted_to_main_ref(self):
+        workflow = (
+            self.ROOT / ".github/workflows/nova-rsi.yml"
+        ).read_text(encoding="utf-8")
+        readiness_job = workflow.split(
+            "  implementation-readiness:", 1
+        )[1].split("\n  budget-gate:", 1)[0]
+        self.assertIn("if: github.ref == 'refs/heads/main'", readiness_job)
 
     def test_protected_paths_are_rejected(self):
         policy = load_policy(self.ROOT)
