@@ -1,7 +1,9 @@
-# RSI Sandbox Cleanup Verification — Navigation Plan
+# Completed Navigation Plan — RSI Sandbox Cleanup Verification
+
+**Canonical completed record:** [Completed cleanup verification](../Completed/2026-10-11-RSI-Sandbox-Cleanup-Verification.md)
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — cleanup confirmation and failure-path tests under review  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; independent sandbox approval remains BLOCKED  
 **Objective:** Ensure timeout/output-limit handling not only attempts to remove candidate containers, but also checks the Docker daemon reports no containers left for the invocation before considering cleanup complete.
 
 ## Mission and method
@@ -30,6 +32,12 @@ Method: [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AU
 - Claiming a Docker container eliminates kernel/daemon escape risk.
 - Enabling any benchmark profile or changing RSI readiness.
 - Broad changes to the retention workflow or credential boundary.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #71](https://github.com/ACROWN-System/AstroCrown-Web/pull/71) merged as `088643ed4b2a984670bfd1eed0009de4f1d8403e`.
+- GitHub Actions [run #38093812456](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38093812456) passed: 85 RSI unit tests, compilation, pinned image verification, and real Docker isolation/timeout-cleanup smoke test.
+- Residual Docker/kernel/daemon risks remain; readiness remains INCOMPLETE and the benchmark remains disabled/unapproved.
 
 ## Acceptance criteria
 
