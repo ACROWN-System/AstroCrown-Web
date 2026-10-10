@@ -26,7 +26,28 @@ DEFAULT_ALLOWED_HOSTS = ("inference.nosana.com",)
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
-    """Do not follow endpoint-controlled redirects with a bearer credential."""
+    """Fail closed on redirects before the default redirect handler can run."""
+
+    handler_order = 100
+
+    @staticmethod
+    def _reject(req, fp, code, msg, headers):
+        raise urllib.error.HTTPError(req.full_url, code, msg, headers, fp)
+
+    def http_error_301(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_302(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_303(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_307(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_308(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
 
     def redirect_request(self, req, fp, code, msg, headers, newurl):
         return None
