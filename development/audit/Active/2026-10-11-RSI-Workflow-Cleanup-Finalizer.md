@@ -1,7 +1,9 @@
-# RSI Workflow Cleanup Finalizer — Navigation Plan
+# Completed Navigation Plan — RSI Workflow Cleanup Finalizer
+
+**Canonical completed record:** [Completed workflow cleanup finalizer](../Completed/2026-10-11-RSI-Workflow-Cleanup-Finalizer.md)
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — same-job finalizer and regression tests under verification  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; independent sandbox approval remains BLOCKED  
 **Objective:** Provide a last-resort, same-runner cleanup step after the RSI engine process fails, times out, or is cancelled, so cleanup does not depend exclusively on Python process handlers.
 
 ## Mission and method
@@ -29,6 +31,13 @@ The evaluator supervisor can clean up on normal exit, outer timeout, and ordinar
 - Enabling RSI or the context-packing benchmark.
 - Increasing workflow permissions or adding secrets.
 - Claiming that an always-run step can recover from a destroyed/unavailable runner host; it is a same-runner best-effort finalizer.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #79](https://github.com/ACROWN-System/AstroCrown-Web/pull/79) merged as `ff1938cd1b1dc1c3a6b98053729d4c4bb19c1f6a`.
+- GitHub Actions [run #38095114681](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38095114681) passed 98 tests, compilation, pinned-image verification, and the real Docker smoke test invoking the exact finalizer CLI.
+- The finalizer is ordered after the engine step and before evidence upload; cycle timeout is 21 minutes, job timeout 25 minutes and cleanup step timeout 3 minutes.
+- The protected RSI readiness remains INCOMPLETE; the benchmark remains disabled/unapproved.
 
 ## Acceptance criteria
 
