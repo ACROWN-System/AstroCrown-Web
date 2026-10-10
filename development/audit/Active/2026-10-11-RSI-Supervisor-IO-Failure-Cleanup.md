@@ -1,7 +1,9 @@
-# RSI Supervisor I/O Failure Cleanup — Navigation Plan
+# Completed Navigation Plan — RSI Supervisor I/O Failure Cleanup
+
+**Canonical completed record:** [Completed supervisor I/O failure cleanup](../Completed/2026-10-11-RSI-Supervisor-IO-Failure-Cleanup.md)
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — unexpected supervisor-I/O failure paths under verification  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; independent sandbox approval remains BLOCKED  
 **Objective:** Ensure evaluator stdout/pipe failures cannot bypass process termination, evaluation-container cleanup, or bounded failure reporting.
 
 ## Mission and method
@@ -23,6 +25,12 @@ Method: [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AU
 3. Return FAIL only if process termination and container cleanup are confirmed; otherwise return BLOCKED.
 4. Add regression tests for two timeout exceptions with no captured output and for a simulated output-pipe failure.
 5. Preserve readiness and benchmark gates.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #76](https://github.com/ACROWN-System/AstroCrown-Web/pull/76) merged as `2dc7f54880c4d9fc5490d59fba9693b7ef52fe68`.
+- GitHub Actions [run #38094680673](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38094680673/job/114338041663) passed **96 RSI tests**, compilation, pinned-image verification, and real Docker supervisor-cleanup smoke testing.
+- RSI readiness remains INCOMPLETE, promotion stays disabled, and the benchmark profile remains disabled/unapproved.
 
 ## Acceptance criteria
 

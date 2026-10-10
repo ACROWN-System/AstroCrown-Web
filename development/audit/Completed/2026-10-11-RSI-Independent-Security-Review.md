@@ -83,6 +83,15 @@ Two additional findings were remediated and independently exercised through CI a
 
 These are test-backed engineering remediations; they do not constitute independent third-party certification of the overall sandbox or benchmark.
 
+### Further supervisor-level hardening
+
+Two additional supervisor-level findings have since been addressed:
+
+- [Evaluator supervisor cleanup](./2026-10-11-RSI-Evaluator-Supervisor-Cleanup.md): PR #75, merged as `6889085e80cd08b29ae5924dfce9932e8f0efc2a`. CI run #38094554904 passed 94 tests, including actual detached evaluation-labelled container cleanup.
+- [Supervisor I/O failure cleanup](./2026-10-11-RSI-Supervisor-IO-Failure-Cleanup.md): PR #76, merged as `2dc7f54880c4d9fc5490d59fba9693b7ef52fe68`. CI run #38094680673 passed 96 tests, including consecutive empty-output timeouts and simulated output-pipe failure cleanup.
+
+The supervisor now kills its evaluator process group, bounds post-timeout drain/reap waits, and uses a separate evaluation label to recover containers when the inner per-command cleanup cannot complete. These changes still depend on the configured Docker daemon accurately reporting its state and are not a substitute for independent threat-model review.
+
 ## Remaining blockers and residual risks
 
 This targeted review does **not** close the independent security approval gate. Remaining work includes an independent threat-model and configuration review covering at least:
