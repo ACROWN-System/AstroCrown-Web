@@ -14,6 +14,7 @@ import os
 import re
 import selectors
 import shutil
+import sys
 import socket
 import subprocess
 import tempfile
@@ -619,12 +620,63 @@ def self_test(policy: dict[str, Any]) -> dict[str, Any]:
                 "cleanup_confirmed": cleanup_confirmed,
                 "output": launched.stdout[-2000:],
             }
-        if not cleanup_evaluation_containers(
-            evaluation_id, docker=docker, wait_for_late_containers=True
-        ):
+        try:
+            # Exercise the same command-line entry point used by the workflow's
+            # if: always() finalizer, not just the underlying helper function.
+            cleanup_cli = subprocess.run(
+                [
+                    sys.executable,
+                    str(Path(__file__).resolve()),
+                    "--cleanup-evaluation-id",
+                    evaluation_id,
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=120,
+                check=False,
+                env=_host_env(),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            cleanup_evaluation_containers(
+                evaluation_id, docker=docker, wait_for_late_containers=True
+            )
             return {
                 "status": "FAIL",
-                "reason": "Supervisor-level cleanup could not confirm removal of all evaluation-labelled containers.",
+                "reason": f"Workflow cleanup CLI failed or timed out: {exc}",
+            }
+        if (
+            cleanup_cli.returncode != 0
+            or '"status": "PASS"' not in cleanup_cli.stdout
+            or '"cleanup_confirmed": true' not in cleanup_cli.stdout
+        ):
+            cleanup_evaluation_containers(
+                evaluation_id, docker=docker, wait_for_late_containers=True
+            )
+            return {
+                "status": "FAIL",
+                "reason": "Workflow cleanup CLI did not confirm evaluation-container cleanup.",
+                "output": cleanup_cli.stdout[-4000:],
+            }
+
+        # Independently verify the label inventory after the CLI reports success.
+        try:
+            remaining = subprocess.run(
+                ["docker", "ps", "-aq", "--filter", f"label=nova.rsi.evaluation_id={evaluation_id}"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                check=False,
+                env=_host_env(),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {"status": "FAIL", "reason": f"Could not independently verify workflow CLI cleanup: {exc}"}
+        if remaining.returncode != 0 or remaining.stdout.strip():
+            return {
+                "status": "FAIL",
+                "reason": "A container remained after the workflow cleanup CLI reported success.",
+                "remaining_container_ids": remaining.stdout.splitlines(),
             }
         return {
             "status": "PASS",
@@ -635,7 +687,7 @@ def self_test(policy: dict[str, Any]) -> dict[str, Any]:
                 "container network access denied",
                 "sandbox process ran without host credentials in its environment",
                 "timed-out container was discovered by run label and removed",
-                "supervisor removed an evaluation-labelled detached container",
+                "workflow cleanup CLI removed an evaluation-labelled detached container",
             ],
             "duration_seconds": round(duration, 3),
             "output": output[-4000:],

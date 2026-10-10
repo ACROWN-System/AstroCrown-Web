@@ -150,7 +150,7 @@ jobs:
   rsi-cycle:
     needs: provider-secret-boundary
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: read
 
@@ -181,6 +181,7 @@ jobs:
           python -c 'import uuid; print("RSI_SANDBOX_EVALUATION_ID=" + uuid.uuid4().hex)' >> "$GITHUB_ENV"
 
       - name: Run bounded autonomous RSI cycle
+        timeout-minutes: 21
         env:
           RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
           RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
