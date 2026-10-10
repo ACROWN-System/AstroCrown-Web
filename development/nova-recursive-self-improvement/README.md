@@ -388,6 +388,12 @@ The actual credential is never stored in tracked source. A configuration preflig
 
 Nosana's current documentation describes the inference service as credit-metered rather than an unlimited free resource. Any free credits or promotional access must be verified at the time of use rather than assumed as an architectural property.
 
+## Initial context-packing workload
+
+A first bounded benchmark workload is being implemented for provenance-preserving context packing. See the protected [Capability Benchmark Protocol](CAPABILITY-BENCHMARK-PROTOCOL.md), [workload runner](benchmarks/run_context_packing_benchmark.py), and fixed [synthetic case set](benchmarks/context-packing-cases.json). It evaluates one defined retrieval/context-budget capability and must not be represented as a general-intelligence benchmark.
+
+The current implementation is a candidate. Do not configure it as the approved `RSI_BENCHMARK_COMMAND` until benchmark adequacy, evaluator integrity, and execution isolation have been independently reviewed. RSI readiness remains `INCOMPLETE`.
+
 ## Current implementation boundary
 
 The provider adapter, protected preflight, dedicated provider-secret boundary, secret isolation, candidate validation, evaluator isolation, and automated tests are implemented.
