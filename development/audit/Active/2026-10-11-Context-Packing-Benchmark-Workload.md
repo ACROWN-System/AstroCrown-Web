@@ -1,7 +1,8 @@
-# Active Navigation Plan — Context Packing Benchmark and RSI Workload
+# Completed Navigation Plan — Context Packing Benchmark and RSI Workload
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — bounded implementation candidate; independent benchmark approval remains BLOCKED  
+**Status:** COMPLETED — this Active-path copy is retained as a detailed archival mirror; independent benchmark approval remains BLOCKED  
+**Canonical completed record:** [Completed context-packing benchmark plan](../Completed/2026-10-11-Context-Packing-Benchmark-Workload.md)  
 **Objective:** Close part of the RSI capability-benchmark gap by implementing and testing one deterministic, zero-cost workload for query-aware context packing that preserves complete source records, provenance, temporal status, and hard character budgets.
 
 ## Mode and source of truth
@@ -59,6 +60,15 @@
 - `implementation_readiness.status` remains `INCOMPLETE` and `promotion.allow_main` remains `false`.
 
 - Do not set this workload as the global RSI benchmark while candidate proposals can target multiple subsystems; require a validated context-packing scope or an independently reviewed task-specific benchmark dispatcher.
+
+## Execution outcome
+
+- AstroCrown-Web PR [#56](https://github.com/ACROWN-System/AstroCrown-Web/pull/56) merged as `12d49fe8d85ddc8d53617e38208f4d8feb752d7a`.
+- The CI run compiled all development Python and passed all 34 RSI unit tests, including nine new context-packing tests.
+- The Jekyll build, build-status report, and deployment jobs also completed successfully on the merge commit.
+- Verified that `implementation_readiness.status` remains `INCOMPLETE`, `promotion.allow_main` remains `false`, and the benchmark runner/corpus/protocol are protected from automatic RSI candidate modifications.
+- The workload remains an unapproved, narrow context-packing benchmark candidate. The protected `RSI_BENCHMARK_COMMAND` was not configured and autonomous RSI was not enabled.
+- No provider calls, secrets, billing changes, runtime application changes, or permission changes were made.
 
 ## Impact Analysis
 
