@@ -47,6 +47,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         command = shlex.split(os.environ["RSI_BENCHMARK_COMMAND"])
         profile_registry = {
             "schema_version": 1,
+            "status": "INDEPENDENT_REVIEW_APPROVED",
             "profiles": [
                 {
                     "profile_id": "context-packing-test",
@@ -55,7 +56,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
                     ],
                     "command": command,
                     "enabled": True,
-                    "review_status": "test-only",
+                    "review_status": "INDEPENDENT_REVIEW_APPROVED",
                 }
             ],
         }
