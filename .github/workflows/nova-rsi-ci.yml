@@ -19,14 +19,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
+      - name: Pull and verify immutable sandbox image
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
+
       - name: Compile development Python
         run: python -m compileall -q development
 
       - name: Run RSI unit tests
         run: python -m unittest discover -s development/nova-recursive-self-improvement/tests -p "test_*.py" -v
+
+      - name: Exercise Docker isolation boundaries
+        run: python development/nova-recursive-self-improvement/sandbox_runtime.py --self-test

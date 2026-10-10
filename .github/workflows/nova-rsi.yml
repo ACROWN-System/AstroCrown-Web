@@ -109,8 +109,25 @@ jobs:
         run: |
           python development/nova-recursive-self-improvement/preflight.py --repo . --check-non-secret
 
-  provider-secret-boundary:
+  sandbox-image-readiness:
     needs: configuration-preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Pull and verify immutable sandbox image without credentials
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          echo "Verified immutable RSI sandbox image identity."
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
+
+  provider-secret-boundary:
+    needs: sandbox-image-readiness
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -140,6 +157,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Pull and verify immutable sandbox image before candidate execution
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
 
       - name: Set up Python
         uses: actions/setup-python@v6
