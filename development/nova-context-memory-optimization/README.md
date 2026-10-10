@@ -291,6 +291,14 @@ and shared homepage reference material remains in:
 
 This subsystem may consume any of those capabilities where appropriate, but it is not defined by a particular workload.
 
+## Initial context-packing implementation candidate
+
+[`context_packer.py`](context_packer.py) is a dependency-free development candidate for selecting whole source records under a hard character budget. It retains each selected record's identifier, source, observation date, status, and full content; it does not summarize or rewrite evidence.
+
+The first fixed synthetic workload lives in the protected RSI benchmark area: [context-packing benchmark runner](../nova-recursive-self-improvement/benchmarks/run_context_packing_benchmark.py) and [case corpus](../nova-recursive-self-improvement/benchmarks/context-packing-cases.json). It checks query-relevant record coverage, provenance integrity, non-truncation, and character-budget compliance against exact baseline/candidate commits.
+
+**Status: candidate / independently unapproved.** The module and workload are not yet a production memory system, do not call external models, and do not by themselves satisfy RSI readiness. Evaluate correctness and usefulness before adoption.
+
 ## Development Status
 
 Status: **candidate / initial subsystem structure**

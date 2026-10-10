@@ -76,16 +76,33 @@ Mandatory regressions in correctness, security, privacy, reliability, provenance
 
 Benchmark output becomes part of the RSI evidence package and must be retained with the candidate cycle.
 
+## Initial workload implementation candidate
+
+A narrow, deterministic workload is being developed for query-aware repository context packing at:
+
+- Runner: `benchmarks/run_context_packing_benchmark.py`
+- Fixed synthetic corpus: `benchmarks/context-packing-cases.json`
+- Implementation candidate: `../nova-context-memory-optimization/context_packer.py`
+- Conformance tests: `tests/test_context_packing_benchmark.py`
+
+The workload compares the exact baseline and candidate versions of `context_packer.py` using `RSI_BASELINE_COMMIT` and `RSI_CANDIDATE_COMMIT`. It measures retrieval of required complete records under fixed character budgets, and validates provenance metadata and non-truncation. Its workload includes synthetic examples for provider-rotation rules, temporal supersession, and RSI readiness/isolation caveats.
+
+A positive result means only that the candidate improved this defined context-packing workload without losing required-evidence coverage per case, increasing unrequired records per case, exceeding the budget, or altering record content/provenance. It is not a general-intelligence benchmark or approval for unrelated candidate types.
+
+**Status: IMPLEMENTED CANDIDATE / INDEPENDENT REVIEW REQUIRED.** Do not configure or rely on this workload as the approved `RSI_BENCHMARK_COMMAND` until its integrity, corpus adequacy, baseline behavior, and execution isolation have been independently reviewed. A successful unit-test run is necessary but not sufficient. The protected RSI readiness gate remains `INCOMPLETE`.
+
 ## Current status
 
-Status: **protocol defined / benchmark implementation required**
+Status: **first workload candidate implemented / independent review required**
 
-Until a protected benchmark command implementing this protocol exists, the RSI evaluator deliberately returns `BLOCKED`.
+The repository now includes a deterministic context-packing workload candidate and fixed synthetic cases. This closes the absence of an executable workload for that narrow capability area, but does not constitute independent approval or establish general intelligence improvement.
+
+The protected evaluator still returns `BLOCKED` while implementation readiness is `INCOMPLETE`. This PR does not configure `RSI_BENCHMARK_COMMAND`.
 
 ## Benchmark implementation status
 
-The evaluator contract is implemented, including exact baseline/candidate commit propagation and strict JSON validation.
+The evaluator contract is implemented, including exact baseline/candidate commit propagation and strict JSON validation. The initial workload compares versions of the query-aware context packer against fixed synthetic cases and validates required-record coverage, provenance, non-truncation, and hard character budgets.
 
-The remaining gap is not the transport protocol. It is the protected measurement workload itself: the repository must define an evidence-backed workload/corpus that measures the capability a candidate claims to improve. A syntax check, unit-test pass, file count, or other code-health signal alone is insufficient to establish intelligence improvement.
+The remaining gates include independent review of the benchmark's integrity and adequacy, confirmation that its scope matches the candidate's claimed capability, and an acceptable execution-isolation decision. Other capability claims require distinct, task-appropriate workloads; this workload is not a universal substitute. Because the RSI proposer can currently suggest changes across many development subsystems, do not configure this context-packing runner as the single global benchmark. Before activation, either constrain and validate candidate scope/hypotheses to context-packing changes or independently review a dispatcher that selects the correct protected workload for each claimed capability. Until that routing/scope condition is met, leave the protected benchmark command unconfigured.
 
-The benchmark command should therefore remain a protected configuration item until such a workload is selected and independently reviewed.
+A syntax check, unit-test pass, or improvement on this one workload is not sufficient to establish general intelligence improvement or overall RSI readiness. Keep the benchmark command unconfigured until the workload and remaining gates have been independently reviewed.
