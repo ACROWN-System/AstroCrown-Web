@@ -124,58 +124,116 @@ class SandboxRuntimeTests(unittest.TestCase):
                 run_id="../unsafe",
             )
 
-    def test_timeout_cleanup_uses_cidfile_when_available(self):
+    def test_timeout_cleanup_uses_cidfile_and_still_discovers_labelled_containers(self):
         cidfile = self.root / "container.cid"
-        cidfile.write_text("abcdef123456\n", encoding="utf-8")
+        cidfile.write_text("abcdef123456\\n", encoding="utf-8")
+        active = {"0123456789ab"}
         calls = []
 
         def fake_run(args, **kwargs):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\\n".join(sorted(active)))
+            if args[1:2] == ["rm"] and len(args) >= 4:
+                active.discard(args[-1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
 
         with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
-            _stop_container("/usr/bin/docker", cidfile, "c" * 32)
+            cleaned = _stop_container("/usr/bin/docker", cidfile, "c" * 32)
 
+        self.assertTrue(cleaned)
         self.assertIn(["/usr/bin/docker", "kill", "abcdef123456"], calls)
         self.assertIn(["/usr/bin/docker", "rm", "-f", "abcdef123456"], calls)
+        self.assertIn(["/usr/bin/docker", "kill", "0123456789ab"], calls)
+        self.assertIn(["/usr/bin/docker", "rm", "-f", "0123456789ab"], calls)
+        self.assertEqual(active, set())
 
     def test_timeout_cleanup_finds_container_when_cidfile_is_missing(self):
         cidfile = self.root / "missing-container.cid"
         run_id = "d" * 32
+        active = {"0123456789ab"}
         calls = []
 
         def fake_run(args, **kwargs):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
                 self.assertIn(f"label=nova.rsi.run_id={run_id}", args)
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\n")
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\\n".join(sorted(active)))
+            if args[1:2] == ["rm"] and len(args) >= 4:
+                active.discard(args[-1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
 
         with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
-            _stop_container("/usr/bin/docker", cidfile, run_id)
+            cleaned = _stop_container("/usr/bin/docker", cidfile, run_id)
 
+        self.assertTrue(cleaned)
         self.assertIn(["/usr/bin/docker", "kill", "0123456789ab"], calls)
         self.assertIn(["/usr/bin/docker", "rm", "-f", "0123456789ab"], calls)
+        self.assertEqual(active, set())
 
     def test_timeout_cleanup_uses_label_when_cidfile_is_malformed(self):
         cidfile = self.root / "malformed-container.cid"
-        cidfile.write_text("not-a-container-id\n", encoding="utf-8")
+        cidfile.write_text("not-a-container-id\\n", encoding="utf-8")
         run_id = "e" * 32
+        active = {"fedcba987654"}
         calls = []
 
         def fake_run(args, **kwargs):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="fedcba987654\n")
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\\n".join(sorted(active)))
+            if args[1:2] == ["rm"] and len(args) >= 4:
+                active.discard(args[-1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
 
         with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
-            _stop_container("/usr/bin/docker", cidfile, run_id)
+            cleaned = _stop_container("/usr/bin/docker", cidfile, run_id)
 
+        self.assertTrue(cleaned)
         self.assertIn(["/usr/bin/docker", "kill", "fedcba987654"], calls)
         self.assertIn(["/usr/bin/docker", "rm", "-f", "fedcba987654"], calls)
+        self.assertEqual(active, set())
+
+    def test_timeout_cleanup_fails_when_docker_cannot_confirm_removal(self):
+        cidfile = self.root / "stuck-container.cid"
+        cidfile.write_text("0123456789ab\\n", encoding="utf-8")
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1:3] == ["ps", "-aq"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\\n")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
+            cleaned = _stop_container("/usr/bin/docker", cidfile, "f" * 32)
+
+        self.assertFalse(cleaned)
+
+    def test_timeout_raises_blocked_error_if_container_cleanup_cannot_be_verified(self):
+        cidfile_id = "0123456789ab"
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1:3] == ["image", "inspect"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout=IMAGE_ID + "\\n")
+            if args[1:3] == ["ps", "-aq"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout=cidfile_id + "\\n")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        timeout = subprocess.TimeoutExpired(["docker", "run"], 5, output=b"started")
+        with patch("sandbox_runtime.shutil.which", return_value="/usr/bin/docker"), patch(
+            "sandbox_runtime.subprocess.run", side_effect=fake_run
+        ), patch("sandbox_runtime._run_bounded", side_effect=timeout):
+            with self.assertRaisesRegex(SandboxUnavailableError, "could not confirm"):
+                run_sandboxed(
+                    ["python", "-c", "pass"],
+                    self.workspace,
+                    5,
+                    policy=POLICY,
+                    run_id="a" * 32,
+                )
 
     def test_output_limit_terminates_producer_and_bounds_capture(self):
         code, output, _duration = _run_bounded(
