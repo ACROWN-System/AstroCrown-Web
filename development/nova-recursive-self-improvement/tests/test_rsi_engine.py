@@ -279,7 +279,11 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertLess(run_cycle, cleanup)
         self.assertLess(cleanup, upload)
 
+        job_block = workflow[workflow.index("  rsi-cycle:"):initialize]
+        cycle_block = workflow[run_cycle:cleanup]
         cleanup_block = workflow[cleanup:upload]
+        self.assertIn("timeout-minutes: 25", job_block)
+        self.assertIn("timeout-minutes: 21", cycle_block)
         self.assertIn("if: always()", cleanup_block)
         self.assertIn("timeout-minutes: 3", cleanup_block)
         self.assertIn(
