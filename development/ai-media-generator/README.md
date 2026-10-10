@@ -45,6 +45,10 @@ Shared homepage reference conventions remain in:
 
 Generated media should be treated as separately produced artifacts that can later be evaluated and intentionally promoted into the website.
 
+## Multi-Model Composition Strategy
+
+[Open-Source, Multi-Model Image and Video Generation Strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md) records the candidate direction to integrate multiple suitably licensed generators and processing components behind one replaceable AstroCrown-owned service. It distinguishes model routing and workflow composition from model-weight merging, and requires rights, account eligibility, runtime, and evidence gates for each material dependency. It does not approve a model, engine, or provider.
+
 ## Rollout and Access Proposal
 
 [Capacity-Aware AI Media Generation and Progressive Access Proposal](CAPACITY-AWARE-ROLLOUT-PROPOSAL.md) records a candidate direction for internal-first media generation, separate feature-access waiting lists and generation-job queues, and staged user access governed by measured capacity. It is a proposal, not an implementation or an approval of any model/provider.
