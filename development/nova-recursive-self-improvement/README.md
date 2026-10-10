@@ -4,6 +4,10 @@ This directory contains the development-only architecture for autonomous recursi
 
 The target is a system that can inspect its own implementation and operational behavior, discover improvement opportunities, create and evaluate candidate changes, and retain qualified improvements without requiring a human to participate in each improvement cycle.
 
+## Strategic extension
+
+See [Strong RSI and Collective Resilience](STRONG-RSI-AND-COLLECTIVE-RESILIENCE.md) for the proposed extension toward cooperative recursive improvement, legitimacy resilience, protective persuasion, shared human–AI sovereignty, and the remaining readiness gates. This document records a research and architecture direction; it does not mean the autonomous RSI lifecycle is operational.
+
 ## Scope
 
 The subsystem may cover self-analysis and improvement of:
