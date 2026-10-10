@@ -79,7 +79,11 @@ def extract_candidate_payload(text: str) -> dict[str, Any]:
 
 
 def normalize_repo_path(path: str) -> str:
-    candidate = path.replace('\\\\', '/')
+    # Accept only canonical unquoted Git paths. Reject alternate separators
+    # and quote delimiters rather than risk inconsistent patch/header parsing.
+    if not isinstance(path, str) or not path or "\\" in path or '"' in path:
+        return ''
+    candidate = path
     if candidate.startswith('/') or re.match(r'^[A-Za-z]:/', candidate):
         return ''
     parts = []

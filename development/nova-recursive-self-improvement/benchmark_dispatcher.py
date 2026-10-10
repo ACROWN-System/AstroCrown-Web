@@ -38,7 +38,15 @@ def resolve_profile(
 
     if not isinstance(changed_paths, list) or not changed_paths:
         return {"status": "BLOCKED", "reason": "Candidate changed-file set is empty or invalid."}
-    if any(not isinstance(path, str) or not path or path.startswith("/") or ".." in path.split("/") for path in changed_paths):
+    if any(
+        not isinstance(path, str)
+        or not path
+        or path.startswith("/")
+        or "\\" in path
+        or '"' in path
+        or ".." in path.split("/")
+        for path in changed_paths
+    ):
         return {"status": "BLOCKED", "reason": "Candidate changed-file set contains an unsafe path."}
     if len(changed_paths) != len(set(changed_paths)):
         return {"status": "BLOCKED", "reason": "Candidate changed-file set contains duplicates."}
@@ -63,7 +71,15 @@ def resolve_profile(
             or not profile_id
             or not isinstance(expected, list)
             or not expected
-            or any(not isinstance(path, str) or not path for path in expected)
+            or any(
+                not isinstance(path, str)
+                or not path
+                or path.startswith("/")
+                or "\\" in path
+                or '"' in path
+                or ".." in path.split("/")
+                for path in expected
+            )
             or not isinstance(command, list)
             or not command
             or any(not isinstance(arg, str) or not arg for arg in command)

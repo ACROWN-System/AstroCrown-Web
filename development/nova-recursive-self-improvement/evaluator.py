@@ -130,7 +130,10 @@ def changed_statuses(root: Path, baseline: str) -> list[tuple[str, str]]:
 
 
 def normalize_repo_path(path: str) -> str:
-    candidate = path.replace("\\", "/")
+    # Accept only canonical unquoted Git paths; reject alternate separators and quotes.
+    if not isinstance(path, str) or not path or "\\" in path or '"' in path:
+        return ""
+    candidate = path
     if candidate.startswith("/") or re.match(r"^[A-Za-z]:/", candidate):
         return ""
     parts = []

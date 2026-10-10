@@ -403,8 +403,24 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertFalse(implementation_ready(policy))
         self.assertEqual(policy["implementation_readiness"]["status"], "INCOMPLETE")
 
-    def test_path_traversal_is_rejected(self):
+    def test_path_traversal_and_alternate_separators_are_rejected(self):
         self.assertEqual(normalize_repo_path("../../.github/workflows/x.yml"), "")
+        self.assertEqual(
+            normalize_repo_path(r"development\..\.github\workflows\x.yml"),
+            "",
+        )
+        self.assertEqual(normalize_repo_path('development/"quoted"/file.py'), "")
+        patch = "\\n".join((
+            'diff --git a/development/"quoted"/file.py b/development/"quoted"/file.py',
+            '--- a/development/"quoted"/file.py',
+            '+++ b/development/"quoted"/file.py',
+            "@@ -1 +1 @@",
+            "-old",
+            "+new",
+        ))
+        self.assertTrue(
+            any(path.startswith("UNSAFE_PATH:") for path in changed_paths_from_patch(patch))
+        )
         policy = load_policy(self.ROOT)
         self.assertTrue(validate_patch_paths(["../../.github/workflows/x.yml"], policy))
 
