@@ -242,12 +242,16 @@ def benchmark(
     if not raw:
         return {"status": "BLOCKED", "reason": "RSI_BENCHMARK_COMMAND is not configured."}
 
-    try:
-        if profile_registry is None:
-            profile_path = root / "development/nova-recursive-self-improvement/benchmark_profiles.json"
-            profile_registry = json.loads(profile_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return {"status": "BLOCKED", "reason": f"Protected benchmark profile registry is unavailable or invalid: {exc}"}
+    if profile_registry is None:
+        return {
+            "status": "BLOCKED",
+            "reason": "Trusted benchmark profile registry was not supplied explicitly.",
+        }
+    if not isinstance(profile_registry, dict):
+        return {
+            "status": "BLOCKED",
+            "reason": "Trusted benchmark profile registry is not a JSON object.",
+        }
 
     selected = resolve_profile(profile_registry, changed_files(root, baseline), raw)
     if selected.get("status") != "READY":
@@ -342,7 +346,12 @@ def implementation_ready(policy: dict[str, Any]) -> bool:
     )
 
 
-def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any]:
+def evaluate(
+    root: Path,
+    baseline: str,
+    policy: dict[str, Any],
+    profile_registry: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     timeout = int(policy["evaluation"]["timeout_seconds"])
     candidate_commit = git(root, "rev-parse", "HEAD")
 
@@ -458,7 +467,14 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
     if bool(policy["evaluation"]["require_benchmark"]):
         results.append({
             "name": "capability-benchmark",
-            **benchmark(root, baseline, candidate_commit, timeout, policy),
+            **benchmark(
+                root,
+                baseline,
+                candidate_commit,
+                timeout,
+                policy,
+                profile_registry=profile_registry,
+            ),
         })
 
     statuses_only = [item["status"] for item in results]
@@ -479,12 +495,16 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--baseline", required=True)
     parser.add_argument("--policy", required=True)
+    parser.add_argument("--profile-registry", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
     root = Path.cwd().resolve()
     policy = json.loads(Path(args.policy).read_text(encoding="utf-8"))
-    result = evaluate(root, args.baseline, policy)
+    profile_registry = json.loads(Path(args.profile_registry).read_text(encoding="utf-8"))
+    if not isinstance(policy, dict) or not isinstance(profile_registry, dict):
+        raise ValueError("Trusted RSI policy and benchmark profile registry must be JSON objects.")
+    result = evaluate(root, args.baseline, policy, profile_registry=profile_registry)
     Path(args.output).write_text(
         json.dumps(result, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
