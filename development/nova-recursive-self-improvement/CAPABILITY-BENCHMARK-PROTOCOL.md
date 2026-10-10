@@ -16,6 +16,10 @@ The evaluator supplies:
 
 The benchmark receives no proposer API key, GitHub token, or other repository credential. The protected evaluator supplies the exact baseline and candidate commit identifiers through `RSI_BASELINE_COMMIT` and `RSI_CANDIDATE_COMMIT`.
 
+Candidate-controlled benchmark commands run through the protected Docker adapter in `sandbox_runtime.py`. The adapter requires the immutable image and expected image ID in `rsi_policy.json`, uses `--pull=never`, disables networking, mounts the candidate workspace and benchmark source snapshots read-only, runs as a non-root UID, drops Linux capabilities, enables no-new-privileges, and applies CPU, memory, PID, file-size, file-descriptor, timeout, and output limits. Only a strict environment allowlist is passed into the container; credentials are never inherited. If Docker, the expected image, or verification is unavailable, the benchmark result is BLOCKED and never falls back to host execution.
+
+For the context-packing workload, the protected host evaluator materializes the source file from each exact full commit SHA into a separate temporary directory, mounts that directory read-only at `/benchmark-input`, and supplies `RSI_BASELINE_PACKER_FILE` and `RSI_CANDIDATE_PACKER_FILE`. The runner validates the SHA-labelled filenames before loading them. This avoids giving candidate-controlled benchmark code access to the host Git object database.
+
 ## Command
 
 Configure the protected repository variable:
