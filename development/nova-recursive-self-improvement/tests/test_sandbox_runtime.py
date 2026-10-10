@@ -1,3 +1,4 @@
+import io
 import os
 import subprocess
 import sys
@@ -15,6 +16,7 @@ from sandbox_runtime import (
     run_sandboxed,
     _stop_container,
     cleanup_evaluation_containers,
+    main,
 )
 
 
@@ -81,6 +83,7 @@ class SandboxRuntimeTests(unittest.TestCase):
             self.assertIn(required, joined)
         self.assertNotIn("GITHUB_TOKEN", joined)
         self.assertNotIn("AWS_ACCESS_KEY_ID", joined)
+        self.assertNotIn("RSI_SANDBOX_EVALUATION_ID=", joined)
 
     def test_mutable_or_wrong_image_reference_is_rejected(self):
         policy = {"sandbox": dict(POLICY["sandbox"], image="python:3.12-slim")}
@@ -139,6 +142,22 @@ class SandboxRuntimeTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(SandboxUnavailableError, "does not match protected policy"):
                 run_sandboxed(["python", "-V"], self.workspace, 5, policy=POLICY)
+
+    def test_cleanup_cli_runs_without_loading_sandbox_policy(self):
+        evaluation_id = "f" * 32
+        output = io.StringIO()
+        with patch("sys.argv", ["sandbox_runtime.py", "--cleanup-evaluation-id", evaluation_id]), patch(
+            "sys.stdout", output
+        ), patch(
+            "sandbox_runtime.cleanup_evaluation_containers", return_value=True
+        ) as cleanup, patch(
+            "pathlib.Path.read_text", side_effect=AssertionError("cleanup CLI must not load policy")
+        ):
+            result = main()
+
+        self.assertEqual(result, 0)
+        cleanup.assert_called_once_with(evaluation_id, wait_for_late_containers=True)
+        self.assertIn('"status": "PASS"', output.getvalue())
 
     def test_invalid_sandbox_evaluation_id_is_rejected(self):
         with self.assertRaisesRegex(SandboxUnavailableError, "evaluation identifier"):

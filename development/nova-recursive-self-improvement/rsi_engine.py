@@ -605,8 +605,17 @@ def apply_and_evaluate(
             'GIT_CONFIG_NOSYSTEM': '1',
             'RSI_BENCHMARK_COMMAND': os.environ.get('RSI_BENCHMARK_COMMAND', ''),
         }
-        evaluation_id = uuid.uuid4().hex
-        env['RSI_SANDBOX_EVALUATION_ID'] = evaluation_id
+        evaluation_id = os.environ.get("RSI_SANDBOX_EVALUATION_ID", "").strip()
+        if not evaluation_id:
+            evaluation_id = uuid.uuid4().hex
+        elif not re.fullmatch(r"[0-9a-f]{32}", evaluation_id):
+            return {
+                "decision": "BLOCKED",
+                "stage": "sandbox-cleanup",
+                "error": "Workflow-provided sandbox evaluation identifier is invalid.",
+                "candidate": candidate,
+            }
+        env["RSI_SANDBOX_EVALUATION_ID"] = evaluation_id
         supervised = run_evaluator_supervised(
             [
                 'python',
