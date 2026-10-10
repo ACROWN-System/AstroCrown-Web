@@ -16,6 +16,8 @@ import time
 from pathlib import Path
 from typing import Any
 
+from sandbox_runtime import SandboxUnavailableError, run_sandboxed
+
 
 SECRET_DIFF_PATTERNS = [
     re.compile(r"BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY", re.IGNORECASE),
@@ -211,6 +213,21 @@ def parse_benchmark_output(
     return payload
 
 
+def _materialize_benchmark_source(
+    root: Path, commit: str, role: str, directory: Path
+) -> Path:
+    if not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise ValueError(f"{role} commit must be a full 40-character lowercase SHA.")
+    relative = "development/nova-context-memory-optimization/context_packer.py"
+    source = git(root, "show", f"{commit}:{relative}")
+    if not source:
+        raise RuntimeError(f"Context packer source is empty at {commit}.")
+    path = directory / f"{role}-{commit}.py"
+    path.write_text(source + "\n", encoding="utf-8")
+    path.chmod(0o444)
+    return path
+
+
 def benchmark(
     root: Path,
     baseline: str,
@@ -228,24 +245,42 @@ def benchmark(
     if not command:
         return {"status": "BLOCKED", "reason": "RSI_BENCHMARK_COMMAND is empty after parsing."}
 
-    home = Path(tempfile.mkdtemp(prefix="nova-rsi-benchmark-home-"))
+    input_dir = Path(tempfile.mkdtemp(prefix="nova-rsi-benchmark-input-"))
     try:
         try:
-            code, output, duration = run(
+            baseline_file = _materialize_benchmark_source(root, baseline, "baseline", input_dir)
+            candidate_file = _materialize_benchmark_source(root, candidate, "candidate", input_dir)
+        except (subprocess.CalledProcessError, ValueError, RuntimeError) as exc:
+            return {
+                "status": "BLOCKED",
+                "reason": f"Could not materialize exact baseline/candidate benchmark sources: {exc}",
+            }
+
+        container_env = {
+            "RSI_BASELINE_COMMIT": baseline,
+            "RSI_CANDIDATE_COMMIT": candidate,
+            "RSI_BASELINE_PACKER_FILE": f"/benchmark-input/{baseline_file.name}",
+            "RSI_CANDIDATE_PACKER_FILE": f"/benchmark-input/{candidate_file.name}",
+            "RSI_BENCHMARK_COMMAND": raw,
+        }
+        try:
+            code, output, duration = run_sandboxed(
                 command,
                 root,
                 timeout,
-                extra_env={
-                    "RSI_BASELINE_COMMIT": baseline,
-                    "RSI_CANDIDATE_COMMIT": candidate,
-                },
-                home=home,
+                extra_env=container_env,
                 policy=policy,
+                readonly_mounts=[(input_dir, "/benchmark-input")],
             )
         except subprocess.TimeoutExpired:
             return {
                 "status": "FAIL",
-                "reason": f"Benchmark exceeded {timeout}s timeout.",
+                "reason": f"Benchmark exceeded {timeout}s timeout inside the Docker sandbox.",
+            }
+        except SandboxUnavailableError as exc:
+            return {
+                "status": "BLOCKED",
+                "reason": f"Sandbox unavailable; benchmark was not run on the host: {exc}",
             }
 
         try:
@@ -277,7 +312,7 @@ def benchmark(
             "evidence": evidence,
         }
     finally:
-        shutil.rmtree(home, ignore_errors=True)
+        shutil.rmtree(input_dir, ignore_errors=True)
 
 
 def implementation_ready(policy: dict[str, Any]) -> bool:
@@ -344,8 +379,8 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
     })
 
     commands = [
-        ("git-diff-check", ["git", "diff", "--check", f"{baseline}..HEAD"]),
-        ("python-compilation", ["python", "-m", "compileall", "-q", "development"]),
+        ("git-diff-check", ["git", "diff", "--check", f"{baseline}..HEAD"], False),
+        ("python-compilation", ["python", "-m", "compileall", "-q", "development"], True),
         (
             "rsi-unit-tests",
             [
@@ -359,24 +394,41 @@ def evaluate(root: Path, baseline: str, policy: dict[str, Any]) -> dict[str, Any
                 "test_*.py",
                 "-v",
             ],
+            True,
         ),
     ]
 
-    for name, command in commands:
+    for name, command, sandboxed in commands:
         try:
-            code, output, duration = run(
-                command,
-                root,
-                timeout,
-                home=root / ".rsi-control-home",
-                policy=policy,
-            )
+            if sandboxed:
+                code, output, duration = run_sandboxed(
+                    command,
+                    root,
+                    timeout,
+                    policy=policy,
+                )
+            else:
+                # Pure Git diff inspection does not execute candidate code.
+                code, output, duration = run(
+                    command,
+                    root,
+                    timeout,
+                    home=root / ".rsi-control-home",
+                    policy=policy,
+                )
             results.append({
                 "name": name,
                 "status": "PASS" if code == 0 else "FAIL",
                 "exit_code": code,
                 "duration_seconds": round(duration, 3),
                 "output": output[-16000:],
+                "execution_boundary": "docker-sandbox" if sandboxed else "trusted-host-read-only-inspection",
+            })
+        except SandboxUnavailableError as exc:
+            results.append({
+                "name": name,
+                "status": "BLOCKED",
+                "reason": f"Sandbox unavailable; candidate-controlled command was not run on the host: {exc}",
             })
         except subprocess.TimeoutExpired:
             results.append({
