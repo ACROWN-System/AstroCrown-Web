@@ -45,6 +45,10 @@ Shared homepage reference conventions remain in:
 
 Generated media should be treated as separately produced artifacts that can later be evaluated and intentionally promoted into the website.
 
+## Image and Video Component Candidate Register
+
+[Image and Video Component Candidate Register](IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md) records a source-backed first pass over Cloudflare-hosted image candidates, FLUX.1 schnell, Wan 2.2, LTX-2.5, HunyuanVideo-1.5, and ComfyUI. It separates software/model licensing, hosted API access, account eligibility, and actual compute feasibility. All complete workflows remain blocked until mandatory evidence is verified.
+
 ## Multi-Model Composition Strategy
 
 [Open-Source, Multi-Model Image and Video Generation Strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md) records the candidate direction to integrate multiple suitably licensed generators and processing components behind one replaceable AstroCrown-owned service. It distinguishes model routing and workflow composition from model-weight merging, and requires rights, account eligibility, runtime, and evidence gates for each material dependency. It does not approve a model, engine, or provider.
