@@ -83,7 +83,7 @@ The protected evaluator resolves the configured command through `benchmark_dispa
 
 ## Promotion behavior
 
-The current workflow retains a PASS candidate on an `rsi/candidate-<run-id>` branch and opens a pull request to `main`. Before the write-capable retention stage receives its GitHub token, `evidence_verifier.py` must validate the downloaded evidence package. After patch application, the verifier compares the actual changed-worktree path set against the verified patch and blocks protected paths, deletions, symlinks/non-regular files, and executable-mode changes. The retention checkout disables automatic Git credential persistence, and candidate application runs `git apply --check` plus `git diff --check`.
+The current workflow retains a PASS candidate on an `rsi/candidate-<run-id>` branch and opens a pull request to `main`. Before the write-capable retention stage receives its GitHub token, `evidence_verifier.py` must validate the downloaded evidence package and require the cycle baseline to equal the workflow's exact `GITHUB_SHA`. After patch application, the verifier compares the actual changed-worktree path set against the verified patch and blocks protected paths, deletions, symlinks/non-regular files, and executable-mode changes. Both verification calls receive the same `--expected-baseline "$GITHUB_SHA"`; a self-consistent artifact from another baseline cannot pass this check. The retention checkout disables automatic Git credential persistence, and candidate application runs `git apply --check` plus `git diff --check`.
 
 Automatic direct modification of `main` is intentionally disabled in the initial implementation.
 
