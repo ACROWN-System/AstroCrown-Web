@@ -578,6 +578,54 @@ def self_test(policy: dict[str, Any]) -> dict[str, Any]:
                 "reason": "A sandbox container remained after the timeout cleanup path.",
                 "remaining_container_ids": remaining.stdout.splitlines(),
             }
+        # Exercise the outer-supervisor cleanup path independently of the
+        # inner runner's cidfile handler: start a detached, evaluation-labelled
+        # container and require the supervisor cleanup to discover and remove it.
+        evaluation_id = uuid.uuid4().hex
+        docker = shutil.which("docker")
+        if not docker:
+            return {"status": "FAIL", "reason": "Docker CLI disappeared before supervisor-cleanup test."}
+        detached_command = build_docker_command(
+            docker,
+            policy,
+            workspace,
+            ["python", "-c", "import time; time.sleep(30)"],
+            evaluation_id=evaluation_id,
+        )
+        run_index = detached_command.index("run")
+        detached_command.insert(run_index + 1, "--detach")
+        try:
+            launched = subprocess.run(
+                detached_command,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                check=False,
+                env=_host_env(),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            cleanup_evaluation_containers(
+                evaluation_id, docker=docker, wait_for_late_containers=True
+            )
+            return {"status": "FAIL", "reason": f"Could not launch evaluation-labelled container: {exc}"}
+        if launched.returncode != 0 or not re.fullmatch(r"[0-9a-f]{12,64}", launched.stdout.strip()):
+            cleanup_confirmed = cleanup_evaluation_containers(
+                evaluation_id, docker=docker, wait_for_late_containers=True
+            )
+            return {
+                "status": "FAIL",
+                "reason": "Docker did not return a valid detached container ID.",
+                "cleanup_confirmed": cleanup_confirmed,
+                "output": launched.stdout[-2000:],
+            }
+        if not cleanup_evaluation_containers(
+            evaluation_id, docker=docker, wait_for_late_containers=True
+        ):
+            return {
+                "status": "FAIL",
+                "reason": "Supervisor-level cleanup could not confirm removal of all evaluation-labelled containers.",
+            }
         return {
             "status": "PASS",
             "checks": [
@@ -587,6 +635,7 @@ def self_test(policy: dict[str, Any]) -> dict[str, Any]:
                 "container network access denied",
                 "sandbox process ran without host credentials in its environment",
                 "timed-out container was discovered by run label and removed",
+                "supervisor removed an evaluation-labelled detached container",
             ],
             "duration_seconds": round(duration, 3),
             "output": output[-4000:],
