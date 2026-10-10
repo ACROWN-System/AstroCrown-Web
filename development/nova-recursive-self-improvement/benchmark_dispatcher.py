@@ -20,7 +20,11 @@ def resolve_profile(
     The profile registry is protected by RSI candidate-path policy. Unknown,
     mixed, malformed, disabled, or command-mismatched scopes return BLOCKED.
     """
-    if not isinstance(config, dict) or config.get("schema_version") != 1:
+    if (
+        not isinstance(config, dict)
+        or type(config.get("schema_version")) is not int
+        or config.get("schema_version") != 1
+    ):
         return {"status": "BLOCKED", "reason": "Benchmark profile registry schema is invalid."}
     if config.get("status") != "INDEPENDENT_REVIEW_APPROVED":
         return {
