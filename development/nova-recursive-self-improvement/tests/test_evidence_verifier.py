@@ -17,6 +17,7 @@ from evidence_verifier import (
 
 BASELINE = "a" * 40
 CANDIDATE = "b" * 40
+CANDIDATE_TREE = "d" * 40
 CHANGED_PATH = "development/sample.txt"
 PATCH = "\n".join(
     (
@@ -83,6 +84,7 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
         "result": {
             "decision": cycle_decision,
             "candidate_commit": CANDIDATE,
+            "candidate_tree": CANDIDATE_TREE,
         },
         "candidate": candidate,
         "proposer_usage": {
@@ -101,6 +103,7 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
         "decision": "PASS",
         "baseline_commit": evaluation_baseline,
         "candidate_commit": CANDIDATE,
+        "candidate_tree": CANDIDATE_TREE,
         "changed_files": [CHANGED_PATH],
         "results": [{"name": name, "status": "PASS"} for name in REQUIRED_RESULTS],
     }
@@ -200,6 +203,19 @@ class EvidenceVerifierTests(unittest.TestCase):
         with self.assertRaisesRegex(EvidenceVerificationError, "evaluator evidence schema version is unsupported"):
             verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
+    def test_evaluator_candidate_tree_must_match_cycle_candidate_tree(self):
+        evaluation_path = self.evidence / "evaluation.json"
+        evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+        evaluation["candidate_tree"] = "e" * 40
+        evaluation_path.write_text(
+            json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        refresh_manifest(self.evidence)
+
+        with self.assertRaisesRegex(EvidenceVerificationError, "does not match the cycle candidate tree"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
+
     def test_evaluator_candidate_commit_must_match_cycle_candidate_commit(self):
         evaluation_path = self.evidence / "evaluation.json"
         evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
@@ -217,6 +233,7 @@ class EvidenceVerifierTests(unittest.TestCase):
         result = verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["candidate_changed_paths"], [CHANGED_PATH])
+        self.assertEqual(result["candidate_tree"], CANDIDATE_TREE)
         self.assertEqual(result["verified_evidence_files"], 3)
 
     def test_modified_file_fails_manifest_hash(self):
