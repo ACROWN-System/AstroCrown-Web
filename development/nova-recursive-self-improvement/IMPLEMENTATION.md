@@ -119,7 +119,7 @@ Full autonomous operation and promotion of an intelligence improvement cannot be
 
 ## Provider adapter and preflight
 
-The provider access layer is implemented in `provider_client.py` and is intentionally dependency-free. It supports the OpenAI-compatible model-list and chat-completions endpoints, enforces HTTPS except for localhost tests, caps response size, and never exposes the credential through normal object representation or provider error text.
+The provider access layer is implemented in `provider_client.py` and is intentionally dependency-free. The current policy allowlists exactly `inference.nosana.com` for the `NOSANA_LLM_API_KEY_01` credential; new provider hosts require an explicit protected-policy change. Remote traffic must use HTTPS on port 443, URLs containing embedded credentials, query strings or fragments are rejected, and redirects are not followed. Local HTTP is an explicit test-only opt-in, not a runtime default. The client caps response size and never exposes the credential through normal object representation or provider error text.
 
 `preflight.py` is non-mutating. It checks implementation readiness first, then validates the base URL, model configuration, explicit commercial-eligibility state, and required benchmark command. Only after those checks does it inspect whether `NOSANA_LLM_API_KEY_01` exists; it does not print or transmit the secret.
 
