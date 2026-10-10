@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import tempfile
@@ -101,6 +102,28 @@ class SandboxRuntimeTests(unittest.TestCase):
         awkward.mkdir()
         with self.assertRaisesRegex(SandboxUnavailableError, "mount delimiter"):
             build_docker_command("docker", POLICY, awkward, ["python", "-V"])
+
+    def test_run_sandboxed_uses_outer_evaluation_id_environment_label(self):
+        captured = {}
+
+        def fake_bounded(command, timeout, max_output_bytes):
+            captured["command"] = list(command)
+            return 0, "ok", 0.01
+
+        with patch.dict(os.environ, {"RSI_SANDBOX_EVALUATION_ID": "d" * 32}), patch(
+            "sandbox_runtime.shutil.which", return_value="/usr/bin/docker"
+        ), patch("sandbox_runtime.verify_image"), patch(
+            "sandbox_runtime._run_bounded", side_effect=fake_bounded
+        ):
+            result = run_sandboxed(
+                ["python", "-c", "pass"],
+                self.workspace,
+                5,
+                policy=POLICY,
+            )
+
+        self.assertEqual(result[0], 0)
+        self.assertIn("nova.rsi.evaluation_id=" + "d" * 32, captured["command"])
 
     def test_missing_docker_fails_closed_without_host_fallback(self):
         with patch("sandbox_runtime.shutil.which", return_value=None):
