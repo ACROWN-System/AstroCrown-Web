@@ -185,6 +185,11 @@ def unsafe_file_types(root: Path, paths: list[str], baseline: str) -> list[str]:
             findings.append(f"symlink:{relative}")
         elif not stat.S_ISREG(mode):
             findings.append(f"non-regular:{relative}")
+        elif mode & (stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH):
+            # Candidate retention independently rejects executable modes. Keep
+            # the evaluator's filesystem-integrity result consistent so a
+            # candidate cannot receive PASS and only fail at the write boundary.
+            findings.append(f"executable-mode:{relative}")
     return sorted(set(findings))
 
 
