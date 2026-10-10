@@ -58,6 +58,8 @@
 - Benchmark artifacts, corpus, protocol, and RSI tests are protected against automatic candidate modifications.
 - `implementation_readiness.status` remains `INCOMPLETE` and `promotion.allow_main` remains `false`.
 
+- Do not set this workload as the global RSI benchmark while candidate proposals can target multiple subsystems; require a validated context-packing scope or an independently reviewed task-specific benchmark dispatcher.
+
 ## Impact Analysis
 
 **IF modified:** the project gains a narrow executable workload for a real capability-producing mechanism, a reproducible baseline comparison, and guardrails against context compression that drops required evidence. This makes one part of the benchmark gap actionable without external cost or provider access.
