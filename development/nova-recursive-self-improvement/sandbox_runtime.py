@@ -245,8 +245,33 @@ def _run_bounded(
         process.stdout.close()
 
 
-def _stop_container(docker: str, cidfile: Path, run_id: str) -> None:
-    """Stop every container for a run, even when Docker never finished its cidfile."""
+def _list_run_containers(docker: str, run_id: str) -> set[str] | None:
+    """Return all container IDs for a run label, or None when inspection failed."""
+    try:
+        listed = subprocess.run(
+            [docker, "ps", "-aq", "--filter", f"label=nova.rsi.run_id={run_id}"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            timeout=5,
+            check=False,
+            env=_host_env(),
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if listed.returncode != 0:
+        return None
+    values = {value.strip() for value in listed.stdout.splitlines() if value.strip()}
+    if any(not re.fullmatch(r"[0-9a-f]{12,64}", value) for value in values):
+        return None
+    return values
+
+
+def _stop_container(docker: str, cidfile: Path, run_id: str) -> bool:
+    """Stop/remove a run's containers and confirm none remain with its label."""
+    if not re.fullmatch(r"[0-9a-f]{32}", run_id):
+        return False
+
     container_ids: set[str] = set()
     try:
         container_id = cidfile.read_text(encoding="utf-8").strip()
@@ -255,35 +280,19 @@ def _stop_container(docker: str, cidfile: Path, run_id: str) -> None:
     if re.fullmatch(r"[0-9a-f]{12,64}", container_id):
         container_ids.add(container_id)
 
-    # The Docker client can be killed after the daemon creates a container but
-    # before the client writes --cidfile. The run label is an independent
-    # cleanup path and also catches any duplicate container created on retry.
-    label = f"nova.rsi.run_id={run_id}"
+    # Always query the run label, even when cidfile is present. This catches
+    # containers the Docker client created before writing cidfile and detects
+    # unexpected duplicates associated with the same invocation.
     for attempt in range(3):
-        try:
-            listed = subprocess.run(
-                [docker, "ps", "-aq", "--filter", f"label={label}"],
-                text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                timeout=5,
-                check=False,
-                env=_host_env(),
-            )
-            if listed.returncode == 0:
-                container_ids.update(
-                    value.strip()
-                    for value in listed.stdout.splitlines()
-                    if re.fullmatch(r"[0-9a-f]{12,64}", value.strip())
-                )
-        except (OSError, subprocess.TimeoutExpired):
-            pass
-        if container_ids or attempt == 2:
+        discovered = _list_run_containers(docker, run_id)
+        if discovered is not None:
+            container_ids.update(discovered)
+        if discovered or attempt == 2:
             break
         time.sleep(0.1)
 
     # A timed-out Docker client does not prove its container has stopped.
-    # Kill and remove all IDs found through either discovery mechanism.
+    # Kill/remove every ID found through either the cidfile or run label.
     for container_id in sorted(container_ids):
         for operation in ("kill", "rm"):
             try:
@@ -297,7 +306,32 @@ def _stop_container(docker: str, cidfile: Path, run_id: str) -> None:
                     env=_host_env(),
                 )
             except (OSError, subprocess.TimeoutExpired):
-                continue
+                pass
+
+    # Do not silently report successful cleanup if the Docker daemon cannot
+    # confirm that no containers remain. Retry to tolerate asynchronous rm.
+    for attempt in range(3):
+        remaining = _list_run_containers(docker, run_id)
+        if remaining == set():
+            return True
+        if remaining:
+            for container_id in sorted(remaining):
+                for operation in ("kill", "rm"):
+                    try:
+                        subprocess.run(
+                            [docker, operation, "-f", container_id] if operation == "rm"
+                            else [docker, operation, container_id],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            timeout=10,
+                            check=False,
+                            env=_host_env(),
+                        )
+                    except (OSError, subprocess.TimeoutExpired):
+                        pass
+        if attempt < 2:
+            time.sleep(0.1)
+    return False
 
 
 def run_sandboxed(
@@ -336,11 +370,16 @@ def run_sandboxed(
         docker_command[image_index:image_index] = ["--cidfile", str(cidfile)]
         try:
             result = _run_bounded(docker_command, timeout, max_output)
-        except subprocess.TimeoutExpired:
-            _stop_container(docker, cidfile, run_id)
+        except subprocess.TimeoutExpired as exc:
+            if not _stop_container(docker, cidfile, run_id):
+                raise SandboxUnavailableError(
+                    "Sandbox timed out, but Docker could not confirm that all run-labelled containers were removed."
+                ) from exc
             raise
-        if result[0] == 125:
-            _stop_container(docker, cidfile, run_id)
+        if result[0] == 125 and not _stop_container(docker, cidfile, run_id):
+            raise SandboxUnavailableError(
+                "Sandbox output limit was exceeded, but Docker could not confirm that all run-labelled containers were removed."
+            )
         return result
 
 
