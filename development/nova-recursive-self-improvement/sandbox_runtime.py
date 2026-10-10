@@ -18,6 +18,7 @@ import socket
 import subprocess
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -101,8 +102,12 @@ def build_docker_command(
     command: Sequence[str],
     extra_env: dict[str, str] | None = None,
     readonly_mounts: Sequence[tuple[Path, str]] = (),
+    run_id: str | None = None,
 ) -> list[str]:
     image, _expected_id, sandbox = _validated_image(policy)
+    run_id = run_id or uuid.uuid4().hex
+    if not re.fullmatch(r"[0-9a-f]{32}", run_id):
+        raise SandboxUnavailableError("Sandbox run identifier must be a 32-character lowercase hex token.")
     if not command or any(not isinstance(arg, str) or "\x00" in arg for arg in command):
         raise SandboxUnavailableError("Sandbox command must be a non-empty argument list.")
 
@@ -158,6 +163,7 @@ def build_docker_command(
         "--ulimit", f"nofile={max_open_files}:{max_open_files}",
         "--tmpfs", f"/tmp:rw,noexec,nosuid,nodev,size={tmpfs_size},mode=1777",
         "--workdir", "/workspace",
+        "--label", f"nova.rsi.run_id={run_id}",
     ]
     for source, target in sources:
         args.extend(["--mount", f"type=bind,source={source},target={target},readonly"])
@@ -239,28 +245,59 @@ def _run_bounded(
         process.stdout.close()
 
 
-def _stop_container(docker: str, cidfile: Path) -> None:
+def _stop_container(docker: str, cidfile: Path, run_id: str) -> None:
+    """Stop every container for a run, even when Docker never finished its cidfile."""
+    container_ids: set[str] = set()
     try:
         container_id = cidfile.read_text(encoding="utf-8").strip()
     except OSError:
-        return
-    if not re.fullmatch(r"[0-9a-f]{12,64}", container_id):
-        return
-    # A timed-out Docker client does not prove its container has stopped.
-    # Kill the daemon-managed container explicitly before removing the cid file.
-    for operation in ("kill", "rm",):
+        container_id = ""
+    if re.fullmatch(r"[0-9a-f]{12,64}", container_id):
+        container_ids.add(container_id)
+
+    # The Docker client can be killed after the daemon creates a container but
+    # before the client writes --cidfile. The run label is an independent
+    # cleanup path and also catches any duplicate container created on retry.
+    label = f"nova.rsi.run_id={run_id}"
+    for attempt in range(3):
         try:
-            subprocess.run(
-                [docker, operation, "-f", container_id] if operation == "rm"
-                else [docker, operation, container_id],
+            listed = subprocess.run(
+                [docker, "ps", "-aq", "--filter", f"label={label}"],
+                text=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                timeout=10,
+                timeout=5,
                 check=False,
                 env=_host_env(),
             )
+            if listed.returncode == 0:
+                container_ids.update(
+                    value.strip()
+                    for value in listed.stdout.splitlines()
+                    if re.fullmatch(r"[0-9a-f]{12,64}", value.strip())
+                )
         except (OSError, subprocess.TimeoutExpired):
-            continue
+            pass
+        if container_ids or attempt == 2:
+            break
+        time.sleep(0.1)
+
+    # A timed-out Docker client does not prove its container has stopped.
+    # Kill and remove all IDs found through either discovery mechanism.
+    for container_id in sorted(container_ids):
+        for operation in ("kill", "rm"):
+            try:
+                subprocess.run(
+                    [docker, operation, "-f", container_id] if operation == "rm"
+                    else [docker, operation, container_id],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    timeout=10,
+                    check=False,
+                    env=_host_env(),
+                )
+            except (OSError, subprocess.TimeoutExpired):
+                continue
 
 
 def run_sandboxed(
@@ -271,6 +308,7 @@ def run_sandboxed(
     *,
     policy: dict[str, Any],
     readonly_mounts: Sequence[tuple[Path, str]] = (),
+    run_id: str | None = None,
 ) -> tuple[int, str, float]:
     if timeout <= 0:
         raise SandboxUnavailableError("Sandbox timeout must be positive.")
@@ -279,6 +317,9 @@ def run_sandboxed(
     if not docker:
         raise SandboxUnavailableError("Docker is unavailable; candidate execution is blocked.")
     verify_image(policy, docker=docker)
+    run_id = run_id or uuid.uuid4().hex
+    if not re.fullmatch(r"[0-9a-f]{32}", run_id):
+        raise SandboxUnavailableError("Sandbox run identifier must be a 32-character lowercase hex token.")
     docker_command = build_docker_command(
         docker,
         policy,
@@ -286,6 +327,7 @@ def run_sandboxed(
         command,
         extra_env,
         readonly_mounts,
+        run_id=run_id,
     )
     max_output = _positive_int(sandbox, "max_output_bytes")
     with tempfile.TemporaryDirectory(prefix="nova-rsi-docker-control-") as control_dir:
@@ -295,10 +337,10 @@ def run_sandboxed(
         try:
             result = _run_bounded(docker_command, timeout, max_output)
         except subprocess.TimeoutExpired:
-            _stop_container(docker, cidfile)
+            _stop_container(docker, cidfile, run_id)
             raise
         if result[0] == 125:
-            _stop_container(docker, cidfile)
+            _stop_container(docker, cidfile, run_id)
         return result
 
 
@@ -344,6 +386,45 @@ def self_test(policy: dict[str, Any]) -> dict[str, Any]:
             return {"status": "FAIL", "reason": "Container wrote into read-only host workspace."}
         if not host_sentinel.exists():
             return {"status": "FAIL", "reason": "Host sentinel was unexpectedly changed or removed."}
+
+        # Exercise the real timeout path after the container has started, then
+        # verify no daemon-managed container remains for its unique run label.
+        timeout_run_id = uuid.uuid4().hex
+        try:
+            run_sandboxed(
+                ["python", "-c", "import time; print('timeout-cleanup-ready', flush=True); time.sleep(30)"],
+                workspace,
+                timeout=5,
+                policy=policy,
+                run_id=timeout_run_id,
+            )
+            return {"status": "FAIL", "reason": "A sleeping sandbox command unexpectedly completed."}
+        except subprocess.TimeoutExpired as exc:
+            timeout_output = exc.output or b""
+            if isinstance(timeout_output, bytes):
+                timeout_output = timeout_output.decode("utf-8", errors="replace")
+            if "timeout-cleanup-ready" not in timeout_output:
+                return {"status": "FAIL", "reason": "Timeout test did not confirm the container command had started."}
+        try:
+            remaining = subprocess.run(
+                ["docker", "ps", "-aq", "--filter", f"label=nova.rsi.run_id={timeout_run_id}"],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                timeout=10,
+                check=False,
+                env=_host_env(),
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {"status": "FAIL", "reason": f"Could not verify timeout cleanup: {exc}"}
+        if remaining.returncode != 0:
+            return {"status": "FAIL", "reason": "Docker could not verify timeout cleanup."}
+        if remaining.stdout.strip():
+            return {
+                "status": "FAIL",
+                "reason": "A sandbox container remained after the timeout cleanup path.",
+                "remaining_container_ids": remaining.stdout.splitlines(),
+            }
         return {
             "status": "PASS",
             "checks": [
@@ -352,6 +433,7 @@ def self_test(policy: dict[str, Any]) -> dict[str, Any]:
                 "host sentinel path not visible inside container",
                 "container network access denied",
                 "sandbox process ran without host credentials in its environment",
+                "timed-out container was discovered by run label and removed",
             ],
             "duration_seconds": round(duration, 3),
             "output": output[-4000:],

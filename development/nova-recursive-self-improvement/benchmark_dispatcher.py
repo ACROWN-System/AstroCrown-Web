@@ -22,6 +22,12 @@ def resolve_profile(
     """
     if not isinstance(config, dict) or config.get("schema_version") != 1:
         return {"status": "BLOCKED", "reason": "Benchmark profile registry schema is invalid."}
+    if config.get("status") != "INDEPENDENT_REVIEW_APPROVED":
+        return {
+            "status": "BLOCKED",
+            "reason": "Benchmark registry is not explicitly approved by independent review.",
+        }
+
     profiles = config.get("profiles")
     if not isinstance(profiles, list):
         return {"status": "BLOCKED", "reason": "Benchmark profile registry has no profile list."}
@@ -69,6 +75,12 @@ def resolve_profile(
         }
 
     profile = matches[0]
+    if profile.get("review_status") != "INDEPENDENT_REVIEW_APPROVED":
+        return {
+            "status": "BLOCKED",
+            "reason": f"Benchmark profile {profile['profile_id']} lacks explicit independent-review approval.",
+            "profile_id": profile["profile_id"],
+        }
     if profile.get("enabled") is not True:
         return {
             "status": "BLOCKED",

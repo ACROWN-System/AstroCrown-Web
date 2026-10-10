@@ -14,18 +14,18 @@ COMMAND = [
 ]
 
 
-def profile(enabled=True, command=None):
+def profile(enabled=True, command=None, review_status="INDEPENDENT_REVIEW_APPROVED"):
     return {
         "profile_id": "context-packing-test",
         "exact_changed_paths": [PACKER_PATH],
         "command": list(command if command is not None else COMMAND),
         "enabled": enabled,
-        "review_status": "test-only",
+        "review_status": review_status,
     }
 
 
-def config(*profiles):
-    return {"schema_version": 1, "profiles": list(profiles)}
+def config(*profiles, status="INDEPENDENT_REVIEW_APPROVED"):
+    return {"schema_version": 1, "status": status, "profiles": list(profiles)}
 
 
 class BenchmarkDispatcherTests(unittest.TestCase):
@@ -35,6 +35,24 @@ class BenchmarkDispatcherTests(unittest.TestCase):
         self.assertEqual(result["profile_id"], "context-packing-test")
         self.assertEqual(result["command"], COMMAND)
         self.assertEqual(result["scope"], [PACKER_PATH])
+
+    def test_enabled_profile_is_blocked_when_registry_is_not_approved(self):
+        result = resolve_profile(
+            config(profile(), status="CANDIDATE_REGISTRY_NOT_INDEPENDENTLY_APPROVED"),
+            [PACKER_PATH],
+            " ".join(COMMAND),
+        )
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertIn("registry is not explicitly approved", result["reason"])
+
+    def test_enabled_profile_is_blocked_when_profile_review_is_not_approved(self):
+        result = resolve_profile(
+            config(profile(review_status="BLOCKED_PENDING_INDEPENDENT_REVIEW")),
+            [PACKER_PATH],
+            " ".join(COMMAND),
+        )
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertIn("lacks explicit independent-review approval", result["reason"])
 
     def test_disabled_production_profile_remains_blocked(self):
         result = resolve_profile(config(profile(enabled=False)), [PACKER_PATH], " ".join(COMMAND))
@@ -73,7 +91,7 @@ class BenchmarkDispatcherTests(unittest.TestCase):
         self.assertIn("not configured", result["reason"])
 
     def test_malformed_registry_is_blocked(self):
-        for value in (None, [], {"schema_version": 2, "profiles": []}, {"schema_version": 1, "profiles": "bad"}):
+        for value in (None, [], {"schema_version": 2, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": []}, {"schema_version": 1, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": "bad"}, {"schema_version": 1, "profiles": []}):
             with self.subTest(value=value):
                 result = resolve_profile(value, [PACKER_PATH], " ".join(COMMAND))
                 self.assertEqual(result["status"], "BLOCKED")

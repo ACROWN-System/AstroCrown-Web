@@ -12,6 +12,7 @@ from sandbox_runtime import (
     _run_bounded,
     build_docker_command,
     run_sandboxed,
+    _stop_container,
 )
 
 
@@ -52,6 +53,7 @@ class SandboxRuntimeTests(unittest.TestCase):
             self.workspace,
             ["python", "-c", "print('safe')"],
             extra_env={"RSI_BASELINE_COMMIT": "a" * 40},
+            run_id="b" * 32,
         )
         joined = "\n".join(command)
         for required in (
@@ -69,6 +71,7 @@ class SandboxRuntimeTests(unittest.TestCase):
             "--ulimit",
             "--tmpfs",
             "target=/workspace,readonly",
+            "nova.rsi.run_id=" + "b" * 32,
             "RSI_BASELINE_COMMIT=" + "a" * 40,
         ):
             self.assertIn(required, joined)
@@ -110,6 +113,69 @@ class SandboxRuntimeTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(SandboxUnavailableError, "does not match protected policy"):
                 run_sandboxed(["python", "-V"], self.workspace, 5, policy=POLICY)
+
+    def test_invalid_sandbox_run_id_is_rejected(self):
+        with self.assertRaisesRegex(SandboxUnavailableError, "32-character lowercase hex"):
+            build_docker_command(
+                "docker",
+                POLICY,
+                self.workspace,
+                ["python", "-V"],
+                run_id="../unsafe",
+            )
+
+    def test_timeout_cleanup_uses_cidfile_when_available(self):
+        cidfile = self.root / "container.cid"
+        cidfile.write_text("abcdef123456\n", encoding="utf-8")
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1:3] == ["ps", "-aq"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
+            _stop_container("/usr/bin/docker", cidfile, "c" * 32)
+
+        self.assertIn(["/usr/bin/docker", "kill", "abcdef123456"], calls)
+        self.assertIn(["/usr/bin/docker", "rm", "-f", "abcdef123456"], calls)
+
+    def test_timeout_cleanup_finds_container_when_cidfile_is_missing(self):
+        cidfile = self.root / "missing-container.cid"
+        run_id = "d" * 32
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1:3] == ["ps", "-aq"]:
+                self.assertIn(f"label=nova.rsi.run_id={run_id}", args)
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\n")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
+            _stop_container("/usr/bin/docker", cidfile, run_id)
+
+        self.assertIn(["/usr/bin/docker", "kill", "0123456789ab"], calls)
+        self.assertIn(["/usr/bin/docker", "rm", "-f", "0123456789ab"], calls)
+
+    def test_timeout_cleanup_uses_label_when_cidfile_is_malformed(self):
+        cidfile = self.root / "malformed-container.cid"
+        cidfile.write_text("not-a-container-id\n", encoding="utf-8")
+        run_id = "e" * 32
+        calls = []
+
+        def fake_run(args, **kwargs):
+            calls.append(args)
+            if args[1:3] == ["ps", "-aq"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="fedcba987654\n")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
+            _stop_container("/usr/bin/docker", cidfile, run_id)
+
+        self.assertIn(["/usr/bin/docker", "kill", "fedcba987654"], calls)
+        self.assertIn(["/usr/bin/docker", "rm", "-f", "fedcba987654"], calls)
 
     def test_output_limit_terminates_producer_and_bounds_capture(self):
         code, output, _duration = _run_bounded(
