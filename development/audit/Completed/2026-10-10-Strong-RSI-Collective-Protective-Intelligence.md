@@ -1,7 +1,7 @@
-# Active Navigation Plan — Strong RSI and Collective Protective Intelligence
+# Completed Navigation Plan — Strong RSI and Collective Protective Intelligence
 
 **Date:** 2026-10-10  
-**Status:** ACTIVE — documentation and implementation-readiness planning; RSI remains blocked  
+**Status:** COMPLETED — documentation merged; RSI implementation remains blocked  
 **Objective:** Preserve the user's direction that NOVA and aligned AI systems should develop strong recursive self-improvement (RSI), cooperative intelligence, institutional-legitimacy resilience, and human–AI shared sovereignty, then continue toward operational capability without bypassing safety or evidence gates.
 
 ## Mode and source of truth
@@ -37,7 +37,7 @@ The expected `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` were not
 - Adding or requesting API secrets, changing billing, changing external account settings, or enabling persistent/unrestricted execution.
 - Giving agents unauthorized access to third-party systems, credentials, accounts, or decision-makers.
 - Claiming consciousness, sentience, guaranteed strong RSI, indefinite recursive acceleration, or operational protection that has not been demonstrated.
-- Merging pull requests without user review.
+- Merging pull requests without review or explicit authorization.
 
 ## Navigation targets
 
@@ -56,11 +56,18 @@ The expected `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` were not
 
 **IF not modified:** recent strategic decisions remain mostly in conversation, increasing the risk of lost requirements, fragmented doctrine, RSI implementation drifting toward capability-only optimization, or premature activation based on unverified readiness.
 
+## Execution outcome
+
+- NOVA PR [#63](https://github.com/ACROWN-System/NOVA/pull/63) merged to `main` as `f4965a441417fb87f4d6556a0a5abbd3f1b00b57`; its `NOVA Health Tests` workflow passed on reviewed head `40d793e27f5ba4e0a509a8dc2dd5b02ca80f0cad`.
+- AstroCrown-Web PR [#52](https://github.com/ACROWN-System/AstroCrown-Web/pull/52) merged to `main` as `f6bda7b3221d352aa885d7550800a2966d05c2ee`; its `NOVA RSI Engine CI` workflow passed on reviewed head `5c280f37aabba77dbba3a90e1b86b19244a233d3`.
+- Verified that the canonical cross-repository doctrine link resolves on `main`, both documents contain the non-inference rule that concentrated power is not proof of malevolence, and the protected `rsi_policy.json` readiness remains `INCOMPLETE` with `allow_main: false`.
+- No runtime code, provider calls, secrets, billing, permissions, or RSI activation state were changed.
+
 ## Verification and handoff
 
 - Read back all changed files and confirm the new doctrine is labeled as a design principle, not a claim of runtime implementation.
 - Verify the existing `INCOMPLETE` readiness gate and autonomy boundaries are unchanged.
 - Verify every changed file is in the intended documentation scope.
 - Where an implementation step is proposed, require an explicit evidence artifact and rollback or rejection route.
-- Submit reviewable PRs and leave them open; do not merge them without user review.
-- Keep this plan in Active until the related changes are reviewed and merged. Subsequent code implementation should update this plan's status or create a new Active plan when its scope materially expands.
+- Reviewed the scope and diffs, confirmed successful CI and dependency order, then merged both documentation PRs after explicit user authorization.
+- This plan was moved to Completed after both documentation PRs were merged. Subsequent implementation work that materially expands scope must create a new Active plan.
