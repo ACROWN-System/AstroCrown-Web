@@ -97,7 +97,7 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertIn("if: github.ref == 'refs/heads/main'", readiness_job)
 
     def test_changed_paths_from_patch_strips_diff_prefixes_and_ignores_dev_null(self):
-        patch = "\\n".join(
+        patch = "\n".join(
             (
                 "diff --git a/development/sample.txt b/development/sample.txt",
                 "--- a/development/sample.txt",
@@ -118,7 +118,7 @@ diff --git a/development/x.txt b/development/x.txt
         )
 
     def test_changed_paths_preserve_unsafe_traversal_as_unsafe(self):
-        patch = "\\n".join(
+        patch = "\n".join(
             (
                 "diff --git a/development/../.github/workflows/x.yml b/development/../.github/workflows/x.yml",
                 "--- a/development/../.github/workflows/x.yml",
