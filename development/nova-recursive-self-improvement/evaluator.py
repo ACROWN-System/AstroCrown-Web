@@ -362,8 +362,10 @@ def evaluate(
 
     if not implementation_ready(policy):
         return {
+            "schema_version": 1,
             "decision": "BLOCKED",
             "baseline_commit": baseline,
+            "candidate_commit": candidate_commit,
             "changed_files": changed_files(root, baseline),
             "results": [
                 {
@@ -489,8 +491,10 @@ def evaluate(
         else ("BLOCKED" if "BLOCKED" in statuses_only else "PASS")
     )
     return {
+        "schema_version": 1,
         "decision": decision,
         "baseline_commit": baseline,
+        "candidate_commit": candidate_commit,
         "changed_files": paths,
         "results": results,
     }
