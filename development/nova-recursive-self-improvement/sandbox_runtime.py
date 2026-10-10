@@ -190,6 +190,7 @@ def _run_bounded(
     try:
         process = subprocess.Popen(
             list(command),
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             env=_host_env(),
