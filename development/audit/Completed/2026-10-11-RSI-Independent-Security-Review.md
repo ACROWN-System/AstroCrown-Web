@@ -1,9 +1,7 @@
 # Completed Security Review — RSI Approval Gates and Sandbox Timeout Cleanup
 
-**Canonical completed record:** [Completed RSI security review](../Completed/2026-10-11-RSI-Independent-Security-Review.md)
-
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; independent sandbox/security approval remains BLOCKED  
+**Status:** TARGETED REVIEW AND REMEDIATION COMPLETED; independent sandbox/security approval remains BLOCKED  
 **Objective:** Close two fail-open/resource-cleanup weaknesses in the RSI benchmark dispatcher and candidate Docker execution boundary without activating RSI.
 
 ## Mission and method
