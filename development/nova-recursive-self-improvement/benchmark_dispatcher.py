@@ -43,7 +43,7 @@ def resolve_profile(
         or not path
         or path.startswith("/")
         or "\\" in path
-        or """ in path
+        or '"' in path
         or ".." in path.split("/")
         for path in changed_paths
     ):
