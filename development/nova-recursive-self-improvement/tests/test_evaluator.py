@@ -1,4 +1,5 @@
 import os
+import shlex
 import sys
 import unittest
 from unittest.mock import patch
@@ -36,10 +37,32 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         def fake_sandbox(command, cwd, timeout, extra_env=None, *, policy=None, readonly_mounts=()):
             return host_run(command, cwd, timeout, extra_env=extra_env, policy=policy)
 
-        with patch(
-            "evaluator.git",
-            return_value="def pack_context(items, query, max_chars):\n    return {}\n",
-        ), patch("evaluator.run_sandboxed", side_effect=fake_sandbox):
+        def fake_git(root, *git_args):
+            if git_args and git_args[0] == "show":
+                return "def pack_context(items, query, max_chars):\n    return {}\n"
+            if len(git_args) >= 2 and git_args[0] == "diff" and git_args[1] == "--name-only":
+                return "development/nova-context-memory-optimization/context_packer.py"
+            return ""
+
+        command = shlex.split(os.environ["RSI_BENCHMARK_COMMAND"])
+        profile_registry = {
+            "schema_version": 1,
+            "profiles": [
+                {
+                    "profile_id": "context-packing-test",
+                    "exact_changed_paths": [
+                        "development/nova-context-memory-optimization/context_packer.py"
+                    ],
+                    "command": command,
+                    "enabled": True,
+                    "review_status": "test-only",
+                }
+            ],
+        }
+        kwargs["profile_registry"] = profile_registry
+        with patch("evaluator.git", side_effect=fake_git), patch(
+            "evaluator.run_sandboxed", side_effect=fake_sandbox
+        ):
             return benchmark(*args, **kwargs)
 
     def test_incomplete_policy_blocks_operational_readiness(self):
