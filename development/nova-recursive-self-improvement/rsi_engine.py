@@ -304,6 +304,41 @@ def call_proposer(prompt: str, max_output_tokens: int, policy: dict[str, Any]) -
         raise ProviderError("RSI provider returned no textual proposer content.")
     return extract_candidate_payload(content), normalize_usage(result.get("usage")), model
 
+TRUSTED_CONTROL_FILENAMES = (
+    "evaluator.py",
+    "benchmark_dispatcher.py",
+    "sandbox_runtime.py",
+    "rsi_policy.json",
+    "benchmark_profiles.json",
+)
+
+
+def materialize_trusted_control_plane(
+    trusted_root: Path, control_dir: Path
+) -> dict[str, Path]:
+    """Copy protected evaluation controls outside the candidate worktree."""
+    source_dir = (
+        trusted_root / "development/nova-recursive-self-improvement"
+    ).resolve()
+    root = trusted_root.resolve()
+    if source_dir != root and root not in source_dir.parents:
+        raise RuntimeError("Trusted RSI control source escaped the repository root.")
+
+    control_dir.mkdir(parents=True, exist_ok=False)
+    copied: dict[str, Path] = {}
+    for filename in TRUSTED_CONTROL_FILENAMES:
+        source = source_dir / filename
+        target = control_dir / filename
+        if not source.is_file():
+            raise FileNotFoundError(
+                f"Trusted RSI control file is missing: {filename}"
+            )
+        shutil.copyfile(source, target)
+        target.chmod(0o444)
+        copied[filename] = target
+    return copied
+
+
 def apply_and_evaluate(
     root: Path,
     baseline: str,
@@ -352,8 +387,13 @@ def apply_and_evaluate(
         )
         candidate_commit = git(worktree_root, 'rev-parse', 'HEAD')
 
-        evaluator_path = worktree_root / 'development/nova-recursive-self-improvement/evaluator.py'
-        policy_path = worktree_root / 'development/nova-recursive-self-improvement/rsi_policy.json'
+        control_files = materialize_trusted_control_plane(
+            root,
+            worktree / 'trusted-control',
+        )
+        evaluator_path = control_files['evaluator.py']
+        policy_path = control_files['rsi_policy.json']
+        profile_registry_path = control_files['benchmark_profiles.json']
         candidate_evidence = evidence_dir / 'evaluation.json'
         control_home = worktree / 'home'
         control_home.mkdir()
@@ -378,6 +418,8 @@ def apply_and_evaluate(
                 baseline,
                 '--policy',
                 str(policy_path),
+                '--profile-registry',
+                str(profile_registry_path),
                 '--output',
                 str(candidate_evidence),
             ],
