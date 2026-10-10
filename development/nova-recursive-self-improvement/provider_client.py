@@ -22,6 +22,37 @@ class ProviderError(RuntimeError):
     """A provider connection or protocol failure that is safe to log."""
 
 
+DEFAULT_ALLOWED_HOSTS = ("inference.nosana.com",)
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Fail closed on redirects before the default redirect handler can run."""
+
+    handler_order = 100
+
+    @staticmethod
+    def _reject(req, fp, code, msg, headers):
+        raise urllib.error.HTTPError(req.full_url, code, msg, headers, fp)
+
+    def http_error_301(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_302(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_303(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_307(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def http_error_308(self, req, fp, code, msg, headers):
+        self._reject(req, fp, code, msg, headers)
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 @dataclass(frozen=True)
 class ProviderConfig:
     base_url: str
@@ -29,6 +60,19 @@ class ProviderConfig:
     api_key: str = field(repr=False)
     timeout_seconds: int = 120
     max_response_bytes: int = 262_144
+    allowed_hosts: tuple[str, ...] = DEFAULT_ALLOWED_HOSTS
+    allow_local_http: bool = False
+
+    def __post_init__(self) -> None:
+        validate_base_url(
+            self.base_url,
+            allowed_hosts=self.allowed_hosts,
+            allow_local_http=self.allow_local_http,
+        )
+        if self.timeout_seconds <= 0:
+            raise ProviderError("RSI provider timeout must be positive.")
+        if self.max_response_bytes <= 0:
+            raise ProviderError("RSI provider response-size limit must be positive.")
 
     @classmethod
     def from_environment(
@@ -40,6 +84,8 @@ class ProviderConfig:
         default_base_url: str | None = None,
         timeout_seconds: int = 120,
         max_response_bytes: int = 262_144,
+        allowed_hosts: tuple[str, ...] | list[str] | None = None,
+        allow_local_http: bool = False,
     ) -> "ProviderConfig":
         base_url = os.environ.get(base_url_env, "").strip() or (default_base_url or "").strip()
         if not base_url:
@@ -50,23 +96,68 @@ class ProviderConfig:
         api_key = os.environ.get(api_key_env, "").strip()
         if not api_key:
             raise ProviderError(f"{api_key_env} must be configured before provider access.")
-        validate_base_url(base_url)
+        configured_hosts = (
+            tuple(allowed_hosts)
+            if allowed_hosts is not None
+            else DEFAULT_ALLOWED_HOSTS
+        )
+        validate_base_url(
+            base_url,
+            allowed_hosts=configured_hosts,
+            allow_local_http=allow_local_http,
+        )
         return cls(
             base_url=base_url.rstrip("/"),
             model=model,
             api_key=api_key,
             timeout_seconds=timeout_seconds,
             max_response_bytes=max_response_bytes,
+            allowed_hosts=configured_hosts,
+            allow_local_http=allow_local_http,
         )
 
 
-def validate_base_url(base_url: str) -> None:
+def validate_base_url(
+    base_url: str,
+    *,
+    allowed_hosts: tuple[str, ...] | list[str] | None = None,
+    allow_local_http: bool = False,
+) -> None:
     parsed = urllib.parse.urlparse(base_url)
     if parsed.scheme not in {"https", "http"} or not parsed.netloc:
         raise ProviderError("RSI provider base URL must be an absolute HTTP(S) URL.")
-    host = (parsed.hostname or "").lower()
-    if parsed.scheme != "https" and host not in {"127.0.0.1", "localhost", "::1"}:
-        raise ProviderError("RSI provider traffic must use HTTPS except for local test endpoints.")
+    if parsed.username is not None or parsed.password is not None:
+        raise ProviderError("RSI provider base URL must not contain embedded credentials.")
+    if parsed.query or parsed.fragment:
+        raise ProviderError("RSI provider base URL must not contain a query or fragment.")
+    try:
+        port = parsed.port
+    except ValueError as exc:
+        raise ProviderError("RSI provider base URL contains an invalid port.") from exc
+
+    host = (parsed.hostname or "").lower().rstrip(".")
+    if not host:
+        raise ProviderError("RSI provider base URL has no valid hostname.")
+    local_hosts = {"127.0.0.1", "localhost", "::1"}
+    if parsed.scheme == "http":
+        if allow_local_http and host in local_hosts:
+            return
+        raise ProviderError(
+            "RSI provider traffic must use HTTPS; local HTTP requires an explicit test-only opt-in."
+        )
+
+    raw_hosts = DEFAULT_ALLOWED_HOSTS if allowed_hosts is None else allowed_hosts
+    if not isinstance(raw_hosts, (tuple, list)) or not raw_hosts:
+        raise ProviderError("RSI provider host allowlist is empty or malformed.")
+    if any(not isinstance(item, str) or not item.strip() for item in raw_hosts):
+        raise ProviderError("RSI provider host allowlist contains an invalid entry.")
+    approved_hosts = {item.strip().lower().rstrip(".") for item in raw_hosts}
+    if host not in approved_hosts:
+        raise ProviderError(
+            f"RSI provider hostname is not in the protected allowlist: {host}."
+        )
+    if port not in (None, 443):
+        raise ProviderError("RSI provider HTTPS endpoint must use the standard port 443.")
 
 
 def endpoint(base_url: str, suffix: str) -> str:
@@ -113,11 +204,11 @@ def _request(
         headers["Content-Type"] = "application/json"
     request = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(
-            request,
-            timeout=config.timeout_seconds,
-            context=ssl.create_default_context(),
-        ) as response:
+        opener = urllib.request.build_opener(
+            _NoRedirectHandler,
+            urllib.request.HTTPSHandler(context=ssl.create_default_context()),
+        )
+        with opener.open(request, timeout=config.timeout_seconds) as response:
             body = _read_limited(response, config.max_response_bytes)
     except urllib.error.HTTPError as exc:
         detail = exc.read(4096).decode("utf-8", errors="replace")

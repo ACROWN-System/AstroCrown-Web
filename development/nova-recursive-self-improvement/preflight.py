@@ -40,7 +40,7 @@ def check_non_secret_configuration(root: Path, policy: dict) -> list[str]:
     ).strip()
 
     try:
-        validate_base_url(base_url)
+        validate_base_url(base_url, allowed_hosts=provider.get("allowed_hosts"))
     except ProviderError as exc:
         errors.append(str(exc))
 
@@ -110,6 +110,7 @@ def run(root: Path, require_secret: bool = False, check_non_secret_only: bool = 
                 api_key_env=api_key_env,
                 default_base_url=policy["provider"].get("default_base_url"),
                 timeout_seconds=int(policy["provider"].get("provider_timeout_seconds", 120)),
+                allowed_hosts=policy["provider"].get("allowed_hosts"),
                 max_response_bytes=int(policy["provider"].get("max_response_bytes", 262144)),
             )
         except ProviderError as exc:
