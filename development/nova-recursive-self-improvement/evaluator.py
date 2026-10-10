@@ -250,6 +250,7 @@ def benchmark(
         try:
             baseline_file = _materialize_benchmark_source(root, baseline, "baseline", input_dir)
             candidate_file = _materialize_benchmark_source(root, candidate, "candidate", input_dir)
+            input_dir.chmod(0o555)
         except (subprocess.CalledProcessError, ValueError, RuntimeError) as exc:
             return {
                 "status": "BLOCKED",
@@ -312,6 +313,10 @@ def benchmark(
             "evidence": evidence,
         }
     finally:
+        try:
+            input_dir.chmod(0o755)
+        except OSError:
+            pass
         shutil.rmtree(input_dir, ignore_errors=True)
 
 
