@@ -71,7 +71,10 @@ def _verify_manifest(evidence_dir: Path) -> dict[str, str]:
         raise EvidenceVerificationError("Evidence directory is missing or is a symlink.")
 
     manifest = _read_json(evidence_dir / "manifest.json", "Evidence manifest")
-    if manifest.get("schema_version") != 1:
+    if (
+        type(manifest.get("schema_version")) is not int
+        or manifest.get("schema_version") != 1
+    ):
         raise EvidenceVerificationError("Evidence manifest schema version is unsupported.")
     hashes = manifest.get("evidence_sha256")
     if not isinstance(hashes, dict):
