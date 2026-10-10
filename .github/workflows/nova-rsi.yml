@@ -218,7 +218,7 @@ jobs:
       - name: Verify evidence before write-capable retention
         run: |
           set -euo pipefail
-          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA"
 
       - name: Retain qualified candidate
         env:
@@ -237,7 +237,7 @@ jobs:
           git switch -c "$BRANCH" "$GITHUB_SHA"
           git apply --check .rsi-evidence/candidate.patch
           git apply .rsi-evidence/candidate.patch
-          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --check-applied
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA" --check-applied
           git diff --check
           git config user.name "NOVA RSI"
           git config user.email "nova-rsi@localhost"
