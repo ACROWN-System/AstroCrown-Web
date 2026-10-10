@@ -53,6 +53,28 @@ class PreflightTests(unittest.TestCase):
         errors = check_non_secret_configuration(self.ROOT, policy)
         self.assertTrue(any("RSI_BENCHMARK_COMMAND" in item for item in errors))
 
+    def test_preflight_blocks_unapproved_provider_hostname(self):
+        policy = {
+            "provider": {
+                "api_key_env": "RSI_AI_API_KEY",
+                "base_url_env": "RSI_AI_BASE_URL",
+                "model_env": "RSI_AI_MODEL",
+                "default_base_url": "https://inference.nosana.com/v1",
+                "allowed_hosts": ["inference.nosana.com"],
+            },
+            "evaluation": {
+                "require_benchmark": True,
+                "benchmark_command_env": "RSI_BENCHMARK_COMMAND",
+            },
+        }
+        for name in self.names:
+            os.environ.pop(name, None)
+        os.environ["RSI_AI_BASE_URL"] = "https://attacker.example/v1"
+        os.environ["RSI_AI_COMMERCIAL_ELIGIBILITY"] = "PASS"
+        os.environ["RSI_BENCHMARK_COMMAND"] = "python -c 'print(1)'"
+        errors = check_non_secret_configuration(self.ROOT, policy)
+        self.assertTrue(any("not in the protected allowlist" in item for item in errors))
+
     def test_preflight_reports_secret_boundary_without_logging_value(self):
         for name in self.names:
             os.environ.pop(name, None)
