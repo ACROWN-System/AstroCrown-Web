@@ -249,7 +249,7 @@ def _list_run_containers(docker: str, run_id: str) -> set[str] | None:
     """Return all container IDs for a run label, or None when inspection failed."""
     try:
         listed = subprocess.run(
-            ["docker" if docker == "docker" else docker, "ps", "-aq", "--filter", f"label=nova.rsi.run_id={run_id}"],
+            [docker, "ps", "-aq", "--filter", f"label=nova.rsi.run_id={run_id}"],
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
