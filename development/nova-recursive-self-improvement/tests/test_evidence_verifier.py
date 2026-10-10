@@ -143,6 +143,22 @@ class EvidenceVerifierTests(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
+    def test_boolean_manifest_schema_version_is_rejected(self):
+        manifest_path = self.evidence / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["schema_version"] = True
+        manifest_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(EvidenceVerificationError, "schema version is unsupported"):
+            verify_evidence(
+                self.evidence,
+                self.root,
+                expected_baseline=BASELINE,
+                policy=self.policy,
+            )
+
     def test_valid_evidence_package_passes(self):
         result = verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
         self.assertEqual(result["status"], "PASS")

@@ -91,7 +91,15 @@ class BenchmarkDispatcherTests(unittest.TestCase):
         self.assertIn("not configured", result["reason"])
 
     def test_malformed_registry_is_blocked(self):
-        for value in (None, [], {"schema_version": 2, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": []}, {"schema_version": 1, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": "bad"}, {"schema_version": 1, "profiles": []}):
+        for value in (
+            None,
+            [],
+            {"schema_version": 2, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": []},
+            {"schema_version": True, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": [profile()]},
+            {"schema_version": 1.0, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": [profile()]},
+            {"schema_version": 1, "status": "INDEPENDENT_REVIEW_APPROVED", "profiles": "bad"},
+            {"schema_version": 1, "profiles": []},
+        ):
             with self.subTest(value=value):
                 result = resolve_profile(value, [PACKER_PATH], " ".join(COMMAND))
                 self.assertEqual(result["status"], "BLOCKED")
