@@ -79,7 +79,12 @@ def extract_candidate_payload(text: str) -> dict[str, Any]:
 
 
 def normalize_repo_path(path: str) -> str:
-    candidate = path.replace('\\\\', '/')
+    # Git patch paths must use canonical forward slashes. Reject alternate
+    # separators rather than partially normalizing them and risking a scope
+    # disagreement with Git or a downstream platform.
+    if not isinstance(path, str) or not path or "\\\\" in path:
+        return ''
+    candidate = path
     if candidate.startswith('/') or re.match(r'^[A-Za-z]:/', candidate):
         return ''
     parts = []
