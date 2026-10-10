@@ -1,7 +1,8 @@
-# RSI Token Usage Telemetry Integrity
+# Completed Audit — RSI Token Usage Telemetry Integrity
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — validate provider token counts before budget accounting  
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror
+**Canonical completed record:** [Completed audit](../Completed/2026-10-11-RSI-Token-Telemetry-Integrity.md)
 **Objective:** Ensure malformed, negative, non-integral, or internally inconsistent token usage cannot be normalized into apparently valid quota telemetry.
 
 ## Finding RSI-SEC-007
@@ -24,3 +25,26 @@ The proposer engine currently converts any numeric provider token field with `in
 - Correct OpenAI-compatible integer telemetry remains accepted.
 - Full RSI CI, pinned-image validation and the real sandbox smoke test pass.
 - RSI readiness stays INCOMPLETE; no secret, billing or permission changes.
+
+## Execution outcome
+
+- AstroCrown-Web [PR #66](https://github.com/ACROWN-System/AstroCrown-Web/pull/66) merged as `e7423ebee6d5063ed295000cd760ace36a4af46b`.
+- GitHub Actions [run #38090168247](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38090168247) is the recorded CI evidence for this change.
+- Usage normalization now accepts only nonnegative integer token counts and rejects booleans, fractions, strings, negative values, zero totals, and inconsistent prompt/completion/total counts.
+- Total usage is derived only when prompt and completion counts are both valid and present.
+- Invalid or incomplete telemetry is unavailable and triggers the existing required-telemetry budget gate, rather than being coerced into apparent compliance.
+- CI passed compilation, 65 RSI unit tests, pinned-image verification, and Docker isolation/timeout-cleanup smoke tests; no provider calls were made.
+- Readiness remains `implementation_readiness.status = INCOMPLETE`; `promotion.allow_main = false`; the production benchmark registry remains unapproved and the context-packing profile remains disabled.
+- No secrets/credentials, billing, workflow permissions, or provider usage were changed by the reviewed work.
+
+## Impact Analysis
+
+**IF modified:** Token budget enforcement no longer treats malformed or internally inconsistent usage reports as valid counts.
+
+**IF not modified:** the identified trust, credential-egress, quota-accounting, artifact-retention, or supply-chain weakness would remain as documented in the findings above.
+
+## Residual risks and handoff
+
+Provider-reported usage is still the source for this engine's accounting; billing records and other NOVA consumers of a shared provider account remain outside this counter.
+
+Keep the readiness and benchmark gates closed until all remaining required evidence and independent review gates are satisfied.
