@@ -291,6 +291,28 @@ diff --git a/development/x.txt b/development/x.txt
             workflow[initialize:run_cycle],
         )
 
+    def test_workflow_has_always_run_sandbox_cleanup_before_evidence_upload(self):
+        workflow = (self.ROOT / ".github/workflows/nova-rsi.yml").read_text(encoding="utf-8")
+        initialize = workflow.index("name: Initialize per-run sandbox cleanup identifier")
+        run_cycle = workflow.index("name: Run bounded autonomous RSI cycle")
+        cleanup = workflow.index("name: Clean up evaluation-labelled sandbox containers")
+        upload = workflow.index("name: Upload RSI evidence")
+        self.assertLess(initialize, run_cycle)
+        self.assertLess(run_cycle, cleanup)
+        self.assertLess(cleanup, upload)
+
+        cleanup_block = workflow[cleanup:upload]
+        self.assertIn("if: always()", cleanup_block)
+        self.assertIn("timeout-minutes: 3", cleanup_block)
+        self.assertIn(
+            'sandbox_runtime.py --cleanup-evaluation-id "$RSI_SANDBOX_EVALUATION_ID"',
+            cleanup_block,
+        )
+        self.assertIn(
+            'print("RSI_SANDBOX_EVALUATION_ID=" + uuid.uuid4().hex)',
+            workflow[initialize:run_cycle],
+        )
+
     def test_retention_workflow_binds_both_verifier_calls_to_github_sha(self):
         workflow = (
             self.ROOT / ".github/workflows/nova-rsi.yml"
