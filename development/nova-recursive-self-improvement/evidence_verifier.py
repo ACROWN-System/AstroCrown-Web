@@ -124,6 +124,7 @@ def verify_evidence(
     evidence_dir: Path,
     repo_root: Path,
     *,
+    expected_baseline: str | None = None,
     policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Verify package integrity, gate decisions, budgets, and candidate scope."""
@@ -153,8 +154,12 @@ def verify_evidence(
 
     baseline = cycle.get("baseline_commit")
     candidate_commit = result.get("candidate_commit")
+    if not isinstance(expected_baseline, str) or not _GIT_SHA_RE.fullmatch(expected_baseline):
+        raise EvidenceVerificationError("Trusted expected baseline must be supplied as a full Git commit SHA.")
     if not isinstance(baseline, str) or not _GIT_SHA_RE.fullmatch(baseline):
         raise EvidenceVerificationError("RSI baseline is not a full Git commit SHA.")
+    if baseline != expected_baseline:
+        raise EvidenceVerificationError("Cycle baseline does not match the trusted workflow baseline.")
     if evaluation.get("baseline_commit") != baseline:
         raise EvidenceVerificationError("Evaluator baseline does not match cycle baseline.")
     if not isinstance(candidate_commit, str) or not _GIT_SHA_RE.fullmatch(candidate_commit):
@@ -316,6 +321,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=".")
     parser.add_argument("--evidence-dir", default=".rsi-evidence")
+    parser.add_argument("--expected-baseline", required=True)
     parser.add_argument("--check-applied", action="store_true")
     args = parser.parse_args()
     repo_root = Path(args.repo).resolve()
@@ -323,7 +329,11 @@ def main() -> int:
     if not evidence_dir.is_absolute():
         evidence_dir = repo_root / evidence_dir
     try:
-        result = verify_evidence(evidence_dir, repo_root)
+        result = verify_evidence(
+            evidence_dir,
+            repo_root,
+            expected_baseline=args.expected_baseline,
+        )
         if args.check_applied:
             try:
                 evidence_relative = evidence_dir.relative_to(repo_root).as_posix()
