@@ -113,7 +113,7 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
     hashes = {
         item.name: hashlib.sha256(item.read_bytes()).hexdigest()
         for item in sorted(evidence_dir.iterdir())
-        if item.is_file()
+        if item.is_file() and item.name != "manifest.json"
     }
     (evidence_dir / "manifest.json").write_text(
         json.dumps({"schema_version": 1, "evidence_sha256": hashes}, indent=2, sort_keys=True) + "\n",
