@@ -390,15 +390,15 @@ Nosana's current documentation describes the inference service as credit-metered
 
 ## Candidate execution isolation
 
-`sandbox_runtime.py` now provides a fail-closed Docker isolation adapter candidate for candidate-controlled compilation, unit tests, and benchmark commands. It requires the immutable image digest and expected image ID in the protected policy, uses a read-only workspace and benchmark-input mount, disables container networking, drops capabilities, enables no-new-privileges, runs as a non-root UID, applies resource/output/time limits, and stops the container if it times out or exceeds output limits.
+`sandbox_runtime.py` provides a fail-closed Docker isolation adapter candidate for candidate-controlled compilation, unit tests, and benchmark commands. It requires the immutable image digest and expected image ID in the protected policy, uses a read-only workspace and benchmark-input mount, disables container networking, drops capabilities, enables no-new-privileges, runs as a non-root UID, and applies resource/output/time limits. Every run has a unique Docker label; timeout/output-limit cleanup uses both the cidfile and label-based container discovery, addressing the case where the Docker client is stopped before writing the cidfile.
 
 CI pulls and verifies the pinned image before running a smoke test for read-only workspace, host-path separation, and network denial. This is implementation evidence for the configured boundary, not a claim that container escape, kernel, Docker-daemon, or supply-chain risks are eliminated. Independent security review is still required; RSI readiness remains `INCOMPLETE`.
 
 ## Task-specific benchmark dispatcher
 
-The protected evaluator uses [`benchmark_dispatcher.py`](benchmark_dispatcher.py) and the protected [`benchmark_profiles.json`](benchmark_profiles.json) registry to select a workload only when the candidate's complete changed-file set and configured command match a specific profile exactly. Mixed, unknown, malformed, disabled, or command-mismatched scopes return `BLOCKED`.
+The protected evaluator uses [`benchmark_dispatcher.py`](benchmark_dispatcher.py) and the protected [`benchmark_profiles.json`](benchmark_profiles.json) registry to select a workload only when the candidate's complete changed-file set and configured command match a specific profile exactly. Mixed, unknown, malformed, disabled, or command-mismatched scopes return `BLOCKED`. The registry and selected profile must both explicitly carry `INDEPENDENT_REVIEW_APPROVED`; unknown or missing approval states are also `BLOCKED`.
 
-The only registered profile is the context-packing candidate, scoped to a single source file. It remains disabled pending independent review of the benchmark/corpus, evaluator integrity, and Docker isolation. This prevents the context-packing workload from serving as an unsupported global benchmark for unrelated RSI changes. New capability profiles require their own suitable workload and review.
+Those state strings are fail-closed gates, not cryptographic evidence that an independent review occurred. An actual repository review trail and security evidence are still required. The only registered profile is the context-packing candidate, scoped to a single source file; it remains unapproved and disabled. New capability profiles require their own suitable workload and documented review.
 
 ## Initial context-packing workload
 
