@@ -1,43 +1,102 @@
-# RSI Independent Security Review — Hardening Plan
+# Completed Security Review — RSI Approval Gates and Sandbox Timeout Cleanup
+
+**Canonical completed record:** [Completed RSI security review](../Completed/2026-10-11-RSI-Independent-Security-Review.md)
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — targeted fail-closed remediations; independent security approval remains BLOCKED  
-**Objective:** Close two review findings in the protected RSI control plane: enforce the benchmark registry's approval state, and make timeout/output-limit container cleanup resilient to a Docker client/container-ID-file race. Keep the benchmark disabled and RSI readiness INCOMPLETE.
+**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; independent sandbox/security approval remains BLOCKED  
+**Objective:** Close two fail-open/resource-cleanup weaknesses in the RSI benchmark dispatcher and candidate Docker execution boundary without activating RSI.
 
-## Mission and source of truth
+## Mission and method
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. RSI is a means serving the collective; it does not gain authority from self-evaluation.
+HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. RSI remains a means of supporting the collective and cannot self-authorize its own readiness.
 
-Primary implementation: `development/nova-recursive-self-improvement/`.  
-Method: `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md` and the protected capability benchmark protocol.
+The review followed the [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AUDIT-CONVENTION.md) and the [RSI Capability Benchmark Protocol](../../nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md). This is a targeted code review and test-backed remediation, not a claim that an independent third party has certified the full sandbox.
 
-## Preliminary findings
+## Findings and remediation
 
-1. **Finding RSI-SEC-001 — Approval metadata is not enforced by the dispatcher.** `benchmark_dispatcher.resolve_profile` checks only the profile's `enabled` value, exact changed-file scope, and command. It does not enforce the registry-level `status` or require an approved `review_status`. The currently configured profile remains disabled, but a registry entry could be marked enabled while its surrounding review status still says unapproved.
-2. **Finding RSI-SEC-002 — Container cleanup can miss a timed-out run.** `sandbox_runtime._run_bounded` kills the Docker CLI on timeout/output overflow, then cleanup depends on reading the Docker `--cidfile`. If the daemon created the container but the client had not finished writing the ID file, cleanup can miss a still-running container. This is a resource-leak/availability risk, not evidence of host escape.
-3. **Residual risk — Docker/kernel/daemon and image supply-chain exposure remains.** These fixes do not establish complete sandbox security or replace independent threat-model review.
+### RSI-SEC-001 — Dispatcher did not enforce review-state metadata
 
-## Scope
+**Original condition:** A profile could pass based on exact path scope, command, and `enabled: true` even if the profile or registry still carried an unapproved review status.
 
-1. Make benchmark profile selection fail closed unless the registry and selected profile carry explicit approved states.
-2. Add tests proving enabled-but-unapproved, missing/malformed approval, and approved exact-match cases are handled correctly.
-3. Give every sandbox invocation a unique protected label and discover matching containers by that label during cleanup, even when the ID file is absent or malformed.
-4. Add tests for ID-file cleanup and label-based fallback cleanup, covering timeout/output-limit cleanup paths.
-5. Document the findings, remediations, tests, and unresolved threat-model points in a completed review record after verification.
-6. Preserve the policy and profile safety gates; no profile enabling, RSI activation, provider calls, or secret/permission/billing changes.
+**Remediation:** `benchmark_dispatcher.resolve_profile` now requires all of the following before selecting a profile:
+- registry status exactly `INDEPENDENT_REVIEW_APPROVED`;
+- profile review status exactly `INDEPENDENT_REVIEW_APPROVED`;
+- `enabled: true`;
+- an exact match of the complete candidate changed-file set;
+- an exact command match to the selected profile;
+- a unique matching profile and well-formed configuration.
 
-## Out of scope
+Missing, malformed, unknown, or unapproved states return `BLOCKED`. Regression tests cover registry-unapproved and profile-unapproved cases, and retain the exact-match/negative scope tests.
 
-- Enabling `context-packing-v1` or setting its review status to approved.
-- Changing `implementation_readiness.status = INCOMPLETE` or `promotion.allow_main = false`.
-- Calling external AI providers, modifying secrets, billing, credentials, runtime permissions, or workflow privileges.
-- Claiming that unit tests prove complete Docker isolation.
+**Important limitation:** These strings are fail-closed control-plane gates, not cryptographic proof of independent review. They must not be set based only on a code change or a passing test. An actual review trail and supporting evidence remain necessary.
 
-## Acceptance criteria
+### RSI-SEC-002 — Cleanup could miss a container if Docker had not written its cidfile
 
-- Dispatcher returns `BLOCKED` unless the registry has the explicit accepted status and the selected profile has an accepted review status, in addition to the existing exact-scope, unique-profile, enabled, and command checks.
-- Production registry/profile stay unapproved and disabled; a matching candidate remains blocked.
-- Container runs have a unique cleanup label; on timeout or output-limit breach, cleanup attempts the cidfile and independently discovers all containers with that run label, then kills/removes them.
-- Tests demonstrate both cleanup discovery paths and approval-state fail-closed behavior.
-- RSI CI passes compilation, unit tests, immutable-image verification, and actual sandbox smoke testing.
-- The final record clearly distinguishes automated test evidence from independent security approval and lists remaining residual risks.
+**Original condition:** On timeout or output-limit breach, the client process could be killed before the Docker daemon's container ID had been written to the cidfile. Cleanup relying only on that file could therefore miss a daemon-managed container.
+
+**Remediation:** Each sandbox run now receives a unique, validated 32-character lowercase-hex run ID, recorded as Docker label `nova.rsi.run_id=<run_id>`. Cleanup uses the cidfile when available and independently queries Docker for containers carrying the unique label, then issues kill/remove operations for IDs found through either path. The output-limit path also passes the run ID through cleanup.
+
+Added unit tests cover:
+- invalid run IDs;
+- cleanup through a valid cidfile;
+- label-based discovery when the cidfile is missing;
+- label-based discovery when the cidfile is malformed.
+
+The real Docker smoke test now launches a sleeping container command, confirms the command started, triggers the timeout, and verifies that no container remains with the unique run label.
+
+## Changes merged
+
+AstroCrown-Web [PR #62](https://github.com/ACROWN-System/AstroCrown-Web/pull/62) was merged on 2026-10-11 local date.
+
+- Merge commit: `87b2e016c22af9ef2a0020adfa03aa4337e65356`
+- Tested PR head: `0db2a40c0793f003ed9f0fe34556ddb1316a8ec1`
+- Main policy blob after merge: `e1377abf9b8d0dd972a424faad9c6d6136a820b5`
+- Files changed: protected benchmark dispatcher, sandbox runtime, relevant unit-test fixtures and regression tests, benchmark protocol, RSI README, and this audit trail.
+
+## Verification evidence
+
+GitHub Actions run [#38088902382](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38088902382) completed successfully.
+
+Observed checks:
+- immutable Docker image digest and expected local image ID: PASS;
+- `python -m compileall -q development`: PASS;
+- RSI unittest suite: **56 tests passed**;
+- Docker isolation smoke test: PASS, including read-only workspace, host-sentinel path separation, network denial, and timeout cleanup;
+- smoke-test output contained `sandbox-smoke-pass` and confirmed `timed-out container was discovered by run label and removed`.
+
+One earlier CI attempt failed two existing evaluator benchmark tests because their mocked registry/profile fixtures lacked the newly required approved states. The production code correctly returned BLOCKED; the test fixtures were updated to model an approved test-only profile, and the subsequent full CI run passed. No production registry approval state was changed to accomplish this.
+
+## Readiness and authorization invariant — verified after merge
+
+The current main policy still records:
+- `implementation_readiness.status = INCOMPLETE`;
+- `promotion.allow_main = false`.
+
+The production benchmark registry remains `CANDIDATE_REGISTRY_NOT_INDEPENDENTLY_APPROVED`; profile `context-packing-v1` remains `enabled: false` and `BLOCKED_PENDING_INDEPENDENT_BENCHMARK_AND_EXECUTION_REVIEW`.
+
+No AI provider calls were made. No secrets, credentials, billing configuration, or workflow permissions were changed. RSI was not activated.
+
+## Remaining blockers and residual risks
+
+This targeted review does **not** close the independent security approval gate. Remaining work includes an independent threat-model and configuration review covering at least:
+- Docker daemon and host-kernel boundary / container escape risk;
+- runner and Docker CLI trust, daemon access and privilege boundary;
+- supply-chain provenance and patch/refresh strategy for the pinned image;
+- residual process, filesystem, side-channel and denial-of-service risks;
+- end-to-end evaluator integrity and benchmark corpus adequacy;
+- proof that the human review trail is external to, and not self-issued by, the benchmark registry state.
+
+The context-packing benchmark remains narrow and unapproved. Passing its tests is not a general-intelligence result and must not qualify unrelated candidate types.
+
+## Impact Analysis
+
+**IF modified:** an unapproved benchmark cannot become selectable merely by toggling its enabled flag, and timeout/output-limit cleanup has an independent discovery path when Docker's cidfile is absent or malformed.
+
+**IF not modified:** approval metadata could be ignored by the dispatcher, and a container created before cidfile completion could be missed during cleanup, leaking runtime resources after a bounded evaluation fails.
+
+## Handoff
+
+- Keep RSI implementation readiness `INCOMPLETE`.
+- Keep `promotion.allow_main = false`.
+- Keep the context-packing profile disabled and unapproved.
+- Require genuine independent review evidence before setting any review-state label to approved or reconsidering RSI readiness.
