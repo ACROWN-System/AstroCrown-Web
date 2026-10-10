@@ -1,7 +1,8 @@
-# Active Navigation Plan — RSI Docker Isolation Candidate
+# Completed Navigation Plan — RSI Docker Isolation Candidate
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — sandbox implementation candidate; independent security verification remains BLOCKED  
+**Status:** COMPLETED — this Active-path file is retained as an archival mirror; independent security verification remains BLOCKED  
+**Canonical completed record:** [Completed RSI Docker Isolation plan](../Completed/2026-10-11-RSI-Docker-Isolation.md)  
 **Objective:** Replace host execution of candidate-controlled RSI tests and benchmark commands with a fail-closed, resource-bounded Docker isolation boundary, while preserving independent control logic and the `INCOMPLETE` readiness state.
 
 ## Mission and source of truth
@@ -56,6 +57,17 @@ The image must be pulled and checked before untrusted execution. Runtime invocat
 - Baseline and candidate benchmark sources are materialized by the protected host evaluator for their exact full commit SHAs and mounted read-only; the in-container runner verifies SHA-labelled file names.
 - CI smoke tests prove write/network/host-sentinel isolation on the actual runner.
 - RSI readiness remains `INCOMPLETE`, and `promotion.allow_main` remains `false`.
+
+## Execution outcome
+
+- AstroCrown-Web PR [#58](https://github.com/ACROWN-System/AstroCrown-Web/pull/58) merged as `1ccd5df56abccf073a31f78ca39e284e9ac73737`.
+- The pinned Docker image digest and expected image ID were verified in CI.
+- The CI run compiled the development tree and passed all 41 RSI unit tests.
+- The real Docker smoke test passed: the container could not write to the candidate workspace, could not see the host sentinel path, and could not reach the network target.
+- The post-merge RSI test passed; the site build and build-status report passed. Site deployment was observed in progress at archive preparation.
+- Verified that candidate-controlled compile, unit-test and benchmark commands use the fail-closed Docker adapter, and that the protected policy remains `INCOMPLETE` with `allow_main: false`.
+- Residual risks remain: Docker/kernel/runtime and image supply-chain vulnerabilities require independent security review. The context-packing workload is not approved as a universal benchmark and must remain unconfigured until a task-specific scope/dispatcher and remaining readiness gates are reviewed.
+- No provider calls, credentials, billing or permission changes were made.
 
 ## Impact Analysis
 
