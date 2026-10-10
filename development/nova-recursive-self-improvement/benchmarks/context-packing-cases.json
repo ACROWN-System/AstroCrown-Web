@@ -5,9 +5,12 @@
   "cases": [
     {
       "case_id": "rotation-evidence-beats-early-noise",
-      "query": "provider successful probe rotation cursor next eligible state latency avoid retry same provider",
+      "query": "provider successful probe rotation cursor next eligible persisted scheduled repeated state latency avoid retry same provider",
       "max_chars": 610,
-      "required_item_ids": ["rotation-rule", "rotation-cursor"],
+      "required_item_ids": [
+        "rotation-rule",
+        "rotation-cursor"
+      ],
       "items": [
         {
           "id": "service-overview",
@@ -43,7 +46,10 @@
       "case_id": "latest-evidence-and-supersession",
       "query": "latest verified quota renewal date reset window supersedes older estimate",
       "max_chars": 600,
-      "required_item_ids": ["quota-current", "quota-supersession"],
+      "required_item_ids": [
+        "quota-current",
+        "quota-supersession"
+      ],
       "items": [
         {
           "id": "provider-summary",
@@ -79,7 +85,10 @@
       "case_id": "readiness-and-isolation-caveats",
       "query": "RSI readiness incomplete capability benchmark evaluator integrity isolation evidence worktree not OS security sandbox blocked",
       "max_chars": 650,
-      "required_item_ids": ["rsi-readiness", "isolation-limit"],
+      "required_item_ids": [
+        "rsi-readiness",
+        "isolation-limit"
+      ],
       "items": [
         {
           "id": "rsi-general-overview",
