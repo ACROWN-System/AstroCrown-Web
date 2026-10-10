@@ -235,6 +235,31 @@ class SandboxRuntimeTests(unittest.TestCase):
                     run_id="a" * 32,
                 )
 
+    def test_output_limit_returns_blocked_when_cleanup_unconfirmed(self):
+        cidfile_id = "0123456789ab"
+
+        def fake_run(args, **kwargs):
+            if args[1:3] == ["image", "inspect"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout=IMAGE_ID + "\n")
+            if args[1:3] == ["ps", "-aq"]:
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout=cidfile_id + "\n")
+            return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
+
+        with patch("sandbox_runtime.shutil.which", return_value="/usr/bin/docker"), patch(
+            "sandbox_runtime.subprocess.run", side_effect=fake_run
+        ), patch(
+            "sandbox_runtime._run_bounded",
+            return_value=(125, "[RSI sandbox output limit exceeded]", 0.2),
+        ):
+            with self.assertRaisesRegex(SandboxUnavailableError, "output limit was exceeded"):
+                run_sandboxed(
+                    ["python", "-c", "print('x')"],
+                    self.workspace,
+                    5,
+                    policy=POLICY,
+                    run_id="9" * 32,
+                )
+
     def test_output_limit_terminates_producer_and_bounds_capture(self):
         code, output, _duration = _run_bounded(
             [sys.executable, "-c", "print('x' * 50000)"],
