@@ -1,8 +1,7 @@
 # Completed Audit — RSI Token Usage Telemetry Integrity
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as an archival mirror
-**Canonical completed record:** [Completed audit](../Completed/2026-10-11-RSI-Token-Telemetry-Integrity.md)
+**Status:** COMPLETED — strict token telemetry validation merged; malformed usage blocks the cycle
 **Objective:** Ensure malformed, negative, non-integral, or internally inconsistent token usage cannot be normalized into apparently valid quota telemetry.
 
 ## Finding RSI-SEC-007

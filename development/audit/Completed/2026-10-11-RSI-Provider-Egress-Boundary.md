@@ -1,8 +1,7 @@
 # Completed Audit — RSI Provider Credential Egress Boundary
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as an archival mirror
-**Canonical completed record:** [Completed audit](../Completed/2026-10-11-RSI-Provider-Egress-Boundary.md)
+**Status:** COMPLETED — provider hostname allowlist and redirect rejection merged; no provider request was made
 **Objective:** Prevent the configured Nosana API credential from being sent to an arbitrary HTTPS host or forwarded through a redirect controlled by the endpoint. Preserve provider flexibility through an explicit protected allowlist rather than an unrestricted URL.
 
 ## Findings

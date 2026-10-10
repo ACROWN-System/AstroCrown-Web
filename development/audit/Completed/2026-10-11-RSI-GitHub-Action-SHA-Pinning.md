@@ -1,8 +1,7 @@
 # Completed Audit — Immutable GitHub Actions References
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as an archival mirror
-**Canonical completed record:** [Completed audit](../Completed/2026-10-11-RSI-GitHub-Action-SHA-Pinning.md)
+**Status:** COMPLETED — all external Actions in RSI workflows pinned to verified commit SHAs; CI passed
 **Objective:** Reduce tag-movement risk in the RSI workflows by pinning every externally maintained GitHub Action to a full commit SHA verified from that action repository's official Git reference API, while documenting the human-readable release tag.
 
 ## Finding RSI-SEC-009

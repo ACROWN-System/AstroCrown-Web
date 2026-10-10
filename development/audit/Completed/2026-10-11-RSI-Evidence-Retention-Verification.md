@@ -1,8 +1,7 @@
 # Completed Audit — RSI Evidence Verification Before Candidate Retention
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as an archival mirror
-**Canonical completed record:** [Completed audit](../Completed/2026-10-11-RSI-Evidence-Retention-Verification.md)
+**Status:** COMPLETED — retention evidence verifier and applied-worktree recheck merged; RSI readiness remains INCOMPLETE
 **Objective:** Prevent the privileged candidate-retention job from applying an unchecked or inconsistent artifact, and independently repeat candidate path/filesystem validation before opening a PR.
 
 ## Finding RSI-SEC-008

@@ -1,8 +1,7 @@
 # Completed Audit — Trusted RSI Evaluator and Main-Ref Guard
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as an archival mirror
-**Canonical completed record:** [Completed audit](../Completed/2026-10-11-RSI-Trusted-Evaluator-Control-Plane.md)
+**Status:** COMPLETED — trusted control-plane separation and main-ref guard merged; broader independent sandbox review remains BLOCKED
 **Objective:** Ensure candidate-controlled source cannot supply the evaluator/dispatcher/sandbox implementation that judges it, and ensure the credential-bearing autonomous RSI workflow only runs from the protected main branch.
 
 ## Mission and source of truth
