@@ -375,6 +375,12 @@ For autonomous RSI, the most important additional requirement is that the system
 
 **NOVA may propose and test changes to NOVA, but a change earns the right to become the new NOVA only through evidence that is sufficiently independent of the change being tested.**
 
+## Provider destination and redirect controls
+
+The provider client validates the URL against the protected `provider.allowed_hosts` list before any request. The current list contains only `inference.nosana.com`, matching the current Nosana credential boundary. An alternative provider must be reviewed and explicitly added to that allowlist rather than selected only through a repository variable. URLs with embedded user-info, query strings, fragments, or non-standard remote HTTPS ports are rejected. HTTP redirects are not followed, preventing an endpoint's redirect response from changing the credential destination. Local HTTP is supported only through an explicit test-only opt-in.
+
+These controls reduce accidental or malicious bearer-token exfiltration through misconfiguration and redirects. They do not replace GitHub secret access controls, provider trust review, or an independent review of RSI readiness.
+
 ## Provider integration and credential boundary
 
 The RSI runtime uses a dependency-free OpenAI-compatible provider client. The current external provider candidate is Nosana's LLM inference API because its documented interface is OpenAI-compatible and exposes a dynamic model list. Provider selection remains a candidate decision and is not permanent architecture.
