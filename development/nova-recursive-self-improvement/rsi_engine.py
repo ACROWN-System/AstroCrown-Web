@@ -284,9 +284,6 @@ def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
     completion_tokens = counts["completion_tokens"]
     total_tokens = counts["total_tokens"]
 
-    if total_tokens is not None and total_tokens == 0:
-        # An actual proposer request has a non-empty system/user prompt.
-        return None
     if total_tokens is None and prompt_tokens is not None and completion_tokens is not None:
         total_tokens = prompt_tokens + completion_tokens
     elif (
@@ -295,6 +292,10 @@ def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
         and completion_tokens is not None
         and total_tokens != prompt_tokens + completion_tokens
     ):
+        return None
+
+    # An actual proposer request has a non-empty system/user prompt.
+    if total_tokens == 0:
         return None
 
     if prompt_tokens is None and completion_tokens is None and total_tokens is None:
