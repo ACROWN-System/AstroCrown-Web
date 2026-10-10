@@ -97,8 +97,10 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
         },
     }
     evaluation = {
+        "schema_version": 1,
         "decision": "PASS",
         "baseline_commit": evaluation_baseline,
+        "candidate_commit": CANDIDATE,
         "changed_files": [CHANGED_PATH],
         "results": [{"name": name, "status": "PASS"} for name in REQUIRED_RESULTS],
     }
@@ -117,6 +119,22 @@ def build_evidence(evidence_dir, *, patch=PATCH, cycle_decision="PASS", evaluati
     }
     (evidence_dir / "manifest.json").write_text(
         json.dumps({"schema_version": 1, "evidence_sha256": hashes}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
+def refresh_manifest(evidence_dir):
+    hashes = {
+        item.name: hashlib.sha256(item.read_bytes()).hexdigest()
+        for item in sorted(evidence_dir.iterdir())
+        if item.is_file() and item.name != "manifest.json"
+    }
+    (evidence_dir / "manifest.json").write_text(
+        json.dumps(
+            {"schema_version": 1, "evidence_sha256": hashes},
+            indent=2,
+            sort_keys=True,
+        ) + "\n",
         encoding="utf-8",
     )
 
@@ -158,6 +176,42 @@ class EvidenceVerifierTests(unittest.TestCase):
                 expected_baseline=BASELINE,
                 policy=self.policy,
             )
+
+    def test_boolean_cycle_schema_version_is_rejected(self):
+        cycle_path = self.evidence / "cycle.json"
+        cycle = json.loads(cycle_path.read_text(encoding="utf-8"))
+        cycle["schema_version"] = True
+        cycle_path.write_text(json.dumps(cycle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        refresh_manifest(self.evidence)
+
+        with self.assertRaisesRegex(EvidenceVerificationError, "cycle evidence schema version is unsupported"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
+
+    def test_float_evaluator_schema_version_is_rejected(self):
+        evaluation_path = self.evidence / "evaluation.json"
+        evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+        evaluation["schema_version"] = 1.0
+        evaluation_path.write_text(
+            json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        refresh_manifest(self.evidence)
+
+        with self.assertRaisesRegex(EvidenceVerificationError, "evaluator evidence schema version is unsupported"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
+
+    def test_evaluator_candidate_commit_must_match_cycle_candidate_commit(self):
+        evaluation_path = self.evidence / "evaluation.json"
+        evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
+        evaluation["candidate_commit"] = "c" * 40
+        evaluation_path.write_text(
+            json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        refresh_manifest(self.evidence)
+
+        with self.assertRaisesRegex(EvidenceVerificationError, "does not match the cycle candidate commit"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_valid_evidence_package_passes(self):
         result = verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
