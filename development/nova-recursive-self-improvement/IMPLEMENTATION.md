@@ -25,7 +25,7 @@ Baseline
 → PASS / FAIL / BLOCKED
 → qualified-candidate branch and pull request when PASS
 
-The protected evaluator retains orchestration and non-executing Git inspection on the host. Candidate-controlled Python compilation, unit tests, and benchmark code execute inside the pinned Docker runtime with networking disabled, a read-only workspace, no inherited credentials, a non-root identity, dropped capabilities, no-new-privileges, resource limits, bounded output, and forced container termination on timeout. The benchmark receives only SHA-labelled baseline/candidate source snapshots through a separate read-only mount; it does not need the host Git database.
+The protected evaluator, benchmark dispatcher, sandbox adapter, RSI policy, and benchmark profile registry are copied from the trusted workflow checkout into a separate read-only control directory outside the candidate worktree. The evaluator is launched from that trusted control directory and receives explicit paths to the trusted policy and registry; it does not import its control logic or acceptance policy from the candidate worktree. The candidate worktree remains the inspected/evaluated subject. Candidate-controlled Python compilation, unit tests, and benchmark code execute inside the pinned Docker runtime with networking disabled, a read-only workspace, no inherited credentials, a non-root identity, dropped capabilities, no-new-privileges, resource limits, bounded output, and forced container termination on timeout. The benchmark receives only SHA-labelled baseline/candidate source snapshots through a separate read-only mount; it does not need the host Git database.
 
 The candidate worktree remains detached and has no inherited provider key or GitHub token. Docker availability, image digest/ID, and container execution must all verify; there is no host-execution fallback.
 
@@ -127,7 +127,7 @@ The engine removes `NOSANA_LLM_API_KEY_01` from its own process environment imme
 
 ## Credential boundary
 
-The intended GitHub Actions boundary is the dedicated `provider-secret-boundary` job. The preceding `configuration-preflight` job is secretless. Only after readiness and non-secret configuration pass does GitHub Actions inject `NOSANA_LLM_API_KEY_01` into the boundary job; the key is then made available to the proposer job and never stored in repository source.
+The intended GitHub Actions boundary is the dedicated `provider-secret-boundary` job. The preceding `configuration-preflight` job is secretless. Only after readiness and non-secret configuration pass does GitHub Actions inject `NOSANA_LLM_API_KEY_01` into the boundary job; the key is then made available to the proposer job and never stored in repository source. In addition, the workflow's first job requires `github.ref == 'refs/heads/main'`. Because each later job depends on that readiness job, manual dispatch from a feature/candidate branch is skipped before the provider-secret boundary.
 
 No real provider key has been added by this implementation. The first sensitive external value still required for an actual proposer request is the provider API key.
 
