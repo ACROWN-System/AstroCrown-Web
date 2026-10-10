@@ -294,11 +294,9 @@ def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
     ):
         return None
 
-    # An actual proposer request has a non-empty system/user prompt.
-    if total_tokens == 0:
-        return None
-
-    if prompt_tokens is None and completion_tokens is None and total_tokens is None:
+    # An actual proposer request has a non-empty system/user prompt, so an
+    # absent or zero total is not sufficient evidence for budget accounting.
+    if total_tokens is None or total_tokens == 0:
         return None
     return {
         "prompt_tokens": prompt_tokens,
