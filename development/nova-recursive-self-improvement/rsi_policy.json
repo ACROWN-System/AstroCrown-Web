@@ -14,7 +14,8 @@
       "development/nova-recursive-self-improvement/provider_client.py",
       "development/nova-recursive-self-improvement/preflight.py",
       "development/nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md",
-      "development/nova-recursive-self-improvement/benchmarks/"
+      "development/nova-recursive-self-improvement/benchmarks/",
+      "development/nova-recursive-self-improvement/sandbox_runtime.py"
     ],
     "forbidden_path_fragments": [
       ".env",
@@ -83,9 +84,17 @@
     "default_base_url": "https://inference.nosana.com/v1"
   },
   "sandbox": {
+    "runtime": "docker",
+    "image": "python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258",
+    "expected_image_id": "sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524",
+    "platform": "linux/amd64",
     "max_output_bytes": 32000,
     "max_output_file_bytes": 67108864,
     "max_open_files": 256,
-    "max_cpu_seconds": 120
+    "max_cpu_seconds": 120,
+    "max_memory": "2g",
+    "max_cpus": "2",
+    "max_pids": 128,
+    "tmpfs_size": "128m"
   }
 }
