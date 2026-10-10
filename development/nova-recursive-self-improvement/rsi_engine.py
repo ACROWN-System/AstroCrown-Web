@@ -264,19 +264,45 @@ Current repository development context:
 
 
 def normalize_usage(raw_usage: Any) -> dict[str, int | None] | None:
+    """Normalize only internally consistent, nonnegative integer token telemetry."""
     if not isinstance(raw_usage, dict):
         return None
-    def integer(key: str) -> int | None:
+
+    keys = ("prompt_tokens", "completion_tokens", "total_tokens")
+    counts: dict[str, int | None] = {}
+    for key in keys:
         value = raw_usage.get(key)
-        return int(value) if isinstance(value, (int, float)) else None
-    prompt_tokens = integer("prompt_tokens")
-    completion_tokens = integer("completion_tokens")
-    total_tokens = integer("total_tokens")
+        if value is None:
+            counts[key] = None
+            continue
+        # bool subclasses int in Python; fractional values must not be truncated.
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            return None
+        counts[key] = value
+
+    prompt_tokens = counts["prompt_tokens"]
+    completion_tokens = counts["completion_tokens"]
+    total_tokens = counts["total_tokens"]
+
     if total_tokens is None and prompt_tokens is not None and completion_tokens is not None:
         total_tokens = prompt_tokens + completion_tokens
-    if prompt_tokens is None and completion_tokens is None and total_tokens is None:
+    elif (
+        total_tokens is not None
+        and prompt_tokens is not None
+        and completion_tokens is not None
+        and total_tokens != prompt_tokens + completion_tokens
+    ):
         return None
-    return {"prompt_tokens": prompt_tokens, "completion_tokens": completion_tokens, "total_tokens": total_tokens}
+
+    # An actual proposer request has a non-empty system/user prompt, so an
+    # absent or zero total is not sufficient evidence for budget accounting.
+    if total_tokens is None or total_tokens == 0:
+        return None
+    return {
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "total_tokens": total_tokens,
+    }
 
 def call_proposer(prompt: str, max_output_tokens: int, policy: dict[str, Any]) -> tuple[dict[str, Any], dict[str, int | None] | None, str]:
     provider = policy["provider"]

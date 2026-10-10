@@ -38,7 +38,7 @@ The protected rsi_policy.json currently enforces:
 - maximum 24,000 repository-context characters sent to the proposer;
 - maximum 1,536 requested output tokens from the proposer;
 - maximum 8,000 reported total tokens per cycle;
-- required OpenAI-compatible usage telemetry so the cycle cannot silently bypass token accounting;
+- required OpenAI-compatible usage telemetry so the cycle cannot silently bypass token accounting; malformed, negative, non-integral, zero, or internally inconsistent usage counts are treated as unavailable and block the cycle;
 - maximum 1 RSI workflow cycle per UTC day.
 
 The daily limit is enforced before proposal generation by querying the workflow's own GitHub Actions run history. Because the default scheduler runs weekly, the default autonomous cadence remains low; a manual run cannot be repeated without limit.
