@@ -129,10 +129,6 @@ def pack_context(
         covered_terms.update(terms)
         remaining = [(idx, item) for idx, item in remaining if idx != original_index]
 
-        if not query_terms:
-            # Empty-query fallback should preserve input order and must not
-            # begin ranking by metadata emitted in the context.
-            break
 
     rendered = "\n\n".join(render_item(item) for item in selected)
     selected_ids = [item["id"] for item in selected]
