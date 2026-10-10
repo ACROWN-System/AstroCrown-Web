@@ -174,7 +174,7 @@ class EvidenceVerifierTests(unittest.TestCase):
             if item.name != "manifest.json" and item.is_file()
         }
         (self.evidence / "manifest.json").write_text(
-            json.dumps({"schema_version": 1, "evidence_sha256": hashes}, indent=2, sort_keys=True) + "\\n",
+            json.dumps({"schema_version": 1, "evidence_sha256": hashes}, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         with self.assertRaisesRegex(EvidenceVerificationError, "exact approved set"):
