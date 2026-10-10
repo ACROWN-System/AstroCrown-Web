@@ -44,7 +44,7 @@
     },
     {
       "case_id": "latest-evidence-and-supersession",
-      "query": "latest verified quota renewal date reset window supersedes older estimate",
+      "query": "latest verified quota renewal date supersedes current dashboard observation",
       "max_chars": 600,
       "required_item_ids": [
         "quota-current",
