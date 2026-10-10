@@ -108,6 +108,8 @@ class BenchmarkDispatcherTests(unittest.TestCase):
         for paths in (
             [PACKER_PATH, PACKER_PATH],
             ["development/../.github/workflows/nova-rsi.yml"],
+            [r"development\..\.github\workflows\nova-rsi.yml"],
+            ['"development/nova-context-memory-optimization/context_packer.py"'],
             ["/etc/passwd"],
         ):
             with self.subTest(paths=paths):
