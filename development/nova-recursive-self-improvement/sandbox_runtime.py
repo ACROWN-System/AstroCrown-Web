@@ -142,7 +142,7 @@ def build_docker_command(
         raise SandboxUnavailableError("Memory, CPU, and tmpfs limits are not configured.")
 
     args = [
-        docker, "run", "--rm", "--pull=never",
+        docker, "run", "--rm", "--init", "--pull=never",
         "--platform", sandbox["platform"],
         "--network=none",
         "--read-only",
