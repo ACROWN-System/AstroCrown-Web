@@ -79,8 +79,8 @@ class RsiEngineTests(unittest.TestCase):
             def communicate(self, timeout=None):
                 self.communicate_calls += 1
                 if self.communicate_calls == 1:
-                    raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout, output=b"initial")
-                raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout, output=b"drain")
+                    raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout, output=None)
+                raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout, output=None)
 
             def kill(self):
                 self.killed = True
@@ -108,6 +108,41 @@ class RsiEngineTests(unittest.TestCase):
         self.assertIn("could not be confirmed terminated", result["error"])
         self.assertEqual(process.communicate_calls, 2)
         self.assertTrue(process.killed)
+        cleanup.assert_called_once_with(evaluation_id, wait_for_late_containers=True)
+
+    def test_supervisor_cleans_containers_after_output_pipe_error(self):
+        class FakeProcess:
+            pid = 7777
+            returncode = None
+            stdout = None
+
+            def communicate(self, timeout=None):
+                raise OSError("simulated output pipe failure")
+
+            def kill(self):
+                pass
+
+            def wait(self, timeout=None):
+                return -9
+
+        evaluation_id = "e" * 32
+        with patch("rsi_engine.subprocess.Popen", return_value=FakeProcess()), patch(
+            "rsi_engine.os.killpg"
+        ) as killpg, patch(
+            "rsi_engine.cleanup_evaluation_containers", return_value=True
+        ) as cleanup:
+            result = run_evaluator_supervised(
+                ["python", "evaluator.py"],
+                Path("/tmp"),
+                {"PATH": "/usr/bin"},
+                2,
+                evaluation_id,
+            )
+
+        self.assertEqual(result["decision"], "FAIL")
+        self.assertEqual(result["stage"], "candidate-execution")
+        self.assertIn("output pipe failure", result["error"])
+        killpg.assert_called_once()
         cleanup.assert_called_once_with(evaluation_id, wait_for_late_containers=True)
 
     def test_supervisor_blocks_when_timeout_cleanup_is_unconfirmed(self):
