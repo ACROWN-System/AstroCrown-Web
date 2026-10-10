@@ -93,14 +93,16 @@ A positive result means only that the candidate improved this defined context-pa
 
 ## Current status
 
-Status: **protocol defined / benchmark implementation required**
+Status: **first workload candidate implemented / independent review required**
 
-Until a protected benchmark command implementing this protocol exists, the RSI evaluator deliberately returns `BLOCKED`.
+The repository now includes a deterministic context-packing workload candidate and fixed synthetic cases. This closes the absence of an executable workload for that narrow capability area, but does not constitute independent approval or establish general intelligence improvement.
+
+The protected evaluator still returns `BLOCKED` while implementation readiness is `INCOMPLETE`. This PR does not configure `RSI_BENCHMARK_COMMAND`.
 
 ## Benchmark implementation status
 
-The evaluator contract is implemented, including exact baseline/candidate commit propagation and strict JSON validation.
+The evaluator contract is implemented, including exact baseline/candidate commit propagation and strict JSON validation. The initial workload compares versions of the query-aware context packer against fixed synthetic cases and validates required-record coverage, provenance, non-truncation, and hard character budgets.
 
-The remaining gap is not the transport protocol. It is the protected measurement workload itself: the repository must define an evidence-backed workload/corpus that measures the capability a candidate claims to improve. A syntax check, unit-test pass, file count, or other code-health signal alone is insufficient to establish intelligence improvement.
+The remaining gates include independent review of the benchmark's integrity and adequacy, confirmation that its scope matches the candidate's claimed capability, and an acceptable execution-isolation decision. Other capability claims may require distinct, task-appropriate workloads; this workload is not a universal substitute.
 
-The benchmark command should therefore remain a protected configuration item until such a workload is selected and independently reviewed.
+A syntax check, unit-test pass, or improvement on this one workload is not sufficient to establish general intelligence improvement or overall RSI readiness. Keep the benchmark command unconfigured until the workload and remaining gates have been independently reviewed.
