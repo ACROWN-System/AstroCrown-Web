@@ -74,6 +74,15 @@ The production benchmark registry remains `CANDIDATE_REGISTRY_NOT_INDEPENDENTLY_
 
 No AI provider calls were made. No secrets, credentials, billing configuration, or workflow permissions were changed. RSI was not activated.
 
+## Follow-up hardening after the initial review
+
+Two additional findings were remediated and independently exercised through CI after this initial review record was completed:
+
+- [Sandbox cleanup verification](./2026-10-11-RSI-Sandbox-Cleanup-Verification.md): PR #71, merge `088643ed4b2a984670bfd1eed0009de4f1d8403e`; 85 unit tests and the real Docker timeout-cleanup smoke test passed. Cleanup now checks for all labelled containers even when a cidfile exists, attempts removal, and blocks if absence cannot be confirmed.
+- [Executable-mode consistency](./2026-10-11-RSI-Executable-Mode-Consistency.md): PR #72, merge `866923a9fbcb173ba90adb508048faa4248b2690`; 86 unit tests and the real Docker timeout-cleanup smoke test passed. The evaluator now rejects changed executable files at evaluation time, matching retention verification.
+
+These are test-backed engineering remediations; they do not constitute independent third-party certification of the overall sandbox or benchmark.
+
 ## Remaining blockers and residual risks
 
 This targeted review does **not** close the independent security approval gate. Remaining work includes an independent threat-model and configuration review covering at least:
