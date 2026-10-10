@@ -4,6 +4,7 @@
 
 - `rsi_engine.py` — autonomous candidate proposal, bounded context/output generation, patch validation, isolated worktree execution, and evidence generation.
 - `evaluator.py` — protected evaluator using the protected policy and enforcing machine-verifiable benchmark evidence rather than candidate-controlled evaluation code.
+- `sandbox_runtime.py` — fail-closed Docker adapter for candidate-controlled compilation, unit tests, and benchmark execution, using an immutable image pin, no network, read-only source mounts, a strict environment allowlist, resource limits, timeout, bounded output, and explicit container cleanup.
 - `rsi_policy.json` — protected scope, evaluation, promotion, and resource-budget policy.
 - `candidate.schema.json` — candidate payload contract.
 - `tests/test_rsi_engine.py` — deterministic tests for candidate parsing, protected-path enforcement, secret-pattern rejection, usage accounting, and decision precedence.
@@ -24,9 +25,9 @@ Baseline
 → PASS / FAIL / BLOCKED
 → qualified-candidate branch and pull request when PASS
 
-Candidate execution receives a sanitized environment and does not receive the proposer API key or GitHub token.
+The protected evaluator retains orchestration and non-executing Git inspection on the host. Candidate-controlled Python compilation, unit tests, and benchmark code execute inside the pinned Docker runtime with networking disabled, a read-only workspace, no inherited credentials, a non-root identity, dropped capabilities, no-new-privileges, resource limits, bounded output, and forced container termination on timeout. The benchmark receives only SHA-labelled baseline/candidate source snapshots through a separate read-only mount; it does not need the host Git database.
 
-Before candidate-controlled checks run, the evaluator removes the candidate worktree's Git remote and inherited credential helper.
+The candidate worktree remains detached and has no inherited provider key or GitHub token. Docker availability, image digest/ID, and container execution must all verify; there is no host-execution fallback.
 
 ## RSI resource budget
 
@@ -102,7 +103,7 @@ Candidate patches are also restricted by the protected `rsi_policy.json` scope a
 
 The current implementation uses a detached Git worktree plus a sanitized process environment. This prevents the candidate evaluator from inheriting the proposer API key or GitHub token and removes the worktree's Git write remote before candidate-controlled code runs.
 
-This is not an OS-level security sandbox. Stronger filesystem, process, network, and syscall isolation should be added before executing untrusted or high-risk self-modification candidates.
+A pinned Docker isolation adapter is now implemented and exercised by CI smoke tests. This is a meaningful OS-level boundary candidate, not an assertion that all container-escape, kernel, Docker-daemon, or supply-chain risks have been eliminated. Independent security review of the threat model, Docker runner permissions, residual kernel/runtime risks, and actual RSI integration remains mandatory. The protected readiness gate stays `INCOMPLETE` until that review and all other required gates pass.
 
 ## Development status
 
@@ -132,6 +133,6 @@ The protected policy intentionally remains `INCOMPLETE`. The following cannot be
 
 - an approved capability benchmark/workload that can establish an actual intelligence or capability improvement;
 - independent validation that the protected evaluation remains trustworthy for the actual NOVA workloads;
-- an acceptable OS-level sandbox or an explicit, evidence-backed decision limiting candidate execution to the current process isolation model.
+- independent review and acceptance of the pinned Docker execution boundary, including residual host/kernel/runtime risks, plus a verified task-specific benchmark scope or independently reviewed benchmark dispatcher.
 
 Until those conditions are independently verified, the proposer/evaluator lifecycle remains blocked even when a provider credential is available.
