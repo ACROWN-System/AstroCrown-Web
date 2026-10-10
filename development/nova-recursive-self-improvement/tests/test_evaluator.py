@@ -228,6 +228,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
             normalize_repo_path(r"development\..\.github\workflows\x.yml"),
             "",
         )
+        self.assertEqual(normalize_repo_path('development/"quoted"/file.py'), "")
 
 
 if __name__ == "__main__":
