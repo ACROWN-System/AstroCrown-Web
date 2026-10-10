@@ -67,6 +67,49 @@ class RsiEngineTests(unittest.TestCase):
         cleanup.assert_called_once_with(evaluation_id, wait_for_late_containers=True)
         self.assertFalse(process.killed)
 
+    def test_supervisor_bounds_repeated_timeout_while_draining_output(self):
+        class FakeProcess:
+            pid = 4322
+            returncode = None
+
+            def __init__(self):
+                self.communicate_calls = 0
+                self.killed = False
+
+            def communicate(self, timeout=None):
+                self.communicate_calls += 1
+                if self.communicate_calls == 1:
+                    raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout, output=b"initial")
+                raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout, output=b"drain")
+
+            def kill(self):
+                self.killed = True
+
+            def wait(self, timeout=None):
+                raise subprocess.TimeoutExpired(["python", "evaluator.py"], timeout)
+
+        process = FakeProcess()
+        evaluation_id = "d" * 32
+        with patch("rsi_engine.subprocess.Popen", return_value=process), patch(
+            "rsi_engine.os.killpg"
+        ), patch(
+            "rsi_engine.cleanup_evaluation_containers", return_value=True
+        ) as cleanup:
+            result = run_evaluator_supervised(
+                ["python", "evaluator.py"],
+                Path("/tmp"),
+                {"PATH": "/usr/bin"},
+                2,
+                evaluation_id,
+            )
+
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertEqual(result["stage"], "sandbox-cleanup")
+        self.assertIn("could not be confirmed terminated", result["error"])
+        self.assertEqual(process.communicate_calls, 2)
+        self.assertTrue(process.killed)
+        cleanup.assert_called_once_with(evaluation_id, wait_for_late_containers=True)
+
     def test_supervisor_blocks_when_timeout_cleanup_is_unconfirmed(self):
         class FakeProcess:
             pid = 5432
