@@ -181,7 +181,7 @@ class EvidenceVerifierTests(unittest.TestCase):
         cycle_path = self.evidence / "cycle.json"
         cycle = json.loads(cycle_path.read_text(encoding="utf-8"))
         cycle["schema_version"] = True
-        cycle_path.write_text(json.dumps(cycle, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+        cycle_path.write_text(json.dumps(cycle, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         refresh_manifest(self.evidence)
 
         with self.assertRaisesRegex(EvidenceVerificationError, "cycle evidence schema version is unsupported"):
@@ -192,7 +192,7 @@ class EvidenceVerifierTests(unittest.TestCase):
         evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
         evaluation["schema_version"] = 1.0
         evaluation_path.write_text(
-            json.dumps(evaluation, indent=2, sort_keys=True) + "\\n",
+            json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         refresh_manifest(self.evidence)
@@ -205,7 +205,7 @@ class EvidenceVerifierTests(unittest.TestCase):
         evaluation = json.loads(evaluation_path.read_text(encoding="utf-8"))
         evaluation["candidate_commit"] = "c" * 40
         evaluation_path.write_text(
-            json.dumps(evaluation, indent=2, sort_keys=True) + "\\n",
+            json.dumps(evaluation, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         refresh_manifest(self.evidence)
