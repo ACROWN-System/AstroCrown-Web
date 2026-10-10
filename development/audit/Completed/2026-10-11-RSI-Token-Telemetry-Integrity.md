@@ -40,7 +40,7 @@ The proposer engine currently converts any numeric provider token field with `in
 
 **IF modified:** Token budget enforcement no longer treats malformed or internally inconsistent usage reports as valid counts.
 
-**IF not modified:** the identified trust, credential-egress, quota-accounting, artifact-retention, or supply-chain weakness would remain as documented in the findings above.
+**IF not modified:** Invalid or inconsistent token counts could still appear compliant and make the per-cycle budget accounting unreliable.
 
 ## Residual risks and handoff
 
