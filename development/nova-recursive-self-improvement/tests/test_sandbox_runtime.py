@@ -126,14 +126,14 @@ class SandboxRuntimeTests(unittest.TestCase):
 
     def test_timeout_cleanup_uses_cidfile_and_still_discovers_labelled_containers(self):
         cidfile = self.root / "container.cid"
-        cidfile.write_text("abcdef123456\\n", encoding="utf-8")
+        cidfile.write_text("abcdef123456\n", encoding="utf-8")
         active = {"0123456789ab"}
         calls = []
 
         def fake_run(args, **kwargs):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\\n".join(sorted(active)))
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\n".join(sorted(active)))
             if args[1:2] == ["rm"] and len(args) >= 4:
                 active.discard(args[-1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
@@ -158,7 +158,7 @@ class SandboxRuntimeTests(unittest.TestCase):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
                 self.assertIn(f"label=nova.rsi.run_id={run_id}", args)
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\\n".join(sorted(active)))
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\n".join(sorted(active)))
             if args[1:2] == ["rm"] and len(args) >= 4:
                 active.discard(args[-1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
@@ -173,7 +173,7 @@ class SandboxRuntimeTests(unittest.TestCase):
 
     def test_timeout_cleanup_uses_label_when_cidfile_is_malformed(self):
         cidfile = self.root / "malformed-container.cid"
-        cidfile.write_text("not-a-container-id\\n", encoding="utf-8")
+        cidfile.write_text("not-a-container-id\n", encoding="utf-8")
         run_id = "e" * 32
         active = {"fedcba987654"}
         calls = []
@@ -181,7 +181,7 @@ class SandboxRuntimeTests(unittest.TestCase):
         def fake_run(args, **kwargs):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\\n".join(sorted(active)))
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="\n".join(sorted(active)))
             if args[1:2] == ["rm"] and len(args) >= 4:
                 active.discard(args[-1])
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
@@ -196,13 +196,13 @@ class SandboxRuntimeTests(unittest.TestCase):
 
     def test_timeout_cleanup_fails_when_docker_cannot_confirm_removal(self):
         cidfile = self.root / "stuck-container.cid"
-        cidfile.write_text("0123456789ab\\n", encoding="utf-8")
+        cidfile.write_text("0123456789ab\n", encoding="utf-8")
         calls = []
 
         def fake_run(args, **kwargs):
             calls.append(args)
             if args[1:3] == ["ps", "-aq"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\\n")
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout="0123456789ab\n")
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
 
         with patch("sandbox_runtime.subprocess.run", side_effect=fake_run):
@@ -217,9 +217,9 @@ class SandboxRuntimeTests(unittest.TestCase):
         def fake_run(args, **kwargs):
             calls.append(args)
             if args[1:3] == ["image", "inspect"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout=IMAGE_ID + "\\n")
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout=IMAGE_ID + "\n")
             if args[1:3] == ["ps", "-aq"]:
-                return subprocess.CompletedProcess(args=args, returncode=0, stdout=cidfile_id + "\\n")
+                return subprocess.CompletedProcess(args=args, returncode=0, stdout=cidfile_id + "\n")
             return subprocess.CompletedProcess(args=args, returncode=0, stdout="")
 
         timeout = subprocess.TimeoutExpired(["docker", "run"], 5, output=b"started")
