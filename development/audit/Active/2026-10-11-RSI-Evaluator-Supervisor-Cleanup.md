@@ -18,9 +18,9 @@ The outer trusted process used a host `subprocess.run(timeout=...)` with a timeo
 
 1. Assign a unique full evaluation identifier before launching the protected evaluator.
 2. Supply it only to the trusted evaluator environment; the Docker adapter adds `nova.rsi.evaluation_id=<id>` to each sandbox container without exposing the identifier as a candidate-chosen setting.
-3. Run the evaluator in a dedicated process group. On outer timeout, terminate the group, then use an independent Docker-label cleanup routine.
+3. Run the evaluator in a dedicated process group. On outer timeout, terminate the group, bound all subsequent output-drain/reap waits, then use an independent Docker-label cleanup routine.
 4. Make cleanup enumerate all containers with that evaluation label, kill/remove discovered IDs, and verify that none remain. Any uncertainty returns BLOCKED.
-5. Use a brief bounded discovery grace for the outer supervisor to catch delayed container creation.
+5. Use a brief bounded discovery grace for the outer supervisor to catch delayed container creation. Any process-termination uncertainty or failed cleanup must return BLOCKED; do not wait indefinitely for stdout EOF.
 6. Add unit tests for process-group timeout handling, cleanup failure, normal-exit cleanup uncertainty, environment-to-label propagation, and multiple evaluation-labelled containers.
 7. Extend the real Docker smoke test to launch a detached evaluation-labelled container and prove supervisor cleanup removes it without relying on the per-container cidfile handler.
 8. Keep readiness and promotion gates unchanged.
@@ -35,6 +35,7 @@ The outer trusted process used a host `subprocess.run(timeout=...)` with a timeo
 
 - Every Docker sandbox launched by the protected evaluator carries the unique outer evaluation ID label.
 - The supervisor kills the evaluator process group on timeout and invokes independent label cleanup.
+- Secondary output draining and process reaping each have explicit time bounds; a child that does not terminate yields BLOCKED rather than an unbounded wait.
 - Any persistent or uninspectable evaluation-labelled container makes cleanup return BLOCKED.
 - The actual Docker CI smoke test verifies supervisor cleanup on a detached container as well as existing timeout cleanup.
 - RSI CI passes compilation, all tests, pinned image verification, and the real Docker smoke test.
