@@ -320,6 +320,8 @@ def main() -> int:
     args = parser.parse_args()
     repo_root = Path(args.repo).resolve()
     evidence_dir = Path(args.evidence_dir)
+    if not evidence_dir.is_absolute():
+        evidence_dir = repo_root / evidence_dir
     try:
         result = verify_evidence(evidence_dir, repo_root)
         if args.check_applied:
