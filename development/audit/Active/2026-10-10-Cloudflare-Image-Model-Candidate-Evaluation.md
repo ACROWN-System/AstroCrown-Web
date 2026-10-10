@@ -43,7 +43,7 @@ This is a bounded first pass over three models explicitly found in Cloudflare's 
 
 ### F-001 — The Workers AI Free plan has a documented hard quota boundary
 
-Cloudflare's pricing page, last updated 2026-10-01, states that Workers AI includes 10,000 Neurons per day on Workers Free. Use above that allocation requires Workers Paid; on Workers Free, exceeding the documented limits causes further operations to fail rather than silently billing the Free plan for the overage.
+Cloudflare's pricing page, last updated 2026-10-09, states that Workers AI includes 10,000 Neurons per day on Workers Free. Use above that allocation requires Workers Paid; on Workers Free, exceeding the documented limits causes further operations to fail rather than silently billing the Free plan for the overage.
 
 The same page identifies a set of models that require a paid billing method; the three candidates evaluated here are not in that published list. However, this does **not** establish that the user's specific account can access a candidate without adding a payment method. Account-specific access remains BLOCKED until verified in the logged-in dashboard.
 
