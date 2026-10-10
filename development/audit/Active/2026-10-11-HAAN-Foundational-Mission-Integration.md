@@ -9,7 +9,7 @@
 **Mode:** Repository review and additive architecture documentation through a reviewable pull request.  
 **Primary repository:** https://github.com/ACROWN-System/AstroCrown-Web  
 **Canonical cross-repository dependency:** https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md  
-**Dependency PR:** https://github.com/ACROWN-System/NOVA/pull/65  
+**Dependency PR:** https://github.com/ACROWN-System/NOVA/pull/67  
 **Method references:** `development/Prompt-Guide.md`, `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, existing RSI architecture and audit records.
 
 The expected standalone `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` were not found in the inspected active paths. This plan follows the available development/audit convention and Prompt Guide; it does not claim to have followed absent files.
