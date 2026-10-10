@@ -144,7 +144,7 @@ class EvidenceVerifierTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_valid_evidence_package_passes(self):
-        result = verify_evidence(self.evidence, self.root, policy=self.policy)
+        result = verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
         self.assertEqual(result["status"], "PASS")
         self.assertEqual(result["candidate_changed_paths"], [CHANGED_PATH])
         self.assertEqual(result["verified_evidence_files"], 3)
@@ -153,17 +153,17 @@ class EvidenceVerifierTests(unittest.TestCase):
         with (self.evidence / "candidate.patch").open("a", encoding="utf-8") as handle:
             handle.write("# altered after manifest\n")
         with self.assertRaisesRegex(EvidenceVerificationError, "hash mismatch"):
-            verify_evidence(self.evidence, self.root, policy=self.policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_missing_and_unexpected_files_fail_closed(self):
         (self.evidence / "evaluation.json").unlink()
         with self.assertRaises(EvidenceVerificationError):
-            verify_evidence(self.evidence, self.root, policy=self.policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
         build_evidence(self.evidence)
         (self.evidence / "unlisted.txt").write_text("unexpected", encoding="utf-8")
         with self.assertRaisesRegex(EvidenceVerificationError, "complete file inventory"):
-            verify_evidence(self.evidence, self.root, policy=self.policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_manifest_cannot_authorize_an_extra_file(self):
         extra = self.evidence / "extra.json"
@@ -178,7 +178,7 @@ class EvidenceVerifierTests(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(EvidenceVerificationError, "exact approved set"):
-            verify_evidence(self.evidence, self.root, policy=self.policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_evidence_directory_symlink_is_rejected(self):
         actual = self.root / "actual-evidence"
@@ -186,17 +186,38 @@ class EvidenceVerifierTests(unittest.TestCase):
         linked = self.root / "linked-evidence"
         linked.symlink_to(actual, target_is_directory=True)
         with self.assertRaisesRegex(EvidenceVerificationError, "must not be a symlink"):
-            verify_evidence(linked, self.root, policy=self.policy)
+            verify_evidence(linked, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_cycle_must_record_pass(self):
         build_evidence(self.evidence, cycle_decision="FAIL")
         with self.assertRaisesRegex(EvidenceVerificationError, "does not record PASS"):
-            verify_evidence(self.evidence, self.root, policy=self.policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
+
+    def test_cycle_baseline_must_match_trusted_expected_baseline(self):
+        with self.assertRaisesRegex(EvidenceVerificationError, "Cycle baseline does not match the trusted workflow baseline"):
+            verify_evidence(
+                self.evidence,
+                self.root,
+                expected_baseline="c" * 40,
+                policy=self.policy,
+            )
+
+    def test_missing_or_invalid_expected_baseline_is_blocked(self):
+        for value in (None, "short", "A" * 40):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                EvidenceVerificationError, "Trusted expected baseline"
+            ):
+                verify_evidence(
+                    self.evidence,
+                    self.root,
+                    expected_baseline=value,
+                    policy=self.policy,
+                )
 
     def test_evaluator_baseline_must_match_cycle_baseline(self):
         build_evidence(self.evidence, evaluation_baseline="c" * 40)
         with self.assertRaisesRegex(EvidenceVerificationError, "baseline does not match"):
-            verify_evidence(self.evidence, self.root, policy=self.policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_protected_patch_path_is_rejected(self):
         protected = "development/protected.py"
@@ -229,13 +250,13 @@ class EvidenceVerifierTests(unittest.TestCase):
             encoding="utf-8",
         )
         with self.assertRaisesRegex(EvidenceVerificationError, "protected path validation"):
-            verify_evidence(self.evidence, self.root, policy=self.policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=self.policy)
 
     def test_readiness_must_be_ready_to_retain_candidate(self):
         policy = test_policy()
         policy["implementation_readiness"]["status"] = "INCOMPLETE"
         with self.assertRaisesRegex(EvidenceVerificationError, "not READY"):
-            verify_evidence(self.evidence, self.root, policy=policy)
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=policy)
 
     def test_applied_worktree_paths_match_verified_patch(self):
         init_repo(self.root)
