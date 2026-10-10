@@ -340,7 +340,10 @@ def _stop_container(docker: str, cidfile: Path, run_id: str) -> bool:
 
 
 def cleanup_evaluation_containers(
-    evaluation_id: str, docker: str | None = None
+    evaluation_id: str,
+    docker: str | None = None,
+    *,
+    wait_for_late_containers: bool = False,
 ) -> bool:
     """Remove and verify all containers tagged with one outer evaluation ID.
 
@@ -355,7 +358,8 @@ def cleanup_evaluation_containers(
 
     label = f"nova.rsi.evaluation_id={evaluation_id}"
     container_ids: set[str] = set()
-    for attempt in range(3):
+    discovery_attempts = 11 if wait_for_late_containers else 3
+    for attempt in range(discovery_attempts):
         try:
             listed = subprocess.run(
                 [docker_executable, "ps", "-aq", "--filter", f"label={label}"],
@@ -380,7 +384,7 @@ def cleanup_evaluation_containers(
                     break
             else:
                 return False
-        if attempt < 2:
+        if attempt < discovery_attempts - 1:
             time.sleep(0.1)
 
     for container_id in sorted(container_ids):
