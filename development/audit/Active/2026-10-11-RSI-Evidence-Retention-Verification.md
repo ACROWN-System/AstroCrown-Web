@@ -41,7 +41,7 @@ The write-capable `retain-qualified-candidate` job downloads `.rsi-evidence`, ap
 
 **IF modified:** The privileged retention boundary now independently validates evidence and the actual patched worktree instead of relying only on the upstream pass result.
 
-**IF not modified:** the identified trust, credential-egress, quota-accounting, artifact-retention, or supply-chain weakness would remain as documented in the findings above.
+**IF not modified:** The write-capable retention boundary would lack an independent evidence/worktree recheck, and the old parser could mishandle valid unified-diff paths.
 
 ## Residual risks and handoff
 
