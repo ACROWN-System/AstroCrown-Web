@@ -168,6 +168,12 @@ def verify_evidence(
     candidate = cycle.get("candidate")
     if not isinstance(candidate, dict):
         raise EvidenceVerificationError("RSI cycle evidence has no candidate object.")
+    evaluated_candidate = result.get("candidate")
+    if not isinstance(evaluated_candidate, dict) or evaluated_candidate != candidate:
+        raise EvidenceVerificationError("The evaluated candidate object does not match the retained candidate object.")
+    evaluator_exit_code = result.get("evaluator_exit_code")
+    if isinstance(evaluator_exit_code, bool) or evaluator_exit_code != 0:
+        raise EvidenceVerificationError("The protected evaluator process did not exit successfully.")
     if candidate.get("baseline_commit") != baseline:
         raise EvidenceVerificationError("Candidate baseline does not match the cycle baseline.")
     payload_errors = validate_candidate_payload(candidate, baseline, trusted_policy)
