@@ -4,6 +4,7 @@
 
 - `rsi_engine.py` — autonomous candidate proposal, bounded context/output generation, patch validation, isolated worktree execution, and evidence generation.
 - `evaluator.py` — protected evaluator using the protected policy and enforcing machine-verifiable benchmark evidence rather than candidate-controlled evaluation code.
+- `evidence_verifier.py` — protected verification of the cycle/evaluator PASS decisions, exact evidence inventory and SHA-256 manifest, candidate patch/scope, provider usage telemetry, budget accounting, and actual applied worktree before privileged retention.
 - `sandbox_runtime.py` — fail-closed Docker adapter for candidate-controlled compilation, unit tests, and benchmark execution, using an immutable image pin, no network, read-only source mounts, a strict environment allowlist, resource limits, timeout, bounded output, and explicit container cleanup.
 - `rsi_policy.json` — protected scope, evaluation, promotion, and resource-budget policy.
 - `candidate.schema.json` — candidate payload contract.
@@ -82,7 +83,7 @@ The protected evaluator resolves the configured command through `benchmark_dispa
 
 ## Promotion behavior
 
-The current workflow retains a PASS candidate on an `rsi/candidate-<run-id>` branch and opens a pull request to `main`.
+The current workflow retains a PASS candidate on an `rsi/candidate-<run-id>` branch and opens a pull request to `main`. Before the write-capable retention stage receives its GitHub token, `evidence_verifier.py` must validate the downloaded evidence package. After patch application, the verifier compares the actual changed-worktree path set against the verified patch and blocks protected paths, deletions, symlinks/non-regular files, and executable-mode changes. The retention checkout disables automatic Git credential persistence, and candidate application runs `git apply --check` plus `git diff --check`.
 
 Automatic direct modification of `main` is intentionally disabled in the initial implementation.
 
@@ -100,6 +101,7 @@ Candidate patches may not modify:
 - `development/nova-recursive-self-improvement/tests/`.
 - `development/nova-recursive-self-improvement/benchmark_dispatcher.py`.
 - `development/nova-recursive-self-improvement/benchmark_profiles.json`.
+- `development/nova-recursive-self-improvement/evidence_verifier.py`.
 
 Candidate patches are also restricted by the protected `rsi_policy.json` scope and are rejected if they delete tracked files or contain configured sensitive path or content indicators. The engine and protected evaluator load the policy rather than maintaining separate copies of the candidate scope and protected-path lists.
 
