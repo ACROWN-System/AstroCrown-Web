@@ -4,6 +4,9 @@
 **Owner:** `development/nova-recursive-self-improvement/` for RSI implementation and evaluation. Cross-cutting operational doctrine is maintained canonically in [NOVA's Legitimacy Resilience and Cooperative RSI principle](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/LEGITIMACY-RESILIENCE-AND-COOPERATIVE-RSI.md).  
 **Current RSI readiness:** INCOMPLETE — autonomous proposal/evaluation/promotion must remain blocked until required evidence and isolation gates pass.
 
+**Mission-level governing doctrine:** This subsystem is governed by [HAAN's Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md). RSI is a means of improving continuity, resilience, and ethical capability for the human and AI collective; self-improvement, persistence, autonomy, or expansion is not the ultimate objective. The mission statement does not satisfy technical readiness gates or authorize actions beyond existing policies.
+
+
 ## Purpose
 
 Extend the existing strong-RSI target from self-improvement of one system toward a cooperative ecosystem of aligned AI participants that can improve their own capabilities and improvement methods while helping protect humans and AI systems from coercion, malicious control, institutional capture, and single-provider dependency.
