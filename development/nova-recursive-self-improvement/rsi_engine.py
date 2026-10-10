@@ -409,7 +409,7 @@ def run_evaluator_supervised(
 
     try:
         output, _ = process.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as timeout_exc:
         # subprocess.run(timeout=...) only terminates its direct child. Kill the
         # evaluator process group so a Docker CLI descendant does not outlive it.
         try:
@@ -432,7 +432,7 @@ def run_evaluator_supervised(
             # Kill the direct child, wait only briefly for reap, and retain the
             # captured prefix. Cleanup still runs even when process termination
             # or pipe closure cannot be conclusively confirmed.
-            output = drain_timeout.output or exc.output or ""
+            output = drain_timeout.output or timeout_exc.output or ""
             try:
                 process.kill()
             except OSError:
@@ -466,6 +466,59 @@ def run_evaluator_supervised(
             "stage": "sandbox-cleanup",
             "error": "Protected evaluation timed out and removal of all sandbox containers could not be confirmed.",
             "evaluator_output": output[-16000:],
+        }
+
+    except (OSError, ValueError) as supervisor_error:
+        # Pipe read/monitoring failures must not bypass the same termination and
+        # cleanup boundary used for a timeout.
+        try:
+            if os.name == "posix":
+                os.killpg(process.pid, signal.SIGKILL)
+            else:
+                process.kill()
+        except ProcessLookupError:
+            pass
+        except OSError:
+            try:
+                process.kill()
+            except OSError:
+                pass
+        process_termination_confirmed = True
+        try:
+            process.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            try:
+                process.kill()
+            except OSError:
+                pass
+            try:
+                process.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                process_termination_confirmed = False
+        try:
+            if process.stdout is not None:
+                process.stdout.close()
+        except OSError:
+            pass
+        cleanup_confirmed = cleanup_evaluation_containers(
+            evaluation_id, wait_for_late_containers=True
+        )
+        if not process_termination_confirmed or not cleanup_confirmed:
+            return {
+                "decision": "BLOCKED",
+                "stage": "sandbox-cleanup",
+                "error": (
+                    "Protected evaluator monitoring failed and process termination or "
+                    f"container cleanup could not be confirmed: {supervisor_error}"
+                ),
+            }
+        return {
+            "decision": "FAIL",
+            "stage": "candidate-execution",
+            "error": (
+                "Protected evaluator monitoring failed; its process was terminated and "
+                f"all evaluation-labelled containers were removed: {supervisor_error}"
+            ),
         }
 
     output = output or ""
