@@ -286,6 +286,7 @@ def call_proposer(prompt: str, max_output_tokens: int, policy: dict[str, Any]) -
         api_key_env=provider["api_key_env"],
         default_base_url=provider.get("default_base_url"),
         timeout_seconds=int(policy["evaluation"].get("provider_timeout_seconds", 120)),
+        allowed_hosts=provider.get("allowed_hosts"),
         max_response_bytes=int(provider.get("max_response_bytes", 262144)),
     )
     result, model = chat_completion(
