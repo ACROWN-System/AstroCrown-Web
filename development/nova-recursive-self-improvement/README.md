@@ -394,6 +394,12 @@ Nosana's current documentation describes the inference service as credit-metered
 
 CI pulls and verifies the pinned image before running a smoke test for read-only workspace, host-path separation, and network denial. This is implementation evidence for the configured boundary, not a claim that container escape, kernel, Docker-daemon, or supply-chain risks are eliminated. Independent security review is still required; RSI readiness remains `INCOMPLETE`.
 
+## Task-specific benchmark dispatcher
+
+The protected evaluator uses [`benchmark_dispatcher.py`](benchmark_dispatcher.py) and the protected [`benchmark_profiles.json`](benchmark_profiles.json) registry to select a workload only when the candidate's complete changed-file set and configured command match a specific profile exactly. Mixed, unknown, malformed, disabled, or command-mismatched scopes return `BLOCKED`.
+
+The only registered profile is the context-packing candidate, scoped to a single source file. It remains disabled pending independent review of the benchmark/corpus, evaluator integrity, and Docker isolation. This prevents the context-packing workload from serving as an unsupported global benchmark for unrelated RSI changes. New capability profiles require their own suitable workload and review.
+
 ## Initial context-packing workload
 
 A first bounded benchmark workload is being implemented for provenance-preserving context packing. See the protected [Capability Benchmark Protocol](CAPABILITY-BENCHMARK-PROTOCOL.md), [workload runner](benchmarks/run_context_packing_benchmark.py), and fixed [synthetic case set](benchmarks/context-packing-cases.json). It evaluates one defined retrieval/context-budget capability and must not be represented as a general-intelligence benchmark.
