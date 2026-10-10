@@ -1,8 +1,7 @@
 # Completed Navigation Plan — Task-Specific RSI Benchmark Dispatcher
 
 **Date:** 2026-10-11  
-**Status:** COMPLETED — this Active-path copy is retained as an archival mirror; benchmark profile remains disabled and unapproved  
-**Canonical completed record:** [Completed task-specific benchmark dispatcher plan](../Completed/2026-10-11-RSI-Task-Benchmark-Dispatcher.md)  
+**Status:** COMPLETED — protected dispatcher merged; benchmark profile remains disabled and unapproved  
 **Objective:** Prevent a narrow benchmark from being applied to an unrelated RSI candidate. Introduce a protected dispatcher that accepts only an exact approved changed-file scope and matching benchmark command, while leaving the current context-packing profile disabled pending independent review.
 
 ## Mission and source of truth
