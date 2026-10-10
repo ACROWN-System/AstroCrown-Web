@@ -109,8 +109,8 @@ diff --git a/development/x.txt b/development/x.txt
         patch = "\n".join(
             (
                 "diff --git a/development/sample.txt b/development/sample.txt",
-                "--- a/development/sample.txt",
-                "+++ b/development/sample.txt",
+                "--- a/development/sample.txt\\t2026-10-11",
+                "+++ b/development/sample.txt\\t2026-10-11",
                 "@@ -1 +1 @@",
                 "-old",
                 "+new",
