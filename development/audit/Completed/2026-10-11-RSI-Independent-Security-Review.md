@@ -92,6 +92,10 @@ Two additional supervisor-level findings have since been addressed:
 
 The supervisor now kills its evaluator process group, bounds post-timeout drain/reap waits, and uses a separate evaluation label to recover containers when the inner per-command cleanup cannot complete. These changes still depend on the configured Docker daemon accurately reporting its state and are not a substitute for independent threat-model review.
 
+### Workflow-level cleanup finalizer
+
+The [workflow cleanup finalizer review](./2026-10-11-RSI-Workflow-Cleanup-Finalizer.md) was completed with [PR #79](https://github.com/ACROWN-System/AstroCrown-Web/pull/79), merged as `ff1938cd1b1dc1c3a6b98053729d4c4bb19c1f6a`. CI [run #38095114681](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38095114681) passed 98 tests, compilation, pinned-image checks, and a real Docker smoke test through the exact standalone cleanup CLI used by the workflow. The RSI job now has an `if: always()` cleanup finalizer with a separate cycle timeout and job-level buffer. This remains a same-runner best-effort cleanup step, not a guarantee against total runner loss or Docker daemon/kernel failure.
+
 ## Remaining blockers and residual risks
 
 This targeted review does **not** close the independent security approval gate. Remaining work includes an independent threat-model and configuration review covering at least:
