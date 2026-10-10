@@ -15,7 +15,9 @@
       "development/nova-recursive-self-improvement/preflight.py",
       "development/nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md",
       "development/nova-recursive-self-improvement/benchmarks/",
-      "development/nova-recursive-self-improvement/sandbox_runtime.py"
+      "development/nova-recursive-self-improvement/sandbox_runtime.py",
+      "development/nova-recursive-self-improvement/README.md",
+      "development/nova-recursive-self-improvement/IMPLEMENTATION.md"
     ],
     "forbidden_path_fragments": [
       ".env",
