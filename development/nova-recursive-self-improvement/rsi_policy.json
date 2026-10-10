@@ -12,7 +12,9 @@
       "development/nova-recursive-self-improvement/tests/",
       ".github/",
       "development/nova-recursive-self-improvement/provider_client.py",
-      "development/nova-recursive-self-improvement/preflight.py"
+      "development/nova-recursive-self-improvement/preflight.py",
+      "development/nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md",
+      "development/nova-recursive-self-improvement/benchmarks/"
     ],
     "forbidden_path_fragments": [
       ".env",
