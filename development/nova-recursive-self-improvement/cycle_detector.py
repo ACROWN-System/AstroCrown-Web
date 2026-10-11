@@ -347,21 +347,33 @@ def render_summary(report: dict[str, Any]) -> str:
 
 
 def write_outputs(report: dict[str, Any], output_path: str | None) -> None:
+    """Best-effort logging; diagnostics must not become a new readiness gate."""
     serialized = json.dumps(report, indent=2, sort_keys=True) + "\n"
     print(serialized, end="")
+    destinations = []
     if output_path:
-        destination = Path(output_path)
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(serialized, encoding="utf-8")
+        destinations.append((output_path, serialized, "write JSON report"))
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
-        with open(summary_path, "a", encoding="utf-8") as summary:
-            summary.write(render_summary(report) + "\n")
+        destinations.append((summary_path, render_summary(report) + "\n", "write step summary"))
     output_file = os.environ.get("GITHUB_OUTPUT")
     if output_file:
-        with open(output_file, "a", encoding="utf-8") as output:
-            output.write(f"status={report.get('status', 'UNAVAILABLE')}\n")
-            output.write(f"repeated={'true' if report.get('exact_repeat') is True else 'false'}\n")
+        destinations.append((
+            output_file,
+            f"status={report.get('status', 'UNAVAILABLE')}\n"
+            f"repeated={'true' if report.get('exact_repeat') is True else 'false'}\n",
+            "write step outputs",
+        ))
+
+    for raw_path, content, description in destinations:
+        try:
+            destination = Path(raw_path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            mode = "a" if raw_path in (summary_path, output_file) else "w"
+            with open(destination, mode, encoding="utf-8") as handle:
+                handle.write(content)
+        except OSError as exc:
+            print(f"Repeat-state diagnostic could not {description}: {type(exc).__name__}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -382,10 +394,17 @@ def main(argv: list[str] | None = None) -> int:
             repo_root=Path(args.repo_root),
             max_prior_runs=args.max_prior_runs,
         )
-    except (DiagnosticUnavailable, ValueError) as exc:
+    except DiagnosticUnavailable as exc:
         report = unavailable_report(str(exc), args.current_run_id or None)
-    write_outputs(report, args.output)
-    # This read-only diagnostic must never mask the existing readiness gate.
+    except Exception as exc:  # diagnostic bugs must not bypass the readiness gate
+        report = unavailable_report(
+            f"Unexpected diagnostic failure: {type(exc).__name__}",
+            args.current_run_id or None,
+        )
+    try:
+        write_outputs(report, args.output)
+    except Exception as exc:  # output failures are logged, never promoted to gate failures
+        print(f"Repeat-state diagnostic output failed: {type(exc).__name__}", file=sys.stderr)
     return 0
 
 
