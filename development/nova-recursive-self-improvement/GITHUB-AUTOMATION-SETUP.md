@@ -8,10 +8,9 @@ Create a GitHub App owned by an account allowed to install apps on ACROWN-System
 
 Grant these repository permissions:
 
-- **Administration: Read** — the workflow verifies effective rules on main before requesting auto-merge.
 - **Contents: Read and write** — create the candidate branch and push its verified patch.
 - **Pull requests: Read and write** — open the PR and request auto-merge.
-- Keep the default **Metadata: Read-only** permission.
+- Keep the default **Metadata: Read-only** permission. The public-branch rules endpoint used by the auto-merge preflight requires only Metadata read access; additional Administration access is not needed.
 
 Do not grant organization-wide or unrelated repository access. Do not place the private key in the repository, a commit, a pull-request body, an issue, or chat.
 
