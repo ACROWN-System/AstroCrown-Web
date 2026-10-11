@@ -5,6 +5,7 @@
 - `rsi_engine.py` — autonomous candidate proposal, bounded context/output generation, patch validation, isolated worktree execution, and evidence generation.
 - `evaluator.py` — protected evaluator using the protected policy and enforcing machine-verifiable benchmark evidence rather than candidate-controlled evaluation code.
 - `evidence_verifier.py` — protected verification of the cycle/evaluator PASS decisions, exact evidence inventory and SHA-256 manifest, candidate patch/scope, provider usage telemetry, budget accounting, and actual applied worktree before privileged retention.
+- `cycle_detector.py` — read-only comparison of native Git tree/blob IDs across recent main-branch RSI runs; reports exact repeated states, cycle lengths, component-level stasis, or `UNAVAILABLE` when evidence cannot be verified.
 - `sandbox_runtime.py` — fail-closed Docker adapter for candidate-controlled compilation, unit tests, and benchmark execution, using an immutable image pin, no network, read-only source mounts, a strict environment allowlist, resource limits, timeout, bounded output, and explicit container cleanup.
 - `rsi_policy.json` — protected scope, evaluation, promotion, and resource-budget policy.
 - `candidate.schema.json` — candidate payload contract.
@@ -25,6 +26,8 @@ Baseline
 → evidence
 → PASS / FAIL / BLOCKED
 → qualified-candidate branch and pull request when PASS
+
+Before the hard implementation-readiness gate, the workflow runs `cycle_detector.py` with read-only Actions and Contents permissions. It inspects at most 10 previous scheduled/manual runs on `main`, compares native Git object IDs for the RSI and context/memory subsystems, protected engine/evaluator/policy/benchmark components, and RSI workflows, then writes a JSON diagnostic and a workflow-step summary. The JSON is retained for 14 days only when an exact full-state repeat is detected. Incomplete or truncated history is `UNAVAILABLE`, never evidence of no repeat. This diagnostic neither authorizes the RSI lifecycle nor treats a repeated state or changed state as proof of capability quality.
 
 The protected evaluator, benchmark dispatcher, sandbox adapter, RSI policy, and benchmark profile registry are copied from the trusted workflow checkout into a separate read-only control directory outside the candidate worktree. The evaluator is launched from that trusted control directory and receives explicit paths to the trusted policy and registry; it does not import its control logic or acceptance policy from the candidate worktree. The candidate worktree remains the inspected/evaluated subject. Candidate-controlled Python compilation, unit tests, and benchmark code execute inside the pinned Docker runtime with networking disabled, a read-only workspace, no inherited credentials, a non-root identity, dropped capabilities, no-new-privileges, resource limits, bounded output, and forced container termination on timeout. The benchmark receives only SHA-labelled baseline/candidate source snapshots through a separate read-only mount; it does not need the host Git database.
 
@@ -102,6 +105,7 @@ Candidate patches may not modify:
 - `development/nova-recursive-self-improvement/benchmark_dispatcher.py`.
 - `development/nova-recursive-self-improvement/benchmark_profiles.json`.
 - `development/nova-recursive-self-improvement/evidence_verifier.py`.
+- `development/nova-recursive-self-improvement/cycle_detector.py`.
 
 Candidate patches are also restricted by the protected `rsi_policy.json` scope and are rejected if they delete tracked files or contain configured sensitive path or content indicators. The engine and protected evaluator load the policy rather than maintaining separate copies of the candidate scope and protected-path lists.
 
