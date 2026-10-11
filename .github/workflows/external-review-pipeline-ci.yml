@@ -1,0 +1,51 @@
+name: External Review Pipeline CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "development/audit/external-review/**"
+      - ".github/workflows/external-review-pipeline-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/audit/external-review/**"
+      - ".github/workflows/external-review-pipeline-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Compile pipeline
+        run: python -m py_compile development/audit/external-review/pipeline.py
+
+      - name: Validate ledger and report structure
+        run: |
+          set -euo pipefail
+          python development/audit/external-review/pipeline.py \
+            --ledger development/audit/external-review/ledger.json > "$RUNNER_TEMP/external-review-report.json"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path(__import__("os").environ["RUNNER_TEMP"] + "/external-review-report.json").read_text())
+          assert report["schema_version"] == 1
+          assert report["cohorts"][0]["stages"]["reply_given_outreach"]["status"] == "NO_ELIGIBLE_OUTCOMES"
+          assert report["cohorts"][0]["stages"]["reply_given_outreach"]["observed_rate_percent"] is None
+          PY
+
+      - name: Run conversion and scoring tests
+        run: python -m unittest discover -s development/audit/external-review/tests -p "test_*.py" -v

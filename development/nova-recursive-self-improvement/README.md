@@ -432,3 +432,7 @@ The provider adapter, protected preflight, dedicated provider-secret boundary, s
 The autonomous RSI lifecycle remains blocked because the protected policy is still explicitly `INCOMPLETE`. In particular, an approved capability workload/corpus that demonstrates actual NOVA intelligence improvement has not yet been established. Deterministic code-health tests are not treated as a substitute for that benchmark.
 
 The repository therefore stops before autonomous provider use and before changing the readiness state to `READY`.
+
+## External security validation and reviewer conversion
+
+The external-review process is recorded in [External Security Review Pipeline](../audit/external-review/README.md). It tracks CodeQL, OpenSSF Scorecard, and other free automated analysis separately from independent human review; evaluates program eligibility before enrollment; and measures reviewer fit and conversion from sourced evidence and observed outcomes rather than assuming that technical reputation predicts acceptance. The current protected readiness gate and disabled benchmark remain authoritative; see the [independent readiness review package](INDEPENDENT-REVIEW-PACKAGE.md).
