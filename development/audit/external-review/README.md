@@ -119,6 +119,45 @@ Optional candidate scoring accepts a JSON file with `candidate_id`, `factor_scor
 
 Because the current ledger has one open outreach and no completed comparable outcomes, this tool deliberately cannot produce a calibrated conversion probability today. The user's 0.0001% assessment for the full individual pro-bono request is preserved as a **user-supplied, unvalidated sensitivity scenario**; it is not used as a training observation or propagated to other routes.
 
+## Additional no-cost program routes assessed — 2026-10-11
+
+### Anthropic OSS Scanner — eligibility inquiry first
+
+Official sources: [program overview](https://red.anthropic.com/oss-scanner/), [scanner enrollment instructions](https://github.com/anthropics/oss-scanner), [terms](https://red.anthropic.com/oss-scanner/terms/).
+
+The program is free and can supply recurring model-generated vulnerability reports, but reports received through this fast track are not human-reviewed. Anthropic describes the service as intended for projects that can already keep up with verified high/critical vulnerability reports; eligibility is decided case by case. Enrollment requires a project build Dockerfile and a public primary-contact email in the enrollment configuration, and the core maintainer must accept the terms.
+
+**Decision:** do not submit an enrollment PR yet. AstroCrown-Web is an early-stage repository and the current evidence does not demonstrate a broad dependent-project or deployed-user footprint. The official questions mailbox is `oss-scanner-questions@anthropic.com`. A project-eligibility inquiry should be sent before preparing a public enrollment configuration. Do not represent a model-generated report as independent human approval.
+
+### Snyk Secure Developer Program — blocked pending maintainer consent
+
+Official source: [Snyk Secure Developer Program](https://snyk.io/open-source/).
+
+Snyk advertises complimentary full enterprise security tooling, community support and dedicated security-advisory assistance for qualifying community projects. Its published conditions include that the project is not backed by a corporate entity, that a link to Snyk is included in both the repository README and project website, and that Snyk is permitted to display the project logo and related content.
+
+**Decision:** potentially useful, but do not apply or add promotional links/branding without the maintainer's explicit decision. These are partnership/branding conditions, not evidence of an independent human audit. No acceptance is claimed.
+
+### OpenSSF Alpha–Omega grant — blocked pending license and impact evidence
+
+Official source: [Alpha–Omega grant application requirements](https://alpha-omega.dev/grants/how-to-apply/).
+
+The published application calendar lists the Q4 2026 intake as 1–31 October 2026. All projects must use an OSI-approved open-source license, and the application assesses the security impact the funding would have on the ecosystem. This is a potential funding route, not a guaranteed external security review.
+
+**Decision:** do not apply while the repository has no license file. Selecting a license has legal and reuse consequences and remains a maintainer decision. Current evidence also does not establish the ecosystem criticality needed to make a strong impact case.
+
+### GitHub Security Lab — free community resources, not an audit commitment
+
+Official sources: [Open Source Community resources](https://securitylab.github.com/open-source/) and [Security Lab repository](https://github.com/github/securitylab).
+
+The Lab publishes free secure-coding education, AppSec training, security tools and research resources for open-source developers, maintainers and researchers. These are actionable resources and possible community touchpoints; the published materials do not promise a dedicated independent audit for this repository.
+
+### Evidence and decision rules
+
+- Continue the existing free CodeQL, OpenSSF Scorecard, RSI CI and reviewer-conversion pipeline.
+- Keep automated reports, model-generated findings, and maintainer self-review distinct from an attributable independent human review.
+- Do not submit an enrollment, accept program terms, choose a license, or grant branding rights merely to increase the apparent number of routes.
+- Reassess a route only when its published conditions and the project evidence support a concrete next action. Record an actual response or result rather than converting non-response or unknown eligibility into a success/failure statistic.
+
 ## Current status
 
 - The first individual outreach is recorded as sent and still unresolved; this environment cannot read the user's Gmail inbox.
