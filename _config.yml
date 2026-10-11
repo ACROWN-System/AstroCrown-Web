@@ -1,0 +1,16 @@
+# Do not render internal development plans or backup mirrors on the public site.
+# This is a Pages publication boundary; the source repository remains public.
+exclude:
+  - backup
+  - development
+  - .github
+  - .sass-cache
+  - .jekyll-cache
+  - gemfiles
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
