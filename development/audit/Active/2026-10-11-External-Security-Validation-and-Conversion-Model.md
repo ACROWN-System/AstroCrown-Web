@@ -1,7 +1,7 @@
 # Active Navigation Plan — External Security Validation and Conversion Model
 
 **Date:** 2026-10-11  
-**Status:** ACTIVE — official program eligibility assessed; implementation and verification in progress  
+**Status:** ACTIVE — automated security-analysis routes and conversion tool merged; OSS Scanner eligibility inquiry still awaits maintainer send/response  
 **Objective:** Establish the best zero-cost external security-validation routes available to NOVA RSI, add an independently operated static-analysis path that can run now, and make reviewer outreach evidence-led with measurable conversion tracking.
 
 ## Mode and source of truth
@@ -74,12 +74,23 @@ If neither condition is met, do not submit an enrollment PR. Keep using free aut
 
 **IF not modified:** the project remains dependent on a low-probability unsolicited volunteer request, misses a no-cost automated analysis channel available now, and continues to lack a repeatable mechanism for selecting and measuring outreach routes.
 
+## Execution outcome — 2026-10-11
+
+- PR [#89](https://github.com/ACROWN-System/AstroCrown-Web/pull/89) merged to `main` as `4b3a490b35df1cad9ad9bda9fe4193f416d56fd9`.
+- External-review pipeline CI passed on the PR head: [run #38109356010](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109356010). Its tests cover unresolved-outreach handling, conditional stage denominators, evidence-gated candidate fit scores, and low-sample uncertainty; no calibrated probability is manufactured from the single pending email.
+- RSI compile, unit tests, immutable image verification, and Docker isolation smoke tests passed on the PR head: [run #38109356016](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109356016).
+- CodeQL analysis passed on the PR head: [run #38109356050](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109356050).
+- On the merged `main` commit, external-review CI passed [run #38109541006](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109541006), RSI CI passed [run #38109541016](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109541016), CodeQL analysis completed successfully [run #38109541012](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109541012), and OpenSSF Scorecard completed successfully, including SARIF upload to GitHub code scanning, [run #38109541051](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109541051).
+- Added a dependency-free evidence-fit and conversion tool with factor weights, known-outcome denominators, Wilson intervals, low-sample warnings, and prospective forecast error tracking. The user's 0.0001% estimate is stored as an unvalidated scenario only.
+- Official Anthropic OSS Scanner guidance was checked. The contact route for eligibility questions is published on its official page; enrollment was not submitted because current evidence does not demonstrate that AstroCrown-Web meets the established-project/critical-impact criteria. The eligibility inquiry was prepared for the maintainer to send; no direct Gmail connection is available here.
+- Verified after merge that protected RSI readiness remains `INCOMPLETE`, `promotion.allow_main` remains `false`, and the context-packing benchmark remains disabled/unapproved.
+
 ## Verification and handoff
 
-- Validate the new workflow YAML and CodeQL configuration.
-- Verify workflow action references are pinned to a full commit SHA.
-- Confirm only the RSI subsystem is included, with backup snapshots excluded.
-- Confirm CodeQL and OpenSSF Scorecard run successfully on the public repository; treat environment/permission failures as BLOCKED rather than PASS.
-- Confirm existing RSI tests and Docker isolation smoke tests still pass.
-- Confirm readiness remains INCOMPLETE, main promotion remains disabled, and the context-packing profile remains disabled/unapproved.
-- Record the exact PR/commit/run results; move this plan to Completed only when repository actions are finished. The external-program eligibility inquiry remains pending until the user sends the prepared message and a reply is received.
+Repository implementation is merged and the core validation routes passed. The plan remains ACTIVE because the external eligibility branch is unresolved, not because repository code is waiting to merge.
+
+- [ ] Maintainer opens and sends the prefilled OSS Scanner eligibility inquiry from their own Gmail account.
+- [ ] Record Anthropic's actual response and update eligibility only from that evidence.
+- [ ] If the project is considered eligible, prepare a project-specific build Dockerfile and threat model, validate locally with the OSS Scanner project's own tools, then ask the maintainer to review and submit the separate enrollment PR/terms checklist.
+- [ ] If ineligible, retain the free CodeQL and OpenSSF Scorecard routes and seek other structured external programs without treating their reports as human approval.
+- [ ] Continue to preserve `implementation_readiness.status = INCOMPLETE`, `promotion.allow_main = false`, and the disabled/unapproved benchmark until all required independent gates are satisfied.
