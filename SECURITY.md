@@ -6,7 +6,7 @@ AstroCrown-Web includes development tooling for NOVA's recursive self-improvemen
 
 Please do not publish exploit steps, payloads, credentials, tokens, or other sensitive reproduction details in a public issue or pull request.
 
-1. First check the repository's **Security** tab for GitHub's **Report a vulnerability** / private vulnerability reporting feature. If available, use that private reporting route.
+1. Try [GitHub's private vulnerability report form](https://github.com/ACROWN-System/AstroCrown-Web/security/advisories/new). If private vulnerability reporting is enabled for this repository, submit the report there.
 2. If private reporting is unavailable, open a minimal public issue titled **Request for private security reporting channel**. Do not include the vulnerability details or a working exploit. A maintainer can then provide a private route.
 
 This fallback is intentionally designed to avoid disclosing technical details publicly. It is not a promise of a staffed response time.
