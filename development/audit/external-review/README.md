@@ -41,7 +41,7 @@ The follow-up run after PR #91 completed successfully and uploaded results: [run
 - **Security-policy discoverability improved but needs another look.** The first scan reported no policy file; after adding root `SECURITY.md`, the second report detected it but scored SecurityPolicy 4/10 because it did not find a linked reporting destination. The current main branch links the direct GitHub private-vulnerability reporting form. Whether the form can receive reports still depends on the repository's private-vulnerability-reporting setting. No unverified mailbox or response-time promise is published. The third Scorecard report no longer emitted a SecurityPolicy finding.
 - **Dependency update automation improved.** The first scan did not detect a dependency-update tool. After the weekly GitHub Actions Dependabot configuration was added, that finding no longer appeared in the second report. Updates still arrive as reviewable PRs; they are not auto-merged.
 - **Static-analysis coverage improved.** The first report saw SAST on 14 of 30 recent commits (8/10); the second saw 22 of 30 (9/10); the third saw 27 of 30 (9/10). This is a detection metric, not a count of vulnerabilities or proof of a clean codebase.
-- **Other current findings remain.** The repository has no detected license file, recognized fuzzing integration, OpenSSF Best Practices badge, or approved changesets in Scorecard's inspected window. It also reports that the repository is under 90 days old; age itself is not a code-remediation task. No license is being selected automatically because that choice has legal and reuse consequences and requires the maintainer's decision. In the latest run, CodeReview scored 0 (0/5 approved changesets in the inspected window) and CI tests were detected on 4 of 5 inspected merged PRs (8/10). The sample denominator shifts as new PRs arrive, so compare context as well as raw counts.
+- **Other current findings remain.** The cited Scorecard run's inspected window did not detect a license file; a root MIT License has since been merged to main (PR #104, 2026-10-11). Other findings from that run included no recognized fuzzing integration, no OpenSSF Best Practices badge, and 0/5 approved changesets in the inspected window. It also reported that the repository was under 90 days old; age itself is not a code-remediation task. In that recorded run, CodeReview scored 0 (0/5 approved changesets) and CI tests were detected on 4 of 5 inspected merged PRs (8/10). These remain historical observations, not refreshed measurements after licensing; the sample denominator shifts as new PRs arrive.
 - **SARIF source-location limitation.** Both Scorecard runs succeeded and uploaded results, but the logs warned that some report-level findings used the placeholder `no file associated with this alert` as a source URI. Some findings may therefore not link to a particular source file. Review the original job output and the GitHub code-scanning view rather than assuming every result is a line-level vulnerability.
 
 ### Manual GitHub settings handoff required
@@ -129,7 +129,15 @@ The program is free and can supply recurring model-generated vulnerability repor
 
 **Decision:** do not submit an enrollment PR yet. AstroCrown-Web is an early-stage repository and the current evidence does not demonstrate a broad dependent-project or deployed-user footprint. The official questions mailbox is `oss-scanner-questions@anthropic.com`. A project-eligibility inquiry should be sent before preparing a public enrollment configuration. Do not represent a model-generated report as independent human approval.
 
-### Snyk Secure Developer Program — blocked pending maintainer consent
+### Snyk Secure Developer Program — priority candidate; eligibility clarification required
+
+Official sources: [Snyk Secure Developer Program](https://snyk.io/open-source/) and [Snyk's June 18, 2026 program update](https://snyk.io/blog/secure-developer-program/).
+
+Snyk advertises complimentary full enterprise security tooling for qualifying open-source projects, community support, and dedicated security-advisory assistance. The current published qualification page lists three conditions: the project is not backed by a corporate entity; a Snyk link appears in both the repository README and project website; and Snyk is granted permission to use, reproduce, and display the project's logo and related content on Snyk's website. This co-branding arrangement can be a reasonable exchange of visibility for free security tools and support, but the exact scope and terms must be reviewed.
+
+**Important licence distinction:** the published qualification criteria reviewed on 2026-10-11 do **not explicitly list an OSI-approved software licence as a separate criterion**. That is different from Alpha–Omega, whose grant page explicitly requires an OSI-approved licence. Since this assessment was drafted, a root MIT License was merged to main in PR #104 on 2026-10-11. The no-license ambiguity is therefore resolved for the covered software, but Snyk eligibility is still unconfirmed until its full published conditions and exact co-branding terms are clarified.
+
+**Decision:** keep Snyk as an actionable priority candidate, not as approved or ineligible. Before making public promotional changes, granting co-branding rights, or submitting an application that binds the project, clarify all eligibility criteria and review the precise co-branding permission. The repository now has an MIT license for its covered software; do not treat this as approval from Snyk or as consent to its requested branding terms. No application acceptance, branding grant, or independent human review is implied.
 
 Official source: [Snyk Secure Developer Program](https://snyk.io/open-source/).
 
@@ -143,7 +151,7 @@ Official source: [Alpha–Omega grant application requirements](https://alpha-om
 
 The published application calendar lists the Q4 2026 intake as 1–31 October 2026. All projects must use an OSI-approved open-source license, and the application assesses the security impact the funding would have on the ecosystem. This is a potential funding route, not a guaranteed external security review.
 
-**Decision:** do not apply while the repository has no license file. Selecting a license has legal and reuse consequences and remains a maintainer decision. Current evidence also does not establish the ecosystem criticality needed to make a strong impact case.
+**Decision:** the repository's MIT license satisfies the published OSI-approved-license gate, but this does not guarantee an award or establish other eligibility. The current evidence still does not establish the ecosystem security impact needed to make a strong impact case; assess evidence and the open Q4 intake before deciding whether to submit.
 
 ### GitHub Security Lab — free community resources, not an audit commitment
 
