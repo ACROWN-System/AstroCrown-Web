@@ -99,6 +99,14 @@ If neither condition is met, do not submit an enrollment PR. Keep using free aut
 - **GitHub Security Lab:** free developer education, AppSec training, tools and research resources are available; this is not a promise of a dedicated audit. Continue using these resources and the repository's existing CodeQL/Scorecard checks as supporting evidence only.
 - The alternatives and their decision conditions are documented in [External Security Review Pipeline](../audit/external-review/README.md). No automated report is to be treated as independent human approval; RSI readiness and promotion gates remain unchanged.
 
+## Route-assessment implementation result — PR #100
+
+- PR [#100](https://github.com/ACROWN-System/AstroCrown-Web/pull/100) merged to `main` as `3809398566141d80ffc3ef2291b34535a729e3db`.
+- The merge documents current eligibility/consent conditions for Anthropic OSS Scanner, Snyk Secure Developer Program, Alpha–Omega grants, and GitHub Security Lab without enrolling, accepting terms, adding branding, or choosing a license.
+- PR checks passed: [External Review Pipeline CI run #38113214840](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38113214840), [NOVA RSI Engine CI run #38113214873](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38113214873), and [NOVA RSI CodeQL run #38113214867](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38113214867).
+- Post-merge source verification confirms `implementation_readiness.status = INCOMPLETE` and `promotion.allow_main = false`. The benchmark remains disabled and unapproved.
+- The GitHub connector did not expose the code-scanning alerts endpoint through its approved fetch interface, so this execution does not assert a zero-alert result. Successful CodeQL completion means analysis ran, not that the repository is vulnerability-free.
+
 ## Verification and handoff
 
 Repository implementation is merged and the core validation routes passed. The plan remains ACTIVE because the external eligibility branch is unresolved, not because repository code is waiting to merge.
