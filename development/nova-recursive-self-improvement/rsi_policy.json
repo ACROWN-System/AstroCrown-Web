@@ -22,7 +22,8 @@
       "development/nova-recursive-self-improvement/benchmark_profiles.json",
       "development/nova-recursive-self-improvement/tests/test_benchmark_dispatcher.py",
       "development/nova-recursive-self-improvement/evidence_verifier.py",
-      "development/nova-recursive-self-improvement/cycle_detector.py"
+      "development/nova-recursive-self-improvement/cycle_detector.py",
+      "development/nova-recursive-self-improvement/INDEPENDENT-REVIEW-PACKAGE.md"
     ],
     "forbidden_path_fragments": [
       ".env",
