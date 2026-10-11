@@ -10,11 +10,6 @@ on:
       - ".github/workflows/nova-rsi-codeql.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "development/nova-recursive-self-improvement/**"
-      - "development/audit/external-review/**"
-      - ".github/codeql/nova-rsi-config.yml"
-      - ".github/workflows/nova-rsi-codeql.yml"
   schedule:
     - cron: "23 4 * * 1"
   workflow_dispatch:
