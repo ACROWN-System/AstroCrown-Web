@@ -222,8 +222,13 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
 
         self.assertIn(f"executable-mode:{relative}", findings)
 
-    def test_repo_path_normalization_rejects_traversal(self):
+    def test_repo_path_normalization_rejects_traversal_and_alternate_separators(self):
         self.assertEqual(normalize_repo_path("../../.github/workflows/x.yml"), "")
+        self.assertEqual(
+            normalize_repo_path(r"development\..\.github\workflows\x.yml"),
+            "",
+        )
+        self.assertEqual(normalize_repo_path('development/"quoted"/file.py'), "")
 
 
 if __name__ == "__main__":

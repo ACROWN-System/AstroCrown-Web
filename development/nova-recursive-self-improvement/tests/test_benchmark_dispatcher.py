@@ -76,6 +76,13 @@ class BenchmarkDispatcherTests(unittest.TestCase):
         )
         self.assertEqual(result["status"], "BLOCKED")
 
+    def test_profile_with_alternate_separator_is_malformed(self):
+        bad = profile()
+        bad["exact_changed_paths"] = [r"development\\context_packer.py"]
+        result = resolve_profile(config(bad), [PACKER_PATH], " ".join(COMMAND))
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertIn("invalid fields", result["reason"])
+
     def test_command_mismatch_is_blocked(self):
         result = resolve_profile(
             config(profile()),
@@ -108,6 +115,8 @@ class BenchmarkDispatcherTests(unittest.TestCase):
         for paths in (
             [PACKER_PATH, PACKER_PATH],
             ["development/../.github/workflows/nova-rsi.yml"],
+            [r"development\..\.github\workflows\nova-rsi.yml"],
+            ['"development/nova-context-memory-optimization/context_packer.py"'],
             ["/etc/passwd"],
         ):
             with self.subTest(paths=paths):
