@@ -129,7 +129,15 @@ The program is free and can supply recurring model-generated vulnerability repor
 
 **Decision:** do not submit an enrollment PR yet. AstroCrown-Web is an early-stage repository and the current evidence does not demonstrate a broad dependent-project or deployed-user footprint. The official questions mailbox is `oss-scanner-questions@anthropic.com`. A project-eligibility inquiry should be sent before preparing a public enrollment configuration. Do not represent a model-generated report as independent human approval.
 
-### Snyk Secure Developer Program — blocked pending maintainer consent
+### Snyk Secure Developer Program — priority candidate; eligibility clarification required
+
+Official sources: [Snyk Secure Developer Program](https://snyk.io/open-source/) and [Snyk's June 18, 2026 program update](https://snyk.io/blog/secure-developer-program/).
+
+Snyk advertises complimentary full enterprise security tooling for qualifying open-source projects, community support, and dedicated security-advisory assistance. The current published qualification page lists three conditions: the project is not backed by a corporate entity; a Snyk link appears in both the repository README and project website; and Snyk is granted permission to use, reproduce, and display the project's logo and related content on Snyk's website. This co-branding arrangement can be a reasonable exchange of visibility for free security tools and support, but the exact scope and terms must be reviewed.
+
+**Important licence distinction:** the published qualification criteria reviewed on 2026-10-11 do **not explicitly list an OSI-approved software licence as a separate criterion**. That is different from Alpha–Omega, whose grant page explicitly requires an OSI-approved licence. However, this repository currently has no LICENSE file, so we must not assume its code already qualifies as open source or that Snyk will accept the current licensing position.
+
+**Decision:** keep Snyk as an actionable priority candidate, not as approved or ineligible. Before making public promotional changes, granting co-branding rights, or submitting an application that binds the project, clarify with Snyk whether a project without an existing LICENSE file can be considered and review the precise co-branding permission. Do not choose a source-code licence merely to satisfy a guessed requirement. No application acceptance, branding grant, or independent human review is implied.
 
 Official source: [Snyk Secure Developer Program](https://snyk.io/open-source/).
 
