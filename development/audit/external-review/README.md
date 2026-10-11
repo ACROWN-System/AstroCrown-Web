@@ -32,7 +32,7 @@ Accessed 2026-10-11. The program owner retains discretion to accept or decline e
 
 The first post-merge run completed successfully and uploaded its results: [run #38109541051](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109541051). A successful scan means the analysis ran; it does not mean the repository received a clean result.
 
-The follow-up run after PR #91 completed successfully and uploaded results: [run #38109929326](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109929326). The third run, after PR #97, is [run #38110251043](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38110251043).
+The follow-up run after PR #91 completed successfully and uploaded results: [run #38109929326](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109929326). The third run, after PR #97, is [run #38110251043](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38110251043). The latest run after the audit record merge (PR #98) is [run #38110463977](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38110463977).
 
 ### Findings and what changed
 
@@ -41,7 +41,7 @@ The follow-up run after PR #91 completed successfully and uploaded results: [run
 - **Security-policy discoverability improved but needs another look.** The first scan reported no policy file; after adding root `SECURITY.md`, the second report detected it but scored SecurityPolicy 4/10 because it did not find a linked reporting destination. The current main branch links the direct GitHub private-vulnerability reporting form. Whether the form can receive reports still depends on the repository's private-vulnerability-reporting setting. No unverified mailbox or response-time promise is published. The third Scorecard report no longer emitted a SecurityPolicy finding.
 - **Dependency update automation improved.** The first scan did not detect a dependency-update tool. After the weekly GitHub Actions Dependabot configuration was added, that finding no longer appeared in the second report. Updates still arrive as reviewable PRs; they are not auto-merged.
 - **Static-analysis coverage improved.** The first report saw SAST on 14 of 30 recent commits (8/10); the second saw 22 of 30 (9/10); the third saw 27 of 30 (9/10). This is a detection metric, not a count of vulnerabilities or proof of a clean codebase.
-- **Other current findings remain.** The repository has no detected license file, recognized fuzzing integration, OpenSSF Best Practices badge, or approved changesets in Scorecard's inspected window. It also reports that the repository is under 90 days old; age itself is not a code-remediation task. No license is being selected automatically because that choice has legal and reuse consequences and requires the maintainer's decision. CodeReview remains 0 (0/4 approved changesets in the latest window) and CI tests were detected on 3 of 4 inspected merged PRs (7/10 in the latest run). The sample denominator shifts as new PRs arrive, so compare context as well as raw counts.
+- **Other current findings remain.** The repository has no detected license file, recognized fuzzing integration, OpenSSF Best Practices badge, or approved changesets in Scorecard's inspected window. It also reports that the repository is under 90 days old; age itself is not a code-remediation task. No license is being selected automatically because that choice has legal and reuse consequences and requires the maintainer's decision. In the latest run, CodeReview scored 0 (0/5 approved changesets in the inspected window) and CI tests were detected on 4 of 5 inspected merged PRs (8/10). The sample denominator shifts as new PRs arrive, so compare context as well as raw counts.
 - **SARIF source-location limitation.** Both Scorecard runs succeeded and uploaded results, but the logs warned that some report-level findings used the placeholder `no file associated with this alert` as a source URI. Some findings may therefore not link to a particular source file. Review the original job output and the GitHub code-scanning view rather than assuming every result is a line-level vulnerability.
 
 ### Manual GitHub settings handoff required
@@ -57,6 +57,8 @@ PR #97 is now merged, and the three pull-request checks run on every PR (push tr
 Also enable dismissal of stale approvals when new commits are pushed and consider requiring the branch to be up to date before merge. Requiring an independent approver and CODEOWNERS review is desirable for security-sensitive code, but with only one active maintainer it can intentionally prevent all merges until another reviewer exists. Choose that trade-off consciously; do not claim external approval or ruleset enforcement before settings confirm it.
 
 Do not treat the successful scan jobs as a clean report, and do not claim branch protection is complete until the active ruleset itself confirms the required checks and review settings.
+
+The latest post-PR #98 main run also completed successfully for the external-review pipeline [run #38110463999](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38110463999) and CodeQL [run #38110463911](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38110463911).
 
 ## Reviewer prioritization: evidence score, not probability
 
