@@ -247,11 +247,35 @@ jobs:
       actions: read
 
     steps:
+      - name: Require GitHub App automation credentials
+        env:
+          NOVA_RSI_APP_CLIENT_ID: ${{ vars.NOVA_RSI_APP_CLIENT_ID }}
+          NOVA_RSI_APP_PRIVATE_KEY: ${{ secrets.NOVA_RSI_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NOVA_RSI_APP_CLIENT_ID:-}" || -z "${NOVA_RSI_APP_PRIVATE_KEY:-}" ]]; then
+            echo "::error title=GitHub App not configured::Configure repository variable NOVA_RSI_APP_CLIENT_ID and repository secret NOVA_RSI_APP_PRIVATE_KEY before the protected RSI workflow is enabled."
+            exit 2
+          fi
+          echo "GitHub App credential presence verified; private key content was not printed."
+
+      - name: Mint repository-scoped GitHub App token
+        id: rsi-app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.NOVA_RSI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.NOVA_RSI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: AstroCrown-Web
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Checkout baseline
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          token: ${{ steps.rsi-app-token.outputs.token }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Download RSI evidence
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
@@ -266,7 +290,8 @@ jobs:
 
       - name: Retain qualified candidate
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.rsi-app-token.outputs.token }}
+          NOVA_RSI_AUTOMERGE_ENABLED: ${{ vars.NOVA_RSI_AUTOMERGE_ENABLED }}
         run: |
           set -euo pipefail
 
@@ -290,4 +315,57 @@ jobs:
           python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA" --check-applied
           git commit -m "rsi: retain verified candidate $GITHUB_RUN_ID"
           git push --set-upstream origin "$BRANCH"
-          gh pr create             --base main             --head "$BRANCH"             --title "NOVA RSI candidate $GITHUB_RUN_ID"             --body "Automated NOVA RSI candidate retained after protected evaluation. See the workflow artifact for the evidence package."
+          PR_URL="$(gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "NOVA RSI candidate $GITHUB_RUN_ID" \
+            --body "Automated NOVA RSI candidate retained after protected evaluation. See the workflow artifact for the evidence package.")"
+          echo "Created qualified candidate pull request: $PR_URL"
+
+          # Default-off: auto-merge may be enabled only after branch rules and
+          # every required check are configured. This runtime preflight fails
+          # closed if those administrative controls are missing or unreadable.
+          if [[ "${NOVA_RSI_AUTOMERGE_ENABLED:-false}" =~ ^([Tt][Rr][Uu][Ee])$ ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/rules/branches/main" > "$RUNNER_TEMP/main-branch-rules.json"
+            python - "$RUNNER_TEMP/main-branch-rules.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          rules = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if not isinstance(rules, list):
+              raise SystemExit("BLOCKED: branch-rule API did not return a rule list.")
+
+          types = {rule.get("type") for rule in rules if isinstance(rule, dict)}
+          if "pull_request" not in types:
+              raise SystemExit("BLOCKED: main has no active pull-request requirement.")
+
+          required_checks = {
+              "NOVA RSI Engine CI / test",
+              "External Review Pipeline CI / test",
+              "NOVA RSI CodeQL Security Analysis / CodeQL analysis (Python)",
+          }
+          configured_checks = set()
+          for rule in rules:
+              if not isinstance(rule, dict) or rule.get("type") != "required_status_checks":
+                  continue
+              parameters = rule.get("parameters") or {}
+              for check in parameters.get("required_status_checks", []):
+                  if isinstance(check, dict):
+                      context = check.get("context") or check.get("name")
+                      if isinstance(context, str):
+                          configured_checks.add(context)
+
+          missing = sorted(required_checks - configured_checks)
+          if missing:
+              raise SystemExit(
+                  "BLOCKED: main is missing mandatory required status checks: "
+                  + ", ".join(missing)
+              )
+          print("Main-branch pull-request rule and all mandatory CI checks are active.")
+          PY
+            gh pr merge "$PR_URL" --auto --squash --delete-branch
+            echo "Auto-merge requested; GitHub will merge only after branch protection requirements pass."
+          else
+            echo "Auto-merge is disabled by NOVA_RSI_AUTOMERGE_ENABLED; PR remains open for verification."
+          fi
