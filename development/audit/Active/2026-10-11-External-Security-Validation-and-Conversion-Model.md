@@ -18,7 +18,7 @@ The expected standalone `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.m
 1. Verify the current official eligibility, workflow, disclosure, and agreement conditions for Anthropic OSS Scanner.
 2. Avoid an enrollment PR if current evidence does not support the program's established-project/critical-impact criteria; do not state or imply a qualification that has not been evidenced.
 3. Do not publish the maintainer's personal email in a public enrollment file or accept program terms on the maintainer's behalf.
-4. Add a scoped, no-cost CodeQL workflow for the RSI Python subsystem as an immediate automated security-analysis supplement. Do not characterize CodeQL as an independent human review or a proof of sandbox isolation.
+4. Add a scoped, no-cost CodeQL workflow for the RSI Python subsystem and an OpenSSF Scorecard workflow for repository-level security posture as automated-analysis supplements. Do not characterize CodeQL as an independent human review or a proof of sandbox isolation.
 5. Add an evidence-led external-review route and conversion method distinguishing discovery score, response probability, task acceptance, completion, and qualified independent evidence.
 6. Preserve `implementation_readiness.status = INCOMPLETE`, `promotion.allow_main = false`, and the disabled/unapproved benchmark profile.
 7. Link the route/method document from the RSI entry point, submit via a pull request, verify test/security workflow outcomes, and record limitations accurately.
@@ -42,7 +42,7 @@ The expected standalone `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.m
 - Anthropic OSS Scanner is free and performs periodic model-generated security scans, but the published criteria target established projects with critical infrastructure/user-security impact. The stated factors include remote-attack exposure and number of users or dependent projects. The service retains discretion to decline a project and the reports are not human-reviewed.
 - The repository evidence reviewed so far does not establish a broad deployed user base or dependent-project footprint for AstroCrown-Web. Therefore eligibility is **BLOCKED pending evidence or written guidance**, not assumed.
 - The user's reported prior for a complete unsolicited pro-bono review is approximately 0.0001%. This is a planning prior, not a measured rate and not automatically transferable to formal programs, task-scoped reviews, or automated scanning channels.
-- The repository has RSI compile/unit/sandbox smoke checks, but no scoped CodeQL security-analysis workflow was found in the inspected workflows.
+- The repository has RSI compile/unit/sandbox smoke checks, but no scoped CodeQL or OpenSSF Scorecard workflow was found in the inspected workflows.
 
 ## Scope and preservation
 
@@ -79,7 +79,7 @@ If neither condition is met, do not submit an enrollment PR. Keep using free aut
 - Validate the new workflow YAML and CodeQL configuration.
 - Verify workflow action references are pinned to a full commit SHA.
 - Confirm only the RSI subsystem is included, with backup snapshots excluded.
-- Confirm the GitHub security scan can run on the public repository; treat environment/permission failures as BLOCKED rather than PASS.
+- Confirm CodeQL and OpenSSF Scorecard run successfully on the public repository; treat environment/permission failures as BLOCKED rather than PASS.
 - Confirm existing RSI tests and Docker isolation smoke tests still pass.
 - Confirm readiness remains INCOMPLETE, main promotion remains disabled, and the context-packing profile remains disabled/unapproved.
 - Record the exact PR/commit/run results; move this plan to Completed only when repository actions are finished. The external-program eligibility inquiry remains pending until the user sends the prepared message and a reply is received.
