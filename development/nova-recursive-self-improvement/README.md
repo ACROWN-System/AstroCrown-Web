@@ -79,6 +79,16 @@ Human participation is therefore not a required runtime step for qualifying chan
 
 Human review may occur retrospectively, but the operational RSI loop must not depend on a human being available to approve every iteration.
 
+## Repeat-state and cycle detection
+
+The scheduled/manual workflow runs a read-only repeat-state diagnostic before the implementation-readiness gate. It compares native Git tree/blob IDs across a bounded window of recent main-branch RSI runs. An exact source-state repeat reports the prior run and cycle length; component-level repeats show which scopes did not change even when other scopes did. The diagnostic treats missing API evidence, malformed history, and truncated trees as `UNAVAILABLE`; it never converts those conditions into a no-repeat result. It writes a workflow summary and JSON report, preserving the JSON as a 14-day artifact only when an exact full-state repeat is detected.
+
+A repeated state identifies recurrence, not whether the system has become more or less capable. No repeat within the history window is not proof of improvement. The diagnostic cannot change readiness, benchmark approval, candidate eligibility, or promotion permissions.
+
+## Diagnostics
+
+`cycle_detector.py` compares native Git object IDs for protected operational scopes across recent RSI workflow runs. Its purpose is to make repeated source states and cycles visible without creating a new dated backup for every pass. The source-state comparison is bounded and read-only; the protected readiness and benchmark gates remain authoritative.
+
 ## Candidate Generation
 
 NOVA may propose candidates by analyzing:
