@@ -9,6 +9,11 @@ concurrency:
   group: nova-rsi
   cancel-in-progress: false
 
+# Default all jobs to read-only; the candidate-retention job declares its
+# narrow write permissions explicitly below.
+permissions:
+  contents: read
+
 jobs:
   implementation-readiness:
     # workflow_dispatch may target any ref; sensitive RSI jobs must originate
