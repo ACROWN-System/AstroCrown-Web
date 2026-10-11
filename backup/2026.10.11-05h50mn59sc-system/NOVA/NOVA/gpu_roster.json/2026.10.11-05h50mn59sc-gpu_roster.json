@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "_comment": "GPU provider roster. Keep credentials out of this file; only environment-variable names belong here.",
+  "providers": [],
+  "candidates": [
+    {
+      "name": "nosana",
+      "status": "candidate",
+      "kind": "gpu_marketplace_api",
+      "credential_mode": "api_key",
+      "api_key_env": "NOSANA_GPU_API_KEY_01",
+      "activation_requirement": "Verify current account credits, API contract, supported workload path, and zero-cost credit policy before activation.",
+      "source": "https://www.nosana.com/blog/the-new-nosana-experience-is-now-live/"
+    },
+    {
+      "name": "huggingface_zerogpu",
+      "status": "candidate",
+      "kind": "shared_gpu_spaces",
+      "credential_mode": "account_or_token",
+      "api_key_env": "HF_ZEROGPU_TOKEN_01",
+      "activation_requirement": "Use only as a provider-specific adapter for Spaces/ZeroGPU; do not treat it as a generic GPU rental API.",
+      "source": "https://huggingface.co/docs/hub/main/spaces-zerogpu"
+    }
+  ],
+  "provider_template": {
+    "name": "example-provider",
+    "status": "unconfigured",
+    "kind": "gpu_api",
+    "api_key_env": "PROVIDER_GPU_API_KEY_01",
+    "health_url": "https://provider.example/v1/health",
+    "health_method": "GET",
+    "auth": {
+      "type": "bearer"
+    },
+    "compute_probe": {
+      "enabled": false,
+      "adapter": null
+    },
+    "gpu_expectations": {
+      "requested_gpu": null,
+      "minimum_vram_gb": null
+    }
+  },
+  "notes": [
+    "Providers become live only after their API contract and credential have been verified.",
+    "compute_probe adapters are provider-specific and must not assume a common GPU API.",
+    "NOVA may record degraded or unavailable provider state without deleting the provider configuration."
+  ]
+}

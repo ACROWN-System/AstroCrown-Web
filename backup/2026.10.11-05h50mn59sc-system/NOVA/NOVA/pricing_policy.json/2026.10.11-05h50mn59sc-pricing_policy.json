@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "pricing_principle": "PUBLIC_PRICE_IS_SERVICE_BASED_NOT_PROVIDER_BASED",
+  "provider_switch_must_not_change_user_price": true,
+  "free_backend_cost_does_not_reduce_public_price": true,
+  "paid_backend_cost_is_absorbed_by_operating_pool": true,
+  "public_price_change_requires_governed_policy_change": true,
+  "currency_policy": {
+    "preferred_public_asset": "USDC",
+    "supported_future_assets": [
+      "USDC",
+      "USDT",
+      "ACROWN"
+    ],
+    "price_display_may_use_fiat_reference": true,
+    "settlement_asset_must_be_explicit": true
+  },
+  "services": {},
+  "transition": {
+    "preserve_public_price_across_provider_switch": true,
+    "preemptive_replenishment_required": true,
+    "minimum_runway_multiple": 1,
+    "user_facing_provider_identity_disclosure": "optional",
+    "never_reprice_only_because_backend_cost_changed": true,
+    "contractual_notice_period_days": 30,
+    "notice_period_is_configurable": true,
+    "preserve_price_during_notice": true,
+    "required_headroom": {
+      "cover_notice_period_cost": true,
+      "cover_next_replenishment_target": true,
+      "emergency_reserve_ratio": 1
+    },
+    "price_change_effective_only_after_notice_period": true,
+    "minimum_time_between_public_price_changes_days": 90,
+    "price_change_should_be_smooth_and_predictable": true,
+    "notice_period_note": "30 days is the initial planning default, not a universal legal requirement; applicable contracts and laws govern the actual notice period."
+  },
+  "dynamic_pricing": {
+    "enabled": false,
+    "recommendation_only_by_default": true,
+    "minimum_evidence_window_transactions": 100,
+    "minimum_margin_ratio": 0.2,
+    "requires_human_approval": true,
+    "continuity_guard": {
+      "require_pricing_change_headroom": true,
+      "do_not_wait_until_quota_exhaustion": true,
+      "recommend_earlier_when_runway_is_below_notice_plus_replenishment": true
+    }
+  },
+  "quote_policy": {
+    "enabled": true,
+    "default_validity_seconds": 300,
+    "backend_switch_must_not_reprice": true,
+    "market_rate_refresh_requires_new_quote": true,
+    "expired_quote_requires_requote": true,
+    "volatile_asset_quotes_should_be_shorter_or_governed": true
+  }
+}

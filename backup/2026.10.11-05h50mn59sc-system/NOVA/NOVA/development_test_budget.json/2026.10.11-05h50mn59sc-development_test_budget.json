@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "purpose": "Protect development free resources while allowing controlled live verification.",
+  "defaults": {
+    "max_fraction_of_free_allocation_per_day_for_tests": 0.1,
+    "minimum_remaining_reserve_fraction": 0.2,
+    "unit_tests_live_calls_allowed": false,
+    "smoke_test_calls_must_be_minimal": true,
+    "performance_tests_require_explicit_budget": true
+  },
+  "providers": {
+    "groq": {
+      "secret": "GROQ_API_KEY_01",
+      "budget_unit": "tokens_and_requests",
+      "daily_test_budget": "UNSET_UNTIL_FIRST_LIVE_QUOTA_OBSERVATION",
+      "reserve": "UNSET_UNTIL_FIRST_LIVE_QUOTA_OBSERVATION"
+    },
+    "gemini": {
+      "secret": "GEMINI_API_KEY_01",
+      "budget_unit": "project_quota_and_tokens",
+      "daily_test_budget": "MODEL_SPECIFIC_INITIAL_CAPS_FROM_2026-10-08_OBSERVATION",
+      "reserve": "MODEL_SPECIFIC_MINIMUM_RPD_RESERVES",
+      "model_budgets": {
+        "gemini-3.8-flash": {
+          "observed_rpm_limit": 5,
+          "observed_tpm_limit": 250000,
+          "observed_rpd_limit": 20,
+          "daily_test_requests_initial_cap": 2,
+          "minimum_remaining_rpd_reserve": 4,
+          "daily_test_tpm_initial_cap": 25000,
+          "source_observation": "NOVA/capacity_observations/gemini_2026-10-08.json"
+        },
+        "gemini-3.1-flash-lite": {
+          "observed_rpm_limit": 15,
+          "observed_tpm_limit": 250000,
+          "observed_rpd_limit": 500,
+          "daily_test_requests_initial_cap": 50,
+          "minimum_remaining_rpd_reserve": 100,
+          "daily_test_tpm_initial_cap": 25000,
+          "source_observation": "NOVA/capacity_observations/gemini_2026-10-08.json"
+        }
+      },
+      "quota_scope": "project"
+    },
+    "mistral": {
+      "secret": "MISTRAL_API_KEY_01",
+      "budget_unit": "monthly_included_usage_and_rate_limits",
+      "daily_test_budget": "UNSET_UNTIL_ACCOUNT_OBSERVATION",
+      "reserve": "UNSET_UNTIL_ACCOUNT_OBSERVATION"
+    },
+    "cloudflare": {
+      "secrets": [
+        "CLOUDFLARE_API_KEY_01",
+        "CLOUDFLARE_ACCOUNT_ID"
+      ],
+      "budget_unit": "neurons",
+      "daily_test_budget": "1000_neurons_initial_cap",
+      "reserve": "2000_neurons_preferred"
+    },
+    "cerebras": {
+      "secret": "CEREBRAS_API_KEY_01",
+      "budget_unit": "provider_rate_limit_and_tokens",
+      "daily_test_budget": "UNSET_UNTIL_FIRST_LIVE_QUOTA_OBSERVATION",
+      "reserve": "UNSET_UNTIL_FIRST_LIVE_QUOTA_OBSERVATION"
+    },
+    "nosana": {
+      "secret": "NOSANA_GPU_API_KEY_01",
+      "budget_unit": "credits_and_gpu_time",
+      "daily_test_budget": "UNSET_UNTIL_CREDIT_BALANCE_OBSERVATION",
+      "reserve": "UNSET_UNTIL_CREDIT_BALANCE_OBSERVATION"
+    },
+    "huggingface_zerogpu": {
+      "secret": "HF_TOKEN_01",
+      "budget_unit": "gpu_seconds",
+      "daily_test_budget": "30_seconds_initial_cap",
+      "reserve": "provider_reported_remaining_quota"
+    }
+  }
+}

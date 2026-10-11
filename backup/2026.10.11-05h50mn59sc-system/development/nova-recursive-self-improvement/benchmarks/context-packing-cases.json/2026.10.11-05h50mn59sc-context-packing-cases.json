@@ -1,0 +1,124 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "nova-context-packing-v1",
+  "description": "Fixed synthetic, non-sensitive context-selection workload. Items are illustrative test records, not live provider or user evidence.",
+  "cases": [
+    {
+      "case_id": "rotation-evidence-beats-early-noise",
+      "query": "provider successful probe rotation cursor next eligible persisted scheduled repeated state latency avoid retry same provider",
+      "max_chars": 610,
+      "required_item_ids": [
+        "rotation-rule",
+        "rotation-cursor"
+      ],
+      "items": [
+        {
+          "id": "service-overview",
+          "source": "synthetic://media-service-overview",
+          "observed_at": "2026-10-01",
+          "status": "background",
+          "content": "The media service records request timestamps, provider identifiers, output metadata, and operational observations so an operator can audit a completed job."
+        },
+        {
+          "id": "provider-catalogue-note",
+          "source": "synthetic://provider-catalogue",
+          "observed_at": "2026-10-02",
+          "status": "background",
+          "content": "A provider catalogue describes model identifiers, capabilities, eligibility, and general health observations. Catalogue records are not themselves a scheduling decision."
+        },
+        {
+          "id": "rotation-rule",
+          "source": "synthetic://rotation-policy",
+          "observed_at": "2026-10-10",
+          "status": "verified",
+          "content": "After a provider probe succeeds, choose the next eligible provider from the persisted rotation cursor. Do not immediately retry the same successful provider as the next probe. Record health state and latency."
+        },
+        {
+          "id": "rotation-cursor",
+          "source": "synthetic://rotation-incident",
+          "observed_at": "2026-10-10",
+          "status": "verified",
+          "content": "Persist the cursor after each attempted provider. The next scheduled run begins at the next index, preventing repeated selection of the same provider when another eligible provider is due."
+        }
+      ]
+    },
+    {
+      "case_id": "latest-evidence-and-supersession",
+      "query": "latest verified quota renewal date supersedes current dashboard observation",
+      "max_chars": 720,
+      "required_item_ids": [
+        "quota-current",
+        "quota-supersession"
+      ],
+      "items": [
+        {
+          "id": "provider-summary",
+          "source": "synthetic://provider-summary",
+          "observed_at": "2026-09-25",
+          "status": "background",
+          "content": "Provider summaries may collect model limits, request-rate guidance, and links to usage dashboards. A summary should not replace a timestamped account observation."
+        },
+        {
+          "id": "old-estimate",
+          "source": "synthetic://old-estimate",
+          "observed_at": "2026-10-01",
+          "status": "historical",
+          "content": "An older estimate suggested that the quota reset might occur near the beginning of October. This estimate was not verified against the account dashboard."
+        },
+        {
+          "id": "quota-current",
+          "source": "synthetic://quota-dashboard-observation",
+          "observed_at": "2026-10-09",
+          "status": "verified",
+          "content": "The latest synthetic dashboard observation records the quota renewal date as 2026-10-09. Use this timestamped observation as the current evidence, not as a guarantee of future limits."
+        },
+        {
+          "id": "quota-supersession",
+          "source": "synthetic://decision-log",
+          "observed_at": "2026-10-09",
+          "status": "current-decision",
+          "content": "The verified 2026-10-09 observation supersedes the older unverified estimate for current planning. Preserve the older estimate as historical context rather than silently deleting the conflict."
+        }
+      ]
+    },
+    {
+      "case_id": "readiness-and-isolation-caveats",
+      "query": "RSI readiness incomplete capability benchmark evaluator integrity isolation evidence worktree not OS security sandbox blocked",
+      "max_chars": 650,
+      "required_item_ids": [
+        "rsi-readiness",
+        "isolation-limit"
+      ],
+      "items": [
+        {
+          "id": "rsi-general-overview",
+          "source": "synthetic://rsi-overview",
+          "observed_at": "2026-10-10",
+          "status": "background",
+          "content": "The recursive improvement engine creates a candidate, runs permitted checks, retains evidence, and may prepare a candidate branch for review. This lifecycle description is not proof that readiness gates have passed."
+        },
+        {
+          "id": "test-status-note",
+          "source": "synthetic://test-status",
+          "observed_at": "2026-10-10",
+          "status": "background",
+          "content": "Passing ordinary unit tests supports only the behaviors covered by those tests. It does not independently establish evaluator integrity, adequate isolation, or demonstrated capability improvement."
+        },
+        {
+          "id": "rsi-readiness",
+          "source": "synthetic://protected-readiness-policy",
+          "observed_at": "2026-10-10",
+          "status": "verified",
+          "content": "Protected RSI readiness remains INCOMPLETE until an approved capability benchmark, independent evaluator-integrity validation, and acceptable execution isolation have evidence."
+        },
+        {
+          "id": "isolation-limit",
+          "source": "synthetic://isolation-review",
+          "observed_at": "2026-10-10",
+          "status": "verified",
+          "content": "A detached worktree and sanitized process environment are not an OS-level security sandbox. Candidate-controlled execution remains blocked pending acceptable isolation evidence."
+        }
+      ]
+    }
+  ]
+}
