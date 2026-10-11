@@ -8,9 +8,6 @@ on:
       - ".github/workflows/external-review-pipeline-ci.yml"
   pull_request:
     branches: [main]
-    paths:
-      - "development/audit/external-review/**"
-      - ".github/workflows/external-review-pipeline-ci.yml"
 
 permissions:
   contents: read
