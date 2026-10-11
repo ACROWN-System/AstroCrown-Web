@@ -1,0 +1,11 @@
+name: NOVA RSI and external-review pipeline security queries
+
+queries:
+  - uses: security-extended
+
+paths:
+  - development/nova-recursive-self-improvement/**
+  - development/audit/external-review/**
+
+paths-ignore:
+  - backup/**
