@@ -1,0 +1,29 @@
+name: NOVA Validation
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: nova-validation
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+
+      - name: Compile NOVA Python
+        run: python -m compileall -q NOVA
+
+      - name: Run NOVA unit tests
+        run: python -m unittest discover -s NOVA/tests -p "test_*.py" -v

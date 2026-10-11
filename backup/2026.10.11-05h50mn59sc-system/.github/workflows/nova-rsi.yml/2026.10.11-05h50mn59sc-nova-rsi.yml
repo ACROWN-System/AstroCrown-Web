@@ -1,0 +1,266 @@
+name: NOVA Recursive Self-Improvement
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"
+
+concurrency:
+  group: nova-rsi
+  cancel-in-progress: false
+
+jobs:
+  implementation-readiness:
+    # workflow_dispatch may target any ref; sensitive RSI jobs must originate
+    # from the protected main branch, not a candidate or feature branch.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout protected policy
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Block RSI until implementation is explicitly ready
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy = json.loads(
+              Path("development/nova-recursive-self-improvement/rsi_policy.json")
+              .read_text(encoding="utf-8")
+          )
+          readiness = policy.get("implementation_readiness", {})
+          status = readiness.get("status")
+          required = readiness.get("require_explicit_ready")
+          promotion_blocked = readiness.get("promotion_blocked_until_ready")
+
+          print(f"RSI implementation readiness: {status}")
+          if not (
+              status == "READY"
+              and required is True
+              and promotion_blocked is True
+          ):
+              raise SystemExit(
+                  "RSI implementation is incomplete; autonomous proposal/evaluation/promotion is blocked."
+              )
+          PY
+
+  budget-gate:
+    needs: implementation-readiness
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout policy
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Enforce daily RSI cycle budget
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          LIMIT="$(python - <<'PY'
+          import json
+          with open("development/nova-recursive-self-improvement/rsi_policy.json", encoding="utf-8") as handle:
+              print(json.load(handle)["budget"]["max_cycles_per_utc_day"])
+          PY
+          )"
+
+          TODAY="$(date -u +%Y-%m-%d)"
+          PRIOR_RUNS="$(gh run list             --repo "$GITHUB_REPOSITORY"             --workflow nova-rsi.yml             --created "$TODAY.."             --limit 100             --json databaseId             --jq '.[].databaseId' | grep -vx "$GITHUB_RUN_ID" | grep -c . || true)"
+
+          echo "Protected daily RSI cycle budget: $LIMIT"
+          echo "Prior RSI workflow runs today (excluding this run): $PRIOR_RUNS"
+
+          if [ "$PRIOR_RUNS" -ge "$LIMIT" ]; then
+            echo "RSI daily budget exhausted; refusing another proposer cycle."
+            exit 1
+          fi
+
+  configuration-preflight:
+    needs: budget-gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
+      RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
+      RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+      RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+
+    steps:
+      - name: Checkout protected configuration
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate non-secret configuration
+        run: |
+          python development/nova-recursive-self-improvement/preflight.py --repo . --check-non-secret
+
+  sandbox-image-readiness:
+    needs: configuration-preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Pull and verify immutable sandbox image without credentials
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          echo "Verified immutable RSI sandbox image identity."
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
+
+  provider-secret-boundary:
+    needs: sandbox-image-readiness
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      NOSANA_LLM_API_KEY_01: ${{ secrets.NOSANA_LLM_API_KEY_01 }}
+
+    steps:
+      - name: Validate provider secret is configured
+        run: |
+          set -euo pipefail
+          if [ -z "${NOSANA_LLM_API_KEY_01:-}" ]; then
+            echo "NOSANA_LLM_API_KEY_01 is not configured. This is the next protected credential boundary."
+            exit 2
+          fi
+          echo "NOSANA_LLM_API_KEY_01 is configured; the value is not printed."
+
+  rsi-cycle:
+    needs: provider-secret-boundary
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Pull and verify immutable sandbox image before candidate execution
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+
+      - name: Initialize per-run sandbox cleanup identifier
+        run: |
+          set -euo pipefail
+          python -c 'import uuid; print("RSI_SANDBOX_EVALUATION_ID=" + uuid.uuid4().hex)' >> "$GITHUB_ENV"
+
+      - name: Run bounded autonomous RSI cycle
+        timeout-minutes: 21
+        env:
+          RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
+          RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
+          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+          NOSANA_LLM_API_KEY_01: ${{ secrets.NOSANA_LLM_API_KEY_01 }}
+          RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+        run: |
+          python development/nova-recursive-self-improvement/rsi_engine.py cycle             --repo .             --evidence-dir .rsi-evidence
+
+      - name: Clean up evaluation-labelled sandbox containers
+        if: always()
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          if [ -z "${RSI_SANDBOX_EVALUATION_ID:-}" ]; then
+            echo "No evaluation ID was initialized; the RSI cycle could not have launched its sandbox."
+            exit 0
+          fi
+          python development/nova-recursive-self-improvement/sandbox_runtime.py --cleanup-evaluation-id "$RSI_SANDBOX_EVALUATION_ID"
+
+      - name: Upload RSI evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nova-rsi-evidence-${{ github.run_id }}
+          path: .rsi-evidence/
+          if-no-files-found: warn
+
+  retain-qualified-candidate:
+    needs: rsi-cycle
+    if: needs.rsi-cycle.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download RSI evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: nova-rsi-evidence-${{ github.run_id }}
+          path: .rsi-evidence
+
+      - name: Verify evidence before write-capable retention
+        run: |
+          set -euo pipefail
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA"
+
+      - name: Retain qualified candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="rsi/candidate-$GITHUB_RUN_ID"
+          if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "https://github.com/$GITHUB_REPOSITORY.git"
+          else
+            git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          fi
+          gh auth setup-git
+          git fetch origin main
+          git switch -c "$BRANCH" "$GITHUB_SHA"
+          git apply --check .rsi-evidence/candidate.patch
+          git apply .rsi-evidence/candidate.patch
+          git diff --check
+          git config user.name "NOVA RSI"
+          git config user.email "nova-rsi@localhost"
+          git add development/
+          git diff --cached --check
+          # The index must reproduce the exact tree independently evaluated.
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA" --check-applied
+          git commit -m "rsi: retain verified candidate $GITHUB_RUN_ID"
+          git push --set-upstream origin "$BRANCH"
+          gh pr create             --base main             --head "$BRANCH"             --title "NOVA RSI candidate $GITHUB_RUN_ID"             --body "Automated NOVA RSI candidate retained after protected evaluation. See the workflow artifact for the evidence package."

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "provider": "gemini",
+  "resource": "Gemini API Free Tier",
+  "scope": "project",
+  "project": "NOVA State Ledger",
+  "source": "Google AI Studio > Gemini API Rate Limit",
+  "observed_at": "2026-10-08T04:02:00+05:30",
+  "time_range_viewed": "28 Days",
+  "measurement_state": "OBSERVED",
+  "limits": {
+    "gemini-3.8-flash": {
+      "rpm": 5,
+      "tpm": 250000,
+      "rpd": 20,
+      "peak_usage": {
+        "rpm": 1,
+        "tpm": 31,
+        "rpd": 1
+      }
+    },
+    "gemini-3.1-flash-lite": {
+      "rpm": 15,
+      "tpm": 250000,
+      "rpd": 500,
+      "peak_usage": {
+        "rpm": 1,
+        "tpm": 34,
+        "rpd": 1
+      }
+    }
+  },
+  "notes": [
+    "Limits are project-level evidence, not key-level limits.",
+    "Peak usage values are not current remaining quota.",
+    "Re-verify after provider account, tier, model, or policy changes."
+  ]
+}

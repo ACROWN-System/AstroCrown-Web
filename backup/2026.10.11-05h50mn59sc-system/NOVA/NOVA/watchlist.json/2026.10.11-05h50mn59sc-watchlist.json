@@ -1,0 +1,5 @@
+{
+  "schema_version": 1,
+  "_comment": "External operational sources to observe. Keep this list small and evidence-backed; source changes are fingerprinted before any future AI analysis.",
+  "sources": []
+}
