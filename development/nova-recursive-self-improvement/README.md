@@ -275,6 +275,9 @@ RSI must not assume that a particular GPU provider is permanent.
 
 ## Security and Credential Boundaries
 
+For a reviewer-ready scope, evidence index, reproducible checks, and independent decision record, see the [Independent Readiness Review Package](INDEPENDENT-REVIEW-PACKAGE.md). The package is review guidance only and does not establish approval or readiness.
+
+
 Self-improvement must not expose credentials or protected configuration to untrusted candidate code.
 
 Credentials should remain outside tracked source files and follow the project's secure secret-handling model.
