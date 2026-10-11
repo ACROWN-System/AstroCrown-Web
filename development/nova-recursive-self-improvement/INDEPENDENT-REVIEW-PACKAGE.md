@@ -33,8 +33,8 @@ A model-generated review, this package, an automated test pass, the presence of 
 - [Docker sandbox adapter](sandbox_runtime.py)
 - [Protected evaluator](evaluator.py)
 - [Protected RSI policy](rsi_policy.json)
-- [RSI workflow](../../../.github/workflows/nova-rsi.yml)
-- [CI workflow](../../../.github/workflows/nova-rsi-ci.yml)
+- [RSI workflow](../../.github/workflows/nova-rsi.yml)
+- [CI workflow](../../.github/workflows/nova-rsi-ci.yml)
 - [Docker isolation audit record](../audit/Completed/2026-10-11-RSI-Docker-Isolation.md)
 - [Cleanup and supervision audit records](../audit/Completed/2026-10-11-RSI-Evaluator-Supervisor-Cleanup.md), [sandbox cleanup verification](../audit/Completed/2026-10-11-RSI-Sandbox-Cleanup-Verification.md), and [supervisor I/O failure cleanup](../audit/Completed/2026-10-11-RSI-Supervisor-IO-Failure-Cleanup.md)
 
@@ -110,7 +110,7 @@ Even if the context-packing workload passes an independent review, that approval
 
 ## 6. Gate D — operational authority, workflow and evidence lifecycle
 
-Review [the RSI workflow](../../../.github/workflows/nova-rsi.yml), [RSI CI](../../../.github/workflows/nova-rsi-ci.yml), [protected policy](rsi_policy.json), [implementation runbook](IMPLEMENTATION.md), and [provider egress boundary record](../audit/Completed/2026-10-11-RSI-Provider-Egress-Boundary.md).
+Review [the RSI workflow](../../.github/workflows/nova-rsi.yml), [RSI CI](../../.github/workflows/nova-rsi-ci.yml), [protected policy](rsi_policy.json), [implementation runbook](IMPLEMENTATION.md), and [provider egress boundary record](../audit/Completed/2026-10-11-RSI-Provider-Egress-Boundary.md).
 
 Confirm that:
 - sensitive jobs originate only from the protected main branch;
