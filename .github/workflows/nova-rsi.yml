@@ -17,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read
 
     steps:
       - name: Checkout protected policy
@@ -24,6 +25,27 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Diagnose repeated RSI source states
+        id: cycle-diagnosis
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python development/nova-recursive-self-improvement/cycle_detector.py \
+            --repo-root . \
+            --max-prior-runs 10 \
+            --output "$RUNNER_TEMP/rsi-cycle-state.json"
+
+      - name: Preserve report when an exact state repeats
+        if: always() && steps.cycle-diagnosis.outputs.repeated == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: nova-rsi-repeat-state-${{ github.run_id }}
+          path: ${{ runner.temp }}/rsi-cycle-state.json
+          if-no-files-found: error
+          retention-days: 14
+        continue-on-error: true
 
       - name: Block RSI until implementation is explicitly ready
         run: |
