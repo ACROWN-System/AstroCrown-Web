@@ -5,8 +5,8 @@ This is a development-only, no-cost process for finding evidence—not a claim t
 ## Current findings (2026-10-11)
 
 - **Anthropic OSS Scanner:** the published service is free, but it accepts established projects with critical infrastructure/user-security impact case by case, considering factors including remote-attack exposure and dependent users/projects. The service requires a primary email in its public enrollment configuration; reports are model-generated and are not human-reviewed. AstroCrown-Web's current public evidence does not establish the required project maturity or dependent-project footprint. Enrollment is therefore **BLOCKED pending stronger eligibility evidence or written program guidance**. Do not submit an enrollment PR based only on the existence of security-sensitive experimental code.
-- **CodeQL:** a free, independently operated static-analysis workflow is being added for the RSI subsystem and this pipeline. It can identify classes of source-code vulnerability but cannot establish that Docker/runner isolation is escape-proof or count as independent human approval.
-- **OpenSSF Scorecard:** a free workflow is being added to assess repository-level security practices and publish SARIF findings in the GitHub Security/code-scanning view. It assesses repository posture, not the validity of the RSI sandbox and not independent human approval.
+- **CodeQL:** a free, scoped static-analysis workflow now runs against the RSI Python subsystem and this pipeline on relevant changes, weekly, and manually. It can identify classes of source-code vulnerability but cannot establish that Docker/runner isolation is escape-proof or count as independent human approval.
+- **OpenSSF Scorecard:** a free workflow now assesses repository-level security practices on pushes to `main` and weekly, and uploads SARIF findings to GitHub code scanning. It assesses repository posture, not the validity of the RSI sandbox and not independent human approval.
 - **Human review:** still mandatory under the existing RSI policy. The separate four-gate review package stays authoritative. Automated findings are supporting evidence only.
 
 ## Official program sources
@@ -27,6 +27,33 @@ Accessed 2026-10-11. The program owner retains discretion to accept or decline e
 3. If written guidance or new evidence supports eligibility, prepare the project-specific Docker build and threat model; run the provider's own validator/build procedure before submitting its separate enrollment PR.
 4. Treat any OSS Scanner report as unvalidated model-generated output. Reproduce findings, assess impact, apply and retest fixes, and do not call it independent human approval.
 5. Continue repository CodeQL, OpenSSF Scorecard, and RSI CI scans in parallel. Neither changes the protected RSI readiness state.
+
+## First OpenSSF Scorecard baseline — 2026-10-11
+
+The first post-merge run completed successfully and uploaded its results: [run #38109541051](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/38109541051). A successful scan means the analysis ran; it does not mean the repository received a clean result.
+
+Important findings:
+
+- **Main branch ruleset is incomplete.** The active `Protect main` ruleset exists and requires pull requests, blocks branch deletion and non-fast-forward updates, and requires review-thread resolution. However, its observed configuration has `required_approving_review_count: 0`, no required status checks, `require_code_owner_review: false`, `dismiss_stale_reviews_on_push: false`, and `require_last_push_approval: false`. Scorecard gave branch protection 3/10 and reported that `main` does not require approvers, code-owner review, or status checks. This is a material governance gap, not evidence of a container escape. The existing ruleset was read but not edited in this change.
+- **Workflow token permissions needed a safer default.** Scorecard flagged no top-level read-only permission default in the RSI workflow and a top-level `security-events: write` permission in CodeQL. The current remediation branch changes the RSI default to `contents: read` and scopes CodeQL's `security-events: write` to the analysis job. The candidate-retention job's narrower `contents: write`/PR write permissions remain necessary to retain a separately verified candidate and open a PR.
+- **Security policy was not detected.** A repository `SECURITY.md` is being added with a safe private-reporting path and explicit limitations.
+- **Dependency update automation was not detected.** A weekly GitHub Actions Dependabot configuration is being added. It opens reviewable update PRs; it does not automatically merge them.
+- **No license file was detected.** No license is being selected automatically because that choice has legal and reuse consequences and is a maintainer decision.
+- **No fuzzing integration or OpenSSF Best Practices badge was detected.** Treat these as future improvement candidates, not as proof of a particular vulnerability. The repository-age warning is not actionable by changing code.
+- **SAST was detected on 14 of the 30 recent commits checked by Scorecard (score 8/10).** The new CodeQL workflow will build more history over time; the score may not immediately reach 10/10.
+
+The Scorecard job's SARIF upload completed, but GitHub's upload log emitted warnings for several report-level findings that had no associated source file path. That limitation should be kept in mind when navigating the alerts. Review the full job output and the code-scanning view rather than assuming every finding maps to a file.
+
+### Manual GitHub settings handoff required
+
+The available integration can inspect but cannot change repository rulesets. To close the remaining branch-governance gap, the maintainer must open [Settings → Rules → Protect main](https://github.com/ACROWN-System/AstroCrown-Web/rules/23728412) and configure required status checks for the existing RSI CI, external-review pipeline CI, and CodeQL analysis workflows. Enable dismissal of stale approvals when a new commit is pushed. Requiring an independent approver and code-owner review is desirable for security-sensitive changes, but with a single active maintainer it can intentionally prevent all merges until another reviewer is available; choose that trade-off consciously rather than silently disabling the review gate.
+
+The workflow names are:
+- `NOVA RSI Engine CI` — compile, RSI tests, immutable sandbox-image check, Docker-isolation smoke test;
+- `External Review Pipeline CI` — score/ledger calculator tests;
+- `NOVA RSI CodeQL Security Analysis` — scoped CodeQL analysis.
+
+Do not claim branch protection is complete until the active ruleset itself confirms the selected checks and review settings.
 
 ## Reviewer prioritization: evidence score, not probability
 
