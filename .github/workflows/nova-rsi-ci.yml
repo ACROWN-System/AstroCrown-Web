@@ -13,16 +13,6 @@ on:
       - ".github/dependabot.yml"
       - "SECURITY.md"
   pull_request:
-    paths:
-      - "development/nova-recursive-self-improvement/**"
-      - ".github/workflows/nova-rsi-ci.yml"
-      - ".github/workflows/nova-rsi.yml"
-      - ".github/workflows/nova-rsi-codeql.yml"
-      - ".github/workflows/ossf-scorecard.yml"
-      - ".github/workflows/external-review-pipeline-ci.yml"
-      - ".github/codeql/nova-rsi-config.yml"
-      - ".github/dependabot.yml"
-      - "SECURITY.md"
 
 permissions:
   contents: read
