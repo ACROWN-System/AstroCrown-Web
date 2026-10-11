@@ -6,6 +6,7 @@ This is a development-only, no-cost process for finding evidence—not a claim t
 
 - **Anthropic OSS Scanner:** the published service is free, but it accepts established projects with critical infrastructure/user-security impact case by case, considering factors including remote-attack exposure and dependent users/projects. The service requires a primary email in its public enrollment configuration; reports are model-generated and are not human-reviewed. AstroCrown-Web's current public evidence does not establish the required project maturity or dependent-project footprint. Enrollment is therefore **BLOCKED pending stronger eligibility evidence or written program guidance**. Do not submit an enrollment PR based only on the existence of security-sensitive experimental code.
 - **CodeQL:** a free, independently operated static-analysis workflow is being added for the RSI subsystem and this pipeline. It can identify classes of source-code vulnerability but cannot establish that Docker/runner isolation is escape-proof or count as independent human approval.
+- **OpenSSF Scorecard:** a free workflow is being added to assess repository-level security practices and publish SARIF findings in the GitHub Security/code-scanning view. It assesses repository posture, not the validity of the RSI sandbox and not independent human approval.
 - **Human review:** still mandatory under the existing RSI policy. The separate four-gate review package stays authoritative. Automated findings are supporting evidence only.
 
 ## Official program sources
@@ -15,6 +16,7 @@ This is a development-only, no-cost process for finding evidence—not a claim t
 - [OSS Scanner Agreement](https://red.anthropic.com/oss-scanner/terms/)
 - [GitHub CodeQL code scanning availability](https://docs.github.com/en/code-security/concepts/code-scanning/codeql/codeql-code-scanning)
 - [CodeQL Action releases](https://github.com/github/codeql-action/releases)
+- [OpenSSF Scorecard action](https://github.com/ossf/scorecard-action)
 
 Accessed 2026-10-11. The program owner retains discretion to accept or decline each project. The eligibility inquiry is not an enrollment and does not accept the agreement.
 
@@ -24,7 +26,7 @@ Accessed 2026-10-11. The program owner retains discretion to accept or decline e
 2. Ask OSS Scanner staff whether an early-stage but security-focused RSI subsystem is in scope before exposing a personal email in a public project config or submitting their enrollment agreement.
 3. If written guidance or new evidence supports eligibility, prepare the project-specific Docker build and threat model; run the provider's own validator/build procedure before submitting its separate enrollment PR.
 4. Treat any OSS Scanner report as unvalidated model-generated output. Reproduce findings, assess impact, apply and retest fixes, and do not call it independent human approval.
-5. Continue repository CodeQL and RSI CI scans in parallel. Neither changes the protected RSI readiness state.
+5. Continue repository CodeQL, OpenSSF Scorecard, and RSI CI scans in parallel. Neither changes the protected RSI readiness state.
 
 ## Reviewer prioritization: evidence score, not probability
 
