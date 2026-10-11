@@ -267,7 +267,6 @@ jobs:
           private-key: ${{ secrets.NOVA_RSI_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: AstroCrown-Web
-          permission-administration: read
           permission-contents: write
           permission-pull-requests: write
 
