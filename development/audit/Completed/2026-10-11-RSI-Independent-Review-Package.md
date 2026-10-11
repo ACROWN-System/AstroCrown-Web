@@ -33,7 +33,7 @@ GitHub Actions run [#38101752903](https://github.com/ACROWN-System/AstroCrown-We
 - The protected readiness remains INCOMPLETE, promotion.allow_main remains false, and context-packing-v1 remains disabled and unapproved.
 - No provider requests, secrets, billing settings, or workflow permissions were changed.
 
-The PR update that moves this audit plan to Completed will trigger the repository's CI again; merge only after that latest check also passes.
+The initial PR CI run passed on commit 43e3b612a9791026de6c556da79b3dc396f9431f after the review package, README link, and protected-path change were present. The later branch commits only moved this audit record from Active to Completed; those contents-API commits did not trigger a new CI run for the final branch head before the PR was merged. No post-merge RSI CI run was observed in the available checks. This is recorded as a verification limitation rather than treating the previous run as a check of the exact final tree. The follow-up clarification PR runs CI against the corrected record.
 
 ## Impact analysis
 
