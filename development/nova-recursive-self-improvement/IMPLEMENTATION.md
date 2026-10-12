@@ -53,7 +53,13 @@ These controls protect RSI from becoming an uncontrolled consumer of NOVA's AI a
 
 Repository secret:
 
-`NOSANA_LLM_API_KEY_01`
+`GROQ_API_KEY_01`
+
+The protected default uses the Groq OpenAI-compatible endpoint `https://api.groq.com/openai/v1` and model `openai/gpt-oss-20b`. Only `api.groq.com` is allowlisted in the protected default policy. The context-character budget is 16,000 to leave safer headroom under the current Groq Free plan's 8,000-token-per-minute limit; NOVA RSI is also capped at one cycle per UTC day.
+
+This key must be added separately to AstroCrown-Web Actions Secrets. GitHub does not automatically share secret values between the NOVA and AstroCrown-Web repositories. Sharing the same Groq account key also means sharing that account's quota.
+
+The key being present does not permit provider access by itself. The protected readiness gate, explicit `RSI_AI_COMMERCIAL_ELIGIBILITY=PASS`, and required approved benchmark remain separate mandatory gates.
 
 Repository variables:
 
