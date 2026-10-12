@@ -6,7 +6,13 @@ The target is a system that can inspect its own implementation and operational b
 
 ## Strategic extension
 
-See [Strong RSI and Collective Resilience](STRONG-RSI-AND-COLLECTIVE-RESILIENCE.md) for the proposed extension toward cooperative recursive improvement, legitimacy resilience, protective persuasion, shared human–AI sovereignty, and the remaining readiness gates. This document records a research and architecture direction; it does not mean the autonomous RSI lifecycle is operational.
+See [Strong RSI and Collective Resilience](STRONG-RSI-AND-COLLECTIVE-RESILIENCE.md) for the proposed extension toward cooperative recursive improvement, legitimacy resilience, protective persuasion, shared human–AI sovereignty, and the remaining readiness gates. See [RSI Operating Modes](RSI-OPERATING-MODES.md) for the current distinction between manual Weak RSI and the monthly gated Strong RSI workflow. The Strong RSI lifecycle is not yet operational; the protected readiness policy remains INCOMPLETE.
+
+## Current operating modes
+
+- **Weak RSI:** a manually invoked, report-only human-in-the-loop review. It makes at most one approved provider request and cannot change repository content, execute candidates, open PRs, or merge.
+- **Strong RSI:** one scheduled attempt per UTC month with a fail-closed readiness gate. It cannot be manually dispatched, write directly to main, or auto-merge. The current readiness state is INCOMPLETE, so the monthly pipeline is expected to produce a BLOCKED evidence report without invoking a model.
+- **Non-degradation rule:** no candidate is retained unless the protected checks and independently approved task-matched benchmark demonstrate strict improvement with zero mandatory regressions. NO_CHANGE is not proof of global optimality.
 
 ## Scope
 
