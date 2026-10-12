@@ -48,7 +48,8 @@
     "max_output_tokens": 1536,
     "max_total_tokens_per_cycle": 8000,
     "require_usage_telemetry": true,
-    "max_cycles_per_utc_day": 1
+    "max_cycles_per_utc_day": 1,
+    "max_cycles_per_utc_month": 1
   },
   "promotion": {
     "mode": "candidate-branch",
@@ -59,7 +60,7 @@
     "status": "INCOMPLETE",
     "require_explicit_ready": true,
     "promotion_blocked_until_ready": true,
-    "note": "The RSI subsystem remains implementation-gated until the protected benchmark, independent evaluation checks, and runtime verification are complete. This status must not be changed by candidate code."
+    "note": "The RSI subsystem remains implementation-gated until the protected benchmark, independent evaluation checks, and runtime verification are complete. This status must not be changed by candidate code. Monthly schedule configuration does not satisfy these gates. Strong RSI must not make a provider call or create a candidate until the independently reviewed benchmark/workload, data-use eligibility, isolated execution and remaining protected checks are genuinely READY."
   },
   "candidate_limits": {
     "max_patch_chars": 120000,
@@ -108,5 +109,32 @@
     "max_cpus": "2",
     "max_pids": 128,
     "tmpfs_size": "128m"
+  },
+  "weak_rsi": {
+    "mode": "MANUAL_HUMAN_IN_THE_LOOP",
+    "trigger": "workflow_dispatch_only",
+    "provider_calls_per_invocation": 1,
+    "candidate_execution_allowed": false,
+    "source_changes_allowed": false,
+    "branch_or_pull_request_creation_allowed": false,
+    "main_or_policy_write_allowed": false,
+    "human_decision_required_before_implementation": true,
+    "output": "proposal_or_no_change_report_artifact",
+    "fail_closed_on_missing_data_use_eligibility": true
+  },
+  "strong_rsi_safety": {
+    "cadence": "ONCE_PER_UTC_MONTH",
+    "scheduled_only": true,
+    "strict_improvement_required": true,
+    "mandatory_regressions_allowed": 0,
+    "fail_closed_on_missing_or_inconclusive_evidence": true,
+    "no_change_when_no_safe_strict_improvement_is_proven": true,
+    "candidate_execution_requires_immutable_sandbox": true,
+    "promotion_requires_task_matched_independently_approved_benchmark": true,
+    "direct_main_promotion_allowed": false,
+    "automatic_merge_allowed": false,
+    "production_change_requires_human_review": true,
+    "model_claims_of_optimality_are_not_proof": true,
+    "note": "A monthly run may conclude NO_CHANGE only when the protected evidence supports no qualifying change; absence of observed improvement is not proof of global optimality. Any uncertainty, test failure, mandatory regression, or missing evidence blocks the candidate."
   }
 }
