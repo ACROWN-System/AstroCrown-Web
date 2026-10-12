@@ -1,7 +1,7 @@
 # RSI Operating Modes and Safety Gates
 
 **Status date:** 2026-10-12  
-**Implementation status:** Cadence/policy changes under review; Strong RSI readiness remains INCOMPLETE.
+**Implementation status:** Strong RSI workflow is SUSPENDED; implementation readiness remains INCOMPLETE.
 
 ## Weak RSI — manual, human-in-the-loop
 
@@ -11,15 +11,17 @@ Weak RSI reads a fixed allowlist of development documents from the public AstroC
 
 This manual review mode is deliberately independent of Strong RSI. It does not authorize Strong RSI, set its readiness status, or alter billing or provider lifecycle policy.
 
-## Strong RSI — one scheduled, gated attempt per UTC month
+## Strong RSI — suspended until fully operational
 
-The Strong RSI workflow is configured to run at 03:17 UTC on the first day of each month. It has no `workflow_dispatch` trigger and its protected budget allows at most one run per UTC month.
+Strong RSI is **inactive**. Its former once-monthly workflow has been moved out of `.github/workflows/` into `suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml`. It has no active schedule, no manual trigger and no provider calls. This avoids consuming routine runner time for monthly runs that can only stop at an INCOMPLETE readiness gate.
 
-The current readiness policy is explicitly `INCOMPLETE`. Therefore the scheduled run is expected to record a blocked gate report and stop **before the provider secret boundary and before any model request**. A scheduled workflow alone is not evidence that autonomous RSI is operational.
+The engine, evaluator, protected policies, tests and workflow template remain preserved for development. This is not a completed Strong RSI capability and must not be marketed as an operational autonomous improvement system.
 
-If all prerequisites are eventually independently verified, Strong RSI may make one bounded proposal request, validate the candidate, run protected tests and the task-matched benchmark inside the immutable isolated sandbox, and preserve evidence. Only a candidate with strict measurable improvement and no mandatory regression may reach a separate candidate PR. It does not write directly to main; auto-merge remains disabled. A human review remains required before any production merge.
+The protected policy now records `strong_rsi_safety.lifecycle_status = SUSPENDED`; `implementation_readiness.status` remains `INCOMPLETE`. No one may reactivate the workflow simply by moving the YAML back or by setting an eligibility flag.
 
-### Non-degradation policy
+Reactivation requires satisfying every criterion in [Strong RSI Status](STRONG-RSI-STATUS.md), including an independently approved capability benchmark, current provider/data-use approval, configured and verified repository-scoped credentials, independently reviewed sandbox/evaluator integrity, exact-baseline evidence verification, zero mandatory regressions, strict task-matched improvement, verified PR-retention permissions and required checks, end-to-end operational proof, rollback procedure, and explicit human release decision.
+
+## Non-degradation policy
 
 - Every mandatory security, privacy, correctness, compatibility, reliability, and operability requirement must pass.
 - Any mandatory regression, unknown result, missing evidence, invalid usage telemetry, unavailable sandbox, unapproved benchmark, or uncertain eligibility blocks the candidate.
@@ -35,4 +37,4 @@ NOVA's six-hour LLM heartbeat records sanitized per-provider key/API observation
 
 ## Public-status wording
 
-Until all independent gates pass, accurately describe the Strong RSI work as a **monthly scheduled, fail-closed evaluation pipeline under development**. Do not advertise it as a proven, currently operational autonomous improvement capability. A public statement of completed operation requires a dated successful evidence package, verified non-degradation checks, approved workload, current provider/data-use eligibility, and reviewed candidate-retention outcome.
+Until all independent gates pass, accurately describe Strong RSI as a **suspended implementation under development**. Its old monthly workflow template is inactive and does not execute. Do not advertise it as a proven, currently operational autonomous improvement capability. A public statement of completed operation requires a dated successful evidence package, verified non-degradation checks, approved workload, current provider/data-use eligibility, and reviewed candidate-retention outcome.
