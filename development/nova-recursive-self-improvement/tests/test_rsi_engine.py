@@ -518,6 +518,28 @@ diff --git a/development/x.txt b/development/x.txt
     def test_missing_usage_is_not_fabricated(self):
         self.assertIsNone(normalize_usage(None))
 
+    def test_strong_rsi_is_monthly_gated_and_no_change_does_not_promote(self):
+        import json
+
+        workflow_path = self.ROOT / ".github/workflows/nova-rsi.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+        events = workflow.split("concurrency:", 1)[0]
+        self.assertIn('cron: "17 3 1 * *"', events)
+        self.assertNotIn("workflow_dispatch", events)
+        self.assertIn("max_cycles_per_utc_month", workflow)
+        self.assertIn("needs.rsi-cycle.outputs.decision == 'PASS'", workflow)
+
+        policy = json.loads(
+            (self.ROOT / "development/nova-recursive-self-improvement/rsi_policy.json")
+            .read_text(encoding="utf-8")
+        )
+        self.assertEqual(policy["budget"]["max_cycles_per_utc_month"], 1)
+        self.assertTrue(policy["strong_rsi_safety"]["strict_improvement_required"])
+        self.assertEqual(policy["strong_rsi_safety"]["mandatory_regressions_allowed"], 0)
+        self.assertFalse(policy["strong_rsi_safety"]["direct_main_promotion_allowed"])
+        self.assertFalse(policy["strong_rsi_safety"]["automatic_merge_allowed"])
+        self.assertTrue(policy["strong_rsi_safety"]["model_claims_of_optimality_are_not_proof"])
+
     def test_decision_precedence(self):
         self.assertEqual(classify_decision(["PASS", "PASS"]), "PASS")
         self.assertEqual(classify_decision(["PASS", "BLOCKED"]), "BLOCKED")
