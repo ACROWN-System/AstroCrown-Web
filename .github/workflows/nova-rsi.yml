@@ -53,23 +53,57 @@ jobs:
 
       - name: Record monthly Strong RSI gate status
         if: always()
+        env:
+          REPORT_PATH: ${{ runner.temp }}/strong-rsi-gate.json
+          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+          RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
         run: |
           set -euo pipefail
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
           import json
+          import os
+          from datetime import datetime, timezone
           from pathlib import Path
+
           policy = json.loads(Path("development/nova-recursive-self-improvement/rsi_policy.json").read_text(encoding="utf-8"))
           readiness = policy.get("implementation_readiness", {})
           budget = policy.get("budget", {})
+          gates = {
+              "implementation_ready": readiness.get("status") == "READY"
+                  and readiness.get("require_explicit_ready") is True
+                  and readiness.get("promotion_blocked_until_ready") is True,
+              "commercial_data_use_eligibility_pass": os.environ.get("RSI_AI_COMMERCIAL_ELIGIBILITY", "").strip() == "PASS",
+              "task_matched_benchmark_configured": bool(os.environ.get("RSI_BENCHMARK_COMMAND", "").strip()),
+              "no_direct_main_promotion": policy.get("promotion", {}).get("allow_main") is False,
+          }
+          report = {
+              "observed_at": datetime.now(timezone.utc).isoformat(),
+              "mode": "STRONG_RSI_MONTHLY_GATED",
+              "scheduled_cadence": "17 3 1 * * (UTC)",
+              "monthly_cycle_budget": budget.get("max_cycles_per_utc_month"),
+              "readiness_status": readiness.get("status", "UNKNOWN"),
+              "gates": gates,
+              "decision": "READY_TO_CONTINUE" if all(gates.values()) else "BLOCKED",
+              "provider_call_allowed_by_this_report": False,
+              "production_change_made": False,
+              "global_optimality_proven": False,
+              "notes": [
+                  "This is a gate report, not a capability result.",
+                  "A monthly schedule does not imply the Strong RSI lifecycle is operational.",
+                  "No-change means no justified candidate within the evaluated scope, not proof of global optimality.",
+              ],
+          }
+          report_path = Path(os.environ["REPORT_PATH"])
+          report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
           print("# Strong RSI — monthly gate report")
           print()
-          print("- Cadence: one scheduled attempt per UTC month")
-          print(f"- Readiness: {readiness.get('status', 'UNKNOWN')}")
-          print(f"- Monthly cycle budget: {budget.get('max_cycles_per_utc_month', 'UNKNOWN')}")
-          print(f"- Direct main promotion: {'BLOCKED' if policy.get('promotion', {}).get('allow_main') is not True else 'POLICY-ENABLED'}")
-          print("- Automatic merge: disabled by repository configuration unless separately changed")
-          print("- Provider call: allowed only after every protected readiness, quota, commercial/data-use, sandbox and benchmark gate passes")
-          print("- Any missing or inconclusive evidence: BLOCKED / no production change")
+          print(f"- Cadence: {report['scheduled_cadence']}")
+          print(f"- Readiness: {report['readiness_status']}")
+          print(f"- Monthly cycle budget: {report['monthly_cycle_budget']}")
+          print(f"- Gate result: {report['decision']}")
+          print(f"- Direct main promotion: {'BLOCKED' if gates['no_direct_main_promotion'] else 'POLICY CHECK FAILED'}")
+          print("- No provider call or production change is authorized by this report.")
+          print("- Missing or inconclusive evidence blocks the cycle.")
           PY
 
       - name: Block RSI until implementation is explicitly ready
@@ -98,6 +132,15 @@ jobs:
                   "RSI implementation is incomplete; autonomous proposal/evaluation/promotion is blocked."
               )
           PY
+
+      - name: Upload monthly Strong RSI gate evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nova-strong-rsi-gate-${{ github.run_id }}
+          path: ${{ runner.temp }}/strong-rsi-gate.json
+          if-no-files-found: warn
+          retention-days: 90
 
   budget-gate:
     needs: implementation-readiness
@@ -203,6 +246,8 @@ jobs:
 
   rsi-cycle:
     needs: provider-secret-boundary
+    outputs:
+      decision: ${{ steps.rsi-decision.outputs.decision }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -245,6 +290,28 @@ jobs:
         run: |
           python development/nova-recursive-self-improvement/rsi_engine.py cycle             --repo .             --evidence-dir .rsi-evidence
 
+      - name: Expose protected RSI decision
+        id: rsi-decision
+        if: always()
+        run: |
+          set -euo pipefail
+          DECISION="BLOCKED"
+          if [[ -f .rsi-evidence/cycle.json ]]; then
+            DECISION="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              result = json.loads(Path(".rsi-evidence/cycle.json").read_text(encoding="utf-8"))
+              value = result.get("decision", "BLOCKED")
+          except (OSError, json.JSONDecodeError):
+              value = "BLOCKED"
+          print(value if value in {"PASS", "NO_CHANGE", "FAIL", "BLOCKED"} else "BLOCKED")
+          PY
+          )"
+          fi
+          echo "decision=$DECISION" >> "$GITHUB_OUTPUT"
+          echo "Strong RSI decision: $DECISION" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Clean up evaluation-labelled sandbox containers
         if: always()
         timeout-minutes: 3
@@ -266,7 +333,7 @@ jobs:
 
   retain-qualified-candidate:
     needs: rsi-cycle
-    if: needs.rsi-cycle.result == 'success'
+    if: needs.rsi-cycle.result == 'success' && needs.rsi-cycle.outputs.decision == 'PASS'
     runs-on: ubuntu-latest
     permissions:
       contents: write
