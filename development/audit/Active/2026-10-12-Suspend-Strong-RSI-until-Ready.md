@@ -1,12 +1,12 @@
 # Active Navigation Plan — Suspend Strong RSI Until Fully Operational
 
 **Date:** 2026-10-12  
-**Status:** ACTIVE until suspension, regression checks, and documentation are merged.  
+**Status:** ACTIVE — code changes prepared; awaiting CI, review and merge.  
 **Objective:** Stop all scheduled Strong RSI workflow execution until every prerequisite needed for a genuine, publicly defensible Strong RSI is complete and independently verified.
 
 ## Decision
 
-Strong RSI must remain inactive rather than waking monthly only to stop at an INCOMPLETE readiness gate. Preserve its workflow as a dormant template outside `.github/workflows/`; no scheduled or manual GitHub Actions event may invoke it during suspension. Keep implementation code, tests, protected policy, and missing-requirements list for future completion.
+Strong RSI must remain inactive rather than waking monthly only to stop at an INCOMPLETE readiness gate. The prior monthly workflow has been copied to `development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml`, then removed from `.github/workflows/`. No scheduled or manual GitHub Actions event can invoke this preserved template. Keep implementation code, tests, protected policy, and missing-requirements list for future completion.
 
 ## Acceptance criteria
 
