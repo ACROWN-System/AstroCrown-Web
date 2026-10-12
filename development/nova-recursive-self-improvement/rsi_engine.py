@@ -294,7 +294,7 @@ Hard constraints from the protected RSI policy:
 - The candidate must have a measurable hypothesis that can be tested against the baseline.
 - Do not claim success; propose a change for protected evaluation.
 - Return exactly one JSON object. If a specific improvement is justified, return: candidate_id, hypothesis, rationale, expected_improvement, risks, patch. The patch must be a valid unified Git patch.
-- If you cannot identify a change that has a defensible chance of strict improvement without violating any hard requirement, return: {"decision":"NO_CHANGE","rationale":"...","evidence_reviewed":["exact path from the provided context", "..."],"uncertainties":["..."]}.
+- If you cannot identify a change that has a defensible chance of strict improvement without violating any hard requirement, return: {{"decision":"NO_CHANGE","rationale":"...","evidence_reviewed":["exact path from the provided context", "..."],"uncertainties":["..."]}}.
 - NO_CHANGE means no safe, evidence-supported candidate is justified from this bounded review. It does NOT mean the system is globally optimal; never claim exhaustive verification or certainty about files/tests not actually observed.
 - Prefer NO_CHANGE over speculative edits. Never fabricate test outcomes, benchmark results, or repository evidence.
 
