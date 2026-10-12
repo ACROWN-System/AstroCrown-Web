@@ -286,29 +286,6 @@ REQUEST
 8. Produce a reusable final prompt.
 9. Preserve unresolved decisions.
 
-### PA-06 — External API / model implementation
-
-OBJECTIVE
-Observable behavior required by the application.
-
-CONTRACT
-Exact endpoint/version, SDK/client, model ID, supported request/response features, quota/eligibility, and authoritative sources with date checked.
-
-EXISTING SYSTEM
-Current adapter, repository patterns, dependencies, tests, workflows, and known incidents.
-
-IMPLEMENTATION
-Choose the simplest justified approach; reuse the production adapter. Document why a new dependency or separate raw-HTTP client is needed.
-
-VERIFICATION
-Offline tests/fixtures, negative/error tests, live-integration requirements, secrets boundary, exact candidate revision, and promotion gate.
-
-FAILURE HANDLING
-Keep transport, response shape, application semantics, capability, quota, and authentication as separate states. Unverified mandatory capability means BLOCKED, not assumed support.
-
-OUTPUT
-Contract evidence → decisions → minimal diff → tests → limitations → remaining blockers.
-
 ### PA-05 — Multi-source / multi-model synthesis
 
 OBJECTIVE
@@ -337,6 +314,29 @@ Test important conclusions.
 
 OUTPUT
 Result → supporting evidence → conflicts → uncertainty.
+
+### PA-06 — External API / model implementation
+
+OBJECTIVE
+Observable behavior required by the application.
+
+CONTRACT
+Exact endpoint/version, SDK/client, model ID, supported request/response features, quota/eligibility, and authoritative sources with date checked.
+
+EXISTING SYSTEM
+Current adapter, repository patterns, dependencies, tests, workflows, and known incidents.
+
+IMPLEMENTATION
+Choose the simplest justified approach; reuse the production adapter. Document why a new dependency or separate raw-HTTP client is needed.
+
+VERIFICATION
+Offline tests/fixtures, negative/error tests, live-integration requirements, secrets boundary, exact candidate revision, and promotion gate.
+
+FAILURE HANDLING
+Keep transport, response shape, application semantics, capability, quota, and authentication as separate states. Unverified mandatory capability means BLOCKED, not assumed support.
+
+OUTPUT
+Contract evidence → decisions → minimal diff → tests → limitations → remaining blockers.
 
 ---
 
