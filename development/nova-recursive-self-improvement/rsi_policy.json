@@ -136,6 +136,12 @@
     "automatic_merge_allowed": false,
     "production_change_requires_human_review": true,
     "model_claims_of_optimality_are_not_proof": true,
-    "note": "A monthly run may conclude NO_CHANGE only when the protected evidence supports no qualifying change; absence of observed improvement is not proof of global optimality. Any uncertainty, test failure, mandatory regression, or missing evidence blocks the candidate."
+    "note": "A monthly run may conclude NO_CHANGE only when the protected evidence supports no qualifying change; absence of observed improvement is not proof of global optimality. Any uncertainty, test failure, mandatory regression, or missing evidence blocks the candidate.",
+    "lifecycle_status": "SUSPENDED",
+    "active_workflow_path": null,
+    "suspended_workflow_template": "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml",
+    "reactivation_requires_explicit_human_release": true,
+    "provider_calls_permitted_while_suspended": 0,
+    "required_reactivation_document": "development/nova-recursive-self-improvement/STRONG-RSI-STATUS.md"
   }
 }
