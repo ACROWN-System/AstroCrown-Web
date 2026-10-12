@@ -293,7 +293,7 @@ diff --git a/development/x.txt b/development/x.txt
                 )
 
     def test_workflow_has_always_run_sandbox_cleanup_before_evidence_upload(self):
-        workflow = (self.ROOT / ".github/workflows/nova-rsi.yml").read_text(encoding="utf-8")
+        workflow = (self.ROOT / "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml").read_text(encoding="utf-8")
         initialize = workflow.index("name: Initialize per-run sandbox cleanup identifier")
         run_cycle = workflow.index("name: Run bounded autonomous RSI cycle")
         cleanup = workflow.index("name: Clean up evaluation-labelled sandbox containers")
@@ -319,7 +319,7 @@ diff --git a/development/x.txt b/development/x.txt
         )
 
     def test_workflow_has_always_run_sandbox_cleanup_before_evidence_upload(self):
-        workflow = (self.ROOT / ".github/workflows/nova-rsi.yml").read_text(encoding="utf-8")
+        workflow = (self.ROOT / "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml").read_text(encoding="utf-8")
         initialize = workflow.index("name: Initialize per-run sandbox cleanup identifier")
         run_cycle = workflow.index("name: Run bounded autonomous RSI cycle")
         cleanup = workflow.index("name: Clean up evaluation-labelled sandbox containers")
@@ -342,7 +342,7 @@ diff --git a/development/x.txt b/development/x.txt
 
     def test_retention_workflow_binds_both_verifier_calls_to_github_sha(self):
         workflow = (
-            self.ROOT / ".github/workflows/nova-rsi.yml"
+            self.ROOT / "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml"
         ).read_text(encoding="utf-8")
         self.assertEqual(
             workflow.count('--expected-baseline "$GITHUB_SHA"'),
@@ -351,7 +351,7 @@ diff --git a/development/x.txt b/development/x.txt
 
     def test_retention_verifies_staged_tree_before_candidate_commit(self):
         workflow = (
-            self.ROOT / ".github/workflows/nova-rsi.yml"
+            self.ROOT / "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml"
         ).read_text(encoding="utf-8")
         retain = workflow.split("      - name: Retain qualified candidate", 1)[1]
         apply_index = retain.index("git apply .rsi-evidence/candidate.patch")
@@ -367,7 +367,7 @@ diff --git a/development/x.txt b/development/x.txt
 
     def test_rsi_workflow_is_restricted_to_main_ref(self):
         workflow = (
-            self.ROOT / ".github/workflows/nova-rsi.yml"
+            self.ROOT / "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml"
         ).read_text(encoding="utf-8")
         readiness_job = workflow.split(
             "  implementation-readiness:", 1
@@ -518,11 +518,18 @@ diff --git a/development/x.txt b/development/x.txt
     def test_missing_usage_is_not_fabricated(self):
         self.assertIsNone(normalize_usage(None))
 
-    def test_strong_rsi_is_monthly_gated_and_no_change_does_not_promote(self):
+    def test_strong_rsi_is_suspended_until_full_readiness_is_proven(self):
         import json
 
-        workflow_path = self.ROOT / ".github/workflows/nova-rsi.yml"
-        workflow = workflow_path.read_text(encoding="utf-8")
+        active_workflow = self.ROOT / ".github/workflows/nova-rsi.yml"
+        suspended_workflow = (
+            self.ROOT
+            / "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml"
+        )
+        self.assertFalse(active_workflow.exists(), "Strong RSI must not be an active scheduled workflow.")
+        self.assertTrue(suspended_workflow.is_file(), "Preserve the workflow template outside GitHub Actions.")
+
+        workflow = suspended_workflow.read_text(encoding="utf-8")
         events = workflow.split("concurrency:", 1)[0]
         self.assertIn('cron: "17 3 1 * *"', events)
         self.assertNotIn("workflow_dispatch", events)
