@@ -1,7 +1,7 @@
 # Active Navigation Plan — Free AI Provider Pool Research and Qualification
 
 **Date:** 2026-10-12  
-**Status:** ACTIVE — research in progress; live credential qualification not yet verified  
+**Status:** ACTIVE — initial live credential qualification completed; account eligibility, free-only overage behavior, provider activation and production readiness remain unresolved  
 **Objective:** Establish a diversified, auditable AI inference pool that maximizes legitimate no-payment-method capacity without relying on one provider, exposing secrets, enabling accidental paid usage, or activating an unqualified endpoint.
 
 ## Mode and source of truth
@@ -35,6 +35,9 @@ The requested `NAVIGATION-PROTOCOL.md`, `NAVIGATION-PLAN-TEMPLATE.md`, and a cur
 - https://github.com/ACROWN-System/NOVA/blob/main/NOVA/KEY-READINESS.md
 - https://github.com/ACROWN-System/NOVA/blob/main/.github/workflows/nova_validation.yml
 - https://github.com/ACROWN-System/NOVA/blob/main/.github/workflows/nova_heartbeat.yml
+- https://github.com/ACROWN-System/NOVA/blob/main/.github/workflows/nova-provider-qualification.yml
+- https://github.com/ACROWN-System/NOVA/blob/main/NOVA/PROVIDER-QUALIFICATION.md
+- https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/audit/Active/2026-10-12-Free-Provider-Pool-Evidence-Matrix.md
 - https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/Prompt-Guide.md
 - https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/DEVELOPMENT-AND-AUDIT-CONVENTION.md
 - https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/nova-recursive-self-improvement/rsi_policy.json
@@ -92,6 +95,25 @@ The requested `NAVIGATION-PROTOCOL.md`, `NAVIGATION-PLAN-TEMPLATE.md`, and a cur
 **IF modified:** NOVA gains a reproducible, risk-bounded path to verify existing keys and compare more independent or aggregated free endpoints; AstroCrown can make routing, user limits, and feature availability decisions from measured quotas rather than assumptions.
 
 **IF not modified:** provider status remains based on stale presence/history, the project risks relying on a single uncertain key, and provider candidates may be activated or advertised without evidence of payment-method eligibility, quota, privacy, licensing, or production suitability.
+
+## Interim execution findings — 2026-10-12
+
+### NOVA implementation and CI
+
+- PR [#77 — Add secret-safe live provider qualification probes](https://github.com/ACROWN-System/NOVA/pull/77) merged as `5a45c627d4cef43f3b3aeb8330d60a8159dfa0b3`.
+- The pull request CI initially identified a missing report-builder interface; this was corrected before merge. [NOVA Health Tests #311](https://github.com/ACROWN-System/NOVA/actions/runs/38229331476) passed all 66 unit tests.
+- PR [#78 — Refine provider qualification diagnostics](https://github.com/ACROWN-System/NOVA/pull/78) merged as `2eb00c35d994f128b2501f9e98ff40b249ae37ed`.
+- [Follow-up NOVA Health Tests](https://github.com/ACROWN-System/NOVA/actions/runs/38229809228) passed. The post-merge validation, credential-readiness and qualification jobs all completed successfully.
+
+### Sanitized live probe evidence
+
+- [Initial provider qualification run](https://github.com/ACROWN-System/NOVA/actions/runs/38229425403), observed at 2026-10-12 09:22 UTC: Groq returned HTTP 200 but did not produce the expected marker within a 32-output-token cap; Gemini passed; Mistral returned 429; GitHub API returned 403; Cloudflare was skipped due to missing API key/account ID.
+- The initial Groq result was not treated as a dead key. A follow-up changed the qualification request to use low reasoning effort and a bounded 64-output-token cap, then distinguished response-shape validity from marker matching.
+- [Follow-up qualification run](https://github.com/ACROWN-System/NOVA/actions/runs/38229853401), observed at 2026-10-12 09:26 UTC: Groq PASS (HTTP 200, marker present, 106 reported total tokens; 999 requests and 7,851 tokens remaining in returned rate-limit headers); Gemini PASS (HTTP 200, marker present, 22 reported total tokens); Mistral returned 429 with `x-ratelimit-limit-req-minute: 0` and `x-ratelimit-remaining-req-minute: 0`; GitHub API returned 403 with 4,998 core API requests remaining in headers; Cloudflare remained skipped.
+- The Mistral headers show a zero request-per-minute allowance at the time of observation. They do not establish whether a daily/monthly quota is exhausted, the plan/account is capacity-limited, or some other provider-side policy is responsible. Mistral remains DEFERRED.
+- GitHub API's 403 cause remains unresolved. The returned rate-limit headers are consistent with an authenticated API rate-limit bucket, but do not prove the token can perform the required repository operations. GitHub Models inference is retired and is not a candidate.
+- The qualification script does not emit credentials, response text, or raw provider error bodies and did not change the active roster, stored health markers, billing or routing.
+- The new evidence matrix is a dated research artifact. It retains CANDIDATE/UNKNOWN/BLOCKED states for providers whose card requirements, paid fallback behavior, data-use terms or production entitlements have not been established.
 
 ## Verification and handoff
 
