@@ -1,6 +1,6 @@
 # GitHub PR automation setup
 
-This guide configures the administrative controls required before NOVA RSI may queue automatic merging. The workflow defaults to leaving a PR open. Its automatic-merge option is opt-in and includes a runtime check of effective branch rules and required check names.
+This guide records the administrative controls for a possible future RSI candidate-retention workflow. **Strong RSI is currently SUSPENDED**; its workflow template is outside `.github/workflows/`. Do not enable candidate retention or auto-merge until all criteria in `STRONG-RSI-STATUS.md` have been completed and human-approved. Auto-merge remains disabled by project decision.
 
 ## 1. Install a dedicated GitHub App
 
@@ -50,26 +50,21 @@ Open [NOVA repository rulesets](https://github.com/ACROWN-System/NOVA/settings/r
 
 The NOVA Health Tests workflow now runs for every pull request (without PR path filters), so its check is suitable as a required check. Do not protect `nova-operational-state` with the same PR-only rule; the heartbeat workflows need to update that data branch directly.
 
-## 5. Enable automatic merge last
+## 5. Do not enable automation during suspension
 
-After the App installation, secrets, required checks, and branch rules have been verified:
+Strong RSI is currently `SUSPENDED`. Do not set `NOVA_RSI_AUTOMERGE_ENABLED=true`, create/activate the GitHub App credentials for Strong RSI, or move its workflow back to `.github/workflows/` as a shortcut. Keep automatic merge disabled.
 
-1. Set repository variable `NOVA_RSI_AUTOMERGE_ENABLED` to the string `true` in AstroCrown-Web.
-2. The next successfully qualified RSI candidate will create its PR using the App token.
-3. The workflow will read effective rules for `main` and refuse to request auto-merge unless a pull-request rule and all three required AstroCrown-Web checks are present.
-4. If the preflight passes, GitHub auto-merge waits for the protected checks/rules to pass before merging. If the variable is unset or false, or the rule preflight cannot validate requirements, the PR remains open or auto-merge is not requested.
-
-The variable is deliberately the final switch; do not set it before the settings above are complete.
+Only after every requirement in [Strong RSI Status](STRONG-RSI-STATUS.md) has supporting evidence and a human explicitly approves reactivation should the preserved workflow be restored and the candidate-retention path re-verified. Even then, PR review should remain mandatory and auto-merge must remain off unless the owner separately decides otherwise after the operational-readiness decision.
 
 ## Remaining independent readiness gate
 
-GitHub PR automation does **not** declare RSI operationally ready. `development/nova-recursive-self-improvement/rsi_policy.json` intentionally remains `INCOMPLETE` and keeps promotion blocked until protected benchmarks, independent evaluation, and runtime verification are complete. The bounded workflow requires its configured Groq provider secret and a reviewed benchmark. Neither the readiness gate nor the benchmark requirement should be relaxed simply to make the workflow run.
+GitHub PR automation does **not** declare RSI operationally ready. `development/nova-recursive-self-improvement/rsi_policy.json` intentionally remains `INCOMPLETE`; its Strong RSI lifecycle is also `SUSPENDED`. Provider credentials, data-use/commercial eligibility, an independently approved task-matched benchmark, runtime isolation review, evidence verification, actual candidate-PR retention, effective required checks, end-to-end proof, and rollback readiness must all be verified before reactivation. Neither the readiness gate nor the benchmark requirement may be relaxed simply to make the workflow run.
 
 
 ## 6. Keep Weak RSI and Strong RSI separate
 
-- **Weak RSI** is manually triggered from the NOVA repository. It uses only the selected provider's key configured in NOVA's own Actions secrets, and produces a report artifact. It has read-only permissions and cannot modify AstroCrown-Web, run candidate code, create PRs, or merge.
-- **Strong RSI** is configured in AstroCrown-Web, uses the AstroCrown-Web-scoped provider secret, and runs at most once per UTC month. It currently remains blocked by the explicit INCOMPLETE readiness policy; the schedule is not evidence of operational autonomous capability.
+- **Weak RSI** remains manually triggered from the NOVA repository. It uses only the selected provider's key in NOVA's own Actions secrets and produces a report artifact with read-only permissions. It cannot modify AstroCrown-Web, execute candidate code, create PRs, or merge.
+- **Strong RSI** is **SUSPENDED**. Its previous monthly workflow is preserved in `development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml`, outside the active Actions directory. No schedule or manual trigger is active.
 - Repository secrets are scoped independently. Neither workflow copies secret values between repositories. A key must be entered by its owner in the intended repository's secret settings.
-- GitHub Actions `GITHUB_TOKEN`, the dedicated GitHub App installation token and Codex/GitHub integration are GitHub-management authentication paths, not LLM inference-provider keys.
-- Do not enable `NOVA_RSI_AUTOMERGE_ENABLED` while Strong RSI readiness remains INCOMPLETE. Keep candidate changes in the normal human-reviewed PR process.
+- GitHub Actions `GITHUB_TOKEN`, a dedicated GitHub App installation token, and the Codex/GitHub integration are GitHub-management authentication paths, not LLM inference-provider keys.
+- Do not enable the Strong workflow or its candidate-retention automation until [Strong RSI Status](STRONG-RSI-STATUS.md) is complete and explicitly approved by a human.
