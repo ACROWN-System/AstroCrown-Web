@@ -15,8 +15,8 @@ permissions:
 
 jobs:
   implementation-readiness:
-    # workflow_dispatch may target any ref; sensitive RSI jobs must originate
-    # from the protected main branch, not a candidate or feature branch.
+    # The monthly schedule is intended only for the protected main branch;
+    # this workflow deliberately has no manual-dispatch trigger.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
