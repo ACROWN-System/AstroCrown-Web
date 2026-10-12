@@ -40,7 +40,8 @@ class PreflightTests(unittest.TestCase):
             "provider": {
                 "base_url_env": "RSI_AI_BASE_URL",
                 "model_env": "RSI_AI_MODEL",
-                "default_base_url": "https://inference.nosana.com/v1",
+                "default_base_url": "https://api.groq.com/openai/v1",
+                "default_model": "openai/gpt-oss-20b",
             },
             "evaluation": {
                 "require_benchmark": True,
@@ -53,14 +54,34 @@ class PreflightTests(unittest.TestCase):
         errors = check_non_secret_configuration(self.ROOT, policy)
         self.assertTrue(any("RSI_BENCHMARK_COMMAND" in item for item in errors))
 
+    def test_non_secret_configuration_uses_protected_model_default(self):
+        policy = {
+            "provider": {
+                "base_url_env": "RSI_AI_BASE_URL",
+                "model_env": "RSI_AI_MODEL",
+                "default_base_url": "https://api.groq.com/openai/v1",
+                "default_model": "openai/gpt-oss-20b",
+                "allowed_hosts": ["api.groq.com"],
+            },
+            "evaluation": {
+                "require_benchmark": False,
+                "benchmark_command_env": "RSI_BENCHMARK_COMMAND",
+            },
+        }
+        for name in self.names:
+            os.environ.pop(name, None)
+        os.environ["RSI_AI_COMMERCIAL_ELIGIBILITY"] = "PASS"
+        self.assertEqual(check_non_secret_configuration(self.ROOT, policy), [])
+
     def test_preflight_blocks_unapproved_provider_hostname(self):
         policy = {
             "provider": {
                 "api_key_env": "RSI_AI_API_KEY",
                 "base_url_env": "RSI_AI_BASE_URL",
                 "model_env": "RSI_AI_MODEL",
-                "default_base_url": "https://inference.nosana.com/v1",
-                "allowed_hosts": ["inference.nosana.com"],
+                "default_base_url": "https://api.groq.com/openai/v1",
+                "default_model": "openai/gpt-oss-20b",
+                "allowed_hosts": ["api.groq.com"],
             },
             "evaluation": {
                 "require_benchmark": True,
@@ -85,7 +106,8 @@ class PreflightTests(unittest.TestCase):
                 "api_key_env": "RSI_AI_API_KEY",
                 "base_url_env": "RSI_AI_BASE_URL",
                 "model_env": "RSI_AI_MODEL",
-                "default_base_url": "https://inference.nosana.com/v1",
+                "default_base_url": "https://api.groq.com/openai/v1",
+                "default_model": "openai/gpt-oss-20b",
             },
             "evaluation": {
                 "require_benchmark": True,
