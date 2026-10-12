@@ -455,7 +455,7 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertIn("secret", scope["forbidden_path_fragments"])
         self.assertEqual(
             policy["provider"]["default_base_url"],
-            "https://inference.nosana.com/v1",
+            "https://api.groq.com/openai/v1",
         )
 
     def test_secret_patterns_and_unsafe_patch_features_are_rejected(self):
