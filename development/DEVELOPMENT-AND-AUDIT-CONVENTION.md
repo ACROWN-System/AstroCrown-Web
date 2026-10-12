@@ -360,6 +360,8 @@ A trivial documentation correction may require only review and link/format check
 
 Before implementing or changing an API, service, library, model, SDK, workflow integration, GPU runtime, or externally controlled interface, create or update a small contract record in the change plan or audit record. At minimum it must identify:
 
+The NOVA-owned proposal for universal root-cause enforcement and cross-user safe knowledge reuse is tracked in [NOVA PR #85](https://github.com/ACROWN-System/NOVA/pull/85). Until that design is implemented and wired into every supported entry point, it is a proposal—not an active universal enforcement guarantee.
+
 - provider/platform and exact endpoint or API/version;
 - exact library/SDK and version, when used;
 - exact model or capability identifier, when relevant;
