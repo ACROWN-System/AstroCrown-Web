@@ -64,3 +64,12 @@ The variable is deliberately the final switch; do not set it before the settings
 ## Remaining independent readiness gate
 
 GitHub PR automation does **not** declare RSI operationally ready. `development/nova-recursive-self-improvement/rsi_policy.json` intentionally remains `INCOMPLETE` and keeps promotion blocked until protected benchmarks, independent evaluation, and runtime verification are complete. The bounded workflow requires its configured Groq provider secret and a reviewed benchmark. Neither the readiness gate nor the benchmark requirement should be relaxed simply to make the workflow run.
+
+
+## 6. Keep Weak RSI and Strong RSI separate
+
+- **Weak RSI** is manually triggered from the NOVA repository. It uses only the selected provider's key configured in NOVA's own Actions secrets, and produces a report artifact. It has read-only permissions and cannot modify AstroCrown-Web, run candidate code, create PRs, or merge.
+- **Strong RSI** is configured in AstroCrown-Web, uses the AstroCrown-Web-scoped provider secret, and runs at most once per UTC month. It currently remains blocked by the explicit INCOMPLETE readiness policy; the schedule is not evidence of operational autonomous capability.
+- Repository secrets are scoped independently. Neither workflow copies secret values between repositories. A key must be entered by its owner in the intended repository's secret settings.
+- GitHub Actions `GITHUB_TOKEN`, the dedicated GitHub App installation token and Codex/GitHub integration are GitHub-management authentication paths, not LLM inference-provider keys.
+- Do not enable `NOVA_RSI_AUTOMERGE_ENABLED` while Strong RSI readiness remains INCOMPLETE. Keep candidate changes in the normal human-reviewed PR process.
