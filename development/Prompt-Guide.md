@@ -124,6 +124,12 @@ When practical, preserve a baseline prompt and compare the candidate against rep
 
 A failed technique, rejected prompt, unresolved question, or unexpected result can be valuable methodology and should not be discarded merely because another approach is preferred.
 
+### P-011 — Establish external contracts before implementation
+
+For APIs, SDKs, providers, models, tools, and platform-controlled behavior, verify the exact endpoint and required capability against current authoritative documentation and maintained examples before coding. Do not infer behavior from familiar syntax, model-family names, prompts, HTTP 2xx responses, or a passing mock test. Record the source, version/date, unsupported or unknown behavior, and acceptance test. If a mandatory capability is unverified, classify it BLOCKED rather than turning the assumption into code.
+
+For repository modifications, follow the target repository's process and merge gates. A model-generated implementation must be independently inspected and tested; the generating model is not its own independent verifier.
+
 ---
 
 ## 4. Prompt construction workflow
@@ -171,6 +177,10 @@ Specify format, required content, status vocabulary, provenance, and omissions t
 ### W-11 — Test and refine
 
 Evaluate output quality rather than judging prompt wording alone.
+
+### W-12 — Verify the implementation contract
+
+When the final task involves implementation, establish acceptance criteria, inspect existing implementations and tests, prove external contract claims, choose the simplest compatible approach, define deterministic negative tests, and state what only an integration/live test can establish. Keep static, unit, contract, live, and promotion evidence distinct. Inspect prior failures before requesting another run; every repeated run must answer a new decision-relevant question.
 
 ---
 
@@ -304,6 +314,29 @@ Test important conclusions.
 
 OUTPUT
 Result → supporting evidence → conflicts → uncertainty.
+
+### PA-06 — External API / model implementation
+
+OBJECTIVE
+Observable behavior required by the application.
+
+CONTRACT
+Exact endpoint/version, SDK/client, model ID, supported request/response features, quota/eligibility, and authoritative sources with date checked.
+
+EXISTING SYSTEM
+Current adapter, repository patterns, dependencies, tests, workflows, and known incidents.
+
+IMPLEMENTATION
+Choose the simplest justified approach; reuse the production adapter. Document why a new dependency or separate raw-HTTP client is needed.
+
+VERIFICATION
+Offline tests/fixtures, negative/error tests, live-integration requirements, secrets boundary, exact candidate revision, and promotion gate.
+
+FAILURE HANDLING
+Keep transport, response shape, application semantics, capability, quota, and authentication as separate states. Unverified mandatory capability means BLOCKED, not assumed support.
+
+OUTPUT
+Contract evidence → decisions → minimal diff → tests → limitations → remaining blockers.
 
 ---
 
