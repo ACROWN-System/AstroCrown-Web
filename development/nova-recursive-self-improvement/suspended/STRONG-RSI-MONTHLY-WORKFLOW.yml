@@ -1,3 +1,7 @@
+## SUSPENDED WORKFLOW TEMPLATE — NOT AN ACTIVE GITHUB ACTION
+## Stored outside .github/workflows intentionally. Do not move back until the reactivation criteria in ../STRONG-RSI-STATUS.md are met.
+## The schedule and all provider-call jobs below are retained for future review only.
+
 name: NOVA Strong RSI — Monthly Autonomous Evaluation (Gated)
 
 on:

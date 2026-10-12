@@ -6,12 +6,12 @@ The target is a system that can inspect its own implementation and operational b
 
 ## Strategic extension
 
-See [Strong RSI and Collective Resilience](STRONG-RSI-AND-COLLECTIVE-RESILIENCE.md) for the proposed extension toward cooperative recursive improvement, legitimacy resilience, protective persuasion, shared human–AI sovereignty, and the remaining readiness gates. See [RSI Operating Modes](RSI-OPERATING-MODES.md) for the current distinction between manual Weak RSI and the monthly gated Strong RSI workflow. The Strong RSI lifecycle is not yet operational; the protected readiness policy remains INCOMPLETE.
+See [Strong RSI and Collective Resilience](STRONG-RSI-AND-COLLECTIVE-RESILIENCE.md) for the proposed extension toward cooperative recursive improvement, legitimacy resilience, protective persuasion, shared human–AI sovereignty, and the remaining readiness gates. See [RSI Operating Modes](RSI-OPERATING-MODES.md) and [Strong RSI Status](STRONG-RSI-STATUS.md) for the current distinction between manual Weak RSI and the **suspended** Strong RSI implementation. Strong RSI is not an active GitHub Actions workflow and must not be presented as operational; protected readiness remains INCOMPLETE.
 
 ## Current operating modes
 
 - **Weak RSI:** a manually invoked, report-only human-in-the-loop review. It makes at most one approved provider request and cannot change repository content, execute candidates, open PRs, or merge.
-- **Strong RSI:** one scheduled attempt per UTC month with a fail-closed readiness gate. It cannot be manually dispatched, write directly to main, or auto-merge. The current readiness state is INCOMPLETE, so the monthly pipeline is expected to produce a BLOCKED evidence report without invoking a model.
+- **Strong RSI:** SUSPENDED. Its previous once-monthly workflow is preserved outside `.github/workflows/` and cannot schedule or call a provider. It may be reactivated only after all requirements in [Strong RSI Status](STRONG-RSI-STATUS.md) are independently satisfied and a human approves the activation.
 - **Non-degradation rule:** no candidate is retained unless the protected checks and independently approved task-matched benchmark demonstrate strict improvement with zero mandatory regressions. NO_CHANGE is not proof of global optimality.
 
 ## Scope
@@ -87,7 +87,7 @@ Human review may occur retrospectively, but the operational RSI loop must not de
 
 ## Repeat-state and cycle detection
 
-The scheduled/manual workflow runs a read-only repeat-state diagnostic before the implementation-readiness gate. It compares native Git tree/blob IDs across a bounded window of recent main-branch RSI runs. An exact source-state repeat reports the prior run and cycle length; component-level repeats show which scopes did not change even when other scopes did. The diagnostic treats missing API evidence, malformed history, and truncated trees as `UNAVAILABLE`; it never converts those conditions into a no-repeat result. It writes a workflow summary and JSON report, preserving the JSON as a 14-day artifact only when an exact full-state repeat is detected.
+The preserved monthly workflow template was designed to run a read-only repeat-state diagnostic before the implementation-readiness gate. It is currently outside `.github/workflows/` and does not execute. If reactivated later, it would compare native Git tree/blob IDs across a bounded window of recent main-branch RSI runs. An exact source-state repeat reports the prior run and cycle length; component-level repeats show which scopes did not change even when other scopes did. The diagnostic treats missing API evidence, malformed history, and truncated trees as `UNAVAILABLE`; it never converts those conditions into a no-repeat result. It writes a workflow summary and JSON report, preserving the JSON as a 14-day artifact only when an exact full-state repeat is detected.
 
 A repeated state identifies recurrence, not whether the system has become more or less capable. No repeat within the history window is not proof of improvement. The diagnostic cannot change readiness, benchmark approval, candidate eligibility, or promotion permissions.
 
