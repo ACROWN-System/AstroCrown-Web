@@ -14,16 +14,21 @@ Grant these repository permissions:
 
 Do not grant organization-wide or unrelated repository access. Do not place the private key in the repository, a commit, a pull-request body, an issue, or chat.
 
-## 2. Configure repository Actions variables and secrets
+## 2. Add the RSI LLM key and GitHub App credentials
 
-In **AstroCrown-Web → Settings → Secrets and variables → Actions**, create:
+In **AstroCrown-Web → Settings → Secrets and variables → Actions**, add the RSI provider key and GitHub App credentials:
 
 | Type | Name | Value |
 |---|---|---|
+| Repository secret | `GROQ_API_KEY_01` | The Groq API key for the account you authorize AstroCrown-Web to use |
 | Repository variable | `NOVA_RSI_APP_CLIENT_ID` | The GitHub App's **Client ID** from its General settings |
 | Repository secret | `NOVA_RSI_APP_PRIVATE_KEY` | The App private key PEM from the downloaded private-key file |
 
-The workflow checks both values without printing them. It mints a short-lived installation token, requests only AstroCrown-Web, and pins the token action to a verified immutable commit.
+The RSI policy uses the Groq OpenAI-compatible endpoint and defaults to `openai/gpt-oss-20b`. Copy or enter the Groq key into this repository's secret settings yourself; GitHub secrets are not automatically shared across repositories. If you reuse NOVA's Groq key, usage shares the Groq account's rate limits. Do not paste the key into a commit, issue, pull request, or chat.
+
+The workflow checks the GitHub App values without printing them. It mints a short-lived installation token, requests only AstroCrown-Web, and pins the token action to a verified immutable commit. It does not need `RSI_AI_BASE_URL` or `RSI_AI_MODEL` overrides for the protected defaults.
+
+Set `RSI_AI_COMMERCIAL_ELIGIBILITY` to `PASS` only after you have reviewed the current provider terms, privacy/data-use conditions, and applicable commercial eligibility. Leave it unset otherwise. `RSI_BENCHMARK_COMMAND` also remains required: the protected benchmark profile is still disabled pending independent review, so do not invent a command or bypass that gate.
 
 Do not set `NOVA_RSI_AUTOMERGE_ENABLED` yet.
 
@@ -58,4 +63,4 @@ The variable is deliberately the final switch; do not set it before the settings
 
 ## Remaining independent readiness gate
 
-GitHub PR automation does **not** declare RSI operationally ready. `development/nova-recursive-self-improvement/rsi_policy.json` intentionally remains `INCOMPLETE` and keeps promotion blocked until protected benchmarks, independent evaluation, and runtime verification are complete. The bounded workflow also requires its configured NOSANA provider credential. Neither gate should be relaxed simply to make the workflow run.
+GitHub PR automation does **not** declare RSI operationally ready. `development/nova-recursive-self-improvement/rsi_policy.json` intentionally remains `INCOMPLETE` and keeps promotion blocked until protected benchmarks, independent evaluation, and runtime verification are complete. The bounded workflow requires its configured Groq provider secret and a reviewed benchmark. Neither the readiness gate nor the benchmark requirement should be relaxed simply to make the workflow run.

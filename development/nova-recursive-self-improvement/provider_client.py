@@ -22,7 +22,7 @@ class ProviderError(RuntimeError):
     """A provider connection or protocol failure that is safe to log."""
 
 
-DEFAULT_ALLOWED_HOSTS = ("inference.nosana.com",)
+DEFAULT_ALLOWED_HOSTS = ("api.groq.com",)
 
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
@@ -80,8 +80,9 @@ class ProviderConfig:
         *,
         base_url_env: str = "RSI_AI_BASE_URL",
         model_env: str = "RSI_AI_MODEL",
-        api_key_env: str = "NOSANA_LLM_API_KEY_01",
+        api_key_env: str = "GROQ_API_KEY_01",
         default_base_url: str | None = None,
+        default_model: str | None = None,
         timeout_seconds: int = 120,
         max_response_bytes: int = 262_144,
         allowed_hosts: tuple[str, ...] | list[str] | None = None,
@@ -92,7 +93,7 @@ class ProviderConfig:
             raise ProviderError(
                 f"{base_url_env} or a protected provider default must be configured."
             )
-        model = os.environ.get(model_env, "").strip() or "auto"
+        model = os.environ.get(model_env, "").strip() or (default_model or "auto")
         api_key = os.environ.get(api_key_env, "").strip()
         if not api_key:
             raise ProviderError(f"{api_key_env} must be configured before provider access.")

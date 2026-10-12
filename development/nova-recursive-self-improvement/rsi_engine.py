@@ -322,6 +322,7 @@ def call_proposer(prompt: str, max_output_tokens: int, policy: dict[str, Any]) -
         model_env=provider["model_env"],
         api_key_env=provider["api_key_env"],
         default_base_url=provider.get("default_base_url"),
+        default_model=provider.get("default_model"),
         timeout_seconds=int(policy["evaluation"].get("provider_timeout_seconds", 120)),
         allowed_hosts=provider.get("allowed_hosts"),
         max_response_bytes=int(provider.get("max_response_bytes", 262144)),
