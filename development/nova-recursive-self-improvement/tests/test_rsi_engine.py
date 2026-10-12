@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 import unittest
@@ -210,6 +211,28 @@ class RsiEngineTests(unittest.TestCase):
         )
         self.assertEqual(payload["candidate_id"], "c1")
         self.assertEqual(payload["patch"], "diff")
+
+    def test_extract_no_change_decision_without_candidate_patch(self):
+        payload = extract_candidate_payload(json.dumps({
+            "decision": "NO_CHANGE",
+            "rationale": "No safe strict improvement is justified from the inspected evidence.",
+            "evidence_reviewed": ["development/nova-recursive-self-improvement/README.md"],
+            "uncertainties": ["The full repository was not exhaustively audited."],
+        }))
+        self.assertEqual(payload["decision"], "NO_CHANGE")
+        self.assertEqual(payload["evidence_reviewed"], [
+            "development/nova-recursive-self-improvement/README.md"
+        ])
+        self.assertNotIn("patch", payload)
+
+    def test_extract_no_change_rejects_empty_rationale_or_evidence(self):
+        with self.assertRaises(ValueError):
+            extract_candidate_payload(json.dumps({
+                "decision": "NO_CHANGE",
+                "rationale": "",
+                "evidence_reviewed": [],
+                "uncertainties": [],
+            }))
 
     def test_extract_diff_fallback(self):
         payload = extract_candidate_payload(
