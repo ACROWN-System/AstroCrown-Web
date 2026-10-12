@@ -1,7 +1,7 @@
-# Active Navigation Plan — Suspend Strong RSI Until Fully Operational
+# Completed Navigation Record — Suspend Strong RSI Until Fully Operational
 
 **Date:** 2026-10-12  
-**Status:** ACTIVE — code changes prepared; awaiting CI, review and merge.  
+**Status:** COMPLETED — PR #114 merged; RSI test suite, Docker isolation exercise, and CodeQL passed.  
 **Objective:** Stop all scheduled Strong RSI workflow execution until every prerequisite needed for a genuine, publicly defensible Strong RSI is complete and independently verified.
 
 ## Decision
@@ -60,3 +60,14 @@ Before returning any Strong RSI workflow to `.github/workflows/`, require all of
 - Run the RSI test suite and compile checks; ensure tests no longer rely on the inactive workflow file at its former path.
 - Confirm policy readiness is still INCOMPLETE, Strong lifecycle SUSPENDED, Weak workflow still manual-only/read-only.
 - Confirm code/telemetry does not invoke Strong RSI from any other workflow.
+
+
+## Completion evidence (2026-10-12)
+
+- Pull request: https://github.com/ACROWN-System/AstroCrown-Web/pull/114
+- Merge commit: `41f6491d72ebea72391f45841ed270431cda5b7f`
+- Pre-merge RSI tests, Python compile, Docker isolation, and CodeQL: PASS.
+- Post-merge RSI CI: PASS; CodeQL and repository build/analysis checks were still running at the first post-merge verification snapshot and must not be claimed complete unless their final run results show success.
+- Verified main: `.github/workflows/nova-rsi.yml` is NOT FOUND; dormant monthly template is present outside the active workflows directory.
+- Verified policy: `strong_rsi_safety.lifecycle_status = SUSPENDED`, active workflow path null, provider calls allowed while suspended = 0, `implementation_readiness.status = INCOMPLETE`.
+- Weak RSI remains separate and available through the manual report-only NOVA workflow.

@@ -1,7 +1,7 @@
-# Active Navigation Plan — Human-Gated RSI Cadence and API-Key Heartbeats
+# Completed Navigation Record — Human-Gated RSI Cadence and API-Key Heartbeats
 
 **Date:** 2026-10-12  
-**Status:** ACTIVE — implementation and verification in progress  
+**Status:** COMPLETED — implementation and CI verification completed; Strong RSI was subsequently suspended by a separate explicit decision  
 **Objective:** Separate on-demand human-in-the-loop Weak RSI from a once-monthly, gate-protected Strong RSI attempt; ensure GitHub-managed authentication is not mistaken for LLM inference; and persist secret-safe live health observations for eligible API credentials through the existing LLM/GPU heartbeat workflows.
 
 ## Mode and source of truth
@@ -74,3 +74,12 @@
 - Confirm readiness remains INCOMPLETE and auto-merge remains off until separate evidence justifies a change.
 - Confirm heartbeats persist only safe diagnostic fields to the operational-state branch, and do not alter active/deferred roster entries or persisted down markers.
 - Keep this plan active until both PRs pass; do not mark public Strong RSI as operational merely because its schedule/configuration has merged.
+
+## Final state and supersession (2026-10-12)
+
+- Weak RSI report-only workflow is merged in NOVA PR #80 and remains manual-only/read-only.
+- Strong RSI cadence/policy work was merged in AstroCrown-Web PR #113, then suspended in PR #114 after the owner correctly decided that a monthly blocked run would not provide a real public Strong RSI capability and would waste runner time.
+- The former monthly YAML is preserved at `development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml`, outside active GitHub Actions discovery.
+- Current protected state: `strong_rsi_safety.lifecycle_status = SUSPENDED`; `implementation_readiness.status = INCOMPLETE`; active workflow path is absent; zero provider calls are permitted while suspended.
+- LLM/GPU credential heartbeat logic is merged in NOVA PR #79. Health/adapter code-update triggers and the corrected Nosana credential endpoint are contained in PR #81 (currently a separate pending change at the time this record was archived).
+- Strong RSI reactivation requirements are recorded in [Strong RSI Status](../../nova-recursive-self-improvement/STRONG-RSI-STATUS.md).
