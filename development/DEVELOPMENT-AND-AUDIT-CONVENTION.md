@@ -321,7 +321,82 @@ merely because these references are used.
 
 The project may state that its development and verification process uses the identified standards as reference criteria when that statement is accurate.
 
-## 16. Core Rule
+## 16. Cross-Repository Engineering Quality Gate
+
+The controls in this section and Section 17 are the minimum shared baseline for cross-repository work that explicitly adopts this convention, including AstroCrown, NOVA, and related project repositories. A target repository's stricter rules take precedence. This extension does not authorize changes to a target repository or bypass that repository's merge, security, deployment, or approval requirements.
+
+Every non-trivial change must have observable acceptance criteria and use the least complex verification that actually proves them. The following are separate evidence classes and must not be conflated:
+
+- **Static/source verification:** syntax, types, schema, YAML/workflow validity, linting, or code review.
+- **Unit verification:** deterministic logic under controlled test inputs.
+- **Contract verification:** request/response/configuration behavior against documented contracts and representative positive/negative fixtures.
+- **Integration verification:** real interaction with the external dependency, service, model, browser, or runtime.
+- **Promotion verification:** exact candidate commit and required CI gates have passed before merge/deployment/activation.
+
+A passing unit test does not prove live-provider compatibility. An HTTP 2xx does not prove application-level correctness. A code change does not close a finding. Record which evidence class was run and which remains BLOCKED.
+
+For AI-generated or AI-assisted changes, generated code is an untrusted candidate until the exact diff has been inspected, the acceptance criteria have been tested, and relevant regressions have passed. The model that generated the code is not independent validation of that code.
+
+### Change acceptance checklist
+
+Before implementation:
+
+1. State the intended outcome, scope, preservation constraints, risks, and measurable acceptance criteria.
+2. Inspect existing code, tests, project conventions, dependencies, workflows, and prior findings before creating a parallel mechanism.
+3. For external behavior, establish the actual source-of-truth contract before coding (Section 17).
+4. Identify the minimum tests and required evidence; distinguish offline tests from any live test.
+
+Before promotion:
+
+1. Inspect the complete diff, including tests, workflow triggers/permissions, logging, dependency changes, and documentation claims.
+2. Run all required checks against the exact candidate commit, not a preceding commit.
+3. Ensure the relevant CI workflow actually triggers for each changed source/config/workflow file.
+4. Require the target repository's established review and main-branch gate. Do not assume the gate exists merely because a workflow file exists.
+5. Record remaining failures, unknowns, and blockers. Do not promote an unresolved candidate by changing the test to match the implementation.
+
+A trivial documentation correction may require only review and link/format checking. A provider/model contract change requires documented capability evidence and appropriately separated offline and integration tests. Apply proportionate gates rather than requiring a full production test for every low-risk change.
+
+## 17. External API, SDK, Platform, and AI-Model Contract Gate
+
+Before implementing or changing an API, service, library, model, SDK, workflow integration, GPU runtime, or externally controlled interface, create or update a small contract record in the change plan or audit record. At minimum it must identify:
+
+- provider/platform and exact endpoint or API/version;
+- exact library/SDK and version, when used;
+- exact model or capability identifier, when relevant;
+- authentication and required configuration names (never secret values);
+- request fields, supported constraints and documented response semantics;
+- the specific capability required by the application (for example JSON Mode, strict JSON Schema, tool calls, vision, structured output, or token-budget semantics);
+- the authoritative source URL(s), date checked, and any conflicts or missing evidence;
+- cost, quota, no-payment-method, licence, and other project eligibility constraints where relevant.
+
+### Source hierarchy
+
+Prefer current official API documentation, provider-maintained SDK documentation/examples, official model capability lists, and official changelogs. Inspect established community implementations only as secondary evidence or a source of hypotheses; confirm important behavior with authoritative documentation and tests. A package being popular or “OpenAI-compatible” does not establish support for every parameter or model capability.
+
+Prefer an official or widely maintained SDK/client when it accurately supports the target endpoint and fits the project's dependency, licensing, and resource constraints. If direct HTTP is the simpler or safer choice, record the reason and validate the exact documented contract. This rule does not require adding a dependency merely to avoid the standard library.
+
+### Model- and feature-specific capability gate
+
+Capabilities belong to a specific model/provider/API combination, not to a model family or an endpoint in general. Do not infer that a model supports JSON Mode or strict schema output because it can return ordinary text or accepts a chat-completions request.
+
+When a required capability is absent from the provider's current supported list or remains unverified, classify the model/task pairing as BLOCKED or CANDIDATE. Do not label it compatible, healthy, or production-ready until evidence satisfies the actual acceptance criterion. If ordinary text is acceptable, define and test that different contract explicitly; do not silently weaken a stricter requirement to make a test pass.
+
+### Shared implementation and test gate
+
+- Reuse the production adapter/request-contract module for smoke and integration testing wherever practical. Do not maintain a separate inline implementation of the same API contract without a documented reason.
+- Keep unit tests deterministic and offline; include malformed/missing response fields and relevant error paths.
+- Use response fixtures based on official examples and sanitized observed behavior. An invented “ideal” response fixture tests application logic only; it is not evidence that the external service behaves that way.
+- Run a controlled live integration test only where authorized and safe. Never expose production secrets to untrusted pull-request code or print raw credentials/model inputs/outputs by default.
+- Record HTTP transport status separately from response-shape validity, application-level validity, model capability, entitlement, and quota. These are different dimensions.
+- For a failed experiment, change one material variable at a time where practical. Each repeat run must answer a new, stated question. Inspect the prior evidence first; if the next run cannot distinguish the hypotheses, research or classify the matter UNKNOWN/BLOCKED instead of asking for another speculative retry.
+
+### CI, branch, and release gate
+
+Workflow/configuration changes are code changes. CI path filters must cover relevant workflow/configuration files or use a broader reliable trigger. A workflow that only runs after a commit is not a merge gate by itself. For important repositories, configure and verify PR-required main-branch changes and the correct required status checks. When repository settings cannot be inspected, record the configuration as BLOCKED and do not claim it is enforced.
+
+Live external integration tests may need different secret and permission treatment from ordinary PR tests. Do not execute arbitrary/untrusted candidate code with production credentials merely to obtain a live result. Use a reviewed trusted workflow, least-privilege secrets and a protected environment; otherwise document the limitation and retain an explicit integration/promotion gate.
+
+## 18. Core Rule
 
 The audit system exists to establish evidence, not reassurance.
 
