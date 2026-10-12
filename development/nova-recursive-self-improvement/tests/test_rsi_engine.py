@@ -1,3 +1,4 @@
+import json
 import subprocess
 import sys
 import unittest
@@ -210,6 +211,28 @@ class RsiEngineTests(unittest.TestCase):
         )
         self.assertEqual(payload["candidate_id"], "c1")
         self.assertEqual(payload["patch"], "diff")
+
+    def test_extract_no_change_decision_without_candidate_patch(self):
+        payload = extract_candidate_payload(json.dumps({
+            "decision": "NO_CHANGE",
+            "rationale": "No safe strict improvement is justified from the inspected evidence.",
+            "evidence_reviewed": ["development/nova-recursive-self-improvement/README.md"],
+            "uncertainties": ["The full repository was not exhaustively audited."],
+        }))
+        self.assertEqual(payload["decision"], "NO_CHANGE")
+        self.assertEqual(payload["evidence_reviewed"], [
+            "development/nova-recursive-self-improvement/README.md"
+        ])
+        self.assertNotIn("patch", payload)
+
+    def test_extract_no_change_rejects_empty_rationale_or_evidence(self):
+        with self.assertRaises(ValueError):
+            extract_candidate_payload(json.dumps({
+                "decision": "NO_CHANGE",
+                "rationale": "",
+                "evidence_reviewed": [],
+                "uncertainties": [],
+            }))
 
     def test_extract_diff_fallback(self):
         payload = extract_candidate_payload(
@@ -494,6 +517,28 @@ diff --git a/development/x.txt b/development/x.txt
 
     def test_missing_usage_is_not_fabricated(self):
         self.assertIsNone(normalize_usage(None))
+
+    def test_strong_rsi_is_monthly_gated_and_no_change_does_not_promote(self):
+        import json
+
+        workflow_path = self.ROOT / ".github/workflows/nova-rsi.yml"
+        workflow = workflow_path.read_text(encoding="utf-8")
+        events = workflow.split("concurrency:", 1)[0]
+        self.assertIn('cron: "17 3 1 * *"', events)
+        self.assertNotIn("workflow_dispatch", events)
+        self.assertIn("max_cycles_per_utc_month", workflow)
+        self.assertIn("needs.rsi-cycle.outputs.decision == 'PASS'", workflow)
+
+        policy = json.loads(
+            (self.ROOT / "development/nova-recursive-self-improvement/rsi_policy.json")
+            .read_text(encoding="utf-8")
+        )
+        self.assertEqual(policy["budget"]["max_cycles_per_utc_month"], 1)
+        self.assertTrue(policy["strong_rsi_safety"]["strict_improvement_required"])
+        self.assertEqual(policy["strong_rsi_safety"]["mandatory_regressions_allowed"], 0)
+        self.assertFalse(policy["strong_rsi_safety"]["direct_main_promotion_allowed"])
+        self.assertFalse(policy["strong_rsi_safety"]["automatic_merge_allowed"])
+        self.assertTrue(policy["strong_rsi_safety"]["model_claims_of_optimality_are_not_proof"])
 
     def test_decision_precedence(self):
         self.assertEqual(classify_decision(["PASS", "PASS"]), "PASS")

@@ -45,7 +45,7 @@ The protected rsi_policy.json currently enforces:
 - required OpenAI-compatible usage telemetry so the cycle cannot silently bypass token accounting; malformed, negative, non-integral, zero, or internally inconsistent usage counts are treated as unavailable and block the cycle;
 - maximum 1 RSI workflow cycle per UTC day.
 
-The daily limit is enforced before proposal generation by querying the workflow's own GitHub Actions run history. Because the default scheduler runs weekly, the default autonomous cadence remains low; a manual run cannot be repeated without limit.
+The monthly limit is enforced before proposal generation by querying the workflow's own GitHub Actions run history. Strong RSI is scheduled for one attempt on the first day of each UTC month and has no manual-dispatch trigger. The separate Weak RSI workflow is manually invoked and produces a report-only artifact; it cannot create or execute a candidate.
 
 These controls protect RSI from becoming an uncontrolled consumer of NOVA's AI allowance. They bound RSI itself; they do not claim to know unrelated API usage performed by other NOVA subsystems through the same provider account.
 
@@ -152,3 +152,10 @@ The protected policy intentionally remains `INCOMPLETE`. The following cannot be
 - independent review and acceptance of the pinned Docker execution boundary, including residual host/kernel/runtime risks, plus a verified task-specific benchmark scope or independently reviewed benchmark dispatcher.
 
 Until those conditions are independently verified, the proposer/evaluator lifecycle remains blocked even when a provider credential is available.
+
+
+## Current operating modes (2026-10-12)
+
+- **Weak RSI — manual, human-in-the-loop:** one bounded proposal/report call only after a person explicitly confirms review of the selected provider's current terms. It reads an explicit allowlist of development documents and uploads a report artifact. It performs no source changes, candidate execution, PR creation or merge. A report is decision support, not verification.
+- **Strong RSI — monthly and gated:** scheduled for 03:17 UTC on day 1 each month; no manual trigger. The protected policy enforces a single monthly attempt. Readiness remains INCOMPLETE, so until the independent benchmark, data-use eligibility, sandbox and other protected requirements are actually verified, the monthly run should stop before a provider call and upload a BLOCKED gate report.
+- **Candidate outcome:** a valid `NO_CHANGE` result means no safe strict improvement was justified from that bounded review. It cannot assert global optimality. A candidate reaches a separate pull request only if evidence-backed evaluation produces PASS. Direct main writes and auto-merge remain disabled.

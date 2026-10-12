@@ -54,6 +54,34 @@ def extract_candidate_payload(text: str) -> dict[str, Any]:
     text = text.strip()
     try:
         payload = json.loads(text)
+        if not isinstance(payload, dict):
+            payload = None
+        if isinstance(payload, dict) and payload.get('decision') == 'NO_CHANGE':
+            rationale = payload.get('rationale')
+            evidence_reviewed = payload.get('evidence_reviewed')
+            uncertainties = payload.get('uncertainties', [])
+            if not isinstance(rationale, str) or not rationale.strip() or len(rationale) > 2000:
+                raise ValueError('NO_CHANGE response must contain a short, non-empty rationale.')
+            if (
+                not isinstance(evidence_reviewed, list)
+                or not evidence_reviewed
+                or len(evidence_reviewed) > 10
+                or any(not isinstance(item, str) or not item.strip() or len(item) > 300
+                       for item in evidence_reviewed)
+            ):
+                raise ValueError('NO_CHANGE response must list one to ten evidence references.')
+            if (
+                not isinstance(uncertainties, list)
+                or len(uncertainties) > 10
+                or any(not isinstance(item, str) or len(item) > 500 for item in uncertainties)
+            ):
+                raise ValueError('NO_CHANGE uncertainties must be a bounded string list.')
+            return {
+                'decision': 'NO_CHANGE',
+                'rationale': rationale.strip(),
+                'evidence_reviewed': [item.strip() for item in evidence_reviewed],
+                'uncertainties': [item.strip() for item in uncertainties],
+            }
         if isinstance(payload, dict) and payload.get('patch'):
             return payload
     except json.JSONDecodeError:
@@ -265,8 +293,10 @@ Hard constraints from the protected RSI policy:
 - Prefer the minimum necessary change.
 - The candidate must have a measurable hypothesis that can be tested against the baseline.
 - Do not claim success; propose a change for protected evaluation.
-- Return JSON only with: candidate_id, hypothesis, rationale, expected_improvement, risks, patch.
-- patch must be a valid unified Git patch.
+- Return exactly one JSON object. If a specific improvement is justified, return: candidate_id, hypothesis, rationale, expected_improvement, risks, patch. The patch must be a valid unified Git patch.
+- If you cannot identify a change that has a defensible chance of strict improvement without violating any hard requirement, return: {{"decision":"NO_CHANGE","rationale":"...","evidence_reviewed":["exact path from the provided context", "..."],"uncertainties":["..."]}}.
+- NO_CHANGE means no safe, evidence-supported candidate is justified from this bounded review. It does NOT mean the system is globally optimal; never claim exhaustive verification or certainty about files/tests not actually observed.
+- Prefer NO_CHANGE over speculative edits. Never fabricate test outcomes, benchmark results, or repository evidence.
 
 Current repository development context:
 {context}
@@ -788,6 +818,23 @@ def cycle(root: Path, evidence_dir: Path) -> int:
                     f"above the protected cycle budget of {max_total_tokens}."
                 ),
             }
+        elif candidate.get('decision') == 'NO_CHANGE':
+            evidence['no_change_recommendation'] = {
+                'rationale': candidate['rationale'],
+                'evidence_reviewed': candidate['evidence_reviewed'],
+                'uncertainties': candidate['uncertainties'],
+                'interpretation': (
+                    'No qualifying safe improvement was justified by this bounded review. '
+                    'This is not proof of global optimality.'
+                ),
+            }
+            evidence['result'] = {
+                'decision': 'NO_CHANGE',
+                'stage': 'proposal',
+                'rationale': candidate['rationale'],
+                'evidence_reviewed': candidate['evidence_reviewed'],
+                'uncertainties': candidate['uncertainties'],
+            }
         else:
             candidate_attempts += 1
             if candidate_attempts > max_candidates:
@@ -816,7 +863,7 @@ def cycle(root: Path, evidence_dir: Path) -> int:
     )
     write_manifest(evidence_dir)
     print(json.dumps(evidence, indent=2, sort_keys=True))
-    return 0 if evidence['decision'] == 'PASS' else 1
+    return 0 if evidence['decision'] in {'PASS', 'NO_CHANGE'} else 1
 
 
 

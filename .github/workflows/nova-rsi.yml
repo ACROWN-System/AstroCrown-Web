@@ -1,9 +1,8 @@
-name: NOVA Recursive Self-Improvement
+name: NOVA Strong RSI — Monthly Autonomous Evaluation (Gated)
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "17 3 * * 1"
+    - cron: "17 3 1 * *"
 
 concurrency:
   group: nova-rsi
@@ -16,8 +15,8 @@ permissions:
 
 jobs:
   implementation-readiness:
-    # workflow_dispatch may target any ref; sensitive RSI jobs must originate
-    # from the protected main branch, not a candidate or feature branch.
+    # The monthly schedule is intended only for the protected main branch;
+    # this workflow deliberately has no manual-dispatch trigger.
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -52,6 +51,61 @@ jobs:
           retention-days: 14
         continue-on-error: true
 
+      - name: Record monthly Strong RSI gate status
+        if: always()
+        env:
+          REPORT_PATH: ${{ runner.temp }}/strong-rsi-gate.json
+          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+          RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          policy = json.loads(Path("development/nova-recursive-self-improvement/rsi_policy.json").read_text(encoding="utf-8"))
+          readiness = policy.get("implementation_readiness", {})
+          budget = policy.get("budget", {})
+          gates = {
+              "implementation_ready": readiness.get("status") == "READY"
+                  and readiness.get("require_explicit_ready") is True
+                  and readiness.get("promotion_blocked_until_ready") is True,
+              "commercial_data_use_eligibility_pass": os.environ.get("RSI_AI_COMMERCIAL_ELIGIBILITY", "").strip() == "PASS",
+              "task_matched_benchmark_configured": bool(os.environ.get("RSI_BENCHMARK_COMMAND", "").strip()),
+              "no_direct_main_promotion": policy.get("promotion", {}).get("allow_main") is False,
+          }
+          report = {
+              "observed_at": datetime.now(timezone.utc).isoformat(),
+              "mode": "STRONG_RSI_MONTHLY_GATED",
+              "scheduled_cadence": "17 3 1 * * (UTC)",
+              "monthly_cycle_budget": budget.get("max_cycles_per_utc_month"),
+              "readiness_status": readiness.get("status", "UNKNOWN"),
+              "gates": gates,
+              "decision": "READY_TO_CONTINUE" if all(gates.values()) else "BLOCKED",
+              "provider_call_allowed_by_this_report": False,
+              "production_change_made": False,
+              "global_optimality_proven": False,
+              "notes": [
+                  "This is a gate report, not a capability result.",
+                  "A monthly schedule does not imply the Strong RSI lifecycle is operational.",
+                  "No-change means no justified candidate within the evaluated scope, not proof of global optimality.",
+              ],
+          }
+          report_path = Path(os.environ["REPORT_PATH"])
+          report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print("# Strong RSI — monthly gate report")
+          print()
+          print(f"- Cadence: {report['scheduled_cadence']}")
+          print(f"- Readiness: {report['readiness_status']}")
+          print(f"- Monthly cycle budget: {report['monthly_cycle_budget']}")
+          print(f"- Gate result: {report['decision']}")
+          print(f"- Direct main promotion: {'BLOCKED' if gates['no_direct_main_promotion'] else 'POLICY CHECK FAILED'}")
+          print("- No provider call or production change is authorized by this report.")
+          print("- Missing or inconclusive evidence blocks the cycle.")
+          PY
+
       - name: Block RSI until implementation is explicitly ready
         run: |
           set -euo pipefail
@@ -79,6 +133,15 @@ jobs:
               )
           PY
 
+      - name: Upload monthly Strong RSI gate evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nova-strong-rsi-gate-${{ github.run_id }}
+          path: ${{ runner.temp }}/strong-rsi-gate.json
+          if-no-files-found: warn
+          retention-days: 90
+
   budget-gate:
     needs: implementation-readiness
     runs-on: ubuntu-latest
@@ -93,27 +156,34 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Enforce daily RSI cycle budget
+      - name: Enforce monthly Strong RSI cycle budget
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          LIMIT="$(python - <<'PY'
+          MONTH_LIMIT="$(python - <<'PY'
           import json
           with open("development/nova-recursive-self-improvement/rsi_policy.json", encoding="utf-8") as handle:
-              print(json.load(handle)["budget"]["max_cycles_per_utc_day"])
+              print(json.load(handle)["budget"]["max_cycles_per_utc_month"])
           PY
           )"
 
-          TODAY="$(date -u +%Y-%m-%d)"
-          PRIOR_RUNS="$(gh run list             --repo "$GITHUB_REPOSITORY"             --workflow nova-rsi.yml             --created "$TODAY.."             --limit 100             --json databaseId             --jq '.[].databaseId' | grep -vx "$GITHUB_RUN_ID" | grep -c . || true)"
+          MONTH_START="$(date -u +%Y-%m-01)"
+          PRIOR_MONTH_RUNS="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow nova-rsi.yml \
+            --branch main \
+            --created "$MONTH_START.." \
+            --limit 100 \
+            --json databaseId \
+            --jq '.[].databaseId' | grep -vx "$GITHUB_RUN_ID" | grep -c . || true)"
 
-          echo "Protected daily RSI cycle budget: $LIMIT"
-          echo "Prior RSI workflow runs today (excluding this run): $PRIOR_RUNS"
+          echo "Protected monthly Strong RSI budget: $MONTH_LIMIT"
+          echo "Prior main-branch Strong RSI runs this month: $PRIOR_MONTH_RUNS"
 
-          if [ "$PRIOR_RUNS" -ge "$LIMIT" ]; then
-            echo "RSI daily budget exhausted; refusing another proposer cycle."
+          if [ "$MONTH_LIMIT" -lt 1 ] || [ "$PRIOR_MONTH_RUNS" -ge "$MONTH_LIMIT" ]; then
+            echo "Monthly Strong RSI budget exhausted or invalid; refusing another proposer cycle."
             exit 1
           fi
 
@@ -176,6 +246,8 @@ jobs:
 
   rsi-cycle:
     needs: provider-secret-boundary
+    outputs:
+      decision: ${{ steps.rsi-decision.outputs.decision }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
@@ -218,6 +290,28 @@ jobs:
         run: |
           python development/nova-recursive-self-improvement/rsi_engine.py cycle             --repo .             --evidence-dir .rsi-evidence
 
+      - name: Expose protected RSI decision
+        id: rsi-decision
+        if: always()
+        run: |
+          set -euo pipefail
+          DECISION="BLOCKED"
+          if [[ -f .rsi-evidence/cycle.json ]]; then
+            DECISION="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              result = json.loads(Path(".rsi-evidence/cycle.json").read_text(encoding="utf-8"))
+              value = result.get("decision", "BLOCKED")
+          except (OSError, json.JSONDecodeError):
+              value = "BLOCKED"
+          print(value if value in {"PASS", "NO_CHANGE", "FAIL", "BLOCKED"} else "BLOCKED")
+          PY
+          )"
+          fi
+          echo "decision=$DECISION" >> "$GITHUB_OUTPUT"
+          echo "Strong RSI decision: $DECISION" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Clean up evaluation-labelled sandbox containers
         if: always()
         timeout-minutes: 3
@@ -239,7 +333,7 @@ jobs:
 
   retain-qualified-candidate:
     needs: rsi-cycle
-    if: needs.rsi-cycle.result == 'success'
+    if: needs.rsi-cycle.result == 'success' && needs.rsi-cycle.outputs.decision == 'PASS'
     runs-on: ubuntu-latest
     permissions:
       contents: write
