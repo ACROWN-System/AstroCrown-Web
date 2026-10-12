@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -79,15 +80,15 @@ class ProviderClientTests(unittest.TestCase):
             validate_base_url("http://example.com/v1", allow_local_http=True)
 
     def test_remote_https_host_must_be_allowlisted(self):
-        validate_base_url("https://inference.nosana.com/v1")
+        validate_base_url("https://api.groq.com/openai/v1")
         with self.assertRaisesRegex(ProviderError, "not in the protected allowlist"):
             validate_base_url("https://attacker.example/v1")
 
     def test_credentials_query_and_fragment_are_rejected(self):
         for url in (
-            "https://user:pass@inference.nosana.com/v1",
-            "https://inference.nosana.com/v1?next=https://attacker.example",
-            "https://inference.nosana.com/v1#fragment",
+            "https://user:pass@api.groq.com/openai/v1",
+            "https://api.groq.com/openai/v1?next=https://attacker.example",
+            "https://api.groq.com/openai/v1#fragment",
         ):
             with self.subTest(url=url), self.assertRaises(ProviderError):
                 validate_base_url(url)
@@ -132,6 +133,22 @@ class ProviderClientTests(unittest.TestCase):
                 api_key_env="TEST_PROVIDER_KEY",
                 default_base_url=self.base_url,
             )
+
+    def test_protected_model_default_is_used_without_override(self):
+        with patch.dict(
+            os.environ,
+            {"TEST_PROVIDER_KEY": "test-secret"},
+            clear=True,
+        ):
+            config = ProviderConfig.from_environment(
+                base_url_env="TEST_PROVIDER_BASE",
+                model_env="TEST_PROVIDER_MODEL",
+                api_key_env="TEST_PROVIDER_KEY",
+                default_base_url="https://api.groq.com/openai/v1",
+                default_model="openai/gpt-oss-20b",
+                allowed_hosts=["api.groq.com"],
+            )
+        self.assertEqual(config.model, "openai/gpt-oss-20b")
 
 
 if __name__ == "__main__":
