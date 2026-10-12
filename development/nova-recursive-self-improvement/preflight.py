@@ -32,7 +32,7 @@ def check_non_secret_configuration(root: Path, policy: dict) -> list[str]:
     base_url = os.environ.get(provider["base_url_env"], "").strip() or provider.get(
         "default_base_url", ""
     )
-    model = os.environ.get(provider["model_env"], "").strip() or "auto"
+    model = os.environ.get(provider["model_env"], "").strip() or provider.get("default_model", "auto")
     eligibility = os.environ.get("RSI_AI_COMMERCIAL_ELIGIBILITY", "").strip()
     benchmark_required = bool(policy["evaluation"]["require_benchmark"])
     benchmark_command = os.environ.get(
@@ -81,11 +81,9 @@ def run(root: Path, require_secret: bool = False, check_non_secret_only: bool = 
         print(json.dumps({
             "decision": "PASS",
             "stage": "non-secret-configuration",
-            "provider_base_url": os.environ.get(
-                policy["provider"]["base_url_env"],
-                policy["provider"].get("default_base_url"),
-            ),
-            "model": os.environ.get(policy["provider"]["model_env"], "auto") or "auto",
+            "provider_base_url": os.environ.get(policy["provider"]["base_url_env"], "").strip()
+            or policy["provider"].get("default_base_url"),
+            "model": os.environ.get(policy["provider"]["model_env"], "").strip() or policy["provider"].get("default_model", "auto"),
             "provider_secret_present": False,
             "next_stage": "provider-secret-boundary",
         }, indent=2, sort_keys=True))
@@ -109,6 +107,7 @@ def run(root: Path, require_secret: bool = False, check_non_secret_only: bool = 
                 model_env=policy["provider"]["model_env"],
                 api_key_env=api_key_env,
                 default_base_url=policy["provider"].get("default_base_url"),
+                default_model=policy["provider"].get("default_model"),
                 timeout_seconds=int(policy["provider"].get("provider_timeout_seconds", 120)),
                 allowed_hosts=policy["provider"].get("allowed_hosts"),
                 max_response_bytes=int(policy["provider"].get("max_response_bytes", 262144)),
@@ -128,7 +127,7 @@ def run(root: Path, require_secret: bool = False, check_non_secret_only: bool = 
             policy["provider"]["base_url_env"],
             policy["provider"].get("default_base_url"),
         ),
-        "model": os.environ.get(policy["provider"]["model_env"], "auto") or "auto",
+        "model": os.environ.get(policy["provider"]["model_env"], "").strip() or policy["provider"].get("default_model", "auto"),
         "provider_secret_present": api_key_present,
         "next_stage": "provider request",
     }, indent=2, sort_keys=True))
