@@ -123,10 +123,8 @@ def run(root: Path, require_secret: bool = False, check_non_secret_only: bool = 
     print(json.dumps({
         "decision": "PASS",
         "stage": "preflight",
-        "provider_base_url": os.environ.get(
-            policy["provider"]["base_url_env"],
-            policy["provider"].get("default_base_url"),
-        ),
+        "provider_base_url": os.environ.get(policy["provider"]["base_url_env"], "").strip()
+        or policy["provider"].get("default_base_url"),
         "model": os.environ.get(policy["provider"]["model_env"], "").strip() or policy["provider"].get("default_model", "auto"),
         "provider_secret_present": api_key_present,
         "next_stage": "provider request",
