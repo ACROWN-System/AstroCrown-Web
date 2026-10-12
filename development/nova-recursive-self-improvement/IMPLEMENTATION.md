@@ -11,7 +11,7 @@
 - `candidate.schema.json` — candidate payload contract.
 - `tests/test_rsi_engine.py` — deterministic tests for candidate parsing, protected-path enforcement, secret-pattern rejection, usage accounting, and decision precedence.
 - `tests/test_evaluator.py` — protected benchmark-contract tests, including baseline/candidate commit propagation and machine-verifiable success/failure.
-- `.github/workflows/nova-rsi.yml` — scheduled/manual autonomous cycle with a separate read-only evaluation phase and write-capable candidate-retention phase.
+- `suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml` — preserved Strong RSI workflow template, intentionally outside `.github/workflows/` until full operational readiness is independently verified.
 
 ## Runtime flow
 
@@ -27,7 +27,7 @@ Baseline
 → PASS / FAIL / BLOCKED
 → qualified-candidate branch and pull request when PASS
 
-Before the hard implementation-readiness gate, the workflow runs `cycle_detector.py` with read-only Actions and Contents permissions. It inspects at most 10 previous scheduled/manual runs on `main`, compares native Git object IDs for the RSI and context/memory subsystems, protected engine/evaluator/policy/benchmark components, and RSI workflows, then writes a JSON diagnostic and a workflow-step summary. The JSON is retained for 14 days only when an exact full-state repeat is detected. Incomplete or truncated history is `UNAVAILABLE`, never evidence of no repeat. This diagnostic neither authorizes the RSI lifecycle nor treats a repeated state or changed state as proof of capability quality.
+The preserved workflow template was designed to run `cycle_detector.py` with read-only Actions and Contents permissions before the readiness gate. It would inspect at most 10 previous main-branch RSI runs and compare native Git object IDs. The template is currently suspended and does not execute. The JSON is retained for 14 days only when an exact full-state repeat is detected. Incomplete or truncated history is `UNAVAILABLE`, never evidence of no repeat. This diagnostic neither authorizes the RSI lifecycle nor treats a repeated state or changed state as proof of capability quality.
 
 The protected evaluator, benchmark dispatcher, sandbox adapter, RSI policy, and benchmark profile registry are copied from the trusted workflow checkout into a separate read-only control directory outside the candidate worktree. The evaluator is launched from that trusted control directory and receives explicit paths to the trusted policy and registry; it does not import its control logic or acceptance policy from the candidate worktree. The candidate worktree remains the inspected/evaluated subject. Candidate-controlled Python compilation, unit tests, and benchmark code execute inside the pinned Docker runtime with networking disabled, a read-only workspace, no inherited credentials, a non-root identity, dropped capabilities, no-new-privileges, resource limits, bounded output, and forced container termination on timeout. The benchmark receives only SHA-labelled baseline/candidate source snapshots through a separate read-only mount; it does not need the host Git database.
 
@@ -43,9 +43,9 @@ The protected rsi_policy.json currently enforces:
 - maximum 1,536 requested output tokens from the proposer;
 - maximum 8,000 reported total tokens per cycle;
 - required OpenAI-compatible usage telemetry so the cycle cannot silently bypass token accounting; malformed, negative, non-integral, zero, or internally inconsistent usage counts are treated as unavailable and block the cycle;
-- maximum 1 RSI workflow cycle per UTC day.
+- monthly workflow template budget: maximum 1 Strong RSI cycle per UTC month; the workflow is currently suspended and no cycle runs.
 
-The monthly limit is enforced before proposal generation by querying the workflow's own GitHub Actions run history. Strong RSI is scheduled for one attempt on the first day of each UTC month and has no manual-dispatch trigger. The separate Weak RSI workflow is manually invoked and produces a report-only artifact; it cannot create or execute a candidate.
+The monthly budget enforcement is preserved in the inactive Strong RSI template. It has been moved outside `.github/workflows/`; there is currently no Strong RSI schedule or trigger. The separate Weak RSI workflow remains manually invoked and produces a report-only artifact; it cannot create or execute a candidate.
 
 These controls protect RSI from becoming an uncontrolled consumer of NOVA's AI allowance. They bound RSI itself; they do not claim to know unrelated API usage performed by other NOVA subsystems through the same provider account.
 
@@ -76,7 +76,7 @@ The autonomous RSI path is intentionally **not operational while implementation 
 
 The protected `rsi_policy.json` currently declares `implementation_readiness.status = INCOMPLETE`. This state is enforced at three layers:
 
-- the workflow refuses to start the proposer/evaluation lifecycle;
+- the preserved workflow template's readiness gate refused to start the proposer/evaluation lifecycle; additionally, the template is now suspended outside GitHub Actions workflow discovery;
 - `rsi_engine.py` stops before making an AI proposer call;
 - `evaluator.py` returns `BLOCKED` rather than PASS.
 
@@ -92,7 +92,7 @@ The protected evaluator resolves the configured command through `benchmark_dispa
 
 ## Promotion behavior
 
-The current workflow retains a PASS candidate on an `rsi/candidate-<run-id>` branch and opens a pull request to `main`. Before the write-capable retention stage receives its GitHub token, `evidence_verifier.py` must validate the downloaded evidence package and require the cycle baseline to equal the workflow's exact `GITHUB_SHA`. After patch application, the verifier compares the actual changed-worktree path set against the verified patch and blocks protected paths, deletions, symlinks/non-regular files, and executable-mode changes. Both verification calls receive the same `--expected-baseline "$GITHUB_SHA"`; a self-consistent artifact from another baseline cannot pass this check. The retention checkout disables automatic Git credential persistence, and candidate application runs `git apply --check` plus `git diff --check`.
+The preserved workflow template is designed to retain a PASS candidate on an `rsi/candidate-<run-id>` branch and open a pull request to `main`; this retention path is inactive while Strong RSI is suspended. Before the write-capable retention stage receives its GitHub token, `evidence_verifier.py` must validate the downloaded evidence package and require the cycle baseline to equal the workflow's exact `GITHUB_SHA`. After patch application, the verifier compares the actual changed-worktree path set against the verified patch and blocks protected paths, deletions, symlinks/non-regular files, and executable-mode changes. Both verification calls receive the same `--expected-baseline "$GITHUB_SHA"`; a self-consistent artifact from another baseline cannot pass this check. The retention checkout disables automatic Git credential persistence, and candidate application runs `git apply --check` plus `git diff --check`.
 
 Automatic direct modification of `main` is intentionally disabled in the initial implementation.
 
@@ -125,7 +125,7 @@ A pinned Docker isolation adapter is now implemented and exercised by CI smoke t
 
 Status: **incomplete / implementation-gated candidate engine**
 
-The autonomous proposal, isolation, evaluation, evidence, and candidate-retention mechanics are partially implemented, but the autonomous RSI lifecycle is intentionally blocked while required implementation work remains incomplete.
+The autonomous proposal, isolation, evaluation, evidence, and candidate-retention mechanics are partially implemented, but the Strong RSI workflow is intentionally suspended. The lifecycle must remain inactive until the requirements in `STRONG-RSI-STATUS.md` are completed and independently verified.
 
 Full autonomous operation and promotion of an intelligence improvement cannot be considered operational until all mandatory RSI components are implemented, independently verified, and the protected policy is explicitly advanced to READY.
 
@@ -157,5 +157,10 @@ Until those conditions are independently verified, the proposer/evaluator lifecy
 ## Current operating modes (2026-10-12)
 
 - **Weak RSI — manual, human-in-the-loop:** one bounded proposal/report call only after a person explicitly confirms review of the selected provider's current terms. It reads an explicit allowlist of development documents and uploads a report artifact. It performs no source changes, candidate execution, PR creation or merge. A report is decision support, not verification.
-- **Strong RSI — monthly and gated:** scheduled for 03:17 UTC on day 1 each month; no manual trigger. The protected policy enforces a single monthly attempt. Readiness remains INCOMPLETE, so until the independent benchmark, data-use eligibility, sandbox and other protected requirements are actually verified, the monthly run should stop before a provider call and upload a BLOCKED gate report.
+- **Strong RSI — suspended:** its prior monthly workflow has been moved out of `.github/workflows/`, so it does not run, consume monthly runner time, or call a provider. Readiness remains INCOMPLETE. See `STRONG-RSI-STATUS.md` for the mandatory reactivation gates.
 - **Candidate outcome:** a valid `NO_CHANGE` result means no safe strict improvement was justified from that bounded review. It cannot assert global optimality. A candidate reaches a separate pull request only if evidence-backed evaluation produces PASS. Direct main writes and auto-merge remain disabled.
+
+
+## Strong RSI suspension — 2026-10-12
+
+Strong RSI is deliberately inactive. The complete monthly workflow is preserved at `suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml`, outside the GitHub Actions workflow directory. Do not move it back until every requirement in [Strong RSI Status](STRONG-RSI-STATUS.md) has evidence and a human approves reactivation. This stops routine runner use for runs that would otherwise be blocked by the current `INCOMPLETE` policy.
