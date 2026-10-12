@@ -246,3 +246,26 @@ def generate_report(repo_root: Path, provider: str, data_use_eligibility: str,
         + output + "\n"
     )
     return report
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo-root", required=True)
+    parser.add_argument("--provider", choices=("groq", "gemini"), required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args()
+    eligibility = os.environ.get("WEAK_RSI_DATA_USE_ELIGIBILITY", "")
+    report = generate_report(
+        Path(args.repo_root).resolve(),
+        provider=args.provider,
+        data_use_eligibility=eligibility,
+    )
+    Path(args.output).write_text(report.get("report_markdown", ""), encoding="utf-8")
+    # Workflow logs receive metadata only, never the model report or credential.
+    print(json.dumps({key: value for key, value in report.items() if key != "report_markdown"},
+                     indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
