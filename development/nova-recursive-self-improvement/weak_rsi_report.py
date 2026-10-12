@@ -66,6 +66,90 @@ Repository context follows:
     return [{"role": "system", "content": system}, {"role": "user", "content": user}]
 
 
+
+def _call_provider(
+    provider: str,
+    api_key: str,
+    messages: list[dict[str, str]],
+    request_fn: Callable[..., Any] | None = None,
+) -> tuple[str, str, dict[str, Any] | None]:
+    if provider == "groq":
+        config = ProviderConfig(
+            base_url="https://api.groq.com/openai/v1",
+            model="openai/gpt-oss-20b",
+            api_key=api_key,
+            timeout_seconds=45,
+            max_response_bytes=131072,
+            allowed_hosts=("api.groq.com",),
+        )
+        if request_fn is None:
+            payload, model = chat_completion(config, messages, MAX_OUTPUT_TOKENS, temperature=0.0)
+        else:
+            payload, model = request_fn(provider, config, messages)
+    elif provider == "gemini":
+        config = ProviderConfig(
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai",
+            model="gemini-3.1-flash-lite",
+            api_key=api_key,
+            timeout_seconds=45,
+            max_response_bytes=131072,
+            allowed_hosts=("generativelanguage.googleapis.com",),
+        )
+        if request_fn is None:
+            payload = _request(
+                config,
+                "POST",
+                "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+                {
+                    "model": config.model,
+                    "messages": messages,
+                    "temperature": 0,
+                    "max_tokens": MAX_OUTPUT_TOKENS,
+                    "stream": False,
+                },
+            )
+        else:
+            payload, _ = request_fn(provider, config, messages)
+        model = config.model or "gemini-3.1-flash-lite"
+    else:
+        raise ProviderError("Weak RSI provider choice is not allowlisted.")
+
+    choices = payload.get("choices") if isinstance(payload, dict) else None
+    first = choices[0] if isinstance(choices, list) and choices else None
+    message = first.get("message") if isinstance(first, dict) else None
+    text = message.get("content") if isinstance(message, dict) else None
+    if not isinstance(text, str) or not text.strip():
+        raise ProviderError("Weak RSI provider returned no textual report.")
+
+    usage_raw = payload.get("usage")
+    usage: dict[str, Any] | None = None
+    if isinstance(usage_raw, dict):
+        safe_usage: dict[str, int] = {}
+        for output_name, input_name in (
+            ("input_tokens", "prompt_tokens"),
+            ("output_tokens", "completion_tokens"),
+            ("total_tokens", "total_tokens"),
+        ):
+            value = usage_raw.get(input_name)
+            if isinstance(value, int) and not isinstance(value, bool) and value >= 0:
+                safe_usage[output_name] = value
+        usage = safe_usage or None
+    return text[:MAX_REPORT_CHARS], model, usage
+
+
+def _sanitize_report(text: str, credentials: list[str]) -> str:
+    safe = text
+    for credential in credentials:
+        if credential:
+            safe = safe.replace(credential, "[REDACTED]")
+    safe = re.sub(
+        r"(?i)\b(?:gsk_|AIza|ghp_|github_pat_|mstrl_)[A-Za-z0-9_-]{8,}\b",
+        "[REDACTED_CREDENTIAL_PATTERN]",
+        safe,
+    )
+    return safe[:MAX_REPORT_CHARS]
+
+
 def collect_context(repo_root: Path, max_chars: int = MAX_CONTEXT_CHARS) -> tuple[str, list[str]]:
     if max_chars < 1:
         raise ValueError("Context budget must be positive.")
