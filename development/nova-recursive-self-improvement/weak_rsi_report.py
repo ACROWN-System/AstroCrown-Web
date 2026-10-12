@@ -173,3 +173,76 @@ def collect_context(repo_root: Path, max_chars: int = MAX_CONTEXT_CHARS) -> tupl
             used += len(text)
             included.append(relative)
     return "".join(chunks), included
+
+
+def generate_report(repo_root: Path, provider: str, data_use_eligibility: str,
+                    environ: Mapping[str, str] | None = None,
+                    request_fn: Callable[..., Any] | None = None) -> dict[str, Any]:
+    env = os.environ if environ is None else environ
+    if provider not in {"groq", "gemini"}:
+        raise ValueError("Provider must be groq or gemini.")
+    key_env = {"groq": "GROQ_API_KEY_01", "gemini": "GEMINI_API_KEY_01"}[provider]
+    key = env.get(key_env, "").strip()
+    report: dict[str, Any] = {
+        "observed_at": datetime.now(timezone.utc).isoformat(),
+        "mode": "WEAK_RSI_MANUAL_HUMAN_IN_THE_LOOP",
+        "provider": provider,
+        "credential_env": key_env,
+        "credential_configured": bool(key),
+        "provider_calls": 0,
+        "source_changes_made": False,
+        "candidate_execution_performed": False,
+        "pull_request_created": False,
+        "merge_performed": False,
+        "decision": "BLOCKED",
+        "baseline_commit": "UNKNOWN",
+        "documents_reviewed": [],
+        "usage": None,
+        "model": None,
+        "report_markdown": "",
+        "reason": None,
+    }
+    if data_use_eligibility != "PASS_AFTER_REVIEW":
+        report["reason"] = "Provider data-use/commercial terms were not explicitly approved for this manual run."
+        report["report_markdown"] = "# Weak RSI — blocked before provider call\n\nNo request was made. Review the selected provider's current terms first.\n"
+        return report
+    if not key:
+        report["reason"] = "Selected provider credential is not configured."
+        report["report_markdown"] = f"# Weak RSI — blocked\n\nCredential slot {key_env} is missing; no request was made.\n"
+        return report
+
+    try:
+        baseline = subprocess.run(
+            ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
+            check=True, capture_output=True, text=True, timeout=5,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        baseline = "UNKNOWN"
+    context, included = collect_context(repo_root)
+    report["baseline_commit"] = baseline
+    report["documents_reviewed"] = included
+    messages = build_prompt(context, included, baseline)
+    try:
+        output, model, usage = _call_provider(provider, key, messages, request_fn=request_fn)
+    except Exception as exc:
+        report["reason"] = "One bounded provider call failed or returned unusable content: " + type(exc).__name__
+        report["report_markdown"] = "# Weak RSI — blocked\n\nThe request did not return a usable report. No retry/fallback or repository change occurred.\n"
+        return report
+
+    output = _sanitize_report(output, [key])
+    report["decision"] = "HUMAN_REVIEW_REQUIRED"
+    report["provider_calls"] = 1
+    report["model"] = model
+    report["usage"] = usage
+    report["report_markdown"] = (
+        "# Weak RSI — human-in-the-loop report\n\n"
+        + "- Observed: " + report["observed_at"] + "\n"
+        + "- Baseline commit: " + baseline + "\n"
+        + "- Provider/model: " + provider + " / " + model + "\n"
+        + "- Token usage: " + json.dumps(usage, sort_keys=True) + "\n"
+        + "- No files changed; no candidate executed; no PR created or merged.\n"
+        + "- A NO_CHANGE recommendation is not proof of global optimality.\n\n"
+        + "## Model-generated review (untrusted until human-reviewed)\n\n"
+        + output + "\n"
+    )
+    return report
