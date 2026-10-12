@@ -1,9 +1,8 @@
-name: NOVA Recursive Self-Improvement
+name: NOVA Strong RSI — Monthly Autonomous Evaluation (Gated)
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "17 3 * * 1"
+    - cron: "17 3 1 * *"
 
 concurrency:
   group: nova-rsi
@@ -52,6 +51,27 @@ jobs:
           retention-days: 14
         continue-on-error: true
 
+      - name: Record monthly Strong RSI gate status
+        if: always()
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+          policy = json.loads(Path("development/nova-recursive-self-improvement/rsi_policy.json").read_text(encoding="utf-8"))
+          readiness = policy.get("implementation_readiness", {})
+          budget = policy.get("budget", {})
+          print("# Strong RSI — monthly gate report")
+          print()
+          print("- Cadence: one scheduled attempt per UTC month")
+          print(f"- Readiness: {readiness.get('status', 'UNKNOWN')}")
+          print(f"- Monthly cycle budget: {budget.get('max_cycles_per_utc_month', 'UNKNOWN')}")
+          print(f"- Direct main promotion: {'BLOCKED' if policy.get('promotion', {}).get('allow_main') is not True else 'POLICY-ENABLED'}")
+          print("- Automatic merge: disabled by repository configuration unless separately changed")
+          print("- Provider call: allowed only after every protected readiness, quota, commercial/data-use, sandbox and benchmark gate passes")
+          print("- Any missing or inconclusive evidence: BLOCKED / no production change")
+          PY
+
       - name: Block RSI until implementation is explicitly ready
         run: |
           set -euo pipefail
@@ -93,27 +113,34 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Enforce daily RSI cycle budget
+      - name: Enforce monthly Strong RSI cycle budget
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
-          LIMIT="$(python - <<'PY'
+          MONTH_LIMIT="$(python - <<'PY'
           import json
           with open("development/nova-recursive-self-improvement/rsi_policy.json", encoding="utf-8") as handle:
-              print(json.load(handle)["budget"]["max_cycles_per_utc_day"])
+              print(json.load(handle)["budget"]["max_cycles_per_utc_month"])
           PY
           )"
 
-          TODAY="$(date -u +%Y-%m-%d)"
-          PRIOR_RUNS="$(gh run list             --repo "$GITHUB_REPOSITORY"             --workflow nova-rsi.yml             --created "$TODAY.."             --limit 100             --json databaseId             --jq '.[].databaseId' | grep -vx "$GITHUB_RUN_ID" | grep -c . || true)"
+          MONTH_START="$(date -u +%Y-%m-01)"
+          PRIOR_MONTH_RUNS="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow nova-rsi.yml \
+            --branch main \
+            --created "$MONTH_START.." \
+            --limit 100 \
+            --json databaseId \
+            --jq '.[].databaseId' | grep -vx "$GITHUB_RUN_ID" | grep -c . || true)"
 
-          echo "Protected daily RSI cycle budget: $LIMIT"
-          echo "Prior RSI workflow runs today (excluding this run): $PRIOR_RUNS"
+          echo "Protected monthly Strong RSI budget: $MONTH_LIMIT"
+          echo "Prior main-branch Strong RSI runs this month: $PRIOR_MONTH_RUNS"
 
-          if [ "$PRIOR_RUNS" -ge "$LIMIT" ]; then
-            echo "RSI daily budget exhausted; refusing another proposer cycle."
+          if [ "$MONTH_LIMIT" -lt 1 ] || [ "$PRIOR_MONTH_RUNS" -ge "$MONTH_LIMIT" ]; then
+            echo "Monthly Strong RSI budget exhausted or invalid; refusing another proposer cycle."
             exit 1
           fi
 
