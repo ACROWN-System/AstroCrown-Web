@@ -30,27 +30,36 @@ Build one shared media-generation service boundary with:
 
 Application features should not need to know which GPU provider executes a job. GPU infrastructure supplies or brokers compute; the media subsystem owns media-generation workflows and jobs; NOVA orchestration may request generation via a defined interface.
 
-## Delivery levels: image-first and brand-grade
+## Target architecture and execution order — one generator, image first
 
-The generator must support two levels of delivery without making the more capable level a blocker for the first useful result.
+The target is **one AstroCrown-owned image-and-video generation system** with a consistent, project-owned visual identity and replaceable model/provider adapters. The implementation order must allow value to arrive before every modality or provider has been qualified.
 
-### Tier 1 — minimum useful image generation
+### First executable milestone — image path
 
-The first implementation milestone is one end-to-end text-to-image or image-guided generation path that is eligible under the current $0/no-payment-method constraint, is suitable for the intended commercial asset use, and returns a retrievable image. Use an existing qualified hosted model or other actually available route; avoid adding an orchestration engine or service abstraction unless the test demonstrates a need. An LLM API may help write/refine prompts, interpret requirements, compare returned images, or run text-based checks, but only a model endpoint with documented and verified image output counts as the image generator.
+Prove one end-to-end image-generation workflow that can return a candidate for AstroCrown's homepage background. Use the least complex route that actually satisfies the current $0/no-payment-method constraint and has sufficient rights evidence for the intended asset. Record the exact model/provider, inputs and parameters, returned output, provenance, terms, observed latency and resource/usage information, quality review, and failures. Do not wait for video feasibility, public-user queues, or exhaustive provider research.
 
-The acceptance artifact is not a successful HTTP status by itself. It is a returned image plus the exact provider/model, applicable terms/licensing evidence, input and parameters, execution time, observable usage, provenance/checksum where practical, visual suitability review, and recorded failures/limitations. This image milestone must not wait for a completed provider inventory, public user queue, or video pipeline.
+LLMs may support prompt planning, prompt refinement, image analysis, evaluation and deterministic checks. Text-generation or vision-input access is not, by itself, evidence that an endpoint can generate images.
 
-### Tier 2 — commercially suitable, brand-grade image and video system
+### Video workstream — parallel and independently gated
 
-The longer-term target is one AstroCrown-owned system with a stable interface and replaceable task-specific adapters. It should compose qualified image models and processing tools, then integrate separately qualified video generation, editing, upscaling, and encoding where these improve actual output quality. The system should support reusable references, composition/lighting/palette controls, repeatable workflows, provenance, approval/promotion of assets, observable job lifecycle, qualified fallback routes, and eventual commercial-scale operation.
+Video remains part of the intended generator, and its feasibility should be investigated in parallel whenever there is a useful, bounded hypothesis to test. Video uses the same AstroCrown-owned job/service boundary but requires a separate adapter and its own model rights, runtime, memory, temporal quality, duration, latency, storage/transfer, usage and capacity checks. A missing or unsuitable free video route should remain an explicit blocker for video—not a blocker for image generation, homepage asset production, or continued generator development. Re-test video viability when a concrete changed condition or new qualified candidate justifies the experiment.
 
-A recognizable brand should emerge from AstroCrown's own visual grammar—not from assuming that an underlying model's vendor style will persist when the provider changes. Start from the homepage requirements and approved reference assets (deep-space blues, restrained atmosphere, Earth–Moon and planetary components, spiral nebula palette, lighting, and placement). Apply the same art direction across image and video workflows. External products can serve as capability/quality comparisons, not as an identity to copy or a required backend.
+### Brand uniformity — our own visual system
 
-### Rights and release boundary
+AstroCrown's recognizable signature should be authored and governed inside our own art direction, reusable references and workflows, not tied to an upstream provider's signature aesthetic. Begin with the documented homepage environment: near-black/deep-blue space, restrained stars and atmospheric dust, the Primitive Earth–Moon composition, the gold-lit rocky planet, and the gold/orange/purple/deep-blue spiral nebula. Share relevant palette, lighting, composition, review and provenance rules across image and video while allowing modality-specific controls. Products mentioned as examples of visibly different generator styles are illustrative only; they do not select a supplier or establish any required integration.
 
-Commercial-use readiness is required from the beginning for every component retained in the final product and every asset intended for commercial publication. A temporary development provider may be used only within its own terms. Removing its API key later does not undo those terms or resolve the provenance of outputs already produced. Keep each output's creation route recorded; when the relevant rights are unknown, mark it BLOCKED for commercial promotion and regenerate it through an approved route or resolve the restriction.
+### Commercial rights and asset promotion
 
-Image and video have distinct workloads and acceptance evidence. A successful image proof does not pass the video workflow, and video availability must not delay the initial image result.
+Commercial usability remains a requirement for every component retained in the eventual service and each asset intended for commercial publication. Independently evaluate application/software licenses, exact model/weight permissions, adapters/extensions/dependencies, hosted endpoint terms, and the rights/restrictions applicable to the asset's actual generation route. Removing a temporary API key later does not resolve restrictions on prior outputs. When a component or asset's commercial status is unknown, keep it BLOCKED for commercial use until resolved or regenerated through a qualified route.
+
+### Delivery sequence
+
+1. Produce and retrieve one useful image.
+2. Evaluate and approve the homepage's foundational deep-space background for its intended use.
+3. Add reusable planetary, Moon, debris, nebula and atmospheric layers plus consistent brand workflows.
+4. Continue video viability in parallel; integrate it once its own requirements pass.
+5. Strengthen the unified generator and expand commercially using observed evidence and replaceable backends.
+
 
 ## 3. Distinguish two queues
 
