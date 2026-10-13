@@ -21,17 +21,28 @@ The goal is to obtain the strongest fit-for-purpose capability that the evidence
 
 This is not a proposal to train a new foundation model or to merge every available model into one large checkpoint. "Our own generator" means our own governed application/service, interfaces, workflows, policy, queue, provenance and user experience; it does **not** imply that AstroCrown owns the underlying models or automatically owns every generated output.
 
-## Delivery levels — first image and long-term brand-grade system
+## Target architecture and execution order — unified image and video
 
-Treat "minimum needed" and "more suitable for wider future commercial use" as two intentionally separate delivery levels.
+The intended outcome is **one AstroCrown-owned image-and-video generator**, with common service/job interfaces, shared brand direction and provenance, and replaceable task-specific adapters. The image-first execution order is a delivery strategy, not a narrower product ambition: it obtains a real homepage asset early, while video viability is investigated in parallel and cannot block the image path.
 
-**Minimum useful level:** obtain one real, retrievable homepage-background image through a route that passes the $0/no-payment-method constraints and has adequate commercial-use evidence for that intended asset. A direct image-capable API is acceptable. LLMs can assist with prompt creation, composition planning, reference-image analysis or output evaluation; do not infer image-generation support from text generation or vision input. Do not require video or exhaustive provider discovery to complete this first proof.
+### First executable slice: image
 
-**Brand-grade level:** retain one AstroCrown-owned interface and add qualified image/video backends and processors behind replaceable adapters. Use approved visual references, brand-specific composition, palette, lighting, motifs and reusable environment layers to create consistent results across providers. Maintain job tracking, output provenance, reproducibility limits, evaluation, optimization and controlled promotion. The desired signature belongs to AstroCrown's authored visual system; it must not rely on a model vendor's recognizable style being available indefinitely.
+Use the least complex route that can prove a real image request and retrieval under the $0/no-payment-method constraint and with commercially suitable rights for the intended background asset. Keep the exact model/provider, terms, parameters, output, provenance, observable resource use, quality review, and errors. LLM text or vision capabilities can help with prompt creation, composition planning, image analysis and evaluation; they are not a substitute for an endpoint that actually returns generated images.
 
-**Commercial gate:** select final dependencies and asset routes for commercial suitability from the beginning. Test licenses and hosted-provider conditions independently. A temporary endpoint is not automatically suitable for commercial publication, and removing its credential does not remove restrictions that may affect outputs already generated. Commercial promotion requires documented rights and asset provenance. Unknown or conflicting terms remain BLOCKED.
+### Video remains in scope, with independent acceptance
 
-**Sequence:** image proof → foundational homepage background → reusable visual layers and consistent workflows → separately qualified video proof → hardening and broader commercial use. The video and brand-grade milestones extend the system; neither should block the first image.
+Continue a bounded video feasibility track without requiring it to finish before the image workflow. It should use the same AstroCrown-owned service boundary and visual rules, but its own adapter, model/dependency rights, runtime/hardware, memory, temporal quality, latency, output length, and capacity gates. If no suitable free video execution path is available, record video as BLOCKED and continue image generation and reusable asset work rather than blocking the whole system. Re-test when a concrete changed condition or candidate makes a new attempt informative.
+
+### Brand uniformity and commercial readiness
+
+Build an owned AstroCrown visual grammar: curated references, composition and lighting conventions, palette, reusable background/object layers, repeatable generation/processing presets, and project-specific output review. Start from the deep-space and homepage layer requirements in `development/index-section/BACKGROUND.md`. The recognizable vendor styles discussed in conversation were examples explaining the objective of visual consistency; they are not desired provider selections or brands to imitate.
+
+Commercial suitability is required for the final retained stack and every asset intended for commercial publication. Verify the software, exact weights, dependencies/extensions, hosted endpoint conditions, and asset-creation path separately. Temporary development routes may be used within their terms, but removing credentials later does not remove restrictions on outputs already produced. Keep unresolved assets BLOCKED for commercial promotion until cleared or regenerated through a qualified route.
+
+### Execution order
+
+Image proof → foundational homepage background → reusable brand layers and consistent workflows; pursue video feasibility in parallel → integrate a qualified video backend when its own gates pass → harden and expand the unified service for broader commercial usage.
+
 
 ## 2. Integration-first principle
 
