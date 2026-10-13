@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "updated_at": null,
+  "operating_pool": "0",
+  "reserve_pool": "0",
+  "balances": {},
+  "provider_capacity": {},
+  "provider_cost_basis": {},
+  "transactions": [],
+  "obligations": [],
+  "payment_intents": [],
+  "continuity": {
+    "status": "NO_PAID_COST_REQUIRED",
+    "projected_paid_cost": "0",
+    "replenishment_target": "0",
+    "next_purchase_required_at": null
+  },
+  "pricing_headroom": {
+    "status": "NOT_YET_MEASURED",
+    "notice_period_days": 30,
+    "required_headroom": "0",
+    "operating_pool_coverage_ratio": "INFINITE",
+    "estimated_runway_days": "INFINITE",
+    "next_price_change_eligible_at": null
+  }
+}

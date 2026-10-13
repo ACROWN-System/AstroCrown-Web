@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "outreach_records": [
+    {
+      "id": "outreach-2026-10-11-001",
+      "route": "direct_individual_email",
+      "scope": "full_independent_review",
+      "sent_date": "2026-10-11",
+      "closed": false,
+      "replied": null,
+      "accepted": null,
+      "completed": null,
+      "qualified_independent_review": null,
+      "forecast_valid_review_percent": null,
+      "note": "The user confirmed that the email was sent. Inbox outcome is not accessible through current connected tools; reply and outcome fields remain unknown."
+    }
+  ],
+  "planning_scenarios": [
+    {
+      "route": "direct_individual_email",
+      "scope": "full_independent_review",
+      "probability_percent": 0.0001,
+      "source": "User-supplied estimate after the first message was sent",
+      "status": "UNVALIDATED_PLANNING_SCENARIO",
+      "use": "Sensitivity scenario only. Not an observed conversion rate, not a calibrated forecast, and not transferable to formal programs or other scopes."
+    }
+  ]
+}

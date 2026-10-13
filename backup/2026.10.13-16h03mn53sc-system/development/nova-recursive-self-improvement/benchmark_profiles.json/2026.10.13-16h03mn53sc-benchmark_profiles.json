@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "status": "CANDIDATE_REGISTRY_NOT_INDEPENDENTLY_APPROVED",
+  "profiles": [
+    {
+      "profile_id": "context-packing-v1",
+      "description": "Evaluate provenance-preserving context packing under a hard character budget on a fixed synthetic corpus.",
+      "exact_changed_paths": [
+        "development/nova-context-memory-optimization/context_packer.py"
+      ],
+      "command": [
+        "python",
+        "development/nova-recursive-self-improvement/benchmarks/run_context_packing_benchmark.py"
+      ],
+      "enabled": false,
+      "review_status": "BLOCKED_PENDING_INDEPENDENT_BENCHMARK_AND_EXECUTION_REVIEW",
+      "limits": {
+        "scope": "context-packing-only",
+        "not_general_intelligence": true,
+        "mixed_scope_candidates_blocked": true
+      }
+    }
+  ]
+}

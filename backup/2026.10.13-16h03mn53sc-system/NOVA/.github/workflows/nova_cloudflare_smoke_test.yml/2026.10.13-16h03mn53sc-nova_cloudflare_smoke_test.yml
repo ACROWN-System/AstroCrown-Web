@@ -1,0 +1,143 @@
+name: NOVA Cloudflare API Smoke Test
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: nova-cloudflare-smoke-test
+  cancel-in-progress: false
+
+jobs:
+  cloudflare-smoke-test:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions: {}
+    env:
+      CLOUDFLARE_API_KEY_01: ${{ secrets.CLOUDFLARE_API_KEY_01 }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - name: Verify documented Workers AI chat-completions request
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+
+          token = os.environ.get("CLOUDFLARE_API_KEY_01", "").strip()
+          account_id = os.environ.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
+          if not token or not account_id:
+              print("CONFIGURATION=FAIL_MISSING_SECRET")
+              print(f"TOKEN_PRESENT={bool(token)}")
+              print(f"ACCOUNT_ID_PRESENT={bool(account_id)}")
+              sys.exit(1)
+
+          def post(url, payload=None):
+              headers = {
+                  "Authorization": f"Bearer {token}",
+                  "Accept": "application/json",
+                  "User-Agent": "NOVA-Cloudflare-Smoke-Test/1.0",
+              }
+              data = None
+              if payload is not None:
+                  headers["Content-Type"] = "application/json"
+                  data = json.dumps(payload).encode("utf-8")
+              request = urllib.request.Request(url, data=data, headers=headers)
+              try:
+                  with urllib.request.urlopen(request, timeout=25) as response:
+                      return response.status, response.read()
+              except urllib.error.HTTPError as error:
+                  return error.code, error.read()
+
+          # Cloudflare's documented token verification endpoint.
+          try:
+              status, raw = post("https://api.cloudflare.com/client/v4/user/tokens/verify")
+              verification = json.loads(raw.decode("utf-8"))
+          except (urllib.error.URLError, TimeoutError, OSError, ValueError):
+              print("TOKEN_VERIFY=FAIL")
+              sys.exit(1)
+          print(f"TOKEN_VERIFY_HTTP_STATUS={status}")
+          if not (200 <= status < 300 and verification.get("success") is True
+                  and str(verification.get("result", {}).get("status", "")).lower() == "active"):
+              print("TOKEN_VERIFY=FAIL")
+              sys.exit(1)
+          print("TOKEN_VERIFY=PASS")
+
+          # Candidate smoke test uses the exact model and schema documented by
+          # Cloudflare's JSON Mode supported-model list. The workflow is manual-only.
+          payload = {
+              "model": "@cf/meta/llama-3.1-8b-instruct-fast",
+              "messages": [{
+                  "role": "user",
+                  "content": 'Return exactly this JSON object with no additional keys: {"nova_health":"OK","ack":"NOVA_HEALTH_PROBE"}',
+              }],
+              "temperature": 0,
+              "max_tokens": 64,
+              "response_format": {
+                  "type": "json_schema",
+                  "json_schema": {
+                      "type": "object",
+                      "properties": {
+                          "nova_health": {"type": "string", "enum": ["OK"]},
+                          "ack": {"type": "string", "enum": ["NOVA_HEALTH_PROBE"]},
+                      },
+                      "required": ["nova_health", "ack"],
+                      "additionalProperties": False,
+                  },
+              },
+          }
+          url = (
+              "https://api.cloudflare.com/client/v4/accounts/"
+              + account_id + "/ai/v1/chat/completions"
+          )
+          try:
+              status, raw = post(url, payload)
+          except (urllib.error.URLError, TimeoutError, OSError) as error:
+              print("WORKERS_AI_INFERENCE=NETWORK_ERROR")
+              print(f"ERROR_TYPE={type(error).__name__}")
+              sys.exit(1)
+
+          print(f"WORKERS_AI_HTTP_STATUS={status}")
+          if not 200 <= status < 300:
+              print("WORKERS_AI_INFERENCE=HTTP_ERROR")
+              sys.exit(1)
+          try:
+              result = json.loads(raw.decode("utf-8"))
+              choice = result.get("choices", [])[0]
+              message = choice.get("message", {})
+          except (ValueError, UnicodeDecodeError, AttributeError, IndexError, TypeError):
+              print("WORKERS_AI_INFERENCE=FAIL")
+              print("RESPONSE_CONTRACT=INVALID_CHAT_COMPLETION")
+              sys.exit(1)
+
+          content = message.get("content")
+          print(f"MESSAGE_CONTENT_PRESENT={isinstance(content, str) and bool(content.strip())}")
+          print(f"MESSAGE_REASONING_PRESENT={bool(message.get('reasoning') or message.get('reasoning_content'))}")
+          print(f"FINISH_REASON={choice.get('finish_reason')}")
+          print(f"COMPLETION_TOKENS={result.get('usage', {}).get('completion_tokens', 'unknown')}")
+          if not isinstance(content, str) or not content.strip():
+              print("WORKERS_AI_INFERENCE=FAIL")
+              print("RESPONSE_CONTRACT=NO_TEXT_CONTENT")
+              sys.exit(1)
+
+          try:
+              health = json.loads(content)
+          except ValueError:
+              print("WORKERS_AI_INFERENCE=FAIL")
+              print("RESPONSE_CONTRACT=CONTENT_NOT_JSON")
+              sys.exit(1)
+
+          if not isinstance(health, dict) or health.get("nova_health") != "OK" or health.get("ack") != "NOVA_HEALTH_PROBE":
+              print("WORKERS_AI_INFERENCE=FAIL")
+              print("RESPONSE_CONTRACT=HEALTH_MARKER_MISMATCH")
+              sys.exit(1)
+
+          print("WORKERS_AI_INFERENCE=PASS")
+          print("RESPONSE_CONTRACT=PASS")
+          print("MODEL=@cf/meta/llama-3.1-8b-instruct-fast")
+          PY

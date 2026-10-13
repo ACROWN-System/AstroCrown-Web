@@ -1,0 +1,63 @@
+name: NOVA GPU Heartbeat
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'NOVA/gpu_heartbeat.py'
+      - 'NOVA/gpu_roster.json'
+      - 'NOVA/gpu_capacity.py'
+      - 'NOVA/gpu_capacity_evidence.json'
+      - 'NOVA/health.py'
+      - '.github/workflows/nova_GPU_heartbeat.yml'
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nova-gpu-heartbeat
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  gpu-heartbeat:
+    if: github.ref == 'refs/heads/main'
+    concurrency:
+      group: nova-operational-state-writer
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      issues: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Test NOVA health primitives
+        run: python -m unittest discover -s NOVA/tests -p 'test_*.py' -v
+
+      - name: Load operational state from dedicated branch
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/nova-operational-state:refs/remotes/origin/nova-operational-state
+          python -m NOVA.operational_state load --state-ref origin/nova-operational-state
+
+      - name: Execute NOVA GPU Heart
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          NOSANA_GPU_API_KEY_01: ${{ secrets.NOSANA_GPU_API_KEY_01 }}
+          HF_ZEROGPU_TOKEN_01: ${{ secrets.HF_ZEROGPU_TOKEN_01 }}
+          NOVA_GPU_PROVIDER_ROTATION_INDEX: ${{ github.run_number }}
+        run: python NOVA/gpu_heartbeat.py
+
+      - name: Publish NOVA GPU heart state to operational branch
+        run: |
+          python -m NOVA.operational_state publish --state-ref origin/nova-operational-state --message "chore(nova): update GPU heart health state [skip ci]"
