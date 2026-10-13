@@ -57,45 +57,20 @@ Generated media should be treated as separately produced artifacts that can late
 
 [Capacity-Aware AI Media Generation and Progressive Access Proposal](CAPACITY-AWARE-ROLLOUT-PROPOSAL.md) records a candidate direction for internal-first media generation, separate feature-access waiting lists and generation-job queues, and staged user access governed by measured capacity. It is a proposal, not an implementation or an approval of any model/provider.
 
-## Target architecture and delivery order — one generator, image first
+## Architecture and source of truth
 
-The target is **one AstroCrown-owned AI image-and-video generator** with a coherent visual identity and replaceable model/provider adapters. Image and video are two capabilities of that intended system—not two unrelated products, and not a promise that every capability is already operational.
+This README is an entry point, not a second specification. The target is one AstroCrown-owned generator for image and video, with image generation as the first executable milestone and a separate qualification gate for video.
 
-### First executable milestone — image generation
+Use these documents as the canonical sources:
 
-Prove one real image-generation path that can produce a useful candidate for the homepage's foundational deep-space environment. Use the least complex route that demonstrably meets the current $0/no-payment-method constraint and has a commercially suitable basis for the intended asset. Preserve the exact provider/model, parameters, input, returned file, terms evidence, provenance, observed latency/usage, quality review, and failures.
+- [Architecture, service boundary, component reuse, and minimum implementation](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md).
+- [Exact model/provider candidates, account eligibility, rights, and evidence](IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md).
+- [Feature-access waiting lists, generation queues, and capacity-aware rollout](CAPACITY-AWARE-ROLLOUT-PROPOSAL.md).
+- [Homepage environment, compositing roles, and R-019 alpha acceptance](../index-section/BACKGROUND.md).
+- [Shared compute responsibility](../gpu-infrastructure/README.md).
+- [NOVA orchestration responsibility](../nova-ai-orchestration/README.md).
 
-An LLM can help with prompts, composition planning, reference analysis, evaluation, and deterministic checks. It only counts as the image generator when the selected endpoint is verified to return generated image output. Do not mistake ordinary text generation or vision input for image-generation capability. Do not hold up the first image for complete provider discovery or a working video backend.
-
-### Video is part of the target, not a gate on image delivery
-
-Develop and qualify video capability as a parallel workstream behind the same service boundary, using a separate video adapter and its own runtime, rights, memory, latency, quality, and capacity checks. If no suitable free video path is currently available, record that blocker, continue improving the image path and shared architecture, and revisit video viability when a materially different candidate or execution condition appears. Video uncertainty must not make the whole generator or homepage work appear blocked.
-
-### Brand uniformity — owned by AstroCrown
-
-Create recognizable AstroCrown visual quality through our own approved art direction, reference assets, composition/lighting rules, palette, and reusable environment components. The existing homepage requirements define the initial signature: deep near-black blue space, subdued atmosphere, the Primitive Earth–Moon environment, gold-lit rocky planet, and spiral nebula in gold/orange/purple/deep blue. Reuse that visual grammar across generated images and videos, then assess outputs against the same project-owned criteria. External products mentioned in conversation were illustrative examples of recognizable differences between generators; they are **not** selected providers, required integrations, or reference brands to imitate.
-
-### Commercial-use and output-promotion boundary
-
-Commercial suitability is required for all components retained in the eventual generator and for every asset intended for commercial publication. Evaluate the application's code, exact model/weights, extensions/dependencies, hosted endpoint and applicable terms separately. Temporary development-only services may be used only within their restrictions. Removing an API key later does not erase restrictions that may apply to prior outputs. If rights or terms are unknown, the resulting asset remains BLOCKED for commercial promotion until the issue is resolved or the asset is regenerated through a qualified route.
-
-### Execution order
-
-1. Prove one image can be generated and retrieved.
-2. Produce and evaluate the homepage's foundational background.
-3. Establish reusable brand-specific objects, layers, prompt/workflow presets, and output evaluation.
-4. Continue video feasibility in parallel; integrate a video backend when its own gates pass, without holding the image path.
-5. Harden the unified generator and expand toward broader commercial use using evidence from actual runs.
-
-
-## Transparency and compositing support
-
-Layered composition is a first-class workflow capability. For foreground objects and effects intended to be placed independently over the homepage environment, the system must support genuine alpha transparency—either natively from a qualified generator or through a separately qualified masking, segmentation, matting, or background-removal stage. A flat black/white/chessboard-looking background is not transparency.
-
-Examples include independently composed planet/Moon assets, debris, asteroids, wispy gas, nebula details, rays, dust and other reusable foreground elements. The foundational deep-space base may stay opaque; alpha is required according to the asset's intended compositing role.
-
-Validate the alpha channel and composite result after processing, optimization, storage and browser delivery. Review fine edges, translucent details, halos and unwanted matte fringes. Keep a working master suitable for alpha; PNG is the baseline format to evaluate for static transparent masters, with WebP/AVIF only when the actual pipeline preserves alpha. Treat transparent video as a separate optional capability with its own codec, playback and runtime verification—not a prerequisite for static layers or the first opaque background.
-
+Do not duplicate provider-health probes, the aggregate GPU-capacity calculator, or NOVA's orchestration/job decisions inside this subsystem. Reuse existing evidence through an explicit, compatible interface when one exists; do not assume a shared executable API already exists. NOVA's current aggregate GPU-capacity report is scoped to non-commercial R&D and is not proof of commercial-production eligibility or live capacity.
 
 ## Development Status
 
@@ -105,21 +80,7 @@ No model, provider, generation method, latency expectation, quality claim, or as
 
 ## Reproducibility and Provenance
 
-Generation records should preserve enough information to reproduce or audit an artifact where the provider and model permit reproducibility, including applicable:
-
-- provider;
-- model/version;
-- prompt/input;
-- generation parameters;
-- source/reference inputs;
-- execution timestamp;
-- job identifier;
-- output identifiers;
-- checksums;
-- transformations or optimization steps;
-- verification results.
-
-Where exact reproduction is not possible because a provider is nondeterministic or does not expose required information, preserve the available evidence and record the limitation rather than implying deterministic reproduction.
+Use the provenance and artifact-evidence requirements in [the canonical composition strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md). Preserve sufficient information to audit each generated or transformed asset, and record unavailable metadata or reproducibility limits explicitly. Do not claim deterministic reproduction when the provider or model does not support it.
 
 ## Verification
 
