@@ -60,6 +60,19 @@ The intended result is AstroCrown's own coherent image/video generator. It may u
 5. Commercial use remains a gate for every retained production dependency and asset intended for publication. Unknown or conflicting rights mean BLOCKED for commercial promotion.
 
 
+### Layer and alpha capability gate
+
+Transparent output must be tested as a distinct output capability, not assumed from ordinary image generation. For each candidate workflow, record:
+
+- whether the exact model/endpoint natively returns an alpha channel or requires a post-processing stage;
+- whether the actual returned and optimized file contains the expected alpha data;
+- edge quality and preservation of wispy or partly transparent elements;
+- whether the image composites cleanly over the AstroCrown background and a contrasting background;
+- alpha preservation through required crop/resize/optimization/storage/browser delivery;
+- component-specific commercial rights and asset provenance for every stage.
+
+A qualified post-processing route may satisfy the layer requirement when native alpha is unavailable, but it must itself be licensed, technically tested and provenance-tracked. Do not classify a flat background or a visual checkerboard as a transparent output. Static transparent images and alpha video are separate capabilities: lack of an alpha-video route does not block the image workflow.
+
 ## 3. Official sources
 
 ### Cloudflare image candidates and quota
