@@ -30,42 +30,13 @@ Build one shared media-generation service boundary with:
 
 Application features should not need to know which GPU provider executes a job. GPU infrastructure supplies or brokers compute; the media subsystem owns media-generation workflows and jobs; NOVA orchestration may request generation via a defined interface.
 
-## Target architecture and execution order — one generator, image first
+## Architecture reference and scope
 
-The target is **one AstroCrown-owned image-and-video generation system** with a consistent, project-owned visual identity and replaceable model/provider adapters. The implementation order must allow value to arrive before every modality or provider has been qualified.
+The unified image/video target, image-first implementation order, service boundary, responsibility ownership, adapter design, provenance, and minimum executable image slice are defined once in [the multi-model composition strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md). Homepage layer roles and the alpha-transparency acceptance contract are defined in [BACKGROUND.md](../index-section/BACKGROUND.md), including R-019.
 
-### First executable milestone — image path
+This proposal owns the later access and operations questions: separate feature-access waiting lists from generation-job queues, staged user access, admission/stop policy, and capacity-aware operations. It does not redefine the media-service architecture or create another provider/capacity registry.
 
-Prove one end-to-end image-generation workflow that can return a candidate for AstroCrown's homepage background. Use the least complex route that actually satisfies the current $0/no-payment-method constraint and has sufficient rights evidence for the intended asset. Record the exact model/provider, inputs and parameters, returned output, provenance, terms, observed latency and resource/usage information, quality review, and failures. Do not wait for video feasibility, public-user queues, or exhaustive provider research.
-
-LLMs may support prompt planning, prompt refinement, image analysis, evaluation and deterministic checks. Text-generation or vision-input access is not, by itself, evidence that an endpoint can generate images.
-
-### Video workstream — parallel and independently gated
-
-Video remains part of the intended generator, and its feasibility should be investigated in parallel whenever there is a useful, bounded hypothesis to test. Video uses the same AstroCrown-owned job/service boundary but requires a separate adapter and its own model rights, runtime, memory, temporal quality, duration, latency, storage/transfer, usage and capacity checks. A missing or unsuitable free video route should remain an explicit blocker for video—not a blocker for image generation, homepage asset production, or continued generator development. Re-test video viability when a concrete changed condition or new qualified candidate justifies the experiment.
-
-### Brand uniformity — our own visual system
-
-AstroCrown's recognizable signature should be authored and governed inside our own art direction, reusable references and workflows, not tied to an upstream provider's signature aesthetic. Begin with the documented homepage environment: near-black/deep-blue space, restrained stars and atmospheric dust, the Primitive Earth–Moon composition, the gold-lit rocky planet, and the gold/orange/purple/deep-blue spiral nebula. Share relevant palette, lighting, composition, review and provenance rules across image and video while allowing modality-specific controls. Products mentioned as examples of visibly different generator styles are illustrative only; they do not select a supplier or establish any required integration.
-
-### Commercial rights and asset promotion
-
-Commercial usability remains a requirement for every component retained in the eventual service and each asset intended for commercial publication. Independently evaluate application/software licenses, exact model/weight permissions, adapters/extensions/dependencies, hosted endpoint terms, and the rights/restrictions applicable to the asset's actual generation route. Removing a temporary API key later does not resolve restrictions on prior outputs. When a component or asset's commercial status is unknown, keep it BLOCKED for commercial use until resolved or regenerated through a qualified route.
-
-### Delivery sequence
-
-1. Produce and retrieve one useful image.
-2. Evaluate and approve the homepage's foundational deep-space background for its intended use.
-3. Add reusable planetary, Moon, debris, nebula and atmospheric layers plus consistent brand workflows.
-4. Continue video viability in parallel; integrate it once its own requirements pass.
-5. Strengthen the unified generator and expand commercially using observed evidence and replaceable backends.
-
-
-## Transparent layer assets and alpha preservation
-
-Layer-ready generation is a required capability of the target system, but transparency is selected by each asset's compositing role rather than imposed on every output. The foundational deep-space background can be opaque; reusable foreground objects and effects (such as planets, the Moon, debris, dust, nebula details and atmospheric effects) should be generated or processed into real alpha-transparent assets whenever they need independent positioning or animation.
-
-A background that merely appears black/white or shows a checkerboard is not transparent. The accepted workflow must verify the actual alpha channel and the visual composite, including fine edges, translucent dust/gas, glows, halos and matte fringes. Where native alpha output is not available or is inadequate, a qualified segmentation/matting/background-removal step is permitted, with the model/tool, version, rights and transformation recorded. Preserve alpha through master storage, resizing, optimization, delivery and browser rendering; validate the resulting file rather than relying on an extension. PNG is the baseline static transparent master, and WebP/AVIF outputs require confirmation that the chosen processing/delivery path preserves alpha. Transparent video is a distinct optional route requiring codec/container/player tests; its absence cannot block static transparency or the first background asset.
+Reuse shared capacity and provider evidence only through an explicit compatible interface. Keep qualified/projected capacity distinct from observed runnable capacity and actual completed-job usage. NOVA's current aggregate GPU report is R&D-scoped; it does not establish commercial-production capacity. The first internal image proof does not require a public waiting list or multi-user job system.
 
 ## 3. Distinguish two queues
 
