@@ -88,6 +88,15 @@ Commercial suitability is required for all components retained in the eventual g
 5. Harden the unified generator and expand toward broader commercial use using evidence from actual runs.
 
 
+## Transparency and compositing support
+
+Layered composition is a first-class workflow capability. For foreground objects and effects intended to be placed independently over the homepage environment, the system must support genuine alpha transparency—either natively from a qualified generator or through a separately qualified masking, segmentation, matting, or background-removal stage. A flat black/white/chessboard-looking background is not transparency.
+
+Examples include independently composed planet/Moon assets, debris, asteroids, wispy gas, nebula details, rays, dust and other reusable foreground elements. The foundational deep-space base may stay opaque; alpha is required according to the asset's intended compositing role.
+
+Validate the alpha channel and composite result after processing, optimization, storage and browser delivery. Review fine edges, translucent details, halos and unwanted matte fringes. Keep a working master suitable for alpha; PNG is the baseline format to evaluate for static transparent masters, with WebP/AVIF only when the actual pipeline preserves alpha. Treat transparent video as a separate optional capability with its own codec, playback and runtime verification—not a prerequisite for static layers or the first opaque background.
+
+
 ## Development Status
 
 Status: **candidate / initial subsystem structure**
