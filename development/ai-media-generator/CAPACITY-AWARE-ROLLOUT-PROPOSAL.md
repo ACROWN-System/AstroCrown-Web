@@ -61,6 +61,12 @@ Commercial usability remains a requirement for every component retained in the e
 5. Strengthen the unified generator and expand commercially using observed evidence and replaceable backends.
 
 
+## Transparent layer assets and alpha preservation
+
+Layer-ready generation is a required capability of the target system, but transparency is selected by each asset's compositing role rather than imposed on every output. The foundational deep-space background can be opaque; reusable foreground objects and effects (such as planets, the Moon, debris, dust, nebula details and atmospheric effects) should be generated or processed into real alpha-transparent assets whenever they need independent positioning or animation.
+
+A background that merely appears black/white or shows a checkerboard is not transparent. The accepted workflow must verify the actual alpha channel and the visual composite, including fine edges, translucent dust/gas, glows, halos and matte fringes. Where native alpha output is not available or is inadequate, a qualified segmentation/matting/background-removal step is permitted, with the model/tool, version, rights and transformation recorded. Preserve alpha through master storage, resizing, optimization, delivery and browser rendering; validate the resulting file rather than relying on an extension. PNG is the baseline static transparent master, and WebP/AVIF outputs require confirmation that the chosen processing/delivery path preserves alpha. Transparent video is a distinct optional route requiring codec/container/player tests; its absence cannot block static transparency or the first background asset.
+
 ## 3. Distinguish two queues
 
 These are different controls and must not be represented as a single queue.
