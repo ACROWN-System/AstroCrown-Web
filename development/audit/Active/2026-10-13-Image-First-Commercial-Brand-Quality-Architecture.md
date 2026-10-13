@@ -21,6 +21,7 @@
 5. From the beginning, evaluate retained dependencies and asset-creation routes for the intended eventual commercial operation. A temporary development-only model/provider may be used for experiments only when its restrictions are respected; its outputs must not be promoted commercially unless the asset's commercial-use basis is established.
 6. Maintain the hard $0/no-payment-method constraint for current execution. Never infer that an LLM API key includes image-generation access, or silently enable billing.
 7. The target system includes both image and video from the beginning. Image is the first executable slice because it delivers the immediate homepage need; video feasibility proceeds in parallel but cannot block image results.
+8. Support genuine alpha transparency for foreground objects/effects intended for independent composition. Native alpha is preferred where suitable; a qualified post-processing route is acceptable. The opaque deep-space base remains valid, and transparent video is separately gated.
 
 ## Work scope
 
@@ -47,6 +48,7 @@
 - LLM capability is split into (a) prompt/planning/analysis support and (b) native model image output; only (b) creates the image.
 - Image/video remain behind a replaceable AstroCrown-owned interface. Video has its own acceptance gates and is not falsely implied by an image PASS.
 - A coherent AstroCrown visual identity is defined through our own art direction, reference assets, reusable environment layers, and repeatable workflows. Generator brands mentioned in conversation were illustrative examples of stylistic differences only, not provider selections or styles to copy.
+- Foreground elements that need independent composition can be provided with a real alpha channel, either natively or through a qualified, licensed matting/removal step; no fake opaque/checkerboard background is counted as transparency. Transparent video remains a separate optional capability.
 - Exact provider/model terms and commercial-use rights remain component-specific; a removed key does not clear restrictions on prior outputs.
 - CI/runtime behavior, credentials, billing, and production site remain unchanged by this documentation-only change.
 - Run diff/content review and whatever proportionate checks are available, open a PR, and leave the PR unmerged for review.
