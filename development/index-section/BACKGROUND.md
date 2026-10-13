@@ -8,45 +8,10 @@ This document preserves source material and does not promote candidates, discove
 
 ## Migration notes
 
-R-012 through R-018 and the related validated discoveries are preserved here as the background/environment subsystem material.
+R-012 through R-018 and their source excerpts are preserved from the pre-migration material. R-019 is a new additive transparency requirement, placed after R-018 to preserve requirement-number order.
 
 ## Source material
 
-
-### R-019 — Transparent Foreground Assets and Alpha-Preserving Layers
-
-#### Purpose
-
-Foreground elements intended to be composed independently over the deep-space environment shall be deliverable with genuine transparency. This supports reusable and rearrangeable homepage layers rather than separate opaque rectangular images.
-
-#### Layer applicability
-
-Where independent composition is intended, asset outputs should support alpha transparency for objects and elements such as:
-
-- Primitive Earth and Moon assets when composed separately;
-- rocky planets;
-- debris, asteroids and dust;
-- spiral nebulae, wispy gas, rays and atmospheric effects;
-- other reusable foreground objects or effects.
-
-The foundational deep-space environment may remain an opaque full-frame image. Transparency is required by the intended compositing role, not indiscriminately for every asset.
-
-#### Functional requirements
-
-- A transparent output shall contain a genuine alpha channel; a black, white, checkerboard, or chroma-key background that merely looks removable is not equivalent to transparency.
-- Alpha edges shall preserve useful detail, natural antialiasing, soft gas/dust, glows, and partially transparent effects where present. Background-removal errors, halos, matte fringes and unwanted holes shall be reviewed.
-- If the selected generator cannot generate suitable alpha output natively, the workflow may use a qualified, separately identified segmentation, matting, or background-removal step. Record the tool/model/version and transformation provenance; verify commercial suitability for all components.
-- An asset intended as a separate layer shall be tested when composited over the actual dark-blue homepage background and at least one contrasting test background. It shall not reveal an unwanted opaque rectangle or destructive matte.
-- Alpha shall be preserved through the required crop, resize, optimization, encoding, storage, retrieval and browser-rendering steps. Validate the actual output file and resulting composite, not only the file extension or API response.
-- Keep a lossless transparent working master when appropriate. PNG is a suitable baseline for static transparent masters; optimized formats such as WebP or AVIF may be used only after confirming that the selected encoder, delivery path and target browser preserve alpha correctly. JPEG shall not be treated as a transparent master format.
-
-#### Video relationship
-
-Transparent video is an optional, separately qualified capability for future layered motion assets. Codec/container support, alpha preservation, playback compatibility, runtime requirements and commercial terms require their own tests. Lack of a suitable transparent-video path shall not block static transparent image layers, ordinary video generation, or the first homepage background.
-
-#### Verification
-
-Record which outputs require alpha and which are intentionally opaque. Acceptance requires evidence of a real alpha channel when requested, visual inspection of edge quality, successful recompositing, alpha preservation after optimization and delivery, and the applicable rights/provenance checks.
 
 ### Source excerpt: lines 497–526
 
@@ -352,3 +317,37 @@ The layer shall:
 - Asset compositing.
 - Atmospheric composition layer.
 
+### R-019 — Transparent Foreground Assets and Alpha-Preserving Layers
+
+#### Purpose
+
+Foreground elements intended to be composed independently over the deep-space environment shall be deliverable with genuine transparency. This supports reusable and rearrangeable homepage layers rather than separate opaque rectangular images.
+
+#### Layer applicability
+
+Where independent composition is intended, asset outputs should support alpha transparency for objects and elements such as:
+
+- Primitive Earth and Moon assets when composed separately;
+- rocky planets;
+- debris, asteroids and dust;
+- spiral nebulae, wispy gas, rays and atmospheric effects;
+- other reusable foreground objects or effects.
+
+The foundational deep-space environment may remain an opaque full-frame image. Transparency is required by the intended compositing role, not indiscriminately for every asset.
+
+#### Functional requirements
+
+- A transparent output shall contain a genuine alpha channel; a black, white, checkerboard, or chroma-key background that merely looks removable is not equivalent to transparency.
+- Alpha edges shall preserve useful detail, natural antialiasing, soft gas/dust, glows, and partially transparent effects where present. Background-removal errors, halos, matte fringes and unwanted holes shall be reviewed.
+- If the selected generator cannot generate suitable alpha output natively, the workflow may use a qualified, separately identified segmentation, matting, or background-removal step. Record the tool/model/version and transformation provenance; verify commercial suitability for all components.
+- An asset intended as a separate layer shall be tested when composited over the actual dark-blue homepage background and at least one contrasting test background. It shall not reveal an unwanted opaque rectangle or destructive matte.
+- Alpha shall be preserved through the required crop, resize, optimization, encoding, storage, retrieval and browser-rendering steps. Validate the actual output file and resulting composite, not only the file extension or API response.
+- Keep a lossless transparent working master when appropriate. PNG is a suitable baseline for static transparent masters; optimized formats such as WebP or AVIF may be used only after confirming that the selected encoder, delivery path and target browser preserve alpha correctly. JPEG shall not be treated as a transparent master format.
+
+#### Video relationship
+
+Transparent video is an optional, separately qualified capability for future layered motion assets. Codec/container support, alpha preservation, playback compatibility, runtime requirements and commercial terms require their own tests. Lack of a suitable transparent-video path shall not block static transparent image layers, ordinary video generation, or the first homepage background.
+
+#### Verification
+
+Record which outputs require alpha and which are intentionally opaque. Acceptance requires evidence of a real alpha channel when requested, visual inspection of edge quality, successful recompositing, alpha preservation after optimization and delivery, and the applicable rights/provenance checks.
