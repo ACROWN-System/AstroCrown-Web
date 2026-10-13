@@ -1,6 +1,7 @@
 # Image and Video Component Candidate Register
 
-**Evaluation date:** 2026-10-10  
+**Document revision:** 2026-10-13  
+**Initial evaluation:** 2026-10-10  
 **Status:** ACTIVE RESEARCH — no complete workflow or generation backend approved  
 **Repository baseline:** `main` at merge commit `1d5742890c68210513485841f27bae3450cfcdff`  
 **Owner:** `development/ai-media-generator/`  
@@ -152,15 +153,21 @@ No local hardware details or free GPU allocation have yet been verified for this
 
 The inventory is deliberately **not closed**. All complete workflows remain BLOCKED until their mandatory gates have evidence.
 
-The next action that genuinely requires the user is account-level observation in Cloudflare:
+### Existing credential context
 
-1. Open the supplied Workers AI usage/dashboard URL while signed in.
-2. Identify whether the page shows the account's current Workers plan, Neuron usage/reset, and available testing/run control.
-3. If a model is selected or there is a model catalogue, verify whether `@cf/bytedance/stable-diffusion-xl-lightning` is accessible without prompting for payment, upgrade, or prepaid credit.
-4. Do not create an API token, accept new terms, or change account/billing settings yet. Report the visible state; redact email addresses, account identifiers if desired, and all secrets.
+Cloudflare Workers AI credentials were already configured in NOVA for a separately qualified LLM inference/health path (CLOUDFLARE_API_KEY_01 and CLOUDFLARE_ACCOUNT_ID). That history does **not** prove that an image-generation model is enabled for the account, supports the required output, has sufficient quota, is available without a payment method, or has terms suitable for the intended asset.
 
-After that observation, decide whether a no-payment test is feasible. If Cloudflare is eligible, request explicit authorization before creating a token or changing any GitHub secret. If not, keep the result BLOCKED and continue with non-billing alternatives.
+Do not restart credential setup from zero or create another token by default. First inspect the existing token's account and permissions, the current account plan/usage/reset information, and access to the exact candidate image endpoint. Do not expose credential values or copy secrets between repositories. Change or add a repository secret only if an identified repository-specific execution path requires it and the missing scope/secret is confirmed; do not enable paid billing or accept new terms as part of this audit.
+
+### Next controlled qualification
+
+1. Verify current $0/no-payment-method eligibility and exact terms for the selected image endpoint.
+2. Confirm that the endpoint actually returns generated image data and that the returned file can be retrieved and decoded.
+3. Run one bounded request only after eligibility, permissions, and the intended-use gate are satisfied. Record the exact model/version, parameters, output checksum, evidence date, latency/resource/quota observations where exposed, and failures.
+4. Keep the route BLOCKED for commercial promotion until every mandatory component and output-rights condition passes. Preserve a failed attempt as evidence; repeat a request only when it answers a new decision-relevant question.
+
+No live request, credential modification, billing change, or provider promotion is authorized by this documentation alone.
 
 ## 8. Closure
 
-This register is current as of 2026-10-10. Re-check upstream licenses, model cards, Cloudflare plan terms, model availability, and hardware compatibility immediately before implementation because these may change. A candidate moves out of BLOCKED only when the applicable missing evidence is supplied and the relevant verification is re-run.
+This document revision is dated 2026-10-13. Candidate entries retain their own source/test evidence dates where available. Re-check upstream licenses, model cards, provider terms, model availability, account eligibility and hardware compatibility immediately before implementation. A candidate moves out of BLOCKED only when the missing evidence is supplied and the relevant verification is re-run.
