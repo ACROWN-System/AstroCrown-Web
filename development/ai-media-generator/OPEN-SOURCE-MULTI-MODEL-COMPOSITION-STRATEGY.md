@@ -44,6 +44,15 @@ Commercial suitability is required for the final retained stack and every asset 
 Image proof → foundational homepage background → reusable brand layers and consistent workflows; pursue video feasibility in parallel → integrate a qualified video backend when its own gates pass → harden and expand the unified service for broader commercial usage.
 
 
+## Layer-aware output and real transparency
+
+The shared workflow shall distinguish an opaque environment/background from independent foreground layers. Where the composition requires an element to move, fade, scale, or be reused independently, the output contract must allow genuine alpha transparency.
+
+Do not assume every image model or endpoint supports native transparent output. Qualify the exact capability. If needed, use a separate licensed and compatible segmentation/matting/background-removal step; track the transformation and retain the original plus derived asset. Reject a simulated checkerboard/black/white background as proof of an alpha channel.
+
+Verify real alpha, edge quality, translucent effects, absence of visible halos/matte fringes, and compositing on both the AstroCrown deep-space background and a contrasting test background. Ensure that alpha survives asset optimization and delivery. Use PNG as a baseline transparent working master for static assets, then test any WebP/AVIF distribution conversion. Transparent video may be added through a separately qualified codec/container/player path, but must not block static transparent layers, ordinary video research, or the first opaque homepage background.
+
+
 ## 2. Integration-first principle
 
 Do not assume a single model or application is best for every media task. Evaluate a portfolio of compatible capabilities and make them available through one stable AstroCrown media-service boundary.
