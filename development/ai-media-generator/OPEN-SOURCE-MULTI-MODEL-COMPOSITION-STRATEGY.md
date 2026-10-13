@@ -79,15 +79,14 @@ Keep application ownership and external dependencies separate.
 The media generator owns:
 
 - stable internal request and result schemas;
-- supported tasks and workflow presets;
-- user/feature eligibility and generation-job lifecycle;
-- task-specific routing policy;
-- prompt and reference-input handling;
-- retry, cancellation, duplicate-submission protection, and result retrieval where supported;
-- output validation and promotion into approved asset collections;
-- provenance, artifact identifiers and checksums;
-- model/workflow qualification status;
-- user-facing error/status information and operational observations.
+- supported media tasks and workflow presets;
+- the canonical generation-job lifecycle and artifact/result handling;
+- media-specific routing among already-qualified compatible workflows;
+- prompt/reference-input handling, output validation, provenance, and promotion evidence;
+- bounded retry, cancellation, and duplicate-submission protection where supported;
+- media-job status and operational observations.
+
+The media service must enforce caller and feature authorization at its boundary using the authoritative application/access-policy decision. It must not create a second account-eligibility policy or a separate waiting-list registry. Public feature eligibility and waiting-list ownership remain a future application-scope decision; do not create another subsystem or database before that feature is actually scoped.
 
 This layer should not require application code to know the specific GPU vendor, provider API, model checkpoint format, or workflow-engine details.
 
@@ -128,7 +127,23 @@ Do not confuse "open weights" with "free compute". Self-hosted inference still r
 
 ### 3.5 NOVA integration
 
-NOVA orchestration may understand user intent, ask for missing task details when required, select a qualified workflow, request generation, compare returned evidence, and communicate the job state. It should call the media service through a defined interface instead of owning media queues or depending directly on a particular GPU provider.
+NOVA orchestration may understand user intent, ask for missing task details when required, select a qualified workflow, request generation, compare returned evidence, and communicate the job state. It calls the media service through a defined interface; it does not own a second media-job queue or directly depend on a specific GPU provider.
+
+### 3.6 Responsibility ownership and minimal implementation
+
+| Responsibility | Canonical owner / rule |
+|---|---|
+| Homepage visual requirements, layer roles, and alpha acceptance | development/index-section/BACKGROUND.md |
+| Exact model, endpoint, licensing, and workflow qualification evidence | IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md plus dated test evidence |
+| Media request/result contract, generation-job lifecycle, artifacts, provenance, and media-specific routing | This media-generator service |
+| Provider credentials, runtime environments, provider health, and compute observations | development/gpu-infrastructure; NOVA evidence may be consumed through an explicit compatible contract |
+| Cross-provider aggregate GPU-capacity accounting | Existing NOVA/gpu_capacity.py evidence where relevant; it is currently intended for non-commercial R&D and must not be presented as commercial capacity or live per-job availability |
+| Request interpretation and orchestration | development/nova-ai-orchestration; invoke the media service rather than duplicating its queue or provider transport |
+| Public feature eligibility and waiting-list policy | Future application/access-policy boundary, to be decided when a public feature is scoped; no new subsystem or database is justified for the first internal proof |
+
+Do not copy NOVA's aggregate capacity calculator or provider-health probes into this repository. Share a schema/report or an explicit API contract when compatible evidence is available; the current subsystem documentation alone does not prove that a reusable executable cross-repository API exists.
+
+**Minimum first implementation:** one eligible image endpoint, one thin image adapter, request/response and file validation, retrieval of the actual image bytes, safe error classification, a small provenance manifest, deterministic positive/negative tests, and one bounded live integration test. Capture measured latency/resource/quota information only when the route exposes it; mark unavailable evidence as unknown/not exposed. Keep the first proof internal and synchronous unless the chosen endpoint requires asynchronous execution. Do not pre-build a public waiting list, persistent multi-user queue, general-purpose registry, multi-model router, or database unless a demonstrated requirement needs it. Add a second model or processing stage only after a baseline exists and a representative test shows why the extra mechanism is necessary.
 
 ## 4. License and permissions gate — each component, not just each model
 
