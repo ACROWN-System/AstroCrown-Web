@@ -1,15 +1,15 @@
-# Active Navigation Plan — Unified Commercial Image/Video Generator, Image-First Execution
+# Active Navigation Plan — Media Architecture Alignment and Minimal Image Proof
 
 **Date:** 2026-10-13  
-**Status:** ACTIVE — requirements clarification and additive architecture documentation  
-**Objective:** Deliver one AstroCrown-owned, commercially suitable image-and-video generator for consistent brand identity, while making image generation the first executable milestone and preventing video feasibility from blocking useful image output.
+**Status:** ACTIVE — documentation alignment, duplication reduction, and first-slice definition  
+**Objective:** Preserve the unified commercial image/video target while eliminating conflicting/duplicated specifications, assigning cross-system ownership, correcting credential/capacity assumptions, and defining the smallest evidence-backed image implementation.
 
 ## Mode and source of truth
 
 **Mode:** Current-source verification, architecture clarification, and additive development documentation.  
 **Repository:** https://github.com/ACROWN-System/AstroCrown-Web  
 **Base revision:** `0aadaf9d804de1fb82e387052e2765fad3cf71a3`  
-**Targets:** media generator README, multi-model strategy, capacity-aware rollout proposal, and model/provider candidate register.  
+**Targets:** media generator README, multi-model strategy, capacity-aware rollout proposal, model/provider candidate register, homepage background requirements (R-019 placement/traceability), and this active plan.  
 **Method:** Follow `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, `development/Prompt-Guide.md`, and `development/audit/templates/CANDIDATE-EVALUATION.md`. This plan does not claim to use missing NAVIGATION protocol/template files.
 
 ## User-confirmed intent
@@ -25,12 +25,14 @@
 
 ## Work scope
 
-- Record one unified image/video generator target, with an image-first executable milestone and a video feasibility track that cannot block image delivery.
-- Record current capability evidence that distinguishes prompt/refinement/vision LLM use from actual image generation.
-- Reconcile official provider/API availability with the current $0/no-card constraint. Where model pricing, access, licensing, or execution is unverified, keep the result BLOCKED.
-- Define end-to-end image generation as the first delivery criterion while keeping video in-scope and independently gated in a parallel workstream.
-- Preserve evidence, candidate IDs, intended-use constraints, and asset provenance requirements.
-- Do not modify production website files, create or change credentials/secrets, alter billing, invoke paid endpoints, or represent any candidate as approved absent evidence.
+- Keep one canonical architecture document and make the README and rollout proposal link to it rather than re-specify the same architecture.
+- Assign media-job lifecycle, application access/waiting-list policy, NOVA orchestration, shared compute, provider-health and capacity-accounting responsibilities without creating duplicate queues, probes or capacity calculators.
+- Explicitly mark the existing NOVA aggregate GPU-capacity report as R&D-scoped, separate from commercial eligibility and live execution availability.
+- Align the candidate register's revision/evidence dates and correct the next-action text for the already-configured NOVA Cloudflare Workers AI credential context.
+- Put R-019 after R-018 and update the migration note to distinguish the new requirement from preserved source material.
+- Define a minimum image proof that includes actual output retrieval, file validation, provenance, negative/contract tests, and one bounded live integration test; defer public queues, user-facing access policy, broad provider registries, and extra pipeline stages until justified.
+- Retain the $0/no-payment-method constraint, component-level rights gates, image-first delivery, parallel but independent video qualification, and alpha-transparency requirements.
+- Do not modify production website files, create/change credentials or secrets, alter billing, invoke live provider endpoints, or promote any candidate as qualified in this documentation-alignment change.
 
 ## Current official sources to check and record
 
@@ -43,15 +45,17 @@
 
 ## Acceptance criteria
 
-- Documents state plainly that the intended target is one AstroCrown-owned generator for both image and video, with image-first execution and separate capability adapters.
-- The image proof is not described as production-ready unless its endpoint contract, entitlement, no-payment-method access, image output, result retrieval, intended-use rights, provenance, and actual quality have been tested.
-- LLM capability is split into (a) prompt/planning/analysis support and (b) native model image output; only (b) creates the image.
-- Image/video remain behind a replaceable AstroCrown-owned interface. Video has its own acceptance gates and is not falsely implied by an image PASS.
-- A coherent AstroCrown visual identity is defined through our own art direction, reference assets, reusable environment layers, and repeatable workflows. Generator brands mentioned in conversation were illustrative examples of stylistic differences only, not provider selections or styles to copy.
-- Foreground elements that need independent composition can be provided with a real alpha channel, either natively or through a qualified, licensed matting/removal step; no fake opaque/checkerboard background is counted as transparency. Transparent video remains a separate optional capability.
-- Exact provider/model terms and commercial-use rights remain component-specific; a removed key does not clear restrictions on prior outputs.
-- CI/runtime behavior, credentials, billing, and production site remain unchanged by this documentation-only change.
-- Run diff/content review and whatever proportionate checks are available, open a PR, and leave the PR unmerged for review.
+- One canonical architecture document owns service-boundary and implementation design; the README and rollout proposal provide concise summaries/links instead of duplicated design text.
+- A responsibility table establishes one owner for media jobs, application access/waiting-list policy, shared compute/provider observations, aggregate capacity evidence, and NOVA request orchestration.
+- No duplicate GPU capacity calculator, provider-health probe, or independent NOVA/media job queue is proposed; any cross-repository reuse uses an explicit compatible schema/API and does not assume existing executable integration.
+- The existing aggregate NOVA GPU report is described as R&D-scoped unless separately requalified; projected/qualified capacity is not confused with live available compute or actual completed-job usage.
+- The candidate register distinguishes its revision date, initial evaluation date, and candidate-level evidence dates, and does not incorrectly suggest that Cloudflare credentials must be created from scratch.
+- R-019 follows R-018 and the migration note identifies it as an additive requirement.
+- The first image slice is specific and testable, while public queues, waiting lists, databases, broad registries, and unnecessary processing stages remain deferred until a real requirement justifies them.
+- Image generation requires an actual retrieved/decoded image and intended-use rights; an HTTP success or text-only LLM response is not accepted as image generation.
+- Video remains part of one target generator but has independent qualification gates; its absence cannot block the image path. Alpha transparency is required only for assets whose compositing role needs it.
+- No production website/runtime, credentials, secrets, billing, or provider state is modified by this documentation-only change.
+- Review the resulting diff and consistency checks; keep the PR open and unmerged for review.
 
 ## Impact Analysis
 
@@ -61,10 +65,11 @@
 
 ## Navigation targets
 
-- `development/ai-media-generator/README.md`
-- `development/ai-media-generator/CAPACITY-AWARE-ROLLOUT-PROPOSAL.md`
-- `development/ai-media-generator/OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md`
-- `development/ai-media-generator/IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md`
+- development/ai-media-generator/README.md
+- development/ai-media-generator/CAPACITY-AWARE-ROLLOUT-PROPOSAL.md
+- development/ai-media-generator/OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md
+- development/ai-media-generator/IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md
+- development/index-section/BACKGROUND.md
 
 ## Completion
 
