@@ -133,12 +133,12 @@ NOVA orchestration may understand user intent, ask for missing task details when
 
 | Responsibility | Canonical owner / rule |
 |---|---|
-| Homepage visual requirements, layer roles, and alpha acceptance | development/index-section/BACKGROUND.md |
-| Exact model, endpoint, licensing, and workflow qualification evidence | IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md plus dated test evidence |
+| Homepage visual requirements, layer roles, and alpha acceptance | [BACKGROUND.md](../index-section/BACKGROUND.md) |
+| Exact model, endpoint, licensing, and workflow qualification evidence | [Candidate register](IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md) plus dated test evidence |
 | Media request/result contract, generation-job lifecycle, artifacts, provenance, and media-specific routing | This media-generator service |
-| Provider credentials, runtime environments, provider health, and compute observations | development/gpu-infrastructure; NOVA evidence may be consumed through an explicit compatible contract |
-| Cross-provider aggregate GPU-capacity accounting | Existing NOVA/gpu_capacity.py evidence where relevant; it is currently intended for non-commercial R&D and must not be presented as commercial capacity or live per-job availability |
-| Request interpretation and orchestration | development/nova-ai-orchestration; invoke the media service rather than duplicating its queue or provider transport |
+| Provider credentials, runtime environments, provider health, and compute observations | [Shared GPU infrastructure](../gpu-infrastructure/README.md); NOVA evidence may be consumed through an explicit compatible contract |
+| Cross-provider aggregate GPU-capacity accounting | [NOVA/gpu_capacity.py](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/gpu_capacity.py) where relevant; it is currently intended for non-commercial R&D and must not be presented as commercial capacity or live per-job availability |
+| Request interpretation and orchestration | [NOVA AI orchestration](../nova-ai-orchestration/README.md); invoke the media service rather than duplicating its queue or provider transport |
 | Public feature eligibility and waiting-list policy | Future application/access-policy boundary, to be decided when a public feature is scoped; no new subsystem or database is justified for the first internal proof |
 
 Do not copy NOVA's aggregate capacity calculator or provider-health probes into this repository. Share a schema/report or an explicit API contract when compatible evidence is available; the current subsystem documentation alone does not prove that a reusable executable cross-repository API exists.
