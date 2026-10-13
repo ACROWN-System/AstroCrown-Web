@@ -1,0 +1,38 @@
+name: NOVA Provider Qualification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'NOVA/provider_qualification.py'
+      - '.github/workflows/nova-provider-qualification.yml'
+
+concurrency:
+  group: nova-provider-qualification
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    env:
+      GROQ_API_KEY_01: ${{ secrets.GROQ_API_KEY_01 }}
+      GEMINI_API_KEY_01: ${{ secrets.GEMINI_API_KEY_01 }}
+    steps:
+      - name: Checkout protected main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+      - name: Run bounded qualification probes
+        run: python -m NOVA.provider_qualification

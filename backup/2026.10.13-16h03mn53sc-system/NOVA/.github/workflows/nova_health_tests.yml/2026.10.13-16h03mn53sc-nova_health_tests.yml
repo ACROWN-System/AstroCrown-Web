@@ -1,0 +1,32 @@
+name: NOVA Health Tests
+
+on:
+  push:
+    paths:
+      - 'NOVA/**'
+      # Any workflow change must run offline compile and unit tests, including
+      # manually dispatched integration-test workflow changes.
+      - '.github/workflows/**'
+  # Run on every PR so this remains a reliable required check, even for workflow/docs changes.
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Compile NOVA Python
+        run: python -m compileall -q NOVA
+
+      - name: Test NOVA health architecture
+        run: python -m unittest discover -s NOVA/tests -p 'test_*.py' -v

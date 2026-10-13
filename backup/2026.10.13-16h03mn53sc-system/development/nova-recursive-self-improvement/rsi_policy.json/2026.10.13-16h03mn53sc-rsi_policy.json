@@ -1,0 +1,147 @@
+{
+  "schema_version": 3,
+  "candidate_scope": {
+    "allowed_prefixes": [
+      "development/"
+    ],
+    "protected_paths": [
+      "development/nova-recursive-self-improvement/evaluator.py",
+      "development/nova-recursive-self-improvement/rsi_engine.py",
+      "development/nova-recursive-self-improvement/rsi_policy.json",
+      "development/nova-recursive-self-improvement/candidate.schema.json",
+      "development/nova-recursive-self-improvement/tests/",
+      ".github/",
+      "development/nova-recursive-self-improvement/provider_client.py",
+      "development/nova-recursive-self-improvement/preflight.py",
+      "development/nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md",
+      "development/nova-recursive-self-improvement/benchmarks/",
+      "development/nova-recursive-self-improvement/sandbox_runtime.py",
+      "development/nova-recursive-self-improvement/README.md",
+      "development/nova-recursive-self-improvement/IMPLEMENTATION.md",
+      "development/nova-recursive-self-improvement/benchmark_dispatcher.py",
+      "development/nova-recursive-self-improvement/benchmark_profiles.json",
+      "development/nova-recursive-self-improvement/tests/test_benchmark_dispatcher.py",
+      "development/nova-recursive-self-improvement/evidence_verifier.py",
+      "development/nova-recursive-self-improvement/cycle_detector.py",
+      "development/nova-recursive-self-improvement/INDEPENDENT-REVIEW-PACKAGE.md",
+      "development/nova-recursive-self-improvement/weak_rsi_report.py"
+    ],
+    "forbidden_path_fragments": [
+      ".env",
+      "credentials",
+      "secret",
+      "private_key",
+      "id_rsa",
+      ".git",
+      ".gitmodules"
+    ]
+  },
+  "evaluation": {
+    "timeout_seconds": 300,
+    "require_benchmark": true,
+    "benchmark_command_env": "RSI_BENCHMARK_COMMAND",
+    "provider_timeout_seconds": 120
+  },
+  "budget": {
+    "max_proposer_calls_per_cycle": 1,
+    "max_candidate_attempts_per_cycle": 1,
+    "max_context_chars": 16000,
+    "max_output_tokens": 1536,
+    "max_total_tokens_per_cycle": 8000,
+    "require_usage_telemetry": true,
+    "max_cycles_per_utc_day": 1,
+    "max_cycles_per_utc_month": 1
+  },
+  "promotion": {
+    "mode": "candidate-branch",
+    "allow_main": false,
+    "require_benchmark_pass": true
+  },
+  "implementation_readiness": {
+    "status": "INCOMPLETE",
+    "require_explicit_ready": true,
+    "promotion_blocked_until_ready": true,
+    "note": "The RSI subsystem remains implementation-gated until the protected benchmark, independent evaluation checks, and runtime verification are complete. This status must not be changed by candidate code. Monthly schedule configuration does not satisfy these gates. Strong RSI must not make a provider call or create a candidate until the independently reviewed benchmark/workload, data-use eligibility, isolated execution and remaining protected checks are genuinely READY."
+  },
+  "candidate_limits": {
+    "max_patch_chars": 120000,
+    "max_patch_lines": 5000,
+    "max_patch_files": 20
+  },
+  "context": {
+    "excluded_prefixes": [
+      "development/verification/archive/",
+      "development/verification/evidence/",
+      "backup/"
+    ],
+    "priority_prefixes": [
+      "development/nova-recursive-self-improvement/",
+      "development/nova-ai-orchestration/",
+      "development/nova-context-memory-optimization/",
+      "development/gpu-infrastructure/",
+      "development/ai-media-generator/",
+      "development/Prompt-Guide.md",
+      "development/DEVELOPMENT-AND-AUDIT-CONVENTION.md",
+      "development/SECURITY-BASELINE.md",
+      "development/README.md"
+    ]
+  },
+  "provider": {
+    "api_key_env": "GROQ_API_KEY_01",
+    "base_url_env": "RSI_AI_BASE_URL",
+    "model_env": "RSI_AI_MODEL",
+    "allowed_hosts": [
+      "api.groq.com"
+    ],
+    "max_response_bytes": 262144,
+    "default_base_url": "https://api.groq.com/openai/v1",
+    "default_model": "openai/gpt-oss-20b"
+  },
+  "sandbox": {
+    "runtime": "docker",
+    "image": "python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258",
+    "expected_image_id": "sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524",
+    "platform": "linux/amd64",
+    "max_output_bytes": 32000,
+    "max_output_file_bytes": 67108864,
+    "max_open_files": 256,
+    "max_cpu_seconds": 120,
+    "max_memory": "2g",
+    "max_cpus": "2",
+    "max_pids": 128,
+    "tmpfs_size": "128m"
+  },
+  "weak_rsi": {
+    "mode": "MANUAL_HUMAN_IN_THE_LOOP",
+    "trigger": "workflow_dispatch_only",
+    "provider_calls_per_invocation": 1,
+    "candidate_execution_allowed": false,
+    "source_changes_allowed": false,
+    "branch_or_pull_request_creation_allowed": false,
+    "main_or_policy_write_allowed": false,
+    "human_decision_required_before_implementation": true,
+    "output": "proposal_or_no_change_report_artifact",
+    "fail_closed_on_missing_data_use_eligibility": true
+  },
+  "strong_rsi_safety": {
+    "cadence": "ONCE_PER_UTC_MONTH",
+    "scheduled_only": true,
+    "strict_improvement_required": true,
+    "mandatory_regressions_allowed": 0,
+    "fail_closed_on_missing_or_inconclusive_evidence": true,
+    "no_change_when_no_safe_strict_improvement_is_proven": true,
+    "candidate_execution_requires_immutable_sandbox": true,
+    "promotion_requires_task_matched_independently_approved_benchmark": true,
+    "direct_main_promotion_allowed": false,
+    "automatic_merge_allowed": false,
+    "production_change_requires_human_review": true,
+    "model_claims_of_optimality_are_not_proof": true,
+    "note": "A monthly run may conclude NO_CHANGE only when the protected evidence supports no qualifying change; absence of observed improvement is not proof of global optimality. Any uncertainty, test failure, mandatory regression, or missing evidence blocks the candidate.",
+    "lifecycle_status": "SUSPENDED",
+    "active_workflow_path": null,
+    "suspended_workflow_template": "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml",
+    "reactivation_requires_explicit_human_release": true,
+    "provider_calls_permitted_while_suspended": 0,
+    "required_reactivation_document": "development/nova-recursive-self-improvement/STRONG-RSI-STATUS.md"
+  }
+}

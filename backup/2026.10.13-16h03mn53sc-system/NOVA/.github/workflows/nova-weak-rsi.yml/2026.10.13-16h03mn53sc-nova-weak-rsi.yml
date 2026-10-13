@@ -1,0 +1,86 @@
+name: NOVA Weak RSI — Manual Human-in-the-Loop Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      provider:
+        description: Provider for this one report request
+        type: choice
+        required: true
+        default: groq
+        options:
+          - groq
+          - gemini
+      data_use_eligibility:
+        description: Choose approval only after reviewing the selected provider's current terms; NOT_APPROVED makes no provider call
+        type: choice
+        required: true
+        default: NOT_APPROVED
+        options:
+          - NOT_APPROVED
+          - PASS_AFTER_REVIEW
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nova-weak-rsi-manual
+  cancel-in-progress: true
+
+jobs:
+  weak-rsi-report:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout NOVA workflow repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Fetch public AstroCrown-Web source without credentials
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/ACROWN-System/AstroCrown-Web.git "$RUNNER_TEMP/astro-source"
+          echo "AstroCrown-Web source commit: $(git -C "$RUNNER_TEMP/astro-source" rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Run one bounded Groq Weak RSI report
+        if: inputs.provider == 'groq'
+        env:
+          GROQ_API_KEY_01: ${{ secrets.GROQ_API_KEY_01 }}
+          WEAK_RSI_DATA_USE_ELIGIBILITY: ${{ inputs.data_use_eligibility }}
+        run: |
+          set -euo pipefail
+          python "$RUNNER_TEMP/astro-source/development/nova-recursive-self-improvement/weak_rsi_report.py" \
+            --repo-root "$RUNNER_TEMP/astro-source" \
+            --provider groq \
+            --output "$RUNNER_TEMP/weak-rsi-report.md"
+
+      - name: Run one bounded Gemini Weak RSI report
+        if: inputs.provider == 'gemini'
+        env:
+          GEMINI_API_KEY_01: ${{ secrets.GEMINI_API_KEY_01 }}
+          WEAK_RSI_DATA_USE_ELIGIBILITY: ${{ inputs.data_use_eligibility }}
+        run: |
+          set -euo pipefail
+          python "$RUNNER_TEMP/astro-source/development/nova-recursive-self-improvement/weak_rsi_report.py" \
+            --repo-root "$RUNNER_TEMP/astro-source" \
+            --provider gemini \
+            --output "$RUNNER_TEMP/weak-rsi-report.md"
+
+      - name: Upload Weak RSI decision-support report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nova-weak-rsi-report-${{ github.run_id }}
+          path: ${{ runner.temp }}/weak-rsi-report.md
+          if-no-files-found: warn
+          retention-days: 30
