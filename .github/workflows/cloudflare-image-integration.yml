@@ -53,20 +53,20 @@ jobs:
 
       - name: Verify required secrets are configured
         env:
-          CLOUDFLARE_API_KEY_01: ${{ secrets.CLOUDFLARE_API_KEY_01 }}
+          ASTROCROWN_CLOUDFLARE_AI_TOKEN: ${{ secrets.ASTROCROWN_CLOUDFLARE_AI_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${CLOUDFLARE_API_KEY_01}" || -z "${CLOUDFLARE_ACCOUNT_ID}" ]]; then
-            echo "::error::Configure CLOUDFLARE_API_KEY_01 and CLOUDFLARE_ACCOUNT_ID as AstroCrown-Web Actions secrets. Do not paste secrets into logs or prompts."
+          if [[ -z "${ASTROCROWN_CLOUDFLARE_AI_TOKEN}" || -z "${CLOUDFLARE_ACCOUNT_ID}" ]]; then
+            echo "::error::Configure ASTROCROWN_CLOUDFLARE_AI_TOKEN and CLOUDFLARE_ACCOUNT_ID as AstroCrown-Web Actions secrets. Do not paste secrets into logs or prompts."
             exit 2
           fi
           echo "Required secret names are present; secret values were not printed."
 
       - name: Generate and validate one image
         env:
-          CLOUDFLARE_API_KEY_01: ${{ secrets.CLOUDFLARE_API_KEY_01 }}
+          ASTROCROWN_CLOUDFLARE_AI_TOKEN: ${{ secrets.ASTROCROWN_CLOUDFLARE_AI_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           MEDIA_PROMPT: ${{ inputs.prompt }}
           IMAGE_WIDTH: ${{ inputs.width }}
