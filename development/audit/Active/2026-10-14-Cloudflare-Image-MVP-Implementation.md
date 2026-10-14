@@ -18,7 +18,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 1. First priority: useful static images for the homepage's deep-space/environment layers and AI Token Generator logos. Transparent foreground assets are a separately verified output requirement; do not assume an opaque text-to-image endpoint emits real alpha.
 2. Build one AstroCrown-owned service boundary with provider-specific code isolated in an adapter. Initial adapter: Cloudflare Workers AI `@cf/bytedance/stable-diffusion-xl-lightning`, because this account already has Cloudflare Workers AI LLM credentials and the provider documents an image endpoint. Existing LLM access does not prove image entitlement or operation.
 3. Keep image generation separate from optional LLM prompt/metadata assistance; no LLM call is required to invoke the image adapter.
-4. No payment method, no spend, no paid fallback, no unattended provider calls. The real-provider integration test must be manually triggered on `main` only and only after the project repository contains a narrowly scoped token and Account ID.
+4. No payment method, no spend, no paid fallback, no unattended provider calls. The real-provider integration test must be manually triggered from NOVA `main` only, using the existing NOVA repository secrets and an explicit no-payment confirmation.
 5. Use no new Python runtime dependencies. Validate the exact HTTPS API host, binary image/png response contract, PNG structure/dimensions/checksums, and output path behavior. Do not log credential values.
 6. Record provenance beside each saved asset. Generated assets are not automatically added to the regular website or promoted commercially.
 7. Keep video in the same target system but separate its adapter/runtime/capacity qualification; do not block the image MVP on a still-unqualified video GPU pool.
@@ -58,7 +58,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 
 - Added `development/ai-media-generator/cloudflare_image.py`: fixed Cloudflare endpoint, bounded request inputs, secret-safe errors, redirect rejection, the documented binary-PNG response contract, PNG chunk CRC/bounded decompression/dimension validation, no-overwrite output and provenance sidecar.
 - Added deterministic tests under `development/ai-media-generator/tests/test_cloudflare_image.py` for success variants, malformed output, provider errors, redirects, dimensions, checksums and no-overwrite behavior.
-- Added the offline-test CI workflow in AstroCrown-Web. The original direct-live workflow required AstroCrown-Web repository secrets that are not present; the follow-on credential-owned qualification runner is being moved to NOVA to use the existing NOVA secrets. The NOVA runner will upload only the image and provenance as a 7-day artifact.
+- Added the offline-test CI workflow in AstroCrown-Web. The direct-live workflow is being removed from AstroCrown-Web because its repository secrets are intentionally not duplicated there. The credential-owning qualification runner is being moved to NOVA to use existing NOVA secrets. The NOVA runner checks out the reviewed adapter commit anonymously by immutable SHA and uploads only the image and provenance as a 7-day artifact.
 - No live provider call has been made, and this adapter is not yet qualified. The current PR check suite must run against its exact head before merge; a successful PR suite would establish offline/code correctness only.
 
 ## Handoff
