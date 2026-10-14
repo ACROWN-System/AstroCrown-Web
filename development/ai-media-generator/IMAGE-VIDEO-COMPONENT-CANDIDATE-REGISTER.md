@@ -62,6 +62,16 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 - One qualified external API call can create a source asset that is reused in many compositions. Use a single request to return several assets only when the exact endpoint documents independent outputs and returns each asset separately. An image-edit API that blends multiple input images into one output does not replace a non-destructive layer/composition system.
 - Keep image generation, alpha post-processing, internal composition and final delivery as independently replaceable/testable components. A failure or rights limitation in one route must not require redesigning all compositions.
 
+### Timing decision — defer launch-scale work until pre-paid-launch readiness
+
+The possible launch-surge/cold-start problem is a **future release-readiness gate, not a reason to divert current prototype work**. Keep today's scope proportional to the $0 MVP and build only foundations that already serve the current implementation. Do not run speculative load tests, benchmark every GPU provider's startup behavior, choose traffic thresholds without traffic evidence, or spend scarce inference/GPU budget on a hypothetical launch surge now.
+
+**During current development:** keep the website and saved assets independent of generation where the current design already supports this; preserve generated files and job/result state; and use simple provider-neutral job boundaries and offline/mock checks when they are already needed for the current workflow. Avoid building a production-scale orchestration/queueing stack solely for a not-yet-scheduled paid launch.
+
+**Reopen this work in the pre-launch window, before accepting public paid generation orders:** use the then-current provider shortlist and evidence of launch interest to measure cold-start behavior, establish a realistic load hypothesis, size bounded admission/queues against a disclosed wait policy, and test surge, quota exhaustion, recovery and rollback. Start early enough in that window to fix problems or restrict/delay the feature before launch. Do not postpone the decision until after paid orders are accepted.
+
+The approximately four-minute startup duration below remains a user-observed planning assumption—not a verified universal fact. The later test should replace it with provider-specific measurements plus a recovery margin. Until that future gate passes, this concern does not block current image/model research or the non-generation parts of the website; it does prohibit an unsupported promise of unrestricted, always-available paid generation.
+
 ### Launch-event surge and GPU cold-start gate
 
 **Planning input:** the user has observed that GPU providers accepting crypto payment can require roughly four minutes before a GPU becomes hot/ready. Treat four minutes as a conservative launch-planning assumption for an unavailable/cold alternative, not as a verified universal provider guarantee. Measure each actual provider's cold-start distribution when an eligible test route exists; plan against the measured high-percentile startup time plus an explicit recovery margin, never the best-case time.
