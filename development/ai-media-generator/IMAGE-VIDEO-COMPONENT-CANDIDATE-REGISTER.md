@@ -62,6 +62,46 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 - One qualified external API call can create a source asset that is reused in many compositions. Use a single request to return several assets only when the exact endpoint documents independent outputs and returns each asset separately. An image-edit API that blends multiple input images into one output does not replace a non-destructive layer/composition system.
 - Keep image generation, alpha post-processing, internal composition and final delivery as independently replaceable/testable components. A failure or rights limitation in one route must not require redesigning all compositions.
 
+### Graceful growth and low-disruption transition policy
+
+**User-facing goal:** traffic growth or a GPU/provider migration should not take down AstroCrown's website, erase work, silently reduce paid output quality, or expose users to avoidable changes in behavior. This is a design target, not a promise of unlimited availability under a $0 compute budget.
+
+#### Separate the user experience from generation capacity
+
+- Keep core website browsing, directory navigation, saved compositions, and already-generated asset delivery independent from live image-generation workers. Existing approved assets and compositions must remain usable during provider outage, quota exhaustion, GPU cold-start, or model migration.
+- Put generation behind an asynchronous, provider-neutral job interface. Return a stable job ID and explicit state rather than holding a page request open while a GPU starts. A queue smooths spikes; it does not create additional compute and must have a bounded admission policy.
+- Use idempotency keys and persistent job/result state so client retries, worker restarts, and at-least-once queue delivery do not create duplicate paid work or overwrite a user's result. Repeated processing must be safe.
+- Define observable lifecycle states, including at least accepted/queued, running, succeeded, retrying, paused for capacity, and terminal failure/requires action. Preserve state and explain delays honestly; do not show false completion or invent exact ETAs before a reliable latency baseline exists.
+- Bound queue size, concurrency and per-user admission using measured resources and the tier's published policy. When capacity reaches its limit, pause/reject new jobs clearly, or accept only work that can be honored within the stated service terms. Never create an unbounded backlog that appears to accept work but cannot finish it.
+
+#### Fail over safely, not silently
+
+- Keep one provider-neutral job contract and versioned adapters. A provider outage can fail over only to an already qualified route that meets the same requested capability and quality floor, and whose cost/terms are authorized. Do not silently downgrade to a cheaper model or switch a user request from true-alpha generation to an opaque image.
+- When the same model release is deployed on another qualified GPU host, use a small canary and compare validity, alpha, task-specific visual quality, error rate, memory behavior, and latency before gradually widening traffic. Do not send duplicate shadow inference traffic where it would consume scarce credits unless separately budgeted and authorized.
+- Keep an explicit rollback path to the previous qualified deployment. Stop the rollout when quality or stability gates fail. The previous approved model/artifact library remains intact.
+- Under current $0 constraints, do not assume a permanently warm standby GPU or unlimited queue processing. Make cold start, session loss, quota exhaustion and unavailable fallback explicit failure modes; test the control paths offline where possible.
+
+#### Proactive capacity signals
+
+Collect actual observations before setting numeric thresholds: accepted and completed jobs, generation success/error rates, p50/p95 latency, queue depth and oldest-job age, retries, provider 429/5xx behavior, current usable quota/runway, GPU startup time, memory failures, and the minimum remaining compute needed for migration qualification. Start transition readiness before expected capacity runway drops below the required test budget plus a recovery reserve.
+
+Use circuit breakers and bounded exponential backoff with jitter for transient failures; do not retry permanent permission, billing, model-not-found or invalid-request errors as if they were transient. Keep failed jobs in a reviewable terminal/dead-letter state instead of deleting user intent. Queue semantics may deliver a message more than once, so deduplication is mandatory where repeated processing could incur cost or create duplicates.
+
+#### Test the overload and migration paths before paid rollout
+
+Add offline/mock tests for provider outage, exhausted quota, slow/cold GPU, bounded/full queue, duplicate delivery, worker restart, idempotent result storage, unavailable fallback, and rollback. These tests prove orchestration controls, not live inference quality. The predeclared live quality suite remains mandatory and cannot be shortened to fit low credits.
+
+A realistic migration sequence is: (1) record the current observed baseline; (2) verify the new target offline; (3) run only the predeclared minimal live qualification set when no-cost access permits; (4) canary the same pinned model/stack on the target; (5) increase traffic only while measured quality/capacity/stability gates pass; (6) keep the old route and rollback mechanism until the new route has met a defined evidence window; (7) decommission only after capacity and artifact integrity are proven. The number and duration of stages must be based on available resources and the service risk, not arbitrary percentages.
+
+If the required test set cannot be completed within free eligible resources, mark the target **BLOCKED / INSUFFICIENT TEST BUDGET**. Keep the current qualified route if available, queue or restrict new generation transparently under published terms, and defer migration; do not pretend the queue or a mock test has solved the capacity gap.
+
+**References to recognized reliability practices:**
+- Google SRE, Handling Overload: https://sre.google/resources/book-update/handling-overload/
+- Google SRE, Addressing Cascading Failures and load shedding: https://sre.google/sre-book/addressing-cascading-failures/
+- AWS Well-Architected, graceful degradation: https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_graceful_degradation.html
+- Cloudflare Queues, queueing and decoupling: https://developers.cloudflare.com/queues/reference/how-queues-works/
+- Cloudflare Queues delivery guarantees (at-least-once and deduplication/idempotency considerations): https://developers.cloudflare.com/queues/reference/delivery-guarantees/
+
 ### Zero-cost migration readiness and capacity guardrails
 
 **Constraint:** Free provider credits or notebook quotas may be too small to qualify a migration when user demand increases. Do not assume the target provider will provide enough free inference for a full migration test. Do not solve the problem by silently lowering quality, hiding the limitation, or triggering unapproved paid usage.
