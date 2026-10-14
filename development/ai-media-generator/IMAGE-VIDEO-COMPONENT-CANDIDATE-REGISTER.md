@@ -1,6 +1,6 @@
 # Image and Video Component Candidate Register
 
-**Document revision:** 2026-10-13  
+**Document revision:** 2026-10-14  
 **Initial evaluation:** 2026-10-10  
 **Status:** ACTIVE RESEARCH — no complete workflow or generation backend approved  
 **Repository baseline:** `main` at merge commit `1d5742890c68210513485841f27bae3450cfcdff`  
@@ -33,6 +33,8 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 | IMG-02 | Cloudflare Workers AI `@cf/stabilityai/stable-diffusion-xl-base-1.0` — alternative hosted text-to-image | Cloudflare labels it Beta and shows $0.00 per step; its model page links its upstream terms/license. | Same account/usage verification is required. The central pricing table does not list this Beta model, so record actual dashboard/model behavior instead of assuming the display establishes all billing conditions. | **BLOCKED** — alternative comparison candidate, not approved. |
 | IMG-03 | Cloudflare Workers AI `@cf/black-forest-labs/flux-1-schnell` — hosted image candidate | Cloudflare central pricing documents 4.80 Neurons per 512×512 tile and 9.60 Neurons per step, with a general Free allocation of 10,000 Neurons/day. The upstream FLUX.1 schnell model card identifies Apache-2.0 and a 12B-parameter text-to-image model. | A published free allocation is not measured capacity or proof of this account's eligibility. Exceeding the Workers Free allocation stops further operations; paid-plan use is outside the current constraint. | **BLOCKED** — account test, usage-meter behavior, output quality, and hosted terms need evidence. |
 | IMG-04 | Local FLUX.1 schnell weights through a compatible inference engine | Upstream model card/repository identify Apache-2.0 for FLUX.1 schnell and provide reference inference code. FLUX.1 dev/fill/edit variants are separately licensed and must not inherit schnell's status. | No free GPU has been verified for this user's actual environment. Model weights, text encoder, runtime dependencies, and memory/latency must be measured; open weights do not make compute free. | **BLOCKED** — rights are promising for the exact base model, but runtime/dependency and hardware gates remain. |
+| IMG-05 | Local ByteDance SDXL-Lightning 4-step UNet plus SDXL base through Diffusers — practical first local-runtime candidate | The official model card identifies the weights as `openrail++`, provides a documented FP16 Diffusers path using the SDXL base and a 4-step UNet checkpoint, and describes 1024px generation in a few steps. The base checkpoint and all dependencies require separate terms/provenance review; OpenRAIL restrictions mean this is not an unrestricted OSI-approved open-source license. | A bounded notebook-GPU test may be feasible on a compatible 16 GB accelerator, but exact memory, download size, runtime compatibility, account no-card eligibility, and actual output remain untested. Kaggle free GPU quotas are variable and do not provide persistent serving. | **BLOCKED** — candidate for bounded technical feasibility only; commercial promotion requires full component-rights review. |
+| IMG-06 | Local Tongyi-MAI Z-Image-Turbo (6B) through a compatible Diffusers/runtime stack — permissive-license alternative | The publisher's model card labels the repo Apache-2.0, describes a 6B model, 8 NFEs for Turbo, and says it fits within 16 GB VRAM consumer devices. Its quick-start uses `bfloat16`; compatibility with notebook GPUs lacking native BF16 support is unknown and must not be assumed. | Runtime/dtype, exact GPU allocation, model download, generation, account no-card eligibility, and usable time remain unverified. | **BLOCKED** — rights are promising for the stated model repository, but runtime/hardware fit and all dependency terms remain to be verified. |
 | VID-01 | Wan 2.2 TI2V-5B — local text/image-to-video baseline | The official Wan2.2 repository states that the models in the repository are under Apache 2.0. Its documentation describes TI2V-5B at 720p/24fps and indicates at least 24 GB VRAM for this path. The 14B paths require substantially more memory (the repository documents 80 GB for relevant single-GPU examples). | Model download, exact component versions, available GPU, generation time, VRAM and output quality are untested. No qualifying free compute path is currently established. | **BLOCKED** — strong licensing candidate; compute feasibility remains a mandatory barrier. |
 | VID-02 | Lightricks LTX-2.5 — text/image/video-to-video and synchronized audio/video | Official model card says commercial and production use at no cost for entities under $10M annual revenue under the LTX-2.x Community License. The same source says transfer of fine-tunes may require a paid license; over $10M annual revenue requires a paid commercial agreement. It requests agreement to share contact information and receive offers/updates to access gated weights. The documented selected model files total roughly 66 GiB for one recommended pipeline. | This is not the same as an unrestricted Apache-2.0 model. Its revenue threshold, fine-tune transfer terms, gated access/marketing consent, hardware needs, and free compute must be considered. | **BLOCKED** — potentially useful optional video candidate, not a foundation dependency until long-term license and access constraints are resolved. |
 | VID-03 | Tencent HunyuanVideo-1.5 — alternative video model | The official Tencent Hunyuan Community License is royalty-free within its defined territory, which excludes the EU, UK and South Korea. It requires downstream service terms to carry specified restrictions, and calls for clear provider identity/non-affiliation disclosure when offering third-party services. It prohibits using outputs/results to improve other AI models (apart from Hunyuan derivatives). | Local/hardware and execution tests remain outstanding. Its downstream restrictions also complicate any proposed process that would use Hunyuan outputs to train or improve another model. | **BLOCKED / RESTRICTED** — only consider if the license and product obligations can be implemented and the intended use does not violate the cross-model restriction. |
@@ -105,6 +107,27 @@ A qualified post-processing route may satisfy the layer requirement when native 
 - ComfyUI license: https://github.com/comfy-org/ComfyUI/blob/master/LICENSE
 - ComfyUI core workflow concepts: https://docs.comfy.org/essentials/core-concepts/links
 
+### Provider-neutral GPU execution candidates — checked 2026-10-14
+
+- ByteDance SDXL-Lightning official model card and FP16 Diffusers example: https://huggingface.co/ByteDance/SDXL-Lightning
+- SDXL-Lightning license file: https://huggingface.co/ByteDance/SDXL-Lightning/blob/main/LICENSE.md
+- Stability AI SDXL base model card and terms: https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0
+- Tongyi-MAI Z-Image-Turbo official model card: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
+- Z-Image official project repository: https://github.com/Tongyi-MAI/Z-Image
+- Kaggle GPU notebook usage guidance: https://www.kaggle.com/docs/efficient-gpu-usage
+- Kaggle notebook GPU availability and session resources: https://www.kaggle.com/docs/notebooks
+- Google Colab FAQ and free-tier resource/policy restrictions: https://research.google.com/colaboratory/faq.html
+- Hugging Face ZeroGPU quota and operating model: https://huggingface.co/docs/hub/main/en/spaces-zerogpu
+
+**Evidence interpretation:**
+
+- SDXL-Lightning provides a documented FP16 Diffusers path, making it a plausible first bounded runtime test. Its `openrail++` license and SDXL base/dependency terms are not equivalent to unrestricted Apache-2.0 licensing; technical success cannot clear commercial rights.
+- Z-Image-Turbo is a permissive-license alternative, not a proven runtime. The official card's 16 GB statement is a model-family/hardware claim, not evidence that a specific Kaggle GPU, precision, library build, or current notebook image will execute it successfully; the published quick-start uses `bfloat16`.
+- Kaggle's published free GPU allocation is quota-limited and subject to demand; it can support a bounded interactive feasibility test, but it is not a durable production endpoint. The account's actual accelerator options, remaining quota, terms, and whether any payment-method registration is required must be verified in the account before a run.
+- Google Colab is not a candidate for hosting AstroCrown's generator on its free managed runtime: its official FAQ prohibits non-interactive web-service/media-serving use and warns that content-generation web-UI use commonly causes termination. It may be considered only for a policy-compliant interactive experiment, not as persistent or guaranteed capacity.
+- Hugging Face ZeroGPU documents 5 GPU-minutes/day for a free account. That is too small to treat as a material sustained-capacity foundation, although a small bounded demonstration may be useful if its other terms and model constraints fit.
+- None of these published allocations counts toward the 86,400 GPU-minute monthly target until actual accessible, permitted GPU execution is measured. Do not multiply quotas by creating accounts or otherwise circumventing provider limits.
+
 ## 4. Important findings
 
 ### F-001 — A hosted API is the least-complex first route to test for images
@@ -131,9 +154,17 @@ ComfyUI could simplify orchestration and make multi-model compositions easier, b
 
 No local hardware details or free GPU allocation have yet been verified for this runtime. There is no evidence yet that Wan2.2, LTX-2.5, or any other local video model can run persistently at $0 and without payment-method prerequisites. Cloudflare's documented image API does not establish free video compute. Avoid installing/downloads and avoid claiming an always-on GPU until a real, permissible runtime is identified.
 
+
+### F-007 — A plausible open-weight image candidate and free test environment now exist, but the pair is unqualified
+
+The official ByteDance SDXL-Lightning model card documents a 4-step FP16 Diffusers route, while its license is `openrail++` and its SDXL base model/dependencies need separate review. The official Tongyi-MAI Z-Image-Turbo card labels its model repository Apache-2.0 and describes a 6B model that fits 16 GB VRAM, but its quick-start uses `bfloat16`, whose compatibility with a free notebook's actual GPU is not established. Kaggle documents free GPU notebook access with a quota generally up to 30 GPU-hours/week, subject to demand and account limits. These facts support a bounded feasibility hypothesis, not a verified runnable or commercially cleared route.
+
+Google Colab's free managed runtime is unsuitable as the generator's persistent web-serving foundation under its stated restrictions. Hugging Face ZeroGPU's documented 5-minute/day free quota is not material sustained capacity. These alternatives must not be counted as interchangeable capacity or treated as guaranteed allocations.
+
 ## 5. Current decisions
 
 - Keep the service model-agnostic and modular.
+- Test SDXL-Lightning's documented FP16 route first for a bounded local-runtime proof, only after the account/no-card and GPU allocation gates are confirmed; retain Z-Image-Turbo as the more permissively licensed alternative but BLOCKED until actual dtype/runtime compatibility is proven.
 - Check SDXL-Lightning first in the existing Cloudflare account, then compare SDXL Base only if the account/usage screen supports it.
 - Retain FLUX.1 schnell as a separate candidate for local or hosted execution; do not assume its hosted price is identical to its local use or Apache model license.
 - Retain Wan2.2 TI2V-5B as a video candidate pending 24 GB VRAM or a verified free execution route.
@@ -161,10 +192,14 @@ Do not restart credential setup from zero or create another token by default. Fi
 
 ### Next controlled qualification
 
-1. Verify current $0/no-payment-method eligibility and exact terms for the selected image endpoint.
-2. Confirm that the endpoint actually returns generated image data and that the returned file can be retrieved and decoded.
-3. Run one bounded request only after eligibility, permissions, and the intended-use gate are satisfied. Record the exact model/version, parameters, output checksum, evidence date, latency/resource/quota observations where exposed, and failures.
-4. Keep the route BLOCKED for commercial promotion until every mandatory component and output-rights condition passes. Preserve a failed attempt as evidence; repeat a request only when it answers a new decision-relevant question.
+1. Verify current $0/no-payment-method eligibility and exact terms for the selected execution environment and model; for the local track, inspect the actual Kaggle accelerator/quota and confirm no payment method is required before running anything.
+2. Confirm the actual GPU architecture, VRAM, supported precision, disk capacity and session limit before downloading model weights.
+3. Test the documented SDXL-Lightning FP16/runtime combination in a bounded notebook session only if the preflight passes; record GPU name, VRAM, software versions, peak memory, startup/download time, generation latency, output validity and quota consumption.
+4. Keep Z-Image-Turbo as a separate Apache-2.0 model candidate, but do not assume its BF16 quick-start runs on the allocated GPU; test only if a compatible precision/runtime is documented.
+5. Keep the Cloudflare hosted route as a separate optional comparison; do not confuse hosted inference with local model execution.
+6. Confirm that the selected route returns generated image data and that the returned file can be retrieved and decoded.
+7. Run one bounded request only after eligibility, permissions, and the intended-use gate are satisfied. Record the exact model/version, parameters, output checksum, evidence date, latency/resource/quota observations where exposed, and failures.
+8. Keep the route BLOCKED for commercial promotion until every mandatory component and output-rights condition passes. Preserve a failed attempt as evidence; repeat a request only when it answers a new decision-relevant question.
 
 No live request, credential modification, billing change, or provider promotion is authorized by this documentation alone.
 
