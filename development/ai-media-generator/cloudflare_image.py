@@ -2,8 +2,8 @@
 """Small, dependency-free Cloudflare Workers AI image adapter for AstroCrown.
 
 This is a development-only first slice. It supports one explicitly selected model,
-accepts the model's documented binary image/png response, validates the PNG
-container, and writes a local provenance sidecar. It does not approve commercial use.
+accepts structurally validated PNG or JPEG responses, records any provider MIME
+inconsistency, and writes a local provenance sidecar. It does not approve commercial use.
 """
 from __future__ import annotations
 
@@ -358,16 +358,6 @@ def _extract_image(
     # JPEG bytes with an image/png declaration are explicitly tolerated because
     # of the documented Cloudflare inconsistency. Provenance records this mismatch.
     return response_body, None, content_type
-
-
-def _extract_image(
-    response_body: bytes,
-    content_type: str,
-    expected_width: int,
-    expected_height: int,
-) -> tuple[bytes, str | None]:
-    # _extract_image validates both MIME declaration and actual container bytes.
-    return _extract_image(response_body, content_type, expected_width, expected_height)
 
 
 def request_image(
