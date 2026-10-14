@@ -101,6 +101,25 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 
 ### Architecture decision direction
 
+### Paid-user quality continuity requirement — 2026-10-15
+
+The user's concern is a commercial acceptance requirement: someone who pays during the sustainable tokenomics study should not receive a silently downgraded image-generation experience when AstroCrown moves to commercial deployment.
+
+Do not promise each new stochastic image will be identical or superior to every previous image. Instead, AstroCrown must define and enforce a versioned quality floor across all advertised paid use cases. Diffusers' official guidance notes that setting a seed helps control randomness but does not guarantee exact output equivalence across software/hardware platforms: https://huggingface.co/docs/diffusers/using-diffusers/reusing_seeds
+
+Before a paid launch or a materially different model migration:
+
+- Establish a baseline for the actual study model/output route and its supported paid capabilities. A study/beta label must be visible before purchase; it is not justification for silent degradation after payment.
+- Build a fixed, versioned, rights-cleared evaluation corpus that covers each advertised modality/asset type, including transparent alpha assets if that capability is sold.
+- Compare the qualified current release against each candidate release. Enforce technical hard gates and per-task quality floors; do not use a single aggregate score that hides a regression in transparency, logos or another supported task. Combine automated/technical checks with a blinded human quality review.
+- For a GPU-provider migration, first try the same pinned base weights, AstroCrown adapter, text encoders/VAE, tokenizer, scheduler, parameters and inference runtime on the new host. Treat a switch to a different hosted image model as a new model release, not a routine host change.
+- Reject, postpone or scope down any candidate that fails a critical task's quality floor or rights/technical gate. Keep the previously qualified deployment ready for rollback during a defined retention window.
+- Preserve the exact delivered asset bytes and checksums plus model-release provenance. A rollout must not rewrite or regenerate an already approved/delivered asset.
+- Notify users before a material behavior change. If equivalent validated quality cannot be maintained, preserve existing entitlements where feasible or define an explicit remedy process; review customer-facing terms with legal counsel.
+- Keep an internal release report with baseline/candidate identifiers and hashes, test corpus revision, outcomes per task, critical failures, human-review findings, latency/resource/cost measurements, and go/no-go decision.
+
+**Go/no-go criterion:** A new paid deployment is not approved simply because it has more resources, higher availability, lower prices or a newer model. It must be validated as meeting or exceeding the existing minimum quality floor for each critical paid capability. Until that evidence exists, the move remains blocked for the affected tier/use case.
+
 ### AstroCrown-owned model direction — 2026-10-15
 
 The desired long-term route is to maintain an AstroCrown-owned/versioned image model and inference pipeline, while replacing only the GPU execution host when capacity or price changes. This reduces dependence on provider-specific hosted image models, whose output behavior and parameters differ.
