@@ -62,6 +62,40 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 - One qualified external API call can create a source asset that is reused in many compositions. Use a single request to return several assets only when the exact endpoint documents independent outputs and returns each asset separately. An image-edit API that blends multiple input images into one output does not replace a non-destructive layer/composition system.
 - Keep image generation, alpha post-processing, internal composition and final delivery as independently replaceable/testable components. A failure or rights limitation in one route must not require redesigning all compositions.
 
+### Launch-event surge and GPU cold-start gate
+
+**Planning input:** the user has observed that GPU providers accepting crypto payment can require roughly four minutes before a GPU becomes hot/ready. Treat four minutes as a conservative launch-planning assumption for an unavailable/cold alternative, not as a verified universal provider guarantee. Measure each actual provider's cold-start distribution when an eligible test route exists; plan against the measured high-percentile startup time plus an explicit recovery margin, never the best-case time.
+
+A sudden launch-event burst can exhaust the current worker capacity before a replacement GPU is ready. Autoscaling is not instantaneous capacity, and a queue cannot create compute. The objective is to stop this from becoming a website-wide outage or a silent downgrade, even if generation must be limited.
+
+#### Pre-launch readiness gates
+
+- Do not enable unrestricted public on-demand generation at the launch event until the current operational capacity, measured request service rate, queue/admission controls, cold-start recovery path and critical failure behavior have been tested against a declared launch-load hypothesis. If there is no qualifying capacity evidence, launch the site/content but keep generation in a clearly disclosed limited preview, waitlist, or scheduled-access mode; do not accept paid generation work that the service cannot reasonably honor.
+- Build a launch-safe static experience: pre-generated, approved demonstration images and asset compositions; cached website files; static sample results; a clear generation availability/status message; and a path to sign up for access. Reuse these assets without calling a generator. Static samples must not be represented as freshly generated personalized results.
+- Forecast requests expected during the cold-start interval. At minimum, estimate the burst as the measured peak arrival rate multiplied by the cold-start window (use four minutes or a larger measured high-percentile duration), then include retry traffic and an explicit recovery margin. Use actual launch-registration/interest data where available; mark assumptions and uncertainty instead of inventing a traffic forecast.
+- Determine the maximum acceptable wait for each tier before the event. Size the queue and admission limit from measured sustainable throughput and that wait requirement. Never use an unbounded queue as a substitute for capacity.
+- Keep the quota and compute budget needed for the predeclared live quality/migration tests; do not consume all qualification headroom on launch demonstrations. Under $0, do not assume a paid warm spare or permanently hot GPU is available.
+- Predefine launch controls: rate limit and per-user concurrency limits, waitlist/controlled cohort switches, queue pause/resume, circuit breaker, retry budget, clear status/communications, and an operator kill switch that pauses new generation while preserving the site and already accepted work.
+
+#### Launch-day behavior
+
+- Serve the website, existing asset library, cached/static samples and saved compositions independently of GPU worker availability.
+- Route new generation requests through bounded admission to a persistent queue. Accept a job only if the applicable tier capacity/wait policy can honor it; otherwise clearly pause admission, rate-limit or direct the user to a waitlist. Show a durable job ID/status for accepted work.
+- If workers are cold, starting, out of quota, or failing, do not assume they will be ready within four minutes; report queued/temporarily unavailable state according to measured policy. Do not aggressively retry and amplify a launch surge. Use bounded backoff, circuit breakers and idempotency.
+- Never switch a request silently to a cheaper/unqualified model, return an opaque image for a promised transparent asset, or claim that a static sample is a personalized result. Preserve quality and honesty even when capacity is constrained.
+- Ramp admission gradually only after live measurements support it: arrival rate, successful completion rate, queue age/depth, error/429/5xx rate, observed cold-start time and spare usable quota. Stop the ramp and shed load when the observed limits are exceeded.
+- If a provider transition fails, roll back to the last qualified route where it is available. If there is no qualified route with usable capacity, pause new generation rather than make the site itself fail.
+
+#### Go/no-go rule
+
+A launch announcement, marketing interest or expected adoption is not capacity. If the launch-load hypothesis cannot be supported by measured free capacity plus a tested four-minute-or-longer cold-start plan and bounded queue, do not launch unrestricted generation as an always-available paid capability. Either restrict generation access transparently before the event, arrange a permitted and explicitly approved additional capacity/test budget, or defer the on-demand generation feature. The website and saved assets should still be available.
+
+**Reliability references:**
+- Google SRE, launch/production load best practices and warning not to mistake launch traffic for steady state: https://sre.google/sre-book/service-best-practices/
+- Google SRE, Handling Overload and load shedding: https://sre.google/resources/book-update/handling-overload/
+- AWS Well-Architected, throttling, retry control, queue limits and emergency levers: https://docs.aws.amazon.com/wellarchitected/latest/framework/rel-05.html
+- AWS Well-Architected, graceful degradation: https://docs.aws.amazon.com/wellarchitected/latest/framework/rel_mitigate_interaction_failure_graceful_degradation.html
+
 ### Graceful growth and low-disruption transition policy
 
 **User-facing goal:** traffic growth or a GPU/provider migration should not take down AstroCrown's website, erase work, silently reduce paid output quality, or expose users to avoidable changes in behavior. This is a design target, not a promise of unlimited availability under a $0 compute budget.
