@@ -21,6 +21,38 @@ The goal is to obtain the strongest fit-for-purpose capability that the evidence
 
 This is not a proposal to train a new foundation model or to merge every available model into one large checkpoint. "Our own generator" means our own governed application/service, interfaces, workflows, policy, queue, provenance and user experience; it does **not** imply that AstroCrown owns the underlying models or automatically owns every generated output.
 
+## Target architecture and execution order — unified image and video
+
+The intended outcome is **one AstroCrown-owned image-and-video generator**, with common service/job interfaces, shared brand direction and provenance, and replaceable task-specific adapters. The image-first execution order is a delivery strategy, not a narrower product ambition: it obtains a real homepage asset early, while video viability is investigated in parallel and cannot block the image path.
+
+### First executable slice: image
+
+Use the least complex route that can prove a real image request and retrieval under the $0/no-payment-method constraint and with commercially suitable rights for the intended background asset. Keep the exact model/provider, terms, parameters, output, provenance, observable resource use, quality review, and errors. LLM text or vision capabilities can help with prompt creation, composition planning, image analysis and evaluation; they are not a substitute for an endpoint that actually returns generated images.
+
+### Video remains in scope, with independent acceptance
+
+Continue a bounded video feasibility track without requiring it to finish before the image workflow. It should use the same AstroCrown-owned service boundary and visual rules, but its own adapter, model/dependency rights, runtime/hardware, memory, temporal quality, latency, output length, and capacity gates. If no suitable free video execution path is available, record video as BLOCKED and continue image generation and reusable asset work rather than blocking the whole system. Re-test when a concrete changed condition or candidate makes a new attempt informative.
+
+### Brand uniformity and commercial readiness
+
+Build an owned AstroCrown visual grammar: curated references, composition and lighting conventions, palette, reusable background/object layers, repeatable generation/processing presets, and project-specific output review. Start from the deep-space and homepage layer requirements in `development/index-section/BACKGROUND.md`. The recognizable vendor styles discussed in conversation were examples explaining the objective of visual consistency; they are not desired provider selections or brands to imitate.
+
+Commercial suitability is required for the final retained stack and every asset intended for commercial publication. Verify the software, exact weights, dependencies/extensions, hosted endpoint conditions, and asset-creation path separately. Temporary development routes may be used within their terms, but removing credentials later does not remove restrictions on outputs already produced. Keep unresolved assets BLOCKED for commercial promotion until cleared or regenerated through a qualified route.
+
+### Execution order
+
+Image proof → foundational homepage background → reusable brand layers and consistent workflows; pursue video feasibility in parallel → integrate a qualified video backend when its own gates pass → harden and expand the unified service for broader commercial usage.
+
+
+## Layer-aware output and real transparency
+
+The shared workflow shall distinguish an opaque environment/background from independent foreground layers. Where the composition requires an element to move, fade, scale, or be reused independently, the output contract must allow genuine alpha transparency.
+
+Do not assume every image model or endpoint supports native transparent output. Qualify the exact capability. If needed, use a separate licensed and compatible segmentation/matting/background-removal step; track the transformation and retain the original plus derived asset. Reject a simulated checkerboard/black/white background as proof of an alpha channel.
+
+Verify real alpha, edge quality, translucent effects, absence of visible halos/matte fringes, and compositing on both the AstroCrown deep-space background and a contrasting test background. Ensure that alpha survives asset optimization and delivery. Use PNG as a baseline transparent working master for static assets, then test any WebP/AVIF distribution conversion. Transparent video may be added through a separately qualified codec/container/player path, but must not block static transparent layers, ordinary video research, or the first opaque homepage background.
+
+
 ## 2. Integration-first principle
 
 Do not assume a single model or application is best for every media task. Evaluate a portfolio of compatible capabilities and make them available through one stable AstroCrown media-service boundary.
@@ -47,15 +79,14 @@ Keep application ownership and external dependencies separate.
 The media generator owns:
 
 - stable internal request and result schemas;
-- supported tasks and workflow presets;
-- user/feature eligibility and generation-job lifecycle;
-- task-specific routing policy;
-- prompt and reference-input handling;
-- retry, cancellation, duplicate-submission protection, and result retrieval where supported;
-- output validation and promotion into approved asset collections;
-- provenance, artifact identifiers and checksums;
-- model/workflow qualification status;
-- user-facing error/status information and operational observations.
+- supported media tasks and workflow presets;
+- the canonical generation-job lifecycle and artifact/result handling;
+- media-specific routing among already-qualified compatible workflows;
+- prompt/reference-input handling, output validation, provenance, and promotion evidence;
+- bounded retry, cancellation, and duplicate-submission protection where supported;
+- media-job status and operational observations.
+
+The media service must enforce caller and feature authorization at its boundary using the authoritative application/access-policy decision. It must not create a second account-eligibility policy or a separate waiting-list registry. Public feature eligibility and waiting-list ownership remain a future application-scope decision; do not create another subsystem or database before that feature is actually scoped.
 
 This layer should not require application code to know the specific GPU vendor, provider API, model checkpoint format, or workflow-engine details.
 
@@ -96,7 +127,23 @@ Do not confuse "open weights" with "free compute". Self-hosted inference still r
 
 ### 3.5 NOVA integration
 
-NOVA orchestration may understand user intent, ask for missing task details when required, select a qualified workflow, request generation, compare returned evidence, and communicate the job state. It should call the media service through a defined interface instead of owning media queues or depending directly on a particular GPU provider.
+NOVA orchestration may understand user intent, ask for missing task details when required, select a qualified workflow, request generation, compare returned evidence, and communicate the job state. It calls the media service through a defined interface; it does not own a second media-job queue or directly depend on a specific GPU provider.
+
+### 3.6 Responsibility ownership and minimal implementation
+
+| Responsibility | Canonical owner / rule |
+|---|---|
+| Homepage visual requirements, layer roles, and alpha acceptance | [BACKGROUND.md](../index-section/BACKGROUND.md) |
+| Exact model, endpoint, licensing, and workflow qualification evidence | [Candidate register](IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md) plus dated test evidence |
+| Media request/result contract, generation-job lifecycle, artifacts, provenance, and media-specific routing | This media-generator service |
+| Provider credentials, runtime environments, provider health, and compute observations | [Shared GPU infrastructure](../gpu-infrastructure/README.md); NOVA evidence may be consumed through an explicit compatible contract |
+| Cross-provider aggregate GPU-capacity accounting | [NOVA/gpu_capacity.py](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/gpu_capacity.py) where relevant; it is currently intended for non-commercial R&D and must not be presented as commercial capacity or live per-job availability |
+| Request interpretation and orchestration | [NOVA AI orchestration](../nova-ai-orchestration/README.md); invoke the media service rather than duplicating its queue or provider transport |
+| Public feature eligibility and waiting-list policy | Future application/access-policy boundary, to be decided when a public feature is scoped; no new subsystem or database is justified for the first internal proof |
+
+Do not copy NOVA's aggregate capacity calculator or provider-health probes into this repository. Share a schema/report or an explicit API contract when compatible evidence is available; the current subsystem documentation alone does not prove that a reusable executable cross-repository API exists.
+
+**Minimum first implementation:** one eligible image endpoint, one thin image adapter, request/response and file validation, retrieval of the actual image bytes, safe error classification, a small provenance manifest, deterministic positive/negative tests, and one bounded live integration test. Capture measured latency/resource/quota information only when the route exposes it; mark unavailable evidence as unknown/not exposed. Keep the first proof internal and synchronous unless the chosen endpoint requires asynchronous execution. Do not pre-build a public waiting list, persistent multi-user queue, general-purpose registry, multi-model router, or database unless a demonstrated requirement needs it. Add a second model or processing stage only after a baseline exists and a representative test shows why the extra mechanism is necessary.
 
 ## 4. License and permissions gate — each component, not just each model
 

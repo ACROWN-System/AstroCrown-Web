@@ -30,6 +30,14 @@ Build one shared media-generation service boundary with:
 
 Application features should not need to know which GPU provider executes a job. GPU infrastructure supplies or brokers compute; the media subsystem owns media-generation workflows and jobs; NOVA orchestration may request generation via a defined interface.
 
+## Architecture reference and scope
+
+The unified image/video target, image-first implementation order, service boundary, responsibility ownership, adapter design, provenance, and minimum executable image slice are defined once in [the multi-model composition strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md). Homepage layer roles and the alpha-transparency acceptance contract are defined in [BACKGROUND.md](../index-section/BACKGROUND.md), including R-036.
+
+This proposal owns the later access and operations questions: separate feature-access waiting lists from generation-job queues, staged user access, admission/stop policy, and capacity-aware operations. It does not redefine the media-service architecture or create another provider/capacity registry.
+
+Reuse shared capacity and provider evidence only through an explicit compatible interface. Keep qualified/projected capacity distinct from observed runnable capacity and actual completed-job usage. NOVA's current aggregate GPU report is R&D-scoped; it does not establish commercial-production capacity. The first internal image proof does not require a public waiting list or multi-user job system.
+
 ## 3. Distinguish two queues
 
 These are different controls and must not be represented as a single queue.

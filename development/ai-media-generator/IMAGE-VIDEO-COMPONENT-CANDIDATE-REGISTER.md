@@ -1,6 +1,7 @@
 # Image and Video Component Candidate Register
 
-**Evaluation date:** 2026-10-10  
+**Document revision:** 2026-10-13  
+**Initial evaluation:** 2026-10-10  
 **Status:** ACTIVE RESEARCH — no complete workflow or generation backend approved  
 **Repository baseline:** `main` at merge commit `1d5742890c68210513485841f27bae3450cfcdff`  
 **Owner:** `development/ai-media-generator/`  
@@ -36,6 +37,42 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 | VID-02 | Lightricks LTX-2.5 — text/image/video-to-video and synchronized audio/video | Official model card says commercial and production use at no cost for entities under $10M annual revenue under the LTX-2.x Community License. The same source says transfer of fine-tunes may require a paid license; over $10M annual revenue requires a paid commercial agreement. It requests agreement to share contact information and receive offers/updates to access gated weights. The documented selected model files total roughly 66 GiB for one recommended pipeline. | This is not the same as an unrestricted Apache-2.0 model. Its revenue threshold, fine-tune transfer terms, gated access/marketing consent, hardware needs, and free compute must be considered. | **BLOCKED** — potentially useful optional video candidate, not a foundation dependency until long-term license and access constraints are resolved. |
 | VID-03 | Tencent HunyuanVideo-1.5 — alternative video model | The official Tencent Hunyuan Community License is royalty-free within its defined territory, which excludes the EU, UK and South Korea. It requires downstream service terms to carry specified restrictions, and calls for clear provider identity/non-affiliation disclosure when offering third-party services. It prohibits using outputs/results to improve other AI models (apart from Hunyuan derivatives). | Local/hardware and execution tests remain outstanding. Its downstream restrictions also complicate any proposed process that would use Hunyuan outputs to train or improve another model. | **BLOCKED / RESTRICTED** — only consider if the license and product obligations can be implemented and the intended use does not violate the cross-model restriction. |
 | ENG-01 | ComfyUI — optional node/workflow composition engine | Official repository uses GPL-3.0 and documents graph-based workflows; official model integrations include multi-model image and video workflows. Each custom node, extension, model and checkpoint must be audited separately. | Engine is free software, but compute and model downloads are not free by implication. Must verify runtime compatibility, API isolation/authentication, extension supply chain, and obligations for the intended deployment/distribution. | **CANDIDATE, NOT APPROVED** — investigate as a reusable adapter/workflow engine; do not make it the sole product boundary by assumption. |
+
+## Capability routing: qualify exact endpoints, not provider brands
+
+**Checked:** 2026-10-13. This is a capability and execution screen—not approval of a provider or proof of a working workflow. The present hard constraint remains $0 expenditure and no mandatory payment method.
+
+The intended result is AstroCrown's own coherent image/video generator. It may use the existing configured provider credentials where a particular model and endpoint genuinely support the needed task; do not select or privilege an outside generator because a recognizable third-party brand was mentioned as an illustration. The target is our own visual identity and workflow, not adoption of someone else's product or style.
+
+| Capability path | Evidence / required gate | Current routing decision |
+|---|---|---|
+| Cloudflare Workers AI direct image generation | Official documentation lists text-to-image models and a Workers AI Free allocation of 10,000 Neurons/day. Account-specific no-payment eligibility, exact model/hosted terms, quota behavior, live request, returned image, quality and provenance still require evidence. | **FIRST ROUTE TO VERIFY** in the existing account. Never activate paid billing to make the test pass. |
+| Configured LLM APIs used as image-generator candidates | Evaluate each exact model ID and endpoint against official supported input/output modalities. Text generation can assist with prompt building, composition planning, metadata, checks and comparisons; vision input can analyze a supplied reference image. Neither proves the model returns newly generated image data. | **CAPABILITY GATE REQUIRED**. Accept as an image backend only when native image output is documented and tested on the current eligible account/plan. |
+| Configured LLM APIs used as orchestration support | The existing provider roster can supply prompt refinement, planning, text processing and output-review assistance where its exact models support those operations under the free-tier limits. | **SUPPORTING ROLE**. Route these tasks only to qualified models; do not confuse this with image creation. |
+| Image-generation model reached through a hosted provider | The exact hosted service's account entitlement, current no-payment route, model-specific terms, quota, output delivery, data handling and commercial-use conditions may differ from the upstream model's code/weights license. | **BLOCKED UNTIL END-TO-END EVIDENCE**. A model license or account key by itself does not qualify the route. |
+| Video generation | No complete video path is currently evidenced as runnable under the user's $0/no-payment-method constraint. | **PARALLEL FEASIBILITY TRACK**. Keep video as part of the target unified generator; its missing runtime must not block image generation or homepage assets. Test a candidate only when a bounded hypothesis and changed condition make the test informative. |
+
+### Routing and project-priority rules
+
+1. Keep one AstroCrown-owned service/job interface for both image and video; implement modality-specific adapters and acceptance gates behind it.
+2. The first concrete deliverable is a real, retrievable image candidate for the documented homepage background—not a provider survey, an HTTP 2xx, or an LLM-written prompt.
+3. Pursue video viability in parallel when useful, but any video blocker applies only to the video path.
+4. Record each asset's actual provider/model, generation route, terms evidence, relevant parameters and available provenance. The future removal of a credential does not clear restrictions on previous outputs.
+5. Commercial use remains a gate for every retained production dependency and asset intended for publication. Unknown or conflicting rights mean BLOCKED for commercial promotion.
+
+
+### Layer and alpha capability gate
+
+Transparent output must be tested as a distinct output capability, not assumed from ordinary image generation. For each candidate workflow, record:
+
+- whether the exact model/endpoint natively returns an alpha channel or requires a post-processing stage;
+- whether the actual returned and optimized file contains the expected alpha data;
+- edge quality and preservation of wispy or partly transparent elements;
+- whether the image composites cleanly over the AstroCrown background and a contrasting background;
+- alpha preservation through required crop/resize/optimization/storage/browser delivery;
+- component-specific commercial rights and asset provenance for every stage.
+
+A qualified post-processing route may satisfy the layer requirement when native alpha is unavailable, but it must itself be licensed, technically tested and provenance-tracked. Do not classify a flat background or a visual checkerboard as a transparent output. Static transparent images and alpha video are separate capabilities: lack of an alpha-video route does not block the image workflow.
 
 ## 3. Official sources
 
@@ -116,15 +153,21 @@ No local hardware details or free GPU allocation have yet been verified for this
 
 The inventory is deliberately **not closed**. All complete workflows remain BLOCKED until their mandatory gates have evidence.
 
-The next action that genuinely requires the user is account-level observation in Cloudflare:
+### Existing credential context
 
-1. Open the supplied Workers AI usage/dashboard URL while signed in.
-2. Identify whether the page shows the account's current Workers plan, Neuron usage/reset, and available testing/run control.
-3. If a model is selected or there is a model catalogue, verify whether `@cf/bytedance/stable-diffusion-xl-lightning` is accessible without prompting for payment, upgrade, or prepaid credit.
-4. Do not create an API token, accept new terms, or change account/billing settings yet. Report the visible state; redact email addresses, account identifiers if desired, and all secrets.
+Cloudflare Workers AI credentials were already configured in NOVA for a separately qualified LLM inference/health path (CLOUDFLARE_API_KEY_01 and CLOUDFLARE_ACCOUNT_ID). That history does **not** prove that an image-generation model is enabled for the account, supports the required output, has sufficient quota, is available without a payment method, or has terms suitable for the intended asset.
 
-After that observation, decide whether a no-payment test is feasible. If Cloudflare is eligible, request explicit authorization before creating a token or changing any GitHub secret. If not, keep the result BLOCKED and continue with non-billing alternatives.
+Do not restart credential setup from zero or create another token by default. First inspect the existing token's account and permissions, the current account plan/usage/reset information, and access to the exact candidate image endpoint. Do not expose credential values or copy secrets between repositories. Change or add a repository secret only if an identified repository-specific execution path requires it and the missing scope/secret is confirmed; do not enable paid billing or accept new terms as part of this audit.
+
+### Next controlled qualification
+
+1. Verify current $0/no-payment-method eligibility and exact terms for the selected image endpoint.
+2. Confirm that the endpoint actually returns generated image data and that the returned file can be retrieved and decoded.
+3. Run one bounded request only after eligibility, permissions, and the intended-use gate are satisfied. Record the exact model/version, parameters, output checksum, evidence date, latency/resource/quota observations where exposed, and failures.
+4. Keep the route BLOCKED for commercial promotion until every mandatory component and output-rights condition passes. Preserve a failed attempt as evidence; repeat a request only when it answers a new decision-relevant question.
+
+No live request, credential modification, billing change, or provider promotion is authorized by this documentation alone.
 
 ## 8. Closure
 
-This register is current as of 2026-10-10. Re-check upstream licenses, model cards, Cloudflare plan terms, model availability, and hardware compatibility immediately before implementation because these may change. A candidate moves out of BLOCKED only when the applicable missing evidence is supplied and the relevant verification is re-run.
+This document revision is dated 2026-10-13. Candidate entries retain their own source/test evidence dates where available. Re-check upstream licenses, model cards, provider terms, model availability, account eligibility and hardware compatibility immediately before implementation. A candidate moves out of BLOCKED only when the missing evidence is supplied and the relevant verification is re-run.

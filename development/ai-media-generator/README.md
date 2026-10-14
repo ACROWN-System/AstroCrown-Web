@@ -57,6 +57,21 @@ Generated media should be treated as separately produced artifacts that can late
 
 [Capacity-Aware AI Media Generation and Progressive Access Proposal](CAPACITY-AWARE-ROLLOUT-PROPOSAL.md) records a candidate direction for internal-first media generation, separate feature-access waiting lists and generation-job queues, and staged user access governed by measured capacity. It is a proposal, not an implementation or an approval of any model/provider.
 
+## Architecture and source of truth
+
+This README is an entry point, not a second specification. The target is one AstroCrown-owned generator for image and video, with image generation as the first executable milestone and a separate qualification gate for video.
+
+Use these documents as the canonical sources:
+
+- [Architecture, service boundary, component reuse, and minimum implementation](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md).
+- [Exact model/provider candidates, account eligibility, rights, and evidence](IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md).
+- [Feature-access waiting lists, generation queues, and capacity-aware rollout](CAPACITY-AWARE-ROLLOUT-PROPOSAL.md).
+- [Homepage environment, compositing roles, and R-036 alpha acceptance](../index-section/BACKGROUND.md).
+- [Shared compute responsibility](../gpu-infrastructure/README.md).
+- [NOVA orchestration responsibility](../nova-ai-orchestration/README.md).
+
+Do not duplicate provider-health probes, the aggregate GPU-capacity calculator, or NOVA's orchestration/job decisions inside this subsystem. Reuse existing evidence through an explicit, compatible interface when one exists; do not assume a shared executable API already exists. NOVA's current aggregate GPU-capacity report is scoped to non-commercial R&D and is not proof of commercial-production eligibility or live capacity.
+
 ## Development Status
 
 Status: **candidate / initial subsystem structure**
@@ -65,21 +80,7 @@ No model, provider, generation method, latency expectation, quality claim, or as
 
 ## Reproducibility and Provenance
 
-Generation records should preserve enough information to reproduce or audit an artifact where the provider and model permit reproducibility, including applicable:
-
-- provider;
-- model/version;
-- prompt/input;
-- generation parameters;
-- source/reference inputs;
-- execution timestamp;
-- job identifier;
-- output identifiers;
-- checksums;
-- transformations or optimization steps;
-- verification results.
-
-Where exact reproduction is not possible because a provider is nondeterministic or does not expose required information, preserve the available evidence and record the limitation rather than implying deterministic reproduction.
+Use the provenance and artifact-evidence requirements in [the canonical composition strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md). Preserve sufficient information to audit each generated or transformed asset, and record unavailable metadata or reproducibility limits explicitly. Do not claim deterministic reproduction when the provider or model does not support it.
 
 ## Verification
 
