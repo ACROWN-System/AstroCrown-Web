@@ -101,6 +101,24 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 
 ### Architecture decision direction
 
+### AstroCrown-owned model direction — 2026-10-15
+
+The desired long-term route is to maintain an AstroCrown-owned/versioned image model and inference pipeline, while replacing only the GPU execution host when capacity or price changes. This reduces dependence on provider-specific hosted image models, whose output behavior and parameters differ.
+
+The practical first step is a licensing- and hardware-qualified **base checkpoint + style adapter (such as LoRA)**, not training a foundation model from scratch. The adapter can help standardize our defined visual identity, but it remains tied to and constrained by its base model. A separately qualified alpha-capable stage is still required for truly transparent source assets; fine-tuning for style alone does not add transparency support.
+
+Before training, inspect the exact base model and all relevant terms, curate a rights-cleared dataset with source/caption provenance, then test a bounded training configuration on the observed T4 environment. Do not use model outputs to train another model unless the exact output/service license allows it. Do not downgrade or replace the working notebook packages speculatively. Training success, visual quality, alpha, commercial suitability, reusable artifacts, and inference reproducibility are distinct acceptance gates.
+
+When paid GPU compute is approved, the preferred migration is the **same pinned AstroCrown model checkpoint, adapter and runtime on a different GPU host**, not switching silently to that host's native image-generation API. Pin weights/versions/parameters and test for changes across hardware/software; exact bitwise reproducibility across environments is not guaranteed. Preserve approved image files immutably, regardless of provider or model changes.
+
+Foundation-model-from-scratch work remains long-term and out of scope for the initial homepage asset proof, because a small Kaggle T4 allocation is not evidence of sufficient sustained training capacity.
+
+Official references:
+- Diffusers training overview (maintained training recipes, including text-to-image, LoRA and DreamBooth): https://huggingface.co/docs/diffusers/training/overview
+- Diffusers LoRA guide (reduced trainable parameters and smaller adapters): https://huggingface.co/docs/diffusers/training/lora
+- Model-card guidance on datasets, intended uses, limitations and evaluations: https://huggingface.co/docs/hub/model-cards
+- FLUX.1 schnell model card (example of an Apache-2.0-labeled candidate, not yet selected for our T4/alpha requirements): https://github.com/black-forest-labs/flux/blob/main/model_cards/FLUX.1-schnell.md
+
 ### Cross-provider reproducibility decision — 2026-10-15
 
 A new request sent to a different model/provider is **not expected to reproduce identical pixels**, even when the natural-language prompt is the same. Seed support, model version pinning, reference-image inputs, and deterministic execution can improve reproducibility within particular pipelines, but are endpoint-specific and do not establish cross-provider equivalence. Public Diffusers guidance explicitly cautions that exact reproducibility across releases/platforms is not guaranteed. Some individual hosted endpoints expose structured prompts plus seeds for their own recreation workflow; that is a route-specific feature, not a portable seed contract.
