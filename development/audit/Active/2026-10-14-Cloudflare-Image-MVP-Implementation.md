@@ -19,7 +19,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 2. Build one AstroCrown-owned service boundary with provider-specific code isolated in an adapter. Initial adapter: Cloudflare Workers AI `@cf/bytedance/stable-diffusion-xl-lightning`, because this account already has Cloudflare Workers AI LLM credentials and the provider documents an image endpoint. Existing LLM access does not prove image entitlement or operation.
 3. Keep image generation separate from optional LLM prompt/metadata assistance; no LLM call is required to invoke the image adapter.
 4. No payment method, no spend, no paid fallback, no unattended provider calls. The real-provider integration test must be manually triggered on `main` only and only after the project repository contains a narrowly scoped token and Account ID.
-5. Use no new Python runtime dependencies. Validate the exact HTTPS API host, request/response envelope, strict base64 image extraction, PNG structure/dimensions/checksums, and output path behavior. Do not log credential values.
+5. Use no new Python runtime dependencies. Validate the exact HTTPS API host, binary image/png response contract, PNG structure/dimensions/checksums, and output path behavior. Do not log credential values.
 6. Record provenance beside each saved asset. Generated assets are not automatically added to the regular website or promoted commercially.
 7. Keep video in the same target system but separate its adapter/runtime/capacity qualification; do not block the image MVP on a still-unqualified video GPU pool.
 
@@ -28,7 +28,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 - Provider/API: Cloudflare Workers AI REST API, `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`.
 - Authentication/configuration: Bearer token from `CLOUDFLARE_API_KEY_01` and account identifier from `CLOUDFLARE_ACCOUNT_ID`; the token must be scoped to the Workers AI permissions the REST API requires. Never store token values in repository files.
 - Request: `prompt`, optional `negative_prompt`, `width`, `height`, `num_steps`, optional `seed`; verify against official model docs at implementation/test time.
-- Expected output: accept either a raw PNG response or a successful JSON envelope with base64 `result.image`; these are normalized into PNG bytes and then validated. Fail closed on an unexpected response, invalid base64, malformed PNG/chunk CRC/compressed data, HTTP errors, redirects, excessive response size or output dimension mismatch.
+- Expected output: the official SDXL-Lightning model schema declares a binary `image/png` output. Accept only that content type with valid PNG bytes. Fail closed on unexpected content type, malformed PNG/chunk CRC/compressed data, HTTP errors, redirects, excessive response size or output dimension mismatch.
 - Eligibility: model page's zero-per-step display does not prove this account's no-card entitlement, quota, hosted terms, or output suitability. Preserve those as BLOCKED until a bounded live test and rights review produce evidence.
 - Current research use mode: internal/non-commercial R&D. Requalify the route and assets before public paid features or commercial production.
 
@@ -56,7 +56,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 
 ## Implementation checkpoint (2026-10-14)
 
-- Added `development/ai-media-generator/cloudflare_image.py`: fixed Cloudflare endpoint, bounded request inputs, secret-safe errors, redirect rejection, raw-PNG and JSON/base64 response handling, PNG chunk CRC/decompression/dimension validation, no-overwrite output and provenance sidecar.
+- Added `development/ai-media-generator/cloudflare_image.py`: fixed Cloudflare endpoint, bounded request inputs, secret-safe errors, redirect rejection, the documented binary-PNG response contract, PNG chunk CRC/bounded decompression/dimension validation, no-overwrite output and provenance sidecar.
 - Added deterministic tests under `development/ai-media-generator/tests/test_cloudflare_image.py` for success variants, malformed output, provider errors, redirects, dimensions, checksums and no-overwrite behavior.
 - Added an offline-test CI workflow and a separate manual-only main-branch live integration workflow. The live workflow requires an explicit `yes` input and uploads only the image and metadata as a 7-day artifact.
 - No live provider call has been made, and this adapter is not yet qualified. The current PR check suite must run against its exact head before merge; a successful PR suite would establish offline/code correctness only.
