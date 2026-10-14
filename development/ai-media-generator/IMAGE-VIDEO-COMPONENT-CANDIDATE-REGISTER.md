@@ -62,6 +62,19 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 - One qualified external API call can create a source asset that is reused in many compositions. Use a single request to return several assets only when the exact endpoint documents independent outputs and returns each asset separately. An image-edit API that blends multiple input images into one output does not replace a non-destructive layer/composition system.
 - Keep image generation, alpha post-processing, internal composition and final delivery as independently replaceable/testable components. A failure or rights limitation in one route must not require redesigning all compositions.
 
+### Reproducibility and provider failover policy
+
+**Do not promise pixel-identical regeneration across providers.** The actual approved file is the source of truth for an existing asset. Prompts, seeds, or model names are not substitutes for preserving the generated binary.
+
+- Keep approved image files immutable and content-addressed (SHA-256 or equivalent). Store the original generated file, actual output format/dimensions, alpha-validation report, and provenance record.
+- Record provider, exact endpoint/model ID, model/version or revision when exposed, date, full request parameters, prompt/negative prompt, input/reference asset IDs and checksums, seed only when the exact endpoint supports one, and any returned structured prompt/workflow metadata. Mark fields unavailable when a hosted endpoint does not expose them; never fabricate a seed or model revision.
+- Treat seeds as endpoint/model-specific controls. They can improve repeatability within a documented route, but they are not portable identifiers for the same output across different model families or providers. Even within one local pipeline, hardware, numerical precision, runtime/library versions and kernels may affect reproducibility.
+- Do not perform automatic provider failover that silently regenerates an approved asset or overwrites its file. Failover can retry the same qualified endpoint under policy, but switching provider/model for asset creation creates a **new candidate version** that must be inspected and accepted separately.
+- Maintain a canonical visual specification and a small reference pack for AstroCrown (palette, lighting, contrast, object treatment, negative space, transparency/edge expectations, and approved example assets). Pass reference images or structured conditioning only where the chosen route documents support and usage rights; these improve similarity but do not guarantee identical pixels.
+- Compare provider outputs against acceptance criteria rather than requiring pixel equality across different models: intended object/shape, palette and brightness, composition-safe negative space, edge quality, real alpha, usable dimensions, and commercial/dependency rights.
+- Prefer one qualified model/runtime per coherent asset batch when visual consistency matters. If a provider must change because of availability or cost, preserve existing assets and introduce the alternate provider through a versioned comparison/approval step.
+- Internal composition should use the original approved assets and a versioned composition manifest. Layout changes must not invoke any generation provider. Reusing the same asset bytes and the same transformations is the way to retain exact consistency across provider changes.
+
 ### Visual/technical acceptance for the first asset
 
 The first success is not a flattened homepage mockup. It is a useful, retrievable source asset whose required transparency is real and whose position/scale/rotation can be changed internally without calling the generator again. The initial demonstration should:
@@ -208,6 +221,7 @@ Google Colab's free managed runtime is unsuitable as the generator's persistent 
 ## 5. Current decisions
 
 - Keep the service model-agnostic and modular.
+- Treat approved image files as immutable source artifacts. Provider/model changes must not silently replace or regenerate an approved image; alternate-provider output is a separate version requiring acceptance.
 - Generate reusable source assets separately from the final composition; use AstroCrown's internal composition system for placement, transformations, reusable layouts and exports. Do not spend inference calls on ordinary composition changes.
 - Treat LayerDiffuse as the leading local transparency experiment and Cloudflare's documented GPT Image 1.5 route as a hosted technical reference only; both remain BLOCKED pending exact alpha tests, rights/dependencies, and $0/no-payment eligibility.
 - Investigate the LayerDiffuse Diffusers CLI as the first local transparency-specific experiment for a single reusable asset, only after its older pinned dependencies can be isolated safely and the runtime/cost/legal gates pass. Do not run the earlier flattened SDXL-Lightning background test as the first experiment. Retain SDXL-Lightning and Z-Image-Turbo as separate alternatives with their own output, runtime and rights gates.
