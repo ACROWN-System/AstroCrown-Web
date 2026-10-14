@@ -85,7 +85,7 @@ A published 30 GPU-hours/week allocation corresponds to roughly 7,800 GPU-minute
 
 ### Decision
 
-No live run is authorized by this research alone. The next necessary user interaction will be limited to checking the account page for actual GPU allocation/quota and confirming that use remains free without a required payment method. Until then, account eligibility and execution are BLOCKED; no model weights are downloaded, no billing is changed, and no secrets are accessed.
+At the time of the initial 2026-10-14 plan, the account-level GPU allocation was unknown, so live model execution remained blocked. That checkpoint is superseded by the observed notebook diagnostics recorded below: two Tesla T4s and working CUDA are now established. However, this does not establish the provider's complete $0/no-payment terms, long-term availability, or suitability as production capacity. No model weights have been downloaded, no image generation has run, no billing was changed, and no secrets were accessed.
 
 ## Observed Kaggle preflight and architecture update — 2026-10-15
 
