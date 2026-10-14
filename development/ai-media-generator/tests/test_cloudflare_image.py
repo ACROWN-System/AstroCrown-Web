@@ -168,10 +168,16 @@ class CloudflareImageTests(unittest.TestCase):
     def test_rejects_malformed_response_and_dimension_mismatch(self):
         with self.assertRaisesRegex(ImageGenerationError, "unexpected content type"):
             request_image(self.config, "logo", 256, 256, opener=FakeOpener(FakeResponse(b"not image")))
-        with self.assertRaisesRegex(ImageGenerationError, "not a recognized PNG or JPEG"):
+        with self.assertRaisesRegex(ImageGenerationError, "not a recognized PNG or JPEG") as caught:
             request_image(
                 self.config, "logo", 256, 256,
                 opener=FakeOpener(FakeResponse(b'{"errors":["secret-like"],"success":false}', "image/png")),
+            )
+        self.assertNotIn("secret-like", str(caught.exception))
+        with self.assertRaisesRegex(ImageGenerationError, "Refusing MIME mismatch"):
+            request_image(
+                self.config, "logo", 256, 256,
+                opener=FakeOpener(FakeResponse(self.png, "image/jpeg")),
             )
         other_size = make_png(512, 256)
         with self.assertRaisesRegex(ImageGenerationError, "expected 256x256"):
