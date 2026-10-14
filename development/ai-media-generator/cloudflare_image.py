@@ -469,7 +469,9 @@ def write_artifact(
             "detected_mime_type": detected["mime_type"],
             "content_type_matches_detected_format": (
                 provider_content_type is None or provider_content_type == detected["mime_type"]
-                or (detected["format"] == "jpeg" and provider_content_type in {"image/jpg", "image/png"})
+            ),
+            "known_cloudflare_jpeg_png_mime_drift_tolerated": (
+                detected["format"] == "jpeg" and provider_content_type == "image/png"
             ),
         },
         "output": {
