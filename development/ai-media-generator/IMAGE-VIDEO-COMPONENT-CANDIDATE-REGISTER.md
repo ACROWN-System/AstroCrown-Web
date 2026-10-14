@@ -62,6 +62,36 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 - One qualified external API call can create a source asset that is reused in many compositions. Use a single request to return several assets only when the exact endpoint documents independent outputs and returns each asset separately. An image-edit API that blends multiple input images into one output does not replace a non-destructive layer/composition system.
 - Keep image generation, alpha post-processing, internal composition and final delivery as independently replaceable/testable components. A failure or rights limitation in one route must not require redesigning all compositions.
 
+### Zero-cost migration readiness and capacity guardrails
+
+**Constraint:** Free provider credits or notebook quotas may be too small to qualify a migration when user demand increases. Do not assume the target provider will provide enough free inference for a full migration test. Do not solve the problem by silently lowering quality, hiding the limitation, or triggering unapproved paid usage.
+
+#### Prepare before credits become scarce
+
+- Keep the model package portable and versioned: model/base revision and checksums, AstroCrown adapter checksums, text encoder/VAE/tokenizer revisions, scheduler, precision, exact inference parameters, runtime lockfile/container digest, supported resolutions and output contracts.
+- Keep offline preflight tests for package integrity, model loading configuration, image-container validation, alpha checks, composition-manifest parsing, output storage, retries, quotas, queue logic, and provider adapter contracts. Use saved fixtures and approved assets so these checks consume no inference credits.
+- Run the composition regression suite locally/offline against persisted assets. Test repositioning, scale, rotation, opacity and alternate compositions without calling any generator.
+- Keep the commercial migration path documented and rehearsed with mocked provider responses before requesting live inference. A successful mock is only evidence for control-flow behavior; it is not evidence of target-hardware or image quality.
+- Track free quota, observed burn rate, request failure/latency rate, pending queue, and remaining usable GPU time. Start migration readiness while there is still headroom, not after service is already failing.
+
+#### Minimum live migration suite is fixed by capability, not by remaining credits
+
+Define the necessary cases before the candidate is run. The suite must cover every critical advertised paid capability on the candidate route (for example opaque background, transparent object with alpha, and logo asset if sold), verify file/format/checksum and actual alpha where required, and include at least one baseline-to-candidate comparison for each critical task. Repeatability, performance and concurrency tests may require additional compute and must be separately budgeted. Do not shrink or skip a critical case simply because free credits are insufficient.
+
+If the free quota cannot complete the predeclared minimum, mark the target **BLOCKED / INSUFFICIENT TEST BUDGET**. Preserve the current qualified route and do not declare migration-ready. Before any paid test, obtain explicit budget authorization, or locate a no-cost eligible target route that can complete the required suite. No paid service activation, prepaid credit, billing-method entry, or unexpected overage is allowed under the current $0 constraint.
+
+#### Traffic and quota protection
+
+- Capacity exhaustion changes scheduling and admission, not model quality. Keep quality settings fixed; if needed, queue new jobs, apply published rate limits/fair-use limits, stagger non-urgent generation, or temporarily stop accepting new generation jobs.
+- Do not silently switch a paid request to an unqualified cheaper model. If an equivalent qualified route is unavailable, fail closed, queue or clearly report temporary unavailability under the published service terms.
+- Serve cached/persisted approved asset bytes and existing compositions without re-inference. An infrastructure/provider outage must not force already-created images to be generated again.
+- Define early migration triggers before launch. Trigger readiness review if projected quota runway falls below the expected migration-test budget plus a recovery reserve, if queue/latency/error rates approach the published service limit, or if a provider signals a quota/terms/availability change. A quota reset is not a production capacity guarantee.
+- Never count advertised quotas, idle notebook time, mock tests, or mere credentials as measured serving capacity. Record actual usable generation capacity separately from test credits and user-serving capacity.
+
+#### Paid launch gate
+
+If the sustainable-techonomic study begins charging users before a production migration route is qualified, the tier must clearly disclose that generation availability is bounded/experimental and must not promise unqualified throughput or uptime. A move to a commercial environment is blocked until its required quality cases pass and service capacity is adequate for the tier's stated promise. If there is no permitted $0 method to test the target, the options are to remain on the current qualified route, constrain new jobs transparently, defer the migration, or seek explicit authorization for a limited migration-test budget. Do not imply that $0 resources can guarantee unlimited demand.
+
 ### Customer quality continuity and paid-tier model changes
 
 **Customer-facing policy direction:** A paid tier must not silently deliver a lower validated quality level because AstroCrown moves from a study/free GPU host to commercial infrastructure, changes model providers, or changes the underlying model. Treat this as a release gate, not an aspiration to check after launch.
