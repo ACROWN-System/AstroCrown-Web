@@ -92,8 +92,6 @@ def _validate_inputs(
     for label, value in (("width", width), ("height", height)):
         if isinstance(value, bool) or not isinstance(value, int) or not 256 <= value <= 2048:
             raise ImageGenerationError(f"{label} must be an integer between 256 and 2048.")
-        if value % 8 != 0:
-            raise ImageGenerationError(f"{label} must be divisible by 8.")
     if isinstance(num_steps, bool) or not isinstance(num_steps, int) or not 1 <= num_steps <= 20:
         raise ImageGenerationError("num_steps must be an integer between 1 and 20.")
 
@@ -137,10 +135,8 @@ def validate_png(data: bytes, expected_width: int, expected_height: int) -> dict
         or not isinstance(expected_height, int)
         or not 256 <= expected_width <= 2048
         or not 256 <= expected_height <= 2048
-        or expected_width % 8 != 0
-        or expected_height % 8 != 0
     ):
-        raise ImageGenerationError("Expected dimensions must be between 256 and 2048 and divisible by 8.")
+        raise ImageGenerationError("Expected dimensions must be between 256 and 2048.")
 
     offset = len(PNG_SIGNATURE)
     width = height = 0
