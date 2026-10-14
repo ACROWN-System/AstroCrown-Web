@@ -1,7 +1,7 @@
 # Active Audit Plan — Provider-Neutral Image Runtime Qualification
 
 **Date:** 2026-10-14  
-**Status:** ACTIVE — research and feasibility qualification  
+**Status:** ACTIVE — initial source review recorded; account-level execution gate remains BLOCKED  
 **Objective:** Identify the least-complex, genuinely $0/no-payment-method route to a working image-generation baseline that can support AstroCrown's homepage background and later reusable token-logo/layer assets, while keeping the generator provider-neutral and evidence-backed.
 
 ## Scope and source of truth
@@ -61,10 +61,34 @@ The requested `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` were no
 
 **IF not modified:** model availability may be confused with executable capacity, commercial terms may be overlooked, and development may continue to depend on a hosted endpoint that does not meet the intended self-hosted/provider-neutral objective.
 
+## Research checkpoint — 2026-10-14
+
+### Documented candidate facts
+
+- **SDXL-Lightning:** the publisher's model card identifies the model as `openrail++`, describes 1024px generation in a few steps, and provides a documented Diffusers route using FP16 for a 4-step UNet plus the SDXL base. This makes it a practical technical-feasibility candidate, but not an unrestricted open-source license conclusion; the model, SDXL base, dependencies and intended use need separate rights review.
+  - Sources: https://huggingface.co/ByteDance/SDXL-Lightning and https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0
+- **Z-Image-Turbo:** the publisher's model card identifies the repository as Apache-2.0, describes a 6B-parameter model, 8 NFEs for Turbo, and states that it fits 16 GB consumer GPUs. The documented quick-start uses `bfloat16`; compatibility with the GPU actually allocated by a free notebook service is unknown.
+  - Source: https://huggingface.co/Tongyi-MAI/Z-Image-Turbo
+- **Kaggle Notebooks:** official docs describe free GPU notebook access and a quota generally up to 30 GPU-hours/week, sometimes higher depending on demand/resources. This may support a bounded interactive batch-generation test, not a persistent public service. The user's actual accelerator availability, remaining quota, payment-method requirements and session constraints are unknown.
+  - Sources: https://www.kaggle.com/docs/efficient-gpu-usage and https://www.kaggle.com/docs/notebooks
+- **Google Colab:** its official FAQ states that free resources are not guaranteed and explicitly restricts non-interactive web-service/media-serving use; it notes content-generation web-UI use on free managed runtimes commonly leads to termination. Do not treat it as the persistent generator backend. It may be considered only for policy-compliant interactive experiments.
+  - Source: https://research.google.com/colaboratory/faq.html
+- **Hugging Face ZeroGPU:** official documentation lists a free-account daily GPU quota of 5 minutes. This is not a material foundation for sustained capacity.
+  - Source: https://huggingface.co/docs/hub/main/en/spaces-zerogpu
+
+### Capacity interpretation
+
+A published 30 GPU-hours/week allocation corresponds to roughly 7,800 GPU-minutes per average month for one account if fully available and used. This is less than one tenth of the 86,400 GPU-minute monthly project target, and the allocation is variable rather than guaranteed. Do not multiply quotas by creating accounts or circumventing provider limits. Only actual, permitted, usable GPU execution counts toward the target.
+
+### Decision
+
+No live run is authorized by this research alone. The next necessary user interaction will be limited to checking the account page for actual GPU allocation/quota and confirming that use remains free without a required payment method. Until then, account eligibility and execution are BLOCKED; no model weights are downloaded, no billing is changed, and no secrets are accessed.
+
 ## Initial status
 
 - Existing Cloudflare image adapter: implementation candidate; at least one previous hosted image was returned, but sustained $0/no-card eligibility, commercial clearance, output quality and real alpha are not yet established.
-- Local open-weight image runtime: BLOCKED pending verified free GPU execution and exact dependency/runtime review.
+- Local image runtime: BLOCKED pending account-level no-card eligibility, an actual GPU allocation, and runtime execution. SDXL-Lightning has a documented FP16 Diffusers path but uses `openrail++` terms and requires separate SDXL-base/dependency review; Z-Image-Turbo has a publisher-labelled Apache-2.0 model card but its quick-start uses `bfloat16`, so compatibility with likely free notebook GPUs is unverified.
 - Video runtime: BLOCKED as an independent track; it must not delay the first image baseline.
 - 86,400 GPU-minutes/month: target only; no assumption of achieved capacity.
-- Next action: conduct source-backed, bounded research and update the candidate register and this plan before proposing implementation.
+- Initial source review: candidate register updated on branch with SDXL-Lightning (technical-feasibility candidate), Z-Image-Turbo (permissive-license alternative), Kaggle, Colab and Hugging Face ZeroGPU evidence.
+- Next action: verify the account-level no-payment-method and actual GPU/quota details through the provider's website before any live model download or generation; then run only a bounded, policy-compliant feasibility test.
