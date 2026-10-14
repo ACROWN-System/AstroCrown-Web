@@ -26,6 +26,7 @@ API_HOST = "api.cloudflare.com"
 API_PREFIX = "/client/v4/accounts"
 MODEL_ID = "@cf/bytedance/stable-diffusion-xl-lightning"
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+JPEG_SIGNATURE = b"\xff\xd8"
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 MAX_PROMPT_LENGTH = 8_000
 ACCOUNT_ID_PATTERN = re.compile(r"^[0-9a-fA-F]{32}$")
@@ -213,21 +214,160 @@ def validate_png(data: bytes, expected_width: int, expected_height: int) -> dict
     return {"width": width, "height": height}
 
 
-def _extract_png(
+
+def validate_jpeg(data: bytes, expected_width: int, expected_height: int) -> dict[str, int]:
+    """Validate JPEG markers, frame dimensions and scan presence without decoding pixels."""
+    if not isinstance(data, bytes) or len(data) < 16 or not data.startswith(JPEG_SIGNATURE):
+        raise ImageGenerationError("Provider output is not a valid JPEG image.")
+    if len(data) > MAX_RESPONSE_BYTES:
+        raise ImageGenerationError("JPEG output exceeds the configured size limit.")
+    if not data.endswith(b"\xff\xd9"):
+        raise ImageGenerationError("JPEG output is incomplete; the end marker is missing.")
+    if (
+        isinstance(expected_width, bool)
+        or isinstance(expected_height, bool)
+        or not isinstance(expected_width, int)
+        or not isinstance(expected_height, int)
+        or not 256 <= expected_width <= 2048
+        or not 256 <= expected_height <= 2048
+    ):
+        raise ImageGenerationError("Expected dimensions must be between 256 and 2048.")
+
+    # JPEG frame headers use SOF marker families; DHT, JPG, and DAC are not SOF.
+    sof_markers = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+    offset = len(JPEG_SIGNATURE)
+    width = height = 0
+    seen_frame = False
+    seen_scan = False
+
+    while offset < len(data) - 2:
+        if data[offset] != 0xFF:
+            raise ImageGenerationError("JPEG marker structure is malformed before the scan header.")
+        while offset < len(data) and data[offset] == 0xFF:
+            offset += 1
+        if offset >= len(data):
+            break
+        marker = data[offset]
+        offset += 1
+        if marker == 0x00 or marker in {0xD8, 0xD9}:
+            raise ImageGenerationError("JPEG contains an invalid marker before its scan header.")
+        if marker == 0x01:  # TEM is the only standalone marker valid outside entropy data.
+            continue
+        if offset + 2 > len(data):
+            raise ImageGenerationError("JPEG contains a truncated segment length.")
+        segment_length = struct.unpack(">H", data[offset : offset + 2])[0]
+        if segment_length < 2 or offset + segment_length > len(data):
+            raise ImageGenerationError("JPEG contains a truncated or invalid marker segment.")
+        segment_end = offset + segment_length
+
+        if marker in sof_markers:
+            if segment_length < 11:
+                raise ImageGenerationError("JPEG frame header is too short.")
+            height, width = struct.unpack(">HH", data[offset + 3 : offset + 7])
+            components = data[offset + 7]
+            if components not in (1, 3, 4) or segment_length != 8 + (3 * components):
+                raise ImageGenerationError("JPEG frame header declares an invalid component layout.")
+            if width <= 0 or height <= 0:
+                raise ImageGenerationError("JPEG declares invalid dimensions.")
+            seen_frame = True
+        if marker == 0xDA:  # Start of Scan; the remaining bounded data must end at EOI.
+            if not seen_frame:
+                raise ImageGenerationError("JPEG scan appears before a frame header.")
+            if segment_end >= len(data) - 2:
+                raise ImageGenerationError("JPEG scan data is empty.")
+            seen_scan = True
+            break
+        offset = segment_end
+
+    if not seen_frame or not seen_scan:
+        raise ImageGenerationError("JPEG is missing a frame header or scan.")
+    if width != expected_width or height != expected_height:
+        raise ImageGenerationError(
+            f"JPEG dimensions were {width}x{height}; expected {expected_width}x{expected_height}."
+        )
+    # This checks structural markers and dimensions but deliberately does not
+    # claim a full JPEG entropy decode; the received bytes remain available for
+    # visual/manual verification after the controlled test.
+    return {"width": width, "height": height}
+
+
+def validate_image(data: bytes, expected_width: int, expected_height: int) -> dict[str, Any]:
+    """Recognize and validate only bounded PNG or JPEG image containers."""
+    if not isinstance(data, bytes):
+        raise ImageGenerationError("Provider image response is not bytes.")
+    if len(data) > MAX_RESPONSE_BYTES:
+        raise ImageGenerationError("Image output exceeds the configured size limit.")
+    if data.startswith(PNG_SIGNATURE):
+        dimensions = validate_png(data, expected_width, expected_height)
+        return {
+            **dimensions,
+            "format": "png",
+            "mime_type": "image/png",
+            "extension": ".png",
+            "validation_method": "signature_chunks_crc_bounded_decompression_dimensions",
+        }
+    if data.startswith(JPEG_SIGNATURE):
+        dimensions = validate_jpeg(data, expected_width, expected_height)
+        return {
+            **dimensions,
+            "format": "jpeg",
+            "mime_type": "image/jpeg",
+            "extension": ".jpg",
+            "validation_method": "signature_markers_frame_dimensions_scan_presence",
+        }
+
+    stripped = data.lstrip()[:16].lower()
+    if stripped.startswith((b"{", b"[")):
+        signature_class = "JSON-like"
+    elif stripped.startswith((b"<!doctype", b"<html", b"<")):
+        signature_class = "HTML-like"
+    else:
+        signature_class = "unknown"
+    raise ImageGenerationError(
+        f"Provider response is not a recognized PNG or JPEG image "
+        f"(signature class: {signature_class}; response bytes: {len(data)})."
+    )
+
+
+def _extract_image(
+    response_body: bytes,
+    content_type: str,
+    expected_width: int,
+    expected_height: int,
+) -> tuple[bytes, str | None, str]:
+    # The public Cloudflare model page currently conflicts: the output schema
+    # says image/png while the usage example uses image/jpg, and a Cloudflare
+    # docs issue reports JPEG bytes returned by the REST endpoint. Determine the
+    # real format from bytes, record the declared Content-Type, and never accept
+    # JSON/HTML merely because a response labels itself as an image.
+    if content_type not in {"image/png", "image/jpeg", "image/jpg"}:
+        raise ImageGenerationError(
+            f"Cloudflare returned unexpected content type {content_type or 'unknown'}; "
+            "expected image/png or image/jpeg."
+        )
+
+    detected = validate_image(response_body, expected_width, expected_height)
+    if detected["format"] == "png" and content_type != "image/png":
+        raise ImageGenerationError(
+            f"Cloudflare declared {content_type}; image bytes were PNG. Refusing MIME mismatch."
+        )
+    if detected["format"] == "jpeg" and content_type not in {"image/jpeg", "image/jpg", "image/png"}:
+        raise ImageGenerationError(
+            f"Cloudflare declared {content_type}; image bytes were JPEG. Refusing MIME mismatch."
+        )
+    # JPEG bytes with an image/png declaration are explicitly tolerated because
+    # of the documented Cloudflare inconsistency. Provenance records this mismatch.
+    return response_body, None, content_type
+
+
+def _extract_image(
     response_body: bytes,
     content_type: str,
     expected_width: int,
     expected_height: int,
 ) -> tuple[bytes, str | None]:
-    # Cloudflare's current SDXL-Lightning REST schema specifies binary image/png.
-    # Do not accept generic JSON/base64 alternatives unless the official model
-    # contract changes and is deliberately requalified.
-    if content_type != "image/png":
-        raise ImageGenerationError(
-            f"Cloudflare returned content type {content_type or 'unknown'}; expected image/png."
-        )
-    validate_png(response_body, expected_width, expected_height)
-    return response_body, None
+    # _extract_image validates both MIME declaration and actual container bytes.
+    return _extract_image(response_body, content_type, expected_width, expected_height)
 
 
 def request_image(
@@ -240,8 +380,8 @@ def request_image(
     seed: int | None = None,
     timeout_seconds: int = 120,
     opener=None,
-) -> tuple[bytes, str | None]:
-    """Call the one fixed Cloudflare endpoint and return validated PNG bytes + request ID."""
+) -> tuple[bytes, str | None, str]:
+    """Call the fixed Cloudflare endpoint and return validated image bytes, request ID and declared MIME."""
     payload = build_payload(prompt, width, height, num_steps, negative_prompt, seed)
     if isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, int) or not 1 <= timeout_seconds <= 300:
         raise ImageGenerationError("timeout_seconds must be an integer between 1 and 300.")
@@ -255,7 +395,6 @@ def request_image(
         headers={
             "Authorization": f"Bearer {config.api_token}",
             "Content-Type": "application/json",
-            "Accept": "application/json, image/png",
             "User-Agent": "AstroCrown-Image-MVP/0.1",
         },
         method="POST",
@@ -267,7 +406,7 @@ def request_image(
             content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
             if len(body) > MAX_RESPONSE_BYTES:
                 raise ImageGenerationError("Cloudflare response exceeds the configured size limit.")
-            return _extract_png(body, content_type, width, height)
+            return _extract_image(body, content_type, width, height)
     except urllib.error.HTTPError as exc:
         if exc.code in (301, 302, 303, 307, 308):
             raise ImageGenerationError(
@@ -287,20 +426,26 @@ def request_image(
 
 def write_artifact(
     output_path: str | Path,
-    png_bytes: bytes,
+    image_bytes: bytes,
     prompt: str,
     width: int,
     height: int,
     num_steps: int,
     seed: int | None,
     request_id: str | None,
+    provider_content_type: str | None = None,
 ) -> tuple[Path, Path]:
-    """Create a PNG and provenance sidecar without overwriting either existing file."""
-    output = Path(output_path).expanduser()
-    if output.suffix.lower() != ".png":
-        raise ImageGenerationError("Output path must end in .png.")
+    """Write PNG/JPEG bytes and provenance without overwriting existing files."""
+    requested_output = Path(output_path).expanduser()
+    if requested_output.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
+        raise ImageGenerationError("Output path must end in .png, .jpg, or .jpeg.")
     build_payload(prompt, width, height, num_steps, seed=seed)
-    validated = validate_png(png_bytes, width, height)
+    detected = validate_image(image_bytes, width, height)
+
+    # Keep the extension truthful when a provider returns JPEG despite declaring image/png.
+    output = requested_output
+    if output.suffix.lower() != detected["extension"]:
+        output = output.with_suffix(detected["extension"])
     metadata_path = output.with_name(output.name + ".metadata.json")
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists() or metadata_path.exists():
@@ -318,12 +463,24 @@ def write_artifact(
             "num_steps": num_steps,
             "seed": seed,
         },
+        "provider_response": {
+            "declared_content_type": provider_content_type,
+            "detected_format": detected["format"],
+            "detected_mime_type": detected["mime_type"],
+            "content_type_matches_detected_format": (
+                provider_content_type is None or provider_content_type == detected["mime_type"]
+                or (detected["format"] == "jpeg" and provider_content_type in {"image/jpg", "image/png"})
+            ),
+        },
         "output": {
             "file_name": output.name,
-            "mime_type": "image/png",
-            "sha256": hashlib.sha256(png_bytes).hexdigest(),
-            "bytes": len(png_bytes),
-            **validated,
+            "format": detected["format"],
+            "mime_type": detected["mime_type"],
+            "validation_method": detected["validation_method"],
+            "sha256": hashlib.sha256(image_bytes).hexdigest(),
+            "bytes": len(image_bytes),
+            "width": width,
+            "height": height,
         },
         "provider_request_id": request_id,
         "rights_status": "NOT_YET_QUALIFIED_FOR_COMMERCIAL_PROMOTION",
@@ -334,7 +491,7 @@ def write_artifact(
     try:
         with output.open("xb") as image_file:
             created_output = True
-            image_file.write(png_bytes)
+            image_file.write(image_bytes)
         with metadata_path.open("x", encoding="utf-8") as metadata_file:
             created_metadata = True
             json.dump(metadata, metadata_file, ensure_ascii=False, indent=2)
@@ -355,7 +512,6 @@ def write_artifact(
         raise
     return output, metadata_path
 
-
 def generate_to_file(
     config: CloudflareConfig,
     prompt: str,
@@ -368,7 +524,7 @@ def generate_to_file(
     timeout_seconds: int = 120,
     opener=None,
 ) -> tuple[Path, Path]:
-    png_bytes, request_id = request_image(
+    image_bytes, request_id, provider_content_type = request_image(
         config=config,
         prompt=prompt,
         width=width,
@@ -381,15 +537,15 @@ def generate_to_file(
     )
     return write_artifact(
         output_path=output_path,
-        png_bytes=png_bytes,
+        image_bytes=image_bytes,
         prompt=prompt,
         width=width,
         height=height,
         num_steps=num_steps,
         seed=seed,
         request_id=request_id,
+        provider_content_type=provider_content_type,
     )
-
 
 def _argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -400,7 +556,7 @@ def _argument_parser() -> argparse.ArgumentParser:
         metavar="ENV_NAME",
         help="Read prompt text from the named environment variable (recommended in CI).",
     )
-    parser.add_argument("--output", required=True, help="Output PNG path; existing files are never overwritten.")
+    parser.add_argument("--output", required=True, help="Preferred image path (.png/.jpg/.jpeg); extension follows the detected image format. Existing files are never overwritten.")
     parser.add_argument("--width", type=int, default=1024)
     parser.add_argument("--height", type=int, default=1024)
     parser.add_argument("--steps", type=int, default=4)
