@@ -66,7 +66,7 @@ Use these documents as the canonical sources:
 - [Architecture, service boundary, component reuse, and minimum implementation](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md).
 - [Exact model/provider candidates, account eligibility, rights, and evidence](IMAGE-VIDEO-COMPONENT-CANDIDATE-REGISTER.md).
 - [Feature-access waiting lists, generation queues, and capacity-aware rollout](CAPACITY-AWARE-ROLLOUT-PROPOSAL.md).
-- [Homepage environment, compositing roles, and R-019 alpha acceptance](../index-section/BACKGROUND.md).
+- [Homepage environment, compositing roles, and R-036 alpha acceptance](../index-section/BACKGROUND.md).
 - [Shared compute responsibility](../gpu-infrastructure/README.md).
 - [NOVA orchestration responsibility](../nova-ai-orchestration/README.md).
 
