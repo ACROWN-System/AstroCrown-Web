@@ -83,3 +83,32 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 ## Handoff
 
 After code and deterministic tests pass, review and merge through pull requests. Do not create AstroCrown-Web secrets for this test. The qualification runner in NOVA uses the existing `CLOUDFLARE_API_KEY_01` and `CLOUDFLARE_ACCOUNT_ID` secrets and checks out the reviewed AstroCrown-Web adapter commit. Only manually dispatch the NOVA workflow after confirming the account remains on its no-payment configuration and entering a non-sensitive prompt. Record request outcome, actual usage, latency, output dimensions/quality and applicable rights before changing the route from BLOCKED.
+
+## Live qualification evidence — 2026-10-14 — run #38577103848
+
+**Result:** LIVE REQUEST AND ARTIFACT DELIVERY PASS; PROMPT FIDELITY PARTIAL; PROVIDER/COMMERCIAL/ALPHA QUALIFICATION STILL BLOCKED.
+
+- Workflow run/job: https://github.com/ACROWN-System/NOVA/actions/runs/38577103848 and https://github.com/ACROWN-System/NOVA/actions/runs/38577103848/job/115897000012
+- Adapter commit actually run: \`72a7eaa70231653fb5baee5b6993464cca3c0656\` (immutable merge commit fetched and checked out).
+- Artifact: \`astrocrown-cloudflare-image-38577103848\`, artifact ID \`11901575526\`, expiry \`2026-10-21T14:03:32Z\`; uploaded archive SHA-256 \`8e2184d464b345567d1270c81e2f60561f0fc9b4e4f2c1b4deab10463aa889fa\`.
+- Uploaded files: \`astrocrown-first-image.jpg\` (72,727 bytes) and \`astrocrown-first-image.jpg.metadata.json\`.
+- Image checks performed after download: Pillow successfully opened and fully decoded the real JPEG; dimensions \`1024x1024\`; mode \`RGB\`; SHA-256 \`639221c57e74e2289e72946b158464474c837e1921767ce089dbf6b718f206ae\`.
+- Provider contract evidence: HTTP \`Content-Type\` was recorded as \`image/png\`, while actual bytes and full decode identified \`image/jpeg\`. Sidecar correctly says \`content_type_matches_detected_format=false\` and \`known_cloudflare_jpeg_png_mime_drift_tolerated=true\`. This confirms the MIME-vs-byte mismatch on this successful run (unlike the previous failed run whose body was not preserved). Provider request ID was unavailable/null.
+- Performance observation: adapter client wall-clock duration was \`3556 ms\`; run step display was about 4 seconds and workflow duration 9 seconds. This includes request, validation and local file writing and is only a single observation, not provider-only latency or a service-level expectation.
+- Visual inspection: image contains a starfield, strongly saturated violet/magenta nebula clouds and a prominent planet left-of-center. It contains no obvious text or watermark. It does not meet the requested "small distant planet near the lower-right edge" and restrained/subtle cloud treatment. **Prompt fidelity: PARTIAL.** Keep it as an internal candidate/reference, not as an approved homepage asset.
+- Transparency: the delivered JPEG is RGB and cannot preserve alpha transparency. It is not suitable as a transparent compositing layer in its current format.
+- Rights: adapter sidecar remains \`NOT_YET_QUALIFIED_FOR_COMMERCIAL_PROMOTION\`; no license or commercial-use approval is inferred from successful execution.
+
+## Metadata correction after live evidence
+
+The real JPEG sidecar exposed that the adapter's generic \`alpha_status\` field still told readers to inspect a PNG alpha channel even when output was JPEG. This is a metadata defect (not a provider failure). A follow-up branch changes metadata by detected format: JPEG explicitly reports \`NOT_SUPPORTED_BY_JPEG\` and explains that JPEG cannot preserve transparency; PNG continues to require separate alpha-channel inspection. A deterministic regression test asserts the JPEG-specific status. The follow-up PR checks must pass before merge. Do not rerun the provider simply to verify this metadata-only correction.
+
+## Account usage / billing evidence boundary
+
+The run was manually triggered under the user's explicit confirmation that their existing account configuration remained no-payment. Cloudflare's current model page displays SDXL-Lightning at \`$0.00 per step\` (https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-lightning/), while the general Workers AI pricing page describes a \`10,000 Neurons/day\` Workers Free allocation and additional usage billing on Workers Paid (https://developers.cloudflare.com/workers-ai/platform/pricing/). This run log does not prove current dashboard consumption, account plan, or invoice status; do not infer billed amount, card status, or sustained free-tier entitlement from this successful request. Before any repeat/batch, verify the Cloudflare usage/account page if the cost boundary is uncertain.
+
+## Impact Analysis — successful run and remaining gap
+
+**IF modified:** the project now has a real, fully decodable test image and evidence that this model response can be JPEG despite its declared PNG content type. Format-aware metadata prevents future JPEG artifacts from falsely implying alpha support.
+
+**IF not modified:** successful JPEG output would continue carrying misleading PNG-alpha guidance, and maintainers could mistakenly treat a non-transparent JPEG as suitable for layered asset compositing. Promoting the current image without prompt-fidelity and rights review would also violate the project's asset-promotion gate.
