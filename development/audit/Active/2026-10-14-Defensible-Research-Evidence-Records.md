@@ -42,6 +42,7 @@ These are jurisdiction-specific authorities and guidance, not a universal legal 
 - Cover fair technical comparisons, claims about capabilities/licenses/capacity/compliance, competitor references, citations, correction and dispute escalation.
 - Explicitly distinguish prospective, hypothetical litigation-continuity planning from allegations that any particular competitor has acted, or will act, improperly; distinguish practical competitive harm from a legal conclusion that a claim is baseless or abusive.
 - If referencing sham-litigation doctrine, label jurisdictional limits and evidentiary thresholds; note that an unsuccessful or costly action alone does not establish abuse.
+- Apply a documented minimization review to tools, artifacts, credentials, data, disclosures and capabilities that could facilitate misuse or expose sensitive material; use least privilege and safe summaries without concealing material facts or impairing lawful evidence preservation.
 - Do not treat a fact-observation label or disclaimer as a legal safe harbor or as a way to disguise copied expression, restricted use, misleading claims or unsupported accusations.
 - Separate public-facing summaries from restricted evidence and trade secrets; protect credentials, personal data and confidential third-party information.
 - Preserve originals, hashes, source snapshots and history accurately; forbid backdating, fabrication, deceptive relabeling or destruction/alteration intended to impair review.
