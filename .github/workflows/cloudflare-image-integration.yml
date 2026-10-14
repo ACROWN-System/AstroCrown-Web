@@ -1,0 +1,94 @@
+name: AI Media Generator — Manual Cloudflare Image Qualification
+
+on:
+  workflow_dispatch:
+    inputs:
+      live_test_confirmed:
+        description: "Confirm that this is a non-sensitive internal test and the existing Cloudflare account is to remain on its current no-payment configuration."
+        type: choice
+        options:
+          - "no"
+          - "yes"
+        default: "no"
+        required: true
+      prompt:
+        description: "Non-sensitive prompt for one test image. This text is sent to Cloudflare; do not enter private or secret information."
+        type: string
+        required: true
+      width:
+        description: "Image width (256–2048)"
+        type: number
+        default: 1024
+        required: true
+      height:
+        description: "Image height (256–2048)"
+        type: number
+        default: 1024
+        required: true
+      steps:
+        description: "Generation steps (1–20)"
+        type: number
+        default: 4
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  qualify-cloudflare-image:
+    if: github.ref == 'refs/heads/main' && inputs.live_test_confirmed == 'yes'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted main revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify required secrets are configured
+        env:
+          ASTROCROWN_CLOUDFLARE_AI_TOKEN: ${{ secrets.ASTROCROWN_CLOUDFLARE_AI_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${ASTROCROWN_CLOUDFLARE_AI_TOKEN}" || -z "${CLOUDFLARE_ACCOUNT_ID}" ]]; then
+            echo "::error::Configure ASTROCROWN_CLOUDFLARE_AI_TOKEN and CLOUDFLARE_ACCOUNT_ID as AstroCrown-Web Actions secrets. Do not paste secrets into logs or prompts."
+            exit 2
+          fi
+          echo "Required secret names are present; secret values were not printed."
+
+      - name: Generate and validate one image
+        env:
+          ASTROCROWN_CLOUDFLARE_AI_TOKEN: ${{ secrets.ASTROCROWN_CLOUDFLARE_AI_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MEDIA_PROMPT: ${{ inputs.prompt }}
+          IMAGE_WIDTH: ${{ inputs.width }}
+          IMAGE_HEIGHT: ${{ inputs.height }}
+          IMAGE_STEPS: ${{ inputs.steps }}
+          RUNNER_TEMP: ${{ runner.temp }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python development/ai-media-generator/cloudflare_image.py \
+            --prompt-env MEDIA_PROMPT \
+            --output "$RUNNER_TEMP/astrocrown-first-image.png" \
+            --width "$IMAGE_WIDTH" \
+            --height "$IMAGE_HEIGHT" \
+            --steps "$IMAGE_STEPS"
+
+      - name: Upload image and provenance for review
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: astrocrown-cloudflare-image-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/astrocrown-first-image.png
+            ${{ runner.temp }}/astrocrown-first-image.png.metadata.json
+          if-no-files-found: error
+          retention-days: 7
