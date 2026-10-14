@@ -28,7 +28,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 - Provider/API: Cloudflare Workers AI REST API, `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`.
 - Authentication/configuration: Bearer token from `CLOUDFLARE_API_KEY_01` and account identifier from `CLOUDFLARE_ACCOUNT_ID`; the token must be scoped to the Workers AI permissions the REST API requires. Never store token values in repository files.
 - Request: `prompt`, optional `negative_prompt`, `width`, `height`, `num_steps`, optional `seed`; verify against official model docs at implementation/test time.
-- Expected result: successful API envelope with base64 image content. Accept only a valid PNG from this first adapter; fail closed on unexpected MIME/container, invalid base64, malformed response, HTTP errors, redirects or output dimension mismatch.
+- Expected output: accept either a raw PNG response or a successful JSON envelope with base64 `result.image`; these are normalized into PNG bytes and then validated. Fail closed on an unexpected response, invalid base64, malformed PNG/chunk CRC/compressed data, HTTP errors, redirects, excessive response size or output dimension mismatch.
 - Eligibility: model page's zero-per-step display does not prove this account's no-card entitlement, quota, hosted terms, or output suitability. Preserve those as BLOCKED until a bounded live test and rights review produce evidence.
 - Current research use mode: internal/non-commercial R&D. Requalify the route and assets before public paid features or commercial production.
 
@@ -54,6 +54,13 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 - Do not implement public UI, multi-user queues, paid fallback, model-weight merging, video runtime or an assumed 86,400 GPU-minute capacity.
 - Do not mark Cloudflare image generation, alpha transparency, video, or commercial-use rights as qualified without evidence.
 
+## Implementation checkpoint (2026-10-14)
+
+- Added `development/ai-media-generator/cloudflare_image.py`: fixed Cloudflare endpoint, bounded request inputs, secret-safe errors, redirect rejection, raw-PNG and JSON/base64 response handling, PNG chunk CRC/decompression/dimension validation, no-overwrite output and provenance sidecar.
+- Added deterministic tests under `development/ai-media-generator/tests/test_cloudflare_image.py` for success variants, malformed output, provider errors, redirects, dimensions, checksums and no-overwrite behavior.
+- Added an offline-test CI workflow and a separate manual-only main-branch live integration workflow. The live workflow requires an explicit `yes` input and uploads only the image and metadata as a 7-day artifact.
+- No live provider call has been made, and this adapter is not yet qualified. The current PR check suite must run against its exact head before merge; a successful PR suite would establish offline/code correctness only.
+
 ## Handoff
 
-After code and deterministic tests pass, review this exact diff, merge through a PR, then have the repository owner add the narrowly scoped Cloudflare token and account ID as AstroCrown-Web Actions secrets if absent. Trigger the manual integration workflow only after the secrets and test conditions are confirmed.
+After code and deterministic tests pass, review this exact diff and merge through a PR. The repository owner must add a narrowly scoped Cloudflare Workers AI token and account ID as AstroCrown-Web Actions secrets if absent; secret values must never be shared in chat or committed. Trigger the manual integration workflow only after account access and no-payment configuration are confirmed. Record request outcome, actual usage, latency, output dimensions/quality and applicable rights before changing the route from BLOCKED.
