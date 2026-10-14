@@ -101,6 +101,25 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 
 ### Architecture decision direction
 
+### Cross-provider reproducibility decision — 2026-10-15
+
+A new request sent to a different model/provider is **not expected to reproduce identical pixels**, even when the natural-language prompt is the same. Seed support, model version pinning, reference-image inputs, and deterministic execution can improve reproducibility within particular pipelines, but are endpoint-specific and do not establish cross-provider equivalence. Public Diffusers guidance explicitly cautions that exact reproducibility across releases/platforms is not guaranteed. Some individual hosted endpoints expose structured prompts plus seeds for their own recreation workflow; that is a route-specific feature, not a portable seed contract.
+
+**Required architecture behavior:**
+
+- The exact approved asset file is authoritative. Persist it, store a checksum, and reuse its bytes; never regenerate it merely because provider availability or routing changes.
+- Keep generation provenance alongside the file: provider/endpoint and model ID/version if available, prompt and negative prompt, reference asset checksums, parameters, endpoint-supported seed/structured workflow metadata, output properties, and rights evidence. Explicitly mark metadata the endpoint does not expose.
+- A fallback that changes model/provider may produce only a new candidate asset version. It must not replace the approved asset automatically. Run the visual/alpha/licensing gates and approve the new candidate explicitly.
+- Keep visual rules and approved examples as a canonical style reference. Use image references, conditioning, or provider-specific structured prompts where available and legally permitted, but describe their effect as improving similarity—not guaranteeing identical output.
+- Prioritize one qualified route for each coherent batch when consistency matters. Keep provider-neutral adapters so route changes are possible, but keep each adapter's parameter capabilities and reproducibility limits explicit.
+- The internal compositor uses persisted assets plus a versioned composition manifest. Repositioning, resizing, rotating, layering, hiding/showing, or exporting the same unchanged assets must not call the image generator.
+
+**Sources:**
+- Diffusers reproducibility guidance: https://huggingface.co/docs/diffusers/main/using-diffusers/reusing_seeds
+- Example of route-specific recreation with a seed and structured prompt (Bria FIBO on Cloudflare): https://developers.cloudflare.com/ai/models/bria/fibo-generate-1.5/
+
+
+
 Generate source assets separately, then use an internal AstroCrown compositor for all arrangements. A full-canvas background plate may be opaque. Reusable planets, Earth, Moon, nebulae, dust, debris, stars, logos and other overlapping elements require true alpha when they must be independently positioned. Website UI and cards must not be baked into a generated background.
 
 A provider call is for creating the source asset—not for every composition. Reuse an asset through a structured manifest describing asset IDs, z-order, position, scale, rotation, opacity, cropping, blending and visibility. A flattened image may be exported for a static use case, but it is not the only retained source of truth. A batch endpoint is useful only if it returns separate independently usable assets; an endpoint that blends multiple inputs into one image is not a substitute for internal composition.
