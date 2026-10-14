@@ -8,8 +8,6 @@ container, and writes a local provenance sidecar. It does not approve commercial
 from __future__ import annotations
 
 import argparse
-import base64
-import binascii
 import hashlib
 import json
 import os
@@ -221,34 +219,15 @@ def _extract_png(
     expected_width: int,
     expected_height: int,
 ) -> tuple[bytes, str | None]:
-    if response_body.startswith(PNG_SIGNATURE):
-        png = response_body
-        response_request_id = None
-    else:
-        try:
-            document = json.loads(response_body.decode("utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise ImageGenerationError(
-                f"Unexpected Cloudflare response content type: {content_type or 'unknown'}."
-            ) from exc
-        if not isinstance(document, dict) or document.get("success") is False:
-            raise ImageGenerationError(
-                "Cloudflare rejected the image request; check token permissions, model access and quota."
-            )
-        result = document.get("result")
-        image_value = result.get("image") if isinstance(result, dict) else None
-        if not isinstance(image_value, str) or not image_value:
-            raise ImageGenerationError("Cloudflare response did not contain result.image.")
-        try:
-            png = base64.b64decode(image_value, validate=True)
-        except (binascii.Error, ValueError) as exc:
-            raise ImageGenerationError("Cloudflare result.image is not valid base64.") from exc
-        response_request_id = document.get("result", {}).get("id")
-        if not isinstance(response_request_id, str):
-            response_request_id = None
-
-    validate_png(png, expected_width, expected_height)
-    return png, response_request_id
+    # Cloudflare's current SDXL-Lightning REST schema specifies binary image/png.
+    # Do not accept generic JSON/base64 alternatives unless the official model
+    # contract changes and is deliberately requalified.
+    if content_type != "image/png":
+        raise ImageGenerationError(
+            f"Cloudflare returned content type {content_type or 'unknown'}; expected image/png."
+        )
+    validate_png(response_body, expected_width, expected_height)
+    return response_body, None
 
 
 def request_image(
