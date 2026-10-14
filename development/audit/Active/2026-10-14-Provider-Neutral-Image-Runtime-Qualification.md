@@ -99,6 +99,36 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 - Installed packages: Diffusers 0.40.0, Transformers 5.16.1, Accelerate 1.14.0, huggingface-hub 1.29.0, safetensors 0.8.0. Required imports passed.
 - No model weights were downloaded and no model inference/image-generation cell was run. The planned flattened SDXL-Lightning background test was stopped before execution when the user clarified the required asset architecture. No GPU inference usage is established from this test record.
 
+### Graceful traffic growth and transition requirements — 2026-10-15
+
+The user's stated product objective is to avoid the common "success disaster": traffic increases, capacity cannot keep up, and users experience crashes or a noticeable drop in capability. The target is a smooth, low-disruption transition, while recognizing that the $0 budget cannot guarantee unlimited demand or an always-available GPU.
+
+#### User-facing continuity
+- Keep core AstroCrown browsing, stored assets, saved compositions and delivery of already-generated files available independently from the live GPU/model backend.
+- Separate the website's short request path from generation work via a provider-neutral asynchronous job API with a stable job ID and persisted job/result state.
+- Provide explicit accepted/queued/running/succeeded/retrying/paused-for-capacity/failed states. Do not pretend work is complete and do not promise precise ETAs until latency data supports them.
+- Use a bounded queue, concurrency cap and admission controls based on actual measurements and published tier terms. A queue buffers bursts but does not create compute. When the cap is reached, clearly pause/reject new jobs or restrict admission rather than building an unbounded backlog.
+- Persist approved outputs and composition manifests; reloading or repositioning a saved image should require no new inference call.
+
+#### Provider and worker behavior
+- Use idempotency keys and safe persisted state so client retries, restarts or duplicate queue delivery do not cause duplicate generation, billing, or file overwrite. Queues with at-least-once delivery need explicit deduplication where repeated work would be harmful.
+- Add circuit breakers and bounded exponential backoff with jitter. Retry transient throttling/service-unavailable errors where allowed; classify invalid request, missing model, permission and billing failures as actionable/terminal rather than retrying them indefinitely. Failed work must remain visible and recoverable.
+- Fail over only to an already qualified route that provides the same capability and quality floor under authorized terms. Do not silently replace transparent output with opaque output or move a paid request to an unqualified cheaper model.
+- Treat migration of the same pinned model to another qualified GPU host separately from changing the image-generation model. Use a bounded canary and gradually widen traffic only as quality, error, memory and latency evidence remains acceptable. Avoid duplicate "shadow" inference when credits are scarce unless it is separately authorized and budgeted.
+- Keep a rollback path and preserve the prior qualified route/artifact library until the replacement has passed the defined evidence window. Under $0 constraints, do not assume a warm standby, unlimited quota or no cold starts.
+
+#### Proactive signals and test plan
+Observe generation success and errors, p50/p95 latency, queue depth/oldest age, provider 429/5xx patterns, retries, cold-start time, usable remaining quota, memory failures, and how much capacity the minimum migration suite requires. Set numeric alert thresholds only after a baseline is observed. Begin transition work before projected usable capacity falls below test budget plus a recovery reserve.
+
+Before paid rollout, exercise offline/mock cases for provider outage, quota exhaustion, slow or lost GPU session, full queue, duplicate delivery, worker restart, idempotent storage, unavailable fallback and rollback. Mock tests validate orchestration but do not establish image quality. Keep the predeclared live task-specific quality suite mandatory. If free resources cannot finish it, mark the target **BLOCKED / INSUFFICIENT TEST BUDGET**, preserve the current qualified route if possible, clearly manage new-request admission and defer migration rather than claiming success.
+
+Reference practices:
+- Google SRE, handling overload and load shedding: https://sre.google/resources/book-update/handling-overload/
+- Google SRE, cascading failures: https://sre.google/sre-book/addressing-cascading-failures/
+- AWS Well-Architected graceful degradation: https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_graceful_degradation.html
+- Cloudflare Queues model: https://developers.cloudflare.com/queues/reference/how-queues-works/
+- Cloudflare Queues delivery guarantees: https://developers.cloudflare.com/queues/reference/delivery-guarantees/
+
 ### Zero-budget migration readiness requirement — 2026-10-15
 
 The sustainable-techonomic study may produce paying users before free provider quotas can fund a full migration comparison. Therefore the project must not wait for quota exhaustion to begin readiness work, and must not claim migration readiness based on mock tests, API credentials, provider marketing, or an incomplete image-quality comparison.
