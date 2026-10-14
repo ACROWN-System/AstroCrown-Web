@@ -268,6 +268,8 @@ class CloudflareImageTests(unittest.TestCase):
             self.assertTrue(metadata["provider_response"]["known_cloudflare_jpeg_png_mime_drift_tolerated"])
             self.assertEqual(metadata["output"]["mime_type"], "image/jpeg")
             self.assertEqual(metadata["output"]["file_name"], "first-image.jpg")
+            self.assertTrue(metadata["alpha_status"].startswith("NOT_SUPPORTED_BY_JPEG"))
+            self.assertIn("does not preserve alpha transparency", metadata["alpha_status"])
 
     def test_metadata_collision_does_not_overwrite_existing_metadata(self):
         with tempfile.TemporaryDirectory() as temp_dir:

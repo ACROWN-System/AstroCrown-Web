@@ -477,7 +477,12 @@ def write_artifact(
         },
         "provider_request_id": request_id,
         "rights_status": "NOT_YET_QUALIFIED_FOR_COMMERCIAL_PROMOTION",
-        "alpha_status": "NOT_ASSERTED; inspect the PNG alpha channel and edge quality before using as a transparent layer",
+        "alpha_status": (
+            "NOT_SUPPORTED_BY_JPEG; JPEG does not preserve alpha transparency. "
+            "Use a transparency-capable output and verify its alpha channel before transparent-layer use."
+            if detected["format"] == "jpeg"
+            else "NOT_ASSERTED; inspect the PNG alpha channel and edge quality before using as a transparent layer"
+        ),
     }
     created_output = False
     created_metadata = False
