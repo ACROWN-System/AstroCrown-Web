@@ -72,6 +72,21 @@ Use these documents as the canonical sources:
 
 Do not duplicate provider-health probes, the aggregate GPU-capacity calculator, or NOVA's orchestration/job decisions inside this subsystem. Reuse existing evidence through an explicit, compatible interface when one exists; do not assume a shared executable API already exists. NOVA's current aggregate GPU-capacity report is scoped to non-commercial R&D and is not proof of commercial-production eligibility or live capacity.
 
+## First image adapter (development-only)
+
+`cloudflare_image.py` is the first isolated image-provider adapter. It has no third-party Python dependencies, fixes the provider/model endpoint in code, accepts Cloudflare's raw PNG or JSON/base64 image response form, validates the PNG structure/dimensions, refuses to overwrite outputs, and writes a provenance sidecar. The prompt-helper LLM is optional and is not part of the image request path.
+
+Run deterministic tests without credentials or network access:
+
+```bash
+python -m py_compile development/ai-media-generator/cloudflare_image.py
+python -m unittest discover -s development/ai-media-generator/tests -p "test_*.py" -v
+```
+
+The live Cloudflare qualification workflow is **manual only**, restricted to `main`, requires an explicit confirmation input and repository secrets named `CLOUDFLARE_API_KEY_01` and `CLOUDFLARE_ACCOUNT_ID`, and uploads one image plus its provenance as a short-lived artifact. Do not add secret values to source files, prompts, issues, or logs. Use only non-sensitive prompts. Do not run the live workflow until account access and the no-payment configuration have been confirmed.
+
+**Status: implementation candidate, not provider-qualified.** Offline tests cannot prove Cloudflare entitlement, correct live output, current quota/usage, commercial rights, visual quality, or true alpha transparency. A valid opaque PNG is not proof of transparent output. Do not promote generated artifacts to the public website before the separate use-rights and quality gates pass.
+
 ## Development Status
 
 Status: **candidate / initial subsystem structure**
