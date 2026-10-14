@@ -99,6 +99,30 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 - Installed packages: Diffusers 0.40.0, Transformers 5.16.1, Accelerate 1.14.0, huggingface-hub 1.29.0, safetensors 0.8.0. Required imports passed.
 - No model weights were downloaded and no model inference/image-generation cell was run. The planned flattened SDXL-Lightning background test was stopped before execution when the user clarified the required asset architecture. No GPU inference usage is established from this test record.
 
+### Zero-budget migration readiness requirement — 2026-10-15
+
+The sustainable-techonomic study may produce paying users before free provider quotas can fund a full migration comparison. Therefore the project must not wait for quota exhaustion to begin readiness work, and must not claim migration readiness based on mock tests, API credentials, provider marketing, or an incomplete image-quality comparison.
+
+**Offline preparation (no inference credits):**
+- Pin and checksum the base model, adapter, encoders/VAE/tokenizer, scheduler, supported parameters, runtime/container and dependency lockfile.
+- Use offline tests for configuration/package integrity, adapter contracts, quota/queue/circuit-breaker logic, stored-file integrity, alpha validation using fixtures, and internal composition manifests.
+- Reuse saved approved assets for composition-regression tests; layout variations should consume zero generation calls.
+- Prepare the candidate deployment and exercise control-flow behavior with mocked provider responses. Keep mocked tests explicitly separate from actual GPU/hardware and image-quality evidence.
+
+**Predeclare the minimum live migration suite:**
+- Include at least one test for every critical capability the tier actually promises (for example opaque space plate, true-alpha asset, and token-logo asset if offered) and a baseline/candidate comparison for each critical task. Add performance/repeatability cases when those claims form part of the service promise.
+- Do not shrink the required suite merely because credits are low. If the available no-cost quota cannot finish it, classify the target as **BLOCKED / INSUFFICIENT TEST BUDGET**.
+- Under the present $0 constraint, do not enter billing information, activate a paid plan or consume paid/prepaid credits to get a passing result. If no eligible free path can complete the suite, keep the existing qualified path (if any), constrain admission transparently, defer the migration, or request explicit authorization for a bounded test budget.
+
+**Traffic and migration triggers:**
+- Monitor remaining free quota / usable GPU time, actual usage burn, generation latency/error rates, backlog, provider limit changes, and the lead time needed to qualify another target.
+- Begin migration review before projected quota runway drops below the required migration-test budget plus a recovery reserve; never wait for complete exhaustion or a production incident.
+- When capacity gets scarce, keep model and quality settings unchanged. Queue, stagger, rate-limit under published limits, or temporarily stop accepting new generation jobs rather than silently switch to a weaker unqualified model.
+- Serve stored approved assets and compositions without re-generation. A provider migration must never invalidate or silently replace previous outputs.
+- Do not count published allocations or idle GPU hours as sustained production capacity. Record test credits separately from user-serving compute.
+
+**Paid-tier gate:** If users are paying before a sustained production route exists, disclose the bounded/experimental nature of generation before purchase and avoid promising unqualified throughput or uptime. Before a provider/compute migration is considered live-ready, the target must pass the predeclared capability-specific quality suite and meet the tier's stated capacity requirements. If there is insufficient free test budget, migration remains blocked—never represent it as verified.
+
 ### Paid-user quality continuity requirement — 2026-10-15
 
 The user's concern is a commercial acceptance requirement: someone who pays during the sustainable tokenomics study should not receive a silently downgraded image-generation experience when AstroCrown moves to commercial deployment.
