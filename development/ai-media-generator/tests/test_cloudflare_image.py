@@ -108,7 +108,7 @@ class CloudflareImageTests(unittest.TestCase):
             build_payload("x", seed=-1)
 
     def test_missing_or_invalid_credentials_fail_before_network(self):
-        with self.assertRaisesRegex(ImageGenerationError, "CLOUDFLARE_API_KEY_01"):
+        with self.assertRaisesRegex(ImageGenerationError, "ASTROCROWN_CLOUDFLARE_AI_TOKEN"):
             CloudflareConfig.from_environment({"CLOUDFLARE_ACCOUNT_ID": self.config.account_id})
         with self.assertRaisesRegex(ImageGenerationError, "32-character hexadecimal"):
             CloudflareConfig("not-an-account-id", "token")
