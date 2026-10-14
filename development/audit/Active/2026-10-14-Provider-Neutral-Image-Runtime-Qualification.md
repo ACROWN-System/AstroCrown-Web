@@ -99,6 +99,36 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 - Installed packages: Diffusers 0.40.0, Transformers 5.16.1, Accelerate 1.14.0, huggingface-hub 1.29.0, safetensors 0.8.0. Required imports passed.
 - No model weights were downloaded and no model inference/image-generation cell was run. The planned flattened SDXL-Lightning background test was stopped before execution when the user clarified the required asset architecture. No GPU inference usage is established from this test record.
 
+### Launch-event surge and cold-start requirement — 2026-10-15
+
+The user calls out a launch event where a large adoption burst may arrive before the free operational-capacity target has been met. The user has observed that GPU providers accepting crypto payments can take approximately four minutes to become hot/ready. Record this as a **planning assumption requiring provider-specific measurement**, not as a verified universal fact. Unless measured data supports a different conservative value, plan as though a cold replacement is unavailable for at least four minutes, or longer if measured high-percentile startup times plus recovery margin require it.
+
+This is a launch gate. Do not infer that autoscaling or a free GPU quota can absorb a burst before the replacement worker is ready. Queueing buffers demand but does not provide capacity.
+
+**Before public launch:**
+
+- Declare the launch-load hypothesis: expected peak request arrival, existing qualified service rate, measured generation latency, maximum acceptable user wait and assumed cold-start window. Calculate the expected arriving work during the cold-start interval (peak requests per minute multiplied by the number of cold-start minutes), then account for retries and an explicit recovery margin. Use actual signup/interest observations where available and mark forecast uncertainty.
+- Do not enable unrestricted public on-demand generation at the event unless measured qualified capacity and a bounded queue/admission plan can handle the declared hypothesis. If capacity is not qualified, launch the website/static content while keeping generation in a clearly disclosed limited preview, waitlist or scheduled-access mode; do not promise unqualified throughput/uptime to paying users.
+- Prepare approved, pre-generated sample outputs and static compositions for demos and homepage use. Cache them and the website independently from live GPU generation. Clearly identify samples; do not imply they are newly generated personal results.
+- Set tier-specific maximum waits, bounded queue depth, per-user rate/concurrency limits, retry budgets, circuit-breaker conditions and an operator control to pause new work. Preserve compute/quota needed for the minimum migration/quality tests; do not assume a paid warm GPU is available.
+- Define user-visible states for queued, paused/capacity-limited and unavailable. Accepted jobs must keep durable IDs and state; reject/limit before acceptance when the queue cannot honor the service promise.
+
+**At the event:**
+
+- Serve browsing, cached site content, saved compositions, approved assets and static examples without waiting for a GPU.
+- If workers are cold or at quota, do not assume a four-minute recovery is guaranteed. Keep accepted jobs visible in the bounded queue and tell users the real state; do not accept unlimited work, make aggressive retries or allow request storms to amplify the outage.
+- Ramp job admission gradually only when real measurements (arrival/completion rates, queue age/depth, p95 latency, errors, cold-start time and remaining usable quota) support the next step. If controls trip, stop accepting new jobs or return users to the waitlist rather than changing image quality silently.
+- Never fall back to an unqualified or weaker model, misrepresent a static sample as personalized output, or return a non-transparent file when alpha output was promised.
+- If no qualified route remains, keep the website and stored outputs online while pausing new generation; resume only when a valid route is available and passes required checks.
+
+**Decision:** a marketing launch does not by itself authorize an always-on image-generation promise. If launch traffic cannot be supported by measured no-cost capacity and the cold-start/queue plan, restrict the generation feature transparently before the event, defer that feature, or obtain explicit approval for a bounded additional capacity/test budget. Under the current $0 rule, never activate paid fallback automatically.
+
+Reliability references:
+- Google SRE, Service Best Practices (launch traffic and load planning): https://sre.google/sre-book/service-best-practices/
+- Google SRE, Handling Overload: https://sre.google/resources/book-update/handling-overload/
+- AWS Well-Architected REL 5: https://docs.aws.amazon.com/wellarchitected/latest/framework/rel-05.html
+- AWS graceful degradation: https://docs.aws.amazon.com/wellarchitected/latest/framework/rel_mitigate_interaction_failure_graceful_degradation.html
+
 ### Graceful traffic growth and transition requirements — 2026-10-15
 
 The user's stated product objective is to avoid the common "success disaster": traffic increases, capacity cannot keep up, and users experience crashes or a noticeable drop in capability. The target is a smooth, low-disruption transition, while recognizing that the $0 budget cannot guarantee unlimited demand or an always-available GPU.
