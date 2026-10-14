@@ -9,7 +9,7 @@
 **Mode:** Current-source verification, architecture clarification, and additive development documentation.  
 **Repository:** https://github.com/ACROWN-System/AstroCrown-Web  
 **Base revision:** `0aadaf9d804de1fb82e387052e2765fad3cf71a3`  
-**Targets:** media generator README, multi-model strategy, capacity-aware rollout proposal, model/provider candidate register, homepage background requirements (R-019 placement/traceability), and this active plan.  
+**Targets:** media generator README, multi-model strategy, capacity-aware rollout proposal, model/provider candidate register, homepage background requirement (globally unique R-036 assignment), and this active plan.  
 **Method:** Follow `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, `development/Prompt-Guide.md`, and `development/audit/templates/CANDIDATE-EVALUATION.md`. This plan does not claim to use missing NAVIGATION protocol/template files.
 
 ## User-confirmed intent
@@ -29,7 +29,7 @@
 - Assign media-job lifecycle, application access/waiting-list policy, NOVA orchestration, shared compute, provider-health and capacity-accounting responsibilities without creating duplicate queues, probes or capacity calculators.
 - Explicitly mark the existing NOVA aggregate GPU-capacity report as R&D-scoped, separate from commercial eligibility and live execution availability.
 - Align the candidate register's revision/evidence dates and correct the next-action text for the already-configured NOVA Cloudflare Workers AI credential context.
-- Put R-019 after R-018 and update the migration note to distinguish the new requirement from preserved source material.
+- Assign the new alpha-transparency requirement the globally unique identifier R-036; preserve R-019 for the existing Homepage Header System requirement and distinguish the new requirement from migrated source material.
 - Define a minimum image proof that includes actual output retrieval, file validation, provenance, negative/contract tests, and one bounded live integration test; defer public queues, user-facing access policy, broad provider registries, and extra pipeline stages until justified.
 - Retain the $0/no-payment-method constraint, component-level rights gates, image-first delivery, parallel but independent video qualification, and alpha-transparency requirements.
 - Do not modify production website files, create/change credentials or secrets, alter billing, invoke live provider endpoints, or promote any candidate as qualified in this documentation-alignment change.
@@ -50,7 +50,7 @@
 - No duplicate GPU capacity calculator, provider-health probe, or independent NOVA/media job queue is proposed; any cross-repository reuse uses an explicit compatible schema/API and does not assume existing executable integration.
 - The existing aggregate NOVA GPU report is described as R&D-scoped unless separately requalified; projected/qualified capacity is not confused with live available compute or actual completed-job usage.
 - The candidate register distinguishes its revision date, initial evaluation date, and candidate-level evidence dates, and does not incorrectly suggest that Cloudflare credentials must be created from scratch.
-- R-019 follows R-018 and the migration note identifies it as an additive requirement.
+- R-036 is globally unique against the archived R-001–R-035 baseline, and the migration note distinguishes the new requirement from preserved source material.
 - The first image slice is specific and testable, while public queues, waiting lists, databases, broad registries, and unnecessary processing stages remain deferred until a real requirement justifies them.
 - Image generation requires an actual retrieved/decoded image and intended-use rights; an HTTP success or text-only LLM response is not accepted as image generation.
 - Video remains part of one target generator but has independent qualification gates; its absence cannot block the image path. Alpha transparency is required only for assets whose compositing role needs it.
