@@ -177,7 +177,8 @@ class CloudflareImageTests(unittest.TestCase):
     def test_validates_png_signature_chunk_crc_compression_and_dimensions(self):
         self.assertEqual(validate_png(self.png, 256, 256), {"width": 256, "height": 256})
         corrupted = bytearray(self.png)
-        corrupted[-9] ^= 0x01
+        # IHDR checksum starts at byte 29 in this test fixture.
+        corrupted[29] ^= 0x01
         with self.assertRaisesRegex(ImageGenerationError, "checksum"):
             validate_png(bytes(corrupted), 256, 256)
         with self.assertRaisesRegex(ImageGenerationError, "not a valid PNG"):
