@@ -94,13 +94,14 @@ class CloudflareImageTests(unittest.TestCase):
             "num_steps": 4,
         })
         self.assertEqual(MODEL_ID, "@cf/bytedance/stable-diffusion-xl-lightning")
+        self.assertEqual(build_payload("odd-but-documented-dimension", width=1025)["width"], 1025)
 
     def test_payload_rejects_empty_prompt_invalid_dimensions_steps_and_seed(self):
         for args in (
             ("   ", 1024, 1024, 4, None),
             ("x", 255, 1024, 4, None),
             ("x", 1024, 1024, 0, None),
-            ("x", 1025, 1024, 4, None),
+            ("x", 2049, 1024, 4, None),
         ):
             with self.subTest(args=args), self.assertRaises(ImageGenerationError):
                 build_payload(*args)
