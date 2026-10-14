@@ -130,8 +130,21 @@ def validate_png(data: bytes, expected_width: int, expected_height: int) -> dict
     if len(data) > MAX_RESPONSE_BYTES:
         raise ImageGenerationError("PNG output exceeds the configured size limit.")
 
+    if (
+        isinstance(expected_width, bool)
+        or isinstance(expected_height, bool)
+        or not isinstance(expected_width, int)
+        or not isinstance(expected_height, int)
+        or not 256 <= expected_width <= 2048
+        or not 256 <= expected_height <= 2048
+        or expected_width % 8 != 0
+        or expected_height % 8 != 0
+    ):
+        raise ImageGenerationError("Expected dimensions must be between 256 and 2048 and divisible by 8.")
+
     offset = len(PNG_SIGNATURE)
     width = height = 0
+    bit_depth = color_type = 0
     seen_ihdr = False
     seen_idat = False
     seen_iend = False
@@ -188,10 +201,19 @@ def validate_png(data: bytes, expected_width: int, expected_height: int) -> dict
         raise ImageGenerationError(
             f"PNG dimensions were {width}x{height}; expected {expected_width}x{expected_height}."
         )
+    # Bound decompression to the maximum plausible 16-bit RGBA image of the
+    # requested dimensions plus per-row/interlace overhead. This avoids a
+    # compressed-response expansion bomb from exhausting runner memory.
+    max_decoded_bytes = expected_width * expected_height * 8 + expected_height * 8 + 4096
+    decoder = zlib.decompressobj()
     try:
-        decoded = zlib.decompress(b"".join(idat_parts))
+        decoded = decoder.decompress(b"".join(idat_parts), max_decoded_bytes + 1)
     except zlib.error as exc:
         raise ImageGenerationError("PNG image data is not valid compressed data.") from exc
+    if len(decoded) > max_decoded_bytes or decoder.unconsumed_tail:
+        raise ImageGenerationError("PNG decompressed image data exceeds the configured size limit.")
+    if not decoder.eof or decoder.unused_data:
+        raise ImageGenerationError("PNG compressed image data is incomplete or contains trailing data.")
     if not decoded:
         raise ImageGenerationError("PNG contains empty decoded image data.")
     return {"width": width, "height": height}
@@ -302,6 +324,7 @@ def write_artifact(
     output = Path(output_path).expanduser()
     if output.suffix.lower() != ".png":
         raise ImageGenerationError("Output path must end in .png.")
+    build_payload(prompt, width, height, num_steps, seed=seed)
     validated = validate_png(png_bytes, width, height)
     metadata_path = output.with_name(output.name + ".metadata.json")
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -331,17 +354,29 @@ def write_artifact(
         "rights_status": "NOT_YET_QUALIFIED_FOR_COMMERCIAL_PROMOTION",
         "alpha_status": "NOT_ASSERTED; inspect the PNG alpha channel and edge quality before using as a transparent layer",
     }
+    created_output = False
+    created_metadata = False
     try:
         with output.open("xb") as image_file:
+            created_output = True
             image_file.write(png_bytes)
         with metadata_path.open("x", encoding="utf-8") as metadata_file:
+            created_metadata = True
             json.dump(metadata, metadata_file, ensure_ascii=False, indent=2)
             metadata_file.write("\n")
     except Exception:
-        try:
-            output.unlink(missing_ok=True)
-        except OSError:
-            pass
+        # Only remove files this invocation successfully created; never delete a
+        # concurrently created or pre-existing file after an exclusive-open failure.
+        if created_output:
+            try:
+                output.unlink(missing_ok=True)
+            except OSError:
+                pass
+        if created_metadata:
+            try:
+                metadata_path.unlink(missing_ok=True)
+            except OSError:
+                pass
         raise
     return output, metadata_path
 
