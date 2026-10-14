@@ -70,6 +70,7 @@ Use these documents as the canonical sources:
 - [Shared compute responsibility](../gpu-infrastructure/README.md).
 - [NOVA orchestration responsibility](../nova-ai-orchestration/README.md).
 - [Fact Observation, Independent Derivation and Evidence Governance](../audit/FACT-OBSERVATION-AND-EVIDENCE-GOVERNANCE.md) for accurate research classifications, provenance, rights review, confidentiality-aware evidence, and preservation.
+- [Public Claims and Legal Communications](../audit/PUBLIC-CLAIMS-AND-LEGAL-COMMUNICATIONS.md) for evidence-backed capability/licensing statements, fair model comparisons, external communications, and dispute escalation.
 
 Do not duplicate provider-health probes, the aggregate GPU-capacity calculator, or NOVA's orchestration/job decisions inside this subsystem. Reuse existing evidence through an explicit, compatible interface when one exists; do not assume a shared executable API already exists. NOVA's current aggregate GPU-capacity report is scoped to non-commercial R&D and is not proof of commercial-production eligibility or live capacity.
 
