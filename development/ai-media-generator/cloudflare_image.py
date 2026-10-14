@@ -273,6 +273,11 @@ def validate_jpeg(data: bytes, expected_width: int, expected_height: int) -> dic
         if marker == 0xDA:  # Start of Scan; the remaining bounded data must end at EOI.
             if not seen_frame:
                 raise ImageGenerationError("JPEG scan appears before a frame header.")
+            if segment_length < 8:
+                raise ImageGenerationError("JPEG scan header is too short.")
+            scan_components = data[offset + 2]
+            if scan_components < 1 or segment_length != 6 + (2 * scan_components):
+                raise ImageGenerationError("JPEG scan header declares an invalid component layout.")
             if segment_end >= len(data) - 2:
                 raise ImageGenerationError("JPEG scan data is empty.")
             seen_scan = True
