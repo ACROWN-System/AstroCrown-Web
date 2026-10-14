@@ -58,6 +58,19 @@ Before comparing products, services, models, providers or competitors, retain th
 
 Do not cherry-pick a result or imply that a limited test proves an overall ranking. State “in these tests, under these conditions” where that is what the evidence supports.
 
+### Litigation as a general business-continuity risk — not an allegation
+
+Risk planning may account for the possibility that a legal threat or proceeding could consume resources, delay market entry or product development, divert management attention, create disclosure and defence costs, or otherwise burden a smaller competitor—even where some allegations are later rejected, narrowed, withdrawn, or remain unresolved. This is a **hypothetical contingency category**, not a prediction that any particular competitor will act this way and not an assertion about the merits of any current or future dispute.
+
+Keep two questions separate:
+
+1. **What practical harm could a dispute impose?** This can be assessed prospectively for continuity planning without accusing anyone of misconduct.
+2. **Was a particular claim legally baseless, abusive, or brought for an improper competitive purpose?** That is a case-specific legal and evidentiary question. A lawsuit's competitive effect, expense, loss, withdrawal, or ultimate failure does not by itself prove bad faith, abuse, lack of standing, or illegitimacy. Conversely, a party's assertion of legitimate rights should not be treated as improper merely because enforcement could affect a competitor.
+
+Some jurisdictions recognize narrow doctrines addressing objectively baseless litigation used as an anticompetitive weapon. For example, the U.S. Supreme Court's decision in *Professional Real Estate Investors, Inc. v. Columbia Pictures Industries, Inc.*, 508 U.S. 49 (1993), describes a two-part U.S. antitrust test requiring objective baselessness before a court examines alleged subjective anticompetitive motivation. Importantly, the Court **did not find the challenged lawsuit to be sham litigation in that case** because the underlying claim was objectively reasonable. This is a jurisdiction-specific example, not a universal rule or a basis to label a real dispute without evidence.
+
+For continuity planning, preserve accurate, contemporaneous records of independent development, lawful research and licensing decisions, design rationale, relevant communications, timelines, test results, and quantifiable operational impact. When a credible threat or claim arises, consult qualified counsel, follow preservation instructions, and let counsel assess the applicable legal test and evidence. Keep public statements about motive separate from internal risk scenarios; do not assert improper intent about a particular party unless the evidence and counsel-reviewed wording justify it.
+
 Do not publicly accuse a named competitor, person or organization of fraud, theft, malicious litigation, infringement, dishonesty or unlawful conduct merely because of suspicion, competitive disagreement, an allegation, or an unresolved legal position. If reporting an existing public claim or proceeding is necessary, verify the primary record, accurately distinguish allegations from findings, include procedural status and material context, and obtain legal review before publication. Truth, good faith, privilege, fair comment and other defenses can be fact- and jurisdiction-dependent; do not treat any of them as an automatic shield.
 
 A neutral internal statement such as “the opposing party alleges X; the claim is disputed; counsel is reviewing the evidence” is preferable to an unsupported conclusion about motive or guilt. Public communications about an active dispute should be handled by a designated spokesperson with counsel's advice.
