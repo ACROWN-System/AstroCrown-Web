@@ -16,12 +16,12 @@ on:
         type: string
         required: true
       width:
-        description: "Image width (256–2048, divisible by 8)"
+        description: "Image width (256–2048)"
         type: number
         default: 1024
         required: true
       height:
-        description: "Image height (256–2048, divisible by 8)"
+        description: "Image height (256–2048)"
         type: number
         default: 1024
         required: true
