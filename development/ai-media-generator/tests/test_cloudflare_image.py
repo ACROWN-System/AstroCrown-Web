@@ -175,9 +175,9 @@ class CloudflareImageTests(unittest.TestCase):
 
     def test_rejects_compressed_image_expansion_bomb(self):
         ihdr = struct.pack(">IIBBBBB", 256, 256, 8, 6, 0, 0, 0)
-        oversized_decoded = zlib.compress(b"\\x00" * 600_000)
+        oversized_decoded = zlib.compress(b"\x00" * 600_000)
         malicious = (
-            b"\\x89PNG\\r\\n\\x1a\\n"
+            b"\x89PNG\r\n\x1a\n"
             + png_chunk(b"IHDR", ihdr)
             + png_chunk(b"IDAT", oversized_decoded)
             + png_chunk(b"IEND", b"")
