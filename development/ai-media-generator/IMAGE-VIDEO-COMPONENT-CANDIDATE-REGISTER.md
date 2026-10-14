@@ -62,6 +62,27 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 - One qualified external API call can create a source asset that is reused in many compositions. Use a single request to return several assets only when the exact endpoint documents independent outputs and returns each asset separately. An image-edit API that blends multiple input images into one output does not replace a non-destructive layer/composition system.
 - Keep image generation, alpha post-processing, internal composition and final delivery as independently replaceable/testable components. A failure or rights limitation in one route must not require redesigning all compositions.
 
+### AstroCrown-owned model strategy — fine-tune first, foundation training later
+
+**Strategic direction:** Prefer a model that AstroCrown operates and versions itself, with external GPU services treated as replaceable compute hosts rather than as opaque third-party image-generation APIs. This allows the same qualified weights and inference pipeline to move to different GPU hosts without intentionally changing the model. GPU portability, exact reproducibility and commercial rights still need separate validation.
+
+**Stage A — qualify and fine-tune a permitted base model (recommended first experiment):**
+
+1. Select an exact base checkpoint only after reviewing the base model's license/terms, commercial-use rights, redistribution and hosted-service obligations, training-data constraints, architecture, runtime compatibility and realistic fit on the observed 15-GiB Tesla T4 GPUs.
+2. Create a small, documented, rights-cleared training set for AstroCrown's visual identity: deep-navy/blue-violet space treatments, lighting/contrast rules, and desired asset aesthetics. Keep captions, source provenance, permissions and train/validation splits. Do not use third-party or generated outputs as training data unless the exact terms permit that use; respect model-specific restrictions on using outputs to train other models.
+3. Use a parameter-efficient adaptation (for example, LoRA) before considering full-model fine-tuning. Begin with a small offline/configuration review, then one bounded training experiment only after memory and library compatibility are demonstrated. The current Kaggle session provides useful proof-of-concept compute, not guaranteed recurring capacity or persistent serving.
+4. Version the base model ID/revision/checksum, adapter ID/checksum, tokenizer/text encoder, VAE, inference runtime/dependencies, precision, scheduler, resolution, safety filters and supported parameter range. Package the base+adapter+pipeline as a single named AstroCrown model release. A LoRA is an adapter and generally depends on its base; it is not a stand-alone independent foundation model.
+5. Evaluate against a fixed prompt/reference set using repeated seeds, side-by-side visual review, prompt adherence, consistency across a batch, VRAM/latency measurements and task-specific alpha checks. Style fine-tuning alone does not create real transparent output: native alpha or a separately qualified transparency stage remains a distinct capability gate.
+6. Preserve each approved output file immutably with a checksum. Re-running the same model can provide consistency but is not a substitute for storing approved results; do not promise bit-for-bit identical outputs across different hardware/software stacks.
+
+**Stage B — own a full foundation model (long-term research only):**
+
+Training a foundation model from scratch would provide more control over architecture and training data, but requires a much larger curated dataset, sustained compute, engineering and evaluation effort. The currently observed Kaggle T4 allocation is not evidence that training a competitive image foundation model from scratch is practical under the $0 constraint. Do not choose this path as a prerequisite for the first assets.
+
+**License rule:** Fine-tuning, merging adapter weights, renaming a checkpoint or serving it from AstroCrown does not erase the base model's license. The combined model, training data, runtime and every dependency require their own rights/provenance review. Prefer a commercially compatible base with clear redistribution and modification terms, but select only after evaluating technical fit; an Apache-2.0 model label alone does not clear the entire pipeline.
+
+**Paid GPU migration rule:** If/when paid compute is approved, deploy the same exact AstroCrown model release to that provider and pay for GPU execution—not a different provider-owned generation model—where the host and terms allow it. Pin the inference software, parameters and artifacts. Hardware/runtime changes can still affect numerical output, so use a validation suite and keep approved files fixed. Provider-specific hosted image APIs are optional separate adapters, not automatic replacements for our model.
+
 ### Reproducibility and provider failover policy
 
 **Do not promise pixel-identical regeneration across providers.** The actual approved file is the source of truth for an existing asset. Prompts, seeds, or model names are not substitutes for preserving the generated binary.
