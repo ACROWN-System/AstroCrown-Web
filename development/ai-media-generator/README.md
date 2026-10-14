@@ -74,7 +74,7 @@ Do not duplicate provider-health probes, the aggregate GPU-capacity calculator, 
 
 ## First image adapter (development-only)
 
-`cloudflare_image.py` is the first isolated image-provider adapter. It has no third-party Python dependencies, fixes the provider/model endpoint in code, accepts the model's documented binary image/png response, validates the PNG structure/dimensions, refuses to overwrite outputs, and writes a provenance sidecar. The prompt-helper LLM is optional and is not part of the image request path.
+`cloudflare_image.py` is the first isolated image-provider adapter. It has no third-party Python dependencies and fixes the provider/model endpoint in code. It accepts only bounded, validated PNG or JPEG image containers, records Cloudflare's declared Content-Type separately from the detected byte format, corrects the saved extension to match the actual format, refuses to overwrite outputs, and writes a provenance sidecar. PNG validation checks chunk CRCs and bounded decompression; JPEG validation checks signatures, marker segments, frame dimensions and scan-header structure but does not fully decode JPEG entropy data, so manual artifact-viewability verification remains required. The prompt-helper LLM is optional and is not part of the image request path.
 
 Run deterministic tests without credentials or network access:
 
@@ -83,7 +83,7 @@ python -m py_compile development/ai-media-generator/cloudflare_image.py
 python -m unittest discover -s development/ai-media-generator/tests -p "test_*.py" -v
 ```
 
-The live Cloudflare qualification workflow is **manual only**, restricted to `main`, requires an explicit confirmation input and repository secrets named `ASTROCROWN_CLOUDFLARE_AI_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and uploads one image plus its provenance as a short-lived artifact. Do not add secret values to source files, prompts, issues, or logs. Use only non-sensitive prompts. Do not run the live workflow until account access and the no-payment configuration have been confirmed.
+The live Cloudflare qualification workflow is owned and dispatched from [NOVA](https://github.com/ACROWN-System/NOVA/actions/workflows/astrocrown-cloudflare-image-qualification.yml), not from this repository. It is **manual only**, restricted to NOVA `main`, and requires explicit confirmation that the current no-payment configuration remains in place. It consumes NOVA's existing `CLOUDFLARE_API_KEY_01` and `CLOUDFLARE_ACCOUNT_ID` secrets, checks out this repository's adapter at a reviewed immutable commit SHA, and uploads one detected-format image plus its provenance as a short-lived artifact. Do not add or duplicate secrets in AstroCrown-Web, or put secret values in source files, prompts, issues, or logs. Use only non-sensitive prompts. Do not dispatch the live workflow until account access and the no-payment configuration have been confirmed.
 
 **Status: implementation candidate, not provider-qualified.** Offline tests cannot prove Cloudflare entitlement, correct live output, current quota/usage, commercial rights, visual quality, or true alpha transparency. A valid opaque PNG is not proof of transparent output. Do not promote generated artifacts to the public website before the separate use-rights and quality gates pass.
 
