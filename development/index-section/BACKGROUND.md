@@ -8,7 +8,7 @@ This document preserves source material and does not promote candidates, discove
 
 ## Migration notes
 
-R-012 through R-018 and their source excerpts are preserved from the pre-migration material. R-019 is a new additive transparency requirement, placed after R-018 to preserve requirement-number order.
+R-012 through R-018 and their source excerpts are preserved from the pre-migration material. The established global requirement baseline continues through R-035, and R-019 remains the Homepage Header System requirement. The new alpha-transparency requirement therefore uses the globally unique identifier R-036.
 
 ## Source material
 
@@ -317,7 +317,7 @@ The layer shall:
 - Asset compositing.
 - Atmospheric composition layer.
 
-### R-019 — Transparent Foreground Assets and Alpha-Preserving Layers
+### R-036 — Transparent Foreground Assets and Alpha-Preserving Layers
 
 #### Purpose
 
