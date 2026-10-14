@@ -99,6 +99,14 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 - Installed packages: Diffusers 0.40.0, Transformers 5.16.1, Accelerate 1.14.0, huggingface-hub 1.29.0, safetensors 0.8.0. Required imports passed.
 - No model weights were downloaded and no model inference/image-generation cell was run. The planned flattened SDXL-Lightning background test was stopped before execution when the user clarified the required asset architecture. No GPU inference usage is established from this test record.
 
+### Timing/prioritization decision — 2026-10-15
+
+The user judges it more cost-efficient to resolve launch-surge capacity shortly before introducing public paid tiers rather than spend current prototype effort on an unmeasured future peak. Record that as the project sequencing decision. The controls below are **pre-paid-launch readiness requirements**, not an instruction to perform load tests or cold-start benchmarks immediately.
+
+During current $0 development, retain only low-cost design decisions that also benefit the current workflow: keep stored assets/site browsing independent from model execution, preserve job/result state where asynchronous generation is already being implemented, and use offline mocks for the basic error paths already in scope. Do not consume limited GPU/inference quota on speculative capacity testing, build a full production-scale queue solely for the launch scenario, or set numeric capacity thresholds without observations.
+
+Revisit the full cold-start and launch-surge validation shortly before public paid generation—early enough to measure the actual shortlisted providers, use observed demand signals to define the load hypothesis, test the bounded queue/admission/recovery behavior, and delay or limit the launch if the evidence is inadequate. The four-minute figure remains a planning assumption until measured for the selected provider(s). This prioritization does not authorize an unrestricted paid-generation promise before the future gate passes.
+
 ### Launch-event surge and cold-start requirement — 2026-10-15
 
 The user calls out a launch event where a large adoption burst may arrive before the free operational-capacity target has been met. The user has observed that GPU providers accepting crypto payments can take approximately four minutes to become hot/ready. Record this as a **planning assumption requiring provider-specific measurement**, not as a verified universal fact. Unless measured data supports a different conservative value, plan as though a cold replacement is unavailable for at least four minutes, or longer if measured high-percentile startup times plus recovery margin require it.
