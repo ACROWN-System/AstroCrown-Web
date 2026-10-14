@@ -67,10 +67,10 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 
 ## Implementation checkpoint (2026-10-14)
 
-- Added `development/ai-media-generator/cloudflare_image.py`: fixed Cloudflare endpoint, bounded request inputs, secret-safe errors, redirect rejection, the documented binary-PNG response contract, PNG chunk CRC/bounded decompression/dimension validation, no-overwrite output and provenance sidecar.
-- Added deterministic tests under `development/ai-media-generator/tests/test_cloudflare_image.py` for success variants, malformed output, provider errors, redirects, dimensions, checksums and no-overwrite behavior.
+- Updated `development/ai-media-generator/cloudflare_image.py`: fixed Cloudflare endpoint, bounded request inputs, secret-safe errors, redirect rejection, PNG chunk CRC/bounded decompression/dimension validation, bounded JPEG marker/frame/scan-structure/dimension validation, MIME-drift recording, format-correct output extension, no-overwrite behavior and a provenance sidecar. JPEG validation is explicitly structural, not a full entropy decode; manual viewability still must be verified from the returned artifact.
+- Expanded deterministic tests under `development/ai-media-generator/tests/test_cloudflare_image.py` for raw PNG success, JPEG bytes with the known image/png declaration drift, JSON/unknown response rejection without body disclosure, JPEG marker/dimension checks, format-correct file naming/provenance, malformed PNG checksums/compression, provider errors, redirects and no-overwrite behavior.
 - Added the offline-test CI workflow in AstroCrown-Web. The direct-live workflow is being removed from AstroCrown-Web because its repository secrets are intentionally not duplicated there. The credential-owning qualification runner is being moved to NOVA to use existing NOVA secrets. The NOVA runner checks out the reviewed adapter commit anonymously by immutable SHA and uploads only the image and provenance as a 7-day artifact.
-- No live provider call has been made, and this adapter is not yet qualified. The current PR check suite must run against its exact head before merge; a successful PR suite would establish offline/code correctness only.
+- NOVA run #38573541271 made the first live provider call. The request reached the adapter but failed safely at the response-format check; no artifact was uploaded. Cloudflare entitlement, output quality and this adapter remain unqualified. The updated PR check suite must run against its exact head before merge; a successful PR suite establishes offline/code correctness only.
 
 ## Handoff
 
