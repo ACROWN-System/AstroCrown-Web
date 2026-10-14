@@ -46,7 +46,7 @@ class CloudflareConfig:
                 "CLOUDFLARE_ACCOUNT_ID must be a 32-character hexadecimal account ID."
             )
         if not self.api_token or not self.api_token.strip():
-            raise ImageGenerationError("CLOUDFLARE_API_KEY_01 is empty or missing.")
+            raise ImageGenerationError("ASTROCROWN_CLOUDFLARE_AI_TOKEN is empty or missing.")
         if any(ch in self.api_token for ch in "\r\n"):
             raise ImageGenerationError("Cloudflare token contains invalid newline characters.")
 
@@ -57,11 +57,11 @@ class CloudflareConfig:
     ) -> "CloudflareConfig":
         env = os.environ if environ is None else environ
         account_id = env.get("CLOUDFLARE_ACCOUNT_ID", "").strip()
-        token = env.get("CLOUDFLARE_API_KEY_01", "")
+        token = env.get("ASTROCROWN_CLOUDFLARE_AI_TOKEN", "")
         if not account_id:
             raise ImageGenerationError("Missing environment variable CLOUDFLARE_ACCOUNT_ID.")
         if not token:
-            raise ImageGenerationError("Missing environment variable CLOUDFLARE_API_KEY_01.")
+            raise ImageGenerationError("Missing environment variable ASTROCROWN_CLOUDFLARE_AI_TOKEN.")
         return cls(account_id=account_id, api_token=token)
 
 
