@@ -356,10 +356,6 @@ def _extract_image(
         raise ImageGenerationError(
             f"Cloudflare declared {content_type}; image bytes were PNG. Refusing MIME mismatch."
         )
-    if detected["format"] == "jpeg" and content_type not in {"image/jpeg", "image/jpg", "image/png"}:
-        raise ImageGenerationError(
-            f"Cloudflare declared {content_type}; image bytes were JPEG. Refusing MIME mismatch."
-        )
     # JPEG bytes with an image/png declaration are explicitly tolerated because
     # of the documented Cloudflare inconsistency. Provenance records this mismatch.
     return response_body, None, content_type
