@@ -45,6 +45,14 @@ These references are examples of jurisdiction-specific principles, not a univers
 
 **IF not modified:** researchers may record observations inconsistently, mix factual findings with claims or copied materials, expose confidential engineering details in public files, or fail to preserve traceable evidence of component rights and independent development.
 
-## Status
+## Implementation and verification status
 
-Plan created before implementation on the dedicated documentation branch. Final status depends on completing the draft, reviewing the diff and available automated checks, and opening the review PR.
+- Created `development/audit/FACT-OBSERVATION-AND-EVIDENCE-GOVERNANCE.md`.
+- Created `development/audit/templates/FACT-OBSERVATION-RECORD.md`.
+- Linked the policy from `development/audit/README.md` and `development/ai-media-generator/README.md`.
+- Added a draft PR for review: https://github.com/ACROWN-System/AstroCrown-Web/pull/123
+- Reviewed the changed-file diff and confirmed that changes are documentation-only. No product code, credentials, model weights, previously collected evidence, or backups were changed.
+- GitHub Actions checks were queued when last inspected; their final conclusions remain unverified.
+- The PR remains a draft because counsel review is appropriate before treating the new policy as approved. This is not a legal opinion or certification.
+
+**Closure condition:** review the PR, inspect completed checks, address any findings, and obtain appropriate legal review before promoting the policy from proposed to approved status.
