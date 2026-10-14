@@ -24,6 +24,10 @@ Use [Fact Observation, Independent Derivation and Evidence Governance](FACT-OBSE
 
 Use [Fact Observation / Research Evidence Record](templates/FACT-OBSERVATION-RECORD.md) as the starting template. Keep public or shareable summaries separate from restricted original evidence and trade secrets. The fact-observation label is not a legal safe harbor; assess the actual material, acquisition method, intended use and applicable rights.
 
+## Public claims and legal communications
+
+Use [Public Claims and Legal Communications](PUBLIC-CLAIMS-AND-LEGAL-COMMUNICATIONS.md) before publishing material capability, quality, performance, capacity, pricing, rights, compliance, marketing, comparative or competitor-related claims, and when responding to a legal threat. It covers prior substantiation, accurate scope and status, fair comparisons, confidentiality, evidence preservation and escalation to qualified counsel. It is proposed operational guidance, not legal advice or a guarantee against litigation.
+
 ## Baseline references
 
 - NIST SP 800-218 SSDF Version 1.1
