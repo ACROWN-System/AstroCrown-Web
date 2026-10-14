@@ -83,7 +83,7 @@ python -m py_compile development/ai-media-generator/cloudflare_image.py
 python -m unittest discover -s development/ai-media-generator/tests -p "test_*.py" -v
 ```
 
-The live Cloudflare qualification workflow is **manual only**, restricted to `main`, requires an explicit confirmation input and repository secrets named `CLOUDFLARE_API_KEY_01` and `CLOUDFLARE_ACCOUNT_ID`, and uploads one image plus its provenance as a short-lived artifact. Do not add secret values to source files, prompts, issues, or logs. Use only non-sensitive prompts. Do not run the live workflow until account access and the no-payment configuration have been confirmed.
+The live Cloudflare qualification workflow is **manual only**, restricted to `main`, requires an explicit confirmation input and repository secrets named `ASTROCROWN_CLOUDFLARE_AI_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`, and uploads one image plus its provenance as a short-lived artifact. Do not add secret values to source files, prompts, issues, or logs. Use only non-sensitive prompts. Do not run the live workflow until account access and the no-payment configuration have been confirmed.
 
 **Status: implementation candidate, not provider-qualified.** Offline tests cannot prove Cloudflare entitlement, correct live output, current quota/usage, commercial rights, visual quality, or true alpha transparency. A valid opaque PNG is not proof of transparent output. Do not promote generated artifacts to the public website before the separate use-rights and quality gates pass.
 
