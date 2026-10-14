@@ -30,6 +30,7 @@ Reference sources used as starting points:
 - EU Unfair Commercial Practices Directive 2005/29/EC: https://eur-lex.europa.eu/eli/dir/2005/29/oj
 - WIPO Trade Secret Management: https://www.wipo.int/web-publications/wipo-guide-to-trade-secrets-and-innovation/en/part-iv-trade-secret-management.html
 - U.S. Federal Rules of Civil Procedure, Rule 37(e): https://uscode.house.gov/view.xhtml?edition=prelim&num=0&req=granuleid%3AUSC-prelim-title28a-node89-node131-rule37
+- *Professional Real Estate Investors, Inc. v. Columbia Pictures Industries, Inc.*, 508 U.S. 49 (1993), U.S. Supreme Court decision describing the U.S. sham-litigation test: https://www.law.cornell.edu/supremecourt/text/508/49
 
 These are jurisdiction-specific authorities and guidance, not a universal legal conclusion. Current applicability and relevant jurisdiction(s) must be verified by qualified counsel for material commercial or disputed matters.
 
@@ -39,6 +40,8 @@ These are jurisdiction-specific authorities and guidance, not a universal legal 
 - Record sources, versions/dates, lawful access channel/terms, exact tested model/component identity, experiment conditions, reproducibility, multiplicity/independence, limitations, and derived implementation references as relevant.
 - Require evidence before material objective public claims; match wording and implied impression to the evidence and disclose material scope, date, assumptions, limitations and uncertainty.
 - Cover fair technical comparisons, claims about capabilities/licenses/capacity/compliance, competitor references, citations, correction and dispute escalation.
+- Explicitly distinguish prospective, hypothetical litigation-continuity planning from allegations that any particular competitor has acted, or will act, improperly; distinguish practical competitive harm from a legal conclusion that a claim is baseless or abusive.
+- If referencing sham-litigation doctrine, label jurisdictional limits and evidentiary thresholds; note that an unsuccessful or costly action alone does not establish abuse.
 - Do not treat a fact-observation label or disclaimer as a legal safe harbor or as a way to disguise copied expression, restricted use, misleading claims or unsupported accusations.
 - Separate public-facing summaries from restricted evidence and trade secrets; protect credentials, personal data and confidential third-party information.
 - Preserve originals, hashes, source snapshots and history accurately; forbid backdating, fabrication, deceptive relabeling or destruction/alteration intended to impair review.
@@ -57,6 +60,7 @@ These are jurisdiction-specific authorities and guidance, not a universal legal 
 - Created `development/audit/FACT-OBSERVATION-AND-EVIDENCE-GOVERNANCE.md`.
 - Created `development/audit/templates/FACT-OBSERVATION-RECORD.md`.
 - Created `development/audit/PUBLIC-CLAIMS-AND-LEGAL-COMMUNICATIONS.md`.
+- Clarified that hypothetical litigation-risk and business-continuity planning is not an allegation against any competitor, and that a failed/costly suit alone does not establish abuse.
 - Linked governance from `development/audit/README.md` and `development/ai-media-generator/README.md`.
 - Draft PR: https://github.com/ACROWN-System/AstroCrown-Web/pull/123
 - Changes are documentation-only. No product code, credentials, model weights, previously collected evidence or backups are changed.
