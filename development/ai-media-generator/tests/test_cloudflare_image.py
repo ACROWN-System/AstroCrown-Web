@@ -186,6 +186,18 @@ class CloudflareImageTests(unittest.TestCase):
         with self.assertRaisesRegex(ImageGenerationError, "trailing data|incomplete"):
             validate_png(self.png + b"junk", 256, 256)
 
+    def test_rejects_compressed_image_expansion_bomb(self):
+        ihdr = struct.pack(">IIBBBBB", 256, 256, 8, 6, 0, 0, 0)
+        oversized_decoded = zlib.compress(b"\\x00" * 600_000)
+        malicious = (
+            b"\\x89PNG\\r\\n\\x1a\\n"
+            + png_chunk(b"IHDR", ihdr)
+            + png_chunk(b"IDAT", oversized_decoded)
+            + png_chunk(b"IEND", b"")
+        )
+        with self.assertRaisesRegex(ImageGenerationError, "decompressed image data exceeds"):
+            validate_png(malicious, 256, 256)
+
     def test_writes_provenance_and_refuses_to_overwrite(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             target = Path(temp_dir) / "first-image.png"
