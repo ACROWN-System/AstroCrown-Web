@@ -1,4 +1,3 @@
-import base64
 import io
 import json
 import os
@@ -130,29 +129,16 @@ class CloudflareImageTests(unittest.TestCase):
         self.assertEqual(sent["prompt"], "space nebula")
         self.assertEqual(opener.timeout, 120)
 
-    def test_accepts_json_base64_image_envelope(self):
-        body = json.dumps({
-            "success": True,
-            "result": {"image": base64.b64encode(self.png).decode("ascii"), "id": "request-123"},
-        }).encode()
-        result, request_id = request_image(
-            self.config, "logo", width=256, height=256,
-            opener=FakeOpener(FakeResponse(body)),
-        )
-        self.assertEqual(result, self.png)
-        self.assertEqual(request_id, "request-123")
-
-    def test_invalid_base64_and_provider_error_envelopes_fail_closed(self):
-        bad_b64 = json.dumps({"success": True, "result": {"image": "@@@@"}}).encode()
-        with self.assertRaisesRegex(ImageGenerationError, "not valid base64"):
-            request_image(self.config, "logo", 256, 256, opener=FakeOpener(FakeResponse(bad_b64)))
-        provider_error = json.dumps({"success": False, "errors": [{"message": "sensitive details"}]}).encode()
-        with self.assertRaisesRegex(ImageGenerationError, "check token permissions, model access and quota") as caught:
-            request_image(self.config, "logo", 256, 256, opener=FakeOpener(FakeResponse(provider_error)))
-        self.assertNotIn("sensitive details", str(caught.exception))
+    def test_rejects_unverified_json_response_format(self):
+        body = json.dumps({"success": True, "result": {"image": "not-used"}}).encode()
+        with self.assertRaisesRegex(ImageGenerationError, "expected image/png"):
+            request_image(
+                self.config, "logo", 256, 256,
+                opener=FakeOpener(FakeResponse(body, "application/json")),
+            )
 
     def test_rejects_malformed_response_and_dimension_mismatch(self):
-        with self.assertRaisesRegex(ImageGenerationError, "Unexpected Cloudflare response"):
+        with self.assertRaisesRegex(ImageGenerationError, "expected image/png"):
             request_image(self.config, "logo", 256, 256, opener=FakeOpener(FakeResponse(b"not image")))
         other_size = make_png(512, 256)
         with self.assertRaisesRegex(ImageGenerationError, "expected 256x256"):
