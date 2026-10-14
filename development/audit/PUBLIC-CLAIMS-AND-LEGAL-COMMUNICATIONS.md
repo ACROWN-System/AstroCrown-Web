@@ -98,7 +98,24 @@ Identify potential trade secrets and limit access on a need-to-know basis. Use s
 
 Do not conceal a material risk from an audience who is legally entitled to receive it simply to protect reputation or proprietary information. Ask counsel how to satisfy the duty while making proportionate, lawful disclosures.
 
-## 7. Evidence integrity and changes
+## 7. Minimize adversarial enablement and unnecessary exposure
+
+As part of legitimate risk reduction, do not create, collect, publish, or hand over unnecessary material that could materially facilitate abuse, compromise AstroCrown/NOVA, expose people, or undermine lawful interests. Apply this principle prospectively to system design, access, publication and information-sharing—not as a reason to hide material facts, evade a lawful obligation, or impair evidence.
+
+For each material tool, artifact, dataset, credential, report, workflow, capability or disclosure, assess:
+
+- **Purpose and necessity:** Is it needed for a legitimate, documented objective? Can the objective be met with less sensitive data, fewer permissions, a safer interface, a bounded demonstration, or a redacted summary?
+- **Potential misuse:** Could it expose credentials, private keys, personal data, confidential communications, unpatched weaknesses, exploitable system details, unreleased product plans, proprietary know-how, or unverified statements that could be misrepresented out of context?
+- **Access and distribution:** Who needs access, at what level, for how long, and through which approved channel? Use least privilege, secrets management, access logging, reviewable sharing, appropriate encryption, and expiry/revocation where suitable.
+- **Public disclosure:** Publish enough information to substantiate the relevant claim and permit fair scrutiny, but avoid publishing exploit-ready technical details, secrets, private legal strategy, confidential third-party material, or unnecessary personal information. Provide a safe summary where that meets the purpose.
+- **Tool design:** Prefer scoped, rate-limited, auditable interfaces with explicit authorization and safe defaults. Do not ship an unnecessary capability merely because it is technically possible; assess whether it enables unauthorized access, evidence tampering, harassment, coercion, or other foreseeable misuse.
+- **Review and remediation:** Record the risk, owner, decision and mitigation. Correct accidental exposure promptly, revoke compromised credentials, preserve relevant incident evidence, and obtain security or legal review where warranted.
+
+This is not a policy of making AstroCrown's legitimate work opaque. Keep claims accurate, provide material qualifications, respect lawful transparency duties, and retain a defensible record of decisions. The goal is **minimum necessary exposure and minimum unnecessary misuse capability**, while preserving reproducibility, accountability, security and fair competition.
+
+**Non-negotiable boundary:** never destroy, falsify, backdate, conceal, or selectively alter relevant records to make them unavailable to a legitimate review or legal process. If a dispute, investigation, preservation notice or other legal duty may apply, involve qualified counsel promptly and follow the appropriate preservation and disclosure requirements. Protecting sensitive material means controlling access and lawful disclosure—not pretending the material does not exist.
+
+## 8. Evidence integrity and changes
 
 - Preserve original records unchanged when practicable. Create annotated/redacted copies separately and link them to their sources.
 - Keep repository commits, workflow/run IDs, version identifiers, timestamps, artifact references and cryptographic hashes where appropriate. Hashes aid integrity checks but do not independently prove authorship, truth, permission or ownership.
