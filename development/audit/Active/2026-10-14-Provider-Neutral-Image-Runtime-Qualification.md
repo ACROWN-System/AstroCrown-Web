@@ -99,8 +99,6 @@ At the time of the initial 2026-10-14 plan, the account-level GPU allocation was
 - Installed packages: Diffusers 0.40.0, Transformers 5.16.1, Accelerate 1.14.0, huggingface-hub 1.29.0, safetensors 0.8.0. Required imports passed.
 - No model weights were downloaded and no model inference/image-generation cell was run. The planned flattened SDXL-Lightning background test was stopped before execution when the user clarified the required asset architecture. No GPU inference usage is established from this test record.
 
-### Architecture decision direction
-
 ### Paid-user quality continuity requirement — 2026-10-15
 
 The user's concern is a commercial acceptance requirement: someone who pays during the sustainable tokenomics study should not receive a silently downgraded image-generation experience when AstroCrown moves to commercial deployment.
