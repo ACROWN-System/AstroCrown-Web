@@ -150,15 +150,16 @@ Wan2.2 is the clearest Apache-2.0 video license candidate in this first screen, 
 
 ComfyUI could simplify orchestration and make multi-model compositions easier, but its GPL-3.0 license, extensions' licenses, runtime security, and redistribution/deployment obligations need review. The engine does not grant permission to use its loaded model weights. Audit nodes and dependencies individually, pin versions, and keep the public application boundary behind AstroCrown-controlled job and authorization APIs.
 
+### F-006 — The final constraint is a complete runnable path, not a list of downloadable models
+
+No local hardware details or free GPU allocation have yet been verified for this runtime. There is no evidence yet that Wan2.2, LTX-2.5, or any other local video model can run persistently at $0 and without payment-method prerequisites. Cloudflare's documented image API does not establish free video compute. Avoid installing/downloads and avoid claiming an always-on GPU until a real, permissible runtime is identified.
+
+
 ### F-007 — A plausible open-weight image candidate and free test environment now exist, but the pair is unqualified
 
 The official ByteDance SDXL-Lightning model card documents a 4-step FP16 Diffusers route, while its license is `openrail++` and its SDXL base model/dependencies need separate review. The official Tongyi-MAI Z-Image-Turbo card labels its model repository Apache-2.0 and describes a 6B model that fits 16 GB VRAM, but its quick-start uses `bfloat16`, whose compatibility with a free notebook's actual GPU is not established. Kaggle documents free GPU notebook access with a quota generally up to 30 GPU-hours/week, subject to demand and account limits. These facts support a bounded feasibility hypothesis, not a verified runnable or commercially cleared route.
 
 Google Colab's free managed runtime is unsuitable as the generator's persistent web-serving foundation under its stated restrictions. Hugging Face ZeroGPU's documented 5-minute/day free quota is not material sustained capacity. These alternatives must not be counted as interchangeable capacity or treated as guaranteed allocations.
-
-### F-006 — The final constraint is a complete runnable path, not a list of downloadable models
-
-No local hardware details or free GPU allocation have yet been verified for this runtime. There is no evidence yet that Wan2.2, LTX-2.5, or any other local video model can run persistently at $0 and without payment-method prerequisites. Cloudflare's documented image API does not establish free video compute. Avoid installing/downloads and avoid claiming an always-on GPU until a real, permissible runtime is identified.
 
 ## 5. Current decisions
 
