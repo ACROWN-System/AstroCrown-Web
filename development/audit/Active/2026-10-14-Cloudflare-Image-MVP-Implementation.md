@@ -26,7 +26,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 ## External contract record
 
 - Provider/API: Cloudflare Workers AI REST API, `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`.
-- Authentication/configuration: Bearer token from `CLOUDFLARE_API_KEY_01` and account identifier from `CLOUDFLARE_ACCOUNT_ID`; the token must be scoped to the Workers AI permissions the REST API requires. Never store token values in repository files.
+- Authentication/configuration: Bearer token from `ASTROCROWN_CLOUDFLARE_AI_TOKEN` and account identifier from `CLOUDFLARE_ACCOUNT_ID`; use a token dedicated to AstroCrown-Web and scoped only to the Workers AI permissions the REST API requires. Do not reuse NOVA's token across repositories or store token values in repository files.
 - Request: `prompt`, optional `negative_prompt`, `width`, `height`, `num_steps`, optional `seed`; verify against official model docs at implementation/test time.
 - Expected output: the official SDXL-Lightning model schema declares a binary `image/png` output. Accept only that content type with valid PNG bytes. Fail closed on unexpected content type, malformed PNG/chunk CRC/compressed data, HTTP errors, redirects, excessive response size or output dimension mismatch.
 - Eligibility: model page's zero-per-step display does not prove this account's no-card entitlement, quota, hosted terms, or output suitability. Preserve those as BLOCKED until a bounded live test and rights review produce evidence.
