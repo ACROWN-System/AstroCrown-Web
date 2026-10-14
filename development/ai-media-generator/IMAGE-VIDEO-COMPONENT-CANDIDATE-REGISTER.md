@@ -1,6 +1,6 @@
 # Image and Video Component Candidate Register
 
-**Document revision:** 2026-10-14  
+**Document revision:** 2026-10-15  
 **Initial evaluation:** 2026-10-10  
 **Status:** ACTIVE RESEARCH — no complete workflow or generation backend approved  
 **Repository baseline:** `main` at merge commit `1d5742890c68210513485841f27bae3450cfcdff`  
@@ -35,10 +35,47 @@ Use `PASS / FAIL / N/A / BLOCKED` per the repository development/audit conventio
 | IMG-04 | Local FLUX.1 schnell weights through a compatible inference engine | Upstream model card/repository identify Apache-2.0 for FLUX.1 schnell and provide reference inference code. FLUX.1 dev/fill/edit variants are separately licensed and must not inherit schnell's status. | No free GPU has been verified for this user's actual environment. Model weights, text encoder, runtime dependencies, and memory/latency must be measured; open weights do not make compute free. | **BLOCKED** — rights are promising for the exact base model, but runtime/dependency and hardware gates remain. |
 | IMG-05 | Local ByteDance SDXL-Lightning 4-step UNet plus SDXL base through Diffusers — practical first local-runtime candidate | The official model card identifies the weights as `openrail++`, provides a documented FP16 Diffusers path using the SDXL base and a 4-step UNet checkpoint, and describes 1024px generation in a few steps. The base checkpoint and all dependencies require separate terms/provenance review; OpenRAIL restrictions mean this is not an unrestricted OSI-approved open-source license. | A bounded notebook-GPU test may be feasible on a compatible 16 GB accelerator, but exact memory, download size, runtime compatibility, account no-card eligibility, and actual output remain untested. Kaggle free GPU quotas are variable and do not provide persistent serving. | **BLOCKED** — candidate for bounded technical feasibility only; commercial promotion requires full component-rights review. |
 | IMG-06 | Local Tongyi-MAI Z-Image-Turbo (6B) through a compatible Diffusers/runtime stack — permissive-license alternative | The publisher's model card labels the repo Apache-2.0, describes a 6B model, 8 NFEs for Turbo, and says it fits within 16 GB VRAM consumer devices. Its quick-start uses `bfloat16`; compatibility with notebook GPUs lacking native BF16 support is unknown and must not be assumed. | Runtime/dtype, exact GPU allocation, model download, generation, account no-card eligibility, and usable time remain unverified. | **BLOCKED** — rights are promising for the stated model repository, but runtime/hardware fit and all dependency terms remain to be verified. |
-| VID-01 | Wan 2.2 TI2V-5B — local text/image-to-video baseline | The official Wan2.2 repository states that the models in the repository are under Apache 2.0. Its documentation describes TI2V-5B at 720p/24fps and indicates at least 24 GB VRAM for this path. The 14B paths require substantially more memory (the repository documents 80 GB for relevant single-GPU examples). | Model download, exact component versions, available GPU, generation time, VRAM and output quality are untested. No qualifying free compute path is currently established. | **BLOCKED** — strong licensing candidate; compute feasibility remains a mandatory barrier. |
+| IMG-07 | Local LayerDiffuse transparent-asset generation through an appropriate maintained integration | The official LayerDiffuse repository describes latent-transparency generation and is Apache-2.0; it points to separate Forge and Diffusers CLI integrations. The integration, underlying SDXL/model weights, adapters, and runtime dependencies have their own status and must be checked separately. | Kaggle has now exposed two Tesla T4 GPUs and the notebook import/network preflight passed, but no LayerDiffuse weights were downloaded and no transparent image was generated. Runtime compatibility, VRAM usage, actual alpha/edge quality, dependencies and commercial-use suitability remain untested. | **BLOCKED** — strongest current local transparency experiment candidate; no model install or inference until exact runtime and dependency/licensing review. |\n| IMG-08 | Hosted one-call transparent asset generation through Cloudflare's third-party OpenAI image route, candidate `openai/gpt-image-1.5` | Cloudflare's GPT Image 2 page says that model does not support transparent backgrounds and points readers to GPT Image 1.5 for transparent PNGs. GPT Image 1.5 is described as a third-party model; its current model page links dashboard pricing, and the published parameter list does not clearly expose a `background: transparent` field. | No request has been made. Free/no-card entitlement, the exact transparent-output API contract, payment route, returned alpha channel and commercial terms are unverified. Do not assume Workers AI's standard free Neuron allocation covers this third-party route. | **BLOCKED** — technical reference only until pricing/access and the documented output contract are explicitly verified; never activate paid billing for this qualification. |\n| VID-01 | Wan 2.2 TI2V-5B — local text/image-to-video baseline | The official Wan2.2 repository states that the models in the repository are under Apache 2.0. Its documentation describes TI2V-5B at 720p/24fps and indicates at least 24 GB VRAM for this path. The 14B paths require substantially more memory (the repository documents 80 GB for relevant single-GPU examples). | Model download, exact component versions, available GPU, generation time, VRAM and output quality are untested. No qualifying free compute path is currently established. | **BLOCKED** — strong licensing candidate; compute feasibility remains a mandatory barrier. |
 | VID-02 | Lightricks LTX-2.5 — text/image/video-to-video and synchronized audio/video | Official model card says commercial and production use at no cost for entities under $10M annual revenue under the LTX-2.x Community License. The same source says transfer of fine-tunes may require a paid license; over $10M annual revenue requires a paid commercial agreement. It requests agreement to share contact information and receive offers/updates to access gated weights. The documented selected model files total roughly 66 GiB for one recommended pipeline. | This is not the same as an unrestricted Apache-2.0 model. Its revenue threshold, fine-tune transfer terms, gated access/marketing consent, hardware needs, and free compute must be considered. | **BLOCKED** — potentially useful optional video candidate, not a foundation dependency until long-term license and access constraints are resolved. |
 | VID-03 | Tencent HunyuanVideo-1.5 — alternative video model | The official Tencent Hunyuan Community License is royalty-free within its defined territory, which excludes the EU, UK and South Korea. It requires downstream service terms to carry specified restrictions, and calls for clear provider identity/non-affiliation disclosure when offering third-party services. It prohibits using outputs/results to improve other AI models (apart from Hunyuan derivatives). | Local/hardware and execution tests remain outstanding. Its downstream restrictions also complicate any proposed process that would use Hunyuan outputs to train or improve another model. | **BLOCKED / RESTRICTED** — only consider if the license and product obligations can be implemented and the intended use does not violate the cross-model restriction. |
 | ENG-01 | ComfyUI — optional node/workflow composition engine | Official repository uses GPL-3.0 and documents graph-based workflows; official model integrations include multi-model image and video workflows. Each custom node, extension, model and checkpoint must be audited separately. | Engine is free software, but compute and model downloads are not free by implication. Must verify runtime compatibility, API isolation/authentication, extension supply chain, and obligations for the intended deployment/distribution. | **CANDIDATE, NOT APPROVED** — investigate as a reusable adapter/workflow engine; do not make it the sole product boundary by assumption. |
+
+## Selected architecture — generate assets separately; compose internally (2026-10-15)
+
+**Decision direction:** Generate source assets with a qualified local model or external image endpoint, then assemble and transform them in AstroCrown's own composition environment. The image-generation provider is not responsible for final homepage layout. This is the intended design direction for the image workflow; the transparent-generation backend and commercial qualification remain BLOCKED until tested.
+
+### Separation of responsibilities
+
+1. **Generation adapter:** make a provider-neutral request for one defined source asset (for example, a base space plate, planet, Earth/Moon, nebula, dust cloud, star/debris element, or token logo). If the requested asset must be independently composable, use an output mode that explicitly supports transparency where available. A prompt saying "transparent background" is not proof the endpoint produces alpha.
+2. **Asset validation gate:** decode the actual returned file; verify dimensions, format, and true alpha where required. An RGBA mode alone is insufficient if every alpha value is 255. Test transparent pixels, object opacity, wispy edges and halos over both dark and light contrasting backgrounds. Record any required post-processing separately.
+3. **Asset registry:** retain a stable asset ID, checksum, generation provider/model/version, prompt, seed and parameters when provided, timestamp, dimensions, file format, alpha-test result, provenance, and exact model/endpoint/dependency terms evidence. Do not infer output rights from a code or weights license alone.
+4. **Internal compositor:** keep composition as structured data, not another AI-generation prompt. Store ordered asset IDs plus position, scale, rotation, opacity, crop, blend mode and visibility. Use browser-native CSS/SVG/Canvas for the live website as appropriate, and a local/internal image compositor for exported flattened files. A new composition or layout adjustment must not require another generation/inference request.
+5. **Delivery and regression checks:** verify that alpha survives transforms, storage, optimization, export and browser delivery. Keep editable layered source data even when a flattened export is produced.
+
+### Composition rules
+
+- A full-canvas base space plate may be opaque; it should be deep navy, low-contrast and free of baked-in cards, text, logos or prominent objects.
+- Reusable foreground/atmosphere objects that overlap the base or one another should be separate assets with verified alpha. Planets, Earth, Moon, debris, nebula formations and token logos should not be embedded into one indivisible homepage raster when they must be moved independently.
+- Website UI, text, cards and data visualizations remain independently rendered UI components rather than being generated as part of the background.
+- One qualified external API call can create a source asset that is reused in many compositions. Use a single request to return several assets only when the exact endpoint documents independent outputs and returns each asset separately. An image-edit API that blends multiple input images into one output does not replace a non-destructive layer/composition system.
+- Keep image generation, alpha post-processing, internal composition and final delivery as independently replaceable/testable components. A failure or rights limitation in one route must not require redesigning all compositions.
+
+### Visual/technical acceptance for the first asset
+
+The first success is not a flattened homepage mockup. It is a useful, retrievable source asset whose required transparency is real and whose position/scale/rotation can be changed internally without calling the generator again. The initial demonstration should:
+- inspect the output's actual alpha values and metadata;
+- composite the same asset over at least a dark and a light background to expose fringes;
+- use the same source asset in two materially different internal compositions;
+- demonstrate that layout changes make zero inference calls;
+- preserve a reproducible composition manifest and provenance record.
+
+### Official references added for the transparency route
+
+- LayerDiffuse official project and integration links: https://github.com/lllyasviel/LayerDiffuse
+- LayerDiffuse Diffusers CLI integration: https://github.com/lllyasviel/LayerDiffuse_DiffusersCLI
+- Cloudflare GPT Image 1.5 model page: https://developers.cloudflare.com/ai/models/openai/gpt-image-1.5/
+- Cloudflare GPT Image 2 model page (explicitly points to GPT Image 1.5 for transparent PNGs): https://developers.cloudflare.com/ai/models/openai/gpt-image-2/
+- Cloudflare Workers AI pricing / free allocation: https://developers.cloudflare.com/workers-ai/platform/pricing/
 
 ## Capability routing: qualify exact endpoints, not provider brands
 
@@ -65,7 +102,7 @@ The intended result is AstroCrown's own coherent image/video generator. It may u
 
 ### Layer and alpha capability gate
 
-Transparent output must be tested as a distinct output capability, not assumed from ordinary image generation. For each candidate workflow, record:
+Transparent output must be tested as a distinct output capability, not assumed from ordinary image generation. Generation and composition are separate: a model/provider creates an input asset, while the internal compositor owns placement and transforms. A provider's ability to accept multiple images and return a blended result is not evidence of independent layer output. For each candidate workflow, record:
 
 - whether the exact model/endpoint natively returns an alpha channel or requires a post-processing stage;
 - whether the actual returned and optimized file contains the expected alpha data;
@@ -164,6 +201,8 @@ Google Colab's free managed runtime is unsuitable as the generator's persistent 
 ## 5. Current decisions
 
 - Keep the service model-agnostic and modular.
+- Generate reusable source assets separately from the final composition; use AstroCrown's internal composition system for placement, transformations, reusable layouts and exports. Do not spend inference calls on ordinary composition changes.
+- Treat LayerDiffuse as the leading local transparency experiment and Cloudflare's documented GPT Image 1.5 route as a hosted technical reference only; both remain BLOCKED pending exact alpha tests, rights/dependencies, and $0/no-payment eligibility.
 - Test SDXL-Lightning's documented FP16 route first for a bounded local-runtime proof, only after the account/no-card and GPU allocation gates are confirmed; retain Z-Image-Turbo as the more permissively licensed alternative but BLOCKED until actual dtype/runtime compatibility is proven.
 - Check SDXL-Lightning first in the existing Cloudflare account, then compare SDXL Base only if the account/usage screen supports it.
 - Retain FLUX.1 schnell as a separate candidate for local or hosted execution; do not assume its hosted price is identical to its local use or Apache model license.
@@ -205,4 +244,4 @@ No live request, credential modification, billing change, or provider promotion 
 
 ## 8. Closure
 
-This document revision is dated 2026-10-13. Candidate entries retain their own source/test evidence dates where available. Re-check upstream licenses, model cards, provider terms, model availability, account eligibility and hardware compatibility immediately before implementation. A candidate moves out of BLOCKED only when the missing evidence is supplied and the relevant verification is re-run.
+This document revision is dated 2026-10-15. Candidate entries retain their own source/test evidence dates where available. Re-check upstream licenses, model cards, provider terms, model availability, account eligibility and hardware compatibility immediately before implementation. A candidate moves out of BLOCKED only when the missing evidence is supplied and the relevant verification is re-run.
