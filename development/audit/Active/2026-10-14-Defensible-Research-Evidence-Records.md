@@ -65,7 +65,7 @@ These are jurisdiction-specific authorities and guidance, not a universal legal 
 - Linked governance from `development/audit/README.md` and `development/ai-media-generator/README.md`.
 - Draft PR: https://github.com/ACROWN-System/AstroCrown-Web/pull/123
 - Changes are documentation-only. No product code, credentials, model weights, previously collected evidence or backups are changed.
-- Offline media-generator tests and external-review-pipeline CI passed on the previous PR head; recheck final head after these added documentation changes. Other checks must be inspected before claiming all CI has passed.
-- PR remains draft pending review. Counsel review is appropriate before treating these guides as approved legal policy.
+- All four PR checks passed on commit `3eaded866ae35a45711f9f3d4e854166ba8494cb`: AI Media Generator Offline Tests, External Review Pipeline CI, NOVA RSI Engine CI, and NOVA RSI CodeQL Security Analysis.
+- Engineering review found a documentation-only proposal with no product code, credentials, model weights, previously collected evidence or backups changed. The proposal must remain clearly marked as not counsel-approved; qualified jurisdiction-specific counsel review is required before treating it as approved legal policy.
 
-**Closure condition:** inspect the final diff and all relevant CI conclusions; address findings; obtain the appropriate jurisdiction-specific legal review before declaring the policy approved.
+**Closure condition:** inspect the final diff and all relevant CI conclusions; address findings; merge only as proposed operational guidance, not as counsel-approved policy; obtain appropriate jurisdiction-specific legal review before declaring the policy approved.
