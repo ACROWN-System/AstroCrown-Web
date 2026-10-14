@@ -2,7 +2,7 @@
 """Small, dependency-free Cloudflare Workers AI image adapter for AstroCrown.
 
 This is a development-only first slice. It supports one explicitly selected model,
-accepts raw PNG or the documented JSON/base64 image envelope, validates the PNG
+accepts the model's documented binary image/png response, validates the PNG
 container, and writes a local provenance sidecar. It does not approve commercial use.
 """
 from __future__ import annotations
