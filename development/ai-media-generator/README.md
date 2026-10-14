@@ -74,7 +74,7 @@ Do not duplicate provider-health probes, the aggregate GPU-capacity calculator, 
 
 ## First image adapter (development-only)
 
-`cloudflare_image.py` is the first isolated image-provider adapter. It has no third-party Python dependencies, fixes the provider/model endpoint in code, accepts Cloudflare's raw PNG or JSON/base64 image response form, validates the PNG structure/dimensions, refuses to overwrite outputs, and writes a provenance sidecar. The prompt-helper LLM is optional and is not part of the image request path.
+`cloudflare_image.py` is the first isolated image-provider adapter. It has no third-party Python dependencies, fixes the provider/model endpoint in code, accepts the model's documented binary image/png response, validates the PNG structure/dimensions, refuses to overwrite outputs, and writes a provenance sidecar. The prompt-helper LLM is optional and is not part of the image request path.
 
 Run deterministic tests without credentials or network access:
 
