@@ -107,9 +107,11 @@ A provider call is for creating the source asset—not for every composition. Re
 
 ### Transparency candidates and current limits
 
-- **LayerDiffuse / its separate Diffusers CLI integration:** plausible local route for generating transparent foreground assets. The official project page states the code repository is Apache-2.0 and points to separate integrations; it does not clear the base model, weights, adapters, dependencies or downstream use. No installation or inference has occurred.
+- **LayerDiffuse / its separate Diffusers CLI integration:** plausible local route for generating transparent foreground assets. The official Diffusers CLI documents SDXL transparent text-to-image and image-to-image commands as finished, while the complete SDXL layer system is still TODO—appropriate for our design because the internal compositor, not the diffusion package, will arrange independent assets. The CLI is explicitly Work In Progress and its requirements pin Diffusers 0.28.0, Transformers 4.41.1 and Accelerate 0.30.1, whereas the working Kaggle environment has 0.40.0, 5.16.1 and 1.14.0. The README claims an 8 GB Nvidia VRAM requirement. No installation or inference has occurred; keep the current kernel untouched and consider an isolated runtime only after reviewing all dependencies and licenses.
   - https://github.com/lllyasviel/LayerDiffuse
   - https://github.com/lllyasviel/LayerDiffuse_DiffusersCLI
+  - Current README/feature state: https://raw.githubusercontent.com/lllyasviel/LayerDiffuse_DiffusersCLI/main/README.md
+  - Pinned requirements: https://raw.githubusercontent.com/lllyasviel/LayerDiffuse_DiffusersCLI/main/requirements.txt
 - **Cloudflare's third-party OpenAI image route:** Cloudflare's GPT Image 2 page says that route does not support transparent backgrounds and points to GPT Image 1.5 for transparent PNGs. GPT Image 1.5's model page is third-party, points to dashboard pricing, and its published parameter list does not clearly expose a transparency parameter. No request has been made; do not treat this as a $0/no-card route or enable paid billing.
   - https://developers.cloudflare.com/ai/models/openai/gpt-image-1.5/
   - https://developers.cloudflare.com/ai/models/openai/gpt-image-2/
