@@ -123,7 +123,7 @@ This is not a policy of making AstroCrown's legitimate work opaque. Keep claims 
 - Never backdate, fabricate, deceptively relabel, selectively alter or delete evidence to improve a legal narrative. Do not create a retrospective record that pretends to be contemporaneous.
 - Apply retention schedules consistently, except where a preservation duty or hold changes the requirements.
 
-## 8. Response to a legal threat, claim or suspected misappropriation
+## 9. Response to a legal threat, claim or suspected misappropriation
 
 When a credible legal demand, threatened proceeding, takedown, infringement allegation, or suspected theft/disclosure of confidential information arises:
 
@@ -136,7 +136,7 @@ When a credible legal demand, threatened proceeding, takedown, infringement alle
 
 Preservation, disclosure, litigation holds, privilege and admissibility are jurisdiction-dependent. This workflow is a prompt to obtain legal advice, not a substitute for a jurisdiction-specific litigation plan.
 
-## 9. Pre-publication review checklist
+## 10. Pre-publication review checklist
 
 Before a material external statement is released, confirm:
 
@@ -153,7 +153,7 @@ Before a material external statement is released, confirm:
 
 A missing mandatory item means the claim must be narrowed, blocked or escalated—not passed through by adding a generic disclaimer.
 
-## 10. Reference sources
+## 11. Reference sources
 
 These sources provide starting points and are jurisdiction-specific; verify current law and applicability with counsel.
 
@@ -172,7 +172,7 @@ These sources provide starting points and are jurisdiction-specific; verify curr
 - WIPO, Trade Secret Management: https://www.wipo.int/web-publications/wipo-guide-to-trade-secrets-and-innovation/en/part-iv-trade-secret-management.html
 - U.S. Federal Rules of Civil Procedure, Rule 37(e), electronically stored information preservation failures: https://uscode.house.gov/view.xhtml?edition=prelim&num=0&req=granuleid%3AUSC-prelim-title28a-node89-node131-rule37
 
-## 11. Governance and review
+## 12. Governance and review
 
 This is proposed operational guidance. It does not certify compliance, create legal privilege, settle disputed facts, or guarantee immunity from litigation. A qualified lawyer should review its application to the entity structure, countries of operation, products, marketing, licenses, and potential disputes before it is treated as approved legal policy.
 
