@@ -19,7 +19,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 2. Build one AstroCrown-owned service boundary with provider-specific code isolated in an adapter. Initial adapter: Cloudflare Workers AI `@cf/bytedance/stable-diffusion-xl-lightning`, because this account already has Cloudflare Workers AI LLM credentials and the provider documents an image endpoint. Existing LLM access does not prove image entitlement or operation.
 3. Keep image generation separate from optional LLM prompt/metadata assistance; no LLM call is required to invoke the image adapter.
 4. No payment method, no spend, no paid fallback, no unattended provider calls. The real-provider integration test must be manually triggered from NOVA `main` only, using the existing NOVA repository secrets and an explicit no-payment confirmation.
-5. Use no new Python runtime dependencies. Validate the exact HTTPS API host, binary image/png response contract, PNG structure/dimensions/checksums, and output path behavior. Do not log credential values.
+5. Use no new Python runtime dependencies. Validate the exact HTTPS API host, bounded PNG or JPEG response contract, PNG chunk CRC/compressed data or JPEG segment/signature/dimension structure, and output path behavior. Do not log credential values or provider response bodies.
 6. Record provenance beside each saved asset. Generated assets are not automatically added to the regular website or promoted commercially.
 7. Keep video in the same target system but separate its adapter/runtime/capacity qualification; do not block the image MVP on a still-unqualified video GPU pool.
 
@@ -28,7 +28,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 - Provider/API: Cloudflare Workers AI REST API, `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`.
 - Authentication/configuration: the qualification workflow runs inside NOVA and reads NOVA's existing repository secrets `CLOUDFLARE_API_KEY_01` and `CLOUDFLARE_ACCOUNT_ID`. The workflow maps the token value to the adapter's process environment variable `ASTROCROWN_CLOUDFLARE_AI_TOKEN` without copying the value into AstroCrown-Web. Do not add AstroCrown-Web token/account secrets or print/store credential values.
 - Request: `prompt`, optional `negative_prompt`, `width`, `height`, `num_steps`, optional `seed`; verify against official model docs at implementation/test time.
-- Expected output: the official SDXL-Lightning model schema declares a binary `image/png` output. Accept only that content type with valid PNG bytes. Fail closed on unexpected content type, malformed PNG/chunk CRC/compressed data, HTTP errors, redirects, excessive response size or output dimension mismatch.
+- Expected output: Cloudflare's SDXL-Lightning API schema declares binary `image/png`, while its published usage example labels the stream `image/jpg`; Cloudflare's public documentation issue #21022 also records REST output observed as JPEG despite the PNG schema (https://github.com/cloudflare/cloudflare-docs/issues/21022; model docs: https://developers.cloudflare.com/workers-ai/models/stable-diffusion-xl-lightning/). The failed controlled call logged `Provider output is not a valid PNG image` after accepting the `image/png` response header, but did not preserve the body or its signature; therefore JPEG is the leading hypothesis, not a confirmed observation from that run. Revise the adapter to identify file format from bounded image signatures and container structure, accept valid PNG or JPEG outputs only, record both the provider's declared Content-Type and the detected format, and choose the saved extension/MIME from actual bytes. Permit the known JPEG-vs-PNG declaration inconsistency only for structurally validated JPEG bytes; fail closed on JSON/HTML/unknown bodies, disallowed content types, malformed containers, HTTP errors, redirects, excessive response size or output dimension mismatch.
 - Eligibility: model page's zero-per-step display does not prove this account's no-card entitlement, quota, hosted terms, or output suitability. Preserve those as BLOCKED until a bounded live test and rights review produce evidence.
 - Current research use mode: internal/non-commercial R&D. Requalify the route and assets before public paid features or commercial production.
 
@@ -53,6 +53,17 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 - Do not create or modify API credentials/secrets.
 - Do not implement public UI, multi-user queues, paid fallback, model-weight merging, video runtime or an assumed 86,400 GPU-minute capacity.
 - Do not mark Cloudflare image generation, alpha transparency, video, or commercial-use rights as qualified without evidence.
+
+
+
+## Failure evidence and remediation checkpoint (2026-10-14)
+
+- NOVA workflow run: https://github.com/ACROWN-System/NOVA/actions/runs/38573541271
+- Result: secret-presence check passed; the reviewed adapter fetch passed; the live image call returned exit code 2 with `Provider output is not a valid PNG image`; artifact upload was skipped.
+- Safety boundary held: no token value or full response body was logged; the workflow did not upload a malformed/unvalidated image. The response body was not persisted, so the run alone cannot establish whether it was JPEG, a mislabeled error payload, or other malformed data.
+- External evidence: Cloudflare’s model docs contain a conflicting `image/jpg` usage header and PNG output schema; public issue #21022 reports JPEG bytes from the REST API despite the schema. The correction must support only explicitly validated PNG/JPEG signatures, expose safe diagnostics for unknown signatures without body logging, record declared versus detected format in provenance, and select the actual file extension.
+- **Impact Analysis addendum — IF modified:** the adapter can tolerate the documented format inconsistency while preserving bounded parsing and truthful provenance, allowing the controlled qualification to continue without adding dependencies or copying secrets. **IF not modified:** a valid JPEG response can remain rejected as a supposed invalid PNG, while future operators lack enough safe diagnostic data to distinguish provider format drift from a malformed/error response.
+- Re-test gate: deterministic offline tests must cover PNG success, JPEG bytes under the documented mismatched header, mismatched/unknown/JSON response rejection, dimension/structure validation, accurate sidecar MIME and filename, no-overwrite behavior, and no secret/body leakage. After PR checks pass, update NOVA’s pinned immutable adapter SHA in a separate PR. Do not rerun live inference until both changes are merged and the revised workflow is verified.
 
 ## Implementation checkpoint (2026-10-14)
 
