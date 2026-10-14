@@ -32,7 +32,7 @@ Application features should not need to know which GPU provider executes a job. 
 
 ## Architecture reference and scope
 
-The unified image/video target, image-first implementation order, service boundary, responsibility ownership, adapter design, provenance, and minimum executable image slice are defined once in [the multi-model composition strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md). Homepage layer roles and the alpha-transparency acceptance contract are defined in [BACKGROUND.md](../index-section/BACKGROUND.md), including R-019.
+The unified image/video target, image-first implementation order, service boundary, responsibility ownership, adapter design, provenance, and minimum executable image slice are defined once in [the multi-model composition strategy](OPEN-SOURCE-MULTI-MODEL-COMPOSITION-STRATEGY.md). Homepage layer roles and the alpha-transparency acceptance contract are defined in [BACKGROUND.md](../index-section/BACKGROUND.md), including R-036.
 
 This proposal owns the later access and operations questions: separate feature-access waiting lists from generation-job queues, staged user access, admission/stop policy, and capacity-aware operations. It does not redefine the media-service architecture or create another provider/capacity registry.
 
