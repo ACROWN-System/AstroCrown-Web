@@ -18,7 +18,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 1. First priority: useful static images for the homepage's deep-space/environment layers and AI Token Generator logos. Transparent foreground assets are a separately verified output requirement; do not assume an opaque text-to-image endpoint emits real alpha.
 2. Build one AstroCrown-owned service boundary with provider-specific code isolated in an adapter. Initial adapter: Cloudflare Workers AI `@cf/bytedance/stable-diffusion-xl-lightning`, because this account already has Cloudflare Workers AI LLM credentials and the provider documents an image endpoint. Existing LLM access does not prove image entitlement or operation.
 3. Keep image generation separate from optional LLM prompt/metadata assistance; no LLM call is required to invoke the image adapter.
-4. No payment method, no spend, no paid fallback, no unattended provider calls. The real-provider integration test must be manually triggered on `main` only and only after the project repository contains a narrowly scoped token and Account ID.
+4. No payment method, no spend, no paid fallback, no unattended provider calls. The real-provider integration test must be manually triggered from NOVA `main` only, using the existing NOVA repository secrets and an explicit no-payment confirmation.
 5. Use no new Python runtime dependencies. Validate the exact HTTPS API host, binary image/png response contract, PNG structure/dimensions/checksums, and output path behavior. Do not log credential values.
 6. Record provenance beside each saved asset. Generated assets are not automatically added to the regular website or promoted commercially.
 7. Keep video in the same target system but separate its adapter/runtime/capacity qualification; do not block the image MVP on a still-unqualified video GPU pool.
@@ -26,7 +26,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 ## External contract record
 
 - Provider/API: Cloudflare Workers AI REST API, `POST https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/@cf/bytedance/stable-diffusion-xl-lightning`.
-- Authentication/configuration: Bearer token from `ASTROCROWN_CLOUDFLARE_AI_TOKEN` and account identifier from `CLOUDFLARE_ACCOUNT_ID`; use a token dedicated to AstroCrown-Web and scoped only to the Workers AI permissions the REST API requires. Do not reuse NOVA's token across repositories or store token values in repository files.
+- Authentication/configuration: the qualification workflow runs inside NOVA and reads NOVA's existing repository secrets `CLOUDFLARE_API_KEY_01` and `CLOUDFLARE_ACCOUNT_ID`. The workflow maps the token value to the adapter's process environment variable `ASTROCROWN_CLOUDFLARE_AI_TOKEN` without copying the value into AstroCrown-Web. Do not add AstroCrown-Web token/account secrets or print/store credential values.
 - Request: `prompt`, optional `negative_prompt`, `width`, `height`, `num_steps`, optional `seed`; verify against official model docs at implementation/test time.
 - Expected output: the official SDXL-Lightning model schema declares a binary `image/png` output. Accept only that content type with valid PNG bytes. Fail closed on unexpected content type, malformed PNG/chunk CRC/compressed data, HTTP errors, redirects, excessive response size or output dimension mismatch.
 - Eligibility: model page's zero-per-step display does not prove this account's no-card entitlement, quota, hosted terms, or output suitability. Preserve those as BLOCKED until a bounded live test and rights review produce evidence.
@@ -36,7 +36,7 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 
 - Offline tests prove request construction, no-secret errors, safe HTTP/error handling, strict parsing and image validation, no accidental overwrite, and provenance output.
 - No workflow other than a manual dispatch may contact Cloudflare for image generation. No real provider credentials are provided to pull-request tests.
-- A manually dispatched integration workflow is restricted to the default `main` ref, consumes repository secrets only, writes output to a temporary artifact path, and records no prompt/token in workflow logs.
+- The manually dispatched image qualification workflow lives in NOVA, is restricted to the NOVA `main` ref and explicit no-payment confirmation, consumes NOVA repository secrets only, checks out the adapter at a reviewed immutable AstroCrown-Web commit, writes output to a temporary artifact path, and records no token in workflow logs. The old direct-live workflow in AstroCrown-Web must be removed to leave one clear entry point.
 - The PR and CI must pass before merge. The first live test remains a separate gate and must not be described as passed until run and evidenced.
 - The audit stays ACTIVE/BLOCKED until account eligibility, endpoint response, actual usage, image quality, latency and rights checks are recorded.
 - Keep the initial result as a candidate, not an approved public/production service.
@@ -58,9 +58,9 @@ The previously inspected active tree did not contain `NAVIGATION-PROTOCOL.md` or
 
 - Added `development/ai-media-generator/cloudflare_image.py`: fixed Cloudflare endpoint, bounded request inputs, secret-safe errors, redirect rejection, the documented binary-PNG response contract, PNG chunk CRC/bounded decompression/dimension validation, no-overwrite output and provenance sidecar.
 - Added deterministic tests under `development/ai-media-generator/tests/test_cloudflare_image.py` for success variants, malformed output, provider errors, redirects, dimensions, checksums and no-overwrite behavior.
-- Added an offline-test CI workflow and a separate manual-only main-branch live integration workflow. The live workflow requires an explicit `yes` input and uploads only the image and metadata as a 7-day artifact.
+- Added the offline-test CI workflow in AstroCrown-Web. The direct-live workflow is being removed from AstroCrown-Web because its repository secrets are intentionally not duplicated there. The credential-owning qualification runner is being moved to NOVA to use existing NOVA secrets. The NOVA runner checks out the reviewed adapter commit anonymously by immutable SHA and uploads only the image and provenance as a 7-day artifact.
 - No live provider call has been made, and this adapter is not yet qualified. The current PR check suite must run against its exact head before merge; a successful PR suite would establish offline/code correctness only.
 
 ## Handoff
 
-After code and deterministic tests pass, review this exact diff and merge through a PR. The repository owner must add a narrowly scoped Cloudflare Workers AI token and account ID as AstroCrown-Web Actions secrets if absent; secret values must never be shared in chat or committed. Trigger the manual integration workflow only after account access and no-payment configuration are confirmed. Record request outcome, actual usage, latency, output dimensions/quality and applicable rights before changing the route from BLOCKED.
+After code and deterministic tests pass, review and merge through pull requests. Do not create AstroCrown-Web secrets for this test. The qualification runner in NOVA uses the existing `CLOUDFLARE_API_KEY_01` and `CLOUDFLARE_ACCOUNT_ID` secrets and checks out the reviewed AstroCrown-Web adapter commit. Only manually dispatch the NOVA workflow after confirming the account remains on its no-payment configuration and entering a non-sensitive prompt. Record request outcome, actual usage, latency, output dimensions/quality and applicable rights before changing the route from BLOCKED.
