@@ -323,7 +323,7 @@ This test does not prove whether the failure came from wording, low resolution/a
 
 - Provider-neutral image generation interface: still a target; not yet implemented/qualified by this work.
 - Kaggle local GPU: **accelerator and CUDA observed working for diagnostics**; actual model inference, duration, quota cost and long-term availability remain unmeasured.
-- Cloudflare hosted image route: **one live opaque JPEG response passed technical container validation**; preliminary style review did not accept this sample for the intended homepage background. Actual account cost/quota meter, rights and commercial use remain unqualified.
+- Cloudflare hosted image route: **four live requests passed technical request/container/artifact handling**, but three later 2026-10-15 samples (including a 512×288 background-only test) failed visual acceptance for the intended subdued homepage plate. The route remains blocked for homepage asset promotion; actual account cost/quota meter, rights and commercial use remain unqualified. The latest JPEG has no alpha.
 - Transparent source-asset generation: **BLOCKED** pending a route that can supply genuine alpha and pass edge/rights validation.
 - Internal composition architecture: **user-selected direction**; independent from the generation backend.
 - Commercial use: **BLOCKED** until the exact asset/model, dependency, and service terms pass review.
