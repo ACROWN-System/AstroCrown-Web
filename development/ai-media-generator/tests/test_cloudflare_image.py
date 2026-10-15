@@ -16,6 +16,7 @@ from cloudflare_image import (
     ImageGenerationError,
     MODEL_ID,
     build_payload,
+    generate_to_file,
     request_image,
     validate_jpeg,
     validate_png,
@@ -250,6 +251,25 @@ class CloudflareImageTests(unittest.TestCase):
                 write_artifact(target, self.png, "second run", 256, 256, 4, None, None)
             self.assertEqual(image_path.read_bytes(), self.png)
 
+    def test_generate_to_file_records_negative_prompt_in_request_and_metadata(self):
+        negative_prompt = "neon magenta, saturated purple, bright stars, lens flare, starburst, streaks"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            opener = FakeOpener(FakeResponse(self.png, "image/png"))
+            image_path, metadata_path = generate_to_file(
+                config=self.config,
+                prompt="deep navy, subdued space background",
+                output_path=Path(temp_dir) / "candidate.png",
+                width=256,
+                height=256,
+                num_steps=4,
+                negative_prompt=negative_prompt,
+                opener=opener,
+            )
+            request_payload = json.loads(opener.request.data.decode("utf-8"))
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            self.assertEqual(request_payload["negative_prompt"], negative_prompt)
+            self.assertEqual(metadata["negative_prompt"], negative_prompt)
+            self.assertEqual(image_path.name, "candidate.png")
     def test_jpeg_output_uses_truthful_extension_and_records_mime_drift(self):
         jpeg = make_jpeg()
         with tempfile.TemporaryDirectory() as temp_dir:
