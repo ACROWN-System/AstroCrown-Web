@@ -255,3 +255,51 @@ Do not begin a broad multi-model installation. After the account-level no-paymen
 **Recorded direction:** investigate and, where evidence permits, integrate multiple licensed image/video generators and reusable components behind one AstroCrown-owned service; modify or combine components only where technically and legally permitted; choose workflows by task and measured evidence; preserve the $0/no-payment constraint.
 
 **Not yet decided:** exact workflow engine, image/video models, component portfolio, hardware/execution route, workflow-composition policy, and any weight merge/fine-tuning plan. Those choices remain candidates until evaluated and tested.
+
+
+## 13. Priority clarification — homepage backgrounds versus token logos (2026-10-15)
+
+The product has at least two materially different image-generation tasks and they must not be treated as one acceptance profile.
+
+### Homepage background — no longer blocks the homepage
+
+The user has an existing background candidate for the current AstroCrown website. Use that candidate and continue the website path rather than delaying the homepage for another model experiment. The Cloudflare Workers AI `@cf/bytedance/stable-diffusion-xl-lightning` route passed request/container/artifact handling in controlled manual tests but failed visual acceptance across three recent prompt iterations: vivid nebula distractions persisted in two square samples, and a 512×288 sample returned pale panel-like geometry and vivid blue features. Preserve those artifacts as diagnostic evidence and do not repeat near-identical prompt requests. This is rejection of the tested route for that task, not a claim that every image model is unsuitable.
+
+### Token-logo generation — remains a required downstream feature
+
+The AI Token Generator still requires a qualified route to create token logos. Its requirements differ from a background plate:
+
+- Square output, with source resolution sufficient for normal token/avatar displays; the final target resolution must be chosen from the product UI requirements rather than inferred from the failed background test.
+- True alpha transparency when the logo must be independently displayed/composited over multiple backgrounds. A visual checkerboard or an opaque image does not qualify.
+- Strong silhouette, clear visual hierarchy, recognizable shapes and legibility after reduction to 32px/64px/128px; avoid relying on small text in the mark unless explicitly required.
+- The saved asset and provenance must be stable. Regeneration/provider switching creates a new candidate; it must never silently replace an accepted logo.
+- Evaluate content/right restrictions, data handling, output format, cost, no-card eligibility and API terms for the exact model/service. Transparent-output support in an API schema is not proof the returned bytes contain a valid alpha channel or that outputs are cleared for the intended commercial use.
+
+### $0-stage decision and paid-later option
+
+Do not develop a custom foundation model or continue the unsuccessful background prompt loop as a prerequisite. Keep the model/provider boundary replaceable, and qualify one narrowly scoped token-logo path when a verified no-cost route exists or a small budget is explicitly authorized.
+
+**OpenRouter Unified Image API** is a researched candidate for the later paid path, not an approved provider or current free route. OpenRouter documents a single Images API for a changing catalogue of 30+ image models; its `openai/gpt-image-1` listing advertises 1:1 output, reference-image input and transparent-background support. OpenRouter's image-generation guide currently says no image-generation model is included in its `:free` tier, and low-cost image routes start around one cent per image. Its FAQ states it accepts cryptocurrency payments in USDC. Therefore it does not meet the current requirement for actual free image inference, but may be evaluated later after explicitly budgeting a small bounded logo-quality test. Verify current per-model pricing, exact endpoint parameter support, service/model terms, data policy, and actual output alpha before implementation. Do not silently activate paid billing or trigger requests during this research.
+
+Official references (checked 2026-10-15):
+- OpenRouter Unified Image API: https://openrouter.ai/blog/announcements/image-api/
+- OpenRouter GPT Image 1 model page (transparent background, square aspect ratio, references and current model pricing): https://openrouter.ai/openai/gpt-image-1
+- OpenRouter image-model cost/free-tier guide: https://openrouter.ai/blog/tutorials/image-generation-models/
+- OpenRouter payment FAQ: https://openrouter.ai/faq
+
+**Interim fallback:** an internally generated, constrained SVG/logo template can give users a deterministic vector mark at $0 while a qualified image API is unavailable. This is a separate product mode, not a substitute claim for AI image generation. If an LLM helps produce a design specification, use a restricted schema and trusted renderer/sanitizer instead of executing model-authored arbitrary SVG or script. Label and evaluate the fallback honestly.
+
+### Revised execution priority
+
+1. Finish the homepage using the existing background candidate.
+2. Keep video and broad generator expansion out of the homepage critical path.
+3. Preserve token-logo generation as a required AI Token Generator capability; research free API eligibility and design its acceptance suite without making live requests or adding billing.
+4. If no legitimate $0 image API can pass transparency, quality, rights and access gates, provide a clearly identified SVG-based fallback or defer the AI-generated-logo subfeature until an explicitly approved budget exists.
+5. Implement an external-provider adapter only after a bounded candidate wins the logo-specific evaluation.
+
+**Impact Analysis**
+
+- **IF adopted:** the homepage proceeds independently, and the token-logo requirement remains visible instead of being lost inside the broader generator deferral. Free inference is not assumed; future use of a crypto-funded API remains a separately gated option.
+- **IF not adopted:** the project could either continue wasting time on a background model that has failed acceptance or incorrectly drop an image-generation capability required by the AI Token Generator.
+
+No live generation request, credential mutation, billing change, or model selection approval is made by this priority adjustment.
