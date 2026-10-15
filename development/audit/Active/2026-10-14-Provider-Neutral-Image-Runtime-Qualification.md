@@ -294,6 +294,21 @@ A single request was manually dispatched through the NOVA workflow on `main`: [r
 - Desired subdued homepage visual quality for this sample: **FAIL (preliminary review; user acceptance pending)**.
 - True alpha, commercial-use rights, provider/account billing state, sustained eligibility and capacity: **BLOCKED / NOT MEASURED**.
 
+
+### Second prompt-quality sample with negative prompt — 2026-10-15
+
+A manually authorized request was dispatched through NOVA run [#38733638612](https://github.com/ACROWN-System/NOVA/actions/runs/38733638612), workflow commit [`bc3351029f5878aef820a71dce6c68ad8c5acb10`](https://github.com/ACROWN-System/NOVA/commit/bc3351029f5878aef820a71dce6c68ad8c5acb10). The job checked out AstroCrown-Web adapter SHA `cdde2a8a3a008da91b88111b3fa6fac1b5ae4937`, completed successfully in 13 seconds, and uploaded artifact [`astrocrown-cloudflare-image-38733638612`](https://github.com/ACROWN-System/NOVA/actions/runs/38733638612/artifacts/11971228713), ID `11971228713`, retained until 2026-10-22T12:18:38Z.
+
+- **Request:** `@cf/bytedance/stable-diffusion-xl-lightning`; 1024×1024; four steps; no seed. It reused the prior positive prompt and supplied the negative prompt `neon magenta, hot pink, oversaturated purple, intense violet glow, bright starbursts, lens flare, overexposed highlights, visible streaks, glowing hotspots, oversized stars, text, logos, UI elements, borders`.
+- **Artifact evidence:** ZIP 113,780 bytes. JPEG `astrocrown-first-image.jpg`, 1024×1024, 113,022 bytes, SHA-256 `a4222c4eac2d27fdfdc1b6cbb167de9d14219f9b29d1e758b0aa79c4c0f94972`. The metadata sidecar records the negative prompt and confirms that Cloudflare declared `image/png` while the returned bytes were JPEG. The adapter correctly saved the detected format as `.jpg`.
+- **Timing:** `CLIENT_TOTAL_ELAPSED_MS=3324`; includes request, validation and local save, not provider-only latency.
+- **Visual result:** the sample lacks the obvious starburst/streak effects in the previous sample, but its bright lavender nebula dominates nearly the entire frame, stars remain numerous and bright, and the dark centre is a sharply defined circular void. **Not accepted for homepage-background promotion.** Since `seed: null`, this is not a deterministic A/B; the difference cannot be attributed solely to the negative prompt.
+- The JPEG is opaque and remains diagnostic only. True alpha, commercial-use rights, account-level no-cost eligibility and quota remain unqualified. The workflow gate was operator-selected and does not establish provider billing or actual consumption; no billing-meter, quota-burn or invoice data was returned.
+- The `actions/upload-artifact` Node.js 20 deprecation notice did not cause a failure; separate runtime maintenance remains appropriate.
+
+**Decision after two samples:** Do not make another near-identical hosted request solely to chase prompt adherence. Evaluate whether existing samples can be made useful through deterministic, reversible background grading/composition (including controlled desaturation/luminance reduction, soft dark gradient and usable negative-space checks) without another provider call, or compare a materially different candidate route. This is a local evaluation proposal, not permission to promote or overwrite source assets.
+
+
 ## Current status
 
 - Provider-neutral image generation interface: still a target; not yet implemented/qualified by this work.
