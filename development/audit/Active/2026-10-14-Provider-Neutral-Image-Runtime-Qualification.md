@@ -272,13 +272,34 @@ A provider call is for creating the source asset—not for every composition. Re
 
 Inspect the official LayerDiffuse Diffusers CLI integration and its requirements/licensing without installing it. Compare the requirements to the already-working Kaggle notebook environment; do not modify installed packages speculatively. Design the smallest one-asset alpha test only after this source/runtime review. Acceptance requires actual file alpha inspection, edge-fringe testing over dark and light backgrounds, and proof the same asset can be recomposed internally without a second generation request.
 
-No production code, assets, model weights, secrets, billing settings, or existing backup contents were changed by this research update.
+At the preceding research checkpoint, no production code, model weights, secrets, billing settings, or existing backup contents were changed. The live test below created only a short-lived workflow artifact and did not promote or commit generated assets.
+
+### First live Cloudflare image request — 2026-10-15
+
+A single request was manually dispatched through the NOVA workflow on `main`: [run #38714064899](https://github.com/ACROWN-System/NOVA/actions/runs/38714064899), workflow commit [`9c3cf01`](https://github.com/ACROWN-System/NOVA/commit/9c3cf01cdda53336c465050aafd0552f79160443). The run completed successfully in 21 seconds, validated one image, and uploaded one temporary artifact (7-day retention). The reviewed adapter commit pinned by the workflow is [`a73b96863eb37d33c2d9cee43cc7c83e2dccade6`](https://github.com/ACROWN-System/AstroCrown-Web/commit/a73b96863eb37d33c2d9cee43cc7c83e2dccade6); its `cloudflare_image.py` file matches the file now on `main`.
+
+**Observed technical outcome:**
+- Model: `@cf/bytedance/stable-diffusion-xl-lightning`; request size 1024×1024; four steps; configured prompt recorded in provenance.
+- The call returned a decodable/structurally validated JPEG, 61,018 bytes, saved as `astrocrown-first-image.jpg`. SHA-256: `d3c05c8c5949dca27f1dad609fd8a0a220076aa647afd386b58022cb67bc67ed`.
+- Provider declared `image/png`, while returned bytes were detected as JPEG. The adapter correctly rejected the assumption that declared MIME was authoritative, saved the correct `.jpg` suffix, and recorded the mismatch in `astrocrown-first-image.jpg.metadata.json`.
+- Recorded client-side elapsed time: 8,392 ms, including the request, validation and local artifact writing; this is not an isolated provider latency measurement. Provider request ID was not exposed.
+- The workflow gate only permits the run when its operator input `no_payment_confirmed` is `yes`. The input was satisfied for this run, but neither workflow logs nor the artifact provide provider billing-meter data, actual quota burn, or a receipt. Record account cost/quota as **NOT MEASURED**, not as independently verified zero-cost usage.
+- The uploaded ZIP contains the JPEG and metadata only; the image action's Node.js 20 deprecation warning did not fail the run. Consider updating the action to a supported runtime in a separate maintenance change; it is not an image-generation failure.
+
+**Preliminary visual review against the required homepage style:** **NOT ACCEPTED for homepage promotion at this stage.** The image has a useful dark central area, but the nebula is strongly magenta/violet, luminosity and saturation are too high, star flares are too prominent, and several streak-like marks are visually distracting. This is a prompt-adherence/style result for one sample, not proof that every output from this model will fail. The image is an opaque JPEG, so it does not meet any true-alpha/transparent-layer task. Keep the retrieved artifact as diagnostic evidence only; do not treat it as an approved website asset.
+
+**Narrow result states:**
+- Live request + artifact validation/upload: **PASS**.
+- Output container identification and extension correction for this observed MIME mismatch: **PASS**.
+- Desired subdued homepage visual quality for this sample: **FAIL (preliminary review; user acceptance pending)**.
+- True alpha, commercial-use rights, provider/account billing state, sustained eligibility and capacity: **BLOCKED / NOT MEASURED**.
 
 ## Current status
 
 - Provider-neutral image generation interface: still a target; not yet implemented/qualified by this work.
 - Kaggle local GPU: **accelerator and CUDA observed working for diagnostics**; actual model inference, duration, quota cost and long-term availability remain unmeasured.
-- Transparent source-asset generation: **BLOCKED** pending exact route and true-alpha evidence.
+- Cloudflare hosted image route: **one live opaque JPEG response passed technical container validation**; preliminary style review did not accept this sample for the intended homepage background. Actual account cost/quota meter, rights and commercial use remain unqualified.
+- Transparent source-asset generation: **BLOCKED** pending a route that can supply genuine alpha and pass edge/rights validation.
 - Internal composition architecture: **user-selected direction**; independent from the generation backend.
 - Commercial use: **BLOCKED** until the exact asset/model, dependency, and service terms pass review.
 - Video runtime: **BLOCKED as an independent track** and must not delay the first alpha-capable image asset.
