@@ -309,6 +309,16 @@ A manually authorized request was dispatched through NOVA run [#38733638612](htt
 **Decision after two samples:** Do not make another near-identical hosted request solely to chase prompt adherence. Evaluate whether existing samples can be made useful through deterministic, reversible background grading/composition (including controlled desaturation/luminance reduction, soft dark gradient and usable negative-space checks) without another provider call, or compare a materially different candidate route. This is a local evaluation proposal, not permission to promote or overwrite source assets.
 
 
+ 
+### Third prompt iteration — low-resolution financial UI background — 2026-10-15
+
+Run [#38738606528](https://github.com/ACROWN-System/NOVA/actions/runs/38738606528) succeeded technically: 512×288 pixels, four steps, seed 20261015, and artifact [ID 11973519757](https://github.com/ACROWN-System/NOVA/actions/runs/38738606528/artifacts/11973519757). Image SHA-256 is `df6441ffe682d7099e0ce3952bf47ed27e338a25feece67b5c69c45f63eb0a63`; image dimensions and RGB/JPEG mode were checked from the downloaded artifact. Client-side elapsed time was 3,335 ms, including request, validation and local save. The exact prompts and parameters are preserved in its sidecar. Cloudflare again declared PNG while the image bytes were JPEG; the adapter detected JPEG and saved the correct `.jpg` extension.
+
+**Visual review: FAIL.** The sample has large pale panels, dark rectangular blocks, hard geometric framing and vivid blue features. It is not a subtle deep-space background and is unsuitable behind financial UI. The image is an opaque JPEG and has no alpha channel. The Node.js 20 warning from the artifact-upload action is non-blocking. The manual no-payment acknowledgement is not usage/billing proof; current account cost, quota consumption and commercial permission remain unmeasured/unqualified.
+
+This test does not prove whether the failure came from wording, low resolution/aspect ratio, or limitations of this particular stochastic model run. Three recent SDXL-Lightning prompt iterations have failed visual acceptance. Avoid another near-identical request; evaluate a deterministic procedural dark-space background as a no-inference baseline, with generated source samples preserved immutably.
+
+
 ## Current status
 
 - Provider-neutral image generation interface: still a target; not yet implemented/qualified by this work.
