@@ -425,3 +425,18 @@ No live request, credential modification, billing change, or provider promotion 
 ## 8. Closure
 
 This document revision is dated 2026-10-15. Candidate entries retain their own source/test evidence dates where available. Re-check upstream licenses, model cards, provider terms, model availability, account eligibility and hardware compatibility immediately before implementation. A candidate moves out of BLOCKED only when the missing evidence is supplied and the relevant verification is re-run.
+
+
+## Pending manual experiment — quiet 16:9 financial UI background — 2026-10-15
+
+The next Cloudflare comparison is configured but has **not** been run. It deliberately changes the composition brief and size from earlier square/cinematic-style prompts; it is not a claim that the provider will follow the brief.
+
+- Positive prompt: `Minimal deep-space background plate for a financial website UI. Nearly uniform near-black deep navy across the frame. Only a few tiny, faint, low-luminosity stars. One small, soft, diffuse, desaturated blue-violet space cloud confined to a small area near an outer edge. Keep most of the frame dark, visually quiet and uninterrupted, with no focal point. Very low contrast, restrained saturation, subtle texture only. Background only; it must sit behind numbers, charts and controls without distracting or reducing text readability. No predominant elements.`
+- Negative prompt: `large nebula, dominant cloud, wide cloud, bright or numerous stars, dense starfield, starbursts, lens flares, light streaks, glowing hotspots, saturated purple, magenta, hot pink, vivid blue, bright center, high contrast, high luminosity, planets, moons, galaxies, spacecraft, objects, text, letters, logos, charts, UI, borders, clutter`
+- Proposed preview dimensions: 512×288 (16:9, 147,456 pixels: about 86% fewer pixels than 1024×1024). Use only for style/layout judgment, not as the assumed final asset resolution.
+- Steps: 4; preserve the SDXL-Lightning setting rather than introducing a step-count change at the same time.
+- Seed: 20261015, for a better-controlled repeat on this route; do not promise bit-identical output across version/runtime changes.
+- The model page accepts width/height from 256 to 2048 and displays $0.00 per step. This does not by itself provide actual usage-meter evidence or prove account no-payment eligibility. Lower output dimensions are a reasonable diagnostic constraint, not a claim of proportional billing savings.
+- The workflow remains manual on `main`, preserves its explicit no-payment confirmation gate and pins the reviewed adapter commit. No live request was triggered during configuration.
+
+Acceptance is about a mostly uniform near-black navy UI backing, very sparse low-luminosity stars, one small diffuse desaturated cloud near an edge, no focal element and no distraction behind financial data. Any new output stays diagnostic pending visual, rights and actual usage eligibility review.
