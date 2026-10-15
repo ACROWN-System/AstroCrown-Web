@@ -425,12 +425,13 @@ def write_artifact(
     seed: int | None,
     request_id: str | None,
     provider_content_type: str | None = None,
+    negative_prompt: str | None = None,
 ) -> tuple[Path, Path]:
     """Write PNG/JPEG bytes and provenance without overwriting existing files."""
     requested_output = Path(output_path).expanduser()
     if requested_output.suffix.lower() not in {".png", ".jpg", ".jpeg"}:
         raise ImageGenerationError("Output path must end in .png, .jpg, or .jpeg.")
-    build_payload(prompt, width, height, num_steps, seed=seed)
+    build_payload(prompt, width, height, num_steps, negative_prompt=negative_prompt, seed=seed)
     detected = validate_image(image_bytes, width, height)
 
     # Keep the extension truthful when a provider returns JPEG despite declaring image/png.
@@ -448,6 +449,7 @@ def write_artifact(
         "model": MODEL_ID,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "prompt": prompt.strip(),
+        "negative_prompt": negative_prompt.strip() if negative_prompt else None,
         "parameters": {
             "width": width,
             "height": height,
@@ -543,6 +545,7 @@ def generate_to_file(
         seed=seed,
         request_id=request_id,
         provider_content_type=provider_content_type,
+        negative_prompt=negative_prompt,
     )
 
 def _argument_parser() -> argparse.ArgumentParser:
