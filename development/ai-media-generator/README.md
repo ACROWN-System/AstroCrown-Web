@@ -59,7 +59,9 @@ Generated media should be treated as separately produced artifacts that can late
 
 ## Architecture and source of truth
 
-This README is an entry point, not a second specification. The target is one AstroCrown-owned generator for image and video, with image generation as the first executable milestone and a separate qualification gate for video.
+This README is an entry point, not a second specification. The target remains one AstroCrown-owned generator for image and video, with image generation as the first executable milestone and a separate qualification gate for video.
+
+**Priority clarification — 2026-10-15:** image generation is still a required future capability for the AI Token Generator to create token logos. The homepage background and token-logo use cases are separate: the homepage can proceed with the image already supplied by the user, while the tested Cloudflare SDXL-Lightning route is rejected for the intended background after repeated visual failures. Do not confuse that candidate's failure with a decision to abandon all image generation. Token-logo qualification must focus on distinctive 1:1 marks, genuine transparent output where required, legibility at small icon sizes, safe provenance, actual rights, and measured cost. Under the current $0/no-payment constraint, do not trigger paid image APIs; compare a free eligible route only with evidence or defer live model calls until a bounded budget is authorized. A procedural/SVG logo path can be an explicit fallback, not a claim that raster image generation has been delivered.
 
 Use these documents as the canonical sources:
 
