@@ -1,10 +1,1210 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AstroCrown</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081426">
+  <meta name="description" content="AstroCrown homepage design preview. Market values and assets are illustrative demo data, not live financial information.">
+  <title>AstroCrown — Market Discovery Preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f2f5fb;
+      --muted: #9aa9be;
+      --quiet: #74859d;
+      --space-950: #050914;
+      --space-900: #081426;
+      --space-850: #0b192c;
+      --space-800: #10233b;
+      --space-700: #16345a;
+      --gold: #ffd700;
+      --gold-soft: #ffeaa0;
+      --green: #20c878;
+      --red: #e5484d;
+      --warning: #ffd24a;
+      --line: rgba(153, 178, 213, .17);
+      --line-strong: rgba(153, 178, 213, .29);
+      --surface: rgba(10, 23, 41, .93);
+      --surface-soft: rgba(13, 29, 50, .84);
+      --surface-hover: rgba(20, 42, 70, .95);
+      --radius: 15px;
+      --shadow: 0 15px 36px rgba(0, 0, 0, .15);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 82px; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse at 13% 0%, rgba(22, 52, 90, .22), transparent 31rem),
+        linear-gradient(180deg, #050914 0%, #07111f 46%, #050914 100%);
+      font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: .005em;
+    }
+    button, input, select { font: inherit; }
+    button, a, input, select { -webkit-tap-highlight-color: transparent; }
+    a { color: inherit; text-decoration: none; }
+    button { color: inherit; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 3px;
+    }
+    button:disabled { opacity: .38; cursor: not-allowed; }
+    .skip-link {
+      position: fixed; left: 12px; top: 8px; z-index: 100;
+      padding: 9px 14px; border-radius: 8px; background: var(--gold); color: #131722;
+      transform: translateY(-150%); font-weight: 750;
+    }
+    .skip-link:focus { transform: translateY(0); }
+    .preview-ribbon {
+      min-height: 25px; padding: 4px 14px; display: flex; justify-content: center; align-items: center;
+      gap: 9px; color: #d9e1ef; background: #060d18; border-bottom: 1px solid rgba(255,255,255,.045);
+      text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .105em; text-transform: uppercase;
+    }
+    .preview-ribbon .ribbon-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 9px rgba(255,210,74,.35); }
+    .site-header {
+      position: sticky; top: 0; z-index: 30; width: 100%; min-height: 62px;
+      display: flex; align-items: center; gap: clamp(9px, 1.3vw, 22px);
+      padding: 7px clamp(14px, 1.5vw, 23px);
+      background: rgba(8, 20, 38, .97); border-bottom: 1px solid rgba(61, 94, 139, .68);
+      box-shadow: 0 5px 19px rgba(0,0,0,.11); backdrop-filter: blur(14px);
+    }
+    .brand-group { display: flex; align-items: center; flex: 0 0 auto; gap: 7px; min-width: 162px; }
+    .brand-link {
+      height: 44px; display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 10px; transition: background .16s ease, transform .16s ease, color .16s ease;
+    }
+    .brand-mark-link { width: 43px; }
+    .brand-word-link { padding: 0 4px; }
+    .brand-group:hover .brand-link, .brand-group:focus-within .brand-link { background: rgba(255,215,0,.07); }
+    .brand-link:active { transform: scale(.97); }
+    .brand-mark { display: block; width: 40px; height: 40px; }
+    .brand-word { font-size: 15px; line-height: 1; font-weight: 800; letter-spacing: .045em; white-space: nowrap; }
+    .brand-word span { color: var(--gold); }
+    .primary-nav { display: flex; align-items: center; gap: 1px; flex: 1 1 auto; min-width: 0; }
+    .menu-slot { position: relative; min-width: 0; }
+    .nav-trigger {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      min-height: 42px; padding: 0 clamp(5px, .68vw, 11px); white-space: nowrap;
+      border: 1px solid transparent; border-radius: 9px; background: transparent;
+      color: #dce5f3; font-size: 12px; font-weight: 650; cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease, color .15s ease;
+    }
+    .nav-trigger:hover, .nav-trigger[aria-expanded="true"] { background: rgba(255,255,255,.055); border-color: var(--line); color: #fff; }
+    .nav-trigger:active { transform: scale(.97); }
+    .chevron { width: 6px; height: 6px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg) translateY(-2px); opacity: .7; flex: 0 0 6px; }
+    .nav-panel, .control-panel {
+      position: absolute; z-index: 50; top: calc(100% + 9px); left: 0;
+      display: none; min-width: 225px; padding: 9px; border: 1px solid var(--line-strong);
+      border-radius: 13px; background: #0b192b; box-shadow: 0 18px 40px rgba(0,0,0,.34);
+    }
+    .menu-slot.is-open > .nav-panel, .menu-slot.is-open > .control-panel { display: block; }
+    .panel-label { padding: 7px 9px 8px; color: var(--quiet); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .nav-panel a, .control-panel a, .panel-action {
+      width: 100%; min-height: 37px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      border: 0; border-radius: 8px; padding: 8px 10px; text-align: left;
+      background: transparent; color: #dce5f3; font-size: 12px; cursor: pointer;
+    }
+    .nav-panel a:hover, .control-panel a:hover, .panel-action:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .panel-note { margin: 7px 8px 5px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+    .search-wrap { position: relative; display: flex; align-items: center; flex: 1 1 175px; min-width: 95px; max-width: 255px; }
+    .search-field {
+      width: 100%; height: 36px; padding: 0 34px 0 34px; border-radius: 10px; border: 1px solid var(--line);
+      color: var(--ink); background: rgba(3,9,17,.42); font-size: 12px;
+    }
+    .search-field::placeholder { color: #75869e; }
+    .search-glass { position: absolute; left: 12px; width: 12px; height: 12px; border: 1.7px solid #8fa1ba; border-radius: 50%; pointer-events: none; }
+    .search-glass:after { content:""; position:absolute; width:5px; height:1.7px; background:#8fa1ba; right:-4px; bottom:-2px; transform:rotate(45deg); border-radius:2px; }
+    .search-shortcut { position:absolute; right:9px; color:#71829a; font-size:10px; pointer-events:none; }
+    .search-results {
+      position:absolute; top:calc(100% + 8px); left:0; right:0; z-index:60; display:none;
+      padding:7px; background:#0b192b; border:1px solid var(--line-strong); border-radius:12px; box-shadow:0 18px 36px rgba(0,0,0,.32);
+    }
+    .search-results.is-visible { display:block; }
+    .search-result {
+      display:flex; align-items:center; gap:9px; width:100%; padding:9px 8px; border:0; border-radius:8px;
+      color:var(--ink); background:transparent; text-align:left; cursor:pointer; font-size:12px;
+    }
+    .search-result:hover, .search-result[aria-selected="true"] { background:rgba(255,255,255,.07); }
+    .search-result small { display:block; color:var(--muted); font-size:10px; }
+    .search-empty { padding:11px 9px; color:var(--muted); font-size:11px; }
+    .right-controls { display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+    .avatar-trigger {
+      width:35px; height:35px; display:grid; place-items:center; border-radius:50%; border:1px solid rgba(255,215,0,.35);
+      background:linear-gradient(145deg, rgba(255,215,0,.16), rgba(22,52,90,.8)); color:var(--gold-soft); cursor:pointer;
+    }
+    .avatar-trigger svg { width:17px; height:17px; }
+    .wallet-trigger {
+      display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 12px; white-space:nowrap;
+      color:#171b23; background:var(--gold); border:1px solid #ffe45b; border-radius:9px; font-size:11px; font-weight:850; cursor:pointer;
+      transition:transform .15s ease, filter .15s ease;
+    }
+    .wallet-trigger:hover { filter:brightness(1.06); }
+    .wallet-trigger:active { transform:scale(.97); }
+    .wallet-trigger svg { width:13px; height:13px; }
+    .right-controls .control-panel { left:auto; right:0; width:255px; }
+    .menu-status { color:var(--warning); font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+    .mobile-more { display:none; }
+
+    .page-shell { width:min(100%, 1770px); margin:0 auto; padding:0 clamp(18px, 3.3vw, 58px) 55px; }
+    .section-kicker { color:var(--gold); font-size:10px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+    .section-heading { margin:0; color:#f1f5fb; font-size:19px; font-weight:760; letter-spacing:-.025em; }
+    .section-description { margin:5px 0 0; color:var(--muted); font-size:12px; }
+    .muted { color:var(--muted); }
+    .mono { font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
+    .pill {
+      display:inline-flex; align-items:center; gap:5px; min-height:22px; padding:3px 8px; border-radius:999px;
+      border:1px solid var(--line); background:rgba(255,255,255,.035); color:#c2cee0; font-size:9px; font-weight:800; letter-spacing:.045em; text-transform:uppercase;
+    }
+    .pill.preview { color:#ffe7a1; border-color:rgba(255,210,74,.24); background:rgba(255,210,74,.065); }
+    .pill.green { color:#78e6b2; border-color:rgba(32,200,120,.25); background:rgba(32,200,120,.08); }
+    .pill.red { color:#ff9295; border-color:rgba(229,72,77,.25); background:rgba(229,72,77,.08); }
+
+    .info-bar-wrap { margin-top:39px; }
+    .info-bar {
+      width:min(78%, 1170px); min-height:53px; display:flex; overflow:hidden; border:1px solid rgba(255,210,74,.55);
+      border-radius:12px; background:rgba(5,9,20,.82); box-shadow:0 11px 27px rgba(0,0,0,.14);
+    }
+    .info-priority {
+      flex:0 0 151px; display:flex; align-items:center; gap:10px; padding:0 13px;
+      border-right:1px solid rgba(255,210,74,.37); background:rgba(255,210,74,.045);
+    }
+    .info-priority-icon { display:grid; place-items:center; width:26px; height:26px; flex:0 0 26px; border-radius:8px; color:var(--warning); background:rgba(255,210,74,.1); }
+    .info-priority-icon svg { width:15px; height:15px; }
+    .info-priority strong { display:block; color:#f4df9b; font-size:10px; line-height:1.25; letter-spacing:.07em; text-transform:uppercase; }
+    .info-priority small { display:block; margin-top:2px; color:var(--quiet); font-size:9px; }
+    .info-message { display:flex; align-items:center; justify-content:space-between; gap:18px; flex:1; min-width:0; padding:0 17px; }
+    .info-message p { margin:0; color:#e1e8f3; font-size:12px; }
+    .info-message p span { color:var(--muted); }
+    .learn-link { flex:0 0 auto; color:#ffe48a; font-size:11px; font-weight:750; border-bottom:1px solid rgba(255,228,138,.55); }
+    .learn-link:hover { color:#fff2c9; }
+
+    .hero-section { width:min(82%, 1320px); margin-top:20px; }
+    .hero-grid { display:grid; grid-template-columns:minmax(300px,1.14fr) minmax(250px,1fr) minmax(250px,1fr); gap:13px; align-items:stretch; }
+    .hero-card {
+      position:relative; display:flex; flex-direction:column; min-width:0; min-height:257px; padding:17px 17px 21px;
+      overflow:visible; border-radius:var(--radius); border:1px solid var(--line); background:linear-gradient(142deg, rgba(15,31,52,.97), rgba(7,16,29,.95));
+      box-shadow:var(--shadow); transition:transform .18s ease,border-color .18s ease,background .18s ease;
+    }
+    .hero-card:after { content:""; position:absolute; inset:0 0 auto; height:2px; opacity:.72; border-radius:var(--radius) var(--radius) 0 0; background:linear-gradient(90deg,rgba(255,215,0,.65),transparent 75%); pointer-events:none; }
+    .hero-card:hover { transform:translateY(-2px); border-color:rgba(255,215,0,.36); background:linear-gradient(142deg, rgba(18,38,63,.98), rgba(7,16,29,.97)); }
+    .hero-card:active { transform:translateY(0) scale(.997); }
+    .hero-card:focus-visible { outline-offset:5px; }
+    .hero-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .hero-card-title { margin:0; font-size:13px; font-weight:780; letter-spacing:-.01em; }
+    .hero-card-subtitle { margin:3px 0 0; color:var(--muted); font-size:10px; }
+    .card-open { color:#6f8199; font-size:16px; line-height:1; }
+    .sentiment-main { display:grid; grid-template-columns:1fr 122px; gap:2px; align-items:center; margin-top:9px; }
+    .sentiment-value { color:#fff; font-size:38px; line-height:1; font-weight:780; letter-spacing:-.05em; }
+    .sentiment-value small { color:var(--muted); font-size:12px; font-weight:600; letter-spacing:0; }
+    .sentiment-state { margin-top:7px; color:var(--gold-soft); font-size:13px; font-weight:750; }
+    .sentiment-copy { margin-top:6px; color:var(--muted); font-size:10px; }
+    .gauge { width:100%; max-width:130px; justify-self:end; margin-top:4px; }
+    .gauge-caption { display:flex; justify-content:space-between; color:var(--quiet); font-size:9px; margin-top:-3px; }
+    .card-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:auto; padding-top:12px; color:var(--muted); font-size:10px; }
+    .dot { width:6px; height:6px; display:inline-block; flex:0 0 6px; border-radius:50%; background:var(--warning); }
+    .mini-link { color:#ffe48a; font-weight:750; }
+    .movers-list { display:grid; gap:10px; margin-top:17px; }
+    .mover-row { display:grid; grid-template-columns:27px minmax(0,1fr) auto; gap:8px; align-items:center; }
+    .mini-coin { width:26px; height:26px; display:grid; place-items:center; border-radius:9px; border:1px solid var(--line); background:rgba(255,255,255,.035); color:#e5edf9; font-size:9px; font-weight:850; }
+    .mover-name { min-width:0; }
+    .mover-name strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e9eef7; font-size:11px; }
+    .mover-name small { display:block; color:var(--quiet); font-size:9px; }
+    .mover-number { text-align:right; font-size:11px; font-weight:780; }
+    .positive { color:var(--green)!important; }
+    .negative { color:#ff7378!important; }
+    .neutral { color:var(--muted)!important; }
+    .split-labels { display:flex; justify-content:space-between; gap:12px; margin-top:11px; font-size:9px; color:var(--quiet); }
+    .split-labels strong { color:#b9c7da; font-weight:650; }
+    .influence-list { display:grid; gap:11px; margin-top:17px; }
+    .influence-row { display:grid; grid-template-columns:91px 1fr 28px; gap:8px; align-items:center; color:#d4deec; font-size:10px; }
+    .influence-track { height:5px; border-radius:99px; overflow:hidden; background:rgba(255,255,255,.075); }
+    .influence-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#9a7e27,#ffd700); }
+    .influence-score { text-align:right; color:#bdc9da; font-size:9px; font-variant-numeric:tabular-nums; }
+    .signal-caveat { margin-top:auto; padding-top:12px; color:var(--quiet); font-size:9px; }
+    .hero-chevron { position:absolute; left:calc(50% - 13px); bottom:-11px; width:26px; height:26px; display:grid; place-items:center; border:1px solid rgba(255,215,0,.32); border-radius:8px; background:#0c1b2e; color:var(--gold); transform:rotate(45deg); box-shadow:0 5px 13px rgba(0,0,0,.18); }
+    .hero-chevron span { transform:rotate(-45deg); font-size:15px; line-height:1; }
+
+    .market-context { margin-top:29px; }
+    .market-context-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .market-context-title { display:flex; align-items:center; gap:9px; }
+    .market-context-title h2 { margin:0; font-size:12px; letter-spacing:.025em; font-weight:760; }
+    .market-context-title .live-dot { width:6px; height:6px; border-radius:50%; background:var(--warning); }
+    .context-note { color:var(--quiet); font-size:10px; }
+    .market-strip { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); overflow:hidden; border:1px solid var(--line); border-radius:12px; background:rgba(7,17,31,.88); }
+    .market-metric { min-width:0; padding:12px 14px; border-right:1px solid var(--line); }
+    .market-metric:last-child { border-right:0; }
+    .metric-label { display:block; color:var(--muted); font-size:9px; white-space:nowrap; }
+    .metric-value { display:block; margin-top:4px; color:#edf2f9; font-size:14px; font-weight:780; letter-spacing:-.025em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .metric-change { display:block; margin-top:2px; font-size:9px; font-weight:700; }
+    .workspace { margin-top:33px; }
+    .workspace-heading { display:flex; justify-content:space-between; align-items:flex-end; gap:18px; margin-bottom:16px; }
+    .workspace-heading .heading-copy { min-width:0; }
+    .workspace-heading .right-note { color:var(--muted); font-size:10px; text-align:right; }
+    .workspace-heading h2 { margin:4px 0 0; font-size:22px; font-weight:780; line-height:1.15; letter-spacing:-.04em; }
+    .workspace-heading p { margin:6px 0 0; color:var(--muted); font-size:11px; }
+    .filter-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px; border:1px solid var(--line); border-radius:12px 12px 0 0; background:rgba(9,21,37,.95); }
+    .filter-options { display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+    .filter-button { display:inline-flex; align-items:center; gap:6px; min-height:31px; padding:0 11px; border:1px solid transparent; border-radius:8px; background:transparent; color:#9eafc5; font-size:10px; font-weight:720; cursor:pointer; }
+    .filter-button:hover { color:#f1f5fb; background:rgba(255,255,255,.045); }
+    .filter-button[aria-pressed="true"] { color:#ffeaa0; background:rgba(255,215,0,.085); border-color:rgba(255,215,0,.22); }
+    .filter-count { color:var(--quiet); font-size:9px; }
+    .directory-tools { display:flex; align-items:center; gap:9px; flex:0 0 auto; }
+    .sort-label { color:var(--muted); font-size:10px; white-space:nowrap; }
+    .sort-select { min-width:132px; height:32px; padding:0 25px 0 9px; border:1px solid var(--line); border-radius:8px; background:#091526; color:#dfe7f3; font-size:10px; cursor:pointer; }
+    .directory-caption { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:9px 14px; border-right:1px solid var(--line); border-left:1px solid var(--line); background:rgba(7,16,29,.93); color:var(--muted); font-size:10px; }
+    .directory-caption strong { color:#e6edf8; font-weight:700; }
+    .directory-shell { overflow:hidden; border:1px solid var(--line); border-radius:0 0 13px 13px; background:rgba(7,16,29,.94); box-shadow:var(--shadow); }
+    .table-viewport { overflow-x:auto; overscroll-behavior-x:contain; }
+    .market-table { width:100%; min-width:1090px; border-collapse:collapse; table-layout:fixed; font-size:11px; font-variant-numeric:tabular-nums; }
+    .market-table thead { background:rgba(255,255,255,.018); }
+    .market-table th { height:38px; color:#8395ad; text-align:right; font-size:9px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; border-bottom:1px solid var(--line); padding:0 10px; white-space:nowrap; }
+    .market-table th:first-child,.market-table td:first-child { text-align:center; }
+    .market-table th:nth-child(2),.market-table td:nth-child(2) { text-align:left; }
+    .market-table th:last-child,.market-table td:last-child { text-align:center; }
+    .market-table td { padding:12px 10px; height:62px; text-align:right; border-bottom:1px solid rgba(153,178,213,.10); color:#d8e1ef; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .market-table tbody tr { transition:background .14s ease; }
+    .market-table tbody tr:hover { background:rgba(33,56,86,.22); }
+    .market-table tbody tr:last-child td { border-bottom:0; }
+    .row-index { color:#657790; font-size:10px; }
+    .asset-cell { display:flex; align-items:center; gap:10px; min-width:0; }
+    .asset-logo { display:grid; place-items:center; width:32px; height:32px; flex:0 0 32px; border-radius:50%; border:1px solid rgba(255,255,255,.15); color:#f5f7fb; font-size:9px; font-weight:900; box-shadow:inset 0 0 0 3px rgba(255,255,255,.025); }
+    .logo-btc { background:linear-gradient(145deg,#91611b,#d9a13d); }
+    .logo-eth { background:linear-gradient(145deg,#344a80,#758ad4); }
+    .logo-ai { background:linear-gradient(145deg,#12665e,#23ad9c); }
+    .logo-meme { background:linear-gradient(145deg,#7a4428,#d98d54); }
+    .logo-stable { background:linear-gradient(145deg,#174d44,#288e71); }
+    .logo-rwa { background:linear-gradient(145deg,#604b80,#b29ad4); }
+    .logo-depin { background:linear-gradient(145deg,#285880,#4b9ccc); }
+    .logo-game { background:linear-gradient(145deg,#754169,#ba71a4); }
+    .logo-ecosystem { background:linear-gradient(145deg,#625315,#bba238); }
+    .asset-identity { min-width:0; }
+    .asset-identity strong { display:block; color:#f0f4fb; overflow:hidden; text-overflow:ellipsis; font-size:11px; font-weight:780; }
+    .asset-identity small { display:flex; align-items:center; gap:6px; margin-top:2px; color:#8495ad; font-size:9px; }
+    .asset-tag { display:inline-block; padding:1px 5px; border:1px solid rgba(153,178,213,.14); border-radius:4px; color:#a8b9d0; font-size:8px; }
+    .favorite-button { border:0; background:transparent; color:#536781; cursor:pointer; font-size:16px; line-height:1; padding:4px; border-radius:5px; }
+    .favorite-button:hover,.favorite-button[aria-pressed="true"] { color:var(--gold); background:rgba(255,215,0,.07); }
+    .change { font-weight:750; }
+    .sparkline { display:block; width:79px; height:25px; margin-left:auto; }
+    .row-action { min-height:28px; padding:0 10px; border:1px solid rgba(255,215,0,.25); border-radius:7px; background:rgba(255,215,0,.055); color:#ffe58c; font-size:9px; font-weight:800; cursor:pointer; }
+    .row-action:hover { background:rgba(255,215,0,.13); }
+    .empty-state { display:none; padding:36px 18px; text-align:center; color:var(--muted); }
+    .empty-state strong { display:block; color:#e7edf7; font-size:13px; }
+    .empty-state p { margin:6px 0 0; font-size:11px; }
+    .pagination-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 13px; border-top:1px solid var(--line); background:rgba(9,21,37,.96); }
+    .pagination-summary { color:var(--muted); font-size:10px; }
+    .pagination-summary strong { color:#e4eaf4; }
+    .pagination-controls { display:flex; align-items:center; gap:5px; }
+    .page-button { display:grid; place-items:center; min-width:30px; height:30px; padding:0 8px; border:1px solid var(--line); border-radius:7px; background:transparent; color:#a8b8cc; font-size:10px; cursor:pointer; }
+    .page-button:hover:not(:disabled) { color:#fff; border-color:var(--line-strong); }
+    .page-button[aria-current="page"] { background:rgba(255,215,0,.1); border-color:rgba(255,215,0,.32); color:#ffe58b; font-weight:800; }
+    .page-ellipsis { padding:0 4px; color:var(--quiet); }
+
+    .discovery-section { margin-top:44px; }
+    .discovery-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:17px; }
+    .discovery-heading h2 { margin:4px 0 0; font-size:23px; letter-spacing:-.04em; line-height:1.2; font-weight:780; }
+    .discovery-heading p { max-width:550px; margin:6px 0 0; color:var(--muted); font-size:11px; }
+    .discovery-counter { flex:0 0 auto; color:var(--muted); font-size:10px; }
+    .discovery-counter strong { color:var(--gold-soft); font-size:18px; font-weight:800; vertical-align:middle; margin-right:4px; }
+    .discovery-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .discovery-card {
+      position:relative; display:flex; flex-direction:column; align-items:stretch; min-width:0; min-height:173px; padding:16px;
+      overflow:hidden; text-align:left; border:1px solid var(--line); border-radius:13px; background:linear-gradient(145deg,rgba(13,29,50,.94),rgba(7,16,29,.96));
+      cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.10); transition:transform .16s ease,border-color .16s ease,background .16s ease;
+    }
+    .discovery-card:before { content:""; position:absolute; width:120px; height:120px; top:-67px; right:-48px; border-radius:50%; border:1px solid var(--tile-glow,rgba(255,215,0,.12)); box-shadow:0 0 0 18px rgba(255,255,255,.008),0 0 0 36px rgba(255,255,255,.006); pointer-events:none; }
+    .discovery-card:hover { transform:translateY(-3px); border-color:var(--tile-glow,rgba(255,215,0,.36)); background:linear-gradient(145deg,rgba(18,38,63,.98),rgba(7,16,29,.97)); }
+    .discovery-card:active { transform:translateY(-1px) scale(.997); }
+    .tile-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .tile-symbol { width:38px; height:38px; display:grid; place-items:center; flex:0 0 38px; border:1px solid var(--tile-border,rgba(255,215,0,.22)); border-radius:11px; color:var(--tile-color,#ffe58b); background:var(--tile-bg,rgba(255,215,0,.07)); font-size:18px; font-weight:700; }
+    .tile-arrow { color:#657991; font-size:16px; }
+    .tile-title { display:block; margin-top:16px; font-size:13px; font-weight:780; letter-spacing:-.015em; }
+    .tile-copy { display:block; margin-top:5px; color:var(--muted); font-size:10px; line-height:1.45; }
+    .tile-foot { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:auto; padding-top:12px; color:var(--quiet); font-size:9px; }
+    .tile-status { color:#bdc7d7; font-size:8px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
+    .discovery-card:nth-child(3n+2) { --tile-color:#8bd7fa; --tile-bg:rgba(67,168,223,.075); --tile-border:rgba(67,168,223,.22); --tile-glow:rgba(67,168,223,.24); }
+    .discovery-card:nth-child(3n+3) { --tile-color:#9be6c4; --tile-bg:rgba(32,200,120,.07); --tile-border:rgba(32,200,120,.22); --tile-glow:rgba(32,200,120,.24); }
+    .discovery-card:nth-child(4n) { --tile-color:#d1b0ff; --tile-bg:rgba(154,113,230,.08); --tile-border:rgba(154,113,230,.22); --tile-glow:rgba(154,113,230,.22); }
+
+    .preview-note {
+      display:flex; align-items:flex-start; gap:12px; margin-top:27px; padding:15px 16px;
+      border:1px solid rgba(255,210,74,.19); border-radius:12px; background:rgba(255,210,74,.035);
+    }
+    .preview-note-icon { display:grid; place-items:center; width:27px; height:27px; flex:0 0 27px; border-radius:8px; color:var(--warning); background:rgba(255,210,74,.09); font-weight:900; }
+    .preview-note h2 { margin:0; color:#eddea7; font-size:11px; font-weight:800; }
+    .preview-note p { margin:4px 0 0; color:#9eacc0; font-size:10px; line-height:1.6; }
+    .site-footer { margin-top:27px; padding:24px 0 5px; border-top:1px solid var(--line); }
+    .footer-main { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
+    .footer-brand { display:flex; align-items:center; gap:10px; }
+    .footer-mark { width:30px; height:30px; }
+    .footer-brand strong { display:block; font-size:12px; letter-spacing:.06em; }
+    .footer-brand small { display:block; color:var(--quiet); font-size:9px; margin-top:2px; }
+    .footer-nav { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px 19px; }
+    .footer-nav a { color:#9aa9be; font-size:10px; }
+    .footer-nav a:hover { color:var(--gold-soft); }
+    .footer-bottom { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:22px; padding-top:13px; border-top:1px solid rgba(153,178,213,.09); color:#6f8098; font-size:9px; }
+    .footer-bottom a { color:#a5b2c5; text-decoration:underline; text-underline-offset:3px; }
+
+    dialog {
+      width:min(460px,calc(100vw - 32px)); max-height:min(78vh,650px); padding:0; overflow:auto;
+      border:1px solid var(--line-strong); border-radius:17px; color:var(--ink); background:#0b192b; box-shadow:0 30px 90px rgba(0,0,0,.6);
+    }
+    dialog::backdrop { background:rgba(1,5,12,.72); backdrop-filter:blur(5px); }
+    .dialog-topline { height:3px; background:linear-gradient(90deg,var(--gold),rgba(255,215,0,0) 85%); }
+    .dialog-content { padding:22px; }
+    .dialog-eyebrow { color:var(--gold); font-size:9px; font-weight:850; letter-spacing:.13em; text-transform:uppercase; }
+    .dialog-title { margin:8px 0 0; font-size:21px; letter-spacing:-.035em; font-weight:780; }
+    .dialog-copy { margin:10px 0 0; color:#bdc9d9; font-size:12px; line-height:1.7; }
+    .dialog-note { margin-top:15px; padding:11px 12px; border:1px solid var(--line); border-radius:9px; background:rgba(255,255,255,.025); color:var(--muted); font-size:10px; }
+    .dialog-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:20px; }
+    .dialog-close { height:34px; padding:0 13px; border:1px solid var(--line-strong); border-radius:8px; background:rgba(255,255,255,.04); cursor:pointer; font-size:11px; font-weight:750; }
+    .dialog-close:hover { background:rgba(255,255,255,.08); }
+    .dialog-link { height:34px; display:inline-flex; align-items:center; padding:0 13px; border-radius:8px; background:var(--gold); color:#161b24; font-size:11px; font-weight:850; }
+
+    @media (max-width: 1320px) {
+      .site-header { gap:8px; }
+      .brand-group { min-width:150px; gap:4px; }
+      .primary-nav { gap:0; }
+      .nav-trigger { font-size:11px; padding-inline:6px; }
+      .search-wrap { flex-basis:138px; }
+      .market-table th,.market-table td { padding-inline:8px; }
+      .hero-section { width:88%; }
+    }
+    @media (max-width: 1100px) {
+      .optional-nav { display:none; }
+      .mobile-more { display:block; }
+      .brand-group { min-width:140px; }
+      .brand-word { font-size:14px; }
+      .hero-section { width:100%; }
+      .hero-grid { grid-template-columns:1.08fr 1fr 1fr; }
+      .market-strip { grid-template-columns:repeat(4,minmax(0,1fr)); }
+      .market-metric:nth-child(4) { border-right:0; }
+      .market-metric:nth-child(n+5) { border-top:1px solid var(--line); }
+      .discovery-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    }
+    @media (max-width: 820px) {
+      .site-header { flex-wrap:wrap; padding:8px 13px; gap:7px; }
+      .brand-group { min-width:0; flex:1 1 auto; }
+      .primary-nav { order:3; flex:1 1 100%; overflow:visible; }
+      .primary-nav .nav-trigger { min-height:34px; }
+      .search-wrap { flex:0 1 210px; }
+      .right-controls { gap:6px; }
+      .nav-panel { top:calc(100% + 5px); }
+      .info-bar-wrap { margin-top:25px; }
+      .info-bar { width:100%; }
+      .hero-section { width:100%; }
+      .hero-grid { grid-template-columns:1fr 1fr; }
+      .hero-card:first-child { grid-column:1/-1; min-height:225px; }
+      .market-context { margin-top:24px; }
+      .workspace-heading h2,.discovery-heading h2 { font-size:21px; }
+      .filter-bar { align-items:flex-start; flex-direction:column; }
+      .directory-tools { width:100%; justify-content:space-between; }
+      .discovery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 560px) {
+      .preview-ribbon { font-size:8px; letter-spacing:.06em; }
+      .site-header { gap:7px; }
+      .brand-word { font-size:13px; }
+      .brand-mark-link { width:36px; }
+      .brand-mark { width:35px; height:35px; }
+      .brand-link { height:38px; }
+      .search-wrap { order:4; flex:1 1 calc(100% - 95px); max-width:none; }
+      .right-controls { margin-left:auto; }
+      .primary-nav { gap:0; justify-content:space-between; }
+      .nav-trigger { padding-inline:5px; font-size:10px; }
+      .primary-nav .nav-slot:not(.mobile-more) { display:none; }
+      .mobile-more { display:block; }
+      .wallet-trigger { height:33px; padding:0 9px; }
+      .page-shell { padding-inline:13px; padding-bottom:34px; }
+      .info-bar-wrap { margin-top:18px; }
+      .info-bar { align-items:stretch; min-height:0; }
+      .info-priority { flex-basis:112px; gap:6px; padding:9px; }
+      .info-priority-icon { width:23px; height:23px; flex-basis:23px; }
+      .info-priority strong { font-size:8px; }
+      .info-priority small { font-size:8px; }
+      .info-message { padding:9px 10px; gap:8px; }
+      .info-message p { font-size:10px; line-height:1.5; }
+      .learn-link { font-size:9px; }
+      .hero-grid { grid-template-columns:1fr; gap:12px; }
+      .hero-card,.hero-card:first-child { grid-column:auto; min-height:230px; }
+      .sentiment-main { grid-template-columns:1fr 125px; }
+      .market-strip { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .market-metric { border-top:1px solid var(--line); }
+      .market-metric:nth-child(odd) { border-right:1px solid var(--line); }
+      .market-metric:nth-child(even) { border-right:0; }
+      .market-metric:first-child,.market-metric:nth-child(2) { border-top:0; }
+      .market-metric:last-child { grid-column:1/-1; }
+      .market-context-head { align-items:flex-start; flex-direction:column; gap:4px; }
+      .workspace-heading { align-items:flex-start; flex-direction:column; gap:7px; }
+      .workspace-heading .right-note { text-align:left; }
+      .workspace-heading h2,.discovery-heading h2 { font-size:20px; }
+      .filter-options { gap:3px; }
+      .filter-button { min-height:29px; padding-inline:8px; }
+      .directory-caption { align-items:flex-start; flex-direction:column; gap:3px; }
+      .pagination-bar { align-items:flex-start; flex-direction:column; }
+      .discovery-heading { align-items:flex-start; flex-direction:column; }
+      .discovery-grid { grid-template-columns:1fr 1fr; gap:8px; }
+      .discovery-card { min-height:176px; padding:12px; }
+      .tile-symbol { width:33px; height:33px; flex-basis:33px; }
+      .tile-title { font-size:12px; margin-top:13px; }
+      .tile-copy { font-size:9px; }
+      .footer-main { flex-direction:column; gap:19px; }
+      .footer-nav { justify-content:flex-start; gap:10px 15px; }
+      .footer-bottom { align-items:flex-start; flex-direction:column; gap:7px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+    }
+  </style>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>Visual review build&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;no live services connected</div>
+
+  <header class="site-header">
+    <div class="brand-group" aria-label="AstroCrown brand">
+      <a class="brand-link brand-mark-link" href="#top" aria-label="AstroCrown home">
+        <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+          <defs><linearGradient id="crownGold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff0a5"/><stop offset=".52" stop-color="#ffd700"/><stop offset="1" stop-color="#b88620"/></linearGradient></defs>
+          <circle cx="24" cy="24" r="20.2" fill="none" stroke="rgba(255,215,0,.26)" stroke-width="1"/>
+          <circle cx="24" cy="24" r="15" fill="none" stroke="rgba(255,215,0,.15)" stroke-width="1" stroke-dasharray="2 4"/>
+          <path d="M24 5.5 27.5 18.2 40.8 13.8 32.1 24 40.8 34.2 27.5 29.8 24 42.5 20.5 29.8 7.2 34.2 15.9 24 7.2 13.8 20.5 18.2Z" fill="url(#crownGold)" stroke="#fff1af" stroke-width=".7" stroke-linejoin="round"/>
+          <circle cx="24" cy="24" r="4.1" fill="#081426" stroke="#ffe88a" stroke-width="1.2"/>
+          <circle cx="37.3" cy="8.8" r="1.7" fill="#f6f8ff"/>
+        </svg>
+      </a>
+      <a class="brand-link brand-word-link" href="#top" aria-label="AstroCrown home"><span class="brand-word">ASTRO<span>CROWN</span></span></a>
+    </div>
+
+    <nav class="primary-nav" aria-label="Primary navigation">
+      <div class="menu-slot nav-slot">
+        <button class="nav-trigger" type="button" data-menu="markets-menu" aria-expanded="false" aria-controls="markets-menu">Markets &amp; Data <span class="chevron" aria-hidden="true"></span></button>
+        <div class="nav-panel" id="markets-menu">
+          <div class="panel-label">Market workspace</div>
+          <a href="#market-context">Market overview <span>↗</span></a>
+          <a href="#market-directory">Asset directory <span>↗</span></a>
+          <a href="#sentiment-card">Sentiment preview <span>↗</span></a>
+          <p class="panel-note">Sample figures only. Live market feeds are not connected.</p>
+        </div>
+      </div>
+      <div class="menu-slot nav-slot optional-nav">
+        <button class="nav-trigger" type="button" data-menu="swap-menu" aria-expanded="false" aria-controls="swap-menu">Swap &amp; Trade <span class="chevron" aria-hidden="true"></span></button>
+        <div class="nav-panel" id="swap-menu">
+          <div class="panel-label">Exchange concepts</div>
+          <a href="#explore">Swap discovery <span>↗</span></a>
+          <a href="#explore">Execution comparison <span>↗</span></a>
+          <p class="panel-note">No orders, wallets, or transactions can be initiated from this preview.</p>
+        </div>
+      </div>
+      <div class="menu-slot nav-slot optional-nav">
+        <button class="nav-trigger" type="button" data-menu="tracker-menu" aria-expanded="false" aria-controls="tracker-menu">Wallet Tracker <span class="chevron" aria-hidden="true"></span></button>
+        <div class="nav-panel" id="tracker-menu">
+          <div class="panel-label">Tracking concepts</div>
+          <a href="#explore">Watchlists <span>↗</span></a>
+          <a href="#explore">On-chain activity <span>↗</span></a>
+          <p class="panel-note">Wallet tracking is not connected. Do not enter wallet or account details.</p>
+        </div>
+      </div>
+      <div class="menu-slot nav-slot optional-nav">
+        <button class="nav-trigger" type="button" data-menu="studio-menu" aria-expanded="false" aria-controls="studio-menu">Token Studio <span class="chevron" aria-hidden="true"></span></button>
+        <div class="nav-panel" id="studio-menu">
+          <div class="panel-label">Creation studio</div>
+          <a href="#explore">Token design <span>↗</span></a>
+          <a href="#explore">Logo generator concept <span>↗</span></a>
+          <p class="panel-note">Creation tools are not connected in this visual draft.</p>
+        </div>
+      </div>
+      <div class="menu-slot nav-slot optional-nav">
+        <button class="nav-trigger" type="button" data-menu="nova-menu" aria-expanded="false" aria-controls="nova-menu">NOVA <span class="chevron" aria-hidden="true"></span></button>
+        <div class="nav-panel" id="nova-menu">
+          <div class="panel-label">Coordination systems</div>
+          <a href="#explore">NOVA systems <span>↗</span></a>
+          <a href="#preview-notes">Prototype boundaries <span>↗</span></a>
+          <p class="panel-note">NOVA is an evolving operational ecosystem; these links are concept previews.</p>
+        </div>
+      </div>
+      <div class="menu-slot nav-slot mobile-more">
+        <button class="nav-trigger" type="button" data-menu="more-menu" aria-expanded="false" aria-controls="more-menu">More <span class="chevron" aria-hidden="true"></span></button>
+        <div class="nav-panel" id="more-menu">
+          <div class="panel-label">Explore AstroCrown</div>
+          <a href="#explore">Swap &amp; Trade concepts <span>↗</span></a>
+          <a href="#explore">Wallet Tracker concepts <span>↗</span></a>
+          <a href="#explore">Token Studio concepts <span>↗</span></a>
+          <a href="#explore">NOVA systems <span>↗</span></a>
+          <a href="#preview-notes">About this preview <span>↗</span></a>
+        </div>
+      </div>
+    </nav>
+
+    <form class="search-wrap" role="search" id="search-form">
+      <span class="search-glass" aria-hidden="true"></span>
+      <label class="sr-only" for="site-search" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Search sample assets</label>
+      <input class="search-field" id="site-search" type="search" placeholder="Search" autocomplete="off" aria-label="Search sample assets" aria-controls="search-results" aria-expanded="false">
+      <span class="search-shortcut" aria-hidden="true">/</span>
+      <div class="search-results" id="search-results" role="listbox" aria-label="Sample asset suggestions"></div>
+    </form>
+
+    <div class="right-controls">
+      <div class="menu-slot">
+        <button class="avatar-trigger" type="button" data-menu="account-menu" aria-expanded="false" aria-controls="account-menu" aria-label="Account preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>
+        </button>
+        <div class="control-panel" id="account-menu">
+          <div class="panel-label">Account</div>
+          <div style="padding:4px 9px 9px;"><span class="menu-status">Not connected</span><p style="margin:6px 0 0;color:#c2cede;font-size:11px;">Account creation, recovery, passkeys and identity choices need a dedicated implementation.</p></div>
+          <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/132" target="_blank" rel="noreferrer">Account continuity roadmap <span>↗</span></a>
+        </div>
+      </div>
+      <div class="menu-slot">
+        <button class="wallet-trigger" type="button" data-menu="wallet-menu" aria-expanded="false" aria-controls="wallet-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 9h18M16 14h2"/></svg>
+          Wallet <span class="chevron" aria-hidden="true"></span>
+        </button>
+        <div class="control-panel" id="wallet-menu">
+          <div class="panel-label">Wallet connection</div>
+          <div style="padding:4px 9px 9px;"><span class="menu-status">Disconnected</span><p style="margin:6px 0 0;color:#c2cede;font-size:11px;">This preview cannot connect a wallet, sign messages, submit orders, or move assets.</p></div>
+          <a href="#explore">Explore wallet concepts <span>↗</span></a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell" id="main-content">
+    <div id="top"></div>
+    <div class="preview-note" id="preview-notes">
+      <div class="preview-note-icon" aria-hidden="true">i</div>
+      <div>
+        <h2>Prototype boundaries — please read before evaluating the numbers</h2>
+        <p>This is a visual and interaction prototype. Market figures, price changes, rankings, sentiment scores and influence weights are illustrative sample values, not live data or financial advice. Search, filters, sorting, pagination and preview dialogs operate only on the local sample set. Wallet, account, trading, token creation, external market data and separate destination pages are not connected.</p>
+      </div>
+    </div>
+
+    <section class="info-bar-wrap" aria-label="Homepage information">
+      <div class="info-bar">
+        <div class="info-priority">
+          <span class="info-priority-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3 20 6v5c0 5-3.2 8-8 10-4.8-2-8-5-8-10V6Z"/><path d="m8.5 12 2.2 2.2 4.7-4.8"/></svg>
+          </span>
+          <span><strong>Daily Information</strong><small>Preview notice</small></span>
+        </div>
+        <div class="info-message">
+          <p><strong>Build the signal, verify the source.</strong> <span>— This homepage is using sample content until data contracts are validated.</span></p>
+          <a class="learn-link" href="#preview-notes">Learn more</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="hero-section" aria-label="Market discovery">
+      <div class="hero-grid">
+        <a class="hero-card" href="#market-context" id="sentiment-card" aria-label="Open market context from the Fear and Greed Consensus preview">
+          <div class="hero-card-head">
+            <div><h2 class="hero-card-title">Fear &amp; Greed Consensus</h2><p class="hero-card-subtitle">How does the market feel?</p></div>
+            <span class="pill preview">Sample</span>
+          </div>
+          <div class="sentiment-main">
+            <div>
+              <div class="sentiment-value mono">58<small> / 100</small></div>
+              <div class="sentiment-state">Mild greed</div>
+              <div class="sentiment-copy">Illustrative multi-source consensus</div>
+            </div>
+            <div>
+              <svg class="gauge" viewBox="0 0 150 100" role="img" aria-label="Illustrative sentiment gauge showing 58 out of 100">
+                <defs><linearGradient id="gaugeGradient" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#e5484d"/><stop offset=".52" stop-color="#ffd24a"/><stop offset="1" stop-color="#20c878"/></linearGradient></defs>
+                <path d="M 15 83 A 60 60 0 0 1 135 83" stroke="#24364d" stroke-width="12" fill="none" stroke-linecap="round"/>
+                <path d="M 15 83 A 60 60 0 0 1 135 83" stroke="url(#gaugeGradient)" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="174 189"/>
+                <line x1="75" y1="82" x2="98" y2="44" stroke="#f7f8fb" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="75" cy="82" r="5" fill="#0d1c30" stroke="#f0f5fc" stroke-width="2"/>
+                <text x="14" y="98" font-size="8" fill="#8192aa">Fear</text><text x="135" y="98" text-anchor="end" font-size="8" fill="#8192aa">Greed</text>
+              </svg>
+              <div class="gauge-caption"><span>0</span><span>50</span><span>100</span></div>
+            </div>
+          </div>
+          <div class="card-foot"><span><span class="dot"></span>&nbsp; Methodology not yet selected</span><span class="mini-link">Market context ↗</span></div>
+          <span class="hero-chevron" aria-hidden="true"><span>⌄</span></span>
+        </a>
+
+        <a class="hero-card" href="#market-directory" aria-label="Explore winners and losers in the market directory">
+          <div class="hero-card-head">
+            <div><h2 class="hero-card-title">Winners &amp; Losers</h2><p class="hero-card-subtitle">What is moving?</p></div>
+            <span class="pill preview">Sample</span>
+          </div>
+          <div class="movers-list">
+            <div class="mover-row"><span class="mini-coin">RN</span><span class="mover-name"><strong>Render</strong><small>AI / Compute</small></span><span class="mover-number positive">+8.4%</span></div>
+            <div class="mover-row"><span class="mini-coin">SUI</span><span class="mover-name"><strong>Sui</strong><small>Layer 1</small></span><span class="mover-number positive">+5.2%</span></div>
+            <div class="mover-row"><span class="mini-coin">AV</span><span class="mover-name"><strong>Avalanche</strong><small>Layer 1</small></span><span class="mover-number negative">−3.1%</span></div>
+            <div class="mover-row"><span class="mini-coin">DG</span><span class="mover-name"><strong>Dogecoin</strong><small>Meme</small></span><span class="mover-number negative">−2.6%</span></div>
+          </div>
+          <div class="split-labels"><span><strong>24h change</strong> · example window</span><span>Ranking method pending</span></div>
+          <span class="hero-chevron" aria-hidden="true"><span>⌄</span></span>
+        </a>
+
+        <a class="hero-card" href="#explore" aria-label="Explore the influence map concepts">
+          <div class="hero-card-head">
+            <div><h2 class="hero-card-title">Influence Map</h2><p class="hero-card-subtitle">What appears connected to movement?</p></div>
+            <span class="pill preview">Sample</span>
+          </div>
+          <div class="influence-list">
+            <div class="influence-row"><span>Spot flows</span><span class="influence-track"><span class="influence-fill" style="display:block;width:76%"></span></span><span class="influence-score">76</span></div>
+            <div class="influence-row"><span>Derivatives</span><span class="influence-track"><span class="influence-fill" style="display:block;width:59%"></span></span><span class="influence-score">59</span></div>
+            <div class="influence-row"><span>Macro risk</span><span class="influence-track"><span class="influence-fill" style="display:block;width:43%"></span></span><span class="influence-score">43</span></div>
+            <div class="influence-row"><span>News / narrative</span><span class="influence-track"><span class="influence-fill" style="display:block;width:34%"></span></span><span class="influence-score">34</span></div>
+          </div>
+          <p class="signal-caveat">Concept only. Association does not establish causation.</p>
+          <span class="hero-chevron" aria-hidden="true"><span>⌄</span></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="market-context" id="market-context" aria-labelledby="market-context-heading">
+      <div class="market-context-head">
+        <div class="market-context-title"><span class="live-dot" aria-hidden="true"></span><h2 id="market-context-heading">MARKET CONTEXT</h2><span class="pill preview">Illustrative values</span></div>
+        <span class="context-note">No market provider is connected in this preview</span>
+      </div>
+      <div class="market-strip">
+        <div class="market-metric"><span class="metric-label">Total market cap</span><strong class="metric-value mono">$2.41T</strong><span class="metric-change positive">+1.8% · sample</span></div>
+        <div class="market-metric"><span class="metric-label">BTC dominance</span><strong class="metric-value mono">56.8%</strong><span class="metric-change neutral">Example value</span></div>
+        <div class="market-metric"><span class="metric-label">ETH dominance</span><strong class="metric-value mono">11.4%</strong><span class="metric-change neutral">Example value</span></div>
+        <div class="market-metric"><span class="metric-label">Bitcoin · BTC</span><strong class="metric-value mono">$67,420</strong><span class="metric-change positive">+2.18% · sample</span></div>
+        <div class="market-metric"><span class="metric-label">Ethereum · ETH</span><strong class="metric-value mono">$3,482</strong><span class="metric-change positive">+1.24% · sample</span></div>
+        <div class="market-metric"><span class="metric-label">24h volume</span><strong class="metric-value mono">$84.6B</strong><span class="metric-change neutral">Example value</span></div>
+        <div class="market-metric"><span class="metric-label">ACROWN</span><strong class="metric-value mono">—</strong><span class="metric-change neutral">No verified listing</span></div>
+      </div>
+    </section>
+
+    <section class="workspace" id="market-directory" aria-labelledby="directory-heading">
+      <div class="workspace-heading">
+        <div class="heading-copy">
+          <span class="section-kicker">Explore the market</span>
+          <h2 id="directory-heading">Market directory</h2>
+          <p>Filter, search and compare the sample assets. Figures are intentionally illustrative until verified data sources are integrated.</p>
+        </div>
+        <div class="right-note"><span class="pill preview">Local demo dataset</span><br><span style="display:inline-block;margin-top:6px;">Filters and pagination work in this page.</span></div>
+      </div>
+
+      <div class="filter-bar">
+        <div class="filter-options" role="group" aria-label="Filter sample assets by sector">
+          <button class="filter-button" type="button" data-filter="all" aria-pressed="true">All <span class="filter-count" data-count="all">24</span></button>
+          <button class="filter-button" type="button" data-filter="AI" aria-pressed="false">AI</button>
+          <button class="filter-button" type="button" data-filter="Gaming" aria-pressed="false">Gaming</button>
+          <button class="filter-button" type="button" data-filter="Meme" aria-pressed="false">Meme</button>
+          <button class="filter-button" type="button" data-filter="RWA" aria-pressed="false">RWA</button>
+          <button class="filter-button" type="button" data-filter="DePIN" aria-pressed="false">DePIN</button>
+          <button class="filter-button" type="button" data-filter="Stable" aria-pressed="false">Stable</button>
+        </div>
+        <div class="directory-tools">
+          <label class="sort-label" for="sort-select">Sort by</label>
+          <select class="sort-select" id="sort-select">
+            <option value="featured">Featured order</option>
+            <option value="marketcap">Market cap</option>
+            <option value="price">Price</option>
+            <option value="change">24h change</option>
+            <option value="name">Name A–Z</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="directory-caption">
+        <span id="directory-result-summary">Showing <strong>1–12 of 24</strong> illustrative assets</span>
+        <span>Reference currency: <strong>USD</strong> · values are not live</span>
+      </div>
+      <div class="directory-shell">
+        <div class="table-viewport">
+          <table class="market-table" aria-describedby="directory-result-summary">
+            <thead>
+              <tr>
+                <th scope="col" style="width:36px">#</th>
+                <th scope="col" style="width:220px">Asset</th>
+                <th scope="col" style="width:112px">Price</th>
+                <th scope="col" style="width:70px">1h</th>
+                <th scope="col" style="width:78px">24h</th>
+                <th scope="col" style="width:78px">7d</th>
+                <th scope="col" style="width:132px">Market cap</th>
+                <th scope="col" style="width:124px">24h volume</th>
+                <th scope="col" style="width:104px">7d trend</th>
+                <th scope="col" style="width:80px">Details</th>
+              </tr>
+            </thead>
+            <tbody id="asset-rows"></tbody>
+          </table>
+          <div class="empty-state" id="empty-state"><strong>No sample assets match</strong><p>Try another search term or choose a different sector.</p></div>
+        </div>
+        <div class="pagination-bar">
+          <div class="pagination-summary" id="pagination-summary">Showing <strong>1–12</strong> of 24 demo assets</div>
+          <nav class="pagination-controls" id="pagination-controls" aria-label="Directory pagination"></nav>
+        </div>
+      </div>
+    </section>
+
+    <section class="discovery-section" id="explore" aria-labelledby="explore-heading">
+      <div class="discovery-heading">
+        <div>
+          <span class="section-kicker">Beyond the market table</span>
+          <h2 id="explore-heading">Explore the AstroCrown ecosystem</h2>
+          <p>These twelve tiles map the broader destination ideas into one visual layer. Select a tile to inspect its concept; the separate pages and services are not connected yet.</p>
+        </div>
+        <div class="discovery-counter"><strong>12</strong> discovery cards</div>
+      </div>
+
+      <div class="discovery-grid">
+        <button class="discovery-card" type="button" data-concept="Market Research">
+          <span class="tile-top"><span class="tile-symbol">⌕</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Market Research</span>
+          <span class="tile-copy">Investigate assets, evidence, sources and the questions behind market movement.</span>
+          <span class="tile-foot"><span>Discovery pathway</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Analytics Studio">
+          <span class="tile-top"><span class="tile-symbol">⌁</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Analytics Studio</span>
+          <span class="tile-copy">Compare metrics and time windows without confusing derived values with source data.</span>
+          <span class="tile-foot"><span>Data workspace</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Exchange & Swap">
+          <span class="tile-top"><span class="tile-symbol">⇄</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Exchange &amp; Swap</span>
+          <span class="tile-copy">A future comparison layer for routes, indicative prices, fees and execution conditions.</span>
+          <span class="tile-foot"><span>Execution layer</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Token Studio">
+          <span class="tile-top"><span class="tile-symbol">✳</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Token Studio</span>
+          <span class="tile-copy">Explore token creation concepts, visual identity and constrained asset generation.</span>
+          <span class="tile-foot"><span>Creation tools</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Wallet Tracker">
+          <span class="tile-top"><span class="tile-symbol">◉</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Wallet Tracker</span>
+          <span class="tile-copy">A privacy-aware path to portfolios, wallet labels and on-chain activity summaries.</span>
+          <span class="tile-foot"><span>Portfolio tools</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Watchlists">
+          <span class="tile-top"><span class="tile-symbol">☆</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Watchlists</span>
+          <span class="tile-copy">Keep assets and personal research questions together without implying custody.</span>
+          <span class="tile-foot"><span>Personal workspace</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Chain Activity">
+          <span class="tile-top"><span class="tile-symbol">⌘</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Chain Activity</span>
+          <span class="tile-copy">Investigate observable transfers, activity and liquidity signals with source context.</span>
+          <span class="tile-foot"><span>On-chain research</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Governance & Safety">
+          <span class="tile-top"><span class="tile-symbol">⛨</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Governance &amp; Safety</span>
+          <span class="tile-copy">Surface governance events, security context and eligibility constraints clearly.</span>
+          <span class="tile-foot"><span>Trust context</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Knowledge Atlas">
+          <span class="tile-top"><span class="tile-symbol">⌬</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Knowledge Atlas</span>
+          <span class="tile-copy">Connect concepts, references and decisions while preserving provenance and uncertainty.</span>
+          <span class="tile-foot"><span>Knowledge systems</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Ecosystem Map">
+          <span class="tile-top"><span class="tile-symbol">◌</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Ecosystem Map</span>
+          <span class="tile-copy">Navigate assets, services and relationships across the wider AstroCrown ecosystem.</span>
+          <span class="tile-foot"><span>Discovery map</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="Market Signals">
+          <span class="tile-top"><span class="tile-symbol">⌁</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">Market Signals</span>
+          <span class="tile-copy">Separate observed signals from interpretations, correlation and causal claims.</span>
+          <span class="tile-foot"><span>Evidence layer</span><span class="tile-status">Concept</span></span>
+        </button>
+        <button class="discovery-card" type="button" data-concept="NOVA Systems">
+          <span class="tile-top"><span class="tile-symbol">✧</span><span class="tile-arrow">↗</span></span>
+          <span class="tile-title">NOVA Systems</span>
+          <span class="tile-copy">Explore coordinated knowledge, governance, reasoning and operational capabilities.</span>
+          <span class="tile-foot"><span>Operational ecosystem</span><span class="tile-status">Concept</span></span>
+        </button>
+      </div>
+    </section>
+
+    <footer class="site-footer">
+      <div class="footer-main">
+        <div class="footer-brand">
+          <svg class="footer-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,215,0,.25)"/><path d="M24 6 28 19 42 14 33 24 42 34 28 29 24 42 20 29 6 34 15 24 6 14 20 19Z" fill="#ffd700"/><circle cx="24" cy="24" r="4" fill="#081426"/></svg>
+          <span><strong>ASTROCROWN</strong><small>Market discovery · visual prototype</small></span>
+        </div>
+        <nav class="footer-nav" aria-label="Footer navigation">
+          <a href="#market-context">Market context</a>
+          <a href="#market-directory">Asset directory</a>
+          <a href="#explore">Explore ecosystem</a>
+          <a href="https://github.com/ACROWN-System/AstroCrown-Web" target="_blank" rel="noreferrer">Project repository ↗</a>
+          <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/132" target="_blank" rel="noreferrer">Account roadmap ↗</a>
+        </nav>
+      </div>
+      <div class="footer-bottom">
+        <span>© AstroCrown project · Brand and product concepts remain subject to review.</span>
+        <span><a href="#preview-notes">Prototype scope and data limitations</a></span>
+      </div>
+    </footer>
+  </main>
+
+  <dialog id="preview-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-topline"></div>
+    <div class="dialog-content">
+      <div class="dialog-eyebrow" id="dialog-eyebrow">Concept preview</div>
+      <h2 class="dialog-title" id="dialog-title">Preview</h2>
+      <p class="dialog-copy" id="dialog-copy"></p>
+      <div class="dialog-note" id="dialog-note"></div>
+      <div class="dialog-actions"><button class="dialog-close" type="button" id="dialog-close">Close preview</button><a class="dialog-link" href="#preview-notes" id="dialog-notes-link">Read prototype notes</a></div>
+    </div>
+  </dialog>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var assets = [
+        {symbol:"BTC",name:"Bitcoin",category:"Core",logo:"₿",logoClass:"logo-btc",price:"$67,420.80",priceValue:67420.8,c1:0.34,c24:2.18,c7:4.62,cap:"$1.33T",capValue:1330000000000,volume:"$28.4B",volumeValue:28400000000,trend:1},
+        {symbol:"ETH",name:"Ethereum",category:"Core",logo:"Ξ",logoClass:"logo-eth",price:"$3,482.12",priceValue:3482.12,c1:0.12,c24:1.24,c7:3.16,cap:"$418.2B",capValue:418200000000,volume:"$13.8B",volumeValue:13800000000,trend:1},
+        {symbol:"SOL",name:"Solana",category:"Core",logo:"S",logoClass:"logo-ai",price:"$148.62",priceValue:148.62,c1:-0.16,c24:3.84,c7:7.21,cap:"$68.5B",capValue:68500000000,volume:"$2.7B",volumeValue:2700000000,trend:1},
+        {symbol:"BNB",name:"BNB",category:"Core",logo:"B",logoClass:"logo-game",price:"$582.45",priceValue:582.45,c1:0.08,c24:0.92,c7:1.73,cap:"$84.9B",capValue:84900000000,volume:"$1.2B",volumeValue:1200000000,trend:1},
+        {symbol:"XRP",name:"XRP",category:"Core",logo:"X",logoClass:"logo-eth",price:"$0.5842",priceValue:0.5842,c1:-0.23,c24:-0.88,c7:0.42,cap:"$32.1B",capValue:32100000000,volume:"$1.1B",volumeValue:1100000000,trend:-1},
+        {symbol:"USDC",name:"USD Coin",category:"Stable",logo:"$",logoClass:"logo-stable",price:"$1.0001",priceValue:1.0001,c1:0.01,c24:0.02,c7:-0.01,cap:"$31.8B",capValue:31800000000,volume:"$4.6B",volumeValue:4600000000,trend:1},
+        {symbol:"DOGE",name:"Dogecoin",category:"Meme",logo:"D",logoClass:"logo-meme",price:"$0.1628",priceValue:0.1628,c1:-0.48,c24:-2.60,c7:-4.23,cap:"$23.4B",capValue:23400000000,volume:"$845M",volumeValue:845000000,trend:-1},
+        {symbol:"LINK",name:"Chainlink",category:"DePIN",logo:"L",logoClass:"logo-depin",price:"$16.82",priceValue:16.82,c1:0.27,c24:1.78,c7:4.19,cap:"$9.9B",capValue:9900000000,volume:"$294M",volumeValue:294000000,trend:1},
+        {symbol:"AVAX",name:"Avalanche",category:"Gaming",logo:"A",logoClass:"logo-game",price:"$36.15",priceValue:36.15,c1:-0.52,c24:-3.10,c7:-2.75,cap:"$14.2B",capValue:14200000000,volume:"$391M",volumeValue:391000000,trend:-1},
+        {symbol:"ARB",name:"Arbitrum",category:"Gaming",logo:"A",logoClass:"logo-game",price:"$1.184",priceValue:1.184,c1:0.11,c24:2.14,c7:1.92,cap:"$3.4B",capValue:3400000000,volume:"$211M",volumeValue:211000000,trend:1},
+        {symbol:"SUI",name:"Sui",category:"Gaming",logo:"S",logoClass:"logo-ai",price:"$1.742",priceValue:1.742,c1:0.78,c24:5.20,c7:9.42,cap:"$4.7B",capValue:4700000000,volume:"$525M",volumeValue:525000000,trend:1},
+        {symbol:"RENDER",name:"Render",category:"AI",logo:"R",logoClass:"logo-ai",price:"$8.42",priceValue:8.42,c1:1.08,c24:8.40,c7:12.65,cap:"$3.3B",capValue:3300000000,volume:"$240M",volumeValue:240000000,trend:1},
+        {symbol:"ONDO",name:"Ondo",category:"RWA",logo:"O",logoClass:"logo-rwa",price:"$0.912",priceValue:0.912,c1:0.28,c24:2.86,c7:5.21,cap:"$1.3B",capValue:1300000000,volume:"$98M",volumeValue:98000000,trend:1},
+        {symbol:"TAO",name:"Bittensor",category:"AI",logo:"τ",logoClass:"logo-ai",price:"$421.30",priceValue:421.3,c1:-0.19,c24:1.64,c7:3.94,cap:"$2.9B",capValue:2900000000,volume:"$81M",volumeValue:81000000,trend:1},
+        {symbol:"GRT",name:"The Graph",category:"AI",logo:"G",logoClass:"logo-ai",price:"$0.2214",priceValue:0.2214,c1:0.14,c24:0.76,c7:-1.45,cap:"$2.1B",capValue:2100000000,volume:"$47M",volumeValue:47000000,trend:-1},
+        {symbol:"FIL",name:"Filecoin",category:"DePIN",logo:"F",logoClass:"logo-depin",price:"$5.82",priceValue:5.82,c1:-0.06,c24:-1.18,c7:-3.02,cap:"$3.2B",capValue:3200000000,volume:"$142M",volumeValue:142000000,trend:-1},
+        {symbol:"IMX",name:"Immutable",category:"Gaming",logo:"I",logoClass:"logo-game",price:"$2.18",priceValue:2.18,c1:0.51,c24:4.08,c7:6.31,cap:"$3.0B",capValue:3000000000,volume:"$76M",volumeValue:76000000,trend:1},
+        {symbol:"PEPE",name:"Pepe",category:"Meme",logo:"P",logoClass:"logo-meme",price:"$0.00000812",priceValue:0.00000812,c1:-0.81,c24:-1.92,c7:-6.43,cap:"$3.4B",capValue:3400000000,volume:"$620M",volumeValue:620000000,trend:-1},
+        {symbol:"USDT",name:"Tether",category:"Stable",logo:"₮",logoClass:"logo-stable",price:"$0.9998",priceValue:0.9998,c1:0,c24:-0.01,c7:0.01,cap:"$110.1B",capValue:110100000000,volume:"$41.2B",volumeValue:41200000000,trend:1},
+        {symbol:"DAI",name:"Dai",category:"Stable",logo:"D",logoClass:"logo-stable",price:"$1.0000",priceValue:1,c1:0.01,c24:0,c7:-0.01,cap:"$5.3B",capValue:5300000000,volume:"$114M",volumeValue:114000000,trend:1},
+        {symbol:"JUP",name:"Jupiter",category:"DePIN",logo:"J",logoClass:"logo-depin",price:"$0.984",priceValue:0.984,c1:0.34,c24:3.12,c7:2.82,cap:"$1.3B",capValue:1300000000,volume:"$55M",volumeValue:55000000,trend:1},
+        {symbol:"NEAR",name:"NEAR Protocol",category:"AI",logo:"N",logoClass:"logo-ai",price:"$6.22",priceValue:6.22,c1:-0.18,c24:-0.62,c7:1.86,cap:"$6.7B",capValue:6700000000,volume:"$162M",volumeValue:162000000,trend:-1},
+        {symbol:"UNI",name:"Uniswap",category:"RWA",logo:"U",logoClass:"logo-rwa",price:"$9.14",priceValue:9.14,c1:0.21,c24:1.35,c7:2.08,cap:"$5.5B",capValue:5500000000,volume:"$109M",volumeValue:109000000,trend:1},
+        {symbol:"ACROWN",name:"AstroCrown",category:"Ecosystem",logo:"AC",logoClass:"logo-ecosystem",price:"—",priceValue:-1,c1:null,c24:null,c7:null,cap:"Not listed",capValue:-1,volume:"—",volumeValue:-1,trend:0}
+      ];
+
+      var pageSize = 12;
+      var currentPage = 1;
+      var activeFilter = "all";
+      var activeQuery = "";
+      var sortMode = "featured";
+      var activeSearchIndex = -1;
+      var filteredSuggestions = [];
+      var previousFocus = null;
+
+      var rowsElement = document.getElementById("asset-rows");
+      var resultSummary = document.getElementById("directory-result-summary");
+      var paginationSummary = document.getElementById("pagination-summary");
+      var paginationControls = document.getElementById("pagination-controls");
+      var emptyState = document.getElementById("empty-state");
+      var searchInput = document.getElementById("site-search");
+      var searchResults = document.getElementById("search-results");
+      var sortSelect = document.getElementById("sort-select");
+      var dialog = document.getElementById("preview-dialog");
+      var dialogTitle = document.getElementById("dialog-title");
+      var dialogEyebrow = document.getElementById("dialog-eyebrow");
+      var dialogCopy = document.getElementById("dialog-copy");
+      var dialogNote = document.getElementById("dialog-note");
+      var menuButtons = Array.prototype.slice.call(document.querySelectorAll("[data-menu]"));
+
+      function escapeText(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+      }
+      function signedPercent(value) {
+        if (value === null || value === undefined) return "—";
+        if (value > 0) return "+" + value.toFixed(2) + "%";
+        if (value < 0) return "−" + Math.abs(value).toFixed(2) + "%";
+        return "0.00%";
+      }
+      function trendMarkup(trend) {
+        var color = trend < 0 ? "#e5484d" : "#20c878";
+        var points = trend < 0 ? "1,5 8,10 15,8 22,15 29,13 36,19 43,18 50,22 57,20 64,25 72,24" : "1,23 8,18 15,20 22,12 29,15 36,8 43,10 50,4 57,8 64,2 72,3";
+        return '<svg class="sparkline" viewBox="0 0 74 28" role="img" aria-label="Illustrative seven-day trend"><polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      }
+      function cellChange(value) {
+        if (value === null || value === undefined) return '<span class="neutral">—</span>';
+        var cls = value > 0 ? "positive" : (value < 0 ? "negative" : "neutral");
+        return '<span class="change ' + cls + '">' + signedPercent(value) + '</span>';
+      }
+      function getFilteredAssets() {
+        var list = assets.filter(function (asset) {
+          var matchesFilter = activeFilter === "all" || asset.category.toLowerCase() === activeFilter.toLowerCase();
+          var query = activeQuery.trim().toLowerCase();
+          var matchesQuery = !query || (asset.name + " " + asset.symbol + " " + asset.category).toLowerCase().indexOf(query) >= 0;
+          return matchesFilter && matchesQuery;
+        });
+        if (sortMode === "marketcap") list.sort(function (a,b) { return b.capValue - a.capValue; });
+        else if (sortMode === "price") list.sort(function (a,b) { return b.priceValue - a.priceValue; });
+        else if (sortMode === "change") list.sort(function (a,b) { return (b.c24 === null ? -Infinity : b.c24) - (a.c24 === null ? -Infinity : a.c24); });
+        else if (sortMode === "name") list.sort(function (a,b) { return a.name.localeCompare(b.name); });
+        return list;
+      }
+      function renderRows() {
+        var list = getFilteredAssets();
+        var totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+        var start = (currentPage - 1) * pageSize;
+        var visible = list.slice(start, start + pageSize);
+        rowsElement.innerHTML = visible.map(function (asset, index) {
+          var absoluteIndex = start + index + 1;
+          var change1 = asset.c1 === null ? '<span class="neutral">—</span>' : cellChange(asset.c1);
+          var supplyText = asset.symbol === "ACROWN" ? "Unlisted" : "Demo";
+          return '<tr data-row-symbol="' + escapeText(asset.symbol) + '">' +
+            '<td><span class="row-index">' + absoluteIndex + '</span></td>' +
+            '<td><div class="asset-cell"><button class="favorite-button" type="button" data-favorite="' + escapeText(asset.symbol) + '" aria-pressed="false" aria-label="Add ' + escapeText(asset.name) + ' to local favorites" title="Toggle local favorite">☆</button><span class="asset-logo ' + escapeText(asset.logoClass) + '" aria-hidden="true">' + escapeText(asset.logo) + '</span><span class="asset-identity"><strong>' + escapeText(asset.name) + '</strong><small>' + escapeText(asset.symbol) + ' <span class="asset-tag">' + escapeText(asset.category) + '</span></small></span></div></td>' +
+            '<td>' + escapeText(asset.price) + '</td><td>' + change1 + '</td><td>' + cellChange(asset.c24) + '</td><td>' + cellChange(asset.c7) + '</td>' +
+            '<td>' + escapeText(asset.cap) + '</td><td>' + escapeText(asset.volume) + '</td><td>' + trendMarkup(asset.trend) + '</td>' +
+            '<td><button class="row-action" type="button" data-open-asset="' + escapeText(asset.symbol) + '">View</button></td></tr>';
+        }).join("");
+        emptyState.style.display = list.length ? "none" : "block";
+        resultSummary.innerHTML = list.length ? "Showing <strong>" + (start + 1) + "–" + Math.min(start + pageSize, list.length) + " of " + list.length + "</strong> illustrative assets" : "Showing <strong>0 results</strong>";
+        paginationSummary.innerHTML = list.length ? "Showing <strong>" + (start + 1) + "–" + Math.min(start + pageSize, list.length) + "</strong> of " + list.length + " demo assets" : "No matching demo assets";
+        renderPagination(list.length, totalPages);
+      }
+      function renderPagination(totalItems, totalPages) {
+        var html = '<button class="page-button" type="button" data-page="' + (currentPage - 1) + '" aria-label="Previous page"' + (currentPage === 1 ? " disabled" : "") + '>‹</button>';
+        for (var i = 1; i <= totalPages; i += 1) {
+          html += '<button class="page-button" type="button" data-page="' + i + '"' + (i === currentPage ? ' aria-current="page"' : "") + ' aria-label="Page ' + i + '">' + i + '</button>';
+        }
+        html += '<button class="page-button" type="button" data-page="' + (currentPage + 1) + '" aria-label="Next page"' + (currentPage === totalPages ? " disabled" : "") + '>›</button>';
+        paginationControls.innerHTML = html;
+      }
+      function closeSearchResults() {
+        searchResults.classList.remove("is-visible");
+        searchInput.setAttribute("aria-expanded", "false");
+        activeSearchIndex = -1;
+      }
+      function renderSearchResults() {
+        var query = searchInput.value.trim().toLowerCase();
+        filteredSuggestions = query.length >= 2 ? assets.filter(function (asset) {
+          return (asset.symbol + " " + asset.name + " " + asset.category).toLowerCase().indexOf(query) >= 0;
+        }).slice(0, 6) : [];
+        activeSearchIndex = -1;
+        if (query.length < 2) {
+          searchResults.innerHTML = "";
+          closeSearchResults();
+          return;
+        }
+        if (!filteredSuggestions.length) {
+          searchResults.innerHTML = '<div class="search-empty">No sample asset found for “' + escapeText(searchInput.value.trim()) + '”.</div>';
+        } else {
+          searchResults.innerHTML = filteredSuggestions.map(function (asset, index) {
+            return '<button class="search-result" type="button" role="option" aria-selected="false" data-search-symbol="' + escapeText(asset.symbol) + '">' +
+              '<span class="asset-logo ' + escapeText(asset.logoClass) + '" style="width:27px;height:27px;flex-basis:27px;">' + escapeText(asset.logo) + '</span>' +
+              '<span><strong>' + escapeText(asset.name) + '</strong><small>' + escapeText(asset.symbol) + ' · ' + escapeText(asset.category) + '</small></span>' +
+              '<span style="margin-left:auto;color:#71829a;">↗</span></button>';
+          }).join("");
+        }
+        searchResults.classList.add("is-visible");
+        searchInput.setAttribute("aria-expanded", "true");
+      }
+      function selectSearchAsset(symbol) {
+        var asset = assets.find(function (item) { return item.symbol === symbol; });
+        if (!asset) return;
+        activeFilter = "all";
+        activeQuery = asset.symbol;
+        searchInput.value = asset.symbol;
+        currentPage = 1;
+        Array.prototype.forEach.call(document.querySelectorAll("[data-filter]"), function (button) {
+          button.setAttribute("aria-pressed", button.getAttribute("data-filter") === "all" ? "true" : "false");
+        });
+        sortSelect.value = "featured";
+        sortMode = "featured";
+        renderRows();
+        closeSearchResults();
+        document.getElementById("market-directory").scrollIntoView({ behavior: "smooth", block: "start" });
+        window.setTimeout(function () {
+          var row = document.querySelector('[data-row-symbol="' + symbol.replace(/"/g, "") + '"]');
+          if (row) row.setAttribute("tabindex", "-1"), row.focus({ preventScroll: true });
+        }, 220);
+      }
+      function openDialog(title, copy, note, eyebrow, trigger) {
+        previousFocus = trigger || document.activeElement;
+        dialogTitle.textContent = title;
+        dialogCopy.textContent = copy;
+        dialogNote.textContent = note;
+        dialogEyebrow.textContent = eyebrow || "Concept preview";
+        if (typeof dialog.showModal === "function") dialog.showModal();
+        else dialog.setAttribute("open", "open");
+        document.getElementById("dialog-close").focus();
+      }
+      function openAssetDialog(symbol, trigger) {
+        var asset = assets.find(function (item) { return item.symbol === symbol; });
+        if (!asset) return;
+        var summary = asset.name + " (" + asset.symbol + ") is part of the illustrative directory. Sample price: " + asset.price + "; sample 24-hour change: " + signedPercent(asset.c24) + "; sample market cap: " + asset.cap + ".";
+        if (asset.symbol === "ACROWN") summary = "AstroCrown is included to reserve a visible place for the project asset. No verified public listing or market value is asserted here.";
+        openDialog(asset.name + " · " + asset.symbol, summary, "These values are design fixtures only and are not connected to a provider. This detail view does not initiate a trade or open an external token page.", "Sample asset detail", trigger);
+      }
+      function closeAllMenus(except) {
+        Array.prototype.forEach.call(document.querySelectorAll(".menu-slot.is-open"), function (slot) {
+          if (except && slot.contains(except)) return;
+          slot.classList.remove("is-open");
+          var trigger = slot.querySelector("[data-menu]");
+          if (trigger) trigger.setAttribute("aria-expanded", "false");
+        });
+      }
+
+      renderRows();
+
+      document.addEventListener("click", function (event) {
+        var menuButton = event.target.closest("[data-menu]");
+        if (menuButton) {
+          var slot = menuButton.closest(".menu-slot");
+          var willOpen = !slot.classList.contains("is-open");
+          closeAllMenus(slot);
+          slot.classList.toggle("is-open", willOpen);
+          menuButton.setAttribute("aria-expanded", willOpen ? "true" : "false");
+          return;
+        }
+        if (!event.target.closest(".menu-slot")) closeAllMenus();
+        if (!event.target.closest(".search-wrap")) closeSearchResults();
+
+        var filterButton = event.target.closest("[data-filter]");
+        if (filterButton) {
+          activeFilter = filterButton.getAttribute("data-filter");
+          currentPage = 1;
+          Array.prototype.forEach.call(document.querySelectorAll("[data-filter]"), function (button) {
+            button.setAttribute("aria-pressed", button === filterButton ? "true" : "false");
+          });
+          renderRows();
+        }
+
+        var pageButton = event.target.closest("[data-page]");
+        if (pageButton && !pageButton.disabled) {
+          currentPage = Number(pageButton.getAttribute("data-page"));
+          renderRows();
+          document.getElementById("market-directory").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+
+        var favButton = event.target.closest("[data-favorite]");
+        if (favButton) {
+          var pressed = favButton.getAttribute("aria-pressed") === "true";
+          favButton.setAttribute("aria-pressed", pressed ? "false" : "true");
+          favButton.textContent = pressed ? "☆" : "★";
+          favButton.setAttribute("aria-label", (pressed ? "Add " : "Remove ") + favButton.getAttribute("data-favorite") + (pressed ? " to" : " from") + " local favorites");
+          favButton.title = pressed ? "Add to local favorites" : "Saved in this page only";
+        }
+
+        var openAssetButton = event.target.closest("[data-open-asset]");
+        if (openAssetButton) openAssetDialog(openAssetButton.getAttribute("data-open-asset"), openAssetButton);
+
+        var searchButton = event.target.closest("[data-search-symbol]");
+        if (searchButton) selectSearchAsset(searchButton.getAttribute("data-search-symbol"));
+
+        var conceptButton = event.target.closest("[data-concept]");
+        if (conceptButton) {
+          var concept = conceptButton.getAttribute("data-concept");
+          var descriptions = {
+            "Market Research":"A research workspace could gather source evidence, compare methodologies and preserve the reasoning behind an interpretation rather than presenting unexplained summaries.",
+            "Analytics Studio":"A measurement workspace could compare timeframes, normalize inputs and make derived indicators reproducible. Exact metrics and source contracts still need evaluation.",
+            "Exchange & Swap":"A future comparison layer could display routes, indicative quotes, fee estimates and observed execution availability. A displayed price must not imply a guaranteed executable trade.",
+            "Token Studio":"A creation flow could guide token parameters and visual identity, with constrained logo-generation outputs and explicit licence, provenance and validation checks.",
+            "Wallet Tracker":"A privacy-aware tracking workspace could help users inspect addresses and activity while clearly separating a viewed address from account identity or custody.",
+            "Watchlists":"A personal workspace could save assets and notes, with its persistence, recovery, privacy and account dependencies designed before implementation.",
+            "Chain Activity":"An evidence layer could present observed transfers, contract events and activity with source, block/time context and limits on interpretation.",
+            "Governance & Safety":"A trust section could present security context, governance decisions, known limitations and the evidence supporting each status.",
+            "Knowledge Atlas":"A knowledge system could connect concepts, sources and decisions while preserving provenance, conflicting evidence and uncertainty.",
+            "Ecosystem Map":"A map could connect assets, services, tools and project systems after destinations and relationships are established rather than guessed.",
+            "Market Signals":"A signal layer could show measured relationships with freshness, methodology, confidence and a clear distinction between correlation and causation.",
+            "NOVA Systems":"NOVA is conceived as an evolving operational ecosystem for coordinating and governing knowledge, infrastructure, services, processes and capabilities. Integration status would need to be shown accurately."
+          };
+          openDialog(concept, descriptions[concept] || "This is a candidate destination concept for review.", "Concept tile only. No separate route, external integration or service is implied to be operational by this design preview.", "Ecosystem concept", conceptButton);
+        }
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          var openSlot = document.querySelector(".menu-slot.is-open");
+          if (openSlot) {
+            var trigger = openSlot.querySelector("[data-menu]");
+            closeAllMenus();
+            if (trigger) trigger.focus();
+          }
+          closeSearchResults();
+        }
+      });
+
+      document.getElementById("search-form").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var query = searchInput.value.trim();
+        if (query.length < 2) {
+          searchInput.focus();
+          return;
+        }
+        var first = filteredSuggestions[0];
+        if (first) {
+          selectSearchAsset(first.symbol);
+        } else {
+          activeQuery = query;
+          activeFilter = "all";
+          currentPage = 1;
+          Array.prototype.forEach.call(document.querySelectorAll("[data-filter]"), function (button) {
+            button.setAttribute("aria-pressed", button.getAttribute("data-filter") === "all" ? "true" : "false");
+          });
+          renderRows();
+          closeSearchResults();
+          document.getElementById("market-directory").scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+
+      searchInput.addEventListener("input", function () {
+        activeQuery = searchInput.value.trim();
+        currentPage = 1;
+        renderRows();
+        renderSearchResults();
+      });
+      searchInput.addEventListener("keydown", function (event) {
+        if (!searchResults.classList.contains("is-visible")) return;
+        var options = Array.prototype.slice.call(searchResults.querySelectorAll("[data-search-symbol]"));
+        if (event.key === "ArrowDown" && options.length) {
+          event.preventDefault();
+          activeSearchIndex = Math.min(activeSearchIndex + 1, options.length - 1);
+        } else if (event.key === "ArrowUp" && options.length) {
+          event.preventDefault();
+          activeSearchIndex = Math.max(activeSearchIndex - 1, 0);
+        } else if (event.key === "Enter" && options.length) {
+          event.preventDefault();
+          var target = options[activeSearchIndex >= 0 ? activeSearchIndex : 0];
+          selectSearchAsset(target.getAttribute("data-search-symbol"));
+          return;
+        } else if (event.key === "Escape") {
+          closeSearchResults();
+          return;
+        } else {
+          return;
+        }
+        options.forEach(function (option, index) {
+          option.setAttribute("aria-selected", index === activeSearchIndex ? "true" : "false");
+        });
+      });
+      sortSelect.addEventListener("change", function () {
+        sortMode = sortSelect.value;
+        currentPage = 1;
+        renderRows();
+      });
+
+      document.getElementById("dialog-close").addEventListener("click", function () {
+        if (typeof dialog.close === "function") dialog.close();
+        else dialog.removeAttribute("open");
+      });
+      document.getElementById("dialog-notes-link").addEventListener("click", function () {
+        if (typeof dialog.close === "function") dialog.close();
+        else dialog.removeAttribute("open");
+      });
+      dialog.addEventListener("close", function () {
+        if (previousFocus && typeof previousFocus.focus === "function") previousFocus.focus();
+      });
+      dialog.addEventListener("click", function (event) {
+        if (event.target === dialog) {
+          if (typeof dialog.close === "function") dialog.close();
+          else dialog.removeAttribute("open");
+        }
+      });
+    }());
+  </script>
 </body>
 </html>
