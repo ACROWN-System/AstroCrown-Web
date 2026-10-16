@@ -30,7 +30,7 @@ The NOVA links point to proposed paths and will not resolve on main until the ca
 3. Define public use of terms and claims: approved designation, status, evidence, capability qualification and local/jurisdictional review.
 4. Define multilingual/localization handling without fabricating equivalences.
 5. Keep local audience/writing notes subordinate to canonical concept definitions.
-6. State that full ISO 704 clause-level conformity remains BLOCKED until the complete licensed edition can be reviewed and mapped.
+6. State that full ISO 704 clause-level conformity remains BLOCKED until the complete licensed edition can be reviewed and mapped, while explicitly preserving certification as an objective to investigate and pursue if a suitable provider offers it.
 7. Record the required active-path term sweep as a follow-up rather than claim this initial documentation pass is an exhaustive full-repository audit.
 8. Do not change public root files, site publication boundary, runtime behavior, product/payment logic or any immutable backup/archive path.
 
@@ -47,7 +47,7 @@ The NOVA links point to proposed paths and will not resolve on main until the ca
 - It separates approved facts, adopted project terms, candidate terms and unsupported claims.
 - It identifies localization, legal review and public claim substantiation requirements.
 - The final changed-path list contains no path under backup/, Backup/ or case variants.
-- No certification claim or unsupported statement of full ISO 704 conformity is introduced.
+- No certification claim or unsupported statement of full ISO 704 conformity is introduced. Certification feasibility is explicitly an objective to investigate and pursue, not a guarantee and not treated as impossible.
 
 ## Current execution status
 
@@ -62,4 +62,4 @@ The NOVA links point to proposed paths and will not resolve on main until the ca
 - Opened [AstroCrown-Web draft PR #135](https://github.com/ACROWN-System/AstroCrown-Web/pull/135); the branch contains four changed paths (root README, development README, guide and this plan).
 - Repository comparison shows no changed path under backup/, Backup/ or any case variant.
 - Canonical NOVA files remain proposed until NOVA PR #124 is merged. This PR must not be merged before its canonical links resolve on NOVA main.
-- Full ISO 704 clause-level conformity remains BLOCKED; the guide is not a certification claim and localization/complete active-path audit remain open.
+- Full ISO 704 clause-level conformity remains BLOCKED; the guide is not a certification claim. Certification-provider feasibility is an explicit, unverified research objective; localization and complete active-path audit remain open.
