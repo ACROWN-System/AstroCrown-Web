@@ -1061,6 +1061,7 @@
           return;
         }
         if (!event.target.closest(".menu-slot")) closeAllMenus();
+        if (event.target.closest(".nav-panel a, .control-panel a")) closeAllMenus();
         if (!event.target.closest(".search-wrap")) closeSearchResults();
 
         var filterButton = event.target.closest("[data-filter]");
