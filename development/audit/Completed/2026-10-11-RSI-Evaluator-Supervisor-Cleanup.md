@@ -6,7 +6,7 @@
 
 ## Mission and method
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Uncertain runtime state must produce BLOCKED, not an inferred success.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Uncertain runtime state must produce BLOCKED, not an inferred success.
 
 Method: [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AUDIT-CONVENTION.md) and the completed [RSI sandbox cleanup verification](./2026-10-11-RSI-Sandbox-Cleanup-Verification.md).
 

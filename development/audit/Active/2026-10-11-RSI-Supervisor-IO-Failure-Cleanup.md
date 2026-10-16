@@ -8,7 +8,7 @@
 
 ## Mission and method
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. If the trusted evaluator cannot be monitored, the result must be FAIL after confirmed cleanup or BLOCKED when termination/cleanup is uncertain.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. If the trusted evaluator cannot be monitored, the result must be FAIL after confirmed cleanup or BLOCKED when termination/cleanup is uncertain.
 
 Method: [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AUDIT-CONVENTION.md) and the [RSI evaluator supervisor cleanup plan](./2026-10-11-RSI-Evaluator-Supervisor-Cleanup.md).
 

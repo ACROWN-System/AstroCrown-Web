@@ -6,7 +6,7 @@
 
 ## Mission and method
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Candidate scope and protected boundaries must not depend on platform-specific path interpretation or parser ambiguity.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Candidate scope and protected boundaries must not depend on platform-specific path interpretation or parser ambiguity.
 
 Method: [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AUDIT-CONVENTION.md) and the [RSI independent security review](../Completed/2026-10-11-RSI-Independent-Security-Review.md).
 

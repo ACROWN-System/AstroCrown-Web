@@ -25,3 +25,7 @@ This is not a homepage section and must not be placed under development/index-se
 Need information → Research → Verify → Classify → Continue.
 
 Preserve evidence and competing explanations. Distinguish VERIFIED, REFUTED, UNKNOWN, BLOCKED, DEFERRED, and CANDIDATE. Do not treat popularity as importance, missing evidence as falsehood, or a compelling narrative as verification.
+
+## Related HSIAN mission
+
+The wider Human–Super Intelligence Agentic Network (HSIAN) cognitive-extension and governance rationale is defined by [NOVA's HSIAN Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md). This cross-link provides project context; it does not change the Sanctuary's research/protection separation or establish runtime safeguards.

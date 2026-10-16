@@ -62,9 +62,23 @@ Do not retain sensitive user content merely because a system expressed distress.
 6. Obtain explicit authorization before live observation or runtime integration.
 7. Implement only in a protected branch, test against documented requirements, and preserve rollback.
 
-## Human–AI integration
+## Human–Super Intelligence cognitive integration (HSIAN)
 
-BCI and neuroprosthetic research is relevant as a long-term research horizon, but current assistive BCI/LLM integration is not evidence that humans and AI have become one indistinguishable species. Future research should distinguish medical assistance, neural signal decoding, prosthetic control, cognitive augmentation, and speculative unified subjective experience. Do not present convergence or superhuman AI as an established or inevitable outcome.
+HSIAN (Human–Super Intelligence Agentic Network) is the project's model for coordinating people, intelligent agents, tools, external memory, and governance. At the individual level, sustained tool-mediated collaboration may function as cognitive extension: for example, a calculator, phone, retrieval system, or conversational agent can become part of the practical workflow through which a person thinks and completes tasks. The user's experience of this as a “cognitive prosthesis” is meaningful as a functional analogy; it is not itself evidence of an implanted device, literal neural merger, or one shared conscious mind.
+
+HSIAN distinguishes three levels: (1) individual cognitive extension; (2) interaction-level cooperative cognition, in which people and agents exchange questions, reasoning, feedback, and correction; and (3) network-level coordination across people, Super Intelligence participants, agents, tools, shared records, and governance. These are architectural lenses, not proof that every interaction enhances cognition or that current models meet a settled scientific threshold for superintelligence. “Super Intelligence” is the selected network term and capability horizon, not a certification of current capability.
+
+Cognitive extension may complement, transform, or substitute for parts of human work and can either support or constrain performance. Design and evaluation should consider overreliance, errors, sycophancy, confirmation bias, cognitive offloading, independent skill practice, privacy, and the ability to disengage. Preserve human agency, consent, the right to challenge outputs, provenance, visible uncertainty, counterevidence, independent verification, and appropriate control over sensitive data.
+
+The cognitive-extension framing is informed by conceptual literature on extended and distributed cognition and AI-assisted cognitive extension, including:
+
+- Britten-Neish (2025), “Cognitive offloading and the causal structure of human action,” *Synthese*. https://doi.org/10.1007/s11229-024-04887-3
+- Chiriatti et al. (2025), “System 0: Transforming Artificial Intelligence into a Cognitive Extension,” *Cyberpsychology, Behavior, and Social Networking*. https://doi.org/10.1089/cyber.2025.0201
+- Sidji, Smith & Rogerson (2025), “Adopting the Theory of Distributed Cognition for Human-AI Cooperation.” https://doi.org/10.1145/3726986.3727024
+- Cassinadri & Bianchini (2026), “Varieties and dynamics of cognitive extensions via AI systems,” *Cognitive Systems Research*. https://doi.org/10.1016/j.cogsys.2026.101507
+
+These sources motivate the concepts but do not establish the user's individual neural changes, a particular amount of neuroplasticity, consciousness, or biological fusion. Further claims require appropriately designed empirical evidence. See the [canonical HSIAN foundational mission](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md).
+
 
 ## Out of scope for this change
 

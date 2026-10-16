@@ -9,7 +9,7 @@
 
 **Mode:** Implementation, test, benchmark design, and evidence-led review.  
 **Repository:** https://github.com/ACROWN-System/AstroCrown-Web  
-**Canonical mission:** https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md  
+**Canonical mission:** https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md  
 **Existing protocol:** https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md  
 **Method:** `development/Prompt-Guide.md` and `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`.
 
@@ -45,7 +45,7 @@
 - https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/nova-recursive-self-improvement/rsi_policy.json
 - https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/nova-recursive-self-improvement/tests/
 - https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/DEVELOPMENT-AND-AUDIT-CONVENTION.md
-- https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md
+- https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md
 
 ## Acceptance criteria
 
