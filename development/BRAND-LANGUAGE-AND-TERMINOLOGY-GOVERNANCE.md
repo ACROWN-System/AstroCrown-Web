@@ -70,7 +70,15 @@ For material statements about features, performance, capacity, pricing, safety, 
 
 A terminology entry establishes the preferred meaning of a concept, not proof that the product meets a requirement. An internal checklist does not prove certification. Never publish “ISO certified” or “certified by ISO”; ISO states that it does not perform certification or issue certificates.
 
-For current terminology work, the accurate status statement is that the ecosystem is **establishing an internal system designed for alignment with the published scope of ISO 704:2022**. Do not call the system fully ISO 704:2022 conformant until a controlled clause-level review against the complete edition and supporting evidence has been completed. ISO 704 is a terminology principles/methods standard, and no ISO 704-specific certification route has been established by this project.
+For current terminology work, the accurate status statement is that the ecosystem is **establishing an internal system designed for alignment with the published scope of ISO 704:2022**. Do not call the system fully ISO 704:2022 conformant until a controlled clause-level review against the complete edition and supporting evidence has been completed. **Pursuing a credible independent ISO 704 certification route is an explicit project objective, not a guarantee and not something to presume impossible.** Initial public-source research has not verified a provider offering an ISO 704:2022-specific certificate; this is an unresolved feasibility question, not proof no provider exists.
+
+### Certification feasibility is an explicit objective
+
+Keep a visible, evidence-tracked workstream for identifying and pursuing a credible independent certificate, where a suitable provider offers one. Before stating that certification is available, obtain written confirmation specifying the actual certificate, standard edition, scheme, scope, assessment criteria, issuer, and accreditation status. Verify the issuer's accreditation scope independently where accredited certification is claimed.
+
+Distinguish an accredited certificate, a non-accredited certificate or conformity statement, a paid consultancy/readiness assessment, and an audit report. These are not interchangeable. A readiness review or application is not a certificate. No public certification claim may be made until an issued certificate is validated and its exact scope checked. The full ISO 704:2022 clause-level conformity assessment remains a separate necessary workstream.
+
+This feasibility investigation does not authorize a payment or standards purchase. Begin with official directories and written inquiries that do not create financial commitments. If no suitable provider is found, record the search scope, sources, responses and date; keep the outcome unresolved unless the evidence supports a firmer conclusion.
 
 ## 6. Public accessibility and consistency
 
