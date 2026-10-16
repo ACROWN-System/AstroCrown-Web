@@ -6,7 +6,7 @@
 
 ## Method and source of truth
 
-Use `development/Prompt-Guide.md`, `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, the repository's existing HAAN mission-integration record, and the canonical mission in NOVA as the relevant process and architecture sources.
+Use `development/Prompt-Guide.md`, `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, the repository's existing mission-integration record, now aligned to HSIAN, and the canonical mission in NOVA as the relevant process and architecture sources.
 
 The expected standalone `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` were not found in the inspected active paths. This plan therefore follows the available repository audit/traceability convention, and does not claim to have followed missing files.
 
