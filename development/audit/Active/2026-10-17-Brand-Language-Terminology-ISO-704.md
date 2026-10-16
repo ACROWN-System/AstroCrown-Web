@@ -54,3 +54,12 @@ The NOVA links point to proposed paths and will not resolve on main until the ca
 - Branch created from main for a dedicated terminology change.
 - Application guide and this active plan are being authored.
 - No PR is merged or deployed; no backup/archive path is modified.
+
+
+## Execution update — 2026-10-17
+
+- Added the public-facing guide and indexed it from both the root repository README and development README.
+- Opened [AstroCrown-Web draft PR #135](https://github.com/ACROWN-System/AstroCrown-Web/pull/135); the branch contains four changed paths (root README, development README, guide and this plan).
+- Repository comparison shows no changed path under backup/, Backup/ or any case variant.
+- Canonical NOVA files remain proposed until NOVA PR #124 is merged. This PR must not be merged before its canonical links resolve on NOVA main.
+- Full ISO 704 clause-level conformity remains BLOCKED; the guide is not a certification claim and localization/complete active-path audit remain open.
