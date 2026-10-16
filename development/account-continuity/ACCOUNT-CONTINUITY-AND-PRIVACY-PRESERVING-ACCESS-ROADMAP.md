@@ -109,6 +109,15 @@ No single identifier, biometric, IP address, device fingerprint, account, wallet
 - Circumventing sanctions, licensing, lawful restrictions, payment-provider controls or legal reporting requirements.
 - Guaranteeing account recovery if all recovery mechanisms are destroyed and no authorized recovery path exists.
 
+### Existing project touchpoints to reuse or re-evaluate before implementation
+
+- [Development & Audit Convention](../DEVELOPMENT-AND-AUDIT-CONVENTION.md) already defines evidence-led requirements, contract gates, result states, re-testing and promotion discipline. Use it rather than inventing a parallel process.
+- [Development Security Baseline](../SECURITY-BASELINE.md) currently contains security areas marked UNVERIFIED. Do not infer that account, recovery or privacy requirements have passed because a general security workflow is green.
+- [NOVA quality_gate.py](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/quality_gate.py) contains deterministic provider-contract and root-cause case/closure primitives, including failure-case recording. Reassess and reuse appropriate generic governance primitives instead of creating a second failure-case framework. Prior inspection did not establish universal end-to-end failure-to-investigation-to-verified-closure enforcement, so do not claim that it is already universal.
+- [NOVA health.py](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/health.py) contains fingerprinted observations and narrow reusable-analysis behavior. That is operational observation reuse, not a complete per-user identity, account or private-memory system.
+- [NOVA context/memory optimization](../nova-context-memory-optimization/README.md) describes candidate architecture and provenance-preserving context packing. Its initial packer is a development candidate, not a production identity vault or general account-recovery implementation.
+- Re-inspect the exact active branches and tests before each feature. This document is not proof that a feature is absent or present at a later commit; it is a roadmap, not a substitute for implementation discovery.
+
 ## 5. Proposed logical architecture
 
 These are logical boundaries; they do not require one microservice per box. Prefer the least complex implementation that maintains the necessary security boundaries.
