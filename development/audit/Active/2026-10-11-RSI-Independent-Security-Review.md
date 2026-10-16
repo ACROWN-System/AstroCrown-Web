@@ -8,7 +8,7 @@
 
 ## Mission and method
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. RSI remains a means of supporting the collective and cannot self-authorize its own readiness.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. RSI remains a means of supporting the collective and cannot self-authorize its own readiness.
 
 The review followed the [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AUDIT-CONVENTION.md) and the [RSI Capability Benchmark Protocol](../../nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md). This is a targeted code review and test-backed remediation, not a claim that an independent third party has certified the full sandbox.
 

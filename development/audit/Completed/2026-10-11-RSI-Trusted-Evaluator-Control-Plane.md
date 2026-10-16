@@ -6,7 +6,7 @@
 
 ## Mission and source of truth
 
-HAAN's foundational mission remains governing context. RSI is a means; it must not gain the ability to redefine its own acceptance boundary.
+HSIAN's foundational mission remains governing context. RSI is a means; it must not gain the ability to redefine its own acceptance boundary.
 
 Method: `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, the protected RSI implementation runbook, and existing evaluator/security tests.
 

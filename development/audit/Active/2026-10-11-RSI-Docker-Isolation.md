@@ -7,7 +7,7 @@
 
 ## Mission and source of truth
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Isolation and recursive self-improvement are means of preserving and serving the collective, not permission to execute untrusted code without authorization.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Isolation and recursive self-improvement are means of preserving and serving the collective, not permission to execute untrusted code without authorization.
 
 Primary implementation: `development/nova-recursive-self-improvement/`.  
 Method: `development/Prompt-Guide.md`, `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, the protected RSI policy, and the existing benchmark protocol.

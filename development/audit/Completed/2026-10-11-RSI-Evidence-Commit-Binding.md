@@ -6,7 +6,7 @@
 
 ## Mission and method
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Evidence must describe the exact candidate evaluated, and a retention job cannot infer equivalence only from matching path names.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Evidence must describe the exact candidate evaluated, and a retention job cannot infer equivalence only from matching path names.
 
 Method: [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AUDIT-CONVENTION.md) and the completed [RSI independent security review](./2026-10-11-RSI-Independent-Security-Review.md).
 

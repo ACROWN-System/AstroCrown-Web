@@ -26,7 +26,7 @@ The standalone `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` were n
 ## Implementation
 
 - Added the standard MIT License text to the root of each repository.
-- Updated each root README to link to the license and state that the license does not grant rights to the AstroCrown, NOVA, or HAAN name/logo/brand identifiers.
+- Updated each root README to link to the license and state that the license does not grant rights to the AstroCrown, NOVA, or HSIAN name/logo/brand identifiers.
 - Preserved separate file-specific licenses/notices and noted that third-party assets or materials not licensed by the maintainers are not relicensed.
 - Moved the brand-notice plan to `development/audit/Completed/`.
 - No source code, runtime behavior, provider credentials, deployment settings, billing, or RSI readiness/benchmark/promotion policy was changed.
