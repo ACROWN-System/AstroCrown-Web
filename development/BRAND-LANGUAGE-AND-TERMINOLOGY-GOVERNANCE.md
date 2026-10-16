@@ -1,7 +1,7 @@
 # AstroCrown Brand Language and Terminology Governance
 
 **Document ID:** ACW-BRAND-TERM-001  
-**Version:** 0.1.1  
+**Version:** 0.1.2  
 **Status:** PROPOSED INTERNAL GUIDE — pending review of the canonical NOVA terminology governance change.  
 **Applies to:** AstroCrown public website copy, UI labels, product/service descriptions, documentation, announcements, public relations, partner materials, metadata and future localization.  
 **Canonical semantics:** NOVA's Terminology Governance Standard and Canonical Terminology Register, once approved and merged into the designated source-of-truth branch.
@@ -122,7 +122,7 @@ When proposing a new brand, product, feature, acronym or important concept:
 7. Add/update the canonical entry first; then update dependent public guidance, interface strings, documentation, content and cross-references through reviewed repository changes.
 8. Retain the previous term as deprecated with a successor pointer where history or searchability matters.
 9. Run a bounded active-path search for missed usages and report the coverage.
-10. Confirm no immutable backup/archive path was changed.
+10. Confirm no backup/archive directory was changed. All such directories are immutable regardless of capitalization, including dated system mirrors and names such as `index-archive/`; never create, update, rename, move or delete files beneath them.
 
 A term may be approved as a project name while associated scientific, performance, legal or operational claims remain unverified. Keep these decision states separate.
 
@@ -170,3 +170,9 @@ The cross-repository terminology system is still in draft. The initial lexicon i
 ## 13. Revision history
 
 - **2026-10-17 / v0.1.1:** Make provider discovery and accreditation checks dependent on the internal readiness gate; update the guide to distinguish readiness from certificate availability. No certification claim is made.
+
+
+## 14. Revision history
+
+- **2026-10-17 / v0.1.1:** Make provider discovery and accreditation checks dependent on the internal readiness gate; update the guide to distinguish readiness from certificate availability. No certification claim is made.
+- **2026-10-17 / v0.1.2:** Clarify the immutable boundary for all backup/archive directories, regardless of capitalization.
