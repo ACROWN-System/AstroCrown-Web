@@ -1,7 +1,7 @@
 # AstroCrown Brand Language and Terminology Governance
 
 **Document ID:** ACW-BRAND-TERM-001  
-**Version:** 0.1.0  
+**Version:** 0.1.1  
 **Status:** PROPOSED INTERNAL GUIDE — pending review of the canonical NOVA terminology governance change.  
 **Applies to:** AstroCrown public website copy, UI labels, product/service descriptions, documentation, announcements, public relations, partner materials, metadata and future localization.  
 **Canonical semantics:** NOVA's Terminology Governance Standard and Canonical Terminology Register, once approved and merged into the designated source-of-truth branch.
@@ -165,3 +165,8 @@ The cross-repository terminology system is still in draft. The initial lexicon i
 **IF applied:** readers across public pages, documentation, products and future languages will encounter consistent terms; project-defined names stay separate from technical facts and legal classifications; and an auditor can trace public wording to a canonical definition and source.
 
 **IF not applied:** inconsistent naming and loosely controlled claims may reappear in user interfaces, social posts, service descriptions and translations even when the canonical register exists.
+
+
+## 13. Revision history
+
+- **2026-10-17 / v0.1.1:** Make provider discovery and accreditation checks dependent on the internal readiness gate; update the guide to distinguish readiness from certificate availability. No certification claim is made.
