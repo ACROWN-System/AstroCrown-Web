@@ -170,9 +170,4 @@ The cross-repository terminology system is still in draft. The initial lexicon i
 ## 13. Revision history
 
 - **2026-10-17 / v0.1.1:** Make provider discovery and accreditation checks dependent on the internal readiness gate; update the guide to distinguish readiness from certificate availability. No certification claim is made.
-
-
-## 14. Revision history
-
-- **2026-10-17 / v0.1.1:** Make provider discovery and accreditation checks dependent on the internal readiness gate; update the guide to distinguish readiness from certificate availability. No certification claim is made.
 - **2026-10-17 / v0.1.2:** Clarify the immutable boundary for all backup/archive directories, regardless of capitalization.
