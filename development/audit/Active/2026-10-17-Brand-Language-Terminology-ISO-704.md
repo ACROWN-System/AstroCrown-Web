@@ -21,7 +21,7 @@ The standalone NAVIGATION-PROTOCOL.md and NAVIGATION-PLAN-TEMPLATE.md were not l
 - ISO 704:2022 official record: https://www.iso.org/standard/79077.html
 - ISO 1087:2019 official record: https://www.iso.org/standard/62330.html
 
-The NOVA links point to proposed paths and will not resolve on main until the canonical changes are merged. Do not claim deployment or publication before merge.
+The NOVA links point to proposed files on the NOVA terminology-governance review branch and may not yet resolve on main. Do not claim publication or merge before it occurs. The human maintainer approved the six-repository planning scope and English as the initial assessment language on 2026-10-18; final baseline freeze and repository/commit reconciliation remain pending.
 
 ## Scope
 
@@ -30,7 +30,7 @@ The NOVA links point to proposed paths and will not resolve on main until the ca
 3. Define public use of terms and claims: approved designation, status, evidence, capability qualification and local/jurisdictional review.
 4. Define multilingual/localization handling without fabricating equivalences.
 5. Keep local audience/writing notes subordinate to canonical concept definitions.
-6. State that full ISO 704 clause-level conformity remains BLOCKED until the complete licensed edition is available as a controlled audit baseline, the full clause/topic-to-evidence matrix and objective evidence package are completed, an internal audit is performed, findings are retested and a human readiness GO is recorded. Preserve possible certification as a project objective, but defer provider discovery and accreditation checks until that GO gate passes.
+6. Separate full-assessment completeness from ongoing improvement. The complete clause inventory and full-matrix result remain unresolved until the applicable edition and relevant provisions can be accounted for; nevertheless, source-bounded assessment of directly visible preview provisions and independently justified terminology improvements may proceed. Mark unseen provisions NOT ASSESSED, not passed or irrelevant. The goal is better terminology quality and operability, not external certification. No provider search/contact or paid activity is authorized unless scope is explicitly changed.
 7. Record the required active-path term sweep as a follow-up rather than claim this initial documentation pass is an exhaustive full-repository audit.
 8. Do not change public root files, site publication boundary, runtime behavior, product/payment logic or any immutable backup/archive path.
 
@@ -62,5 +62,5 @@ The NOVA links point to proposed paths and will not resolve on main until the ca
 - Opened [AstroCrown-Web draft PR #135](https://github.com/ACROWN-System/AstroCrown-Web/pull/135); the branch contains four changed paths (root README, development README, guide and this plan).
 - Repository comparison shows no changed path under backup/, Backup/ or any case variant.
 - Canonical NOVA files remain proposed until NOVA PR #124 is merged. This PR must not be merged before its canonical links resolve on NOVA main.
-- Full ISO 704 clause-level conformity remains BLOCKED; the guide is not a certification claim. NOVA's [Audit-Readiness Dossier](https://github.com/ACROWN-System/NOVA/blob/docs/terminology-governance-iso704-2026-10-17/NOVA/research/Active/2026-10-17-ISO-704-Audit-Readiness-Dossier.md) now defines the evidence package and mandatory GO/NO-GO gate.
-- Provider discovery, accreditation checks and enquiries are deferred until the readiness gate passes. The current package is NOT READY FOR AN ISO 704 AUDIT; the full standard baseline, clause/topic matrix, operational evidence, complete active-path sweep, internal audit and corrective-action closure remain to be demonstrated.
+- The complete ISO 704 clause inventory/full-matrix result remains unresolved, but that does not stop source-bounded work on provisions directly visible in public previews. The guide is not a certification claim. NOVA's [Audit-Readiness Dossier](https://github.com/ACROWN-System/NOVA/blob/docs/terminology-governance-iso704-2026-10-17/NOVA/research/Active/2026-10-17-ISO-704-Audit-Readiness-Dossier.md) defines its evidence gaps; see also the [Public-Preview Partial Mapping](https://github.com/ACROWN-System/NOVA/blob/docs/terminology-governance-iso704-2026-10-17/NOVA/research/Active/2026-10-18-ISO-704-Public-Preview-Partial-Mapping.md).
+- External certification/provider discovery is not the current objective. The $0-only rule remains in force, and no paid inquiry or service is authorized. The complete assessment remains incomplete; this is not a requirement to purchase certification or stop all terminology improvement.
