@@ -6,7 +6,7 @@
 
 ## Mission and source of truth
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. RSI serves the collective mission and does not gain authority from its own claimed performance.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. RSI serves the collective mission and does not gain authority from its own claimed performance.
 
 Primary protocol: development/nova-recursive-self-improvement/CAPABILITY-BENCHMARK-PROTOCOL.md.  
 Implementation: the protected RSI evaluator, benchmark runner and policy.  

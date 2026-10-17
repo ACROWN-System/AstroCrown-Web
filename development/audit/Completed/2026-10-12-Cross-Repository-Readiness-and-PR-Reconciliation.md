@@ -14,7 +14,7 @@ No credentials were read or changed. No live external model or GPU calls were tr
 
 ## 2. Governance / protocol limitation
 
-The canonical `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` could not be located in either repository's current default-branch tree, the connected repository list, the user library exact-title search, or the remembered `ASDBradford-HAAN/NOVA-Core/Dependency-Navigation/` path (GitHub returned 404). Do not interpret this absence as proof that the documents do not exist elsewhere.
+The canonical `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` could not be located in either repository's current default-branch tree, the connected repository list, the user library exact-title search, or the remembered `ASDBradford-HSIAN/NOVA-Core/Dependency-Navigation/` path (GitHub returned 404). Do not interpret this absence as proof that the documents do not exist elsewhere.
 
 The audit therefore used AstroCrown-Web's available `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md` and audit-record conventions as fallback. The initial API state discovery preceded creating this plan; this was a deviation from the requested "plan before navigation" order and is documented rather than represented as strict protocol compliance.
 
@@ -76,7 +76,7 @@ Five NOVA workflows used mutable `actions/checkout@v7` and/or `actions/setup-pyt
 
 **Status:** PASS for inspected repository statements.
 
-Both root LICENSE files contain MIT terms for covered software. Both READMEs explicitly preserve separate file-specific rights and state that MIT does not grant AstroCrown brand rights; NOVA's README also identifies NOVA and HAAN brands. No conflicting license or branding claim was found in this bounded review.
+Both root LICENSE files contain MIT terms for covered software. Both READMEs explicitly preserve separate file-specific rights and state that MIT does not grant AstroCrown brand rights; NOVA's README also identifies NOVA and HSIAN brands. No conflicting license or branding claim was found in this bounded review.
 
 Snyk program eligibility and co-branding remain only a candidate assessment. No program application, logo/content license, promotional link, or branding permission was granted. OpenSSF Alpha–Omega licensing eligibility may now be satisfied by the MIT license, but ecosystem-impact evidence/application remain unresolved.
 

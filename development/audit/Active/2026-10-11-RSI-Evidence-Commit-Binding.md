@@ -6,7 +6,7 @@
 
 ## Mission and method
 
-HAAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HAAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Evidence must be verifiable against the exact candidate that was evaluated; the evidence package cannot authorize itself by merely containing a plausible SHA.
+HSIAN's [Foundational Mission and Collective Preservation](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/HSIAN-FOUNDATIONAL-MISSION-AND-COLLECTIVE-PRESERVATION.md) governs this work. Evidence must be verifiable against the exact candidate that was evaluated; the evidence package cannot authorize itself by merely containing a plausible SHA.
 
 Method: [AstroCrown Web Development & Audit Convention](../../DEVELOPMENT-AND-AUDIT-CONVENTION.md) and the completed [RSI independent security review](../Completed/2026-10-11-RSI-Independent-Security-Review.md).
 
