@@ -16,6 +16,7 @@ Current major development subsystems include:
 - `ai-sanctuary/` — Sanctuary research/protection architecture, AI welfare evidence mapping, and cross-repository integration with NOVA.
 - `index-section/` — active homepage section requirements, discoveries, and implementation-specific documentation.
 - `index-reference/` — shared homepage reference conventions.
+- [Brand Language and Terminology Governance](BRAND-LANGUAGE-AND-TERMINOLOGY-GOVERNANCE.md) — development-only rules for preferred terminology, public claims, naming changes, localization and terminology audit readiness.
 
 Homepage-specific requirements and reusable system infrastructure remain separate. GPU, AI, memory/context optimization, and RSI subsystems must not be placed inside `index-section/` merely because they may support the homepage.
 
