@@ -21,9 +21,11 @@ from .service import (
 )
 
 
-def handler_for(state_path: str | Path) -> type[BaseHTTPRequestHandler]:
-    """Create a request handler bound to a single local state-file path."""
+def handler_for(state_path: str | Path, editor_path: str | Path | None = None) -> type[BaseHTTPRequestHandler]:
+    """Create a request handler bound to a local state file and editor asset."""
     store = Path(state_path)
+    default_editor = Path(__file__).resolve().parents[3] / "development" / "admin" / "announcement-band-editor.html"
+    editor = Path(editor_path) if editor_path is not None else default_editor
 
     class BannerAPIHandler(BaseHTTPRequestHandler):
         server_version = "AstroCrownBannerPrototype/0.1"
@@ -32,6 +34,17 @@ def handler_for(state_path: str | Path) -> type[BaseHTTPRequestHandler]:
         def log_message(self, format: str, *args: Any) -> None:
             # Avoid logging request bodies or any banner content.
             super().log_message(format, *args)
+
+        def _send_html(self, status: int, content: bytes) -> None:
+            self.send_response(status)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("X-Frame-Options", "DENY")
+            self.send_header("Referrer-Policy", "no-referrer")
+            self.end_headers()
+            self.wfile.write(content)
 
         def _send_json(self, status: int, payload: dict[str, Any]) -> None:
             encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
@@ -66,6 +79,14 @@ def handler_for(state_path: str | Path) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
             if not self._require_local_host():
                 return
+            if self.path == "/admin/banner-editor":
+                try:
+                    content = editor.read_bytes()
+                except OSError:
+                    self._send_json(500, {"error": "editor_unavailable", "message": "The development editor file could not be read."})
+                    return
+                self._send_html(200, content)
+                return
             if self.path == "/api/health":
                 self._send_json(200, {
                     "status": "ok",
@@ -86,8 +107,9 @@ def handler_for(state_path: str | Path) -> type[BaseHTTPRequestHandler]:
             if self.path == "/":
                 self._send_json(200, {
                     "name": "AstroCrown banner backend prototype",
-                    "message": "Local JSON API only. The visual editor is not connected to this API yet.",
-                    "endpoints": ["GET /api/health", "GET /api/state", "PUT /api/state"],
+                    "message": "Local editor is served at /admin/banner-editor. Authentication is not implemented; do not expose this server to a network.",
+                    "editor_path": "/admin/banner-editor",
+                    "endpoints": ["GET /admin/banner-editor", "GET /api/health", "GET /api/state", "PUT /api/state"],
                     "production_ready": False,
                 })
                 return
@@ -163,7 +185,9 @@ def main() -> None:
     args.data_file = args.data_file.expanduser().resolve()
     server = ThreadingHTTPServer(("127.0.0.1", args.port), handler_for(args.data_file))
     print("AstroCrown banner backend prototype — local-only; authentication is NOT implemented.")
-    print(f"Listening at http://127.0.0.1:{server.server_port}/ (not for network or production use)")
+    print(f"Editor: http://127.0.0.1:{server.server_port}/admin/banner-editor")
+    print(f"API health: http://127.0.0.1:{server.server_port}/api/health")
+    print("Local-only prototype; not for network exposure or production use.")
     print(f"Local state file: {args.data_file}")
     try:
         server.serve_forever()
