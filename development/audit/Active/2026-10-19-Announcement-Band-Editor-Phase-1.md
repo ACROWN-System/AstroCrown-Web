@@ -299,7 +299,7 @@ The Python runtime and local HTTP API are proven to execute in a local test envi
 
 - Python compilation: PASS in the available local Python 3.13 environment.
 - Standard-library unittest suite: PASS, 20 tests, including a real loopback HTTP server, state read/write, revision conflict, corrupt-state preservation, URL validation, timezone enforcement, schedule boundaries, overlapping-event rejection, and confirmed default transitions.
-- A dedicated Python 3.12 GitHub Actions workflow is added to verify the same compile and unit/integration tests on the repository's public PR workflow. Its result must be checked against the exact commit after push; no CI result is presumed here.
+- GitHub Actions workflow [Banner Backend Python Tests](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39333043950): PASS on commit `498b46576f81c41fffec54ebfcecd74cc4f2d5ba`, using Python 3.12. Local Python compilation and all 20 tests also PASS in the available Python 3.13 environment. The NOVA RSI Engine CI, NOVA RSI CodeQL Security Analysis, and External Review Pipeline CI workflows also PASS on that code commit. These results establish the local API/code checks only; they do not establish browser integration, remote deployment, or production security.
 - Browser integration of the existing visual editor with this API: NOT IMPLEMENTED.
 - Authentication/authorization: NOT IMPLEMENTED.
 - Public deployment, provider portability, external access, and production scheduling: BLOCKED / NOT TESTED.
