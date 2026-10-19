@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "development/admin/banner_backend/**"
+      - "development/admin/announcement-band-editor.html"
       - "development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md"
       - "development/audit/Active/2026-10-20-Python-Banner-Editor-Integration.md"
       - ".github/workflows/banner-backend-python-tests.yml"
@@ -12,6 +13,7 @@ on:
     branches: [main]
     paths:
       - "development/admin/banner_backend/**"
+      - "development/admin/announcement-band-editor.html"
       - ".github/workflows/banner-backend-python-tests.yml"
 
 permissions:
@@ -38,6 +40,19 @@ jobs:
             development/admin/banner_backend/__init__.py \
             development/admin/banner_backend/service.py \
             development/admin/banner_backend/server.py
+
+      - name: Validate inline editor JavaScript syntax
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          source = Path("development/admin/announcement-band-editor.html").read_text(encoding="utf-8")
+          if source.count("<script>") != 1 or source.count("</script>") != 1:
+              raise SystemExit("Expected exactly one inline editor script")
+          script = source.split("<script>", 1)[1].split("</script>", 1)[0]
+          Path(os.environ["RUNNER_TEMP"], "announcement-band-editor.js").write_text(script, encoding="utf-8")
+          PY
+          node --check "$RUNNER_TEMP/announcement-band-editor.js"
 
       - name: Run unit and local HTTP API tests
         run: python -m unittest discover -s development/admin/banner_backend/tests -t . -p "test_*.py" -v
