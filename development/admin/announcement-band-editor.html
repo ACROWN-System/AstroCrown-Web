@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#081426">
+<title>AstroCrown — Announcement Band Editor Prototype</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101e30;--panel2:#14243a;--line:#2b405a;--ink:#eef4ff;--muted:#9eb0c8;--accent:#78b9ff;--warn:#f6d58b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer;color:var(--ink);background:#1b3049;border:1px solid #39516e;border-radius:8px;padding:8px 10px}button:hover{background:#25415f}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}button:disabled{opacity:.45;cursor:not-allowed}
+header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 12px}p{margin:6px 0}.muted{color:var(--muted)}.status{color:var(--warn);font-weight:650}.layout{display:grid;grid-template-columns:minmax(190px,230px) minmax(300px,1fr) minmax(230px,290px);gap:14px;padding:14px;align-items:start}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}.stack{display:grid;gap:10px}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row>*{min-width:0}.library button{width:100%;text-align:left}.small{font-size:12px}.divider{border:0;border-top:1px solid var(--line);margin:14px 0}
+.canvas-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#050b14;padding:10px}.canvas{position:relative;width:100%;min-width:280px;height:140px;background:linear-gradient(115deg,#142b48,#081522);border:1px dashed #56708c;overflow:hidden;isolation:isolate}.canvas-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.canvas-element{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;overflow:visible;touch-action:none;user-select:none;cursor:move;border:1px solid transparent;border-radius:5px;padding:5px;white-space:pre-wrap;overflow-wrap:anywhere}.canvas-element.selected{border:1px solid var(--accent);outline:1px solid #78b9ff80}.canvas-element.shape{background:linear-gradient(135deg,#2b5d8c,#18314b);border-color:#5d8db7}.canvas-element.media{background:repeating-linear-gradient(135deg,#20354b,#20354b 10px,#17283b 10px,#17283b 20px);border:1px dashed #9eb0c8;color:#d5e2f2}.handle{position:absolute;width:10px;height:10px;background:#e8f4ff;border:2px solid #2874b9;border-radius:2px;padding:0;z-index:3;touch-action:none}.nw{left:-5px;top:-5px;cursor:nwse-resize}.n{left:calc(50% - 5px);top:-5px;cursor:ns-resize}.ne{right:-5px;top:-5px;cursor:nesw-resize}.e{right:-5px;top:calc(50% - 5px);cursor:ew-resize}.se{right:-5px;bottom:-5px;cursor:nwse-resize}.s{left:calc(50% - 5px);bottom:-5px;cursor:ns-resize}.sw{left:-5px;bottom:-5px;cursor:nesw-resize}.w{left:-5px;top:calc(50% - 5px);cursor:ew-resize}.resize-band{height:16px;width:100%;display:block;cursor:ns-resize;background:linear-gradient(transparent 6px,#56708c 6px,#56708c 8px,transparent 8px);touch-action:none}.resize-band:focus-visible{outline:2px solid var(--accent)}.layers{display:grid;gap:6px}.layer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px;align-items:center}.layer .select-layer{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.layer button{padding:6px 8px}.field{display:grid;gap:4px}.field label{font-size:12px;color:var(--muted)}input,textarea,select{width:100%;min-width:0;background:#081522;color:var(--ink);border:1px solid #39516e;border-radius:7px;padding:8px}input[type=color]{padding:2px;height:38px}input[type=checkbox]{width:auto}textarea{resize:vertical;min-height:70px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:12px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.danger{border-color:#805050}.menu{position:fixed;z-index:20;display:none;background:#13243a;border:1px solid #4c6685;border-radius:9px;padding:6px;box-shadow:0 8px 30px #0008;min-width:130px}.menu.open{display:grid;gap:5px}.menu button{text-align:left}.notice{padding:10px 14px;background:#17263a;border-bottom:1px solid var(--line);color:#dce8f8}.pill{border:1px solid #6a5c37;color:var(--warn);border-radius:99px;padding:3px 8px;font-size:11px}
+@media(max-width:950px){.layout{grid-template-columns:minmax(160px,220px) minmax(0,1fr)}.properties{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:14px}.properties>h2{grid-column:1/-1}}
+@media(max-width:620px){header{padding:14px}.layout{grid-template-columns:1fr;padding:9px}.properties{grid-template-columns:1fr}.canvas{min-width:280px}.panel{padding:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>AstroCrown — Announcement Band Editor</h1><p class="muted small">Development prototype · local draft only</p></div>
+  <div class="row"><span class="pill">NOT PUBLISHED</span><button id="undoBtn" type="button" disabled>Undo removal</button></div>
+</header>
+<div class="notice"><strong>Prototype boundary:</strong> edits exist only in this page's memory. No upload, persistence, account, external service or publish action is connected.</div>
+<main class="layout">
+  <section class="panel library" aria-labelledby="libraryTitle">
+    <h2 id="libraryTitle">1. Element Library</h2>
+    <p class="hint">Add an element; existing content stays in place.</p>
+    <div class="stack">
+      <button type="button" data-add="text">＋ Add text</button>
+      <button type="button" data-add="shape">＋ Add shape</button>
+      <button type="button" data-add="media">＋ Add media placeholder</button>
+    </div>
+    <hr class="divider">
+    <h2>Band size</h2>
+    <div class="stack">
+      <label class="field"><span class="hint">Preset</span><select id="preset"><option value="36">Compact · 36 px</option><option value="56">Standard · 56 px</option><option value="120" selected>Media-rich · 120 px</option><option value="160">Expanded · 160 px</option></select></label>
+      <label class="field"><span class="hint">Custom height: <output id="heightValue">120</output> px</span><input id="heightInput" type="range" min="36" max="240" step="4" value="120"></label>
+      <p class="hint">Drag the lower edge of the canvas to resize. Changes are draft-only.</p>
+    </div>
+  </section>
+  <section class="panel" aria-labelledby="canvasTitle">
+    <div class="canvas-label"><div><h2 id="canvasTitle">2. Announcement Band Canvas</h2><p class="hint">Select an element to edit. Drag to move; use eight handles to resize.</p></div><span class="pill">DRAFT</span></div>
+    <div class="canvas-wrap"><div id="bandCanvas" class="canvas" role="group" aria-label="Announcement band editing canvas"></div></div>
+    <button id="resizeBand" class="resize-band" type="button" aria-label="Resize announcement band height with arrow keys" title="Drag to resize band; use arrow keys when focused"></button>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><span class="hint" id="canvasSize">Band: 100% wide</span><span class="hint">Canvas zoom: 100% (not published size)</span></div>
+    <hr class="divider">
+    <h2>Layers</h2><div id="layers" class="layers" aria-label="Element layers"></div>
+    <p class="hint">Use the layer controls to select, hide, or reorder elements. Keyboard: arrow keys move the selected element; Shift + arrow moves farther; Delete removes it; Ctrl/Cmd + Z undoes removal.</p>
+  </section>
+  <section class="panel properties" aria-labelledby="propertiesTitle">
+    <h2 id="propertiesTitle">3. Layers and Properties</h2>
+    <div id="emptyProperties" class="hint">Select an element on the canvas or in Layers to edit its properties.</div>
+    <div id="propertiesForm" class="stack" hidden>
+      <div class="field"><label for="elementName">Element label</label><input id="elementName" maxlength="80"></div>
+      <div class="field" id="textField"><label for="elementText">Editable text</label><textarea id="elementText" maxlength="500"></textarea></div>
+      <div class="grid2">
+        <div class="field"><label for="elementX">X position (%)</label><input id="elementX" type="number" min="0" max="100" step="1"></div>
+        <div class="field"><label for="elementY">Y position (%)</label><input id="elementY" type="number" min="0" max="100" step="1"></div>
+        <div class="field"><label for="elementW">Width (%)</label><input id="elementW" type="number" min="5" max="100" step="1"></div>
+        <div class="field"><label for="elementH">Height (%)</label><input id="elementH" type="number" min="5" max="100" step="1"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="elementColor">Element color</label><input id="elementColor" type="color" value="#e8f1ff"></div>
+        <div class="field"><label for="elementFont">Text size (px)</label><input id="elementFont" type="number" min="10" max="48" value="16"></div>
+      </div>
+      <div class="actions"><button id="hideBtn" type="button">Hide element</button><button id="deleteBtn" class="danger" type="button">Delete element</button></div>
+      <p class="hint">Text remains editable content. Media is a placeholder only; no file is uploaded or stored.</p>
+    </div>
+    <hr class="divider">
+    <div class="field"><label for="bandColor">Band base color</label><input id="bandColor" type="color" value="#10243b"></div>
+    <p class="hint">This is a local editing prototype, not an authenticated admin system or publishing interface.</p>
+  </section>
+</main>
+<div id="contextMenu" class="menu" role="menu" aria-label="Element actions">
+  <button id="contextSelect" type="button" role="menuitem">Select</button>
+  <button id="contextDelete" type="button" role="menuitem">Delete</button>
+</div>
+<script>
+(function(){
+  "use strict";
+  const canvas=document.getElementById("bandCanvas");
+  const layers=document.getElementById("layers");
+  const form=document.getElementById("propertiesForm");
+  const empty=document.getElementById("emptyProperties");
+  const menu=document.getElementById("contextMenu");
+  const $=id=>document.getElementById(id);
+  let nextId=2, selectedId=1, bandHeight=120, removed=null, contextId=null;
+  const elements=[{id:1,type:"text",name:"Announcement message",text:"AstroCrown · Discovery and opportunities",x:4,y:25,w:62,h:48,color:"#e8f1ff",font:16,hidden:false}];
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v)||0));
+  const selected=()=>elements.find(e=>e.id===selectedId)||null;
+  function closeMenu(){menu.classList.remove("open");contextId=null}
+  function render(){
+    canvas.style.height=bandHeight+"px";
+    canvas.style.background=$("bandColor").value;
+    canvas.replaceChildren();
+    elements.forEach(e=>{
+      if(e.hidden)return;
+      const el=document.createElement("div");
+      el.className="canvas-element "+e.type+(e.id===selectedId?" selected":"");
+      el.dataset.id=String(e.id);el.tabIndex=0;
+      el.setAttribute("role","button");
+      el.setAttribute("aria-label",e.name+(e.id===selectedId?", selected":""));
+      el.style.left=e.x+"%";el.style.top=e.y+"%";el.style.width=e.w+"%";el.style.height=e.h+"%";
+      el.style.color=e.color;el.style.fontSize=e.font+"px";
+      if(e.type==="text"){el.textContent=e.text;el.style.background="transparent";}
+      else if(e.type==="shape"){el.textContent=e.name;el.style.background=e.color;}
+      else{el.textContent="▧ "+e.name+" · media placeholder";el.style.background="repeating-linear-gradient(135deg,#20354b,#20354b 10px,#17283b 10px,#17283b 20px)";}
+      el.addEventListener("click",()=>{selectedId=e.id;render()});
+      el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();selectedId=e.id;render()}});
+      el.addEventListener("contextmenu",ev=>{ev.preventDefault();contextId=e.id;selectedId=e.id;menu.style.left=Math.min(ev.clientX,window.innerWidth-160)+"px";menu.style.top=Math.min(ev.clientY,window.innerHeight-100)+"px";menu.classList.add("open");render()});
+      el.addEventListener("pointerdown",ev=>{if(ev.target!==el)return;if(ev.button!==0)return;selectedId=e.id;beginPointer(ev,e,"move");});
+      if(e.id===selectedId) addHandles(el,e);
+      canvas.appendChild(el);
+    });
+    renderLayers();renderProperties();
+    $("heightValue").textContent=String(bandHeight);$("heightInput").value=String(bandHeight);
+    $("canvasSize").textContent="Band: "+Math.round(canvas.clientWidth)+" × "+bandHeight+" px preview";
+    $("undoBtn").disabled=!removed;
+  }
+  function addHandles(el,e){
+    ["nw","n","ne","e","se","s","sw","w"].forEach(pos=>{
+      const h=document.createElement("button");h.type="button";h.className="handle "+pos;
+      h.setAttribute("aria-label","Resize "+e.name+" "+pos);
+      h.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();beginPointer(ev,e,pos)});
+      el.appendChild(h);
+    });
+  }
+  function beginPointer(ev,e,mode){
+    if(ev.button!==0)return;ev.preventDefault();selectedId=e.id;closeMenu();
+    const rect=canvas.getBoundingClientRect(),startX=ev.clientX,startY=ev.clientY;
+    const original={x:e.x,y:e.y,w:e.w,h:e.h};
+    const move=mv=>{
+      const dx=(mv.clientX-startX)/Math.max(1,rect.width)*100;
+      const dy=(mv.clientY-startY)/Math.max(1,rect.height)*100;
+      if(mode==="move"){e.x=clamp(original.x+dx,0,100-e.w);e.y=clamp(original.y+dy,0,100-e.h);}
+      else{
+        if(mode.includes("w")){e.x=clamp(original.x+dx,0,original.x+original.w-5);e.w=clamp(original.w-dx,5,100-e.x);}
+        if(mode.includes("e"))e.w=clamp(original.w+dx,5,100-e.x);
+        if(mode.includes("n")){e.y=clamp(original.y+dy,0,original.y+original.h-5);e.h=clamp(original.h-dy,5,100-e.y);}
+        if(mode.includes("s"))e.h=clamp(original.h+dy,5,100-e.y);
+      }
+      render();
+    };
+    const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);render()};
+    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
+  }
+  function renderLayers(){
+    layers.replaceChildren();
+    [...elements].reverse().forEach(e=>{
+      const row=document.createElement("div");row.className="layer";
+      const choose=document.createElement("button");choose.type="button";choose.className="select-layer";choose.textContent=(e.hidden?"◌ ":"◉ ")+e.name;choose.setAttribute("aria-pressed",String(e.id===selectedId));choose.addEventListener("click",()=>{selectedId=e.id;render()});
+      const visibility=document.createElement("button");visibility.type="button";visibility.textContent=e.hidden?"Show":"Hide";visibility.setAttribute("aria-label",(e.hidden?"Show ":"Hide ")+e.name);visibility.addEventListener("click",()=>{e.hidden=!e.hidden;render()});
+      const order=document.createElement("button");order.type="button";order.textContent="↑";order.setAttribute("aria-label","Move "+e.name+" forward");order.addEventListener("click",()=>{const i=elements.findIndex(x=>x.id===e.id);if(i>=0&&i<elements.length-1){[elements[i],elements[i+1]]=[elements[i+1],elements[i]];render()}});
+      row.append(choose,visibility,order);layers.appendChild(row);
+    });
+  }
+  function renderProperties(){
+    const e=selected();form.hidden=!e;empty.hidden=!!e;if(!e)return;
+    $("elementName").value=e.name;$("elementText").value=e.text||"";$("textField").hidden=e.type!=="text";
+    $("elementX").value=e.x;$("elementY").value=e.y;$("elementW").value=e.w;$("elementH").value=e.h;
+    $("elementColor").value=e.color;$("elementFont").value=e.font;
+    $("hideBtn").textContent=e.hidden?"Show element":"Hide element";
+  }
+  function updateField(id,fn){$(id).addEventListener("change",()=>{const e=selected();if(!e)return;fn(e,$(id).value);render()})}
+  updateField("elementName",(e,v)=>e.name=v.trim()||"Untitled element");
+  updateField("elementText",(e,v)=>e.text=v);
+  updateField("elementX",(e,v)=>e.x=clamp(v,0,100-e.w));
+  updateField("elementY",(e,v)=>e.y=clamp(v,0,100-e.h));
+  updateField("elementW",(e,v)=>e.w=clamp(v,5,100-e.x));
+  updateField("elementH",(e,v)=>e.h=clamp(v,5,100-e.y));
+  updateField("elementColor",(e,v)=>e.color=v);
+  updateField("elementFont",(e,v)=>e.font=clamp(v,10,48));
+  function add(type){
+    const e={id:nextId++,type,name:type==="text"?"New text":type==="shape"?"Accent shape":"Media placeholder",text:type==="text"?"Edit this message": "",x:8+(elements.length%4)*4,y:18+(elements.length%3)*8,w:type==="shape"?22:45,h:type==="shape"?55:52,color:type==="shape"?"#3b79ad":"#e8f1ff",font:16,hidden:false};
+    elements.push(e);selectedId=e.id;render();
+  }
+  document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>add(b.dataset.add)));
+  function removeSelected(){const i=elements.findIndex(e=>e.id===selectedId);if(i<0)return;removed={element:elements[i],index:i};elements.splice(i,1);selectedId=elements.length?elements[elements.length-1].id:null;closeMenu();render()}
+  $("deleteBtn").addEventListener("click",removeSelected);
+  $("hideBtn").addEventListener("click",()=>{const e=selected();if(e){e.hidden=!e.hidden;render()}});
+  $("undoBtn").addEventListener("click",()=>{if(!removed)return;elements.splice(Math.min(removed.index,elements.length),0,removed.element);selectedId=removed.element.id;removed=null;render()});
+  $("bandColor").addEventListener("input",render);
+  $("preset").addEventListener("change",()=>{bandHeight=Number($("preset").value);render()});
+  $("heightInput").addEventListener("input",()=>{bandHeight=Number($("heightInput").value);$("preset").value=["36","56","120","160"].includes(String(bandHeight))?String(bandHeight):"120";render()});
+  $("resizeBand").addEventListener("pointerdown",ev=>{
+    if(ev.button!==0)return;ev.preventDefault();const y=ev.clientY,start=bandHeight;
+    const move=mv=>{bandHeight=clamp(start+mv.clientY-y,36,240);render()};
+    const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up)};
+    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
+  });
+  $("resizeBand").addEventListener("keydown",ev=>{if(ev.key==="ArrowUp"||ev.key==="ArrowDown"){ev.preventDefault();bandHeight=clamp(bandHeight+(ev.key==="ArrowUp"?4:-4),36,240);render()}});
+  $("contextSelect").addEventListener("click",()=>{if(contextId!==null)selectedId=contextId;closeMenu();render()});
+  $("contextDelete").addEventListener("click",()=>{if(contextId!==null)selectedId=contextId;closeMenu();removeSelected()});
+  document.addEventListener("pointerdown",ev=>{if(!menu.contains(ev.target)&&!ev.target.closest(".canvas-element"))closeMenu()});
+  document.addEventListener("keydown",ev=>{
+    if(ev.key==="Escape"){closeMenu();return}
+    const e=selected();if(!e||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+    if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="z"){ev.preventDefault();if(removed)$("undoBtn").click();return}
+    if(ev.key==="Delete"&&document.activeElement===document.body){removeSelected();return}
+    const step=ev.shiftKey?5:1;
+    if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(ev.key)&&document.activeElement.classList.contains("canvas-element")){
+      ev.preventDefault();if(ev.key==="ArrowLeft")e.x=clamp(e.x-step,0,100-e.w);if(ev.key==="ArrowRight")e.x=clamp(e.x+step,0,100-e.w);if(ev.key==="ArrowUp")e.y=clamp(e.y-step,0,100-e.h);if(ev.key==="ArrowDown")e.y=clamp(e.y+step,0,100-e.h);render();
+    }
+    if((ev.shiftKey&&ev.key==="F10")||ev.key==="ContextMenu"){
+      if(document.activeElement.classList.contains("canvas-element")){ev.preventDefault();contextId=e.id;menu.style.left="20px";menu.style.top="20px";menu.classList.add("open")}
+    }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
