@@ -84,7 +84,7 @@ async function evaluate(expression) {
 }
 async function pressKey(key, shift = false) {
   const code = key === " " ? "Space" : key;
-  const keyCode = key === "Tab" ? 9 : key === "Enter" ? 13 : 0;
+  const keyCode = key === "Tab" ? 9 : key === "Enter" ? 13 : key === "Escape" ? 27 : 0;
   const down = { type: "keyDown", key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
   const up = { type: "keyUp", key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
   if (key === "Enter") { down.text = "\r"; down.unmodifiedText = "\r"; }
@@ -355,6 +355,15 @@ try {
   assert.equal(await evaluate("document.activeElement.id"), "addScheduleBtn", "cancelling the dialog should return focus to its invoker");
   assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 3, "cancel must leave schedules unchanged");
   assert.match(await evaluate("document.getElementById('scheduleFeedback').textContent"), /No schedule change was made/);
+
+  // Escape must dismiss the open-ended dialog without adding a schedule or losing focus context.
+  await evaluate("(()=>{const o=document.getElementById('scheduleOpenAt');o.value='2026-11-09T18:00';o.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("document.getElementById('addScheduleBtn').click()");
+  assert.equal(await evaluate("document.getElementById('openEndedScheduleDialog').hidden"), false);
+  await pressKey("Escape");
+  assert.equal(await evaluate("document.getElementById('openEndedScheduleDialog').hidden"), true, "Escape should close the confirmation dialog");
+  assert.equal(await evaluate("document.activeElement.id"), "addScheduleBtn", "Escape should return focus to the dialog invoker");
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 3, "Escape must not add a schedule");
 
   await evaluate("document.getElementById('saveDraftBtn').click()");
   await waitFor("banner schedule save", async () => {
