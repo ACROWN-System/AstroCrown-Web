@@ -145,6 +145,41 @@ try {
     return text.includes("Draft saved on this computer. Not published.");
   });
 
+  // Test real pointer input, not synthetic DOM events, for the primary canvas interactions.
+  const beforeMove = JSON.parse(await evaluate("JSON.stringify((()=>{const e=document.querySelector('.canvas-element');const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,left:parseFloat(e.style.left),width:parseFloat(e.style.width)}})())"));
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeMove.x, y: beforeMove.y });
+  await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: beforeMove.x, y: beforeMove.y, button: "left", buttons: 1, clickCount: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeMove.x + 28, y: beforeMove.y + 12, button: "left", buttons: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeMove.x + 48, y: beforeMove.y + 18, button: "left", buttons: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x: beforeMove.x + 48, y: beforeMove.y + 18, button: "left", buttons: 0, clickCount: 1 });
+  const afterMove = JSON.parse(await evaluate("JSON.stringify((()=>{const e=document.querySelector('.canvas-element');return {left:parseFloat(e.style.left),top:parseFloat(e.style.top)}})())"));
+  assert.ok(afterMove.left > beforeMove.left + 1, "real pointer drag should move the selected element horizontally");
+  assert.match(await evaluate("document.getElementById('saveStatus').textContent"), /Unsaved changes/);
+
+  const beforeResize = JSON.parse(await evaluate("JSON.stringify((()=>{const e=document.querySelector('.canvas-element');const h=e.querySelector('.handle.e');const r=h.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:parseFloat(e.style.width)}})())"));
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeResize.x, y: beforeResize.y });
+  await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: beforeResize.x, y: beforeResize.y, button: "left", buttons: 1, clickCount: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeResize.x + 32, y: beforeResize.y, button: "left", buttons: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeResize.x + 48, y: beforeResize.y, button: "left", buttons: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x: beforeResize.x + 48, y: beforeResize.y, button: "left", buttons: 0, clickCount: 1 });
+  const afterResize = JSON.parse(await evaluate("JSON.stringify({width:parseFloat(document.querySelector('.canvas-element').style.width)})"));
+  assert.ok(afterResize.width > beforeResize.width + 1, "east resize handle should enlarge the element with real pointer input");
+
+  const beforeBandResize = JSON.parse(await evaluate("JSON.stringify((()=>{const b=document.getElementById('resizeBand').getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2,height:document.getElementById('bandCanvas').offsetHeight}})())"));
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeBandResize.x, y: beforeBandResize.y });
+  await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: beforeBandResize.x, y: beforeBandResize.y, button: "left", buttons: 1, clickCount: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeBandResize.x, y: beforeBandResize.y + 20, button: "left", buttons: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x: beforeBandResize.x, y: beforeBandResize.y + 20, button: "left", buttons: 0, clickCount: 1 });
+  const afterBandResize = JSON.parse(await evaluate("JSON.stringify({height:document.getElementById('bandCanvas').offsetHeight})"));
+  assert.ok(afterBandResize.height >= beforeBandResize.height + 10, "dragging the band lower edge should increase band height");
+  assert.match(await evaluate("document.getElementById('saveStatus').textContent"), /Unsaved changes/);
+
+  await evaluate("document.getElementById('saveDraftBtn').click()");
+  await waitFor("pointer edits save", async () => {
+    const text = await evaluate("document.getElementById('saveStatus').textContent");
+    return text.includes("Draft saved on this computer. Not published.");
+  });
+
   // Simulate another editor saving after this tab loaded its revision.
   await evaluate("(()=>{const f=document.getElementById('elementText');f.value='Local edit kept after conflict';f.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   const currentResponse = await fetch(base + "/api/state");
