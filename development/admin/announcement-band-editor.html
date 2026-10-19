@@ -618,8 +618,8 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       if(!payload.state||typeof payload.revision!=="string")throw new Error("The Python service returned an incomplete saved-state response.");
       backendState=payload.state;
       backendRevision=payload.revision;
-      applyPersistedState(payload.state);
       backendAvailable=true;
+      applyPersistedState(payload.state);
       hasUnsavedChanges=false;
       saveConflict=false;
       editGeneration=0;
