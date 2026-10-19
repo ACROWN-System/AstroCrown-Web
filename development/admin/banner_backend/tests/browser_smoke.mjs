@@ -343,6 +343,29 @@ try {
   assert.equal(await evaluate("document.getElementById('scheduleBannerSelect').options.length"), 2, "scheduled banner should survive reload");
   assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 3, "all saved schedules should survive reload");
 
+  // Month navigation and day selection should coordinate dates without mutating schedules.
+  const monthBefore = await evaluate("document.getElementById('calendarMonthTitle').textContent");
+  await evaluate("document.getElementById('calendarNextMonth').click()");
+  const monthNext = await evaluate("document.getElementById('calendarMonthTitle').textContent");
+  assert.notEqual(monthNext, monthBefore, "Next month should change the month heading");
+  await evaluate("document.getElementById('calendarPrevMonth').click()");
+  assert.equal(await evaluate("document.getElementById('calendarMonthTitle').textContent"), monthBefore, "Previous month should restore the prior month");
+  await evaluate("document.getElementById('calendarToday').click()");
+  const scheduleOpenDate = JSON.parse(await evaluate("JSON.stringify((()=>{const r=document.querySelector('.schedule-item');return r?r.dataset.scheduleId:null})())"));
+  assert.ok(scheduleOpenDate, "calendar agenda should still contain schedule records");
+  const targetOpenDate = await evaluate("(()=>{const s=JSON.parse(document.body.dataset.savedSchedules||'[]');return s[0]?.opens_at||''})()");
+  const dateToPick = await evaluate("(()=>{const items=Array.from(document.querySelectorAll('.schedule-item'));return items.length?items.map(i=>i.dataset.scheduleId):[]})()");
+  assert.equal(dateToPick.length, 3, "calendar navigation must not add or remove schedules");
+  // The temporary opening date is known from the test setup.
+  await evaluate("(()=>{let current=document.getElementById('calendarMonthTitle').textContent;for(let i=0;i<15&&!document.querySelector('[data-date=\\"2026-11-05\\"]');i++)document.getElementById('calendarNextMonth').click();for(let i=0;i<15&&!document.querySelector('[data-date=\\"2026-11-05\\"]');i++)document.getElementById('calendarPrevMonth').click();return true})()");
+  const eventDay = JSON.parse(await evaluate("JSON.stringify((()=>{const d=document.querySelector('[data-date=\\"2026-11-05\\"]');return d?{text:d.textContent,aria:d.getAttribute('aria-label'),markers:d.querySelectorAll('.calendar-event').length}:null})())"));
+  assert.ok(eventDay, "calendar should render the November 5 event day");
+  assert.ok(eventDay.markers >= 1, "scheduled opening should be marked on its calendar date");
+  const priorScheduleCount = await evaluate("document.querySelectorAll('.schedule-item').length");
+  await evaluate("document.querySelector('[data-date=\\"2026-11-05\\"]').click()");
+  assert.match(await evaluate("document.getElementById('scheduleOpenAt').value"), /^2026-11-05T/);
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), priorScheduleCount, "clicking a calendar date must not create a schedule");
+
   // Return to the default banner for the stale-write conflict test below.
   await evaluate("(()=>{const s=document.getElementById('bannerSelect');s.value='regular';s.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   assert.equal(await evaluate("document.getElementById('bannerSelect').value"), "regular");
