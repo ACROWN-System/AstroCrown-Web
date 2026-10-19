@@ -266,10 +266,18 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       label.append(checkbox,document.createTextNode("Add link"));
       checkbox.setAttribute("aria-label","Add link for scene "+(index+1));
       checkbox.addEventListener("change",()=>{
-        slot.add_link=checkbox.checked;
+        const enableLink=checkbox.checked;
+        slot.add_link=enableLink;
         if(!slot.add_link)slot.destination_url="";
         markDirty();
         renderSceneLinks();
+        const next=Array.from(root.querySelectorAll("[data-scene-link-toggle]"))
+          .find(node=>node.dataset.sceneLinkToggle===slot.id);
+        if(enableLink){
+          const destination=Array.from(root.querySelectorAll("[data-scene-link-url]"))
+            .find(node=>node.dataset.sceneLinkUrl===slot.id);
+          if(destination)destination.focus();
+        }else if(next){next.focus()}
       });
       const field=document.createElement("div");
       field.className="field scene-link-url";
@@ -876,7 +884,28 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     const index=banner.slots.findIndex(slot=>slot.id===activeSlotId);
     if(index>=0&&index<banner.slots.length-1)selectScene(banner.slots[index+1].id);
   });
-  function closeMenu(){menu.classList.remove("open");contextId=null}
+  function closeMenu(restoreFocus=false){
+    const previousId=contextId;
+    menu.classList.remove("open");contextId=null;
+    if(restoreFocus&&previousId!==null){
+      const target=canvas.querySelector('[data-id="'+previousId+'"]');
+      if(target)target.focus();
+      else focusLayerControl(previousId,"select");
+    }
+  }
+  function focusLayerControl(elementId,action){
+    const target=Array.from(layers.querySelectorAll("[data-layer-element-id]"))
+      .find(node=>node.dataset.layerElementId===String(elementId)&&node.dataset.layerAction===action);
+    if(target)target.focus();
+  }
+  function openContextMenu(elementId,x,y){
+    contextId=elementId;selectedId=elementId;render();
+    menu.style.left=Math.max(0,Math.min(x,window.innerWidth-menu.offsetWidth-8))+"px";
+    menu.style.top=Math.max(0,Math.min(y,window.innerHeight-menu.offsetHeight-8))+"px";
+    menu.classList.add("open");
+    const first=menu.querySelector('[role="menuitem"]');
+    if(first)first.focus();
+  }
   function render(){
     canvas.style.height=bandHeight+"px";
     canvas.style.background=$("bandColor").value;
@@ -895,7 +924,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       else{el.textContent="▧ "+e.name+" · media placeholder";el.style.background="repeating-linear-gradient(135deg,#20354b,#20354b 10px,#17283b 10px,#17283b 20px)";}
       el.addEventListener("click",()=>{selectedId=e.id;render()});
       el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();selectedId=e.id;render();const focused=canvas.querySelector('[data-id="'+e.id+'"]');if(focused)focused.focus()}});
-      el.addEventListener("contextmenu",ev=>{ev.preventDefault();contextId=e.id;selectedId=e.id;menu.style.left=Math.min(ev.clientX,window.innerWidth-160)+"px";menu.style.top=Math.min(ev.clientY,window.innerHeight-100)+"px";menu.classList.add("open");render()});
+      el.addEventListener("contextmenu",ev=>{ev.preventDefault();openContextMenu(e.id,ev.clientX,ev.clientY)});
       el.addEventListener("pointerdown",ev=>{if(ev.target!==el)return;if(ev.button!==0)return;selectedId=e.id;beginPointer(ev,e,"move");});
       if(e.id===selectedId) addHandles(el,e);
       canvas.appendChild(el);
@@ -908,8 +937,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   }
   function addHandles(el,e){
     ["nw","n","ne","e","se","s","sw","w"].forEach(pos=>{
-      const h=document.createElement("button");h.type="button";h.className="handle "+pos;
-      h.setAttribute("aria-label","Resize "+e.name+" "+pos);
+      const h=document.createElement("div");h.className="handle "+pos;h.setAttribute("aria-hidden","true");
       h.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();beginPointer(ev,e,pos)});
       el.appendChild(h);
     });
@@ -937,9 +965,9 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     layers.replaceChildren();
     [...elements].reverse().forEach(e=>{
       const row=document.createElement("div");row.className="layer";
-      const choose=document.createElement("button");choose.type="button";choose.className="select-layer";choose.textContent=(e.hidden?"◌ ":"◉ ")+e.name;choose.setAttribute("aria-pressed",String(e.id===selectedId));choose.addEventListener("click",()=>{selectedId=e.id;render()});
-      const visibility=document.createElement("button");visibility.type="button";visibility.textContent=e.hidden?"Show":"Hide";visibility.setAttribute("aria-label",(e.hidden?"Show ":"Hide ")+e.name);visibility.addEventListener("click",()=>{e.hidden=!e.hidden;markDirty();render()});
-      const order=document.createElement("button");order.type="button";order.textContent="↑";order.setAttribute("aria-label","Move "+e.name+" forward");order.addEventListener("click",()=>{const i=elements.findIndex(x=>x.id===e.id);if(i>=0&&i<elements.length-1){[elements[i],elements[i+1]]=[elements[i+1],elements[i]];markDirty();render()}});
+      const choose=document.createElement("button");choose.type="button";choose.className="select-layer";choose.dataset.layerElementId=String(e.id);choose.dataset.layerAction="select";choose.textContent=(e.hidden?"◌ ":"◉ ")+e.name;choose.setAttribute("aria-pressed",String(e.id===selectedId));choose.addEventListener("click",()=>{selectedId=e.id;render();focusLayerControl(e.id,"select")});
+      const visibility=document.createElement("button");visibility.type="button";visibility.dataset.layerElementId=String(e.id);visibility.dataset.layerAction="visibility";visibility.textContent=e.hidden?"Show":"Hide";visibility.setAttribute("aria-label",(e.hidden?"Show ":"Hide ")+e.name);visibility.addEventListener("click",()=>{e.hidden=!e.hidden;markDirty();render();focusLayerControl(e.id,"visibility")});
+      const order=document.createElement("button");order.type="button";order.dataset.layerElementId=String(e.id);order.dataset.layerAction="order";order.textContent="↑";order.setAttribute("aria-label","Move "+e.name+" forward");order.addEventListener("click",()=>{const i=elements.findIndex(x=>x.id===e.id);if(i>=0&&i<elements.length-1){[elements[i],elements[i+1]]=[elements[i+1],elements[i]];markDirty();render();focusLayerControl(e.id,"order")}});
       row.append(choose,visibility,order);layers.appendChild(row);
     });
   }
@@ -978,9 +1006,30 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
   });
   $("resizeBand").addEventListener("keydown",ev=>{if(ev.key==="ArrowUp"||ev.key==="ArrowDown"){ev.preventDefault();bandHeight=clamp(bandHeight+(ev.key==="ArrowUp"?4:-4),36,240);markDirty();render()}});
-  $("contextSelect").addEventListener("click",()=>{if(contextId!==null)selectedId=contextId;closeMenu();render()});
-  $("contextDelete").addEventListener("click",()=>{if(contextId!==null)selectedId=contextId;closeMenu();removeSelected()});
-  document.addEventListener("pointerdown",ev=>{if(!menu.contains(ev.target)&&!ev.target.closest(".canvas-element"))closeMenu()});
+  $("contextSelect").addEventListener("click",()=>{
+    const id=contextId;if(id!==null)selectedId=id;
+    closeMenu(false);render();
+    const target=id===null?null:canvas.querySelector('[data-id="'+id+'"]');
+    if(target)target.focus();
+  });
+  $("contextDelete").addEventListener("click",()=>{
+    const id=contextId;if(id!==null)selectedId=id;
+    closeMenu(false);removeSelected();
+    if(id!==null)focusLayerControl(id,"select");
+  });
+  menu.addEventListener("keydown",ev=>{
+    const items=Array.from(menu.querySelectorAll('[role="menuitem"]:not(:disabled)'));
+    const index=items.indexOf(document.activeElement);
+    if(ev.key==="Escape"){ev.preventDefault();closeMenu(true);return}
+    if(!items.length)return;
+    let next=null;
+    if(ev.key==="ArrowDown")next=(index+1)%items.length;
+    else if(ev.key==="ArrowUp")next=(index-1+items.length)%items.length;
+    else if(ev.key==="Home")next=0;
+    else if(ev.key==="End")next=items.length-1;
+    if(next!==null){ev.preventDefault();items[next].focus()}
+  });
+  document.addEventListener("pointerdown",ev=>{if(!menu.contains(ev.target)&&!ev.target.closest(".canvas-element"))closeMenu(false)});
   document.addEventListener("keydown",ev=>{
     const openEndedDialog=$("openEndedScheduleDialog");
     if(!openEndedDialog.hidden&&ev.key==="Tab"){
@@ -998,7 +1047,8 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     }
     if(ev.key==="Escape"){
       if(!$("openEndedScheduleDialog").hidden){cancelOpenEndedSchedule();return;}
-      closeMenu();return;
+      if(menu.classList.contains("open")){closeMenu(true);return;}
+      closeMenu(false);return;
     }
     const e=selected();if(!e||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
     if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="z"){ev.preventDefault();if(removed)$("undoBtn").click();return}
@@ -1008,7 +1058,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       ev.preventDefault();if(ev.key==="ArrowLeft")e.x=clamp(e.x-step,0,100-e.w);if(ev.key==="ArrowRight")e.x=clamp(e.x+step,0,100-e.w);if(ev.key==="ArrowUp")e.y=clamp(e.y-step,0,100-e.h);if(ev.key==="ArrowDown")e.y=clamp(e.y+step,0,100-e.h);markDirty();render();const moved=canvas.querySelector('[data-id="'+e.id+'"]');if(moved)moved.focus();
     }
     if((ev.shiftKey&&ev.key==="F10")||ev.key==="ContextMenu"){
-      if(document.activeElement.classList.contains("canvas-element")){ev.preventDefault();contextId=e.id;menu.style.left="20px";menu.style.top="20px";menu.classList.add("open")}
+      if(document.activeElement.classList.contains("canvas-element")){ev.preventDefault();openContextMenu(e.id,20,20)}
     }
   });
   render();
