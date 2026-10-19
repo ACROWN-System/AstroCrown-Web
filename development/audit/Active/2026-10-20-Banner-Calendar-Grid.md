@@ -1,7 +1,7 @@
 # Active Navigation Plan — Banner Calendar Grid and Coordination View
 
 **Date:** 2026-10-20  
-**Status:** ACTIVE — lightweight calendar visualization for banner coordination  
+**Status:** IMPLEMENTED — automated and real-browser verification PASS; broader accessibility/performance review remains open  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Working branch:** admin/announcement-band-editor-phase-1  
 **Parent plans:**  
@@ -58,6 +58,23 @@ The expected development/NAVIGATION-PROTOCOL.md and development/NAVIGATION-PLAN-
 
 **IF not implemented:** admins can still enter dates through a native date picker and see an agenda, but cannot scan events visually by month or select an Open date from a calendar grid.
 
-## 8. Status at plan creation
+## 8. Verification results
 
-No month grid, month navigation, event markers, or click-a-day behavior is implemented by this plan's creation.
+- [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39338734004) on tested commit `1940aad6ceb8033d6fbd8cb83c250a81b55f3d8b`.
+- Python compilation, inline JavaScript syntax check, all 24 standard-library unit/API tests, and the real headless Chrome smoke test completed successfully.
+- The Chrome test verified Previous month and Next month change the displayed heading and return to the original month; Today returns to the current month; the scheduled opening marker is rendered on the known 5 November 2026 date; clicking that date fills only the Open date field and does not create/remove a schedule.
+- The same browser run retained the previous checks for carousel direction and independent per-scene links, schedule temporary/default confirmation branches, saving/reloading, conflict handling, pointer movement/resizing, and the 390px width assertion.
+- Calendar uses browser-local dates for coordination while saved timestamps retain explicit timezone offsets. No external calendar package was added.
+- The main canvas render loop does not rebuild the schedule agenda/calendar on every pointer frame; calendar/agenda refresh happens when the saved state or schedule list changes.
+
+Browser evidence is a focused smoke test, not a full keyboard, assistive-technology, high-zoom, all-breakpoint, accessibility, or performance audit. Authentication/authorization, remote hosting, production activation and publishing remain NOT IMPLEMENTED.
+
+## 9. Impact Analysis
+
+**IF implemented:** administrators can visually coordinate scheduled banner opens/closes by month and select an Open date directly, while the underlying draft schedule state is unchanged until they explicitly add and save an entry.
+
+**IF not implemented:** admins would rely only on native date/time fields and the agenda list, without a month-oriented view for identifying event dates or choosing a start date visually.
+
+## 10. Status
+
+The calendar grid, month navigation, Open/Close markers, time-zone-aware labels, and click-a-day Open-date selection are implemented and passed the focused automated/browser checks above. Further accessibility and visual review remains outstanding; this is not production acceptance.

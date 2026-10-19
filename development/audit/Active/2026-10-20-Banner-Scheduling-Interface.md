@@ -88,3 +88,8 @@ Implemented on the development PR branch and verified on code commit `06ce67cd09
 - Browser smoke verification is limited to the listed scenarios and a 390px viewport check. It is not a full accessibility/performance audit or production security acceptance.
 
 The schedule UI is implemented and smoke-tested as local draft behavior. It must not be described as automatically updating the live homepage yet.
+
+
+### Monthly calendar grid — follow-on verification (2026-10-20)
+
+A month grid was added alongside the native Open/Close controls and agenda. Previous/Next/Today navigation, local-date Open/Close markers, and click-a-day-to-set-Open-date are tested by the same passing Chrome run as the schedule workflow: https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39338734004. Selecting a day does not create a schedule; the administrator must still choose **Add schedule to draft**, and then **Save draft**. No external calendar dependency or live scheduler was introduced.

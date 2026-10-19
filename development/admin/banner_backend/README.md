@@ -23,6 +23,7 @@ Open http://127.0.0.1:8765/admin/banner-editor to use the visual editor served f
 - The visual editor can create/name separate banner definitions, schedule temporary banners with Open and Close, and list/remove schedules from the local draft.
 - If Close is omitted, a three-choice confirmation dialog can confirm an open-ended default change, return to add a closing time, or cancel without changing the schedule.
 - Local date/time inputs are converted to ISO 8601 with explicit offsets; the browser's detected time zone is shown.
+- A lightweight monthly calendar marks saved Open/Close dates, supports Previous/Next/Today, and clicking a day fills the Open date field without creating a schedule.
 - A scheduled banner with a close time is temporary and returns to the effective default after closing.
 - A schedule without a close time requires explicit confirmation to make that banner the new default at its opening time.
 - Overlapping temporary events and ambiguous simultaneous default transitions are rejected.

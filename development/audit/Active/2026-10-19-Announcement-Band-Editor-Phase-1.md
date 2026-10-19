@@ -387,3 +387,18 @@ Evidence: [Banner Backend Python Tests — PASS](https://github.com/ACROWN-Syste
 **IF added:** the admin can now model temporary announcements and future default changes through the actual editor, while keeping schedule records separate from carousel scenes and preserving the draft-only boundary.
 
 **IF not added:** schedule validation existed only in Python; the admin could not configure time-based banner behavior through the editor.
+
+
+### Monthly banner calendar — verification update (2026-10-20)
+
+The scheduling section now combines native Open/Close date-time fields, a scheduled-banner agenda, and a lightweight month grid using native JavaScript only. The grid supports Previous/Next/Today, marks scheduled Open and Close dates in the browser's displayed timezone, and lets the administrator select a day to fill the Open date without creating or changing a schedule.
+
+Evidence: [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39338734004) on tested code commit \`1940aad6ceb8033d6fbd8cb83c250a81b55f3d8b\`. The workflow passed Python compilation, JavaScript syntax validation, all 24 backend/API tests, and real Chrome smoke checks including month navigation, the 5 November 2026 event marker, and selection of that day without changing the saved-schedule count.
+
+The calendar/agenda is deliberately not rebuilt by the canvas's high-frequency pointer render loop. Refreshes occur when saved state or schedule data changes, protecting editing fluidity.
+
+**IF added:** the administrator can scan upcoming banner events by month and populate schedule dates without adding a package or coupling the editor to an external calendar service.
+
+**IF not added:** event coordination stays limited to typing a date/time and reading an agenda list.
+
+This verifies only the listed scenarios; full accessibility, extensive viewport/high-zoom, performance, authentication, publication, and production activation remain unverified or unimplemented.
