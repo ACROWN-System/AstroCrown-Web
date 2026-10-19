@@ -266,7 +266,8 @@ try {
   await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", unmodifiedText: "\r", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
   await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: top to bottom", "Direction control should work with the keyboard");
-  const canvasSemantics = JSON.parse(await evaluate("JSON.stringify((()=>{const e=document.querySelector('.canvas-element');return {role:e.getAttribute('role'),handleCount:e.querySelectorAll('button.handle').length,label:e.getAttribute('aria-label')}})())"));
+  const canvasSemantics = JSON.parse(await evaluate("JSON.stringify({count:document.querySelectorAll('.canvas-element').length,role:document.querySelector('.canvas-element')?.getAttribute('role')||null,handleCount:document.querySelector('.canvas-element')?.querySelectorAll('button.handle').length||0,label:document.querySelector('.canvas-element')?.getAttribute('aria-label')||''})"));
+  assert.ok(canvasSemantics.count > 0, "canvas must have a rendered element before checking resize control semantics");
   assert.equal(canvasSemantics.role, "group", "canvas element containing resize buttons must not expose button semantics");
   assert.equal(canvasSemantics.handleCount, 8, "all eight individually labelled resize buttons should remain available");
   assert.match(canvasSemantics.label, /Width and Height fields/, "canvas element should announce keyboard/property alternatives");
