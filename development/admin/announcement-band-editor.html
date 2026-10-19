@@ -896,13 +896,14 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   function focusLayerControl(elementId,action){
     const target=Array.from(layers.querySelectorAll("[data-layer-element-id]"))
       .find(node=>node.dataset.layerElementId===String(elementId)&&node.dataset.layerAction===action);
-    if(target)target.focus();
+    if(target){target.focus();return}
+    if(action==="select")layers.querySelector(".select-layer")?.focus();
   }
   function openContextMenu(elementId,x,y){
     contextId=elementId;selectedId=elementId;render();
+    menu.classList.add("open");
     menu.style.left=Math.max(0,Math.min(x,window.innerWidth-menu.offsetWidth-8))+"px";
     menu.style.top=Math.max(0,Math.min(y,window.innerHeight-menu.offsetHeight-8))+"px";
-    menu.classList.add("open");
     const first=menu.querySelector('[role="menuitem"]');
     if(first)first.focus();
   }
@@ -916,7 +917,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       el.className="canvas-element "+e.type+(e.id===selectedId?" selected":"");
       el.dataset.id=String(e.id);el.tabIndex=0;
       el.setAttribute("role","group");
-      el.setAttribute("aria-label",e.name+(e.id===selectedId?", selected":"")+". Focus this element to move it with arrow keys; resize with the labelled handles or Width and Height fields.");
+      el.setAttribute("aria-label",e.name+(e.id===selectedId?", selected":"")+". Focus this element to move it with arrow keys; resize with the Width and Height fields.");
       el.style.left=e.x+"%";el.style.top=e.y+"%";el.style.width=e.w+"%";el.style.height=e.h+"%";
       el.style.color=e.color;el.style.fontSize=e.font+"px";
       if(e.type==="text"){el.textContent=e.text;el.style.background="transparent";}
