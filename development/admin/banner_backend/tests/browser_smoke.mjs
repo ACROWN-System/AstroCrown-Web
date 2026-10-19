@@ -165,8 +165,26 @@ try {
   const canvasSemantics = JSON.parse(await evaluate("JSON.stringify({count:document.querySelectorAll('.canvas-element').length,role:document.querySelector('.canvas-element')?.getAttribute('role')||null,handleCount:document.querySelector('.canvas-element')?.querySelectorAll('button.handle').length||0,label:document.querySelector('.canvas-element')?.getAttribute('aria-label')||''})"));
   assert.ok(canvasSemantics.count > 0, "canvas must have a rendered element before checking resize control semantics");
   assert.equal(canvasSemantics.role, "group", "canvas element containing resize buttons must not expose button semantics");
-  assert.equal(canvasSemantics.handleCount, 8, "all eight individually labelled resize buttons should remain available");
+  assert.equal(await evaluate("document.querySelectorAll('.canvas-element .handle[aria-hidden=\"true\"]').length"), 8, "all eight pointer resize handles should remain present but hidden from the accessibility tree");
+  assert.equal(await evaluate("document.querySelectorAll('.canvas-element .handle button, .canvas-element .handle[tabindex]').length"), 0, "pointer-only resize handles must not create inert keyboard tab stops");
   assert.match(canvasSemantics.label, /Width and Height fields/, "canvas element should announce keyboard/property alternatives");
+
+  // Real keyboard activation of a regenerated layer control must preserve focus.
+  await evaluate("document.querySelector('.select-layer').focus();true");
+  await pressKey("Enter");
+  assert.equal(await evaluate("document.activeElement.dataset.layerAction"), "select", "layer selection should restore focus to the regenerated select control");
+  assert.ok(await evaluate("document.activeElement.dataset.layerElementId"), "restored layer control should identify its element");
+
+  // The custom menu must follow menu keyboard conventions and restore focus on Escape.
+  await evaluate("document.querySelector('.canvas-element').focus();true");
+  await pressKey("F10", true);
+  assert.equal(await evaluate("document.activeElement.id"), "contextSelect", "Shift+F10 should open the menu and focus its first item");
+  await pressKey("ArrowDown");
+  assert.equal(await evaluate("document.activeElement.id"), "contextDelete", "ArrowDown should move to the next menu item");
+  await pressKey("Home");
+  assert.equal(await evaluate("document.activeElement.id"), "contextSelect", "Home should focus the first menu item");
+  await pressKey("Escape");
+  assert.equal(await evaluate("document.activeElement.classList.contains('canvas-element')"), true, "Escape should return focus to the canvas element");
 
   await evaluate("(()=>{const f=document.getElementById('elementText');f.value='Browser persistence verified';f.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   const dirty = JSON.parse(await evaluate("JSON.stringify({status:document.getElementById('saveStatus').textContent,saveDisabled:document.getElementById('saveDraftBtn').disabled})"));
@@ -241,8 +259,10 @@ try {
   assert.equal(await evaluate("document.querySelectorAll('.scene-link-row').length"), 2);
   await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-1\"]');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   assert.equal(await evaluate("document.querySelector('[data-scene-link-url=\"slot-1\"]').parentElement.hidden"), false);
+  assert.equal(await evaluate("document.activeElement.dataset.sceneLinkUrl"), "slot-1", "enabling a scene link should move focus to its revealed destination URL field");
   await evaluate("(()=>{const u=document.querySelector('[data-scene-link-url=\"slot-1\"]');u.value='/releases';u.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-2\"]');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  assert.equal(await evaluate("document.activeElement.dataset.sceneLinkUrl"), "slot-2", "each scene toggle should focus its own destination URL field");
   await evaluate("(()=>{const u=document.querySelector('[data-scene-link-url=\"slot-2\"]');u.value='https://example.org/special';u.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   const linkSettings = JSON.parse(await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.scene-link-row')).map(r=>({id:r.dataset.sceneId,enabled:r.querySelector('input[type=checkbox]').checked,urlVisible:!r.querySelector('input[type=url]').parentElement.hidden,url:r.querySelector('input[type=url]').value})))"));
   assert.deepEqual(linkSettings, [
@@ -254,7 +274,9 @@ try {
   await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-1\"]');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   const linkOff = JSON.parse(await evaluate("JSON.stringify((()=>{const r=document.querySelector('.scene-link-row[data-scene-id=\"slot-1\"]');return {enabled:r.querySelector('input[type=checkbox]').checked,hidden:r.querySelector('input[type=url]').parentElement.hidden,url:r.querySelector('input[type=url]').value}})())"));
   assert.deepEqual(linkOff,{enabled:false,hidden:true,url:""},"turning Add link off must hide and clear the URL");
+  assert.equal(await evaluate("document.activeElement.dataset.sceneLinkToggle"), "slot-1", "disabling a scene link should return focus to that scene's checkbox");
   await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-1\"]');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));const u=document.querySelector('[data-scene-link-url=\"slot-1\"]');u.value='/releases';u.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  assert.equal(await evaluate("document.activeElement.dataset.sceneLinkUrl"), "slot-1", "re-enabling a link should focus its restored URL input");
 
   const directions = [];
   for (let index = 0; index < 4; index++) {
@@ -441,14 +463,20 @@ try {
   assert.equal(await evaluate("document.getElementById('bandColor').value"), "#223344");
   assert.equal(await evaluate("document.getElementById('elementText').value"), "Browser persistence verified");
 
-  await cdp("Emulation.setDeviceMetricsOverride", {
-    width: 390, height: 844, deviceScaleFactor: 1, mobile: true
-  });
-  const viewport = JSON.parse(await evaluate("JSON.stringify({innerWidth:window.innerWidth,scrollWidth:document.documentElement.scrollWidth})"));
-  assert.equal(viewport.innerWidth, 390, "narrow viewport was not applied");
-  assert.ok(viewport.scrollWidth <= 391, "page should not overflow horizontally at 390px: " + JSON.stringify(viewport));
+  // These are CSS viewport/reflow tests, not browser-zoom simulations.
+  const responsiveWidths = [320, 390, 520, 620, 640, 760, 950];
+  for (const width of responsiveWidths) {
+    await cdp("Emulation.setDeviceMetricsOverride", {
+      width, height: 900, deviceScaleFactor: 1, mobile: true
+    });
+    const viewport = JSON.parse(await evaluate("JSON.stringify({innerWidth:window.innerWidth,scrollWidth:document.documentElement.scrollWidth,layoutColumns:getComputedStyle(document.querySelector('.layout')).gridTemplateColumns,scheduleColumns:getComputedStyle(document.querySelector('.schedule-layout')).gridTemplateColumns})"));
+    assert.equal(viewport.innerWidth, width, "requested CSS viewport was not applied: " + width);
+    assert.ok(viewport.scrollWidth <= width + 1, "document must not overflow horizontally at " + width + "px: " + JSON.stringify(viewport));
+    if (width <= 620) assert.equal(viewport.layoutColumns.trim().split(/\\s+/).length, 1, "main editor should reflow to one column at " + width + "px: " + JSON.stringify(viewport));
+    if (width <= 760) assert.equal(viewport.scheduleColumns.trim().split(/\\s+/).length, 1, "schedule editor should reflow to one column at " + width + "px: " + JSON.stringify(viewport));
+  }
   await cdp("Emulation.clearDeviceMetricsOverride");
-  console.log("PASS: real Chrome verified canvas pointer movement/resizing, band height drag, save/reload/conflict recovery, carousel scene lifecycle, independent links, direction cycle and keyboard activation, banner scheduling, all open-ended confirmation branches, and 390px layout.");
+  console.log("PASS: real Chrome verified canvas pointer movement/resizing, band height drag, save/reload/conflict recovery, carousel scene lifecycle, independent links/focus, direction cycle and keyboard activation, keyboard menu behavior/focus return, banner scheduling, open-ended confirmation branches, and CSS viewport reflow/overflow at 320/390/520/620/640/760/950px. Actual browser zoom and assistive-technology review are not measured by this test.");
 } finally {
   try { socket?.close(); } catch {}
   for (const child of [browser, server]) {
