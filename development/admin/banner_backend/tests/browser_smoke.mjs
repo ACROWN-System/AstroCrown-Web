@@ -82,6 +82,16 @@ async function evaluate(expression) {
   }
   return response.result?.value;
 }
+async function pressKey(key, shift = false) {
+  const code = key === " " ? "Space" : key;
+  const keyCode = key === "Tab" ? 9 : key === "Enter" ? 13 : 0;
+  const down = { type: "keyDown", key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
+  const up = { type: "keyUp", key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
+  if (key === "Enter") { down.text = "\\r"; down.unmodifiedText = "\\r"; }
+  if (shift) { down.modifiers = 8; up.modifiers = 8; }
+  await cdp("Input.dispatchKeyEvent", down);
+  await cdp("Input.dispatchKeyEvent", up);
+}
 async function waitForPageReady() {
   await waitFor("saved banner draft to load", async () => {
     const text = await evaluate("document.getElementById('saveStatus')?.textContent || ''");
@@ -256,6 +266,10 @@ try {
   await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", unmodifiedText: "\r", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
   await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: top to bottom", "Direction control should work with the keyboard");
+  const canvasSemantics = JSON.parse(await evaluate("JSON.stringify((()=>{const e=document.querySelector('.canvas-element');return {role:e.getAttribute('role'),handleCount:e.querySelectorAll('button.handle').length,label:e.getAttribute('aria-label')}})())"));
+  assert.equal(canvasSemantics.role, "group", "canvas element containing resize buttons must not expose button semantics");
+  assert.equal(canvasSemantics.handleCount, 8, "all eight individually labelled resize buttons should remain available");
+  assert.match(canvasSemantics.label, /Width and Height fields/, "canvas element should announce keyboard/property alternatives");
   for (let index = 0; index < 3; index++) await evaluate("document.getElementById('directionBtn').click()");
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left to right");
 
@@ -301,7 +315,20 @@ try {
   await evaluate("document.getElementById('addScheduleBtn').click()");
   assert.equal(await evaluate("document.getElementById('openEndedScheduleDialog').hidden"), false);
   assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 1, "open-ended schedule must not be added before confirmation");
+  assert.equal(await evaluate("document.activeElement.id"), "confirmDefaultScheduleBtn", "dialog should move initial focus to its primary action");
+  await evaluate("document.getElementById('calendarPrevMonth').focus();true");
+  await pressKey("Tab");
+  assert.equal(await evaluate("document.activeElement.id"), "confirmDefaultScheduleBtn", "Tab must bring outside focus back into the modal");
+  await pressKey("Tab");
+  assert.equal(await evaluate("document.activeElement.id"), "addScheduleCloseBtn", "Tab should advance within the dialog");
+  await pressKey("Tab");
+  assert.equal(await evaluate("document.activeElement.id"), "cancelOpenEndedScheduleBtn", "Tab should reach the final dialog action");
+  await pressKey("Tab");
+  assert.equal(await evaluate("document.activeElement.id"), "confirmDefaultScheduleBtn", "Tab from the final action must wrap to the first");
+  await pressKey("Tab", true);
+  assert.equal(await evaluate("document.activeElement.id"), "cancelOpenEndedScheduleBtn", "Shift+Tab from the first action must wrap to the last");
   await evaluate("document.getElementById('confirmDefaultScheduleBtn').click()");
+  assert.equal(await evaluate("document.activeElement.id"), "addScheduleBtn", "confirming the dialog should return focus to its invoker");
   assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 2);
   assert.equal(await evaluate("Array.from(document.querySelectorAll('.schedule-item .pill')).some(p=>p.textContent==='NEW DEFAULT')"), true);
 
@@ -312,6 +339,7 @@ try {
   await evaluate("document.getElementById('addScheduleCloseBtn').click()");
   assert.equal(await evaluate("document.getElementById('scheduleCloseEnabled').checked"), true);
   assert.equal(await evaluate("document.getElementById('scheduleCloseField').hidden"), false);
+  assert.equal(await evaluate("document.activeElement.id"), "scheduleCloseAt", "Add a closing time should focus the newly revealed field");
   assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 2);
   await evaluate("(()=>{const e=document.getElementById('scheduleCloseAt');e.value='2026-11-07T20:00';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   await evaluate("document.getElementById('addScheduleBtn').click()");
@@ -322,6 +350,7 @@ try {
   await evaluate("document.getElementById('addScheduleBtn').click()");
   assert.equal(await evaluate("document.getElementById('openEndedScheduleDialog').hidden"), false);
   await evaluate("document.getElementById('cancelOpenEndedScheduleBtn').click()");
+  assert.equal(await evaluate("document.activeElement.id"), "addScheduleBtn", "cancelling the dialog should return focus to its invoker");
   assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 3, "cancel must leave schedules unchanged");
   assert.match(await evaluate("document.getElementById('scheduleFeedback').textContent"), /No schedule change was made/);
 
@@ -355,13 +384,18 @@ try {
   assert.equal(scheduleIds.split(',').length, 3, "calendar navigation must not add or remove schedules");
   // The temporary opening date is known from the test setup.
   await evaluate("(()=>{for(let i=0;i<15&&!Array.from(document.querySelectorAll('[data-date]')).some(d=>d.dataset.date==='2026-11-05');i++)document.getElementById('calendarNextMonth').click();for(let i=0;i<15&&!Array.from(document.querySelectorAll('[data-date]')).some(d=>d.dataset.date==='2026-11-05');i++)document.getElementById('calendarPrevMonth').click();return true})()");
-  const eventDay = JSON.parse(await evaluate("JSON.stringify((()=>{const d=Array.from(document.querySelectorAll('[data-date]')).find(x=>x.dataset.date==='2026-11-05');return d?{text:d.textContent,aria:d.getAttribute('aria-label'),markers:d.querySelectorAll('.calendar-event').length}:null})())"));
+  assert.equal(await evaluate("document.getElementById('calendarGrid').getAttribute('role')"), "group", "calendar should use a simple labelled-button group, not incomplete grid semantics");
+  const eventDay = JSON.parse(await evaluate("JSON.stringify((()=>{const d=Array.from(document.querySelectorAll('[data-date]')).find(x=>x.dataset.date==='2026-11-05');return d?{text:d.textContent,aria:d.getAttribute('aria-label'),role:d.getAttribute('role'),pressed:d.getAttribute('aria-pressed'),markers:d.querySelectorAll('.calendar-event').length}:null})())"));
   assert.ok(eventDay, "calendar should render the November 5 event day");
+  assert.equal(eventDay.role, null, "native date button should retain its implicit button role");
   assert.ok(eventDay.markers >= 1, "scheduled opening should be marked on its calendar date");
+  assert.match(eventDay.aria, /ACROWN Release Event/, "date's accessible label should include the banner name");
+  assert.match(eventDay.aria, /opens at/i, "date's accessible label should include event timing");
   const priorScheduleCount = await evaluate("document.querySelectorAll('.schedule-item').length");
-  await evaluate("Array.from(document.querySelectorAll('[data-date]')).find(d=>d.dataset.date==='2026-11-05').click()");
-  assert.match(await evaluate("document.getElementById('scheduleOpenAt').value"), /^2026-11-05T/);
-  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), priorScheduleCount, "clicking a calendar date must not create a schedule");
+  await evaluate("Array.from(document.querySelectorAll('[data-date]')).find(d=>d.dataset.date==='2026-11-05').focus()");
+  await pressKey("Enter");
+  assert.match(await evaluate("document.getElementById('scheduleOpenAt').value"), /^2026-11-05T/, "keyboard activation should set the Open date");
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), priorScheduleCount, "activating a calendar date must not create a schedule");
 
   // Return to the default banner for the stale-write conflict test below.
   await evaluate("(()=>{const s=document.getElementById('bannerSelect');s.value='regular';s.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
