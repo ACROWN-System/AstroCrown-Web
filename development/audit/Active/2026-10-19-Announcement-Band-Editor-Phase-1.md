@@ -356,3 +356,16 @@ Browser smoke testing is PASS for the listed scenarios only. This does not certi
 **IF added:** direct canvas movement, element resizing, and band-height resizing have independent real-browser evidence, making the single-scene editor baseline more defensible before adding carousel state.
 
 **IF not added:** future carousel implementation would build on editor interactions that were only statically inspected or keyboard-smoke-tested, increasing the risk of extending a defective canvas interaction.
+
+
+### Carousel scenes and per-scene links — verification update (2026-10-20)
+
+The editor now exposes multiple scene slots through one shared canvas/editor. It includes the required \`+\` / three-dot Direction / \`−\` control order, a previous/current-count/next navigator, a four-state Direction cycle, and a separate Add link checkbox / Destination URL for every scene. Disabling a scene's link hides and clears only that scene's URL; the backend validates every enabled URL.
+
+Evidence on code commit \`44cc8a28cb09ed32904d78573ec1bfa9bbffac3b\`: [Banner Backend Python Tests run — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39337306876). This run passed Python compilation, JavaScript syntax validation, 24 standard-library unit/API tests, and a headless Chrome browser test covering independent scene links, link-off behavior, four direction states plus keyboard activation, scene add/delete, save/reload, conflict recovery, real pointer movement/resizing, band-height drag, and 390px layout.
+
+**IF added:** the editor's carousel authoring and per-scene link settings have repeatable browser and backend evidence while remaining dependency-free and draft-only.
+
+**IF not added:** the Python state model could carry multiple slots and links but the editor would not expose or reliably preserve the intended per-scene workflow.
+
+The next scoped increment is the banner scheduling UI. Schedule records reference banner definitions, whereas carousel slots are scenes within a banner; do not conflate those IDs. The scheduling form should implement Open + optional Close and the explicit confirm/add-close/cancel dialog for an open-ended default transition. Production activation, authentication, remote hosting and publishing remain separate future work.

@@ -1,7 +1,7 @@
 # Active Navigation Plan — Carousel Scenes and Per-Scene Links
 
 **Date:** 2026-10-20  
-**Status:** ACTIVE — next scoped editor increment  
+**Status:** IMPLEMENTED — automated and real-browser verification PASS; scheduling interface is the next increment  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Working branch:** admin/announcement-band-editor-phase-1  
 **Parent plan:** development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md  
@@ -71,4 +71,11 @@ The expected development/NAVIGATION-PROTOCOL.md and development/NAVIGATION-PLAN-
 
 ## 9. Status
 
-No carousel UI, Direction control, per-scene link UI, or multiple-scene browser verification has been implemented by this plan's creation. This is the next work increment only.
+Implemented on the development PR branch and verified on code/test commit `44cc8a28cb09ed32904d78573ec1bfa9bbffac3b`.
+
+- [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39337306876): Python compile, editor JavaScript syntax, 24 standard-library unit/API tests, and the real Chrome smoke test all passed.
+- The browser test validates independent per-scene link checkboxes and URL values, link-off clearing/hiding, the exact four-direction cycle, keyboard Enter activation of Direction, adding/deleting a scene, saving both slots/links/direction, and the existing load/save/reload/conflict/pointer/resize/390px checks.
+- The scene control is intentionally a composition-authoring control only. Direction is persisted as a transition setting; automatic carousel playback/rendering remains unimplemented.
+- Authentication, remote deployment, scheduling UI, production publishing, and full accessibility/performance conformance remain NOT IMPLEMENTED or NOT YET VERIFIED.
+
+This is a local development feature, not production readiness.

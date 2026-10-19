@@ -9,6 +9,7 @@ on:
       - "development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md"
       - "development/audit/Active/2026-10-20-Python-Banner-Editor-Integration.md"
       - "development/audit/Active/2026-10-20-Carousel-Scene-Link-Editor.md"
+      - "development/audit/Active/2026-10-20-Banner-Scheduling-Interface.md"
       - ".github/workflows/banner-backend-python-tests.yml"
   push:
     branches: [main]
