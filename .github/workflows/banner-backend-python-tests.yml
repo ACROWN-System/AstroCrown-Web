@@ -56,3 +56,18 @@ jobs:
 
       - name: Run unit and local HTTP API tests
         run: python -m unittest discover -s development/admin/banner_backend/tests -t . -p "test_*.py" -v
+      - name: Run real-browser save/reload/conflict smoke test
+        shell: bash
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v google-chrome)"
+          elif command -v chromium >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v chromium)"
+          elif command -v chromium-browser >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v chromium-browser)"
+          else
+            echo "::warning::BLOCKED: no preinstalled Chrome/Chromium binary; browser verification remains blocked"
+            exit 0
+          fi
+          node development/admin/banner_backend/tests/browser_smoke.mjs
+
