@@ -891,6 +891,7 @@
       var activeFilter = "all";
       var activeQuery = "";
       var sortMode = "featured";
+      var favoriteSymbols = Object.create(null);
       var activeSearchIndex = -1;
       var filteredSuggestions = [];
       var previousFocus = null;
@@ -952,10 +953,10 @@
         rowsElement.innerHTML = visible.map(function (asset, index) {
           var absoluteIndex = start + index + 1;
           var change1 = asset.c1 === null ? '<span class="neutral">—</span>' : cellChange(asset.c1);
-          var supplyText = asset.symbol === "ACROWN" ? "Unlisted" : "Demo";
+          var isFavorite = favoriteSymbols[asset.symbol] === true;
           return '<tr data-row-symbol="' + escapeText(asset.symbol) + '">' +
             '<td><span class="row-index">' + absoluteIndex + '</span></td>' +
-            '<td><div class="asset-cell"><button class="favorite-button" type="button" data-favorite="' + escapeText(asset.symbol) + '" aria-pressed="false" aria-label="Add ' + escapeText(asset.name) + ' to local favorites" title="Toggle local favorite">☆</button><span class="asset-logo ' + escapeText(asset.logoClass) + '" aria-hidden="true">' + escapeText(asset.logo) + '</span><span class="asset-identity"><strong>' + escapeText(asset.name) + '</strong><small>' + escapeText(asset.symbol) + ' <span class="asset-tag">' + escapeText(asset.category) + '</span></small></span></div></td>' +
+            '<td><div class="asset-cell"><button class="favorite-button" type="button" data-favorite="' + escapeText(asset.symbol) + '" aria-pressed="' + (isFavorite ? "true" : "false") + '" aria-label="' + (isFavorite ? "Remove " : "Add ") + escapeText(asset.name) + (isFavorite ? " from" : " to") + ' local favorites" title="' + (isFavorite ? "Saved in this page only" : "Add to local favorites") + '">' + (isFavorite ? "★" : "☆") + '</button><span class="asset-logo ' + escapeText(asset.logoClass) + '" aria-hidden="true">' + escapeText(asset.logo) + '</span><span class="asset-identity"><strong>' + escapeText(asset.name) + '</strong><small>' + escapeText(asset.symbol) + ' <span class="asset-tag">' + escapeText(asset.category) + '</span></small></span></div></td>' +
             '<td>' + escapeText(asset.price) + '</td><td>' + change1 + '</td><td>' + cellChange(asset.c24) + '</td><td>' + cellChange(asset.c7) + '</td>' +
             '<td>' + escapeText(asset.cap) + '</td><td>' + escapeText(asset.volume) + '</td><td>' + trendMarkup(asset.trend) + '</td>' +
             '<td><button class="row-action" type="button" data-open-asset="' + escapeText(asset.symbol) + '">View</button></td></tr>';
@@ -1084,6 +1085,8 @@
         var favButton = event.target.closest("[data-favorite]");
         if (favButton) {
           var pressed = favButton.getAttribute("aria-pressed") === "true";
+          var favoriteSymbol = favButton.getAttribute("data-favorite");
+          favoriteSymbols[favoriteSymbol] = !pressed;
           favButton.setAttribute("aria-pressed", pressed ? "false" : "true");
           favButton.textContent = pressed ? "☆" : "★";
           favButton.setAttribute("aria-label", (pressed ? "Add " : "Remove ") + favButton.getAttribute("data-favorite") + (pressed ? " to" : " from") + " local favorites");
