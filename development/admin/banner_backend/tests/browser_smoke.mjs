@@ -185,7 +185,7 @@ try {
   });
 
   // Add a second scene and verify each scene's link setting is independent.
-  assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left-to-right");
+  assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left to right");
   await evaluate("document.getElementById('addSceneBtn').click()");
   assert.equal(await evaluate("document.getElementById('sceneCounter').textContent"), "2 / 2");
   assert.equal(await evaluate("document.querySelectorAll('.scene-link-row').length"), 2);
@@ -206,10 +206,10 @@ try {
     directions.push(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"));
   }
   assert.deepEqual(directions, [
-    "Direction: top-to-bottom",
-    "Direction: right-to-left",
-    "Direction: bottom-to-top",
-    "Direction: left-to-right"
+    "Direction: top to bottom",
+    "Direction: right to left",
+    "Direction: bottom to top",
+    "Direction: left to right"
   ], "Direction must follow the exact four-step cycle");
 
   await evaluate("document.getElementById('addSceneBtn').click()");
