@@ -32,8 +32,8 @@ The expected development/NAVIGATION-PROTOCOL.md and development/NAVIGATION-PLAN-
 ## 4. Data model and compatibility
 
 - Use the existing banner slot records as carousel scenes. Each slot already contains an ID, composition, Add link flag, and destination URL.
-- Add a documented optional/defaulted carousel-direction field on each banner, defaulting to left-to-right; update validation to accept only the four defined values. Existing state files without this field must load by defaulting it, not fail.
-- Keep the active banner identity separate from the active scene identity. Save the active scene's composition before switching scenes; save the overall banner state with all other scenes intact.
+- Add an optional/defaulted carousel-direction field on each banner, defaulting to left-to-right; update validation to accept only the four defined values. Existing state files without this field must load by defaulting it, not fail.
+- Keep active banner identity separate from active scene identity. Save the active scene's composition before switching scenes; save the overall banner state with all other scenes intact.
 - Limit scene count in the UI to a documented reasonable cap for the prototype and disable Add at the cap; do not silently discard scenes.
 
 ## 5. Implementation sequence
