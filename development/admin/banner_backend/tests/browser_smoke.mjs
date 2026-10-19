@@ -3,19 +3,42 @@ import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createServer } from "node:net";
 
 const chrome = process.env.CHROME_BIN;
 if (!chrome) throw new Error("CHROME_BIN must name a preinstalled Chrome/Chromium binary.");
 const work = mkdtempSync(join(tmpdir(), "acrown-banner-browser-"));
-const port = 18765;
-const debugPort = 19222;
+const [port, debugPort] = await findFreePorts(2);
 const base = "http://127.0.0.1:" + port;
 let server = null;
 let browser = null;
+let chromeStderr = "";
+let browserExit = null;
 let socket = null;
 let requestId = 0;
 const pending = new Map();
 
+async function findFreePorts(count) {
+  const servers = [];
+  try {
+    for (let index = 0; index < count; index++) {
+      const server = createServer();
+      await new Promise((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(0, "127.0.0.1", resolve);
+      });
+      servers.push(server);
+    }
+    const ports = servers.map(server => server.address().port);
+    await Promise.all(servers.map(server => new Promise((resolve, reject) => {
+      server.close(error => error ? reject(error) : resolve());
+    })));
+    return ports;
+  } catch (error) {
+    await Promise.all(servers.map(server => new Promise(resolve => server.close(() => resolve()))));
+    throw error;
+  }
+}
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function waitFor(description, predicate, timeoutMs = 15000) {
   const deadline = Date.now() + timeoutMs;
@@ -83,16 +106,27 @@ try {
     "--remote-allow-origins=*",
     "--user-data-dir=" + join(work, "chrome-profile"),
     base + "/admin/banner-editor"
-  ], { stdio: "ignore" });
+  ], { stdio: ["ignore", "ignore", "pipe"] });
+  browser.stderr.setEncoding("utf8");
+  browser.stderr.on("data", chunk => { chromeStderr = (chromeStderr + chunk).slice(-6000); });
+  browser.on("exit", (code, signal) => { browserExit = { code, signal }; });
 
   let target;
   await waitFor("Chrome DevTools target", async () => {
-    const response = await fetch("http://127.0.0.1:" + debugPort + "/json");
-    if (!response.ok) return false;
-    const targets = await response.json();
-    target = targets.find(item => item.type === "page" && item.url.includes("/admin/banner-editor"));
-    return Boolean(target?.webSocketDebuggerUrl);
-  }, 15000);
+    if (browserExit) return true;
+    try {
+      const response = await fetch("http://127.0.0.1:" + debugPort + "/json");
+      if (!response.ok) return false;
+      const targets = await response.json();
+      target = targets.find(item => item.type === "page" && item.url.includes("/admin/banner-editor"));
+      return Boolean(target?.webSocketDebuggerUrl);
+    } catch {
+      return false;
+    }
+  }, 25000);
+  if (!target?.webSocketDebuggerUrl) {
+    throw new Error("Chrome DevTools did not become available. Exit=" + JSON.stringify(browserExit) + "\nChrome stderr:\n" + chromeStderr);
+  }
 
   socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => {
