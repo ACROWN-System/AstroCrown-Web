@@ -268,3 +268,57 @@ Do not select or implement a production backend merely because a provider curren
 ### Status
 
 This is an owner-directed architecture requirement, not evidence that portability, backups, alternative hosting, account recovery or migration have been implemented or tested. Provider selection remains undecided.
+
+
+## 17. Python-first implementation experiment: local banner API
+
+### Objective
+
+Following the owner's direction, attempt a Python implementation before selecting an external hosting provider. Keep the implementation dependency-free and within the existing repository/development workflow as far as possible. Do not conclude that Python is unsuitable merely because the static public homepage cannot itself execute a server process.
+
+### Implementation delivered in this increment
+
+A local-only Python API prototype has been added under development/admin/banner_backend/. It uses only the Python standard library and provides:
+
+- A small JSON schema for the default banner, banner carousel slots, per-slot optional destination links, and schedule entries.
+- Validation that absolute destination URLs use HTTPS or same-origin absolute paths; unsafe schemes, embedded URL credentials, protocol-relative URLs, and control characters are rejected.
+- Explicit time-zone offsets for scheduled instants; UTC-normalized comparisons; deterministic open/close boundaries.
+- Temporary banners with an opening and closing time; an open-ended schedule is accepted only when the request explicitly confirms that it will become the new default.
+- Validation that temporary schedules do not overlap; an open-ended default change during a temporary event takes effect as the default after that event closes.
+- JSON-file persistence using temporary-file replacement, and revision-based conflict detection to prevent stale edits from overwriting newer state.
+- A small HTTP API using http.server, bound explicitly to 127.0.0.1, with GET /api/health, GET /api/state, and PUT /api/state.
+- Size limits, local Host validation, no CORS permission, no-store responses, safe JSON error responses, and no external dependencies.
+
+### Mandatory limitations
+
+This is a local development experiment only. Authentication and user authorization are not implemented. The API does not yet connect to announcement-band-editor.html. It is not safe to expose over a network, deploy to production, or treat as a protected admin backend. The page/editor, local API, and persistent data path remain separate until the integration is deliberately implemented and tested.
+
+The Python runtime and local HTTP API are proven to execute in a local test environment; this does not prove that a continuously running Python process can be hosted entirely inside GitHub Pages or GitHub Actions. GitHub-native orchestration/hosting possibilities remain a distinct architecture question. Do not jump to an external hosting/API dependency until the current Python implementation and credible GitHub-native options have been investigated against the actual requirements.
+
+### Verification evidence
+
+- Python compilation: PASS in the available local Python 3.13 environment.
+- Standard-library unittest suite: PASS, 20 tests, including a real loopback HTTP server, state read/write, revision conflict, corrupt-state preservation, URL validation, timezone enforcement, schedule boundaries, overlapping-event rejection, and confirmed default transitions.
+- A dedicated Python 3.12 GitHub Actions workflow is added to verify the same compile and unit/integration tests on the repository's public PR workflow. Its result must be checked against the exact commit after push; no CI result is presumed here.
+- Browser integration of the existing visual editor with this API: NOT IMPLEMENTED.
+- Authentication/authorization: NOT IMPLEMENTED.
+- Public deployment, provider portability, external access, and production scheduling: BLOCKED / NOT TESTED.
+- The active editor prototype and production homepage remain separate; do not modify the root homepage or _config.yml in this increment.
+
+### Next steps
+
+1. Inspect the exact diff and verify GitHub Actions against the new head commit.
+2. Integrate the existing editor with GET/PUT state locally, preserving its visual interactions and adding clear save/load/error/conflict feedback without changing production behavior.
+3. Run real-browser checks for the complete edit/save/load workflow, keyboard use, responsive layouts, and failed/offline API behavior.
+4. Only after the Python integration works locally, investigate the best way to run/deploy the Python application while preferring GitHub-native options and recording each actual blocker. Compare GitHub-native mechanisms with similar practical systems before considering an external provider or service.
+5. Before any public deployment, design and test authentication/authorization, persistent-state backup/restore, provider exit, and scheduled published configuration.
+
+### Impact Analysis
+
+**IF modified:** AstroCrown gains a dependency-free Python implementation for core banner validation, scheduling rules, and local persistence, allowing real behavior and tests before a hosting vendor is selected. GitHub CI makes these regressions repeatable without introducing a third-party package.
+
+**IF not modified:** Python would remain only a prospective option; the project would continue discussing runtime constraints without empirical evidence from a working application. Provider choices could be made prematurely, and the banner scheduling rules might be duplicated between frontend and backend.
+
+### Status
+
+The local Python API and its tests are implemented. This is evidence that the domain logic and local HTTP service are feasible in Python; it is not evidence that a production deployment is complete, that the frontend is integrated, or that authorization/security requirements are met.

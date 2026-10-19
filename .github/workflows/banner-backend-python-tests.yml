@@ -1,0 +1,41 @@
+name: Banner Backend Python Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/admin/banner_backend/**"
+      - ".github/workflows/banner-backend-python-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "development/admin/banner_backend/**"
+      - ".github/workflows/banner-backend-python-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile backend prototype
+        run: |
+          python -m py_compile \
+            development/admin/banner_backend/__init__.py \
+            development/admin/banner_backend/service.py \
+            development/admin/banner_backend/server.py
+
+      - name: Run unit and local HTTP API tests
+        run: python -m unittest discover -s development/admin/banner_backend/tests -t . -p "test_*.py" -v
