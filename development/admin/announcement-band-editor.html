@@ -155,6 +155,9 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   let nextId=2, selectedId=1, bandHeight=120, removed=null, contextId=null;
   let activeBannerId=null, activeSlotId=null, carouselDirection="left-to-right";
   let scheduleTargetBannerId=null, pendingOpenEndedSchedule=null;
+  const initialCalendarDate=new Date();
+  let calendarMonth=new Date(initialCalendarDate.getFullYear(),initialCalendarDate.getMonth(),1,12,0,0);
+  let selectedOpenDate=null;
   const MAX_SCENES=10;
   const DIRECTION_CYCLE=["left-to-right","top-to-bottom","right-to-left","bottom-to-top"];
   const elements=[{id:1,type:"text",name:"Announcement message",text:"AstroCrown · Discovery and opportunities",x:4,y:25,w:62,h:48,color:"#e8f1ff",font:16,hidden:false}];
@@ -318,6 +321,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     loadSlotComposition(banner.slots[0]);
     closeMenu();
     render();
+    renderBannerPicker();
   }
   function createBanner(){
     if(!backendAvailable||!backendState||backendState.banners.length>=100)return;
@@ -344,6 +348,9 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     loadSlotComposition(banner.slots[0]);
     markDirty();
     render();
+    renderBannerPicker();
+    renderScheduleBannerPicker();
+    renderScheduleList();
     $("bannerName").focus();
   }
   function localDateTimeToIso(value){
@@ -396,6 +403,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       emptyState.className="schedule-empty";
       emptyState.textContent="No scheduled banners yet.";
       root.appendChild(emptyState);
+      renderCalendar();
       return;
     }
     sorted.forEach(schedule=>{
@@ -428,11 +436,128 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
         backendState.schedules=backendState.schedules.filter(item=>item.id!==schedule.id);
         markDirty();
         render();
+        renderScheduleList();
         setScheduleFeedback("Schedule removed from the local draft. Save draft to persist the change.","success");
       });
       item.append(top,open,close,remove);
       root.appendChild(item);
     });
+    renderCalendar();
+  }
+  function localCalendarDateKey(date){
+    const pad=value=>String(value).padStart(2,"0");
+    return date.getFullYear()+"-"+pad(date.getMonth()+1)+"-"+pad(date.getDate());
+  }
+  function localCalendarTime(value){
+    const date=new Date(value);
+    return Number.isNaN(date.getTime())?"":date.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+  }
+  function renderCalendar(){
+    const title=$("calendarMonthTitle");
+    const grid=$("calendarGrid");
+    if(!title||!grid)return;
+    const year=calendarMonth.getFullYear(),month=calendarMonth.getMonth();
+    const firstDay=new Date(year,month,1,12,0,0);
+    title.textContent=firstDay.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+    grid.replaceChildren();
+
+    const banners=backendState&&Array.isArray(backendState.banners)?backendState.banners:[];
+    const schedules=backendState&&Array.isArray(backendState.schedules)?backendState.schedules:[];
+    const eventsByDate=new Map();
+    function addMarker(value,marker){
+      const date=new Date(value);
+      if(Number.isNaN(date.getTime()))return;
+      const key=localCalendarDateKey(date);
+      if(!eventsByDate.has(key))eventsByDate.set(key,[]);
+      eventsByDate.get(key).push({...marker,sortTime:date.getTime()});
+    }
+    schedules.forEach(schedule=>{
+      const banner=banners.find(item=>item.id===schedule.banner_id);
+      const name=banner?banner.name:"Missing banner";
+      addMarker(schedule.opens_at,{
+        kind:schedule.closes_at?"open":"default",
+        label:(schedule.closes_at?"Open":"Default")+" · "+localCalendarTime(schedule.opens_at),
+        title:name+" — "+(schedule.closes_at?"opens":"becomes default")+" at "+displayScheduleTime(schedule.opens_at)
+      });
+      if(schedule.closes_at){
+        addMarker(schedule.closes_at,{
+          kind:"close",
+          label:"Close · "+localCalendarTime(schedule.closes_at),
+          title:name+" — closes at "+displayScheduleTime(schedule.closes_at)
+        });
+      }
+    });
+    eventsByDate.forEach(items=>items.sort((a,b)=>a.sortTime-b.sortTime));
+
+    const leadingCells=(firstDay.getDay()+6)%7; // Monday-first grid.
+    const dayCount=new Date(year,month+1,0).getDate();
+    const todayKey=localCalendarDateKey(new Date());
+    const inputValue=$("scheduleOpenAt").value;
+    const selectedDate=selectedOpenDate||(inputValue?inputValue.slice(0,10):"");
+
+    for(let i=0;i<leadingCells;i++){
+      const empty=document.createElement("div");
+      empty.className="calendar-empty";
+      empty.setAttribute("aria-hidden","true");
+      grid.appendChild(empty);
+    }
+    for(let day=1;day<=dayCount;day++){
+      const date=new Date(year,month,day,12,0,0);
+      const key=localCalendarDateKey(date);
+      const markers=eventsByDate.get(key)||[];
+      const cell=document.createElement("button");
+      cell.type="button";
+      cell.className="calendar-day"+(key===todayKey?" is-today":"");
+      cell.dataset.date=key;
+      cell.setAttribute("role","gridcell");
+      cell.setAttribute("aria-selected",String(key===selectedDate));
+      cell.setAttribute("aria-label",date.toLocaleDateString(undefined,{
+        weekday:"long",month:"long",day:"numeric",year:"numeric"
+      })+(markers.length?", "+markers.length+" scheduled marker"+(markers.length===1?"":"s"):"")+". Select as Open date.");
+      const number=document.createElement("span");
+      number.className="calendar-day-number";
+      number.textContent=String(day);
+      cell.appendChild(number);
+      if(markers.length){
+        const markerList=document.createElement("span");
+        markerList.className="calendar-event-list";
+        markers.slice(0,2).forEach(marker=>{
+          const badge=document.createElement("span");
+          badge.className="calendar-event "+marker.kind;
+          badge.textContent=marker.label;
+          badge.title=marker.title;
+          markerList.appendChild(badge);
+        });
+        if(markers.length>2){
+          const more=document.createElement("span");
+          more.className="calendar-more";
+          more.textContent="+"+(markers.length-2)+" more";
+          markerList.appendChild(more);
+        }
+        cell.appendChild(markerList);
+      }
+      cell.addEventListener("click",()=>{
+        const current=$("scheduleOpenAt").value;
+        const time=current.includes("T")?current.split("T")[1]:"18:00";
+        selectedOpenDate=key;
+        $("scheduleOpenAt").value=key+"T"+time;
+        setScheduleFeedback(
+          "Open date set to "+date.toLocaleDateString(undefined,{dateStyle:"medium"})+". No schedule has been created yet.",
+          "idle"
+        );
+        renderCalendar();
+        $("scheduleOpenAt").focus();
+      });
+      grid.appendChild(cell);
+    }
+    const usedCells=leadingCells+dayCount;
+    const trailingCells=(7-(usedCells%7))%7;
+    for(let i=0;i<trailingCells;i++){
+      const empty=document.createElement("div");
+      empty.className="calendar-empty";
+      empty.setAttribute("aria-hidden","true");
+      grid.appendChild(empty);
+    }
   }
   function setScheduleFeedback(message,state="idle"){
     $("scheduleFeedback").textContent=message;
@@ -475,6 +600,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     backendState.schedules.push(record);
     markDirty();
     render();
+    renderScheduleList();
     setScheduleFeedback(
       pending.closesAt
         ?"Temporary banner schedule added to the draft. Save draft to retain it; nothing has been published."
@@ -600,6 +726,9 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     carouselDirection=banner.carousel_direction||"left-to-right";
     loadSlotComposition(slot);
     render();
+    renderBannerPicker();
+    renderScheduleBannerPicker();
+    renderScheduleList();
   }
   function buildPersistedState(){
     if(!backendState)throw new Error("Load the saved state before saving.");
@@ -695,6 +824,30 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   });
   $("newBannerBtn").addEventListener("click",createBanner);
   $("scheduleBannerSelect").addEventListener("change",()=>{scheduleTargetBannerId=$("scheduleBannerSelect").value;});
+  $("calendarPrevMonth").addEventListener("click",()=>{
+    calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,1,12,0,0);
+    renderCalendar();
+  });
+  $("calendarNextMonth").addEventListener("click",()=>{
+    calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,1,12,0,0);
+    renderCalendar();
+  });
+  $("calendarToday").addEventListener("click",()=>{
+    const now=new Date();
+    calendarMonth=new Date(now.getFullYear(),now.getMonth(),1,12,0,0);
+    renderCalendar();
+  });
+  $("scheduleOpenAt").addEventListener("change",()=>{
+    const value=$("scheduleOpenAt").value;
+    if(value){
+      selectedOpenDate=value.slice(0,10);
+      const parts=selectedOpenDate.split("-").map(Number);
+      calendarMonth=new Date(parts[0],parts[1]-1,1,12,0,0);
+    }else{
+      selectedOpenDate=null;
+    }
+    renderCalendar();
+  });
   $("scheduleCloseEnabled").addEventListener("change",()=>{
     $("scheduleCloseField").hidden=!$("scheduleCloseEnabled").checked;
     $("scheduleCloseAt").disabled=!backendAvailable||!$("scheduleCloseEnabled").checked;
@@ -747,7 +900,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       if(e.id===selectedId) addHandles(el,e);
       canvas.appendChild(el);
     });
-    renderLayers();renderProperties();renderSceneControls();renderSceneLinks();renderBannerPicker();renderScheduleBannerPicker();renderScheduleList();
+    renderLayers();renderProperties();renderSceneControls();renderSceneLinks();
     $("heightValue").textContent=String(bandHeight);$("heightInput").value=String(bandHeight);
     $("canvasSize").textContent="Band: "+Math.round(canvas.clientWidth)+" × "+bandHeight+" px preview";
     $("undoBtn").disabled=!removed;
