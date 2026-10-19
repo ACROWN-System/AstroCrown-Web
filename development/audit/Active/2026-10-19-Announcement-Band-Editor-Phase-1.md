@@ -333,6 +333,8 @@ The local Python API and its tests are implemented. This is evidence that the do
 - Save replaces the current default banner's first-slot composition while retaining the rest of the state document, including other banner records, slot link flags/URLs, and schedules.
 - The initial local JSON state includes the same starter text element shown by the visual editor.
 - Two HTTP test cases cover the served editor route and the root route's explicit not-production-ready boundary. The suite now contains 21 tests, plus Node's inline JavaScript syntax check in CI.
+
+- CI initially caught a runtime NameError in the starter state, where JSON \`false\` had been used instead of Python \`False\`. The source was corrected, and [the rerun passed all 21 tests and the JavaScript syntax check](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39334949893). The prior failed run and correction were retained as root-cause evidence rather than bypassed.
 - The Python API remains unauthenticated and bound to 127.0.0.1 only. The integration does not add production publishing, remote hosting, or public homepage changes.
 - Browser verification remains BLOCKED until a real browser run demonstrates UI rendering, save/load, conflict prompts, keyboard and responsive behavior. Passing automated tests do not establish browser or production acceptance.
 

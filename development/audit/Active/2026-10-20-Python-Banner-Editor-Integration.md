@@ -1,7 +1,7 @@
 # Active Navigation Plan — Python Banner Editor Integration
 
 **Date:** 2026-10-20  
-**Status:** IMPLEMENTED — automated verification pending; browser verification BLOCKED  
+**Status:** IMPLEMENTED — automated verification PASS; browser verification BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Working branch:** admin/announcement-band-editor-phase-1  
 **Parent objective:** development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md
@@ -63,6 +63,15 @@ Implemented in the development branch:
 - Saving updates only the default banner's first slot composition while preserving other banner records, slot link settings, and schedules.
 - The server remains loopback-only, and production readiness/authentication are explicitly false/not implemented.
 
-Automated verification is pending for the exact updated commit. The workflow now runs Python compilation, the standard-library unit/HTTP suite, and a Node syntax check of the inline JavaScript. Browser-level visual, pointer, keyboard, responsive, offline/error and actual save/reload checks remain BLOCKED pending a real browser run. Authentication/authorization, remote deployment, backups/recovery rehearsal, and production publishing remain NOT IMPLEMENTED.
+Automated verification on code commit `c057c781dc0ea3a6f539612779f78e56059917d3`:
+
+- [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39334949893): Python compilation, inline editor JavaScript syntax via `node --check`, and all 21 standard-library unit/HTTP tests passed.
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39334949906).
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39334950016).
+- NOVA RSI CodeQL was still running when this record was updated; verify the final PR head's conclusion separately.
+- An earlier run on `acadc7e85de92255356bd48900eb6d44f26ea0f7` failed in 20 of 21 tests because the new Python initial-state seed used JSON's lowercase `false` as a Python name. Root cause was corrected to Python's `False`; the Python suite then passed. This demonstrates why compile-only checks are insufficient for runtime behavior.
+- A documentation-only plan update follows the verified code commit; final workflow status must be checked on the resulting PR head as well.
+
+Browser-level visual, pointer, keyboard, responsive, offline/error and actual save/reload checks remain BLOCKED pending a real browser run. Authentication/authorization, remote deployment, backups/recovery rehearsal, and production publishing remain NOT IMPLEMENTED.
 
 This status does not claim that production or browser acceptance has passed.
