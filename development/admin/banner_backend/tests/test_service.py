@@ -37,6 +37,25 @@ class BannerStateValidationTests(unittest.TestCase):
         self.assertEqual(len(state["banners"]), 1)
         self.assertEqual(state["banners"][0]["slots"][0]["add_link"], False)
 
+    def test_legacy_banner_defaults_direction_to_left_to_right(self) -> None:
+        state = initial_state()
+        del state["banners"][0]["carousel_direction"]
+        normalized = validate_state(state)
+        self.assertEqual(normalized["banners"][0]["carousel_direction"], "left-to-right")
+
+    def test_all_carousel_directions_are_accepted(self) -> None:
+        for direction in ("left-to-right", "top-to-bottom", "right-to-left", "bottom-to-top"):
+            with self.subTest(direction=direction):
+                state = initial_state()
+                state["banners"][0]["carousel_direction"] = direction
+                self.assertEqual(validate_state(state)["banners"][0]["carousel_direction"], direction)
+
+    def test_invalid_carousel_direction_is_rejected(self) -> None:
+        state = initial_state()
+        state["banners"][0]["carousel_direction"] = "diagonal"
+        with self.assertRaisesRegex(BannerStateError, "carousel_direction"):
+            validate_state(state)
+
     def test_slot_link_requires_safe_destination(self) -> None:
         state = initial_state()
         slot = state["banners"][0]["slots"][0]

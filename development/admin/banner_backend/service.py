@@ -44,6 +44,7 @@ def initial_state() -> dict[str, Any]:
             {
                 "id": "regular",
                 "name": "Regular announcements",
+                "carousel_direction": "left-to-right",
                 "slots": [
                     {
                         "id": "slot-1",
@@ -164,7 +165,7 @@ def validate_state(value: Any) -> dict[str, Any]:
     for index, raw_banner in enumerate(raw_banners):
         field = f"banners[{index}]"
         banner = _require_object(raw_banner, field)
-        _require_keys(banner, {"id", "name", "slots"}, field)
+        _require_keys(banner, {"id", "name", "slots", "carousel_direction"}, field)
         banner_id = _validate_id(banner.get("id"), f"{field}.id")
         if banner_id in banner_ids:
             raise BannerStateError(f"duplicate banner id: {banner_id}")
@@ -172,6 +173,10 @@ def validate_state(value: Any) -> dict[str, Any]:
         name = banner.get("name")
         if not isinstance(name, str) or not name.strip() or len(name.strip()) > 120:
             raise BannerStateError(f"{field}.name must contain 1–120 characters")
+        direction = banner.get("carousel_direction", "left-to-right")
+        allowed_directions = {"left-to-right", "top-to-bottom", "right-to-left", "bottom-to-top"}
+        if not isinstance(direction, str) or direction not in allowed_directions:
+            raise BannerStateError(f"{field}.carousel_direction must be one of: {', '.join(sorted(allowed_directions))}")
         raw_slots = banner.get("slots")
         if not isinstance(raw_slots, list) or not raw_slots:
             raise BannerStateError(f"{field}.slots must be a non-empty list")
@@ -210,7 +215,7 @@ def validate_state(value: Any) -> dict[str, Any]:
                 "destination_url": destination,
                 "composition": composition,
             })
-        banners.append({"id": banner_id, "name": name.strip(), "slots": slots})
+        banners.append({"id": banner_id, "name": name.strip(), "carousel_direction": direction, "slots": slots})
 
     default_banner_id = _validate_id(root.get("default_banner_id"), "default_banner_id")
     if default_banner_id not in banner_ids:
