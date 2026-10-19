@@ -9,7 +9,7 @@
 :root{color-scheme:dark;--bg:#07111f;--panel:#101e30;--panel2:#14243a;--line:#2b405a;--ink:#eef4ff;--muted:#9eb0c8;--accent:#78b9ff;--warn:#f6d58b}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer;color:var(--ink);background:#1b3049;border:1px solid #39516e;border-radius:8px;padding:8px 10px}button:hover{background:#25415f}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}button:disabled{opacity:.45;cursor:not-allowed}
 header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 12px}p{margin:6px 0}.muted{color:var(--muted)}.status{color:var(--warn);font-weight:650}.layout{display:grid;grid-template-columns:minmax(190px,230px) minmax(300px,1fr) minmax(230px,290px);gap:14px;padding:14px;align-items:start}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}.stack{display:grid;gap:10px}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row>*{min-width:0}.library button{width:100%;text-align:left}.small{font-size:12px}.divider{border:0;border-top:1px solid var(--line);margin:14px 0}
-.canvas-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#050b14;padding:10px}.canvas{position:relative;width:100%;min-width:280px;height:140px;background:linear-gradient(115deg,#142b48,#081522);border:1px dashed #56708c;overflow:hidden;isolation:isolate}.canvas-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.canvas-element{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;overflow:visible;touch-action:none;user-select:none;cursor:move;border:1px solid transparent;border-radius:5px;padding:5px;white-space:pre-wrap;overflow-wrap:anywhere}.canvas-element.selected{border:1px solid var(--accent);outline:1px solid #78b9ff80}.canvas-element.shape{background:linear-gradient(135deg,#2b5d8c,#18314b);border-color:#5d8db7}.canvas-element.media{background:repeating-linear-gradient(135deg,#20354b,#20354b 10px,#17283b 10px,#17283b 20px);border:1px dashed #9eb0c8;color:#d5e2f2}.handle{position:absolute;width:10px;height:10px;background:#e8f4ff;border:2px solid #2874b9;border-radius:2px;padding:0;z-index:3;touch-action:none}.nw{left:-5px;top:-5px;cursor:nwse-resize}.n{left:calc(50% - 5px);top:-5px;cursor:ns-resize}.ne{right:-5px;top:-5px;cursor:nesw-resize}.e{right:-5px;top:calc(50% - 5px);cursor:ew-resize}.se{right:-5px;bottom:-5px;cursor:nwse-resize}.s{left:calc(50% - 5px);bottom:-5px;cursor:ns-resize}.sw{left:-5px;bottom:-5px;cursor:nesw-resize}.w{left:-5px;top:calc(50% - 5px);cursor:ew-resize}.resize-band{height:16px;width:100%;display:block;cursor:ns-resize;background:linear-gradient(transparent 6px,#56708c 6px,#56708c 8px,transparent 8px);touch-action:none}.resize-band:focus-visible{outline:2px solid var(--accent)}.layers{display:grid;gap:6px}.layer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px;align-items:center}.layer .select-layer{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.layer button{padding:6px 8px}.field{display:grid;gap:4px}.field label{font-size:12px;color:var(--muted)}input,textarea,select{width:100%;min-width:0;background:#081522;color:var(--ink);border:1px solid #39516e;border-radius:7px;padding:8px}input[type=color]{padding:2px;height:38px}input[type=checkbox]{width:auto}textarea{resize:vertical;min-height:70px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:12px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.danger{border-color:#805050}.menu{position:fixed;z-index:20;display:none;background:#13243a;border:1px solid #4c6685;border-radius:9px;padding:6px;box-shadow:0 8px 30px #0008;min-width:130px}.menu.open{display:grid;gap:5px}.menu button{text-align:left}.notice{padding:10px 14px;background:#17263a;border-bottom:1px solid var(--line);color:#dce8f8}.pill{border:1px solid #6a5c37;color:var(--warn);border-radius:99px;padding:3px 8px;font-size:11px}.save-status{font-size:12px;color:var(--muted);max-width:285px}.save-status[data-state="dirty"],.save-status[data-state="busy"]{color:var(--warn)}.save-status[data-state="saved"]{color:#78e6b2}.save-status[data-state="error"]{color:#ff9295}
+.canvas-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#050b14;padding:10px}.canvas{position:relative;width:100%;min-width:280px;height:140px;background:linear-gradient(115deg,#142b48,#081522);border:1px dashed #56708c;overflow:hidden;isolation:isolate}.canvas-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.canvas-element{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;overflow:visible;touch-action:none;user-select:none;cursor:move;border:1px solid transparent;border-radius:5px;padding:5px;white-space:pre-wrap;overflow-wrap:anywhere}.canvas-element.selected{border:1px solid var(--accent);outline:1px solid #78b9ff80}.canvas-element.shape{background:linear-gradient(135deg,#2b5d8c,#18314b);border-color:#5d8db7}.canvas-element.media{background:repeating-linear-gradient(135deg,#20354b,#20354b 10px,#17283b 10px,#17283b 20px);border:1px dashed #9eb0c8;color:#d5e2f2}.handle{position:absolute;width:10px;height:10px;background:#e8f4ff;border:2px solid #2874b9;border-radius:2px;padding:0;z-index:3;touch-action:none}.nw{left:-5px;top:-5px;cursor:nwse-resize}.n{left:calc(50% - 5px);top:-5px;cursor:ns-resize}.ne{right:-5px;top:-5px;cursor:nesw-resize}.e{right:-5px;top:calc(50% - 5px);cursor:ew-resize}.se{right:-5px;bottom:-5px;cursor:nwse-resize}.s{left:calc(50% - 5px);bottom:-5px;cursor:ns-resize}.sw{left:-5px;bottom:-5px;cursor:nesw-resize}.w{left:-5px;top:calc(50% - 5px);cursor:ew-resize}.resize-band{height:16px;width:100%;display:block;cursor:ns-resize;background:linear-gradient(transparent 6px,#56708c 6px,#56708c 8px,transparent 8px);touch-action:none}.resize-band:focus-visible{outline:2px solid var(--accent)}.carousel-actions{display:flex;justify-content:center;align-items:center;gap:9px;margin-top:10px}.carousel-action{width:38px;height:38px;display:grid;place-items:center;padding:0;border-radius:50%;font-size:21px;line-height:1}.direction-dots{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:16px;height:16px}.direction-dot{display:block;width:4px;height:4px;border-radius:50%;background:#a9c9ef}.direction-btn[data-direction="left-to-right"] .direction-dot:first-child,.direction-btn[data-direction="top-to-bottom"] .direction-dot:first-child,.direction-btn[data-direction="right-to-left"] .direction-dot:first-child,.direction-btn[data-direction="bottom-to-top"] .direction-dot:first-child{background:var(--accent);box-shadow:0 0 5px #78b9ff80}.direction-btn[data-direction="right-to-left"] .direction-dots{flex-direction:row-reverse}.direction-btn[data-direction="top-to-bottom"] .direction-dots{flex-direction:column}.direction-btn[data-direction="bottom-to-top"] .direction-dots{flex-direction:column-reverse}.scene-navigator{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:5px}.scene-nav-btn{min-width:35px;height:30px;padding:0 9px;font-size:17px}.scene-counter{min-width:54px;text-align:center;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}.scene-link-list{display:grid;gap:9px}.scene-link-row{display:grid;gap:7px;padding:10px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.018)}.scene-link-head{font-weight:700;font-size:12px;color:#dce8f8}.scene-link-toggle{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:12px}.scene-link-toggle input{width:auto}.scene-link-url[hidden]{display:none}.layers{display:grid;gap:6px}.layer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px;align-items:center}.layer .select-layer{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.layer button{padding:6px 8px}.field{display:grid;gap:4px}.field label{font-size:12px;color:var(--muted)}input,textarea,select{width:100%;min-width:0;background:#081522;color:var(--ink);border:1px solid #39516e;border-radius:7px;padding:8px}input[type=color]{padding:2px;height:38px}input[type=checkbox]{width:auto}textarea{resize:vertical;min-height:70px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:12px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.danger{border-color:#805050}.menu{position:fixed;z-index:20;display:none;background:#13243a;border:1px solid #4c6685;border-radius:9px;padding:6px;box-shadow:0 8px 30px #0008;min-width:130px}.menu.open{display:grid;gap:5px}.menu button{text-align:left}.notice{padding:10px 14px;background:#17263a;border-bottom:1px solid var(--line);color:#dce8f8}.pill{border:1px solid #6a5c37;color:var(--warn);border-radius:99px;padding:3px 8px;font-size:11px}.save-status{font-size:12px;color:var(--muted);max-width:285px}.save-status[data-state="dirty"],.save-status[data-state="busy"]{color:var(--warn)}.save-status[data-state="saved"]{color:#78e6b2}.save-status[data-state="error"]{color:#ff9295}
 @media(max-width:950px){.layout{grid-template-columns:minmax(160px,220px) minmax(0,1fr)}.properties{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:14px}.properties>h2{grid-column:1/-1}}
 @media(max-width:620px){header{padding:14px}.layout{grid-template-columns:1fr;padding:9px}.properties{grid-template-columns:1fr}.canvas{min-width:280px}.panel{padding:11px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
@@ -42,6 +42,16 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     <div class="canvas-label"><div><h2 id="canvasTitle">2. Announcement Band Canvas</h2><p class="hint">Select an element to edit. Drag to move; use eight handles to resize.</p></div><span class="pill">DRAFT</span></div>
     <div class="canvas-wrap"><div id="bandCanvas" class="canvas" role="group" aria-label="Announcement band editing canvas"></div></div>
     <button id="resizeBand" class="resize-band" type="button" aria-label="Resize announcement band height with arrow keys" title="Drag to resize band; use arrow keys when focused"></button>
+    <div class="carousel-actions" aria-label="Carousel scene controls">
+      <button id="addSceneBtn" class="carousel-action" type="button" aria-label="Add scene" title="Add scene">+</button>
+      <button id="directionBtn" class="carousel-action direction-btn" type="button" data-direction="left-to-right" aria-label="Direction: left to right" title="Direction: left to right"><span class="direction-dots" aria-hidden="true"><span class="direction-dot"></span><span class="direction-dot"></span><span class="direction-dot"></span></span></button>
+      <button id="deleteSceneBtn" class="carousel-action danger" type="button" aria-label="Delete selected scene" title="Delete selected scene">−</button>
+    </div>
+    <div class="scene-navigator" aria-label="Carousel scene navigation">
+      <button id="prevSceneBtn" class="scene-nav-btn" type="button" aria-label="Previous scene" disabled>‹</button>
+      <span id="sceneCounter" class="scene-counter" role="status" aria-live="polite">1 / 1</span>
+      <button id="nextSceneBtn" class="scene-nav-btn" type="button" aria-label="Next scene" disabled>›</button>
+    </div>
     <div class="row" style="justify-content:space-between;margin-top:10px"><span class="hint" id="canvasSize">Band: 100% wide</span><span class="hint">Canvas zoom: 100% (not published size)</span></div>
     <hr class="divider">
     <h2>Layers</h2><div id="layers" class="layers" aria-label="Element layers"></div>
@@ -67,6 +77,10 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       <p class="hint">Text remains editable content. Media is a placeholder only; no file is uploaded or stored.</p>
     </div>
     <hr class="divider">
+    <h2>Carousel links</h2>
+    <p class="hint">Each scene has its own optional link. Enable it to reveal that scene's destination URL.</p>
+    <div id="sceneLinks" class="scene-link-list" aria-label="Per-scene link settings"></div>
+    <hr class="divider">
     <div class="field"><label for="bandColor">Band base color</label><input id="bandColor" type="color" value="#10243b"></div>
     <p class="hint">This is a local editing prototype, not an authenticated admin system or publishing interface.</p>
   </section>
@@ -85,6 +99,9 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   const menu=document.getElementById("contextMenu");
   const $=id=>document.getElementById(id);
   let nextId=2, selectedId=1, bandHeight=120, removed=null, contextId=null;
+  let activeBannerId=null, activeSlotId=null, carouselDirection="left-to-right";
+  const MAX_SCENES=10;
+  const DIRECTION_CYCLE=["left-to-right","top-to-bottom","right-to-left","bottom-to-top"];
   const elements=[{id:1,type:"text",name:"Announcement message",text:"AstroCrown · Discovery and opportunities",x:4,y:25,w:62,h:48,color:"#e8f1ff",font:16,hidden:false}];
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v)||0));
   const selected=()=>elements.find(e=>e.id===selectedId)||null;
@@ -102,7 +119,8 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   }
   function markDirty(){
     if(applyingSavedState)return;
-    editGeneration+=1;
+    storeActiveComposition(backendState);
+    editGeneration++;
     hasUnsavedChanges=true;
     if(saveConflict){
       setPersistenceStatus("A newer saved version exists. Your edits remain here; reload before saving again.","error");
@@ -114,12 +132,20 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   function defaultElements(){
     return [{id:1,type:"text",name:"Announcement message",text:"AstroCrown · Discovery and opportunities",x:4,y:25,w:62,h:48,color:"#e8f1ff",font:16,hidden:false}];
   }
-  function applyPersistedState(state){
-    if(!state||!Array.isArray(state.banners)||!state.default_banner_id)throw new Error("The saved response does not contain a valid banner state.");
-    const banner=state.banners.find(item=>item&&item.id===state.default_banner_id);
-    const slot=banner&&Array.isArray(banner.slots)?banner.slots[0]:null;
-    if(!slot)throw new Error("The saved default banner does not contain an editable slot.");
-    const composition=slot.composition&&typeof slot.composition==="object"?slot.composition:{};
+  function activeBanner(state=backendState){
+    return state&&Array.isArray(state.banners)?state.banners.find(item=>item&&item.id===activeBannerId)||null:null;
+  }
+  function activeSlot(state=backendState){
+    const banner=activeBanner(state);
+    return banner&&Array.isArray(banner.slots)?banner.slots.find(item=>item&&item.id===activeSlotId)||null:null;
+  }
+  function storeActiveComposition(state=backendState){
+    const slot=activeSlot(state);
+    if(!slot)return;
+    slot.composition={band_height:bandHeight,band_color:$("bandColor").value,elements:elements.map(item=>({...item}))};
+  }
+  function loadSlotComposition(slot){
+    const composition=slot&&slot.composition&&typeof slot.composition==="object"?slot.composition:{};
     const height=Number(composition.band_height);
     bandHeight=Number.isFinite(height)?clamp(height,36,240):120;
     const color=typeof composition.band_color==="string"&&/^#[0-9a-f]{6}$/i.test(composition.band_color)?composition.band_color:"#10243b";
@@ -142,14 +168,138 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
     nextId=Math.max(0,...elements.map(item=>item.id))+1;
     selectedId=elements.length?elements[0].id:null;
     removed=null;
+  }
+  function renderSceneControls(){
+    const banner=activeBanner();
+    const slots=banner&&Array.isArray(banner.slots)?banner.slots:[];
+    const index=slots.findIndex(slot=>slot.id===activeSlotId);
+    const direction=banner&&DIRECTION_CYCLE.includes(banner.carousel_direction)?banner.carousel_direction:"left-to-right";
+    const directionText=direction.replace(/-/g," ");
+    $("directionBtn").dataset.direction=direction;
+    $("directionBtn").setAttribute("aria-label","Direction: "+directionText);
+    $("directionBtn").title="Direction: "+directionText+" (click to change)";
+    $("sceneCounter").textContent=(index>=0?index+1:0)+" / "+slots.length;
+    $("prevSceneBtn").disabled=index<=0;
+    $("nextSceneBtn").disabled=index<0||index>=slots.length-1;
+    $("addSceneBtn").disabled=!backendAvailable||slots.length>=MAX_SCENES;
+    $("deleteSceneBtn").disabled=!backendAvailable||slots.length<=1;
+    $("prevSceneBtn").disabled=!backendAvailable||index<=0;
+    $("nextSceneBtn").disabled=!backendAvailable||index<0||index>=slots.length-1;
+    $("directionBtn").disabled=!backendAvailable||!banner;
+  }
+  function renderSceneLinks(){
+    const root=$("sceneLinks");
+    root.replaceChildren();
+    const banner=activeBanner();
+    const slots=banner&&Array.isArray(banner.slots)?banner.slots:[];
+    slots.forEach((slot,index)=>{
+      const row=document.createElement("div");
+      row.className="scene-link-row";
+      row.dataset.sceneId=slot.id;
+      const heading=document.createElement("div");
+      heading.className="scene-link-head";
+      heading.textContent="Scene "+(index+1)+(slot.id===activeSlotId?" · Editing":"");
+      const label=document.createElement("label");
+      label.className="scene-link-toggle";
+      const checkbox=document.createElement("input");
+      checkbox.type="checkbox";
+      checkbox.checked=slot.add_link===true;
+      checkbox.dataset.sceneLinkToggle=slot.id;
+      label.append(checkbox,document.createTextNode("Add link"));
+      checkbox.setAttribute("aria-label","Add link for scene "+(index+1));
+      checkbox.addEventListener("change",()=>{
+        slot.add_link=checkbox.checked;
+        if(!slot.add_link)slot.destination_url="";
+        markDirty();
+        renderSceneLinks();
+      });
+      const field=document.createElement("div");
+      field.className="field scene-link-url";
+      field.hidden=!slot.add_link;
+      const urlLabel=document.createElement("label");
+      urlLabel.textContent="Destination URL";
+      urlLabel.htmlFor="scene-url-"+slot.id;
+      const input=document.createElement("input");
+      input.type="url";
+      input.id=urlLabel.htmlFor;
+      input.placeholder="/releases or https://example.com/...";
+      input.value=slot.destination_url||"";
+      input.dataset.sceneLinkUrl=slot.id;
+      input.setAttribute("aria-label","Destination URL for scene "+(index+1));
+      input.addEventListener("change",()=>{
+        slot.destination_url=input.value.trim();
+        markDirty();
+      });
+      field.append(urlLabel,input);
+      row.append(heading,label,field);
+      root.appendChild(row);
+    });
+  }
+  function selectScene(slotId){
+    const banner=activeBanner();
+    if(!banner)return;
+    const slot=banner.slots.find(item=>item.id===slotId);
+    if(!slot||slot.id===activeSlotId)return;
+    storeActiveComposition();
+    activeSlotId=slot.id;
+    loadSlotComposition(slot);
+    closeMenu();
+    render();
+  }
+  function addScene(){
+    const banner=activeBanner();
+    if(!banner||banner.slots.length>=MAX_SCENES)return;
+    storeActiveComposition();
+    let number=1;
+    while(banner.slots.some(slot=>slot.id==="slot-"+number))number++;
+    const slot={id:"slot-"+number,add_link:false,destination_url:"",composition:{band_height:bandHeight,band_color:$("bandColor").value,elements:[]}};
+    banner.slots.push(slot);
+    activeSlotId=slot.id;
+    elements.splice(0,elements.length);
+    selectedId=null;
+    removed=null;
+    markDirty();
+    render();
+  }
+  function deleteScene(){
+    const banner=activeBanner();
+    if(!banner||banner.slots.length<=1)return;
+    const index=banner.slots.findIndex(slot=>slot.id===activeSlotId);
+    if(index<0)return;
+    if(!window.confirm("Delete scene "+(index+1)+"? Only this scene and its own link will be removed."))return;
+    storeActiveComposition();
+    banner.slots.splice(index,1);
+    activeSlotId=banner.slots[Math.min(index,banner.slots.length-1)].id;
+    loadSlotComposition(activeSlot());
+    markDirty();
+    render();
+  }
+  function cycleDirection(){
+    const banner=activeBanner();
+    if(!banner)return;
+    const current=DIRECTION_CYCLE.indexOf(banner.carousel_direction||"left-to-right");
+    const direction=DIRECTION_CYCLE[(current+1)%DIRECTION_CYCLE.length];
+    banner.carousel_direction=direction;
+    carouselDirection=direction;
+    markDirty();
+    renderSceneControls();
+  }
+  function applyPersistedState(state){
+    if(!state||!Array.isArray(state.banners)||!state.default_banner_id)throw new Error("The saved response does not contain a valid banner state.");
+    const banner=state.banners.find(item=>item&&item.id===state.default_banner_id);
+    const slot=banner&&Array.isArray(banner.slots)?banner.slots[0]:null;
+    if(!slot)throw new Error("The saved default banner does not contain an editable slot.");
+    activeBannerId=banner.id;
+    activeSlotId=slot.id;
+    carouselDirection=banner.carousel_direction||"left-to-right";
+    loadSlotComposition(slot);
     render();
   }
   function buildPersistedState(){
     if(!backendState)throw new Error("Load the saved state before saving.");
     const next=JSON.parse(JSON.stringify(backendState));
-    const banner=next.banners.find(item=>item&&item.id===next.default_banner_id);
-    if(!banner||!Array.isArray(banner.slots)||!banner.slots[0])throw new Error("The saved default banner has no editable slot.");
-    banner.slots[0].composition={band_height:bandHeight,band_color:$("bandColor").value,elements:elements.map(item=>({...item}))};
+    if(!activeSlot(next))throw new Error("The active scene no longer exists in the saved draft.");
+    storeActiveComposition(next);
     return next;
   }
   async function readResponse(response){
@@ -172,9 +322,9 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       const response=await fetch("/api/state",{method:"GET",cache:"no-store",headers:{"Accept":"application/json"}});
       const payload=await readResponse(response);
       if(!payload.state||typeof payload.revision!=="string")throw new Error("The Python service returned an incomplete saved-state response.");
-      applyPersistedState(payload.state);
       backendState=payload.state;
       backendRevision=payload.revision;
+      applyPersistedState(payload.state);
       backendAvailable=true;
       hasUnsavedChanges=false;
       saveConflict=false;
@@ -226,6 +376,19 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
   }
   $("saveDraftBtn").addEventListener("click",saveDraft);
   $("reloadDraftBtn").addEventListener("click",()=>loadSavedDraft(true));
+  $("addSceneBtn").addEventListener("click",addScene);
+  $("deleteSceneBtn").addEventListener("click",deleteScene);
+  $("directionBtn").addEventListener("click",cycleDirection);
+  $("prevSceneBtn").addEventListener("click",()=>{
+    const banner=activeBanner();if(!banner)return;
+    const index=banner.slots.findIndex(slot=>slot.id===activeSlotId);
+    if(index>0)selectScene(banner.slots[index-1].id);
+  });
+  $("nextSceneBtn").addEventListener("click",()=>{
+    const banner=activeBanner();if(!banner)return;
+    const index=banner.slots.findIndex(slot=>slot.id===activeSlotId);
+    if(index>=0&&index<banner.slots.length-1)selectScene(banner.slots[index+1].id);
+  });
   function closeMenu(){menu.classList.remove("open");contextId=null}
   function render(){
     canvas.style.height=bandHeight+"px";
@@ -250,7 +413,7 @@ header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-
       if(e.id===selectedId) addHandles(el,e);
       canvas.appendChild(el);
     });
-    renderLayers();renderProperties();
+    renderLayers();renderProperties();renderSceneControls();renderSceneLinks();
     $("heightValue").textContent=String(bandHeight);$("heightInput").value=String(bandHeight);
     $("canvasSize").textContent="Band: "+Math.round(canvas.clientWidth)+" × "+bandHeight+" px preview";
     $("undoBtn").disabled=!removed;
