@@ -343,3 +343,16 @@ The local Python API and its tests are implemented. This is evidence that the do
 **IF integrated:** the Python domain/persistence implementation and visual editor work together locally with explicit save/load state, recoverable local drafts, and stale-write protection while preserving the production-site boundary.
 
 **IF not integrated:** the editor remains disconnected and non-persistent; the Python API could pass API tests without proving it can support the actual banner-editing workflow.
+
+
+### Expanded browser verification update (2026-10-20)
+
+The local Python/editor integration was tested in actual headless Chrome through a GitHub-hosted runner without adding a browser-testing package. The passing smoke test covers draft load, edit, save, reload, keyboard movement, real pointer move, east resize handle, lower-border band resize, stale-write conflict preservation, confirmed recovery, and a 390px viewport overflow assertion. The band-height drag changed the measured height from 120px to 140px. Evidence: https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39336175307 on code commit 9ffc6226edd9a87d8a31d68875c6dfb71e93452f.
+
+The test harness initially failed to inspect the lower-edge interaction correctly because its coordinates were below the browser's visible viewport. This was identified from recorded dimensions and fixed by scrolling the control into view before real pointer input; no product behavior was changed to satisfy the test.
+
+Browser smoke testing is PASS for the listed scenarios only. This does not certify full accessibility, all pointer/keyboard paths, high-zoom/responsive behavior beyond the tested 390px width, performance, authentication, network deployment, or production publishing.
+
+**IF added:** direct canvas movement, element resizing, and band-height resizing have independent real-browser evidence, making the single-scene editor baseline more defensible before adding carousel state.
+
+**IF not added:** future carousel implementation would build on editor interactions that were only statically inspected or keyboard-smoke-tested, increasing the risk of extending a defective canvas interaction.
