@@ -162,3 +162,32 @@ Do not generate a separate codebase or one-off editor implementation for every n
 ### Status and evidence
 
 This addendum records owner direction and implementation decisions to guide future work. It does not claim that the dashboard, section editor, component registry, link handling, authentication, persistence, scheduling, or publishing has been implemented or browser-tested.
+
+
+## 14. Admin dashboard is a home for multiple administration capabilities (owner discussion, 2026-10-20)
+
+### Dashboard information architecture
+
+The AstroCrown Admin Dashboard is a broader administration landing page; it must not be reduced to, or immediately display, the list of pages. Present capabilities as clearly named dashboard cards or equivalent accessible navigation tiles. The Page Editor is one capability among other current or future administration functions.
+
+- The **Page Editor** card opens the list of pages the signed-in administrator is authorized to manage.
+- Selecting a page from that list opens the page-layout editor for that page.
+- Other dashboard cards may be added when there is an actual project need and defined access model. Their presence in the design does not imply that those tools or backends already exist.
+- Show only capabilities appropriate to the user's authorization. Protect every underlying route and operation server-side; UI visibility alone is not authorization.
+- Keep the first implementation proportionate: do not invent or implement unrelated dashboard modules simply to fill the landing page. Clearly identify planned or unavailable capabilities rather than presenting them as operational.
+
+### Flow
+
+Admin sign-in and authorization → Admin Dashboard landing page → select **Page Editor** → authorized page list → select a page → page-layout editor → select a section/component → contextual section properties or the appropriate specialized component editor.
+
+The announcement-band editor remains the immediate priority. The dashboard card and page list are a subsequent navigation layer and must not delay browser verification or destabilize the existing banner-editor foundation.
+
+### Impact Analysis
+
+**IF modified:** The dashboard can grow to accommodate multiple administration responsibilities while making page editing an explicit, discoverable tool rather than the only assumed purpose of the whole admin system.
+
+**IF not modified:** Page selection could become the dashboard's entire initial screen, making later admin capabilities harder to organize and encouraging a navigation restructure when new capabilities are introduced.
+
+### Status
+
+This records the intended information architecture only. It does not claim that a dashboard landing page, cards, page list, authentication, authorization, or other admin modules have been implemented.
