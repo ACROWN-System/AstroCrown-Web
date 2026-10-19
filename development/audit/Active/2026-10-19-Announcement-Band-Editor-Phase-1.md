@@ -369,3 +369,21 @@ Evidence on code commit \`44cc8a28cb09ed32904d78573ec1bfa9bbffac3b\`: [Banner Ba
 **IF not added:** the Python state model could carry multiple slots and links but the editor would not expose or reliably preserve the intended per-scene workflow.
 
 The next scoped increment is the banner scheduling UI. Schedule records reference banner definitions, whereas carousel slots are scenes within a banner; do not conflate those IDs. The scheduling form should implement Open + optional Close and the explicit confirm/add-close/cancel dialog for an open-ended default transition. Production activation, authentication, remote hosting and publishing remain separate future work.
+
+
+### Banner scheduling interface — verification update (2026-10-20)
+
+The editor now includes a separate **Banner Schedule & Calendar** area. It provides a selector for banner definitions, a new-banner action, Open and optional Close date/time fields, detected time-zone display, a saved-draft agenda, and removal of entries from the local draft. This keeps schedule references at banner level rather than confusing them with carousel scenes.
+
+When Close is absent, the custom dialog offers three distinct choices:
+1. **Confirm and set as default** — adds an open-ended schedule with explicit confirmation.
+2. **Add a closing time** — returns to the form with Close enabled/focused, without adding a schedule yet.
+3. **Cancel** — makes no schedule change.
+
+The schedule is persisted only when the administrator selects Save draft. No live publishing or automatic activation is connected.
+
+Evidence: [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39337759434) on tested code commit \`06ce67cd09f6c4f7b089becf0283931cf7fd7bf2\`. The run passed Python compilation, inline JavaScript syntax, 24 standard-library tests, and real Chrome checks of temporary scheduling, all three open-ended confirmation branches, save/reload, carousel/link behavior, pointer interactions, stale-write conflicts, and 390px layout.
+
+**IF added:** the admin can now model temporary announcements and future default changes through the actual editor, while keeping schedule records separate from carousel scenes and preserving the draft-only boundary.
+
+**IF not added:** schedule validation existed only in Python; the admin could not configure time-based banner behavior through the editor.

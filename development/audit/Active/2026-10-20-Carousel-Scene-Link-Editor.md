@@ -76,6 +76,7 @@ Implemented on the development PR branch and verified on code/test commit `44cc8
 - [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39337306876): Python compile, editor JavaScript syntax, 24 standard-library unit/API tests, and the real Chrome smoke test all passed.
 - The browser test validates independent per-scene link checkboxes and URL values, link-off clearing/hiding, the exact four-direction cycle, keyboard Enter activation of Direction, adding/deleting a scene, saving both slots/links/direction, and the existing load/save/reload/conflict/pointer/resize/390px checks.
 - The scene control is intentionally a composition-authoring control only. Direction is persisted as a transition setting; automatic carousel playback/rendering remains unimplemented.
-- Authentication, remote deployment, scheduling UI, production publishing, and full accessibility/performance conformance remain NOT IMPLEMENTED or NOT YET VERIFIED.
+- Authentication, remote deployment and production publishing remain NOT IMPLEMENTED; full accessibility/performance conformance is NOT YET VERIFIED.
+- The separate banner scheduling interface has since been added under the schedule plan. It references banner definitions, not scene slots, and continues to be draft-only.
 
 This is a local development feature, not production readiness.

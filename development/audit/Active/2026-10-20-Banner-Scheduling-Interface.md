@@ -1,7 +1,7 @@
 # Active Navigation Plan — Banner Scheduling Interface
 
 **Date:** 2026-10-20  
-**Status:** ACTIVE — next scoped increment after carousel verification  
+**Status:** IMPLEMENTED — automated and real-browser verification PASS; production activation remains out of scope  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Working branch:** admin/announcement-band-editor-phase-1  
 **Parent plan:** development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md  
@@ -77,4 +77,14 @@ The expected development/NAVIGATION-PROTOCOL.md and development/NAVIGATION-PLAN-
 
 ## 9. Status
 
-No scheduling form/agenda UI, banner selector, or confirmation dialog has been implemented by creation of this plan. This is the next scoped increment.
+Implemented on the development PR branch and verified on code commit `06ce67cd09f6c4f7b089becf0283931cf7fd7bf2`.
+
+- [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39337759434): Python compile, inline editor JavaScript syntax, 24 standard-library unit/API tests, and real headless Chrome tests passed.
+- Browser evidence covers creation and naming of a new banner definition, temporary Open/Close scheduling, no-Close dialog appearing without mutating schedule data before confirmation, confirm-and-set-default, Add a closing time returning to the form, Cancel leaving schedules unchanged, save/reload, and retention of the banner/schedule relationship.
+- The schedule form uses the browser's native date/time picker and displays the detected IANA/browser time zone. Local date/time values are converted to ISO 8601 timestamps with explicit UTC offsets. The adjacent agenda lists scheduled entries and can remove entries from the local draft.
+- The backend remains authoritative for schedule schema, time-zone offsets, close-after-open, schedule/banner references, temporary overlap rejection, and open-ended default-change confirmation.
+- Schedule records reference banner IDs, not carousel slot IDs. Multiple-scene compositions and each scene's independent link settings remain intact.
+- The interface saves only a local draft. There is no production activation scheduler, no public banner delivery integration, no authentication, and no remote hosting.
+- Browser smoke verification is limited to the listed scenarios and a 390px viewport check. It is not a full accessibility/performance audit or production security acceptance.
+
+The schedule UI is implemented and smoke-tested as local draft behavior. It must not be described as automatically updating the live homepage yet.
