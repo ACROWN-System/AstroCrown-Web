@@ -98,10 +98,22 @@ class BannerAPITests(unittest.TestCase):
             response.close()
             self.fail("unexpected Host header should be rejected")
 
-    def test_root_explains_editor_is_not_connected(self) -> None:
+    def test_editor_route_serves_html_from_same_origin(self) -> None:
+        response = urlopen(self.base + "/admin/banner-editor", timeout=3)
+        with response:
+            self.assertEqual(response.status, 200)
+            self.assertIn("text/html", response.headers.get("Content-Type", ""))
+            self.assertEqual(response.headers.get("Cache-Control"), "no-store")
+            html = response.read().decode("utf-8")
+        self.assertIn("AstroCrown — Announcement Band Editor", html)
+        self.assertIn('fetch("/api/state"', html)
+        self.assertIn("Save draft", html)
+
+    def test_root_explains_local_editor_route_and_security_boundary(self) -> None:
         status, body, _ = self.request_json("/")
         self.assertEqual(status, 200)
-        self.assertIn("not connected", body["message"])
+        self.assertEqual(body["editor_path"], "/admin/banner-editor")
+        self.assertIn("Authentication is not implemented", body["message"])
         self.assertFalse(body["production_ready"])
 
 

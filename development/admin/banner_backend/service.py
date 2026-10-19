@@ -49,7 +49,25 @@ def initial_state() -> dict[str, Any]:
                         "id": "slot-1",
                         "add_link": False,
                         "destination_url": "",
-                        "composition": {},
+                        "composition": {
+                            "band_height": 120,
+                            "band_color": "#10243b",
+                            "elements": [
+                                {
+                                    "id": 1,
+                                    "type": "text",
+                                    "name": "Announcement message",
+                                    "text": "AstroCrown · Discovery and opportunities",
+                                    "x": 4,
+                                    "y": 25,
+                                    "w": 62,
+                                    "h": 48,
+                                    "color": "#e8f1ff",
+                                    "font": 16,
+                                    "hidden": false
+                                }
+                            ]
+                        },
                     }
                 ],
             }
