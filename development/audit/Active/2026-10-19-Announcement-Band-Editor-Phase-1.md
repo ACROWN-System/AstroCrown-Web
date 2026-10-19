@@ -112,3 +112,53 @@ No production promotion is authorized by this plan.
 - [ ] Implement the first basic local-draft editing workflow.
 - [ ] Add and run targeted verification; record limitations and evidence.
 - [ ] Open a review PR only after the scoped increment is ready.
+
+
+## 13. Page dashboard and reusable component-editor direction (owner discussion, 2026-10-20)
+
+### Preserved direction
+
+The near-term goal remains a high-quality, easy-to-use announcement-band editor for the AstroCrown homepage. The broader dashboard idea should shape clean boundaries, but must not destabilize or overcomplicate the current editor.
+
+The intended longer-term administration flow is:
+
+1. An authenticated, authorized administrator enters a private admin dashboard.
+2. The dashboard presents the pages the administrator is allowed to manage; the homepage is the first and current priority.
+3. Selecting a page opens a page-layout view showing the page's named sections and the spaces between them.
+4. Selecting a section highlights its start, middle/content region, and end in the canvas and loads the section's name and applicable layout properties in a contextual sidebar.
+5. Section properties may include spacing values in CSS pixels with direct increment/decrement controls; whether top/bottom spacing and the middle/content region need independent controls must be specified and verified before implementation.
+6. An “Add element” control reveals the available element types. Any layout-division option should appear only when enabled, with understandable pattern choices and a live preview.
+7. Adding a component creates a configured instance in the selected section. For example, adding an announcement banner exposes an action to open the existing banner editor for that specific instance.
+
+### Reuse rule
+
+Do not generate a separate codebase or one-off editor implementation for every new element. Use a small component-type registry or equivalent explicit mapping from a component type to its configuration and specialized editor. Reuse the same banner editor for each banner instance while maintaining independent data for each instance. A component without a supported editor must be clearly marked unsupported rather than silently receiving an incorrect editor.
+
+### Banner behavior preserved
+
+- The banner editor remains specialized for visual composition, band dimensions, its own carousel slots, and its schedule.
+- Each existing carousel slot has exactly one optional “[ ] Add link” control; selecting it reveals that slot's Destination URL field. Each slot's URL is independent. Adding a slot adds a corresponding link setting; removing a slot must not transfer its settings to another slot.
+- If a scheduled banner has both Open and Close times, it is a temporary banner and the applicable default resumes at Close.
+- If no Close time is entered, show a confirmation dialog before scheduling: confirm to make the banner the new default at its Open time, or return to add a Close time; cancellation makes no schedule change.
+- The administrator interface and unpublished drafts remain private. A published banner may be public content and may link to a destination page; authorization for any operation on that destination is enforced by the destination, not by the banner.
+- The production admin route must not be exposed to unauthorized users. Production access requires real authentication and server-side authorization; an obscure URL, hidden link, or client-side-only gate is not security.
+- Public banner delivery and link navigation are distinct from the private editing interface.
+
+### Implementation sequence
+
+1. Keep PR #140's current scope as the banner-editor foundation. Establish browser-based interaction, keyboard, responsive, and visual evidence before expanding its feature scope. Any unavailable browser verification stays BLOCKED.
+2. Correct root causes and stabilize the banner editor, preserving the explicit development-only/non-persistent boundary.
+3. In a subsequent scoped increment, introduce the smallest useful dashboard/page-selection shell and a homepage page-layout view. Avoid implementing a fully generic multi-page builder at this stage.
+4. Add section selection and spacing controls only after the page layout is accurately represented and the expected start/middle/end geometry is validated.
+5. Add the “Add element” flow and component-type mapping; wire the banner component to the reusable banner editor.
+6. Add persistent schedule and production access/publishing only under separate backend, security, and verification plans. Do not imply the current local-only prototype provides these capabilities.
+
+### Impact Analysis
+
+**IF modified:** The editor can evolve from a focused homepage tool into a page-aware dashboard without requiring bespoke editors for every component. The stepwise boundary preserves usability and allows the banner editor to be proven before adding page-level complexity.
+
+**IF not modified:** The page-selector, section-spacing, and component-to-editor relationship could be improvised later, causing duplicated editors, inconsistent property panels, or a disruptive rewrite when additional homepage elements need editing.
+
+### Status and evidence
+
+This addendum records owner direction and implementation decisions to guide future work. It does not claim that the dashboard, section editor, component registry, link handling, authentication, persistence, scheduling, or publishing has been implemented or browser-tested.
