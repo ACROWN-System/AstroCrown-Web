@@ -1,7 +1,7 @@
 # Active Navigation Plan — Python Banner Editor Integration
 
 **Date:** 2026-10-20  
-**Status:** IMPLEMENTED — automated verification PASS; browser verification BLOCKED  
+**Status:** COMPLETED — automated verification and defined real-browser smoke tests PASS; production readiness remains BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Working branch:** admin/announcement-band-editor-phase-1  
 **Parent objective:** development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md
@@ -72,6 +72,8 @@ Automated verification on code commit `c057c781dc0ea3a6f539612779f78e56059917d3`
 - An earlier run on `acadc7e85de92255356bd48900eb6d44f26ea0f7` failed in 20 of 21 tests because the new Python initial-state seed used JSON's lowercase `false` as a Python name. Root cause was corrected to Python's `False`; the Python suite then passed. This demonstrates why compile-only checks are insufficient for runtime behavior.
 - A documentation-only plan update follows the verified code commit; final workflow status must be checked on the resulting PR head as well.
 
-Browser-level visual, pointer, keyboard, responsive, offline/error and actual save/reload checks remain BLOCKED pending a real browser run. Authentication/authorization, remote deployment, backups/recovery rehearsal, and production publishing remain NOT IMPLEMENTED.
+Real-browser verification on the current tested code commit 9ffc6226edd9a87d8a31d68875c6dfb71e93452f passed through GitHub-hosted headless Chrome without adding a browser package. The test exercised load, edit, save, reload, keyboard movement, real pointer drag-to-move, the east element resize handle, lower-border band resizing, stale-write conflict preservation, confirmed recovery, and a 390px viewport overflow check. The measured band height changed from 120px to 140px. Evidence: https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39336175307.
 
-This status does not claim that production or browser acceptance has passed.
+Earlier browser smoke failures were investigated: first the CDP test helper read a nested result incorrectly; then the lower-edge interaction was below the browser's visible viewport. The helper was fixed, the test scrolled the control into view, and reruns passed. These were test-harness issues rather than reasons to change product behavior.
+
+Authentication/authorization, remote deployment, backups/recovery rehearsal, and production publishing remain NOT IMPLEMENTED. The browser smoke test does not certify full accessibility, all keyboard paths, all responsive sizes/high zoom, performance, network security, or production acceptance.
