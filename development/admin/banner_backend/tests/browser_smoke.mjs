@@ -253,8 +253,8 @@ try {
   ], "Direction must follow the exact four-step cycle");
 
   await evaluate("document.getElementById('directionBtn').focus();true");
-  await cdp("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
-  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", unmodifiedText: "\r", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: top to bottom", "Direction control should work with the keyboard");
   for (let index = 0; index < 3; index++) await evaluate("document.getElementById('directionBtn').click()");
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left to right");
