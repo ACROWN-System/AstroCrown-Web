@@ -286,6 +286,68 @@ try {
   assert.equal(await evaluate("document.getElementById('sceneCounter').textContent"), "1 / 2");
   assert.equal(await evaluate("document.getElementById('elementText').value"), "Browser persistence verified");
 
+  // Test banner creation, temporary scheduling, no-close confirmation branches, and save/load.
+  await evaluate("document.getElementById('newBannerBtn').click()");
+  assert.equal(await evaluate("document.getElementById('bannerSelect').value"), "banner-1");
+  assert.equal(await evaluate("document.getElementById('scheduleBannerSelect').value"), "banner-1");
+  await evaluate("(()=>{const n=document.getElementById('bannerName');n.value='ACROWN Release Event';n.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("(()=>{const o=document.getElementById('scheduleOpenAt');o.value='2026-11-05T18:00';o.dispatchEvent(new Event('change',{bubbles:true}));const c=document.getElementById('scheduleCloseEnabled');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));const e=document.getElementById('scheduleCloseAt');e.value='2026-11-05T21:00';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("document.getElementById('addScheduleBtn').click()");
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 1, "temporary schedule should be added");
+  assert.equal(await evaluate("document.querySelector('.schedule-item .pill').textContent"), "TEMPORARY");
+
+  // Leaving Close blank must open confirmation and must not mutate schedule data yet.
+  await evaluate("(()=>{const c=document.getElementById('scheduleCloseEnabled');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}));const o=document.getElementById('scheduleOpenAt');o.value='2026-11-06T18:00';o.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("document.getElementById('addScheduleBtn').click()");
+  assert.equal(await evaluate("document.getElementById('openEndedScheduleDialog').hidden"), false);
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 1, "open-ended schedule must not be added before confirmation");
+  await evaluate("document.getElementById('confirmDefaultScheduleBtn').click()");
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 2);
+  assert.equal(await evaluate("Array.from(document.querySelectorAll('.schedule-item .pill')).some(p=>p.textContent==='NEW DEFAULT')"), true);
+
+  // Choosing Add a closing time returns to the form and still does not create a schedule.
+  await evaluate("(()=>{const o=document.getElementById('scheduleOpenAt');o.value='2026-11-07T18:00';o.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("document.getElementById('addScheduleBtn').click()");
+  assert.equal(await evaluate("document.getElementById('openEndedScheduleDialog').hidden"), false);
+  await evaluate("document.getElementById('addScheduleCloseBtn').click()");
+  assert.equal(await evaluate("document.getElementById('scheduleCloseEnabled').checked"), true);
+  assert.equal(await evaluate("document.getElementById('scheduleCloseField').hidden"), false);
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 2);
+  await evaluate("(()=>{const e=document.getElementById('scheduleCloseAt');e.value='2026-11-07T20:00';e.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("document.getElementById('addScheduleBtn').click()");
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 3);
+
+  // Cancel is a no-op.
+  await evaluate("(()=>{const c=document.getElementById('scheduleCloseEnabled');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}));const o=document.getElementById('scheduleOpenAt');o.value='2026-11-08T18:00';o.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("document.getElementById('addScheduleBtn').click()");
+  assert.equal(await evaluate("document.getElementById('openEndedScheduleDialog').hidden"), false);
+  await evaluate("document.getElementById('cancelOpenEndedScheduleBtn').click()");
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 3, "cancel must leave schedules unchanged");
+  assert.match(await evaluate("document.getElementById('scheduleFeedback').textContent"), /No schedule change was made/);
+
+  await evaluate("document.getElementById('saveDraftBtn').click()");
+  await waitFor("banner schedule save", async () => {
+    const text = await evaluate("document.getElementById('saveStatus').textContent");
+    return text.includes("Draft saved on this computer. Not published.");
+  });
+  const schedulesResponse = await fetch(base + "/api/state");
+  const schedulesSaved = await schedulesResponse.json();
+  const eventBanner = schedulesSaved.state.banners.find(item => item.id === "banner-1");
+  assert.equal(eventBanner.name, "ACROWN Release Event");
+  assert.equal(schedulesSaved.state.schedules.length, 3);
+  assert.equal(schedulesSaved.state.schedules[0].banner_id, "banner-1");
+  assert.notEqual(schedulesSaved.state.schedules[0].closes_at, null);
+  assert.equal(schedulesSaved.state.schedules.some(item => item.closes_at === null && item.confirmed_default_change === true), true);
+  await cdp("Page.reload", { ignoreCache: true });
+  await waitForPageReady();
+  assert.equal(await evaluate("document.getElementById('scheduleBannerSelect').options.length"), 2, "scheduled banner should survive reload");
+  assert.equal(await evaluate("document.querySelectorAll('.schedule-item').length"), 3, "all saved schedules should survive reload");
+
+  // Return to the default banner for the stale-write conflict test below.
+  await evaluate("(()=>{const s=document.getElementById('bannerSelect');s.value='regular';s.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  assert.equal(await evaluate("document.getElementById('bannerSelect').value"), "regular");
+  assert.equal(await evaluate("document.getElementById('elementText').value"), "Browser persistence verified");
+
   // Simulate another editor saving after this tab loaded its revision.
   await evaluate("(()=>{const f=document.getElementById('elementText');f.value='Local edit kept after conflict';f.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   const currentResponse = await fetch(base + "/api/state");
@@ -321,7 +383,7 @@ try {
   assert.equal(viewport.innerWidth, 390, "narrow viewport was not applied");
   assert.ok(viewport.scrollWidth <= 391, "page should not overflow horizontally at 390px: " + JSON.stringify(viewport));
   await cdp("Emulation.clearDeviceMetricsOverride");
-  console.log("PASS: real Chrome verified canvas pointer movement/resizing, band height drag, save/reload/conflict recovery, carousel scene lifecycle, independent links, direction cycle and keyboard activation, and 390px layout.");
+  console.log("PASS: real Chrome verified canvas pointer movement/resizing, band height drag, save/reload/conflict recovery, carousel scene lifecycle, independent links, direction cycle and keyboard activation, banner scheduling, all open-ended confirmation branches, and 390px layout.");
 } finally {
   try { socket?.close(); } catch {}
   for (const child of [browser, server]) {
