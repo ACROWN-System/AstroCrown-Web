@@ -57,7 +57,7 @@ async function evaluate(expression) {
   if (response.exceptionDetails) {
     throw new Error(response.exceptionDetails.text || "Browser JavaScript evaluation failed");
   }
-  return response.result?.result?.value;
+  return response.result?.value;
 }
 async function waitForPageReady() {
   await waitFor("saved banner draft to load", async () => {
