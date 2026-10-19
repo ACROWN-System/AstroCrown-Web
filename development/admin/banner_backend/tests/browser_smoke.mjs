@@ -184,6 +184,61 @@ try {
     return text.includes("Draft saved on this computer. Not published.");
   });
 
+  // Add a second scene and verify each scene's link setting is independent.
+  assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left-to-right");
+  await evaluate("document.getElementById('addSceneBtn').click()");
+  assert.equal(await evaluate("document.getElementById('sceneCounter').textContent"), "2 / 2");
+  assert.equal(await evaluate("document.querySelectorAll('.scene-link-row').length"), 2);
+  await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-1\"]');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  assert.equal(await evaluate("document.querySelector('[data-scene-link-url=\"slot-1\"]').parentElement.hidden"), false);
+  await evaluate("(()=>{const u=document.querySelector('[data-scene-link-url=\"slot-1\"]');u.value='/releases';u.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-2\"]');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  await evaluate("(()=>{const u=document.querySelector('[data-scene-link-url=\"slot-2\"]');u.value='https://example.org/special';u.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  const linkSettings = JSON.parse(await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.scene-link-row')).map(r=>({id:r.dataset.sceneId,enabled:r.querySelector('input[type=checkbox]').checked,urlVisible:!r.querySelector('input[type=url]').parentElement.hidden,url:r.querySelector('input[type=url]').value})))"));
+  assert.deepEqual(linkSettings, [
+    {id:"slot-1",enabled:true,urlVisible:true,url:"/releases"},
+    {id:"slot-2",enabled:true,urlVisible:true,url:"https://example.org/special"}
+  ], "each scene must retain its own Add link setting and destination");
+
+  const directions = [];
+  for (let index = 0; index < 4; index++) {
+    await evaluate("document.getElementById('directionBtn').click()");
+    directions.push(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"));
+  }
+  assert.deepEqual(directions, [
+    "Direction: top-to-bottom",
+    "Direction: right-to-left",
+    "Direction: bottom-to-top",
+    "Direction: left-to-right"
+  ], "Direction must follow the exact four-step cycle");
+
+  await evaluate("document.getElementById('addSceneBtn').click()");
+  assert.equal(await evaluate("document.getElementById('sceneCounter').textContent"), "3 / 3");
+  assert.equal(await evaluate("document.querySelectorAll('.scene-link-row').length"), 3);
+  await evaluate("window.confirm=()=>true;document.getElementById('deleteSceneBtn').click();true");
+  assert.equal(await evaluate("document.getElementById('sceneCounter').textContent"), "2 / 2");
+  assert.equal(await evaluate("document.querySelectorAll('.scene-link-row').length"), 2);
+
+  await evaluate("document.getElementById('saveDraftBtn').click()");
+  await waitFor("carousel scene save", async () => {
+    const text = await evaluate("document.getElementById('saveStatus').textContent");
+    return text.includes("Draft saved on this computer. Not published.");
+  });
+  const carouselResponse = await fetch(base + "/api/state");
+  const carouselSaved = await carouselResponse.json();
+  const carouselBanner = carouselSaved.state.banners.find(item => item.id === carouselSaved.state.default_banner_id);
+  assert.equal(carouselBanner.carousel_direction, "left-to-right");
+  assert.equal(carouselBanner.slots.length, 2);
+  assert.equal(carouselBanner.slots[0].add_link, true);
+  assert.equal(carouselBanner.slots[0].destination_url, "/releases");
+  assert.equal(carouselBanner.slots[1].add_link, true);
+  assert.equal(carouselBanner.slots[1].destination_url, "https://example.org/special");
+
+  // Return to the first scene for the stale-write conflict test below.
+  await evaluate("document.getElementById('prevSceneBtn').click()");
+  assert.equal(await evaluate("document.getElementById('sceneCounter').textContent"), "1 / 2");
+  assert.equal(await evaluate("document.getElementById('elementText').value"), "Browser persistence verified");
+
   // Simulate another editor saving after this tab loaded its revision.
   await evaluate("(()=>{const f=document.getElementById('elementText');f.value='Local edit kept after conflict';f.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   const currentResponse = await fetch(base + "/api/state");
