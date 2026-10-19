@@ -322,3 +322,22 @@ The Python runtime and local HTTP API are proven to execute in a local test envi
 ### Status
 
 The local Python API and its tests are implemented. This is evidence that the domain logic and local HTTP service are feasible in Python; it is not evidence that a production deployment is complete, that the frontend is integrated, or that authorization/security requirements are met.
+
+
+### Frontend/API integration update (2026-10-20)
+
+- The Python server serves the development-only editor at \`/admin/banner-editor\` on the same loopback origin as \`/api/state\`, avoiding \`file://\` fetch/CORS issues for the local integration.
+- The editor now loads the saved default banner composition on startup and has explicit **Save draft** / **Reload saved draft** controls with a live status message.
+- Content/property updates, visibility, layer order, band base color/height, pointer movement/resizing, deletion, and undo mark the composition unsaved. Reload prompts before discarding local changes.
+- Save uses the last-read revision. A stale write receives HTTP 409; in-page edits remain intact and another save is disabled until the administrator reloads and reviews the newer stored version.
+- Save replaces the current default banner's first-slot composition while retaining the rest of the state document, including other banner records, slot link flags/URLs, and schedules.
+- The initial local JSON state includes the same starter text element shown by the visual editor.
+- Two HTTP test cases cover the served editor route and the root route's explicit not-production-ready boundary. The suite now contains 21 tests, plus Node's inline JavaScript syntax check in CI.
+- The Python API remains unauthenticated and bound to 127.0.0.1 only. The integration does not add production publishing, remote hosting, or public homepage changes.
+- Browser verification remains BLOCKED until a real browser run demonstrates UI rendering, save/load, conflict prompts, keyboard and responsive behavior. Passing automated tests do not establish browser or production acceptance.
+
+### Updated Impact Analysis
+
+**IF integrated:** the Python domain/persistence implementation and visual editor work together locally with explicit save/load state, recoverable local drafts, and stale-write protection while preserving the production-site boundary.
+
+**IF not integrated:** the editor remains disconnected and non-persistent; the Python API could pass API tests without proving it can support the actual banner-editing workflow.

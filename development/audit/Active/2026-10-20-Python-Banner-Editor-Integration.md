@@ -1,7 +1,7 @@
 # Active Navigation Plan — Python Banner Editor Integration
 
 **Date:** 2026-10-20  
-**Status:** ACTIVE — local editor/API integration  
+**Status:** IMPLEMENTED — automated verification pending; browser verification BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Working branch:** admin/announcement-band-editor-phase-1  
 **Parent objective:** development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md
@@ -52,6 +52,17 @@ The expected development/NAVIGATION-PROTOCOL.md and development/NAVIGATION-PLAN-
 
 **IF not modified:** the visual editor remains disconnected and non-persistent while the Python API is tested in isolation; the project cannot yet verify a complete save/reload workflow or a realistic frontend/API failure experience.
 
-## 7. Status at plan creation
+## 7. Verification status
 
-All integration requirements are pending. This plan does not claim that frontend/API integration, browser testing, authentication, deployment, or production scheduling already exists.
+Implemented in the development branch:
+
+- The Python server serves the editor at `/admin/banner-editor` on the same loopback origin as the API.
+- The editor loads the persisted default-banner composition and provides explicit Save draft and Reload saved draft controls.
+- Changes to content/properties, visibility, order, band base color/height, pointer movement/resizing, deletion, and undo mark the draft unsaved.
+- Reload asks before discarding edits. Save uses the loaded revision. A stale revision (HTTP 409) preserves current in-page changes and requires reload before another write.
+- Saving updates only the default banner's first slot composition while preserving other banner records, slot link settings, and schedules.
+- The server remains loopback-only, and production readiness/authentication are explicitly false/not implemented.
+
+Automated verification is pending for the exact updated commit. The workflow now runs Python compilation, the standard-library unit/HTTP suite, and a Node syntax check of the inline JavaScript. Browser-level visual, pointer, keyboard, responsive, offline/error and actual save/reload checks remain BLOCKED pending a real browser run. Authentication/authorization, remote deployment, backups/recovery rehearsal, and production publishing remain NOT IMPLEMENTED.
+
+This status does not claim that production or browser acceptance has passed.
