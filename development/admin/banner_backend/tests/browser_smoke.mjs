@@ -200,6 +200,12 @@ try {
     {id:"slot-2",enabled:true,urlVisible:true,url:"https://example.org/special"}
   ], "each scene must retain its own Add link setting and destination");
 
+  // Disabling a scene's link must hide and clear only that scene's destination.
+  await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-1\"]');c.checked=false;c.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+  const linkOff = JSON.parse(await evaluate("JSON.stringify((()=>{const r=document.querySelector('.scene-link-row[data-scene-id=\"slot-1\"]');return {enabled:r.querySelector('input[type=checkbox]').checked,hidden:r.querySelector('input[type=url]').parentElement.hidden,url:r.querySelector('input[type=url]').value}})())"));
+  assert.deepEqual(linkOff,{enabled:false,hidden:true,url:""},"turning Add link off must hide and clear the URL");
+  await evaluate("(()=>{const c=document.querySelector('[data-scene-link-toggle=\"slot-1\"]');c.checked=true;c.dispatchEvent(new Event('change',{bubbles:true}));const u=document.querySelector('[data-scene-link-url=\"slot-1\"]');u.value='/releases';u.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
+
   const directions = [];
   for (let index = 0; index < 4; index++) {
     await evaluate("document.getElementById('directionBtn').click()");
@@ -211,6 +217,13 @@ try {
     "Direction: bottom to top",
     "Direction: left to right"
   ], "Direction must follow the exact four-step cycle");
+
+  await evaluate("document.getElementById('directionBtn').focus();true");
+  await cdp("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+  assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: top to bottom", "Direction control should work with the keyboard");
+  for (let index = 0; index < 3; index++) await evaluate("document.getElementById('directionBtn').click()");
+  assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left to right");
 
   await evaluate("document.getElementById('addSceneBtn').click()");
   assert.equal(await evaluate("document.getElementById('sceneCounter').textContent"), "3 / 3");
@@ -274,7 +287,7 @@ try {
   assert.equal(viewport.innerWidth, 390, "narrow viewport was not applied");
   assert.ok(viewport.scrollWidth <= 391, "page should not overflow horizontally at 390px: " + JSON.stringify(viewport));
   await cdp("Emulation.clearDeviceMetricsOverride");
-  console.log("PASS: real Chrome verified load, edit, save, reload, keyboard movement, stale-write conflict preservation, confirmed recovery, and 390px layout.");
+  console.log("PASS: real Chrome verified canvas pointer movement/resizing, band height drag, save/reload/conflict recovery, carousel scene lifecycle, independent links, direction cycle and keyboard activation, and 390px layout.");
 } finally {
   try { socket?.close(); } catch {}
   for (const child of [browser, server]) {
