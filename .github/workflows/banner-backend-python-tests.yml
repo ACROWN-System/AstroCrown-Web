@@ -6,6 +6,7 @@ on:
     paths:
       - "development/admin/banner_backend/**"
       - "development/audit/Active/2026-10-19-Announcement-Band-Editor-Phase-1.md"
+      - "development/audit/Active/2026-10-20-Python-Banner-Editor-Integration.md"
       - ".github/workflows/banner-backend-python-tests.yml"
   push:
     branches: [main]

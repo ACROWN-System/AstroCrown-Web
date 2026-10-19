@@ -12,9 +12,7 @@ From the repository root, use Python 3.10 or newer:
 
 The server binds only to 127.0.0.1. By default, the JSON state is stored in the current user's home directory at .astrocrown/banner-state.json. A different local path can be supplied using --data-file.
 
-Open http://127.0.0.1:8765/api/health to verify the local API is running. GET /api/state returns the state and its revision. PUT /api/state accepts a JSON object containing the revision last read and the replacement state. A stale revision returns HTTP 409 rather than overwriting newer state.
-
-This server does not yet serve or connect the visual editor. The root endpoint explains that limitation.
+Open http://127.0.0.1:8765/admin/banner-editor to use the visual editor served from the same origin as the Python API. The editor loads the saved default banner composition and shows its save status. “Save draft” writes the current composition to the local JSON file; “Reload saved draft” restores the saved version after warning before discarding unsaved edits. A stale revision returns HTTP 409 and the editor preserves its in-page edits rather than overwriting newer saved state. Open http://127.0.0.1:8765/api/health to verify the local API is running. GET /api/state returns the state and its revision. PUT /api/state accepts a JSON object containing the revision last read and the replacement state.
 
 ## What is implemented
 
@@ -38,4 +36,4 @@ A matching GitHub Actions workflow runs these checks for relevant pull requests 
 
 Authentication and authorization are not implemented. The API is not safe to expose beyond the local machine and is not production-ready. Do not deploy it or interpret the local Host check, lack of CORS, or obscure port as authentication. Before integration into a remotely accessible admin dashboard, implement and test trusted authentication, server-side authorization, CSRF and session protections, audit/recovery, persistent backups, and a provider-independent deployment plan.
 
-The current PR #140 visual editor remains a separate local in-memory prototype until a dedicated change connects it to this API. No public homepage, production publishing, account, wallet, or payment behavior is changed by this Python experiment.
+The visual editor now connects to this local API only when served by this Python process. The editor/API integration remains a development prototype: it has no authentication or authorization and is not safe for network exposure. No public homepage, production publishing, account, wallet, or payment behavior is changed by this experiment.
