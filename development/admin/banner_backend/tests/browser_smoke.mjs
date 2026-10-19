@@ -87,7 +87,7 @@ async function pressKey(key, shift = false) {
   const keyCode = key === "Tab" ? 9 : key === "Enter" ? 13 : 0;
   const down = { type: "keyDown", key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
   const up = { type: "keyUp", key, code, windowsVirtualKeyCode: keyCode, nativeVirtualKeyCode: keyCode };
-  if (key === "Enter") { down.text = "\\r"; down.unmodifiedText = "\\r"; }
+  if (key === "Enter") { down.text = "\r"; down.unmodifiedText = "\r"; }
   if (shift) { down.modifiers = 8; up.modifiers = 8; }
   await cdp("Input.dispatchKeyEvent", down);
   await cdp("Input.dispatchKeyEvent", up);
@@ -161,6 +161,12 @@ try {
 
   let initial = JSON.parse(await evaluate("JSON.stringify({text:document.getElementById('elementText').value,saveDisabled:document.getElementById('saveDraftBtn').disabled})"));
   assert.equal(initial.saveDisabled, true, "save should be disabled until there are unsaved changes");
+
+  const canvasSemantics = JSON.parse(await evaluate("JSON.stringify({count:document.querySelectorAll('.canvas-element').length,role:document.querySelector('.canvas-element')?.getAttribute('role')||null,handleCount:document.querySelector('.canvas-element')?.querySelectorAll('button.handle').length||0,label:document.querySelector('.canvas-element')?.getAttribute('aria-label')||''})"));
+  assert.ok(canvasSemantics.count > 0, "canvas must have a rendered element before checking resize control semantics");
+  assert.equal(canvasSemantics.role, "group", "canvas element containing resize buttons must not expose button semantics");
+  assert.equal(canvasSemantics.handleCount, 8, "all eight individually labelled resize buttons should remain available");
+  assert.match(canvasSemantics.label, /Width and Height fields/, "canvas element should announce keyboard/property alternatives");
 
   await evaluate("(()=>{const f=document.getElementById('elementText');f.value='Browser persistence verified';f.dispatchEvent(new Event('change',{bubbles:true}));return true})()");
   const dirty = JSON.parse(await evaluate("JSON.stringify({status:document.getElementById('saveStatus').textContent,saveDisabled:document.getElementById('saveDraftBtn').disabled})"));
@@ -266,11 +272,6 @@ try {
   await cdp("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", text: "\r", unmodifiedText: "\r", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
   await cdp("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13 });
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: top to bottom", "Direction control should work with the keyboard");
-  const canvasSemantics = JSON.parse(await evaluate("JSON.stringify({count:document.querySelectorAll('.canvas-element').length,role:document.querySelector('.canvas-element')?.getAttribute('role')||null,handleCount:document.querySelector('.canvas-element')?.querySelectorAll('button.handle').length||0,label:document.querySelector('.canvas-element')?.getAttribute('aria-label')||''})"));
-  assert.ok(canvasSemantics.count > 0, "canvas must have a rendered element before checking resize control semantics");
-  assert.equal(canvasSemantics.role, "group", "canvas element containing resize buttons must not expose button semantics");
-  assert.equal(canvasSemantics.handleCount, 8, "all eight individually labelled resize buttons should remain available");
-  assert.match(canvasSemantics.label, /Width and Height fields/, "canvas element should announce keyboard/property alternatives");
   for (let index = 0; index < 3; index++) await evaluate("document.getElementById('directionBtn').click()");
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left to right");
 
