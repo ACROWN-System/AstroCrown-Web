@@ -191,3 +191,36 @@ The announcement-band editor remains the immediate priority. The dashboard card 
 ### Status
 
 This records the intended information architecture only. It does not claim that a dashboard landing page, cards, page list, authentication, authorization, or other admin modules have been implemented.
+
+
+## 15. One account sign-in with role-gated workspace choice (owner proposal, 2026-10-20)
+
+### Proposed user experience
+
+Use the same normal AstroCrown account sign-in for both ordinary users and administrators. After successful authentication:
+
+- A normal account proceeds to its usual user experience and is never shown an Admin Account choice.
+- An account whose administrator role has been verified by the trusted authorization layer sees two workspace choices: **User Account** and **Admin Account**.
+- **User Account** opens the ordinary AstroCrown user experience, without the administration dashboard being exposed through user navigation.
+- **Admin Account** opens the private AstroCrown Admin Dashboard, whose cards may lead to Page Editor, announcement management, and other implemented administration capabilities.
+- Workspace selection is a navigation/context choice, not a permission grant. Selecting, guessing, or calling an admin URL must never grant privileges.
+
+### Mandatory security boundaries
+
+The administrator role must be determined by a trusted backend or identity/authorization source—not a client-side flag, local storage value, editable profile field, hidden link, or user-supplied route parameter. Every protected admin page and mutation must enforce authorization server-side. Unauthorized direct requests must not disclose protected page content or admin operations. Avoid revealing admin routes to ordinary users, but treat route obscurity only as an additional privacy measure, never as access control.
+
+An administrator using the User Account workspace still retains the identity and rights associated with their account, but admin-only operations must require the protected admin context and server-side permission checks. The precise session/mode model should be reviewed during authentication design to ensure the workspace switch cannot accidentally weaken authorization, CSRF protections, audit attribution, or session revocation.
+
+### Scope and sequence
+
+This is a proposed future production sign-in/dashboard behavior. The current PR #140 editor remains a local, in-memory development prototype with no authentication, persistence, or publishing; do not add a decorative/fake login to imply protection. First stabilize and verify the banner editor, then design and implement authentication/authorization under a separate plan before exposing any production admin route.
+
+### Impact Analysis
+
+**IF adopted:** administrators use one familiar account, can access their regular user experience, and receive an Admin Account entry only after verified authorization. This avoids duplicate identities and keeps admin navigation out of ordinary users' interfaces.
+
+**IF not adopted:** separate admin sign-in paths or accounts could create extra friction, duplicate identity management, or inconsistent access handling.
+
+### Status
+
+This records the owner's proposed access direction and its security constraints. It does not indicate authentication, role verification, workspace switching, or admin-route protection is implemented or tested.
