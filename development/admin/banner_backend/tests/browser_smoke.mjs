@@ -252,6 +252,29 @@ try {
     return text.includes("Draft saved on this computer. Not published.");
   });
 
+  // Verify keyboard focus survives layer visibility and order rerenders with real keyboard input.
+  await evaluate("document.querySelector('[data-add=\"shape\"]').focus();true");
+  await pressKey("Enter");
+  assert.equal(await evaluate("document.querySelectorAll('.canvas-element').length"), 2, "keyboard activation should add a second element for layer-order testing");
+  const shapeId = await evaluate("document.querySelector('.select-layer').dataset.layerElementId");
+  await evaluate("document.querySelector('[data-layer-element-id=\"" + shapeId + "\"][data-layer-action=\"visibility\"]').focus();true");
+  await pressKey("Enter");
+  assert.equal(await evaluate("document.activeElement.dataset.layerAction"), "visibility", "hiding an element should preserve focus on its regenerated visibility control");
+  assert.equal(await evaluate("document.activeElement.dataset.layerElementId"), shapeId);
+  await pressKey("Enter");
+  assert.equal(await evaluate("document.activeElement.dataset.layerAction"), "visibility", "showing an element should also preserve focus");
+  assert.equal(await evaluate("document.activeElement.dataset.layerElementId"), shapeId);
+
+  // Move the original element forward and then restore the original layer order.
+  await evaluate("document.querySelector('[data-layer-element-id=\"1\"][data-layer-action=\"order\"]').focus();true");
+  await pressKey("Enter");
+  assert.equal(await evaluate("document.activeElement.dataset.layerAction"), "order", "layer reordering should preserve focus");
+  assert.equal(await evaluate("document.activeElement.dataset.layerElementId"), "1");
+  await evaluate("document.querySelector('[data-layer-element-id=\"" + shapeId + "\"][data-layer-action=\"order\"]').focus();true");
+  await pressKey("Enter");
+  assert.equal(await evaluate("document.activeElement.dataset.layerAction"), "order", "restoring layer order should preserve focus");
+  assert.equal(await evaluate("document.activeElement.dataset.layerElementId"), shapeId);
+
   // Add a second scene and verify each scene's link setting is independent.
   assert.equal(await evaluate("document.getElementById('directionBtn').getAttribute('aria-label')"), "Direction: left to right");
   await evaluate("document.getElementById('addSceneBtn').click()");
