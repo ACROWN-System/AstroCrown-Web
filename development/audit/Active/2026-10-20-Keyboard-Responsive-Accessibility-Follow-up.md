@@ -1,75 +1,76 @@
-# Active Plan — Keyboard-Only and Responsive Accessibility Follow-up
+# Keyboard-Only and Responsive Accessibility Follow-up — Final Record
 
 **Date:** 2026-10-20  
-**Status:** AUDIT COMPLETE — remediation scoped for Block 5/5  
+**Status:** TARGETED FINDINGS CLOSED — exact-code CI and browser regressions PASS; comprehensive accessibility acceptance remains BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Branch:** admin/announcement-band-editor-phase-1  
 **PR:** #140  
-**Reviewed head:** 20d9ff5a98b2590e8dbedc7f658b39da1f855825  
-**Source baseline:** development/admin/announcement-band-editor.html  
-**Browser-test baseline:** development/admin/banner_backend/tests/browser_smoke.mjs
+**Verified code/test commit:** 55d3d105cf1902dced88e82c5089360c4a50adba  
+**Scope:** development/admin/announcement-band-editor.html and development/admin/banner_backend/tests/browser_smoke.mjs
 
-## 1. Objective
+## 1. Objective and scope
 
-Audit keyboard-only editing and responsive/high-zoom evidence after the targeted fixes to the calendar, canvas semantics, and scheduling confirmation dialog. Identify verified gaps without expanding the feature scope or claiming inaccessible behavior is covered by pointer-based smoke tests.
+Close the three source findings from the keyboard-only/responsive audit without expanding this development-only editor into an authenticated or publishable admin system. Preserve existing editor, carousel, schedule and draft-persistence behavior. Do not modify the root homepage or `_config.yml`.
 
-## 2. Navigation protocol limitation
+The expected `development/NAVIGATION-PROTOCOL.md` and `development/NAVIGATION-PLAN-TEMPLATE.md` were previously checked and were unavailable. This record does not claim to have followed those unavailable files. The available `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md` informed the evidence and retest record.
 
-The expected `development/NAVIGATION-PROTOCOL.md` and `development/NAVIGATION-PLAN-TEMPLATE.md` have previously been checked and were unavailable. Do not claim to have followed those unavailable files. Continue using `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`, the active banner editor plans, and this record.
+## 2. Findings and remediation
 
-## 3. Audit method
+### F-KEY-01 — Inert resize controls: CLOSED
 
-Reviewed the current editor's responsive CSS, dynamic rendering, keydown/pointer handlers, calendar controls, layer controls, scene-link controls, context menu and browser smoke assertions. The targeted accessibility tests pass on code/test commit `1c653d4d044d5ba4c6a84c18a164d1a18614dcc4`; the current later PR-head commit changes documentation only. This was a source/test-coverage audit, not a complete manual keyboard or assistive-technology session.
+**Observed:** the eight resize handles were tabbable native buttons with pointer-only behavior. Keyboard activation did not resize.
 
-## 4. Findings
+**Change:** resize handles are now non-focusable visual `div` affordances hidden from the accessibility tree. The canvas label points keyboard users to the labelled Width and Height property fields. Pointer drag resizing remains available.
 
-### PASS — Responsive foundations exist
+**Retest:** browser smoke asserts all eight handles remain present and are hidden from the accessibility tree, and that none introduces a button/tabindex focus stop. Existing pointer drag resizing passed. Keyboard dimension fields remain in the regular property form.
 
-- CSS breakpoint rules exist at 950px, 760px, 620px and 520px.
-- At 620px the main editor switches to one column; the scheduling layout switches to one column at 760px.
-- The canvas has a 280px minimum width inside a horizontally scrollable canvas wrapper, so narrow preview content can scroll within the canvas region.
-- Visible focus styling and reduced-motion preferences are present.
+### F-KEY-02 — Dynamic layer/link focus loss: CLOSED
 
-These observations confirm responsive mechanisms exist, not that every breakpoint or zoom mode has passed.
+**Observed:** layer controls and scene-link controls are regenerated on updates, which could discard the focused node.
 
-### FAIL — Resize handles are keyboard-focusable but activation is inert
+**Change:** layer selection, visibility and ordering handlers restore focus to the corresponding replacement control by stable element ID/action. Enabling a scene link moves focus to that scene's newly revealed Destination URL input. Disabling a link returns focus to its checkbox. If the focused layer was removed, focus falls back to an available layer selector.
 
-The eight resize handles are native buttons with accessible names, but their only behavior is a `pointerdown` listener. They have no click or keyboard resize operation. Keyboard users can change Width/Height through the property fields, but the eight tabbable buttons themselves are no-op controls. Block 5 should either give the handles meaningful keyboard behavior or remove them from the keyboard tab order and expose them as pointer-only visual affordances, while preserving the property fields as the keyboard-accessible resizing interface.
+**Retest:** the real-Chrome test uses CDP keyboard input to select a layer, hide/show an element, reorder two layers and restore their original order. It also verifies per-scene focus transitions when links are enabled/disabled, with link values kept independent.
 
-### FAIL — Dynamic layer and scene-link updates may lose focus
+### F-KEY-03 — Incomplete custom menu behavior: CLOSED
 
-- Layer selection, visibility, and ordering handlers call `render()`; `renderLayers()` replaces the layer controls' DOM. These handlers do not consistently restore focus after that replacement.
-- Scene-link toggles call `renderSceneLinks()`, which replaces the scene-link controls. Enabling a link can therefore remove the focused checkbox without moving focus to the newly revealed Destination URL field.
+**Observed:** the custom surface declared `role="menu"` and `role="menuitem"`, but did not place focus into the menu or support its keyboard navigation model.
 
-Block 5 should preserve focus based on stable element/scene identity and move focus to the logical next control when one is revealed.
+**Change:** Shift+F10/ContextMenu and pointer context-menu opening now focus the first menu item. ArrowUp/ArrowDown, Home and End move focus among available menu items. Escape closes the menu and restores focus to the corresponding canvas element. Context-menu placement measures the visible menu before clamping it to viewport bounds.
 
-### FAIL — Custom context-menu keyboard interaction is incomplete
+**Retest:** real-Chrome keyboard tests verify Shift+F10 opening, first-item focus, ArrowDown, Home and Escape/focus return.
 
-The canvas opens a custom container marked `role="menu"` with `role="menuitem"` children on context-menu/Shift+F10 keyboard invocation, but the handler does not move focus to the first item or implement menu arrow-key navigation. Either implement the required menu keyboard model and focus return, or simplify the structure to ordinary popover actions rather than claiming menu semantics.
+## 3. Responsive/reflow evidence
 
-### BLOCKED — Complete keyboard-only workflow
+The real Chrome smoke test emulates CSS viewport widths of **320, 390, 520, 620, 640, 760 and 950 CSS pixels**. At each width it asserts the requested viewport took effect and document horizontal scroll width does not exceed the viewport tolerance. At widths up to 620px it also checks the main editor uses one column; at widths up to 760px it checks the scheduling editor uses one column.
 
-The browser smoke test currently includes real CDP key input for the Direction control and the confirmation dialog and date-button activation. The canvas arrow-movement check dispatches a synthetic `KeyboardEvent`; much of the remaining editing workflow is exercised with direct DOM actions or clicks. This is not evidence that a user can complete the entire workflow using physical keyboard navigation alone.
+These are CSS viewport/reflow tests, **not actual browser zoom tests**. Actual 200%/400% zoom, full text-resize acceptance, a screen-reader/assistive-technology session, complete manual keyboard-only completion, and a full color-contrast audit remain **BLOCKED / not performed**. No comprehensive WCAG conformance claim is made.
 
-### BLOCKED — High-zoom and full responsive acceptance
+## 4. Exact-commit verification
 
-The existing real-browser check verifies no horizontal document overflow at a 390px viewport only. It does not test the full breakpoint set, a narrow 320px viewport, actual browser zoom (e.g. 200%/400%), text resize/reflow, or focus visibility at high zoom. The very small calendar event marker text at narrow widths is a visual-review candidate but has not been established as a measured failure. A full contrast audit and a screen-reader session also remain unperformed.
+The following all passed on source/test commit `55d3d105cf1902dced88e82c5089360c4a50adba`:
 
-## 5. Block 5 acceptance criteria
+- [Banner Backend Python Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39343605733): Python compilation, inline JavaScript `node --check`, all 24 standard-library unit/API tests and real headless-Chrome browser smoke test.
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39343605861).
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39343605761).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39343605765).
 
-- Make resize handles meaningful keyboard controls or ensure they are not inert focus stops; keep dimensions adjustable through labelled property fields.
-- Preserve keyboard focus through layer visibility/order/selection updates and scene-link enable/disable updates.
-- Give the context-menu action surface coherent focus and keyboard behavior, or replace the menu roles with semantics matching the interaction.
-- Extend the existing Chrome test for these cases and for representative 320/390/520/620/640/760/950px CSS viewport widths without adding browser dependencies.
-- Clearly separate simulated narrow viewport evidence from actual browser zoom. If actual zoom or assistive technology cannot be tested with the current harness, leave it BLOCKED.
-- Run all applicable workflows on the exact changed source/test commit and report failures rather than weakening assertions.
+The final browser log confirms pointer move/resize and band-height drag, persistence/reload/conflict handling, carousel and independent-link behavior, link focus transitions, keyboard menu navigation/focus return, scheduling branches, and the viewport/reflow checks above.
 
-## 6. Impact Analysis
+### Test-harness failure and correction
 
-**IF corrected:** users who rely on a keyboard can use more of the editor without pointer-only controls or unexpected focus loss; additional viewport checks give evidence about reflow boundaries and overflow.
+An intermediate run on commit `ddb60580870bde097b1b069e3fae894dd0b9fa24` failed because the test still expected eight native resize buttons after the implementation had intentionally converted the pointer-only handles to non-focusable `div` elements. The assertion was updated to verify the intended accessibility contract instead; the complete suite then passed on commit `55d3d105cf1902dced88e82c5089360c4a50adba`. This transient mismatch is recorded rather than represented as a product regression or hidden.
 
-**IF not corrected:** the editor retains inert keyboard stops, uncertain focus continuity during dynamic updates, and incomplete context-menu keyboard behavior. Existing 390px smoke evidence would remain too narrow to claim responsive/high-zoom acceptance.
+## 5. Impact analysis
 
-## 7. Scope boundary
+**IF modified:** the editor no longer adds inert pointer-only resize handles to keyboard navigation; dynamic layer/link interactions preserve focus; the custom menu supports predictable focus and keyboard navigation; reflow evidence covers representative narrow/breakpoint viewports.
 
-No source or test code was changed during this audit block. PR #140 remains open and draft; do not merge or promote the local-only editor.
+**IF not modified:** users would encounter inert focus stops, potential focus loss after regenerated controls, and menu roles without the corresponding keyboard/focus behavior. The former single-width overflow check would not establish behavior across the audited viewport set.
+
+## 6. Boundaries and closure
+
+- PR #140 remains **open and draft**; do not merge or promote as part of this block.
+- No production root homepage or `_config.yml` change was made.
+- The Python server remains loopback-only, unauthenticated and draft-only. No publish/activation behavior was added.
+- The three findings above are closed for the tested behavior because the corrections and relevant regression tests passed on the exact code/test commit.
+- Comprehensive accessibility acceptance is not closed: high-zoom, screen-reader, full contrast and full manual keyboard-only workflow evidence remain outstanding.
