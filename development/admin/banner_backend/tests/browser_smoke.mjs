@@ -165,6 +165,7 @@ try {
   const afterResize = JSON.parse(await evaluate("JSON.stringify({width:parseFloat(document.querySelector('.canvas-element').style.width)})"));
   assert.ok(afterResize.width > beforeResize.width + 1, "east resize handle should enlarge the element with real pointer input");
 
+  await evaluate("document.getElementById('resizeBand').scrollIntoView({block:'center'});true");
   const beforeBandResize = JSON.parse(await evaluate("JSON.stringify((()=>{const b=document.getElementById('resizeBand').getBoundingClientRect();const x=b.x+b.width/2,y=b.y+b.height/2;return {x,y,height:document.getElementById('bandCanvas').offsetHeight,target:document.elementFromPoint(x,y)?.id,innerWidth:window.innerWidth,innerHeight:window.innerHeight}})())"));
   console.log("BAND_RESIZE_BEFORE", JSON.stringify(beforeBandResize));
   assert.equal(beforeBandResize.target, "resizeBand", "band resize pointer must target the lower-border control: " + JSON.stringify(beforeBandResize));
