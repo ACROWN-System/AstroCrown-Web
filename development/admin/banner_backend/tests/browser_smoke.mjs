@@ -165,13 +165,16 @@ try {
   const afterResize = JSON.parse(await evaluate("JSON.stringify({width:parseFloat(document.querySelector('.canvas-element').style.width)})"));
   assert.ok(afterResize.width > beforeResize.width + 1, "east resize handle should enlarge the element with real pointer input");
 
-  const beforeBandResize = JSON.parse(await evaluate("JSON.stringify((()=>{const b=document.getElementById('resizeBand').getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2,height:document.getElementById('bandCanvas').offsetHeight}})())"));
+  const beforeBandResize = JSON.parse(await evaluate("JSON.stringify((()=>{const b=document.getElementById('resizeBand').getBoundingClientRect();const x=b.x+b.width/2,y=b.y+b.height/2;return {x,y,height:document.getElementById('bandCanvas').offsetHeight,target:document.elementFromPoint(x,y)?.id,innerWidth:window.innerWidth,innerHeight:window.innerHeight}})())"));
+  console.log("BAND_RESIZE_BEFORE", JSON.stringify(beforeBandResize));
+  assert.equal(beforeBandResize.target, "resizeBand", "band resize pointer must target the lower-border control: " + JSON.stringify(beforeBandResize));
   await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeBandResize.x, y: beforeBandResize.y });
   await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: beforeBandResize.x, y: beforeBandResize.y, button: "left", buttons: 1, clickCount: 1 });
   await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: beforeBandResize.x, y: beforeBandResize.y + 20, button: "left", buttons: 1 });
   await cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x: beforeBandResize.x, y: beforeBandResize.y + 20, button: "left", buttons: 0, clickCount: 1 });
   const afterBandResize = JSON.parse(await evaluate("JSON.stringify({height:document.getElementById('bandCanvas').offsetHeight})"));
-  assert.ok(afterBandResize.height >= beforeBandResize.height + 10, "dragging the band lower edge should increase band height");
+  console.log("BAND_RESIZE_AFTER", JSON.stringify(afterBandResize));
+  assert.ok(afterBandResize.height >= beforeBandResize.height + 10, "dragging the band lower edge should increase band height: " + JSON.stringify({beforeBandResize,afterBandResize}));
   assert.match(await evaluate("document.getElementById('saveStatus').textContent"), /Unsaved changes/);
 
   await evaluate("document.getElementById('saveDraftBtn').click()");
