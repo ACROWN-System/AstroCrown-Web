@@ -224,3 +224,47 @@ This is a proposed future production sign-in/dashboard behavior. The current PR 
 ### Status
 
 This records the owner's proposed access direction and its security constraints. It does not indicate authentication, role verification, workspace switching, or admin-route protection is implemented or tested.
+
+
+## 16. Provider independence and recovery-before-dependency requirement (owner concern, 2026-10-20)
+
+### Requirement
+
+Do not make the AstroCrown homepage, administration access, banner data, or ability to recover the system irreversibly dependent on one provider's free tier, account availability, proprietary runtime, authentication service, or storage service. Free services are acceptable candidates only when their limits and failure modes are understood and a practical exit/recovery path exists.
+
+### Required design constraints
+
+- **Static/public resilience:** the last verified published homepage and its last valid banner configuration should remain available during admin-backend/authentication outages where the static hosting layer remains available. If no new configuration can be obtained, fail safely to the last published valid state; do not blank the banner, expose drafts, or silently publish unverified changes.
+- **Portable source:** keep application/business logic separate from provider-specific request handlers, storage bindings, identity adapters, and deployment configuration. Prefer widely used protocols, formats and portable dependencies. Provider-specific adapters require an explicit justification and documented replacement path.
+- **Portability evidence:** if evaluating Cloudflare Python Workers or another managed runtime, verify the actual language/runtime compatibility and restrictions against the required dependencies. Cloudflare Python Workers execute through Pyodide/WebAssembly; do not assume a project behaves exactly like a conventional CPython server without testing.
+- **Data ownership:** banner compositions, slot-specific links, schedules, default selection, and publication/version history must use documented, exportable formats and have a restoration/import path that does not depend solely on the original provider.
+- **Independent backups:** code remains in Git. Operational data and configuration need versioned/exportable backups under owner control and, where practical, an independent copy outside the active application's provider. Never store secrets in the public repository or backup exports.
+- **Identity and break-glass recovery:** recovery must not depend solely on the same provider/account being recovered. Document a secure, tested, least-privilege recovery procedure; never solve lockout by failing open or bypassing authorization.
+- **Domain and deployability:** maintain owner control of the domain and records required to route it to replacement hosting. Document the minimum replacement deployment steps and environment-variable/secret names, not secret values.
+- **Cost/quota handling:** monitor free-tier usage where practical, handle quota errors predictably, and keep published read-only behavior available when appropriate. A quota failure must never grant unauthorised writes or imply that an admin change was saved.
+- **No premature multi-provider duplication:** first establish portability, backups, recovery documentation and tested restoration. Do not operate two live backends or introduce multi-cloud synchronization until demonstrated availability needs justify its added complexity.
+
+### Migration acceptance test
+
+Before a production backend is accepted, document and rehearse a provider-exit scenario with a sanitized export/sample dataset:
+
+1. Deploy the same application logic in a local or alternate compatible environment.
+2. Restore the banner and schedule data from the provider-independent export/backup.
+3. verify default-banner selection, scheduled opening and closing, per-slot link mappings, and retained published state.
+4. Verify that the previous host/provider is not required for the replacement instance to read/modify the restored data.
+5. Verify that all credentials can be rotated and the authorized administrator can regain access securely.
+6. Record exact prerequisites, manual steps, time/cost constraints and remaining provider-specific pieces. Until this is tested, portability is a design intention, not PASS.
+
+### Implementation sequencing
+
+Do not select or implement a production backend merely because a provider currently has a free plan. First finish browser verification and stabilize the local-only banner editor. Before backend selection, evaluate conventional portable Python hosting versus managed runtimes, including no-card/$0 eligibility, quotas, dependencies, auth integration, data export/import, domain migration, operational burden and vendor-specific runtime constraints. The current GitHub Pages/static hosting boundary remains independent of that decision.
+
+### Impact Analysis
+
+**IF followed:** provider outage, quota removal, account loss or plan changes are less likely to erase public availability or lock the owner out permanently; switching hosting becomes a tested migration instead of a rewrite.
+
+**IF not followed:** the project may become coupled to one platform's runtime, identity system or data service, making a free-tier change an emergency migration and potentially preventing timely recovery of the admin account or scheduled banner data.
+
+### Status
+
+This is an owner-directed architecture requirement, not evidence that portability, backups, alternative hosting, account recovery or migration have been implemented or tested. Provider selection remains undecided.
