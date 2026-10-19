@@ -64,7 +64,7 @@ def initial_state() -> dict[str, Any]:
                                     "h": 48,
                                     "color": "#e8f1ff",
                                     "font": 16,
-                                    "hidden": false
+                                    "hidden": False
                                 }
                             ]
                         },
