@@ -187,6 +187,11 @@ try {
   assert.ok(parsedMethods.includes("eth_chainId"));
   assert.ok(parsedMethods.includes("personal_sign"), "signing method is called only after the sign button");
   assert.equal(parsedMethods.filter(method => method === "personal_sign").length, 1);
+  const signRequest = JSON.parse(await evaluate("JSON.stringify(window.__walletCalls.find(x => x.method === 'personal_sign'))"));
+  const visibleMessage = await evaluate("document.getElementById('siwe-message').textContent");
+  const expectedMessageHex = "0x" + Array.from(new TextEncoder().encode(visibleMessage), byte => byte.toString(16).padStart(2, "0")).join("");
+  assert.equal(signRequest.params[0], expectedMessageHex, "wallet must be asked to sign the exact visible SIWE message bytes");
+  assert.equal(signRequest.params[1].toLowerCase(), "0x52908400098527886e0f7030069857d2e4169ee7", "wallet signing account must match the selected account");
   assert.ok(parsedMethods.every(method => ["eth_requestAccounts", "eth_accounts", "eth_chainId", "personal_sign"].includes(method)), "mock wallet must not receive transaction or unexpected methods");
   const session = await evaluate("fetch('/api/session', {cache:'no-store'}).then(response => response.json()).then(value => JSON.stringify(value))");
   const sessionState = JSON.parse(session);
