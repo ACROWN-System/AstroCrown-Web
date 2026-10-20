@@ -1,8 +1,10 @@
-# AstroCrown Local Wallet Authentication Test
+# AstroCrown Optional Wallet Authentication Lab
 
 **Status:** local development prototype only; not production authentication.
 
-This prototype checks the basic EOA / EIP-191 message-signing flow using the ERC-4361 / Sign-In with Ethereum (SIWE) message format. It is deliberately isolated from the announcement editor and does not depend on PR #140 being merged.
+This prototype checks the basic EOA / EIP-191 message-signing flow using the ERC-4361 / Sign-In with Ethereum (SIWE) message format. It is **only a technical lab for a wallet-specific feature that genuinely needs proof of wallet control**, not AstroCrown's normal account login. Ordinary account access must work without connecting a wallet. It is deliberately isolated from the announcement editor and does not depend on PR #140 being merged.
+
+The governing product decision is [Authentication Separation and Recovery Decision](../audit/Active/2026-10-21-Authentication-Separation-and-Recovery-Decision.md).
 
 ## Safety boundaries
 
@@ -10,8 +12,8 @@ This prototype checks the basic EOA / EIP-191 message-signing flow using the ERC
 - It does not create blockchain transactions, require funds/gas, use email or an external identity provider, call a blockchain RPC from the application, or use a wallet relay.
 - The wallet is asked to sign a short-lived SIWE login message only after an explicit click. Read the full message before approving.
 - Never enter or share a seed phrase/private key. The server has no field or endpoint for either.
-- It uses in-memory challenges and sessions only. Restarting the server clears them. This is not suitable for real accounts, remote users, production data, or network exposure.
-- Only injected EIP-1193 EOA wallets are in scope. Smart-contract wallets (ERC-1271), wallet linking/recovery, roles, account creation, persistent storage and publishing are excluded.
+- It uses in-memory challenges and sessions only. Restarting the server clears them. This is not suitable for real accounts, ordinary account login, remote users, production data, or network exposure.
+- Only injected EIP-1193 EOA wallets are in scope. Smart-contract wallets (ERC-1271), ordinary account authentication, wallet linking/recovery, roles, account creation, persistent storage and publishing are excluded.
 - The Python SIWE library candidate has not undergone a formal security audit. Passing these tests is prototype evidence, not a security certification or production approval.
 
 ## Run locally
@@ -36,7 +38,7 @@ Then open exactly `http://localhost:8765/` in the browser profile containing the
 4. Confirm that the local page reports a verified address and temporary session; then use **End local session** to test revocation.
 5. Stop the server with Ctrl+C.
 
-The user-wallet test should happen only after the dedicated workflow passes the full offline/HTTP and headless-browser test suite on the exact candidate commit. If the browser wallet shows an unexpected domain, message, transaction request or seed/private-key request, reject it and report what happened without sharing secrets.
+A real-wallet test is optional and justified only to validate a specific wallet-dependent feature. It is not required to choose or test ordinary account authentication. Any such test should happen only after the dedicated workflow passes the full offline/HTTP and headless-browser test suite on the exact candidate commit. If the browser wallet shows an unexpected domain, message, transaction request or seed/private-key request, reject it and report what happened without sharing secrets.
 
 ## Tests
 
