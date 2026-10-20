@@ -73,10 +73,11 @@ class WalletAuthServiceTests(unittest.TestCase):
         tampered = issued["message"].replace("does not authorize a transaction", "authorizes a transaction")
         with self.assertRaises(AuthenticationError):
             self.service.verify_signature(tampered, self.sign(tampered), now=self.now)
-        self.assertFalse(self.service.challenges == {})
+        parsed = SiweMessage.from_message(issued["message"])
+        self.assertNotIn(parsed.nonce, self.service.challenges)
         with self.assertRaises(AuthenticationError):
             self.service.verify_signature(
-                issued["message"], self.sign(issued["message"], TEST_PRIVATE_KEY_B),
+                issued["message"], self.sign(issued["message"], TEST_PRIVATE_KEY_A),
                 now=self.now,
             )
 
@@ -145,7 +146,7 @@ class LocalHTTPTests(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join(timeout=2)
 
-    def request(self, method, path, data=None, origin=None, host=None, cookie=None, content_type="application/json"):
+    def request(self, method, path, data=None, origin=None, host=None, cookie=None, content_type="application/json", fetch_site=None):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         headers = {
             "Host": host or self.authority,
@@ -154,6 +155,8 @@ class LocalHTTPTests(unittest.TestCase):
         }
         if cookie:
             headers["Cookie"] = cookie
+        if fetch_site is not None:
+            headers["Sec-Fetch-Site"] = fetch_site
         body = json.dumps(data).encode("utf-8") if data is not None else None
         connection.request(method, path, body=body, headers=headers)
         response = connection.getresponse()
@@ -199,6 +202,29 @@ class LocalHTTPTests(unittest.TestCase):
         self.assertIn("Max-Age=0", headers["Set-Cookie"])
         status, _, session = self.request("GET", "/api/session", data=None, cookie=cookie.split(";", 1)[0])
         self.assertFalse(session["authenticated"])
+
+    def test_direct_browser_navigation_allows_sec_fetch_site_none(self):
+        status, headers, body = self.request(
+            "GET", "/", data=None, origin="", fetch_site="none"
+        )
+        self.assertEqual(status, 200)
+        self.assertIn(b"LOCAL DEVELOPMENT ONLY", body)
+
+    def test_untrusted_fetch_site_is_rejected(self):
+        status, _, _ = self.request(
+            "POST", "/api/challenge",
+            {"address": TEST_ACCOUNT_A.address, "chainId": 1},
+            fetch_site="cross-site",
+        )
+        self.assertEqual(status, 403)
+
+    def test_malformed_signature_consumes_challenge(self):
+        issued = self.server.auth_service.issue_challenge(TEST_ACCOUNT_A.address, 1)
+        from siwe import SiweMessage
+        nonce = SiweMessage.from_message(issued["message"]).nonce
+        with self.assertRaises(AuthenticationError):
+            self.server.auth_service.verify_signature(issued["message"], "0x12")
+        self.assertNotIn(nonce, self.server.auth_service.challenges)
 
     def test_content_type_and_body_are_validated(self):
         status, _, _ = self.request("POST", "/api/challenge", {"address": TEST_ACCOUNT_A.address, "chainId": 1}, content_type="text/plain")
