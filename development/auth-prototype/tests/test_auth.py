@@ -5,9 +5,10 @@ import http.client
 import json
 import sys
 import threading
-from pathlib import Path
 import unittest
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from unittest.mock import patch
 
 from eth_account import Account
 from eth_account.messages import encode_defunct
@@ -55,6 +56,19 @@ class WalletAuthServiceTests(unittest.TestCase):
         session = self.service.read_session(token, now=self.now)
         self.assertTrue(session["authenticated"])
         self.assertEqual(session["address"], TEST_ACCOUNT_A.address)
+
+    def test_eoa_verification_does_not_call_contract_wallet_rpc_fallback(self):
+        issued = self.issue()
+        with patch(
+            "siwe.siwe.check_contract_wallet_signature",
+            side_effect=AssertionError("EOA path must not use contract-wallet RPC"),
+        ) as contract_check:
+            token, address = self.service.verify_signature(
+                issued["message"], self.sign(issued["message"]), now=self.now
+            )
+            contract_check.assert_not_called()
+        self.assertEqual(address, TEST_ACCOUNT_A.address)
+        self.assertTrue(self.service.read_session(token, now=self.now)["authenticated"])
 
     def test_wrong_signer_is_rejected_and_challenge_consumed(self):
         issued = self.issue()
@@ -240,6 +254,7 @@ class LocalHTTPTests(unittest.TestCase):
         self.assertEqual(status, 405)
 
     def test_homepage_and_security_headers_are_local(self):
+        self.assertEqual(self.server.server_address[0], "127.0.0.1")
         status, headers, body = self.request("GET", "/", data=None)
         self.assertEqual(status, 200)
         self.assertIn(b"LOCAL DEVELOPMENT ONLY", body)
