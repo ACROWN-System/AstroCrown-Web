@@ -188,9 +188,9 @@ try {
   assert.ok(parsedMethods.includes("personal_sign"), "signing method is called only after the sign button");
   assert.equal(parsedMethods.filter(method => method === "personal_sign").length, 1);
   assert.ok(parsedMethods.every(method => ["eth_requestAccounts", "eth_accounts", "eth_chainId", "personal_sign"].includes(method)), "mock wallet must not receive transaction or unexpected methods");
-  const sessionResponse = await fetch("http://127.0.0.1:" + port + "/api/session");
-  const session = await sessionResponse.json();
-  assert.equal(session.authenticated, false, "invalid browser signature must not establish a session");
+  const session = await evaluate("fetch('/api/session', {cache:'no-store'}).then(response => response.json()).then(value => JSON.stringify(value))");
+  const sessionState = JSON.parse(session);
+  assert.equal(sessionState.authenticated, false, "invalid browser signature must not establish a session");
 
   console.log("PASS: real headless browser navigation, no auto-prompt, explicit connect/sign clicks, visible SIWE challenge, invalid-signature rejection, and no session without a verified signature.");
 } catch (error) {
