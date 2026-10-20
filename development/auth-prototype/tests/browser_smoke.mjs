@@ -163,7 +163,7 @@ try {
   await cdp("Page.navigate", { url: localUrl });
 
   await waitFor("page loaded through a real top-level browser navigation", async () => {
-    return await evaluate("document.readyState === 'complete' && document.title.includes('Local Wallet Authentication Test')");
+    return await evaluate("document.readyState === 'complete' && document.title.includes('Optional Wallet Authentication Lab')");
   });
   assert.equal(await evaluate("window.__walletCalls.length"), 0, "page load must not prompt or contact the wallet");
   assert.equal(await evaluate("document.querySelectorAll('input[type=password]').length"), 0, "page must not request a password or secret");
