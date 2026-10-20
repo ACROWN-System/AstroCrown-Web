@@ -145,16 +145,16 @@ try {
   await cdp("Runtime.enable");
   const injectedProvider = [
     "(() => {",
-    "const address = \\"0x52908400098527886E0F7030069857D2E4169EE7\\";",
+    "const address = '0x52908400098527886E0F7030069857D2E4169EE7';",
     "window.__walletCalls = [];",
     "window.ethereum = {",
     "on: () => {},",
     "request: async ({method, params}) => {",
     "window.__walletCalls.push({method, params});",
-    "if (method === \\"eth_requestAccounts\\" || method === \\"eth_accounts\\") return [address];",
-    "if (method === \\"eth_chainId\\") return \\"0x1\\";",
-    "if (method === \\"personal_sign\\") return \\"0x\\" + \\"00\\".repeat(65);",
-    "throw new Error(\\"Unexpected wallet method: \\" + method);",
+    "if (method === 'eth_requestAccounts' || method === 'eth_accounts') return [address];",
+    "if (method === 'eth_chainId') return '0x1';",
+    "if (method === 'personal_sign') return '0x' + '00'.repeat(65);",
+    "throw new Error('Unexpected wallet method: ' + method);",
     "}",
     "};",
     "})();"
@@ -173,7 +173,7 @@ try {
   await waitFor("wallet connection and challenge", async () => {
     const status = await evaluate("document.getElementById('status').textContent");
     const message = await evaluate("document.getElementById('siwe-message').textContent");
-    return status.includes("Challenge ready") && message.includes("localhost:" + ${port});
+    return status.includes("Challenge ready") && message.includes("localhost:" + port);
   });
   assert.match(await evaluate("document.getElementById('siwe-message').textContent"), /Sign in to the local AstroCrown wallet test/);
   assert.equal(await evaluate("window.__walletCalls.filter(x => x.method === 'personal_sign').length"), 0, "connection must not trigger a signature request");
