@@ -1,7 +1,7 @@
-# Active Navigation Plan — Local-Only Wallet Authentication Prototype
+# Active Navigation Plan — Optional Wallet Authentication Lab
 
-**Date:** 2026-10-20  
-**Status:** ACTIVE — local EOA/SIWE prototype implemented; offline and headless-browser workflow passes on the last verified code head; exact-head general CI and final review remain in progress; production integration remains BLOCKED  
+**Date:** 2026-10-21  
+**Status:** ACTIVE AS A TEST-ONLY WALLET-CAPABILITY LAB — this is not ordinary AstroCrown account authentication; exact-head checks must be rerun after this decision-alignment update; production integration remains BLOCKED  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related architecture record:** [Provider-Independent Wallet Authentication Plan](2026-10-20-Provider-Independent-Wallet-Authentication-Plan.md)  
@@ -10,7 +10,7 @@
 
 ## 1. Objective and scope
 
-Prepare the smallest testable, isolated EOA Sign-In with Ethereum (SIWE/ERC-4361) prototype so the maintainer can later exercise it with a **test-purpose wallet**. Do not ask the maintainer to sign a message until the exact candidate and all offline checks are ready.
+Retain the smallest testable, isolated EOA Sign-In with Ethereum (SIWE/ERC-4361) prototype only as a **wallet-capability experiment** for a future feature that genuinely needs proof of wallet control. It is not the ordinary AstroCrown account sign-in and must not become a mandatory login gate. Real-wallet testing is not currently required for the product authentication decision.
 
 The prototype, when implemented, must be:
 - loopback-only, bound to `127.0.0.1` and opened through one canonical local origin;
@@ -21,7 +21,7 @@ The prototype, when implemented, must be:
 - application and test source under `development/auth-prototype/`; one dedicated test-only workflow under `.github/workflows/wallet-auth-prototype-tests.yml` with read-only contents permission, no secrets and no deploy actions;
 - no change to the root public homepage, `_config.yml`, production deployment configuration or any existing backup/archive path.
 
-This local experiment is not production sign-in, account creation, wallet linking/recovery, role administration or publishing. Contract-wallet / ERC-1271 support is excluded because reliable contract-signature validation can require chain-state access.
+This local experiment is not ordinary account sign-in, production sign-in, account creation, wallet linking/recovery, role administration or publishing. The governing product decision is [Authentication Separation and Recovery Decision](2026-10-21-Authentication-Separation-and-Recovery-Decision.md): ordinary account access must work without a crypto wallet. Contract-wallet / ERC-1271 support is excluded because reliable contract-signature validation can require chain-state access.
 
 ## 2. Gate separation
 
@@ -109,11 +109,11 @@ Pause before the user step if:
 - the prototype can bind beyond loopback, or tests cannot prove it remains local;
 - exact-head CI fails or a test is being weakened merely to fit the implementation.
 
-The first requested human action should be the test-wallet interaction only after those local/offline prerequisites pass. AUTH-001 remains an independent blocker for future public/editor integration and deployment.
+A real-wallet interaction is optional and should be requested only when validating a specific wallet-dependent feature warrants it; it is not the next step for ordinary account authentication. AUTH-001 remains an independent blocker for future public/editor integration and deployment.
 
 ## 9. Result and handoff
 
-Current result: **LOCAL-ONLY EOA/SIWE PROTOTYPE IMPLEMENTED; TEST WALLET NOT YET USED**.
+Current result: **LOCAL-ONLY EOA/SIWE WALLET-CAPABILITY LAB IMPLEMENTED; TEST WALLET NOT USED; NOT THE ORDINARY LOGIN PATH**.
 
 - Prototype source and 17 offline/loopback tests are under `development/auth-prototype/`; the browser UI is a separate same-origin page.
 - [Local Wallet Authentication Prototype Tests #22](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39397576898) passed on exact code head `3e5689e93bd5ad42547636f07c494ca6b2372d60`. Python compilation, browser JavaScript syntax, all 17 unit/HTTP tests, the headless-browser wallet UI smoke test, and the static no-transaction/no-relay check passed.
@@ -124,4 +124,4 @@ Current result: **LOCAL-ONLY EOA/SIWE PROTOTYPE IMPLEMENTED; TEST WALLET NOT YET
 - The 41 dependency versions are pinned, but the file is not hash-locked. Artifact hashes, complete license verification, dependency vulnerability review, and production dependency approval remain outstanding gates.
 - **Not performed:** interaction with any real wallet, public deployment-source verification, production integration, wallet linking/recovery, role enforcement, remote storage, account creation, or publishing. No production secret or wallet secret has been accessed.
 
-On each subsequent revision, update this record with changed paths, exact commit, test evidence, findings, remediation/re-test results, and remaining production blockers. The wallet test is a local integration checkpoint only; it is not approval to merge or deploy.
+On each subsequent revision, update this record with changed paths, exact commit, test evidence, findings, remediation/re-test results, and remaining production blockers. This lab can support a particular optional wallet feature only; it is not the ordinary login path and passing its tests is not approval to merge or deploy.
