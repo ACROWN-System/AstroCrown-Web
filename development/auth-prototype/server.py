@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
+from eth_keys.exceptions import BadSignature
 from eth_utils import is_address, to_checksum_address
 from siwe import SiweMessage, VerificationError, generate_nonce
 
@@ -209,7 +210,7 @@ class WalletAuthService:
                 timestamp=current_time,
                 provider=None,
             )
-        except (VerificationError, ValueError, TypeError):
+        except (VerificationError, ValueError, TypeError, BadSignature):
             raise AuthenticationError(
                 "The wallet signature could not be verified."
             ) from None
