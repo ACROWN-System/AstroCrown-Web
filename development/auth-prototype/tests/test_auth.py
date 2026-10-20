@@ -146,13 +146,14 @@ class LocalHTTPTests(unittest.TestCase):
         cls.server.server_close()
         cls.thread.join(timeout=2)
 
-    def request(self, method, path, data=None, origin=None, host=None, cookie=None, content_type="application/json", fetch_site=None):
+    def request(self, method, path, data=None, origin=None, host=None, cookie=None, content_type="application/json", fetch_site=None, omit_origin=False):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=3)
         headers = {
             "Host": host or self.authority,
-            "Origin": self.origin if origin is None else origin,
             "Content-Type": content_type,
         }
+        if not omit_origin:
+            headers["Origin"] = self.origin if origin is None else origin
         if cookie:
             headers["Cookie"] = cookie
         if fetch_site is not None:
@@ -205,7 +206,7 @@ class LocalHTTPTests(unittest.TestCase):
 
     def test_direct_browser_navigation_allows_sec_fetch_site_none(self):
         status, headers, body = self.request(
-            "GET", "/", data=None, origin="", fetch_site="none"
+            "GET", "/", data=None, fetch_site="none", omit_origin=True
         )
         self.assertEqual(status, 200)
         self.assertIn(b"LOCAL DEVELOPMENT ONLY", body)
