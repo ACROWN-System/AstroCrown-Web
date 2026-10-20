@@ -113,6 +113,13 @@ The first requested human action should be the test-wallet interaction only afte
 
 ## 9. Result and handoff
 
-Current result: **PLAN RECORDED; NO AUTHENTICATION CODE YET**. Candidate library status is CANDIDATE; publishing-source verification is BLOCKED; wallet interaction has not been requested or performed. No user wallet, private key, seed phrase, production endpoint or secret has been accessed.
+Current result: **LOCAL-ONLY EOA/SIWE PROTOTYPE IMPLEMENTED; USER WALLET NOT YET USED**.
 
-On completion, update this record with changed paths, commit, exact test evidence, findings, remediation/re-test results, and the remaining production blockers.
+- Prototype source and 16 offline/loopback tests are under `development/auth-prototype/`; the browser UI is a separate same-origin page.
+- The dedicated workflow's most recent completed run at the time of this update is [Local Wallet Authentication Prototype Tests #14](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39396946261), for code head `630813dfec7b0edee7734fa73fcccde8fb59f5a7`. Python compilation, browser JavaScript syntax, all 16 unit/HTTP tests, real headless-browser wallet UI smoke test, and the static no-transaction/no-relay check passed. A deliberately invalid mock signature was rejected without a session.
+- That run identified and verified a correction for an unhandled `eth-keys.BadSignature`: the implementation now returns a safe authentication rejection rather than an unhandled handler exception. Earlier runs also identified and fixed the incompatible resolver-selected `abnf` version and the missing `0x` prefix in deterministic test-signature fixtures.
+- The branch head has advanced since run #14, so the exact latest head must be rechecked before the user-wallet handoff.
+- General CodeQL and RSI CI must pass for the exact candidate commit. Artifact hashes, full license verification, dependency vulnerability review, and production dependency approval remain outstanding production gates.
+- **Not performed:** interaction with any real wallet, public deployment-source verification, production integration, role/recovery implementation, remote storage, account creation, or publishing. No production secret or wallet secret has been accessed.
+
+On each subsequent revision, update this record with changed paths, exact commit, test evidence, findings, remediation/re-test results, and remaining production blockers. The wallet test is a one-time local integration checkpoint only; it is not approval to merge or deploy.
