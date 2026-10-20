@@ -173,6 +173,11 @@ class WalletAuthService:
             if current_time >= challenge.expires_at:
                 self.challenges.pop(nonce, None)
                 raise AuthenticationError("This sign-in challenge has expired.")
+            # Once a live challenge nonce is presented, consume it before
+            # comparing message fields or verifying a signature. This is
+            # intentionally fail-closed: even malformed/tampered attempts
+            # cannot retry the same issued nonce.
+            self.challenges.pop(nonce, None)
             if message_text != challenge.message:
                 raise AuthenticationError(
                     "The signed message does not match the issued challenge."
@@ -191,7 +196,6 @@ class WalletAuthService:
                 raise AuthenticationError(
                     "The signed message does not match the issued challenge."
                 )
-            self.challenges.pop(nonce, None)
 
         try:
             # No provider is supplied. That keeps this prototype on the
@@ -311,8 +315,13 @@ class WalletHandler(BaseHTTPRequestHandler):
         elif origin is not None and origin != self.server.local_origin:
             return False
         fetch_site = self.headers.get("Sec-Fetch-Site")
-        if fetch_site and fetch_site != "same-origin":
-            return False
+        # A direct top-level browser navigation normally sends "none", not
+        # "same-origin". Permit that only for GET-style requests that do not
+        # require an Origin header; all POST API calls must be same-origin.
+        if fetch_site:
+            allowed_fetch_sites = {"same-origin"} if require_origin else {"same-origin", "none"}
+            if fetch_site not in allowed_fetch_sites:
+                return False
         return True
 
     def _read_json(self) -> dict[str, Any]:
