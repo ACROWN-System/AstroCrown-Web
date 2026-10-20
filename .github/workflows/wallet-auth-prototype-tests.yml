@@ -1,0 +1,61 @@
+name: Local Wallet Authentication Prototype Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/auth-prototype/**"
+      - "development/audit/Active/2026-10-20-Local-Only-Wallet-Authentication-Prototype.md"
+      - ".github/workflows/wallet-auth-prototype-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "development/auth-prototype/**"
+      - ".github/workflows/wallet-auth-prototype-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-and-loopback-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned SIWE candidate
+        run: |
+          python -m pip install --disable-pip-version-check -r development/auth-prototype/requirements.txt
+          python -m pip freeze
+
+      - name: Compile prototype
+        run: python -m py_compile development/auth-prototype/server.py development/auth-prototype/tests/test_auth.py
+
+      - name: Validate browser JavaScript syntax
+        run: node --check development/auth-prototype/app.js
+
+      - name: Run offline and loopback HTTP tests
+        run: python -m unittest discover -s development/auth-prototype/tests -p "test_*.py" -v
+
+      - name: Check no external wallet service or transaction path exists in the browser client
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source = Path("development/auth-prototype/app.js").read_text(encoding="utf-8")
+          forbidden = ("eth_sendTransaction", "eth_signTransaction", "walletconnect", "wallet_connect", "seed phrase", "private key")
+          present = [item for item in forbidden if item.casefold() in source.casefold()]
+          if present:
+              raise SystemExit(f"Unexpected transaction/secret/relay path in browser client: {present}")
+          if "personal_sign" not in source or "eth_requestAccounts" not in source:
+              raise SystemExit("Expected explicit account connection and message-signing methods.")
+          if "fetch(" not in source or '"/api/verify"' not in source:
+              raise SystemExit("Expected local same-origin verification request.")
+          PY
