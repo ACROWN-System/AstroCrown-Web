@@ -18,7 +18,8 @@ The prototype, when implemented, must be:
 - limited to one-wallet EOA message authentication and a temporary local session;
 - free of real funds, transactions, seeds, private-key entry, private-key handling, external identity providers, email, application-controlled blockchain RPC, wallet relays, remote persistence and production secrets;
 - independent of PR #140's unmerged implementation files; no implicit dependency on an open draft PR;
-- entirely under `development/`, without changing the root public homepage, `_config.yml`, deployment configuration or any existing backup/archive path.
+- application and test source under `development/auth-prototype/`; one dedicated test-only workflow under `.github/workflows/wallet-auth-prototype-tests.yml` with read-only contents permission, no secrets and no deploy actions;
+- no change to the root public homepage, `_config.yml`, production deployment configuration or any existing backup/archive path.
 
 This local experiment is not production sign-in, account creation, wallet linking/recovery, role administration or publishing. Contract-wallet / ERC-1271 support is excluded because reliable contract-signature validation can require chain-state access.
 
