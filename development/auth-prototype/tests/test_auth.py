@@ -41,10 +41,10 @@ class WalletAuthServiceTests(unittest.TestCase):
         return self.service.issue_challenge(account.address, chain_id, now=self.now)
 
     def sign(self, message: str, private_key: str = TEST_PRIVATE_KEY_A) -> str:
-        signature = Account.sign_message(
+        encoded = Account.sign_message(
             encode_defunct(text=message), private_key=private_key
-        ).signature
-        return signature.hex()
+        ).signature.hex()
+        return encoded if encoded.startswith("0x") else "0x" + encoded
 
     def test_valid_eoa_sign_in_creates_session(self):
         issued = self.issue()
@@ -177,6 +177,8 @@ class LocalHTTPTests(unittest.TestCase):
         signature = Account.sign_message(
             encode_defunct(text=message), private_key=TEST_PRIVATE_KEY_A
         ).signature.hex()
+        if not signature.startswith("0x"):
+            signature = "0x" + signature
         status, headers, verified = self.request(
             "POST", "/api/verify", {"message": message, "signature": signature}
         )
