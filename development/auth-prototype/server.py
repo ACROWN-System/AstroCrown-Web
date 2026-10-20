@@ -6,6 +6,7 @@ broadcasts transactions or stores wallet secrets.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import secrets
@@ -447,7 +448,13 @@ def build_server(port: int = PORT) -> ThreadingHTTPServer:
 
 
 def main() -> None:
-    server = build_server()
+    parser = argparse.ArgumentParser(description="Run the local-only wallet test server.")
+    parser.add_argument(
+        "--port", type=int, default=PORT,
+        help="loopback port to use (default: %(default)s; 0 selects an ephemeral port)",
+    )
+    args = parser.parse_args()
+    server = build_server(port=args.port)
     print(
         "Local-only wallet test server listening at "
         f"{server.local_origin}/ (bound to {HOST})."
