@@ -1,7 +1,7 @@
 # Active Navigation Plan — Local-Only Wallet Authentication Prototype
 
 **Date:** 2026-10-20  
-**Status:** ACTIVE — contract and isolated prototype preparation; production integration remains BLOCKED  
+**Status:** ACTIVE — local EOA/SIWE prototype implemented; offline and headless-browser workflow passes on the last verified code head; exact-head general CI and final review remain in progress; production integration remains BLOCKED  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related architecture record:** [Provider-Independent Wallet Authentication Plan](2026-10-20-Provider-Independent-Wallet-Authentication-Plan.md)  
