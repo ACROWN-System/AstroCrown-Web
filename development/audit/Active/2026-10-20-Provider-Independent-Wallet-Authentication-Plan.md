@@ -1,7 +1,7 @@
 # Active Architecture Plan — Provider-Independent Wallet Authentication
 
 **Date:** 2026-10-20  
-**Status:** ACTIVE — architecture direction recorded; implementation BLOCKED pending source/deployment discovery and verification  
+**Status:** ACTIVE — architecture direction recorded; isolated local-only EOA prototype under verification; public/editor integration and deployment remain BLOCKED  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related editor prototype:** [Draft PR #140 — Build development-only announcement editor with Python draft backend](https://github.com/ACROWN-System/AstroCrown-Web/pull/140)  
@@ -12,7 +12,7 @@
 
 Record the agreed direction before selecting production hosting or implementing sign-in for the announcement-band editor: **wallet-first, provider-independent authentication with multiple independently controlled wallets for recovery, no mandatory email, and no blockchain RPC, external identity-provider or wallet-relay dependency in the basic externally owned account (EOA) sign-in path.**
 
-This is a documentation and architecture-planning change. It does not implement account creation, authentication, wallet linking, recovery, role enforcement, storage, publishing, deployment or failover.
+The original architecture decision is preserved here. A separately scoped local-only EOA/SIWE prototype is now being developed under `development/auth-prototype/` to test message verification and wallet interoperability without public exposure. That experiment does not implement production account creation, wallet linking/recovery, role enforcement, durable storage, publishing, deployment or failover; it does not close AUTH-001 or authorize integration with PR #140.
 
 ## 2. Navigation, source of truth and boundaries
 
@@ -144,10 +144,11 @@ Initial roles to test remain: **Owner/Security Administrator**, **Editor**, **Pu
 ## 8. Current result and stop condition
 
 - Architecture direction: **RECORDED AS THE WORKING DIRECTION** from the owner's instruction.
-- Existing editor authentication: **NOT IMPLEMENTED**.
+- Local EOA/SIWE prototype: **IMPLEMENTED ON THE DRAFT FEATURE BRANCH; verification in progress**. Its implementation, tests and dependency pinning are documented in [the Local-Only Wallet Authentication Prototype Plan](2026-10-20-Local-Only-Wallet-Authentication-Prototype.md).
+- Real-wallet interaction: **NOT YET PERFORMED**; it remains gated on exact-head offline and browser CI, source review, and a clear local test procedure.
 - Production deployment source: **BLOCKED / UNVERIFIED**.
-- SIWE library, backend host and durable storage candidates: **NOT SELECTED**.
-- Auth, role, recovery, provider-independence, $0 and production resilience criteria: **BLOCKED pending tests**.
+- Production SIWE integration, backend host and durable storage: **NOT SELECTED**.
+- Auth, wallet linking/recovery, server roles, $0 eligibility and production resilience criteria: **BLOCKED pending requirements and evidence**.
 - Production changes: **NONE**.
 
-Do not implement or deploy the login flow until AUTH-001 is resolved, the exact contract is written, mandatory candidates are eligible, and the necessary negative, integration, recovery and authorization tests are passing.
+The isolated local-only EOA experiment is the only permitted exception to the earlier implementation stop condition. Do not integrate the flow with the editor or deploy/login against any public service until AUTH-001 is resolved, exact external contracts and hosting/storage candidates are verified, and the required negative, integration, recovery, authorization and promotion tests pass.
