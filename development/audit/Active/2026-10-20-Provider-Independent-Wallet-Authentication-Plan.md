@@ -22,6 +22,25 @@ This is a documentation and architecture-planning change. It does not implement 
 - The repository's `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md` applies. Its sections on evidence, result states, candidate eligibility, external contract gates, and the development/public boundary must be followed. The expected active paths `development/NAVIGATION-PROTOCOL.md` and `development/NAVIGATION-PLAN-TEMPLATE.md` were not found in the inspected tree; this record does not claim to have used them.
 - Existing backups and archives are immutable. No path within `backup/` is in scope.
 
+### 2.1 Publication-path discovery — 2026-10-20
+
+Read-only inspection was performed against the repository metadata, the `main` tree at commit `27162a5f8ea91b6c51e9c928851d0da0f1ee6ead`, `README.md`, `_config.yml`, available branch names, and the complete workflow-file list in that tree.
+
+Observed evidence:
+
+- Repository metadata reports `default_branch: main`, `has_pages: true`, `homepage: null`, and a public repository. `has_pages: true` indicates the Pages feature flag/state in repository metadata; alone it does **not** disclose the publishing source, current custom domain, successful deployment or accessible live content.
+- The inspected `main` tree has no root `index.html`, no root `CNAME`, and no root deployment manifest for another named web host.
+- The six `.github/workflows/` files at that commit are `external-review-pipeline-ci.yml`, `media-generator-tests.yml`, `nova-credential-readiness.yml`, `nova-rsi-ci.yml`, `nova-rsi-codeql.yml`, and `ossf-scorecard.yml`. None of their names or inspected content establishes a homepage build/deployment workflow.
+- `_config.yml` excludes `development/`, `backup/`, and internal workflow/support paths from Jekyll output. The current homepage prototype is at `development/index.html`, so it is deliberately excluded from the expected root public output.
+- The repository's advertised homepage field is empty, and no custom-domain file was found in the inspected `main` tree. This does not rule out a domain configured only in GitHub Pages settings or through another publishing system.
+- The Pages settings/API endpoint could not be accessed through the available read-only GitHub connector. A direct test from this execution environment also could not resolve the candidate URL `https://acrown-system.github.io/AstroCrown-Web/`; the environment reported a DNS-resolution failure. That result is a limitation of this test environment, **not evidence that the public website is down**.
+- Public web search did not identify an authoritative AstroCrown website/domain tied to this repository. Search absence is not proof that no public domain exists.
+
+Result: **AUTH-001 = BLOCKED**. The authoritative public hostname/URL, actual Pages source branch and directory or external host, build/deployment settings, custom domain/DNS/CDN and current public artifact have not been verified. We did not reproduce a live public build.
+
+Next evidence required: open the repository's **Settings → Pages** and identify the exact publishing source (branch/folder or Actions workflow), the displayed site URL/custom domain, and any linked external deployment provider. Share the authoritative public URL so its live response and content can be checked. If the current public site comes from another repository or service, that source becomes part of the audit scope. Do not infer or configure a replacement deployment based only on the repository name.
+
+
 ## 3. Working architecture decision
 
 ### 3.1 Basic sign-in path
