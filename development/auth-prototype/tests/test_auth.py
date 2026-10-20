@@ -219,12 +219,14 @@ class LocalHTTPTests(unittest.TestCase):
         )
         self.assertEqual(status, 403)
 
-    def test_malformed_signature_consumes_challenge(self):
+    def test_invalid_ecdsa_signature_is_normalized_and_consumes_challenge(self):
         issued = self.server.auth_service.issue_challenge(TEST_ACCOUNT_A.address, 1)
         from siwe import SiweMessage
         nonce = SiweMessage.from_message(issued["message"]).nonce
+        # A 65-byte zero signature reaches an eth-keys BadSignature exception
+        # in this dependency combination; the app must return a safe rejection.
         with self.assertRaises(AuthenticationError):
-            self.server.auth_service.verify_signature(issued["message"], "0x12")
+            self.server.auth_service.verify_signature(issued["message"], "0x" + "00" * 65)
         self.assertNotIn(nonce, self.server.auth_service.challenges)
 
     def test_content_type_and_body_are_validated(self):
