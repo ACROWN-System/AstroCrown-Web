@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import http.client
 import json
+import sys
 import threading
+from pathlib import Path
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -11,7 +13,9 @@ from eth_account import Account
 from eth_account.messages import encode_defunct
 from siwe import SiweMessage
 
-from development.auth_prototype.server import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from server import (
     AuthenticationError,
     CHALLENGE_TTL,
     SESSION_TTL,
