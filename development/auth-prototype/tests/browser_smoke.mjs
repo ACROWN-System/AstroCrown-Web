@@ -158,7 +158,7 @@ try {
     "}",
     "};",
     "})();"
-  ].join("\\n");
+  ].join("\n");
   await cdp("Page.addScriptToEvaluateOnNewDocument", { source: injectedProvider });
   await cdp("Page.navigate", { url: localUrl });
 
