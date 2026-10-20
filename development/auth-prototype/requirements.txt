@@ -1,1 +1,3 @@
+# SIWE 4.4.0's upstream lock uses abnf 2.2.0. Newer abnf 2.x releases fail to import its grammar.
+abnf==2.2.0
 siwe==4.4.0
