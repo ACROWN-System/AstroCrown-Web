@@ -175,7 +175,8 @@ try {
     const message = await evaluate("document.getElementById('siwe-message').textContent");
     return status.includes("Challenge ready") && message.includes("localhost:" + port);
   });
-  assert.match(await evaluate("document.getElementById('siwe-message').textContent"), /Sign in to the local AstroCrown wallet test/);
+  const displayedSiweMessage = await evaluate("document.getElementById('siwe-message').textContent");
+  assert.match(displayedSiweMessage, /Sign in to the local AstroCrown wallet test/);
   assert.equal(await evaluate("window.__walletCalls.filter(x => x.method === 'personal_sign').length"), 0, "connection must not trigger a signature request");
 
   await evaluate("document.getElementById('sign-button').click()");
@@ -188,8 +189,7 @@ try {
   assert.ok(parsedMethods.includes("personal_sign"), "signing method is called only after the sign button");
   assert.equal(parsedMethods.filter(method => method === "personal_sign").length, 1);
   const signRequest = JSON.parse(await evaluate("JSON.stringify(window.__walletCalls.find(x => x.method === 'personal_sign'))"));
-  const visibleMessage = await evaluate("document.getElementById('siwe-message').textContent");
-  const expectedMessageHex = "0x" + Array.from(new TextEncoder().encode(visibleMessage), byte => byte.toString(16).padStart(2, "0")).join("");
+  const expectedMessageHex = "0x" + Array.from(new TextEncoder().encode(displayedSiweMessage), byte => byte.toString(16).padStart(2, "0")).join("");
   assert.equal(signRequest.params[0], expectedMessageHex, "wallet must be asked to sign the exact visible SIWE message bytes");
   assert.equal(signRequest.params[1].toLowerCase(), "0x52908400098527886e0f7030069857d2e4169ee7", "wallet signing account must match the selected account");
   assert.ok(parsedMethods.every(method => ["eth_requestAccounts", "eth_accounts", "eth_chainId", "personal_sign"].includes(method)), "mock wallet must not receive transaction or unexpected methods");
