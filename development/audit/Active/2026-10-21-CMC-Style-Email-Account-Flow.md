@@ -181,11 +181,20 @@ The owner identified three remaining visual issues:
 
 | ID | Criterion | Evidence | State |
 |---|---|---|---|
-| ACC-UI-VIS-006 | The redundant account-access kicker is absent; “AstroCrown account” remains the sole dialog heading | Static source assertion and browser DOM assertion | CI pending |
-| ACC-UI-VIS-007 | Exactly two dashed line elements flank a precisely centered “Or” label, with the line pattern tapering at both outer ends | Browser DOM geometry assertions and computed-style assertion | CI pending |
-| ACC-UI-VIS-008 | The downward arrowhead is horizontally centered under the “Or” label | Browser bounding-box assertion | CI pending |
-| ACC-UI-VIS-009 | The divider remains a static, non-clickable separator and existing account security boundaries remain intact | Existing static guards and end-to-end browser tests | CI pending |
+| ACC-UI-VIS-006 | The redundant account-access kicker is absent; “AstroCrown account” remains the sole dialog heading | Static source assertion and browser DOM assertion | PASS |
+| ACC-UI-VIS-007 | Exactly two dashed line elements flank a precisely centered “Or” label, with the line pattern tapering at both outer ends | Browser DOM geometry assertions and computed-style assertion | PASS |
+| ACC-UI-VIS-008 | The downward arrowhead is horizontally centered under the “Or” label | Browser bounding-box assertion | PASS |
+| ACC-UI-VIS-009 | The divider remains a static, non-clickable separator and existing account security boundaries remain intact | Existing static guards and end-to-end browser tests | PASS |
 
 The HTML Preview revision for this correction is pinned to `877ad2d3b2e4fd653b6f51b9248426f4ae4658a5`. It contains the updated homepage and divider styling; later audit/README-only commits do not change those previewed UI assets.
+
+### CI evidence for the owner corrections
+
+The account UI acceptance assertions passed on tested branch snapshot `47d875cd3271366eebe96209cbf85442f13a19aa`. The browser test verifies that the redundant kicker is absent, the dialog title remains, exactly two divider lines flank the “Or” label, the label is centered, the arrowhead aligns below it, and the line mask tapers the broken gold segments.
+
+- [Local Account Continuity Prototype Tests #57 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39663622773): 11 Python tests plus headless-browser flows for local sign-up/login and the memory-only browser preview.
+- [Local Wallet Authentication Prototype Tests #85 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39663622758): 17 Python tests plus the headless-browser wallet prototype journey.
+- [NOVA RSI Engine CI #737 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39663622731): 131 tests.
+- [External Review Pipeline CI #298 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39663622766): 11 tests.
 
 **Owner visual confirmation remains open.** CI is required to verify the DOM assertions and existing account journeys; the owner’s visual inspection still determines whether the line taper and center spacing match the intended appearance.
