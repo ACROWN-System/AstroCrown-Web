@@ -35,15 +35,15 @@ This UI request does not by itself qualify an email-delivery vendor or authorize
 
 | ID | Criterion | Evidence required | State |
 |---|---|---|---|
-| ACC-UX-EMAIL-001 | Log In / Sign Up tabs and requested field labels render correctly | Browser smoke test and source review | BLOCKED until implementation |
-| ACC-UX-EMAIL-002 | Valid email/password registration and sign-in work in local and browser-preview modes | Automated positive/negative test | BLOCKED until implementation |
-| ACC-UX-EMAIL-003 | Referral ID is optional, bounded, and recorded only as an unverified reference | Unit/integration tests; UI disclosure | BLOCKED until implementation |
-| ACC-UX-EMAIL-004 | Newsletter preference is independent, optional, unchecked by default, and recorded with consent timestamp | Unit/integration tests | BLOCKED until implementation |
-| ACC-UX-EMAIL-005 | Terms acceptance is required; policy links resolve to labelled draft policies | Static/browser test | BLOCKED until implementation |
-| ACC-UX-EMAIL-006 | Registration does not force or foreground one-time recovery codes | Browser smoke test | BLOCKED until implementation |
-| ACC-UX-EMAIL-007 | “Forgot password?” does not claim email delivery without an actual mail mechanism | Browser smoke test and source review | BLOCKED until implementation |
-| ACC-UX-EMAIL-008 | Existing loopback/origin, password-hash, session, no-wallet, and preview non-persistence guards remain intact | Existing and updated automated tests | BLOCKED until implementation |
-| ACC-UX-EMAIL-009 | Only development files change; no merge/deployment | Changed-file list and PR state | BLOCKED until implementation |
+| ACC-UX-EMAIL-001 | Log In / Sign Up structure and requested field labels render | Static guards + current-head headless Chrome flow; owner visual review remains open | PASS |
+| ACC-UX-EMAIL-002 | Email/password registration and sign-in work in local and browser-preview modes | Current-head 11-test suite + headless Chrome local and memory-only journeys | PASS |
+| ACC-UX-EMAIL-003 | Referral ID is optional, bounded, and recorded only as an unverified reference | Local API validation/storage tests + browser flow | PASS |
+| ACC-UX-EMAIL-004 | Newsletter preference is separate, optional, unchecked by default, and timestamped only when opted in | Current-head local API and browser tests; no external mail sender | PASS |
+| ACC-UX-EMAIL-005 | Terms acceptance is required; linked policy draft pages are served and clearly marked | Current-head API/static checks and local page serving tests; hosted HTML Preview navigation still needs owner visual confirmation | PASS |
+| ACC-UX-EMAIL-006 | Sign-up and forgotten-password journey do not force recovery-code memorisation | Static guard + browser smoke flow; old code endpoint is removed from the new contract | PASS |
+| ACC-UX-EMAIL-007 | Forgot-password does not claim email delivery when no mail mechanism exists | Browser flow and HTTP 501 contract test explicitly verify “no email was sent” | PASS |
+| ACC-UX-EMAIL-008 | Loopback/origin, password hashing, sessions, no-wallet, and preview non-persistence boundaries remain intact | Current-head account workflow, static guards, and headless Chrome | PASS |
+| ACC-UX-EMAIL-009 | Production/root homepage unchanged; changes remain in development and PR stays draft/unmerged | PR changed-file list and PR state | PASS |
 
 ## 5. Scope and boundaries
 
@@ -80,7 +80,7 @@ The draft branch now contains the following implementation changes:
 - Two development-only Terms/Privacy pages are linked. Both clearly identify themselves as unapproved drafts; the account prototype records terms-version acknowledgement only for test verification.
 - README and previous account-flow records now distinguish the historical username/recovery-code prototype evidence from this new flow.
 
-**Current verification result:** implementation/source updates are present, but until the latest pull-request workflow runs finish successfully, automated criteria remain BLOCKED. No manual browser test by the owner is claimed. Green prototype checks, if obtained, would still not make this production authentication.
+**Current verification result at code revision `a1b0ecbd1a2efcb4676360547363074c533cf13a`: automated implementation criteria PASS; owner visual confirmation of the HTML Preview remains outstanding.** The current-head account workflow completed syntax validation, all 11 loopback API tests, static UX/security guards, and the headless-Chrome local/browser-preview journeys. The browser test confirmed email sign-up/login, opt-in/terms/referral metadata handling, no email sent for forgotten password, no account API fetch in browser-preview mode, and page-memory loss after reload. These results apply to the identified revision only; prototype CI does not establish production authentication/security.
 
 ## 10. Outstanding decisions / blockers
 
@@ -92,4 +92,18 @@ The draft branch now contains the following implementation changes:
 
 ## 11. Evidence / closure
 
-Record the implementation commit, relevant Actions run URLs/statuses, browser flow result, and any remaining findings below. Do not mark acceptance criteria PASS until test evidence supports the exact implementation; production security remains BLOCKED independently of green prototype tests.
+**Implementation revision tested:** `a1b0ecbd1a2efcb4676360547363074c533cf13a`  
+**Pull request:** [#141 — Prototype familiar email account entry; retain optional wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141) — OPEN / DRAFT / NOT MERGED.
+
+Current-head GitHub Actions evidence:
+- [Local Account Continuity Prototype Tests #41 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39649436502): syntax validation, **11/11 Python tests passed**, static UX/security guards, and headless Chrome passed both the localhost-backed flow and the browser-only preview flow. The browser log ended with: `PASS: email signup/login, referral and consent handling, reset-email disclosure, local backend guardrails, and memory-only browser preview.`
+- [Local Wallet Authentication Prototype Tests #69 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39649436563): separate wallet-lab regression suite.
+- [NOVA RSI Engine CI #721 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39649436390).
+- [External Review Pipeline CI #282 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39649436671).
+- [NOVA RSI CodeQL Security Analysis #292 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39649436413).
+
+**Re-test result:** the automated test suite covers email normalization/sign-in, duplicate email, password validation, independent opt-in timestamp, optional referral identifier and invalid referral rejection, Terms acceptance/version, rate/origin/host/body controls, no false email reset success, no one-time recovery-code sign-up contract, no wallet prompt, no account API calls in browser-preview mode, and reload clearing the preview account.
+
+**Remaining finding/limitation:** automated browser checks exercise local HTML and a simulated browser-preview adapter; they do not confirm the owner’s rendering in the external HTML-preview website. Owner visual confirmation of form fit, arrowhead, and links remains open. The flow must only be tested with invented values.
+
+**Production closure: BLOCKED.** Email verification, email password-reset delivery, newsletter operations/unsubscribe, approved legal text, production hosting/database, hardened production authentication/recovery, security/privacy/legal review, and AUTH-001 publishing verification are not implemented. No claim of production readiness or protection of real assets is made.
