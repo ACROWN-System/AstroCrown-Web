@@ -28,11 +28,11 @@ A crypto wallet is familiar to some users but may be unfamiliar, intimidating or
 
 Separating concerns also limits the consequences of a compromised wallet: wallet ownership should not automatically grant an ordinary account, privileged editor role, payout destination, private-memory access or administrative authority. Conversely, loss of a crypto wallet should not automatically lock a person out of their AstroCrown account.
 
-## 3. Ordinary account authentication: candidate direction, not final implementation
+## 3. Ordinary account authentication: familiar entry first, candidate direction not final implementation
 
 ### 3.1 First candidate: WebAuthn/passkeys
 
-Evaluate WebAuthn/passkeys as the leading candidate for passwordless ordinary sign-in. WebAuthn is a public-key credential standard; its use does not require AstroCrown to receive a user's private key. A local authenticator may be unlocked by a device PIN, password or optional biometric depending on the authenticator; AstroCrown must not demand facial recognition, fingerprint recognition or any centralized biometric template as the only access path.
+Avoid making an unfamiliar authentication method the only first interaction. Provide a familiar sign-in/create-account interface and evaluate WebAuthn/passkeys as an optional additional or later sign-in method, rather than making a passkey the only available path. WebAuthn is a public-key credential standard; its use does not require AstroCrown to receive a user's private key. A local authenticator may be unlocked by a device PIN, password or optional biometric depending on the authenticator; AstroCrown must not demand facial recognition, fingerprint recognition or any centralized biometric template as the only access path.
 
 The W3C published WebAuthn Level 3 as a Recommendation on 2026-08-25. This establishes the standards status, not our application's security, compatibility, accessibility, hosting or recovery readiness. Reference: https://www.w3.org/TR/2026/REC-webauthn-3-20260825/.
 
@@ -48,7 +48,19 @@ Therefore:
 - Keep standards-based WebAuthn as a candidate until the supported device matrix, accessibility and fallback flows pass explicit tests.
 - If passkeys alone cannot serve the intended audience, evaluate a maintained non-wallet alternative such as password plus a suitable second factor. Do not build a custom cryptographic authentication scheme.
 
-### 3.3 Account and wallet records stay separate
+### 3.3 Familiar ordinary-account entry choices
+
+**Proposed first screen, subject to actual provider and no-cost qualification:**
+
+- “Continue with Google” using the official sign-in integration, after AstroCrown's real domain, privacy policy, consent/branding configuration and redirect path are verified.
+- “Use username and password” as a recognizable route that does not require a social identity provider or mandatory email. A password is not an account identifier by itself: this route needs a unique username/handle or internal account identifier plus a password. If email is not collected, account recovery must rely on other registered authenticators and/or properly implemented recovery codes/ceremony.
+- Offer passkey setup as an optional next step during account security setup, sign-in when it can help, or settings; do not force users to learn a novel sign-in method before they understand AstroCrown.
+- Add other social-provider buttons only where the actual provider integration, brand usage, privacy scope, terms, operational maintenance and strict $0/no-card constraints have been checked. A “More options” area can hold providers we later qualify; do not display fake/inactive brand buttons.
+- Do not show a wallet as a default ordinary-account sign-in choice. Request it in context when a wallet-dependent feature needs it.
+
+For a single-factor password route, use the current NIST SP 800-63B guidance as an engineering reference: minimum 15 characters, allow long passphrases (at least 64-character maximum supported), support password managers/autofill/paste, block common/known-compromised passwords, avoid arbitrary composition rules and periodic resets absent compromise, and rate-limit attempts. These are to be evaluated against the project's security and usability requirements; NIST guidance is a reference, not a claim of certification. Reference: https://pages.nist.gov/800-63-4/sp800-63b.html.
+
+### 3.4 Account and wallet records stay separate
 
 An ordinary account should have a stable internal account ID independent of its wallet addresses. A wallet may be linked explicitly for a wallet-specific feature or, if later justified, as an additional optional authenticator. In either case:
 - Linking requires reauthentication with an already registered ordinary-account authenticator and proof of control of the wallet being linked, or a separately reviewed recovery ceremony.
@@ -85,7 +97,7 @@ The exact mix is a candidate decision to be tested. No method should be describe
 
 Owner/Security Administrator and publishing privileges need stricter controls than ordinary login. Before implementation, decide and test a deliberate bootstrap procedure, multi-authenticator/second-operator rules where practical, reauthentication for critical changes, delayed recovery when justified, independent notifications, session revocation and auditable role changes. No “first person to sign in” or “first wallet connected” may become administrator automatically. Routine login recovery must never immediately become a privilege-escalation route.
 
-## 5. PR #141 reassessment
+## 5. Administrator wallet policy and Imperial HSIAN recovery
 
 PR #141 currently contains an isolated local EOA/SIWE wallet-signature prototype and an architecture plan that previously framed the application as wallet-first.
 
@@ -99,13 +111,13 @@ Keep PR #141 in draft until:
 3. ordinary-account requirements and recovery scenarios are written and tested separately;
 4. AUTH-001 (authoritative public source/origin/publishing path) and other production gates are resolved before any public integration.
 
-## 6. PR #140 and editor boundary
+## 7. PR #140 and editor boundary
 
 PR #140 is a separate development-only announcement-band editor prototype. Its eventual administrative sign-in should authenticate an ordinary AstroCrown account without requiring a crypto wallet. Server-side authorization must independently determine the user's roles. Wallet connection is shown only where an editor/publisher action truly needs a wallet, asset-ownership proof, or an explicitly explained blockchain transaction.
 
 Do not infer that this PR changes or secures PR #140. Keep both drafts isolated until each requirement, trust boundary, permission model and deployment path is verified.
 
-## 7. Mandatory acceptance criteria before selecting or promoting an implementation
+## 8. Mandatory acceptance criteria before selecting or promoting an implementation
 
 | ID | Criterion | Evidence required |
 |---|---|---|
@@ -126,7 +138,7 @@ Do not infer that this PR changes or secures PR #140. Keep both drafts isolated 
 
 The listed tests are AstroCrown project requirements, not claims that every row is prescribed verbatim by an external standard.
 
-## 8. Ordered next actions
+## 9. Ordered next actions
 
 1. Keep this decision authoritative and the wallet lab optional. The SIWE prototype does not substitute for ordinary account authentication.
 2. Verify the real public website and publishing source. Resolve AUTH-001 before setting WebAuthn's relying-party ID/origin or choosing a backend, database, route or migration strategy.
@@ -137,14 +149,15 @@ The listed tests are AstroCrown project requirements, not claims that every row 
 7. Only then revisit PR #140 integration. Enforce roles server-side and require wallet access only for explicit wallet-specific operations.
 8. Review exact diffs and checks before any promotion. No automatic merge or deployment.
 
-## 9. Impact Analysis
+## 10. Impact Analysis
 
 **IF this decision is followed:** ordinary users will not be forced into crypto-wallet UX, and wallet loss/absence will not automatically block unrelated account access. Authenticator registration, wallet association, roles, recovery and publishing can be evaluated as separate trust boundaries. A user may still choose wallet authentication where it genuinely serves their feature.
 
 **IF the prior wallet-first direction were retained:** unfamiliar wallet UX could make users distrust or abandon registration; lack of wallet support could block ordinary use; wallet compromise could spill into unrelated app access; and changing the model later could require account migration and recovery work.
 
-## 10. External references and status
+## 11. Research references and status
 
+- Social login/logo trust and onboarding research: [Sign-In Provider Research and Onboarding Plan](2026-10-21-Sign-In-Provider-Research-and-Onboarding-Plan.md).
 - W3C WebAuthn Level 3 Recommendation, 2026-08-25: https://www.w3.org/TR/2026/REC-webauthn-3-20260825/
 - FIDO Alliance, *Synced Passkey Deployment: Emerging Practices for Consumer Use Cases*: https://fidoalliance.org/wp-content/uploads/2024/05/Synced-Passkey-Deployment_-Emerging-Practices-for-Consumer-Use-Cases_2024-Final.pdf
 - FIDO Alliance passkeys overview: https://fidoalliance.org/passkeys-2/
@@ -152,4 +165,4 @@ The listed tests are AstroCrown project requirements, not claims that every row 
 - Account continuity baseline and proposed recovery architecture: [roadmap](../../account-continuity/ACCOUNT-CONTINUITY-AND-PRIVACY-PRESERVING-ACCESS-ROADMAP.md)
 - Optional wallet protocol experiment only: [ERC-4361 / SIWE](https://eips.ethereum.org/EIPS/eip-4361), [EIP-191](https://eips.ethereum.org/EIPS/eip-191), [EIP-1193](https://eips.ethereum.org/EIPS/eip-1193)
 
-**Current implementation status:** direction recorded; no ordinary-account authenticator or recovery flow has been implemented or approved in this decision. Wallet experiment is not production authentication. AUTH-001 remains BLOCKED.
+**Current implementation status:** direction recorded; no ordinary-account authenticator or recovery flow has been implemented or approved in this decision. Admin wallet policy is documented but not implemented; Imperial HSIAN recovery remains a human/governance process to specify and test. Wallet experiment is not production authentication. AUTH-001 remains BLOCKED.
