@@ -12,7 +12,7 @@ Current major development subsystems include:
 - `nova-ai-orchestration/` — multi-AI orchestration, comparison, arbitration, distillation, and reusable NOVA intelligence workflows.
 - `nova-context-memory-optimization/` — evaluation and integration of established memory, semantic compression, retrieval, context-pruning, token-budgeting, caching, and related efficiency techniques.
 - `nova-recursive-self-improvement/` — autonomous RSI experimentation, protected evaluation, evidence, and candidate retention.
-- `account-continuity/` — development-only roadmap for account continuity, accessible authentication, privacy-preserving eligibility, recovery, member benefits, and optional community resource contribution; includes a loopback-only account-creation/sign-in test prototype under account-continuity/prototype/.
+- `account-continuity/` — development-only roadmap for account continuity, accessible authentication, privacy-preserving eligibility, recovery, member benefits, and optional community resource contribution; includes an ephemeral browser-preview account-flow demo and a separate loopback-only Python/SQLite test backend under account-continuity/prototype/.
 - `ai-sanctuary/` — Sanctuary research/protection architecture, AI welfare evidence mapping, and cross-repository integration with NOVA.
 - `index-section/` — active homepage section requirements, discoveries, and implementation-specific documentation.
 - `index-reference/` — shared homepage reference conventions.
