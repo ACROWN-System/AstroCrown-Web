@@ -1,7 +1,7 @@
 # Active Navigation Plan — Familiar Email Account Entry (CMC-Inspired)
 
 **Date:** 2026-10-21  
-**Status:** PLAN / IMPLEMENTATION IN PROGRESS — development prototype only  
+**Status:** IMPLEMENTED ON DRAFT BRANCH — exact-head CI/browser verification pending; production use BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Branch:** docs/provider-independent-wallet-auth-plan-2026-10-20  
 **Parent PR:** [#141 — authentication architecture and optional-wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)
@@ -67,6 +67,29 @@ A typed email address is personal data. The development preview therefore accept
 
 **Residual risk:** this UX prototype cannot protect real user assets. Production account storage, email verification, email-based password reset, newsletter delivery/consent operations, policy approval and host/publishing qualification remain separate mandatory gates.
 
-## 8. Evidence / closure
+
+## 9. Implementation record (2026-10-21)
+
+The draft branch now contains the following implementation changes:
+
+- `development/index.html` opens the account modal with updated account-access framing.
+- `development/account-continuity/prototype/account-ui.js` now renders Log In / Sign Up tabs, the requested email/password placeholders, optional Referral ID, independent unchecked-by-default newsletter preference, required policy acknowledgement, and the down-chevron **Or** expander. It no longer displays the one-time recovery-code registration flow.
+- `account-prototype.css` uses a compact, clean light form inside the existing AstroCrown development theme.
+- `server.py` uses email as the prototype account identifier, stores referral and consent metadata locally, retains salted PBKDF2 password hashes and loopback-only session controls, and explicitly returns a non-success status for password-reset email because no email delivery is configured.
+- `tests/test_account_server.py`, `tests/browser_smoke.mjs`, and the prototype workflow were updated to check email registration/sign-in, consent separation, Terms acceptance, missing email delivery, no wallet requirement, and browser-preview non-persistence.
+- Two development-only Terms/Privacy pages are linked. Both clearly identify themselves as unapproved drafts; the account prototype records terms-version acknowledgement only for test verification.
+- README and previous account-flow records now distinguish the historical username/recovery-code prototype evidence from this new flow.
+
+**Current verification result:** implementation/source updates are present, but until the latest pull-request workflow runs finish successfully, automated criteria remain BLOCKED. No manual browser test by the owner is claimed. Green prototype checks, if obtained, would still not make this production authentication.
+
+## 10. Outstanding decisions / blockers
+
+- Production email verification and password-reset delivery are not implemented; no provider is selected. Any provider must be qualified against $0/no-card, security, privacy, domain, and operational requirements before use.
+- Newsletter opt-in is stored only as a test preference; no external list or email sender is contacted.
+- Referral values are syntactically checked but not resolved against a referral programme or rewarded.
+- Production Terms of Use / Privacy Policy require review and approval; the linked drafts are not production legal documents.
+- Production account persistence, rate limiting beyond the single-process test limiter, transport/session hardening, account export/deletion, recovery, security review and AUTH-001 publishing verification remain BLOCKED.
+
+## 11. Evidence / closure
 
 Record the implementation commit, relevant Actions run URLs/statuses, browser flow result, and any remaining findings below. Do not mark acceptance criteria PASS until test evidence supports the exact implementation; production security remains BLOCKED independently of green prototype tests.
