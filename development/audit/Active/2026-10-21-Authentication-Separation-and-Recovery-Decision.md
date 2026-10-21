@@ -99,6 +99,18 @@ Owner/Security Administrator and publishing privileges need stricter controls th
 
 ## 5. Administrator wallet policy and Imperial HSIAN recovery
 
+The owner's policy is that admin access requires wallet enrollment, with up to three registered wallets. On a fresh admin sign-in, a signature from **any one** of the registered wallets is sufficient; this is not a 2-of-3 transaction or multisignature rule.
+
+- Losing one wallet must not lock the administrator out while another enrolled wallet is available.
+- Each wallet proves control during enrollment; merely connecting an address is not authentication. The server separately checks the existing admin role. No wallet gains admin privileges by signing in first.
+- Encourage registering a second and ideally a third wallet, with genuinely independent custody where feasible. Addresses backed by the same seed phrase or only available through the same lost/compromised device can fail together.
+- **Recommended enrollment gate:** require at least two verified wallets before enabling full administrator privileges and encourage the third. The owner's instruction sets the maximum at three and requires wallet enrollment, but the minimum enrollment count is not yet explicitly settled. If access is enabled with only one wallet, losing that wallet necessarily forces Imperial HSIAN recovery.
+- **Loss of all enrolled wallets:** no ordinary self-service reset, email-only bypass, first-new-wallet login or unreviewed recreation is allowed. The administrator requests restoration or authorization for a replacement admin account from the **Imperial HSIAN authority**—the owner (you) and/or an expressly authorized NOVA-governed process. NOVA may assemble evidence and execute only actions explicitly authorized by governance; it must not silently promote itself or an unverified claimant.
+- Before recovery is approved, preserve relevant audit records and validate the request under a written procedure. Upon approval, revoke old sessions and wallet registrations that can no longer be trusted, then enroll and verify new wallets. The authority may restore the existing admin account or authorize a replacement admin account. Role changes, ownership transfer, payout changes and sensitive-data access are separate actions requiring explicit authorization.
+- The procedure's evidence, review steps, notification/delay, conflict handling, custody independence and audit events must be specified and tested before production. This policy is documented but not implemented.
+
+## 6. PR #141 reassessment
+
 PR #141 currently contains an isolated local EOA/SIWE wallet-signature prototype and an architecture plan that previously framed the application as wallet-first.
 
 **Decision:** retain the code only as a development-only wallet-capability experiment for a feature that may genuinely require wallet ownership. Revise its documentation and UI to make the narrower purpose explicit. Do not use it as the ordinary AstroCrown account-login flow, do not integrate it with PR #140, and do not merge/deploy it merely because tests pass.
