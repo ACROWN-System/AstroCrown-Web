@@ -26,13 +26,13 @@ Ordinary account access does not request a crypto wallet or a social sign-in pro
 
 ## Direct browser preview (no installation)
 
-Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2Fe76d834c413a75b86b08bf52e551bcd1c4d0ce7b%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
+Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2Fbb57ea275491b43a014b055318aa8ada46b7b66e%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
 
 On the hosted preview origin, account interactions run in a browser-only demonstration adapter. It makes no account API requests and keeps the account, password hash, referral field and test consent values in page memory only. All of them disappear when the page reloads or when another tab is opened. This is an interaction harness, not real authentication.
 
 The preview uses a third-party HTML proxy. Use invented email/passphrase/referral values only. Never enter a real password, personal email address, wallet secret, valuable recovery material or real marketing preference. Do not let your password manager save the test credentials.
 
-The URL is pinned to the homepage commit that contains this email-account UI. It deliberately opens a historical revision so the preview's relative account assets match the same commit; newer changes to unrelated audit/tests files do not change the previewed screen.
+The URL is pinned to the audited draft commit containing the current email-account UI, styles, and development policy pages. Its relative CSS/JavaScript assets and policy pages resolve from the same repository revision; subsequent documentation-only changes do not alter the page shown by this link.
 
 ## Windows PowerShell: run locally
 
