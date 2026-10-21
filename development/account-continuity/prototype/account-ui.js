@@ -359,7 +359,7 @@
         '</label>' +
         '<button class="account-primary" type="submit">Create account</button>' +
       '</form>' +
-      '<p class="account-provider-note">Local development only. Do not reuse a real or important password here. Do not reuse a real or important password here. This is not production authentication.</p>';
+      '<p class="account-provider-note">This prototype is for development only. Do not reuse a real or important password. This is not production authentication.</p>';
   }
 
   function renderRecoveryCodes() {
