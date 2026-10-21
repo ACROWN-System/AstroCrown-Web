@@ -214,7 +214,8 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('.account-dialog-kicker'))"), false);
   assert.equal(await evaluate("document.querySelector('.account-or-divider').tagName"), "DIV");
   assert.equal(await evaluate("document.querySelectorAll('.account-or-divider-line').length"), 2);
-  assert.ok(await evaluate("Math.abs((document.querySelector('.account-or-divider-label').getBoundingClientRect().left + document.querySelector('.account-or-divider-label').getBoundingClientRect().right) / 2 - (document.querySelector('.account-or-divider-line-row').getBoundingClientRect().left + document.querySelector('.account-or-divider-line-row').getBoundingClientRect().right) / 2) <= 1));
+  assert.ok(await evaluate("Math.abs((document.querySelector('.account-or-divider-label').getBoundingClientRect().left + document.querySelector('.account-or-divider-label').getBoundingClientRect().right) / 2 - (document.querySelector('.account-or-divider-line-row').getBoundingClientRect().left + document.querySelector('.account-or-divider-line-row').getBoundingClientRect().right) / 2) <= 1"),
+    "Or must be centered in browser-preview mode");
   assert.equal(await evaluate("Boolean(document.querySelector('.account-or-divider button, .account-or-divider a, #account-other-options'))"), false);
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("browser-preview create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
