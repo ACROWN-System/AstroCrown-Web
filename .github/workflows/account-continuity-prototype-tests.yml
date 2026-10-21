@@ -49,6 +49,8 @@ jobs:
           html = Path("development/index.html").read_text(encoding="utf-8")
           server = Path("development/account-continuity/prototype/server.py").read_text(encoding="utf-8")
           ui = Path("development/account-continuity/prototype/account-ui.js").read_text(encoding="utf-8")
+          terms = Path("development/account-continuity/prototype/terms-of-use.html").read_text(encoding="utf-8")
+          privacy = Path("development/account-continuity/prototype/privacy-policy.html").read_text(encoding="utf-8")
           required = (
               'id="open-account-dialog"', 'id="account-dialog"', 'id="account-demo-notice"',
               'href="./account-continuity/prototype/account-prototype.css"',
@@ -60,11 +62,19 @@ jobs:
           if 'ThreadingHTTPServer(("127.0.0.1", port)' not in server:
               raise SystemExit("The local account prototype must bind only to loopback.")
           for item in (
-              "recoveryCodes", "data-account-mode", "Forgot password?", "A crypto wallet is not required",
-              "browserPreviewRequest", "browser-preview-memory-only", "600000"
+              "newsletterOptIn", "data-account-mode", "Forgot password?", "A crypto wallet is not required",
+              "Referral ID (Optional)", "Terms of Use", "Privacy Policy", "No email was sent",
+              "browserPreviewRequest", "browser-preview-memory-only", "600000", "termsAccepted"
           ):
               if item not in ui:
                   raise SystemExit(f"Expected account UX/security boundary missing: {item}")
+          if "recoveryCodes" in ui or "account-recover-form" in ui:
+              raise SystemExit("One-time recovery codes must not be the default forgot-password journey.")
+          if "DRAFT ONLY" not in terms or "DRAFT ONLY" not in privacy:
+              raise SystemExit("Policy links must point to explicitly marked development drafts.")
+          for item in ("terms-of-use.html", "privacy-policy.html"):
+              if item not in server:
+                  raise SystemExit(f"Local allowlist missing development policy page: {item}")
           if any(item in ui for item in ("localStorage.", "sessionStorage.", "indexedDB.")):
               raise SystemExit("Preview account flow must not persist credentials or account state in browser storage.")
           if "window.ethereum" in ui or "eth_requestAccounts" in ui:
