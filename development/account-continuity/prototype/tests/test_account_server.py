@@ -52,7 +52,12 @@ class AccountServerTests(unittest.TestCase):
         client = opener or self.opener
         try:
             response = client.open(request, timeout=5)
-            return response.status, json.loads(response.read().decode("utf-8")), response.headers
+            body = response.read().decode("utf-8")
+            try:
+                payload = json.loads(body)
+            except json.JSONDecodeError:
+                payload = {"body": body}
+            return response.status, payload, response.headers
         except urllib.error.HTTPError as error:
             body = error.read().decode("utf-8")
             try:
