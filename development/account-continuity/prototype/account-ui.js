@@ -57,12 +57,6 @@
     return data;
   }
 
-  function environmentDetails() {
-    return browserPreviewMode
-      ? "Temporary browser demo: account state is held in this page only and is erased on reload or when you open a new tab. No account API is called. Use an invented email and passphrase."
-      : "Local test only: account data is stored in SQLite on this computer. Email verification, email password reset and newsletter delivery are not configured.";
-  }
-
   function applyPreviewFormPrivacy() {
     if (!browserPreviewMode) return;
     Array.prototype.forEach.call(content.querySelectorAll("form"), function (form) {
