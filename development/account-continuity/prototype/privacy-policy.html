@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>AstroCrown Privacy Policy — Development Draft</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#0c1b2e;--ink:#f2f5fb;--muted:#aab8cb;--gold:#ffd700;--line:rgba(153,178,213,.22}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#050914,#091629);color:var(--ink);font:16px/1.7 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{width:min(820px,calc(100% - 32px));margin:40px auto;padding:clamp(20px,5vw,42px);border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+h1,h2{line-height:1.2}h1{font-size:clamp(28px,5vw,40px)}h2{font-size:20px;margin-top:28px}
+.notice{padding:14px;border:1px solid rgba(255,210,74,.4);border-radius:10px;background:rgba(255,210,74,.07);color:#ffe8a0;font-weight:700}
+p,li{color:var(--muted)}a{color:var(--gold)}.meta{font-size:12px;color:#8192aa}
+</style>
+</head>
+<body><main>
+<p class="meta">ASTROCROWN · DEVELOPMENT PREVIEW</p>
+<h1>Privacy Policy</h1>
+<p class="notice">DRAFT ONLY — NOT APPROVED FOR PRODUCTION OR REAL USERS</p>
+<p><strong>Status:</strong> Development draft for the Account dialog only. It does not replace a reviewed production privacy notice and should not be relied on as legal advice or a complete statement of a deployed service's practices.</p>
+<h2>1. Browser-preview mode</h2>
+<p>The hosted HTML preview is a disposable interaction demonstration. Account form values and demo account state are processed in page memory only by the prototype; this code does not send account API requests or write account data to browser storage. Reloading or opening a new tab discards the demo account. The preview is served through a third-party HTML-preview service, so never enter real personal information or credentials.</p>
+<h2>2. Local prototype mode</h2>
+<p>In the optional localhost test, email address, password hash, creation timestamp, referral ID, Terms acceptance and newsletter opt-in state are stored in a local SQLite database on the test computer. Passwords are not stored in plaintext. This prototype does not send verification messages, password-reset emails, or crypto-news newsletters. The newsletter checkbox records only a local test preference; it does not subscribe the address to a mailing list.</p>
+<h2>3. Data minimization and purpose</h2>
+<p>Email is used as the account identifier in this prototype. A Referral ID is an optional unverified test value; it does not trigger rewards or tracking. The crypto-news email preference is separate, optional, and unchecked by default. The development test is not an authorization to contact real people.</p>
+<h2>4. Retention, deletion and access</h2>
+<p>Hosted-preview data disappears with the page session. Local test records persist in the configured SQLite database until the test operator deletes that database. This draft does not define production retention periods, access requests, export, deletion, incident notifications, lawful bases, cross-border transfers, or data-subject rights.</p>
+<h2>5. Third parties and production delivery</h2>
+<p>No external identity, mailing-list, or email delivery provider is configured by this prototype. Any future service must be evaluated for necessity, cost, data access, retention, security, jurisdiction, privacy, and the project's $0/no-card constraint before activation.</p>
+<h2>6. Review required</h2>
+<p>Before collecting real user data, AstroCrown must approve its production hosting and data flows, verify email addresses, implement secure password-reset delivery, define marketing consent and unsubscribe handling, assess legal obligations, and publish an accurate, reviewed privacy notice. No production compliance claim is made.</p>
+<p><a href="../../index.html">Return to the development homepage</a></p>
+</main></body></html>
