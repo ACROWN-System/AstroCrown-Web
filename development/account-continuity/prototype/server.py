@@ -295,6 +295,10 @@ class AccountApplication:
             if not self.rate_allowed("recover", username, limit=8):
                 raise ApiError(429, "Too many recovery attempts. Wait a minute before trying again.")
             with self.connect() as db:
+                # Serialize concurrent recovery attempts before looking up a single-use code.
+                # Without BEGIN IMMEDIATE, two simultaneous requests could both read the same
+                # code before either transaction performs a write.
+                db.execute("BEGIN IMMEDIATE")
                 account = db.execute("SELECT * FROM accounts WHERE username = ?", (username,)).fetchone()
                 code_row = None
                 if account is not None and bool(account["recovery_enabled"]) and RECOVERY_RE.fullmatch(code):
