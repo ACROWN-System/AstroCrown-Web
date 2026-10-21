@@ -1,7 +1,7 @@
 # Active Navigation Plan — Familiar Email Account Entry (CMC-Inspired)
 
 **Date:** 2026-10-21  
-**Status:** IMPLEMENTED ON DRAFT BRANCH — email-account behavior verified on prior draft head; 2026-10-22 visual refinement in progress; production use BLOCKED  
+**Status:** IMPLEMENTED ON DRAFT BRANCH — automated visual-contract and account-flow checks PASS on code snapshot `9873353d2e814709b3473fb1829935ff8d4eb81f`; owner visual confirmation BLOCKED; production use BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Branch:** docs/provider-independent-wallet-auth-plan-2026-10-20  
 **Parent PR:** [#141 — authentication architecture and optional-wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)
@@ -132,11 +132,25 @@ The owner asked to improve the visual UI before proceeding with production authe
 
 | ID | Criterion | Evidence | State |
 |---|---|---|---|
-| ACC-UI-VIS-001 | Log In / Sign Up is the first row inside account content | Headless-browser DOM-order assertion | BLOCKED pending current-head run |
-| ACC-UI-VIS-002 | Three circular future-provider slots are reserved but not interactive | DOM assertion and static source check | BLOCKED pending current-head run |
-| ACC-UI-VIS-003 | “Or” is static, has no click handler, and shows a broken gold line with arrow beneath it | DOM assertions + CSS guard + browser computed style | BLOCKED pending current-head run |
-| ACC-UI-VIS-004 | Account dialog uses the AstroCrown dark card palette and gold highlights | CSS source contract + owner visual inspection in HTML Preview | BLOCKED pending current-head run and owner visual confirmation |
-| ACC-UI-VIS-005 | Email sign-up/login, consent/referral behavior and prototype warnings remain intact | Existing 11 API tests + end-to-end browser journey | BLOCKED pending current-head run |
+| ACC-UI-VIS-001 | Log In / Sign Up is the first row inside account content | Headless-browser DOM-order assertion | PASS |
+| ACC-UI-VIS-002 | Three circular future-provider slots are reserved but not interactive | DOM assertion and static source check | PASS |
+| ACC-UI-VIS-003 | “Or” is static, has no click handler, and shows a broken gold line with arrow beneath it | DOM assertions + CSS guard + browser computed style | PASS |
+| ACC-UI-VIS-004 | Account dialog uses the AstroCrown dark card palette and gold highlights | CSS source contract passes; owner visual inspection in HTML Preview remains open | BLOCKED — owner confirmation pending |
+| ACC-UI-VIS-005 | Email sign-up/login, consent/referral behavior and prototype warnings remain intact | 11 Python tests + end-to-end headless Chrome journey | PASS |
+
+### Exact-snapshot re-test evidence — 2026-10-22
+
+Automated checks completed successfully on source snapshot `9873353d2e814709b3473fb1829935ff8d4eb81f`:
+
+- [Local Account Continuity Prototype Tests #51 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39657201903): Python/JavaScript syntax, 11/11 API tests, static UI/security checks, and headless Chrome for the localhost-backed and memory-only preview flows. The updated browser assertions verify tabs-first order, three non-interactive circular slots, a static non-clickable Or divider, a broken gold line and arrow placement underneath.
+- [Local Wallet Authentication Prototype Tests #79 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39657201838).
+- [NOVA RSI Engine CI #731 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39657202173).
+- [External Review Pipeline CI #292 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39657201927).
+- [NOVA RSI CodeQL Security Analysis #302 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39657202527).
+
+The pinned HTML-preview revision `42864fd11adfacee86dec996dca3bd7d5887395f` was compared with the tested source snapshot. The homepage, account JavaScript, account CSS, Terms draft and Privacy draft have identical file blob SHAs in both revisions. README/audit-only commits do not alter the previewed UI assets.
+
+**Owner visual confirmation remains BLOCKED.** The test suite verifies DOM order, non-interactivity and key computed styling, but does not replace the owner's own visual inspection in the external HTML Preview.
 
 ### Impact analysis
 
