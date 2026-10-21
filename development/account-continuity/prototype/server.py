@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Loopback-only AstroCrown ordinary-account creation/sign-in prototype.
+"""Loopback-only AstroCrown email-account UX prototype.
 
-This is a development test harness, not production authentication.
-It uses only the Python standard library, SQLite, PBKDF2 and HTTP cookies.
+Development test harness only — not production authentication.
+Uses Python standard library, SQLite, PBKDF2 and HTTP cookies.
 """
 from __future__ import annotations
 
@@ -31,10 +31,10 @@ PASSWORD_ITERATIONS = 600_000
 PASSWORD_MIN_LENGTH = 15
 PASSWORD_MAX_LENGTH = 1024
 SESSION_LIFETIME_SECONDS = 30 * 60
-RECOVERY_CODE_COUNT = 8
 MAX_BODY_BYTES = 16 * 1024
-USERNAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{2,23}$")
-RECOVERY_RE = re.compile(r"^[A-F0-9]{24}$")
+TERMS_VERSION = "development-draft-2026-10-21"
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+REFERRAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 
 
 class ApiError(Exception):
@@ -44,23 +44,23 @@ class ApiError(Exception):
         self.message = message
 
 
-def utc_iso(timestamp: int | None = None) -> str:
-    value = datetime.fromtimestamp(timestamp or time.time(), tz=timezone.utc)
+def utc_iso(timestamp: int | float | None = None) -> str:
+    value = datetime.fromtimestamp(time.time() if timestamp is None else timestamp, tz=timezone.utc)
     return value.isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
-def normalize_username(value: object) -> str:
+def normalize_email(value: object) -> str:
     if not isinstance(value, str):
-        raise ApiError(400, "Enter a username using 3–24 letters, digits, dots, underscores or hyphens.")
-    candidate = value.strip()
-    if not USERNAME_RE.fullmatch(candidate):
-        raise ApiError(400, "Enter a username using 3–24 letters, digits, dots, underscores or hyphens.")
-    return candidate.lower()
+        raise ApiError(400, "Enter a valid email address.")
+    candidate = value.strip().lower()
+    if len(candidate) > 254 or not EMAIL_RE.fullmatch(candidate):
+        raise ApiError(400, "Enter a valid email address.")
+    return candidate
 
 
 def validate_password(value: object) -> str:
     if not isinstance(value, str):
-        raise ApiError(400, "Enter a password.")
+        raise ApiError(400, "Enter your password.")
     if len(value) < PASSWORD_MIN_LENGTH:
         raise ApiError(400, "Use a passphrase at least 15 characters long.")
     if len(value) > PASSWORD_MAX_LENGTH:
@@ -68,23 +68,17 @@ def validate_password(value: object) -> str:
     return value
 
 
-def normalize_recovery_code(value: object) -> str:
-    if not isinstance(value, str):
+def normalize_referral_id(value: object) -> str:
+    if value is None:
         return ""
-    return re.sub(r"[^A-Fa-f0-9]", "", value).upper()
-
-
-def make_recovery_codes() -> list[str]:
-    codes = []
-    for _ in range(RECOVERY_CODE_COUNT):
-        raw = secrets.token_hex(12).upper()
-        codes.append("-".join(raw[i:i + 4] for i in range(0, len(raw), 4)))
-    return codes
-
-
-def hash_recovery_code(code: str) -> str:
-    normalized = normalize_recovery_code(code)
-    return hashlib.sha256(normalized.encode("ascii")).hexdigest()
+    if not isinstance(value, str):
+        raise ApiError(400, "Enter a valid Referral ID or leave the field blank.")
+    candidate = value.strip()
+    if not candidate:
+        return ""
+    if not REFERRAL_RE.fullmatch(candidate):
+        raise ApiError(400, "Enter a valid Referral ID or leave the field blank.")
+    return candidate
 
 
 def hash_session_token(token: str) -> str:
@@ -119,16 +113,17 @@ class AccountApplication:
                 CREATE TABLE IF NOT EXISTS accounts (
                     account_id TEXT PRIMARY KEY,
                     username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+                    email TEXT UNIQUE COLLATE NOCASE,
                     password_salt BLOB NOT NULL,
                     password_hash BLOB NOT NULL,
                     created_at TEXT NOT NULL,
-                    recovery_enabled INTEGER NOT NULL DEFAULT 0
-                );
-                CREATE TABLE IF NOT EXISTS recovery_codes (
-                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
-                    code_hash TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    PRIMARY KEY (account_id, code_hash)
+                    recovery_enabled INTEGER NOT NULL DEFAULT 0,
+                    referral_id TEXT NOT NULL DEFAULT '',
+                    newsletter_opt_in INTEGER NOT NULL DEFAULT 0,
+                    newsletter_consent_at TEXT,
+                    terms_version TEXT NOT NULL DEFAULT '',
+                    terms_accepted_at TEXT NOT NULL DEFAULT '',
+                    email_verified INTEGER NOT NULL DEFAULT 0
                 );
                 CREATE TABLE IF NOT EXISTS sessions (
                     token_hash TEXT PRIMARY KEY,
@@ -137,9 +132,25 @@ class AccountApplication:
                     expires_at INTEGER NOT NULL
                 );
                 CREATE INDEX IF NOT EXISTS sessions_account_idx ON sessions(account_id);
-                CREATE INDEX IF NOT EXISTS recovery_account_idx ON recovery_codes(account_id);
                 """
             )
+            # Upgrade an older local test database in place. The old username value
+            # is retained as a legacy value; real users/data must never use this prototype.
+            columns = {row["name"] for row in db.execute("PRAGMA table_info(accounts)").fetchall()}
+            migrations = {
+                "email": "TEXT",
+                "referral_id": "TEXT NOT NULL DEFAULT ''",
+                "newsletter_opt_in": "INTEGER NOT NULL DEFAULT 0",
+                "newsletter_consent_at": "TEXT",
+                "terms_version": "TEXT NOT NULL DEFAULT ''",
+                "terms_accepted_at": "TEXT NOT NULL DEFAULT ''",
+                "email_verified": "INTEGER NOT NULL DEFAULT 0",
+            }
+            for name, definition in migrations.items():
+                if name not in columns:
+                    db.execute(f"ALTER TABLE accounts ADD COLUMN {name} {definition}")
+            db.execute("UPDATE accounts SET email = username WHERE email IS NULL OR email = ''")
+            db.execute("CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_ci_idx ON accounts(email COLLATE NOCASE)")
         try:
             os.chmod(self.database_path, 0o600)
         except OSError:
@@ -199,87 +210,91 @@ class AccountApplication:
             return row, int(row["expires_at"])
 
     @staticmethod
-    def account_summary(account: sqlite3.Row, expires_at: int | None, code_count: int) -> dict:
-        enabled = bool(account["recovery_enabled"])
+    def account_summary(account: sqlite3.Row, expires_at: int | None) -> dict:
         return {
             "authenticated": True,
-            "username": account["username"],
+            "email": account["email"] or account["username"],
             "createdAt": account["created_at"],
-            "recoveryConfigured": enabled,
-            "recoveryCodesRemaining": code_count if enabled else 0,
+            "referralId": account["referral_id"] or "",
+            "newsletterOptIn": bool(account["newsletter_opt_in"]),
+            "newsletterConsentAt": account["newsletter_consent_at"],
+            "termsAccepted": bool(account["terms_accepted_at"]),
+            "termsVersion": account["terms_version"],
+            "termsAcceptedAt": account["terms_accepted_at"],
+            "emailVerified": bool(account["email_verified"]),
+            "passwordResetAvailable": False,
             "sessionExpiresAt": utc_iso(expires_at) if expires_at else None,
             "scope": "local-test-account-only",
             "admin": False,
         }
 
-    def insert_recovery_codes(self, db: sqlite3.Connection, account_id: str, codes: list[str]) -> None:
-        created = utc_iso()
-        db.executemany(
-            "INSERT INTO recovery_codes(account_id, code_hash, created_at) VALUES (?, ?, ?)",
-            [(account_id, hash_recovery_code(code), created) for code in codes],
-        )
-
     def handle(self, path: str, payload: dict, handler: BaseHTTPRequestHandler) -> tuple[int, dict, str | None]:
         """Return (status, JSON, optional Set-Cookie header)."""
         if path == "/api/account/status":
-            row, expires = self.account_for_session(self.get_cookie(handler))
-            if row is None:
-                return 200, {"authenticated": False, "admin": False}, None
-            with self.connect() as db:
-                count = int(db.execute(
-                    "SELECT COUNT(*) FROM recovery_codes WHERE account_id = ?",
-                    (row["account_id"],),
-                ).fetchone()[0])
-            return 200, self.account_summary(row, expires, count), None
+            account, expires = self.account_for_session(self.get_cookie(handler))
+            if account is None:
+                return 200, {"authenticated": False, "admin": False, "passwordResetAvailable": False}, None
+            return 200, self.account_summary(account, expires), None
 
         if path == "/api/account/register":
-            username = normalize_username(payload.get("username"))
+            email = normalize_email(payload.get("email"))
             password = validate_password(payload.get("password"))
-            if not self.rate_allowed("register", username, limit=5):
-                raise ApiError(429, "Too many attempts for this username. Try again shortly.")
+            referral_id = normalize_referral_id(payload.get("referralId", ""))
+            if payload.get("termsAccepted") is not True:
+                raise ApiError(400, "Accept the Terms of Use and Privacy Policy to create an account.")
+            if payload.get("termsVersion") != TERMS_VERSION:
+                raise ApiError(400, "The development Terms of Use and Privacy Policy version is not acknowledged.")
+            newsletter_opt_in = payload.get("newsletterOptIn", False)
+            if not isinstance(newsletter_opt_in, bool):
+                raise ApiError(400, "The optional email-news preference must be true or false.")
+            if not self.rate_allowed("register", email, limit=5):
+                raise ApiError(429, "Too many account-creation attempts for this email. Try again shortly.")
             salt = secrets.token_bytes(16)
             encoded = self.hash_password(password, salt)
             account_id = str(uuid.uuid4())
-            codes = make_recovery_codes()
+            created_at = utc_iso()
+            newsletter_consent_at = created_at if newsletter_opt_in else None
+            terms_accepted_at = created_at
             try:
                 with self.connect() as db:
                     db.execute(
-                        """INSERT INTO accounts(account_id, username, password_salt, password_hash,
-                           created_at, recovery_enabled) VALUES (?, ?, ?, ?, ?, 0)""",
-                        (account_id, username, salt, encoded, utc_iso()),
+                        """INSERT INTO accounts(
+                               account_id, username, email, password_salt, password_hash, created_at,
+                               referral_id, newsletter_opt_in, newsletter_consent_at,
+                               terms_version, terms_accepted_at, email_verified
+                           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)""",
+                        (
+                            account_id, email, email, salt, encoded, created_at, referral_id,
+                            int(newsletter_opt_in), newsletter_consent_at, TERMS_VERSION, terms_accepted_at,
+                        ),
                     )
-                    self.insert_recovery_codes(db, account_id, codes)
             except sqlite3.IntegrityError:
-                raise ApiError(409, "That username is already in use. Choose another one.")
+                raise ApiError(409, "An account with this email already exists. Try Log In.")
             token, expires = self.new_session(account_id)
             with self.connect() as db:
                 account = db.execute("SELECT * FROM accounts WHERE account_id = ?", (account_id,)).fetchone()
-            return 201, {
-                **self.account_summary(account, expires, 0),
-                "recoveryCodes": codes,
-                "message": "Account created. Save the one-time recovery codes if you want password recovery.",
-            }, self.cookie_header(token)
+            result = self.account_summary(account, expires)
+            result["message"] = (
+                "Development test account created. Email is not verified and no email or newsletter message was sent."
+            )
+            return 201, result, self.cookie_header(token)
 
         if path == "/api/account/login":
-            username = normalize_username(payload.get("username"))
+            email = normalize_email(payload.get("email"))
             password = payload.get("password")
             if not isinstance(password, str) or len(password) > PASSWORD_MAX_LENGTH:
-                raise ApiError(400, "Enter your username and password.")
-            if not self.rate_allowed("login", username, limit=10):
+                raise ApiError(400, "Enter your email address and password.")
+            if not self.rate_allowed("login", email, limit=10):
                 raise ApiError(429, "Too many sign-in attempts. Wait a minute before trying again.")
             with self.connect() as db:
-                account = db.execute("SELECT * FROM accounts WHERE username = ?", (username,)).fetchone()
+                account = db.execute("SELECT * FROM accounts WHERE email = ? COLLATE NOCASE", (email,)).fetchone()
             if not self.verify_password(account, password):
-                raise ApiError(401, "Username or password did not match.")
-            self.rate_events.pop(("login", username), None)
+                raise ApiError(401, "Email address or password did not match.")
+            self.rate_events.pop(("login", email), None)
             token, expires = self.new_session(account["account_id"])
             with self.connect() as db:
                 account = db.execute("SELECT * FROM accounts WHERE account_id = ?", (account["account_id"],)).fetchone()
-                count = int(db.execute(
-                    "SELECT COUNT(*) FROM recovery_codes WHERE account_id = ?",
-                    (account["account_id"],),
-                ).fetchone()[0])
-            return 200, self.account_summary(account, expires, count), self.cookie_header(token)
+            return 200, self.account_summary(account, expires), self.cookie_header(token)
 
         if path == "/api/account/logout":
             token = self.get_cookie(handler)
@@ -288,84 +303,11 @@ class AccountApplication:
                     db.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_session_token(token),))
             return 200, {"authenticated": False, "message": "You have signed out."}, self.clear_cookie_header()
 
-        if path == "/api/account/recover":
-            username = normalize_username(payload.get("username"))
-            code = normalize_recovery_code(payload.get("recoveryCode"))
-            new_password = validate_password(payload.get("newPassword"))
-            if not self.rate_allowed("recover", username, limit=8):
-                raise ApiError(429, "Too many recovery attempts. Wait a minute before trying again.")
-            with self.connect() as db:
-                # Serialize concurrent recovery attempts before looking up a single-use code.
-                # Without BEGIN IMMEDIATE, two simultaneous requests could both read the same
-                # code before either transaction performs a write.
-                db.execute("BEGIN IMMEDIATE")
-                account = db.execute("SELECT * FROM accounts WHERE username = ?", (username,)).fetchone()
-                code_row = None
-                if account is not None and bool(account["recovery_enabled"]) and RECOVERY_RE.fullmatch(code):
-                    code_row = db.execute(
-                        "SELECT code_hash FROM recovery_codes WHERE account_id = ? AND code_hash = ?",
-                        (account["account_id"], hash_recovery_code(code)),
-                    ).fetchone()
-                if account is None or code_row is None:
-                    raise ApiError(401, "The username or recovery code could not be verified.")
-                salt = secrets.token_bytes(16)
-                encoded = self.hash_password(new_password, salt)
-                db.execute(
-                    "UPDATE accounts SET password_salt = ?, password_hash = ? WHERE account_id = ?",
-                    (salt, encoded, account["account_id"]),
-                )
-                db.execute(
-                    "DELETE FROM recovery_codes WHERE account_id = ? AND code_hash = ?",
-                    (account["account_id"], code_row["code_hash"]),
-                )
-                db.execute("DELETE FROM sessions WHERE account_id = ?", (account["account_id"],))
-                remaining = int(db.execute(
-                    "SELECT COUNT(*) FROM recovery_codes WHERE account_id = ?",
-                    (account["account_id"],),
-                ).fetchone()[0])
-                db.execute(
-                    "UPDATE accounts SET recovery_enabled = ? WHERE account_id = ?",
-                    (1 if remaining else 0, account["account_id"]),
-                )
-            return 200, {
-                "reset": True,
-                "message": "Password reset. Sign in with your new password. All existing sessions were revoked.",
-            }, self.clear_cookie_header()
-
-        if path in ("/api/recovery/ack", "/api/recovery/skip"):
-            account, _ = self.account_for_session(self.get_cookie(handler))
-            if account is None:
-                raise ApiError(401, "Sign in again to manage recovery codes.")
-            with self.connect() as db:
-                count = int(db.execute(
-                    "SELECT COUNT(*) FROM recovery_codes WHERE account_id = ?",
-                    (account["account_id"],),
-                ).fetchone()[0])
-                if path.endswith("/ack"):
-                    if count < 1:
-                        raise ApiError(400, "Generate a new recovery-code set before confirming it.")
-                    db.execute("UPDATE accounts SET recovery_enabled = 1 WHERE account_id = ?", (account["account_id"],))
-                    return 200, {"recoveryConfigured": True, "recoveryCodesRemaining": count}, None
-                db.execute("DELETE FROM recovery_codes WHERE account_id = ?", (account["account_id"],))
-                db.execute("UPDATE accounts SET recovery_enabled = 0 WHERE account_id = ?", (account["account_id"],))
-            return 200, {"recoveryConfigured": False, "message": "Recovery codes were not enabled."}, None
-
-        if path == "/api/recovery/regenerate":
-            account, _ = self.account_for_session(self.get_cookie(handler))
-            if account is None:
-                raise ApiError(401, "Sign in again to manage recovery codes.")
-            password = payload.get("password")
-            if not isinstance(password, str) or len(password) > PASSWORD_MAX_LENGTH or not self.verify_password(account, password):
-                raise ApiError(401, "Your current password could not be verified.")
-            codes = make_recovery_codes()
-            with self.connect() as db:
-                db.execute("DELETE FROM recovery_codes WHERE account_id = ?", (account["account_id"],))
-                self.insert_recovery_codes(db, account["account_id"], codes)
-                db.execute("UPDATE accounts SET recovery_enabled = 0 WHERE account_id = ?", (account["account_id"],))
-            return 200, {
-                "recoveryCodes": codes,
-                "message": "The previous recovery codes have been invalidated. Save this new set before confirming.",
-            }, None
+        if path == "/api/account/password-reset/request":
+            raise ApiError(
+                501,
+                "Email-based password reset is not enabled in this development prototype. No email was sent.",
+            )
 
         raise ApiError(404, "That local account action is not available.")
 
@@ -391,11 +333,11 @@ class AccountApplication:
 
 def make_handler(application: AccountApplication):
     class Handler(BaseHTTPRequestHandler):
-        server_version = "AstroCrownLocalAccountPrototype/0.1"
+        server_version = "AstroCrownLocalAccountPrototype/0.2"
         sys_version = ""
 
         def log_message(self, _format: str, *_args) -> None:
-            # Do not log usernames, request bodies, cookies, or recovery material.
+            # Do not log email addresses, request bodies, cookies or passwords.
             return
 
         def common_headers(self, content_type: str) -> None:
@@ -431,6 +373,12 @@ def make_handler(application: AccountApplication):
                 ),
                 "/account-continuity/prototype/account-ui.js": (
                     PROTOTYPE_DIR / "account-ui.js", "text/javascript; charset=utf-8"
+                ),
+                "/account-continuity/prototype/terms-of-use.html": (
+                    PROTOTYPE_DIR / "terms-of-use.html", "text/html; charset=utf-8"
+                ),
+                "/account-continuity/prototype/privacy-policy.html": (
+                    PROTOTYPE_DIR / "privacy-policy.html", "text/html; charset=utf-8"
                 ),
             }
             target = allowed.get(path)
@@ -470,7 +418,7 @@ def make_handler(application: AccountApplication):
             if self.headers.get("Origin") != expected_origin:
                 self.json_response(403, {"error": "The local request origin could not be verified."})
                 return
-            if not self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() == "application/json":
+            if self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower() != "application/json":
                 self.json_response(415, {"error": "This local endpoint accepts JSON requests only."})
                 return
             try:
@@ -538,10 +486,11 @@ def main(argv: list[str] | None = None) -> int:
         print("Unable to start the local account prototype. The port may already be in use.", file=sys.stderr)
         print(str(exc), file=sys.stderr)
         return 2
-    print("AstroCrown ordinary-account prototype (development only)")
+    print("AstroCrown email-account prototype (development only)")
     print("Open exactly: http://localhost:" + str(args.port) + "/")
     print("Bound to 127.0.0.1 only. No external account provider or wallet is used.")
     print("Local database: " + str(application.database_path))
+    print("No email verification, password-reset delivery or newsletter delivery is configured.")
     print("Do not use real credentials, production accounts or wallet secrets.")
     print("Press Ctrl+C to stop.")
     try:
