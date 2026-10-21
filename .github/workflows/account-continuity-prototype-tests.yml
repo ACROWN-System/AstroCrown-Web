@@ -61,6 +61,8 @@ jobs:
           missing = [item for item in required if item not in html]
           if missing:
               raise SystemExit(f"Account entry point or relative preview asset is missing: {missing}")
+          if "ASTROCROWN · ACCOUNT ACCESS" in html or 'class="account-dialog-kicker"' in html:
+              raise SystemExit("Remove the redundant AstroCrown account-access kicker above the dialog title.")
           if 'ThreadingHTTPServer(("127.0.0.1", port)' not in server:
               raise SystemExit("The local account prototype must bind only to loopback.")
           for item in ('id="account-demo-notice"', "renderProviderSlots", "renderOrDivider"):
@@ -70,7 +72,9 @@ jobs:
               raise SystemExit("The Or divider must not be a clickable/toggle control.")
           for item in (
               ".account-provider-placeholder", ".account-or-divider", ".account-or-divider-arrow",
-              "repeating-linear-gradient", "pointer-events:none", "--gold", "rgba(15,31,52,.97)"
+              ".account-or-divider-line-row", "grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)",
+              "repeating-linear-gradient", "mask-image:linear-gradient(90deg, transparent 0%, #000 17%, #000 83%, transparent 100%)",
+              "pointer-events:none", "--gold", "rgba(15,31,52,.97)"
           ):
               if item not in css:
                   raise SystemExit(f"Expected AstroCrown account visual styling missing: {item}")
