@@ -1,7 +1,7 @@
 # Active Navigation Plan — Local Account Creation and Sign-In Prototype
 
 **Date:** 2026-10-21  
-**Status:** IMPLEMENTED ON DRAFT BRANCH; exact-head backend and browser checks required before user handoff; production use BLOCKED  
+**Status:** IMPLEMENTED ON DRAFT BRANCH; account HTTP/recovery tests, browser flow, wallet-lab tests, NOVA CI, external review and CodeQL all PASS on implementation commit `027f2ce841ea7623994bced48057956f13251587`; production use BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Branch:** docs/provider-independent-wallet-auth-plan-2026-10-20  
 **Primary requirement source:** PR #132 — Account Continuity and Privacy-Preserving Access Roadmap  
@@ -76,3 +76,17 @@ Make the development homepage's Account button open an accessible, working local
 ## 8. Promotion gate and outstanding work
 
 The user-facing test is local and development-only. The public site/source/domain remain unverified (AUTH-001 BLOCKED). Google/OIDC, passkeys, admin wallet enrollment, Imperial HSIAN all-wallet-loss recovery, production password policy, deployed session/cookie security, provider costs, privacy/legal review, account export/deletion and production database selection remain unimplemented. Do not merge/deploy or state the account subsystem is production-ready merely because local prototype tests pass.
+
+## 9. Verification evidence — 2026-10-21
+
+The implementation commit `027f2ce841ea7623994bced48057956f13251587` passed all five relevant GitHub Actions checks:
+
+- [Local Account Continuity Prototype Tests #39625342438 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39625342438): Python/JavaScript syntax; 10 loopback HTTP, account and recovery tests including concurrent reuse of one recovery code; static account/no-wallet boundary; headless Chrome test covering Account menu open, account creation, recovery-code acknowledgment, sign-out/sign-in, password reset, rejection of recovery-code reuse and successful sign-in with the replacement password.
+- [Local Wallet Authentication Prototype Tests #39625342641 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39625342641): existing optional SIWE local-lab regression suite and headless mock-wallet test.
+- [NOVA RSI Engine CI #39625343064 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39625343064).
+- [External Review Pipeline CI #39625342459 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39625342459).
+- [NOVA RSI CodeQL Security Analysis #39625342581 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39625342581).
+
+An earlier first run exposed a defect in the test helper: it attempted to parse the served HTML homepage as JSON. The helper was corrected to accept HTML responses, and the complete suite subsequently passed. A separate concurrency control was added using SQLite `BEGIN IMMEDIATE`; the regression test confirms two concurrent reset attempts cannot both redeem the same one-time recovery code.
+
+This evidence is scoped to the local prototype and the exact commit named above. It does not establish production authentication/security approval, and AUTH-001 remains BLOCKED. The verification-record update itself may trigger another CI run; consult the latest PR checks before treating the updated documentation head as fully reverified.
