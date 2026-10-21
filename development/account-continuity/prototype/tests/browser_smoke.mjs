@@ -220,7 +220,7 @@ try {
   await evaluate("document.getElementById('new-password').value = " + JSON.stringify(demoNewPassword));
   await evaluate("document.getElementById('confirm-new-password').value = " + JSON.stringify(demoNewPassword));
   await evaluate("document.getElementById('account-recover-form').requestSubmit()");
-  await waitFor("browser-preview password reset", () => evaluate("/Demo password reset/.test(document.getElementById('account-feedback').textContent)"), 20000);
+  await waitFor("browser-preview password reset", () => evaluate("/Password reset/.test(document.getElementById('account-feedback').textContent)"), 20000);
 
   await evaluate("document.querySelector('[data-account-mode=recover]').click()");
   await waitFor("browser-preview second recovery form", () => evaluate("Boolean(document.getElementById('account-recover-form'))"));
@@ -247,7 +247,6 @@ try {
 
   console.log("PASS: local backend journey and browser-only preview journey; preview uses no fetch calls, consumes recovery codes once, and clears account memory on reload.");
 
-  console.log("PASS: Account button, local registration, recovery-code setup, sign-out, sign-in, password reset, single-use code enforcement and restored login.");
 } catch (error) {
   console.error(String(error?.stack || error));
   if (browserOutput) console.error("Browser/server output:\n" + browserOutput);
