@@ -6,6 +6,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -143,6 +144,32 @@ class AccountServerTests(unittest.TestCase):
             "username": USERNAME, "password": "Replacement-Passphrase-2026!"
         })
         self.assertEqual(status, 200, data)
+
+    def test_concurrent_recovery_attempts_cannot_reuse_one_code(self):
+        status, created, _ = self.create_account()
+        self.assertEqual(status, 201)
+        code = created["recoveryCodes"][0]
+        status, _, _ = self.ack_codes()
+        self.assertEqual(status, 200)
+
+        payloads = [
+            {"username": USERNAME, "recoveryCode": code, "newPassword": "Concurrent-Password-One-2026!"},
+            {"username": USERNAME, "recoveryCode": code, "newPassword": "Concurrent-Password-Two-2026!"},
+        ]
+        def reset(payload):
+            return self.request("/api/account/recover", payload, opener=urllib.request.build_opener())[0]
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            statuses = sorted(pool.map(reset, payloads))
+        self.assertEqual(statuses, [200, 401])
+
+        first = self.request("/api/account/login", {
+            "username": USERNAME, "password": payloads[0]["newPassword"]
+        })[0]
+        second = self.request("/api/account/login", {
+            "username": USERNAME, "password": payloads[1]["newPassword"]
+        })[0]
+        self.assertEqual(sorted([first, second]), [200, 401])
 
     def test_missing_or_wrong_origin_and_wrong_host_are_rejected(self):
         status, _, _ = self.request("/api/account/register", {"username": USERNAME, "password": PASSWORD}, origin=False)
