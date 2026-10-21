@@ -137,7 +137,7 @@ try {
     true,
     "Log In / Sign Up tabs must be the first account-content row"
   );
-  assert.equal(await evaluate("document.querySelector('.account-dialog-kicker')"), null,
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-dialog-kicker'))"), false,
     "the redundant AstroCrown account-access kicker must be absent");
   assert.equal(await evaluate("document.querySelectorAll('.account-provider-placeholder').length"), 3);
   assert.equal(await evaluate("document.querySelector('.account-or-divider').tagName"), "DIV",
@@ -211,7 +211,7 @@ try {
   assert.match(await evaluate("document.getElementById('account-demo-notice').textContent"), /disappear on reload/);
   assert.equal(await evaluate("document.getElementById('account-content').firstElementChild.classList.contains('account-tabs')"), true);
   assert.equal(await evaluate("document.querySelectorAll('.account-provider-placeholder').length"), 3);
-  assert.equal(await evaluate("document.querySelector('.account-dialog-kicker')"), null);
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-dialog-kicker'))"), false);
   assert.equal(await evaluate("document.querySelector('.account-or-divider').tagName"), "DIV");
   assert.equal(await evaluate("document.querySelectorAll('.account-or-divider-line').length"), 2);
   assert.ok(await evaluate("Math.abs((document.querySelector('.account-or-divider-label').getBoundingClientRect().left + document.querySelector('.account-or-divider-label').getBoundingClientRect().right) / 2 - (document.querySelector('.account-or-divider-line-row').getBoundingClientRect().left + document.querySelector('.account-or-divider-line-row').getBoundingClientRect().right) / 2) <= 1));
