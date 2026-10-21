@@ -57,15 +57,6 @@
     return data;
   }
 
-  function setEnvironmentDisclosure() {
-    var notice = document.getElementById("account-demo-notice");
-    if (!notice) return;
-    notice.dataset.mode = browserPreviewMode ? "browser-preview-demo" : "local-server-test";
-    notice.textContent = browserPreviewMode
-      ? "BROWSER PREVIEW DEMO ONLY — account details exist only in this page's memory and disappear on reload. Use invented details only. No verification, password-reset or newsletter email is sent."
-      : "LOCAL DEVELOPMENT TEST ONLY — test account details are stored in this computer's local SQLite database. No verification, password-reset or newsletter email is sent. This is not production authentication.";
-  }
-
   function environmentDetails() {
     return browserPreviewMode
       ? "Temporary browser demo: account state is held in this page only and is erased on reload or when you open a new tab. No account API is called. Use an invented email and passphrase."
@@ -255,18 +246,41 @@
       '</div>';
   }
 
-  function renderOrToggle() {
-    return '<button type="button" class="account-or-toggle" id="account-other-options" aria-expanded="false" aria-controls="account-other-options-panel">' +
-      '<span>Or</span><span class="account-or-arrow" aria-hidden="true"></span>' +
-      '</button>' +
-      '<div class="account-other-options-panel" id="account-other-options-panel" hidden>' +
-        'Other sign-in methods are not connected in this development prototype. We will not show fake provider buttons or request a wallet for ordinary account access.' +
-      '</div>';
+  function renderDevelopmentNotice() {
+    return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' +
+      (browserPreviewMode ? "browser-preview-demo" : "local-server-test") + '">' +
+      (browserPreviewMode
+        ? "BROWSER PREVIEW DEMO ONLY — account details exist only in this page’s memory and disappear on reload. Use invented details only. No verification, password-reset or newsletter email is sent."
+        : "LOCAL DEVELOPMENT TEST ONLY — test account details are stored in this computer’s local SQLite database. No verification, password-reset or newsletter email is sent. This is not production authentication.") +
+      '</p>';
+  }
+
+  function renderProviderSlots() {
+    return '<section class="account-provider-options" aria-label="Reserved space for future external sign-in options">' +
+      '<p class="account-provider-heading">External account sign-in <span>PLANNED</span></p>' +
+      '<div class="account-provider-placeholders" aria-hidden="true">' +
+        '<span class="account-provider-placeholder"></span>' +
+        '<span class="account-provider-placeholder"></span>' +
+        '<span class="account-provider-placeholder"></span>' +
+      '</div>' +
+      '<p class="account-provider-caption">Optional provider logos can be placed here later. These circles are visual placeholders only; no external sign-in is enabled.</p>' +
+      '</section>';
+  }
+
+  function renderOrDivider() {
+    return '<div class="account-or-divider" aria-label="Or — use email and password">' +
+      '<div class="account-or-divider-line-row" aria-hidden="true">' +
+        '<span class="account-or-divider-line"></span>' +
+        '<span class="account-or-divider-label">Or</span>' +
+        '<span class="account-or-divider-line"></span>' +
+      '</div>' +
+      '<span class="account-or-divider-arrow" aria-hidden="true"></span>' +
+    '</div>';
   }
 
   function renderSignIn() {
-    title.textContent = "Log In";
-    content.innerHTML = renderTabs("signin") + renderOrToggle() +
+    title.textContent = "AstroCrown account";
+    content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() + renderProviderSlots() + renderOrDivider() +
       '<p class="account-dialog-description">Welcome back. Log in to your AstroCrown account with your email and password.</p>' +
       '<form id="account-signin-form" class="account-form" autocomplete="on">' +
         '<label class="account-field" for="account-email">Email' +
@@ -282,8 +296,8 @@
   }
 
   function renderCreate() {
-    title.textContent = "Sign Up";
-    content.innerHTML = renderTabs("create") + renderOrToggle() +
+    title.textContent = "AstroCrown account";
+    content.innerHTML = renderTabs("create") + renderDevelopmentNotice() + renderProviderSlots() + renderOrDivider() +
       '<p class="account-dialog-description">Create your AstroCrown account using your email address.</p>' +
       '<form id="account-create-form" class="account-form" autocomplete="on">' +
         '<label class="account-field" for="account-email">Email' +
@@ -310,7 +324,7 @@
   }
 
   function renderAccount() {
-    title.textContent = "Your account";
+    title.textContent = "Your AstroCrown account";
     var email = escapeHtml(accountState.email || "");
     var referral = accountState.referralId
       ? '<p class="account-status-copy"><strong>Referral ID:</strong> ' + escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(recorded as an unverified test value; no reward is applied)</span></p>'
@@ -330,8 +344,8 @@
   }
 
   function renderRecover() {
-    title.textContent = "Forgot password?";
-    content.innerHTML = renderTabs("signin") +
+    title.textContent = "Account recovery";
+    content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
       '<p class="account-dialog-description">Enter the email address associated with your account. A production service would send a time-limited password-reset link to that inbox.</p>' +
       '<div class="account-recovery-warning"><strong>Email reset is not enabled in this prototype.</strong><br>No email will be sent, and this demo cannot reset the password. We will not ask you to memorise or enter a one-time recovery code.</div>' +
       '<form id="account-reset-request-form" class="account-form" autocomplete="on">' +
@@ -350,12 +364,6 @@
     else if (mode === "create") renderCreate();
     else if (mode === "recover") renderRecover();
     else renderAccount();
-    if (browserPreviewMode) {
-      var previewNote = document.createElement("p");
-      previewNote.className = "account-provider-note account-environment-note";
-      previewNote.textContent = environmentDetails();
-      content.appendChild(previewNote);
-    }
     applyPreviewFormPrivacy();
   }
 
@@ -446,13 +454,6 @@
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (button.id === "account-other-options") {
-      var panel = document.getElementById("account-other-options-panel");
-      var expanded = button.getAttribute("aria-expanded") === "true";
-      button.setAttribute("aria-expanded", expanded ? "false" : "true");
-      if (panel) panel.hidden = expanded;
-      return;
-    }
     if (button.dataset.accountMode) {
       setMode(button.dataset.accountMode);
       return;
@@ -487,6 +488,5 @@
     if (event.key === "Escape" && dialog.open) closeDialog();
   });
 
-  setEnvironmentDisclosure();
   refreshStatus();
 }());
