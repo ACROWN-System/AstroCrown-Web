@@ -6,17 +6,16 @@ import sys
 import tempfile
 import threading
 import unittest
-from concurrent.futures import ThreadPoolExecutor
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 PROTOTYPE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROTOTYPE_DIR))
-from server import AccountApplication, create_server  # noqa: E402
+from server import AccountApplication, TERMS_VERSION, create_server  # noqa: E402
 
 PASSWORD = "AstroCrown-Local-Test-2026!"
-USERNAME = "testuser"
+EMAIL = "test-user@example.test"
 
 
 class AccountServerTests(unittest.TestCase):
@@ -67,155 +66,164 @@ class AccountServerTests(unittest.TestCase):
                 payload = {"raw": body}
             return error.code, payload, error.headers
 
-    def create_account(self, username=USERNAME, password=PASSWORD):
-        return self.request("/api/account/register", {"username": username, "password": password})
+    def create_account(self, email=EMAIL, password=PASSWORD, **overrides):
+        payload = {
+            "email": email,
+            "password": password,
+            "referralId": "",
+            "newsletterOptIn": False,
+            "termsAccepted": True,
+            "termsVersion": TERMS_VERSION,
+        }
+        payload.update(overrides)
+        return self.request("/api/account/register", payload)
 
-    def ack_codes(self):
-        return self.request("/api/recovery/ack", {})
-
-    def test_homepage_and_static_asset_are_served_without_external_auth(self):
+    def test_homepage_assets_and_policy_drafts_are_served_locally(self):
         status, _, headers = self.request("/")
         self.assertEqual(status, 200)
         self.assertIn("text/html", headers.get("Content-Type", ""))
-        status, _, headers = self.request("/account-continuity/prototype/account-ui.js")
-        self.assertEqual(status, 200)
-        self.assertIn("javascript", headers.get("Content-Type", ""))
+        for path, expected_type in (
+            ("/account-continuity/prototype/account-ui.js", "javascript"),
+            ("/account-continuity/prototype/account-prototype.css", "text/css"),
+            ("/account-continuity/prototype/terms-of-use.html", "text/html"),
+            ("/account-continuity/prototype/privacy-policy.html", "text/html"),
+        ):
+            status, _, headers = self.request(path)
+            self.assertEqual(status, 200, path)
+            self.assertIn(expected_type, headers.get("Content-Type", ""))
 
-    def test_register_sign_in_logout_and_password_is_not_exposed(self):
-        status, data, headers = self.create_account()
+    def test_register_login_logout_and_password_not_exposed(self):
+        status, data, headers = self.create_account(
+            email=" Test-User@Example.Test ",
+            referralId="ACROWN_42",
+            newsletterOptIn=True,
+        )
         self.assertEqual(status, 201, data)
-        self.assertEqual(len(data["recoveryCodes"]), 8)
+        self.assertEqual(data["email"], "test-user@example.test")
+        self.assertTrue(data["newsletterOptIn"])
+        self.assertTrue(data["newsletterConsentAt"])
+        self.assertEqual(data["referralId"], "ACROWN_42")
+        self.assertTrue(data["termsAccepted"])
+        self.assertEqual(data["termsVersion"], TERMS_VERSION)
+        self.assertTrue(data["termsAcceptedAt"])
+        self.assertFalse(data["emailVerified"])
+        self.assertFalse(data["passwordResetAvailable"])
+        self.assertFalse(data["admin"])
         self.assertNotIn("password", data)
+        self.assertNotIn("recoveryCodes", data)
         self.assertIn("HttpOnly", headers.get("Set-Cookie", ""))
         self.assertIn("SameSite=Strict", headers.get("Set-Cookie", ""))
         self.assertNotIn("Domain=", headers.get("Set-Cookie", ""))
+
         status, session, _ = self.request("/api/account/status")
         self.assertEqual(status, 200)
         self.assertTrue(session["authenticated"])
-        self.assertFalse(session["recoveryConfigured"])
-        status, data, _ = self.ack_codes()
-        self.assertEqual(status, 200, data)
-        self.assertTrue(data["recoveryConfigured"])
+        self.assertEqual(session["email"], "test-user@example.test")
+        self.assertTrue(session["newsletterOptIn"])
+
         status, _, _ = self.request("/api/account/logout", {})
         self.assertEqual(status, 200)
         status, session, _ = self.request("/api/account/status")
         self.assertFalse(session["authenticated"])
-        status, data, _ = self.request("/api/account/login", {"username": USERNAME, "password": PASSWORD})
+
+        status, data, _ = self.request(
+            "/api/account/login",
+            {"email": "TEST-USER@example.test", "password": PASSWORD},
+        )
         self.assertEqual(status, 200, data)
         self.assertTrue(data["authenticated"])
+        self.assertEqual(data["email"], "test-user@example.test")
         self.assertFalse(data["admin"])
 
-    def test_duplicate_username_and_short_password_are_rejected(self):
+    def test_newsletter_preference_is_separate_and_defaults_to_off(self):
+        status, data, _ = self.create_account()
+        self.assertEqual(status, 201, data)
+        self.assertFalse(data["newsletterOptIn"])
+        self.assertIsNone(data["newsletterConsentAt"])
+        self.assertEqual(data["referralId"], "")
+        self.assertFalse(data["emailVerified"])
+        self.assertIn("no email", data["message"].lower())
+
+    def test_duplicate_email_is_rejected_case_insensitively(self):
         status, _, _ = self.create_account()
         self.assertEqual(status, 201)
-        status, _, _ = self.create_account(username=USERNAME.upper())
+        status, data, _ = self.create_account(email=EMAIL.upper())
         self.assertEqual(status, 409)
-        status, data, _ = self.create_account(username="shortpass", password="short")
+        self.assertIn("already exists", data["error"])
+
+    def test_invalid_email_short_password_and_unaccepted_terms_are_rejected(self):
+        status, data, _ = self.create_account(email="not-an-email")
+        self.assertEqual(status, 400)
+        self.assertIn("valid email", data["error"].lower())
+
+        status, data, _ = self.create_account(email="shortpass@example.test", password="short")
         self.assertEqual(status, 400)
         self.assertIn("15 characters", data["error"])
+
+        status, data, _ = self.create_account(email="terms@example.test", termsAccepted=False)
+        self.assertEqual(status, 400)
+        self.assertIn("accept", data["error"].lower())
+
+        status, data, _ = self.create_account(email="wrong-version@example.test", termsVersion="unknown")
+        self.assertEqual(status, 400)
+        self.assertIn("version", data["error"].lower())
+
+    def test_invalid_referral_identifier_is_rejected(self):
+        status, data, _ = self.create_account(email="bad-referral@example.test", referralId="has spaces")
+        self.assertEqual(status, 400)
+        self.assertIn("Referral ID", data["error"])
 
     def test_bad_password_is_rejected_without_revealing_account_existence(self):
         status, _, _ = self.create_account()
         self.assertEqual(status, 201)
-        status, first, _ = self.request("/api/account/login", {"username": USERNAME, "password": "wrong password"})
+        status, first, _ = self.request(
+            "/api/account/login", {"email": EMAIL, "password": "Wrong-Passphrase-2026!"},
+        )
         self.assertEqual(status, 401)
-        status, second, _ = self.request("/api/account/login", {"username": "missing-account", "password": "wrong password"})
+        status, second, _ = self.request(
+            "/api/account/login", {"email": "missing@example.test", "password": "Wrong-Passphrase-2026!"},
+        )
         self.assertEqual(status, 401)
         self.assertEqual(first["error"], second["error"])
 
-    def test_recovery_code_is_single_use_and_revokes_existing_sessions(self):
-        status, created, _ = self.create_account()
+    def test_password_reset_does_not_claim_to_send_email(self):
+        status, data, _ = self.request(
+            "/api/account/password-reset/request", {"email": EMAIL},
+        )
+        self.assertEqual(status, 501)
+        self.assertIn("not enabled", data["error"].lower())
+        self.assertIn("no email was sent", data["error"].lower())
+
+    def test_recovery_code_api_is_not_part_of_the_new_signup_contract(self):
+        status, data, _ = self.create_account()
         self.assertEqual(status, 201)
-        code = created["recoveryCodes"][0]
-        status, _, _ = self.ack_codes()
-        self.assertEqual(status, 200)
-        status, _, _ = self.request("/api/account/recover", {
-            "username": USERNAME, "recoveryCode": code, "newPassword": "Replacement-Passphrase-2026!"
-        })
-        self.assertEqual(status, 200)
-        status, session, _ = self.request("/api/account/status")
-        self.assertFalse(session["authenticated"])
-        status, reused, _ = self.request("/api/account/recover", {
-            "username": USERNAME, "recoveryCode": code, "newPassword": "Another-Replacement-2026!!"
-        })
-        self.assertEqual(status, 401)
-        self.assertEqual(reused["error"], "The username or recovery code could not be verified.")
-        status, data, _ = self.request("/api/account/login", {
-            "username": USERNAME, "password": "Replacement-Passphrase-2026!"
-        })
-        self.assertEqual(status, 200, data)
-
-    def test_concurrent_recovery_attempts_cannot_reuse_one_code(self):
-        status, created, _ = self.create_account()
-        self.assertEqual(status, 201)
-        code = created["recoveryCodes"][0]
-        status, _, _ = self.ack_codes()
-        self.assertEqual(status, 200)
-
-        payloads = [
-            {"username": USERNAME, "recoveryCode": code, "newPassword": "Concurrent-Password-One-2026!"},
-            {"username": USERNAME, "recoveryCode": code, "newPassword": "Concurrent-Password-Two-2026!"},
-        ]
-        def reset(payload):
-            return self.request("/api/account/recover", payload, opener=urllib.request.build_opener())[0]
-
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            statuses = sorted(pool.map(reset, payloads))
-        self.assertEqual(statuses, [200, 401])
-
-        first = self.request("/api/account/login", {
-            "username": USERNAME, "password": payloads[0]["newPassword"]
-        })[0]
-        second = self.request("/api/account/login", {
-            "username": USERNAME, "password": payloads[1]["newPassword"]
-        })[0]
-        self.assertEqual(sorted([first, second]), [200, 401])
+        self.assertNotIn("recoveryCodes", data)
+        status, response, _ = self.request(
+            "/api/account/recover",
+            {"email": EMAIL, "recoveryCode": "A" * 24, "newPassword": "Replacement-Passphrase-2026!"},
+        )
+        self.assertEqual(status, 404)
+        self.assertIn("not available", response["error"].lower())
 
     def test_missing_or_wrong_origin_and_wrong_host_are_rejected(self):
-        status, _, _ = self.request("/api/account/register", {"username": USERNAME, "password": PASSWORD}, origin=False)
+        payload = {
+            "email": EMAIL, "password": PASSWORD, "termsAccepted": True,
+            "termsVersion": TERMS_VERSION, "newsletterOptIn": False, "referralId": "",
+        }
+        status, _, _ = self.request("/api/account/register", payload, origin=False)
         self.assertEqual(status, 403)
-        status, _, _ = self.request("/api/account/register", {"username": USERNAME, "password": PASSWORD}, host=False)
+        status, _, _ = self.request("/api/account/register", payload, host=False)
         self.assertEqual(status, 403)
-
-    def test_password_reset_without_enabled_recovery_fails(self):
-        status, created, _ = self.create_account()
-        self.assertEqual(status, 201)
-        status, _, _ = self.request("/api/account/recover", {
-            "username": USERNAME, "recoveryCode": created["recoveryCodes"][0],
-            "newPassword": "Recovery-Unenabled-Passphrase!"
-        })
-        self.assertEqual(status, 401)
-
-    def test_regeneration_invalidates_prior_codes_until_acknowledged(self):
-        status, created, _ = self.create_account()
-        self.assertEqual(status, 201)
-        status, _, _ = self.ack_codes()
-        self.assertEqual(status, 200)
-        status, regenerated, _ = self.request("/api/recovery/regenerate", {"password": PASSWORD})
-        self.assertEqual(status, 200)
-        status, _, _ = self.request("/api/account/recover", {
-            "username": USERNAME, "recoveryCode": created["recoveryCodes"][0],
-            "newPassword": "Replacement-Passphrase-2026!"
-        })
-        self.assertEqual(status, 401)
-        status, _, _ = self.request("/api/account/recover", {
-            "username": USERNAME, "recoveryCode": regenerated["recoveryCodes"][0],
-            "newPassword": "Replacement-Passphrase-2026!"
-        })
-        self.assertEqual(status, 401)
-        status, _, _ = self.ack_codes()
-        self.assertEqual(status, 200)
-        status, data, _ = self.request("/api/account/recover", {
-            "username": USERNAME, "recoveryCode": regenerated["recoveryCodes"][0],
-            "newPassword": "Replacement-Passphrase-2026!"
-        })
-        self.assertEqual(status, 200, data)
 
     def test_oversized_json_body_is_rejected(self):
-        raw = b'{"username":"' + b"x" * (16 * 1024) + b'"}'
+        raw = b'{"email":"' + b"x" * (16 * 1024) + b'"}'
         request = urllib.request.Request(
             self.url + "/api/account/register", data=raw,
-            headers={"Host": "localhost:" + str(self.port), "Origin": self.origin, "Content-Type": "application/json"},
+            headers={
+                "Host": "localhost:" + str(self.port),
+                "Origin": self.origin,
+                "Content-Type": "application/json",
+            },
             method="POST",
         )
         try:
