@@ -135,52 +135,42 @@ try {
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("create-account form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
 
-  const username = "e2euser" + Date.now().toString(16);
-  const oldPassword = "AstroCrown-Local-Test-2026!";
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(username));
-  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(oldPassword));
-  await evaluate("document.getElementById('account-confirm-password').value = " + JSON.stringify(oldPassword));
+  const email = "e2euser" + Date.now().toString(16) + "@example.test";
+  const password = "AstroCrown-Local-Test-2026!";
+  await evaluate("document.getElementById('account-email').value = " + JSON.stringify(email));
+  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(password));
+  await evaluate("document.getElementById('account-referral-id').value = 'ACROWN_E2E_7'");
+  await evaluate("document.getElementById('account-newsletter-opt-in').checked = true");
+  await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
-  await waitFor("recovery codes after successful creation", () => evaluate("document.querySelectorAll('#recovery-code-list code').length === 8"));
-  const oneTimeCode = await evaluate("document.querySelector('#recovery-code-list code').textContent");
-  assert.match(oneTimeCode, /^[A-F0-9]{4}(-[A-F0-9]{4}){5}$/);
-  await evaluate("document.getElementById('acknowledge-recovery').click()");
-  await waitFor("signed-in account page", () => evaluate("document.getElementById('account-signout') && document.getElementById('manage-recovery')"));
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), username.toLowerCase());
-  assert.match(await evaluate("document.body.innerText"), /Recovery codes enabled/);
+  await waitFor("signed-in account after email signup", () => evaluate("Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), email.toLowerCase());
+  assert.match(await evaluate("document.body.innerText"), /Email verification is not enabled/);
+  assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
+  const storedAccount = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(storedAccount.email, email.toLowerCase());
+  assert.equal(storedAccount.referralId, "ACROWN_E2E_7");
+  assert.equal(storedAccount.newsletterOptIn, true);
+  assert.ok(storedAccount.newsletterConsentAt);
+  assert.equal(storedAccount.termsAccepted, true);
+  assert.match(storedAccount.termsVersion, /development-draft/);
+  assert.equal(storedAccount.emailVerified, false);
 
   await evaluate("document.getElementById('account-signout').click()");
-  await waitFor("signed-out login view", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(username));
-  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(oldPassword));
+  await waitFor("signed-out Log In view", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
+  await evaluate("document.getElementById('account-email').value = " + JSON.stringify(email));
+  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(password));
   await evaluate("document.getElementById('account-signin-form').requestSubmit()");
-  await waitFor("successful sign-in", () => evaluate("Boolean(document.getElementById('account-signout'))"));
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), username.toLowerCase());
+  await waitFor("successful email sign-in", () => evaluate("Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), email.toLowerCase());
 
   await evaluate("document.getElementById('account-signout').click()");
-  await waitFor("login form after second sign-out", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
+  await waitFor("Log In view after second sign-out", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
   await evaluate("document.querySelector('[data-account-mode=recover]').click()");
-  await waitFor("password recovery form", () => evaluate("Boolean(document.getElementById('account-recover-form'))"));
-  const newPassword = "Replacement-Passphrase-2026!";
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(username));
-  await evaluate("document.getElementById('recovery-code').value = " + JSON.stringify(oneTimeCode));
-  await evaluate("document.getElementById('new-password').value = " + JSON.stringify(newPassword));
-  await evaluate("document.getElementById('confirm-new-password').value = " + JSON.stringify(newPassword));
-  await evaluate("document.getElementById('account-recover-form').requestSubmit()");
-  await waitFor("return to sign in after recovery", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
-  assert.match(await evaluate("document.getElementById('account-feedback').textContent"), /Password reset/);
-
-  const reuseExpression = "fetch('/api/account/recover', {method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:" +
-    JSON.stringify(username) + ",recoveryCode:" + JSON.stringify(oneTimeCode) +
-    ",newPassword:'Another-Recovery-Passphrase-2026!'})}).then(r=>r.status)";
-  const reused = await evaluate(reuseExpression);
-  assert.equal(reused, 401, "recovery codes must be single-use");
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(username));
-  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(newPassword));
-  await evaluate("document.getElementById('account-signin-form').requestSubmit()");
-  await waitFor("sign-in with recovered password", () => evaluate("Boolean(document.getElementById('account-signout'))"));
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), username.toLowerCase());
-
+  await waitFor("password-reset information form", () => evaluate("Boolean(document.getElementById('account-reset-request-form'))"));
+  await evaluate("document.getElementById('account-email').value = " + JSON.stringify(email));
+  await evaluate("document.getElementById('account-reset-request-form').requestSubmit()");
+  assert.match(await evaluate("document.getElementById('account-feedback').textContent"), /No email was sent/);
 
   // Exercise the hosted preview path without allowing any account API request.
   // The query flag selects the same in-memory adapter that activates on remote hosts.
@@ -195,61 +185,51 @@ try {
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("browser-preview create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
 
-  const demoUsername = "demo" + Date.now().toString(16);
+  const demoEmail = "browserdemo" + Date.now().toString(16) + "@example.test";
   const demoPassword = "AstroCrown-Browser-Demo-2026!";
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
-  await evaluate("document.getElementById('account-confirm-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-referral-id').value = 'PREVIEW_22'");
+  await evaluate("document.getElementById('account-newsletter-opt-in').checked = true");
+  await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
-  await waitFor("browser-preview recovery codes", () => evaluate("document.querySelectorAll('#recovery-code-list code').length === 8"), 30000);
-  const demoCode = await evaluate("document.querySelector('#recovery-code-list code').textContent");
-  await evaluate("document.getElementById('acknowledge-recovery').click()");
-  await waitFor("browser-preview account page", () => evaluate("Boolean(document.getElementById('account-signout'))"), 20000);
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoUsername.toLowerCase());
+  await waitFor("browser-preview email account creation", () => evaluate("Boolean(document.getElementById('account-signout'))"), 30000);
+  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoEmail.toLowerCase());
+  assert.match(await evaluate("document.body.innerText"), /no email or newsletter message was sent/i);
+  assert.match(await evaluate("document.body.innerText"), /opted in to crypto-news email updates/i);
+  assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
 
   await evaluate("document.getElementById('account-signout').click()");
-  await waitFor("browser-preview sign-in view", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await waitFor("browser-preview Log In view", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
+  await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
   await evaluate("document.getElementById('account-signin-form').requestSubmit()");
-  await waitFor("browser-preview sign-in", () => evaluate("Boolean(document.getElementById('account-signout'))"), 20000);
+  await waitFor("browser-preview email sign-in", () => evaluate("Boolean(document.getElementById('account-signout'))"), 20000);
+  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoEmail.toLowerCase());
 
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("browser-preview signed out", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
   await evaluate("document.querySelector('[data-account-mode=recover]').click()");
-  await waitFor("browser-preview recovery form", () => evaluate("Boolean(document.getElementById('account-recover-form'))"));
-  const demoNewPassword = "AstroCrown-Browser-Recovered-2026!";
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
-  await evaluate("document.getElementById('recovery-code').value = " + JSON.stringify(demoCode));
-  await evaluate("document.getElementById('new-password').value = " + JSON.stringify(demoNewPassword));
-  await evaluate("document.getElementById('confirm-new-password').value = " + JSON.stringify(demoNewPassword));
-  await evaluate("document.getElementById('account-recover-form').requestSubmit()");
-  await waitFor("browser-preview password reset", () => evaluate("/Password reset/.test(document.getElementById('account-feedback').textContent)"), 20000);
+  await waitFor("browser-preview password-reset form", () => evaluate("Boolean(document.getElementById('account-reset-request-form'))"));
+  await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
+  await evaluate("document.getElementById('account-reset-request-form').requestSubmit()");
+  assert.match(await evaluate("document.getElementById('account-feedback').textContent"), /No email was sent/);
 
-  await evaluate("document.querySelector('[data-account-mode=recover]').click()");
-  await waitFor("browser-preview second recovery form", () => evaluate("Boolean(document.getElementById('account-recover-form'))"));
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
-  await evaluate("document.getElementById('recovery-code').value = " + JSON.stringify(demoCode));
-  await evaluate("document.getElementById('new-password').value = " + JSON.stringify(demoPassword));
-  await evaluate("document.getElementById('confirm-new-password').value = " + JSON.stringify(demoPassword));
-  await evaluate("document.getElementById('account-recover-form').requestSubmit()");
-  await waitFor("browser-preview rejects spent recovery code", () =>
-    evaluate("/could not be verified/.test(document.getElementById('account-feedback').textContent)"), 20000);
-
-  // Reload destroys every in-memory account. Re-registering the same name must work.
+  // The hosted preview has no backend or persistence. Reloading loses the test account.
   await cdp("Page.navigate", { url: previewUrl });
   await waitFor("reloaded browser-preview homepage", pageReady);
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("reloaded Account dialog", () => evaluate("document.getElementById('account-dialog').open"));
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
-  await waitFor("reloaded create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
-  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await waitFor("reloaded Sign Up form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
+  await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
-  await evaluate("document.getElementById('account-confirm-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
-  await waitFor("same username can be created after page reload", () => evaluate("document.querySelectorAll('#recovery-code-list code').length === 8"), 30000);
+  await waitFor("same email can be used after page reload", () => evaluate("Boolean(document.getElementById('account-signout'))"), 30000);
+  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoEmail.toLowerCase());
 
-  console.log("PASS: local backend journey and browser-only preview journey; preview uses no fetch calls, consumes recovery codes once, and clears account memory on reload.");
+  console.log("PASS: email signup/login, referral and consent handling, reset-email disclosure, local backend guardrails, and memory-only browser preview.");
 
 } catch (error) {
   console.error(String(error?.stack || error));
