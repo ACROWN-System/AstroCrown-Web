@@ -2,7 +2,7 @@
 
 **Status: local development test only — not production authentication.**
 
-This prototype makes the homepage's **Account** button open a working local account-creation and sign-in dialog. It follows the account-continuity foundation merged in PR #132 and the owner-approved separation of ordinary account authentication from optional wallet access.
+This prototype makes the homepage's **Account** button open a working account-creation and sign-in flow in the no-installation browser preview or the optional local SQLite test. It follows the account-continuity foundation merged in PR #132 and the owner-approved separation of ordinary account authentication from optional wallet access.
 
 ## What you can test
 
@@ -16,7 +16,7 @@ The ordinary-account prototype does **not** request a wallet, email, phone, Goog
 
 ## Direct browser preview (no installation)
 
-Open the [AstroCrown development homepage in the Git-Forge HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2Fe6acb045d39763869147406c690b5d0249a39d1e%2Fdevelopment%2Findex.html). Click **Account**, then **Create account**. This path does not require Git, Python or a local server.
+Open the [AstroCrown development homepage in the Git-Forge HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2F97232117e935b69733263bb83e519b7c4b548b31%2Fdevelopment%2Findex.html). Click **Account**, then **Create account**. This path does not require Git, Python or a local server.
 
 On the hosted preview origin, the Account button uses an isolated browser-only demo adapter. It performs the interaction flow in the page's JavaScript memory and makes no account API requests. It uses Web Crypto for the demonstration's password and one-time recovery-code hashes, but it is **not real authentication**. All demo account/session data disappear when the page reloads or you open a new tab; they are not written to browser storage or a database. A downloaded recovery-code file remains your responsibility to delete when finished.
 
