@@ -1,7 +1,7 @@
 # Active Navigation Plan — Familiar Email Account Entry (CMC-Inspired)
 
 **Date:** 2026-10-21  
-**Status:** IMPLEMENTED ON DRAFT BRANCH — exact-head CI/browser verification pending; production use BLOCKED  
+**Status:** IMPLEMENTED ON DRAFT BRANCH — email-account behavior verified on prior draft head; 2026-10-22 visual refinement in progress; production use BLOCKED  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Branch:** docs/provider-independent-wallet-auth-plan-2026-10-20  
 **Parent PR:** [#141 — authentication architecture and optional-wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)
@@ -107,3 +107,41 @@ Current-head GitHub Actions evidence:
 **Remaining finding/limitation:** automated browser checks exercise local HTML and a simulated browser-preview adapter; they do not confirm the owner’s rendering in the external HTML-preview website. Owner visual confirmation of form fit, arrowhead, and links remains open. The flow must only be tested with invented values.
 
 **Production closure: BLOCKED.** Email verification, email password-reset delivery, newsletter operations/unsubscribe, approved legal text, production hosting/database, hardened production authentication/recovery, security/privacy/legal review, and AUTH-001 publishing verification are not implemented. No claim of production readiness or protection of real assets is made.
+
+## 12. Visual hierarchy refinement — 2026-10-22
+
+### Owner decision
+
+The owner asked to improve the visual UI before proceeding with production authentication work:
+
+1. Place **Log In / Sign Up** as the first row in the account-content area.
+2. Reserve a centered row of circular slots for future external-account logos that might support optional sign-in/sign-up if a provider is later selected and qualified.
+3. Do not make those future-provider slots functional, and do not add fake provider buttons.
+4. Make **Or** a static, non-clickable separator with a downward arrowhead directly underneath.
+5. Use a broken/dashed gold line on both sides of “Or” to distinguish the optional-provider area from the email/password form.
+6. Use the deep-space navy, layered card surfaces, subtle borders, and gold accents already present on AstroCrown market cards—not a contrasting white dialog theme.
+
+### Implementation action
+
+- `account-ui.js`: moved the tabs to the first row; made the environment disclosure part of the rendered flow; added three non-interactive circular logo placeholders; replaced the old “Or” toggle/button with a plain static divider; removed its click handler.
+- `account-prototype.css`: switched the dialog and fields to AstroCrown's dark card palette; styled gold-active tabs, reserved circular provider-logo slots, dashed/repeating gold separator, and downward arrow. The divider uses `pointer-events:none` and has no button/link descendants.
+- `index.html`: removed static introduction/disclosure from ahead of the tabs so the active mode is the first account-content row.
+- `tests/browser_smoke.mjs` and the workflow's static guards: assert the tabs are first, three provider slots are present but are not controls, “Or” is a non-interactive `DIV`, the divider uses a broken line, and the arrow sits below the label.
+
+### Acceptance status
+
+| ID | Criterion | Evidence | State |
+|---|---|---|---|
+| ACC-UI-VIS-001 | Log In / Sign Up is the first row inside account content | Headless-browser DOM-order assertion | BLOCKED pending current-head run |
+| ACC-UI-VIS-002 | Three circular future-provider slots are reserved but not interactive | DOM assertion and static source check | BLOCKED pending current-head run |
+| ACC-UI-VIS-003 | “Or” is static, has no click handler, and shows a broken gold line with arrow beneath it | DOM assertions + CSS guard + browser computed style | BLOCKED pending current-head run |
+| ACC-UI-VIS-004 | Account dialog uses the AstroCrown dark card palette and gold highlights | CSS source contract + owner visual inspection in HTML Preview | BLOCKED pending current-head run and owner visual confirmation |
+| ACC-UI-VIS-005 | Email sign-up/login, consent/referral behavior and prototype warnings remain intact | Existing 11 API tests + end-to-end browser journey | BLOCKED pending current-head run |
+
+### Impact analysis
+
+**If implemented:** the dialog gains a clearer hierarchy—mode selection first, future optional-provider area second, and a visually distinct email/password path below. Static placeholders make future provider support visible without suggesting that unconfigured authentication methods work.
+
+**If not implemented:** the existing clickable “Or” behavior distracts from its role as a separator, the empty expansion panel adds confusing interaction, and the white dialog does not align with AstroCrown’s card-based visual system.
+
+**Boundaries:** external providers remain unselected and unavailable; no logo slots should become clickable until a real integration has passed provider, cost, privacy, domain, and security qualification. This remains a development-only interface.
