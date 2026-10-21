@@ -209,7 +209,7 @@
   }
 
   async function openAccountDialog() {
-    focusBeforeOpen = document.activeElement;
+    focusBeforeOpen = document.querySelector('[data-menu="account-menu"]') || document.activeElement;
     var slot = openButton.closest(".menu-slot");
     if (slot) {
       slot.classList.remove("is-open");
