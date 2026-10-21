@@ -35,7 +35,6 @@
 .account-dialog::backdrop { background: rgba(1,5,12,.79); backdrop-filter: blur(7px); }
 .account-dialog-shell { padding: clamp(18px, 4vw, 26px); }
 .account-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
-.account-dialog-kicker { margin:0 0 7px; color:var(--gold, #ffd700); font-size:9px; font-weight:850; letter-spacing:.14em; text-transform:uppercase; }
 .account-dialog-title { margin:0; color:#f2f5fb; font-size:clamp(21px, 4vw, 26px); line-height:1.18; letter-spacing:-.035em; }
 .account-dialog-close {
   display:grid; place-items:center; flex:0 0 36px; width:36px; height:36px;
@@ -97,13 +96,17 @@
 .account-provider-caption { max-width:340px; margin:8px auto 0; color:#74859d; font-size:9px; line-height:1.5; }
 
 .account-or-divider { margin:16px 0 12px; pointer-events:none; user-select:none; }
-.account-or-divider-line-row { display:flex; align-items:center; justify-content:center; gap:12px; }
-.account-or-divider-line {
-  display:block; height:1px; min-width:20px; flex:1 1 0;
-  background-image:repeating-linear-gradient(90deg, rgba(255,215,0,.87) 0 7px, transparent 7px 12px);
-  background-repeat:repeat-x;
+.account-or-divider-line-row {
+  display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; column-gap:12px;
 }
-.account-or-divider-label { flex:0 0 auto; color:#f1d76a; font-size:11px; font-weight:800; letter-spacing:.04em; }
+.account-or-divider-line {
+  display:block; width:100%; height:2px; min-width:20px;
+  background-image:repeating-linear-gradient(90deg, rgba(255,215,0,.9) 0 7px, transparent 7px 12px);
+  background-repeat:repeat-x;
+  -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 17%, #000 83%, transparent 100%);
+  mask-image:linear-gradient(90deg, transparent 0%, #000 17%, #000 83%, transparent 100%);
+}
+.account-or-divider-label { justify-self:center; min-width:22px; text-align:center; color:#f1d76a; font-size:11px; font-weight:800; letter-spacing:.04em; }
 .account-or-divider-arrow {
   display:block; width:7px; height:7px; margin:7px auto 0;
   border-right:1.5px solid #d9b91d; border-bottom:1.5px solid #d9b91d;
