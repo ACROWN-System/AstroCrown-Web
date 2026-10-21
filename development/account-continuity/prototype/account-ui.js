@@ -359,7 +359,7 @@
         '</label>' +
         '<button class="account-primary" type="submit">Create account</button>' +
       '</form>' +
-      '<p class="account-provider-note">Local development only. Do not reuse a real or important password here. This is a disposable browser demo or local database test, depending on the preview mode shown above. Never use a real or important password.</p>';
+      '<p class="account-provider-note">Local development only. Do not reuse a real or important password here. Do not reuse a real or important password here. This is not production authentication.</p>';
   }
 
   function renderRecoveryCodes() {
@@ -388,7 +388,7 @@
           String(accountState.recoveryCodesRemaining || 0) + ' unused code(s) remain. Keep them offline and private.</div>'
       : '<div class="account-recovery-warning"><strong>Recovery is not set up.</strong><br>If you forget your password, there is no email or wallet reset in this prototype. Set up recovery codes before relying on this test account.</div>';
     content.innerHTML =
-      '<div class="account-account-card"><p class="account-account-status">Signed in · local test account</p>' +
+      '<div class="account-account-card"><p class="account-account-status">' + (browserPreviewMode ? "Signed in · browser demo account" : "Signed in · local test account") + '</p>' +
         '<p class="account-account-name">' + username + '</p>' +
         '<p class="account-status-copy">This is an ordinary test account only. It has no admin role, wallet association, real assets or production privileges.</p></div>' +
       recoveryPanel +
@@ -396,7 +396,7 @@
         '<button class="account-primary" type="button" id="manage-recovery">' + (accountState.recoveryConfigured ? 'Replace recovery codes' : 'Set up recovery codes') + '</button>' +
         '<button class="account-secondary" type="button" id="account-signout">Sign out</button>' +
       '</div>' +
-      '<p class="account-provider-note">Browser-preview data remains only in page memory and is erased on reload, or local-backend test data remains in the local database. The local server must not be exposed to a network. This is not production authentication.</p>';
+      '<p class="account-provider-note">This is an ordinary account-access prototype, not production authentication.</p>';
   }
 
   function renderRecover() {
