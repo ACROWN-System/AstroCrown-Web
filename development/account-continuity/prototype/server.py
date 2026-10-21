@@ -113,7 +113,7 @@ class AccountApplication:
                 CREATE TABLE IF NOT EXISTS accounts (
                     account_id TEXT PRIMARY KEY,
                     username TEXT NOT NULL UNIQUE COLLATE NOCASE,
-                    email TEXT UNIQUE COLLATE NOCASE,
+                    email TEXT,
                     password_salt BLOB NOT NULL,
                     password_hash BLOB NOT NULL,
                     created_at TEXT NOT NULL,
