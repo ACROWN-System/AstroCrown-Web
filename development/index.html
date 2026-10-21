@@ -458,8 +458,8 @@
       *, *::before, *::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
     }
   </style>
-  <link rel="stylesheet" href="/account-continuity/prototype/account-prototype.css">
-  <script src="/account-continuity/prototype/account-ui.js" defer></script>
+  <link rel="stylesheet" href="./account-continuity/prototype/account-prototype.css">
+  <script src="./account-continuity/prototype/account-ui.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -817,7 +817,7 @@
       <div class="preview-note-icon" aria-hidden="true">i</div>
       <div>
         <h2>Prototype boundaries — please read before evaluating the numbers</h2>
-        <p>This is a visual and interaction prototype. Market figures, price changes, rankings, sentiment scores and influence weights are illustrative sample values, not live data or financial advice. Search, filters, sorting, pagination and preview dialogs operate only on the local sample set. Account creation and sign-in work only through the documented loopback development server and are not production authentication. Wallet, trading, token creation, external market data and separate destination pages are not connected.</p>
+        <p>This is a visual and interaction prototype. Market figures, price changes, rankings, sentiment scores and influence weights are illustrative sample values, not live data or financial advice. Search, filters, sorting, pagination and preview dialogs operate only on the local sample set. Account creation and sign-in can be tested in a disposable browser-preview demo or through the local loopback development server; neither is production authentication. Preview accounts are erased on reload. Wallet, trading, token creation, external market data and separate destination pages are not connected.</p>
       </div>
     </div>
 
@@ -863,7 +863,7 @@
         <button class="account-dialog-close" id="account-dialog-close" type="button" aria-label="Close account dialog">×</button>
       </div>
       <p class="account-dialog-description">Try ordinary account creation, sign-in and recovery. A crypto wallet is not required.</p>
-      <p class="account-demo-notice">This is a local development prototype, not production login. Test credentials and account records remain on this computer. Do not reuse an important password.</p>
+      <p class="account-demo-notice" id="account-demo-notice" data-mode="unknown">Development-only account prototype. Use invented test credentials only; this is not production authentication.</p>
       <div class="account-feedback" id="account-feedback" role="status" aria-live="polite"></div>
       <div id="account-content"></div>
     </div>
