@@ -72,12 +72,15 @@ jobs:
               raise SystemExit("The Or divider must not be a clickable/toggle control.")
           for item in (
               ".account-provider-placeholder", ".account-or-divider", ".account-or-divider-arrow",
-              ".account-or-divider-line-row", "grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)",
-              "repeating-linear-gradient", "mask-image:linear-gradient(90deg, transparent 0%, #000 17%, #000 83%, transparent 100%)",
+              ".account-or-divider-line", ".account-or-divider-line-row",
+              "grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)",
+              "background-image:linear-gradient(90deg, transparent 0%, rgba(255,215,0,.9) 17%, rgba(255,215,0,.9) 83%, transparent 100%)",
               "pointer-events:none", "--gold", "rgba(15,31,52,.97)"
           ):
               if item not in css:
                   raise SystemExit(f"Expected AstroCrown account visual styling missing: {item}")
+          if "repeating-linear-gradient" in css:
+              raise SystemExit("The Or divider side segments must be solid continuous lines, not dotted or dashed.")
           for item in (
               "newsletterOptIn", "data-account-mode", "Forgot password?", "A crypto wallet is not required",
               "Referral ID (Optional)", "Terms of Use", "Privacy Policy", "No email was sent",
