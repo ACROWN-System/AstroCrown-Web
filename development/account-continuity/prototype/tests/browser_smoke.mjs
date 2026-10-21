@@ -125,10 +125,8 @@ try {
   await waitFor("homepage load", pageReady);
   assert.equal(await evaluate("Boolean(window.ethereum)"), false, "ordinary account test must not require a wallet");
 
-  await evaluate("document.querySelector('[data-menu=account-menu]').click()");
-  await waitFor("Account menu opens", () => evaluate("document.querySelector('[data-menu=account-menu]').getAttribute('aria-expanded') === 'true'"));
   await evaluate("document.getElementById('open-account-dialog').click()");
-  await waitFor("account dialog", () => evaluate("document.getElementById('account-dialog').open"));
+  await waitFor("Account button opens sign-in dialog directly", () => evaluate("document.getElementById('account-dialog').open"));
   assert.match(await evaluate("document.body.innerText"), /A crypto wallet is not required/);
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("create-account form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
