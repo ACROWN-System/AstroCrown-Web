@@ -9,14 +9,18 @@
   var closeButton = document.getElementById("account-dialog-close");
   var mode = "signin";
   var accountState = { authenticated: false };
-  var recoveryCodes = [];
   var focusBeforeOpen = null;
   var busy = false;
+  var termsVersion = "development-draft-2026-10-21";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var forceBrowserDemo = new URLSearchParams(window.location.search).get("account-preview-demo") === "1";
   var browserPreviewMode = forceBrowserDemo || loopbackHosts.indexOf(window.location.hostname) === -1;
-  var browserPreviewState = { accounts: Object.create(null), activeUsername: null, sessionExpiresAt: 0, failedLogins: Object.create(null) };
-
+  var browserPreviewState = {
+    accounts: Object.create(null),
+    activeEmail: null,
+    sessionExpiresAt: 0,
+    failedLogins: Object.create(null)
+  };
 
   function escapeHtml(value) {
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -30,7 +34,7 @@
   }
 
   async function requestJson(path, payload) {
-    if (browserPreviewMode) return browserPreviewRequest(path, payload);
+    if (browserPreviewMode) return browserPreviewRequest(path, payload || {});
     var response;
     try {
       response = await fetch(path, {
@@ -53,25 +57,19 @@
     return data;
   }
 
-
-  // The hosted HTML preview cannot reach a maintainer's loopback server. Its
-  // account journey is deliberately a disposable, in-memory interaction demo.
-  // It does not call account APIs or persist account state in browser storage.
-  // The local Python/SQLite path stays intact.
   function setEnvironmentDisclosure() {
     var notice = document.getElementById("account-demo-notice");
-    if (notice) {
-      notice.dataset.mode = browserPreviewMode ? "browser-preview-demo" : "local-server-test";
-      notice.textContent = browserPreviewMode
-        ? "BROWSER PREVIEW DEMO ONLY — test records exist only in this page's memory and disappear on reload. Use invented credentials only; never enter a real password or valuable recovery material."
-        : "LOCAL DEVELOPMENT TEST ONLY — account records are stored in the local SQLite database. Use invented credentials only; this is not production authentication.";
-    }
+    if (!notice) return;
+    notice.dataset.mode = browserPreviewMode ? "browser-preview-demo" : "local-server-test";
+    notice.textContent = browserPreviewMode
+      ? "BROWSER PREVIEW DEMO ONLY — account details exist only in this page's memory and disappear on reload. Use invented details only. No verification, password-reset or newsletter email is sent."
+      : "LOCAL DEVELOPMENT TEST ONLY — test account details are stored in this computer's local SQLite database. No verification, password-reset or newsletter email is sent. This is not production authentication.";
   }
 
   function environmentDetails() {
     return browserPreviewMode
-      ? "Browser-preview demo only: account requests are not sent to a server. Test records exist only in this page's memory and are erased when the page reloads. Never use real credentials or valuable recovery material."
-      : "Local development only. No account data is sent to an external identity provider; records are stored in the SQLite database on this computer. This is not production authentication.";
+      ? "Temporary browser demo: account state is held in this page only and is erased on reload or when you open a new tab. No account API is called. Use an invented email and passphrase."
+      : "Local test only: account data is stored in SQLite on this computer. Email verification, email password reset and newsletter delivery are not configured.";
   }
 
   function applyPreviewFormPrivacy() {
@@ -114,71 +112,54 @@
     return previewHex(result);
   }
 
-  async function previewCodeHash(code) {
-    var normalized = String(code).toUpperCase().replace(/[^A-Z0-9]/g, "");
-    return previewHex(await window.crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized)));
+  function normalizeEmail(value) {
+    if (typeof value !== "string") throw new Error("Enter a valid email address.");
+    var email = value.trim().toLowerCase();
+    if (email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      throw new Error("Enter a valid email address.");
+    }
+    return email;
   }
 
-  function previewEqual(left, right) {
-    left = String(left);
-    right = String(right);
-    var difference = left.length ^ right.length;
-    var maximum = Math.max(left.length, right.length);
-    for (var i = 0; i < maximum; i++) {
-      difference |= (left.charCodeAt(i % Math.max(left.length, 1)) || 0) ^
-        (right.charCodeAt(i % Math.max(right.length, 1)) || 0);
-    }
-    return difference === 0;
-  }
-
-  function previewNormalizeUsername(value) {
-    if (typeof value !== "string") {
-      throw new Error("Enter a username using 3–24 letters, numbers, dots, underscores or hyphens.");
-    }
-    var username = value.trim().toLowerCase();
-    if (!/^[a-z0-9][a-z0-9_.-]{2,23}$/.test(username)) {
-      throw new Error("Use 3–24 characters: letters, numbers, dot, underscore or hyphen. Start with a letter or number.");
-    }
-    return username;
-  }
-
-  function previewValidatePassword(value) {
+  function validatePassword(value) {
     if (typeof value !== "string" || value.length < 15 || value.length > 1024) {
       throw new Error("Use a passphrase between 15 and 1024 characters.");
     }
     return value;
   }
 
-  function previewMakeCodes() {
-    var codes = [];
-    for (var i = 0; i < 8; i++) {
-      var hex = previewHex(previewRandomBytes(12)).toUpperCase();
-      codes.push(hex.match(/.{4}/g).join("-"));
+  function validateReferralId(value) {
+    if (value === undefined || value === null || String(value).trim() === "") return "";
+    var referralId = String(value).trim();
+    if (referralId.length > 64 || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(referralId)) {
+      throw new Error("Enter a valid Referral ID or leave the field blank.");
     }
-    return codes;
-  }
-
-  async function previewHashCodes(codes) {
-    return Promise.all(codes.map(function (code) { return previewCodeHash(code); }));
+    return referralId;
   }
 
   function previewCurrentAccount() {
-    if (!browserPreviewState.activeUsername || Date.now() >= browserPreviewState.sessionExpiresAt) {
-      browserPreviewState.activeUsername = null;
+    if (!browserPreviewState.activeEmail || Date.now() >= browserPreviewState.sessionExpiresAt) {
+      browserPreviewState.activeEmail = null;
       browserPreviewState.sessionExpiresAt = 0;
       return null;
     }
-    return browserPreviewState.accounts[browserPreviewState.activeUsername] || null;
+    return browserPreviewState.accounts[browserPreviewState.activeEmail] || null;
   }
 
   function previewSummary(account) {
     var current = Boolean(account && previewCurrentAccount() === account);
     return {
       authenticated: current,
-      username: current ? account.username : undefined,
+      email: current ? account.email : account.email,
       createdAt: account ? account.createdAt : undefined,
-      recoveryConfigured: Boolean(account && account.recoveryEnabled),
-      recoveryCodesRemaining: account && account.recoveryEnabled ? account.recoveryHashes.length : 0,
+      referralId: account ? account.referralId : "",
+      newsletterOptIn: Boolean(account && account.newsletterOptIn),
+      newsletterConsentAt: account && account.newsletterConsentAt ? account.newsletterConsentAt : null,
+      termsAccepted: Boolean(account && account.termsAccepted),
+      termsVersion: account ? account.termsVersion : termsVersion,
+      termsAcceptedAt: account ? account.termsAcceptedAt : null,
+      emailVerified: false,
+      passwordResetAvailable: false,
       sessionExpiresAt: current ? new Date(browserPreviewState.sessionExpiresAt).toISOString() : null,
       scope: "browser-preview-memory-only",
       admin: false
@@ -187,126 +168,76 @@
 
   async function previewVerifyPassword(account, password) {
     if (!account || typeof password !== "string" || password.length > 1024) return false;
-    return previewEqual(await previewPasswordHash(password, account.passwordSalt), account.passwordHash);
+    var candidate = await previewPasswordHash(password, account.passwordSalt);
+    return candidate === account.passwordHash;
   }
 
-  function previewStartSession(username) {
-    browserPreviewState.activeUsername = username;
+  function previewStartSession(email) {
+    browserPreviewState.activeEmail = email;
     browserPreviewState.sessionExpiresAt = Date.now() + 30 * 60 * 1000;
   }
 
   async function browserPreviewRequest(path, payload) {
-    payload = payload || {};
     if (path === "/api/account/status") {
       var current = previewCurrentAccount();
       return current ? previewSummary(current) : { authenticated: false, admin: false, scope: "browser-preview-memory-only" };
     }
 
     if (path === "/api/account/register") {
-      var username = previewNormalizeUsername(payload.username);
-      var password = previewValidatePassword(payload.password);
-      if (browserPreviewState.accounts[username]) {
-        throw new Error("That username is already in use. Choose another one.");
-      }
-      var codes = previewMakeCodes();
+      var email = normalizeEmail(payload.email);
+      var password = validatePassword(payload.password);
+      var referralId = validateReferralId(payload.referralId);
+      if (payload.termsAccepted !== true) throw new Error("Accept the Terms of Use and Privacy Policy to create an account.");
+      if (typeof payload.newsletterOptIn !== "boolean") throw new Error("Choose whether you want AstroCrown crypto-news emails.");
+      if (browserPreviewState.accounts[email]) throw new Error("An account with this email already exists. Try Log In.");
       var salt = previewHex(previewRandomBytes(16));
+      var now = new Date().toISOString();
       var account = {
-        username: username,
+        email: email,
         passwordSalt: salt,
         passwordHash: await previewPasswordHash(password, salt),
-        createdAt: new Date().toISOString(),
-        recoveryEnabled: false,
-        recoveryHashes: await previewHashCodes(codes)
+        createdAt: now,
+        referralId: referralId,
+        newsletterOptIn: payload.newsletterOptIn,
+        newsletterConsentAt: payload.newsletterOptIn ? now : null,
+        termsAccepted: true,
+        termsVersion: termsVersion,
+        termsAcceptedAt: now
       };
-      browserPreviewState.accounts[username] = account;
-      previewStartSession(username);
+      browserPreviewState.accounts[email] = account;
+      previewStartSession(email);
       return Object.assign(previewSummary(account), {
         authenticated: true,
-        recoveryCodes: codes,
-        message: "Demo account created in this page's memory. Save the one-time demo codes if you want to test recovery."
+        message: "Development test account created. Your email is not verified, and no emails or newsletter messages have been sent."
       });
     }
 
     if (path === "/api/account/login") {
-      var loginName = previewNormalizeUsername(payload.username);
+      var loginEmail = normalizeEmail(payload.email);
       if (typeof payload.password !== "string" || payload.password.length > 1024) {
-        throw new Error("Enter your username and password.");
+        throw new Error("Enter your email address and password.");
       }
-      var attempt = browserPreviewState.failedLogins[loginName] || { count: 0, startedAt: Date.now() };
+      var attempt = browserPreviewState.failedLogins[loginEmail] || { count: 0, startedAt: Date.now() };
       if (Date.now() - attempt.startedAt > 60000) attempt = { count: 0, startedAt: Date.now() };
       if (attempt.count >= 10) throw new Error("Too many sign-in attempts. Wait a minute before trying again.");
-      var loginAccount = browserPreviewState.accounts[loginName];
+      var loginAccount = browserPreviewState.accounts[loginEmail];
       if (!loginAccount || !(await previewVerifyPassword(loginAccount, payload.password))) {
         attempt.count += 1;
-        browserPreviewState.failedLogins[loginName] = attempt;
-        throw new Error("Username or password did not match.");
+        browserPreviewState.failedLogins[loginEmail] = attempt;
+        throw new Error("Email address or password did not match.");
       }
-      delete browserPreviewState.failedLogins[loginName];
-      previewStartSession(loginName);
+      delete browserPreviewState.failedLogins[loginEmail];
+      previewStartSession(loginEmail);
       return previewSummary(loginAccount);
     }
 
     if (path === "/api/account/logout") {
-      browserPreviewState.activeUsername = null;
+      browserPreviewState.activeEmail = null;
       browserPreviewState.sessionExpiresAt = 0;
       return { authenticated: false, message: "Signed out of this browser-preview demo." };
     }
 
-    if (path === "/api/account/recover") {
-      var recoveryName = previewNormalizeUsername(payload.username);
-      var newPassword = previewValidatePassword(payload.newPassword);
-      var recoveryAccount = browserPreviewState.accounts[recoveryName];
-      if (!recoveryAccount || !recoveryAccount.recoveryEnabled || typeof payload.recoveryCode !== "string") {
-        throw new Error("The username or recovery code could not be verified.");
-      }
-      var suppliedHash = await previewCodeHash(payload.recoveryCode);
-      var codeIndex = recoveryAccount.recoveryHashes.findIndex(function (item) { return previewEqual(item, suppliedHash); });
-      if (codeIndex < 0) throw new Error("The username or recovery code could not be verified.");
-      var replacementSalt = previewHex(previewRandomBytes(16));
-      var replacementHash = await previewPasswordHash(newPassword, replacementSalt);
-      recoveryAccount.passwordSalt = replacementSalt;
-      recoveryAccount.passwordHash = replacementHash;
-      recoveryAccount.recoveryHashes.splice(codeIndex, 1);
-      recoveryAccount.recoveryEnabled = recoveryAccount.recoveryHashes.length > 0;
-      browserPreviewState.activeUsername = null;
-      browserPreviewState.sessionExpiresAt = 0;
-      return { reset: true, message: "Demo password reset. Sign in with the new passphrase." };
-    }
-
-    if (path === "/api/recovery/ack") {
-      var ackAccount = previewCurrentAccount();
-      if (!ackAccount) throw new Error("Sign in again to manage recovery codes.");
-      if (ackAccount.recoveryHashes.length < 1) {
-        throw new Error("Generate a new set of recovery codes before confirming it.");
-      }
-      ackAccount.recoveryEnabled = true;
-      return { recoveryConfigured: true, recoveryCodesRemaining: ackAccount.recoveryHashes.length };
-    }
-
-    if (path === "/api/recovery/skip") {
-      var skipAccount = previewCurrentAccount();
-      if (!skipAccount) throw new Error("Sign in again to manage recovery codes.");
-      skipAccount.recoveryHashes = [];
-      skipAccount.recoveryEnabled = false;
-      return { recoveryConfigured: false, message: "Demo recovery codes were deleted." };
-    }
-
-    if (path === "/api/recovery/regenerate") {
-      var regenAccount = previewCurrentAccount();
-      if (!regenAccount) throw new Error("Sign in again to manage recovery codes.");
-      if (!(await previewVerifyPassword(regenAccount, payload.password))) {
-        throw new Error("Your current password could not be verified.");
-      }
-      var replacementCodes = previewMakeCodes();
-      regenAccount.recoveryHashes = await previewHashCodes(replacementCodes);
-      regenAccount.recoveryEnabled = false;
-      return {
-        recoveryCodes: replacementCodes,
-        message: "The previous demo recovery codes have been invalidated. Save the new set before confirming."
-      };
-    }
-
-    throw new Error("That browser-preview account action is not available.");
+    throw new Error("Email-based password reset and external sign-in methods are not enabled in this development prototype. No email was sent.");
   }
 
   function setBusy(value) {
@@ -319,122 +250,98 @@
 
   function renderTabs(selected) {
     return '<div class="account-tabs" role="tablist" aria-label="Account access">' +
-      '<button type="button" class="account-tab" role="tab" data-account-mode="signin" aria-selected="' + (selected === "signin" ? "true" : "false") + '">Sign in</button>' +
-      '<button type="button" class="account-tab" role="tab" data-account-mode="create" aria-selected="' + (selected === "create" ? "true" : "false") + '">Create account</button>' +
+      '<button type="button" class="account-tab" role="tab" data-account-mode="signin" aria-selected="' + (selected === "signin" ? "true" : "false") + '">Log In</button>' +
+      '<button type="button" class="account-tab" role="tab" data-account-mode="create" aria-selected="' + (selected === "create" ? "true" : "false") + '">Sign Up</button>' +
+      '</div>';
+  }
+
+  function renderOrToggle() {
+    return '<button type="button" class="account-or-toggle" id="account-other-options" aria-expanded="false" aria-controls="account-other-options-panel">' +
+      '<span>Or</span><span class="account-or-arrow" aria-hidden="true"></span>' +
+      '</button>' +
+      '<div class="account-other-options-panel" id="account-other-options-panel" hidden>' +
+        'Other sign-in methods are not connected in this development prototype. We will not show fake provider buttons or request a wallet for ordinary account access.' +
       '</div>';
   }
 
   function renderSignIn() {
-    title.textContent = "Welcome back";
-    content.innerHTML = renderTabs("signin") +
-      '<p class="account-dialog-description">Sign in with your AstroCrown username and password. A crypto wallet is not required for ordinary account access.</p>' +
+    title.textContent = "Log In";
+    content.innerHTML = renderTabs("signin") + renderOrToggle() +
+      '<p class="account-dialog-description">Welcome back. Log in to your AstroCrown account with your email and password.</p>' +
       '<form id="account-signin-form" class="account-form" autocomplete="on">' +
-        '<label class="account-field" for="account-username">Username' +
-          '<input id="account-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{2,23}" required autocapitalize="none" spellcheck="false" placeholder="your-username">' +
+        '<label class="account-field" for="account-email">Email' +
+          '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
         '</label>' +
         '<label class="account-field" for="account-password">Password' +
-          '<input id="account-password" name="password" type="password" autocomplete="current-password" required maxlength="1024" placeholder="Enter your passphrase">' +
+          '<input id="account-password" name="password" type="password" autocomplete="current-password" required maxlength="1024" placeholder="Enter your password...">' +
         '</label>' +
-        '<div class="account-form-actions"><button class="account-primary" type="submit">Sign in</button>' +
+        '<div class="account-form-actions"><button class="account-primary" type="submit">Log In</button>' +
           '<button class="account-text-button" type="button" data-account-mode="recover">Forgot password?</button></div>' +
       '</form>' +
-      '<p class="account-provider-note">This local test does not connect Google, Apple, X, Facebook, LinkedIn, or any other identity provider. We will not display pretend provider buttons. Those integrations require separate approval and verification.</p>';
+      '<p class="account-provider-note">A crypto wallet is not required for ordinary account access. This development prototype does not verify email ownership or provide email password-reset delivery.</p>';
   }
 
   function renderCreate() {
-    title.textContent = "Create your account";
-    content.innerHTML = renderTabs("create") +
-      '<p class="account-dialog-description">Choose a username and a strong passphrase. No email address or crypto wallet is requested by this prototype.</p>' +
+    title.textContent = "Sign Up";
+    content.innerHTML = renderTabs("create") + renderOrToggle() +
+      '<p class="account-dialog-description">Create your AstroCrown account using your email address.</p>' +
       '<form id="account-create-form" class="account-form" autocomplete="on">' +
-        '<label class="account-field" for="account-username">Username' +
-          '<input id="account-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9][A-Za-z0-9_.-]{2,23}" required autocapitalize="none" spellcheck="false" placeholder="your-username">' +
-          '<small>3–24 characters: letters, numbers, dot, underscore or hyphen. Usernames are not case-sensitive.</small>' +
+        '<label class="account-field" for="account-email">Email' +
+          '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
         '</label>' +
-        '<label class="account-field" for="account-password">Password / passphrase' +
-          '<input id="account-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required placeholder="At least 15 characters">' +
-          '<small>This local prototype has no email reset. After creating the account, save the one-time recovery codes or you may be unable to recover forgotten access.</small>' +
+        '<label class="account-field" for="account-password">Password' +
+          '<input id="account-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required placeholder="Enter your password...">' +
+          '<small>For this test, use an invented passphrase at least 15 characters long. Do not reuse a real password.</small>' +
         '</label>' +
-        '<label class="account-field" for="account-confirm-password">Confirm password' +
-          '<input id="account-confirm-password" name="confirmPassword" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required placeholder="Enter it again">' +
+        '<label class="account-field" for="account-referral-id">Referral ID (Optional)' +
+          '<input id="account-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
-        '<button class="account-primary" type="submit">Create account</button>' +
+        '<label class="account-consent account-newsletter-consent" for="account-newsletter-opt-in">' +
+          '<input id="account-newsletter-opt-in" name="newsletterOptIn" type="checkbox">' +
+          '<span>Please keep me updated by email with the latest crypto news, and more information from the Crypto universe of AstroCrown.</span>' +
+        '</label>' +
+        '<label class="account-consent account-terms-consent" for="account-terms-accepted">' +
+          '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
+          '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>. <small>Both policy pages are marked development drafts and are not approved for production.</small></span>' +
+        '</label>' +
+        '<button class="account-primary account-create-submit" type="submit">Create an account</button>' +
       '</form>' +
-      '<p class="account-provider-note">This prototype is for development only. Do not reuse a real or important password. This is not production authentication.</p>';
-  }
-
-  function renderRecoveryCodes() {
-    title.textContent = "Protect your account";
-    var codes = recoveryCodes.map(function (code) { return "<code>" + escapeHtml(code) + "</code>"; }).join("");
-    content.innerHTML =
-      '<p class="account-dialog-description">Save these one-time recovery codes somewhere private and separate from this device. Each code can be used once to reset the password. They are shown only now.</p>' +
-      '<div class="account-recovery-warning"><strong>Important:</strong> this prototype has no email reset or passkey yet. If you skip these codes and later forget your password, you cannot use this prototype\'s password-recovery route.</div>' +
-      '<div class="account-code-list" id="recovery-code-list">' + codes + '</div>' +
-      '<div class="account-form-actions">' +
-        '<button class="account-secondary" type="button" id="copy-recovery-codes">Copy codes</button>' +
-        '<button class="account-secondary" type="button" id="download-recovery-codes">Download .txt</button>' +
-      '</div>' +
-      '<div class="account-actions-stack">' +
-        '<button class="account-primary" type="button" id="acknowledge-recovery">I have saved these codes</button>' +
-        '<button class="account-text-button" type="button" id="skip-recovery">Not now — delete these codes</button>' +
-      '</div>' +
-      '<p class="account-inline-note">Regenerating codes later invalidates all codes from the previous set. Never send recovery codes to support, NOVA, or anyone else.</p>';
+      '<p class="account-provider-note">This prototype stores test information only. No verification email or crypto-news newsletter will be sent.</p>';
   }
 
   function renderAccount() {
     title.textContent = "Your account";
-    var username = escapeHtml(accountState.username || "");
-    var recoveryPanel = accountState.recoveryConfigured
-      ? '<div class="account-recovery-ok"><strong>Recovery codes enabled.</strong><br>' +
-          String(accountState.recoveryCodesRemaining || 0) + ' unused code(s) remain. Keep them offline and private.</div>'
-      : '<div class="account-recovery-warning"><strong>Recovery is not set up.</strong><br>If you forget your password, there is no email or wallet reset in this prototype. Set up recovery codes before relying on this test account.</div>';
+    var email = escapeHtml(accountState.email || "");
+    var referral = accountState.referralId
+      ? '<p class="account-status-copy"><strong>Referral ID:</strong> ' + escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(recorded as an unverified test value; no reward is applied)</span></p>'
+      : '<p class="account-status-copy"><strong>Referral ID:</strong> Not supplied</p>';
+    var newsletter = accountState.newsletterOptIn
+      ? "You opted in to crypto-news email updates in this test. No newsletter has been sent."
+      : "You did not opt in to crypto-news email updates.";
     content.innerHTML =
-      '<div class="account-account-card"><p class="account-account-status">' + (browserPreviewMode ? "Signed in · browser demo account" : "Signed in · local test account") + '</p>' +
-        '<p class="account-account-name">' + username + '</p>' +
-        '<p class="account-status-copy">This is an ordinary test account only. It has no admin role, wallet association, real assets or production privileges.</p></div>' +
-      recoveryPanel +
-      '<div class="account-actions-stack">' +
-        '<button class="account-primary" type="button" id="manage-recovery">' + (accountState.recoveryConfigured ? 'Replace recovery codes' : 'Set up recovery codes') + '</button>' +
-        '<button class="account-secondary" type="button" id="account-signout">Sign out</button>' +
-      '</div>' +
-      '<p class="account-provider-note">This is an ordinary account-access prototype, not production authentication.</p>';
+      '<div class="account-account-card"><p class="account-account-status">Signed in · development test account</p>' +
+        '<p class="account-account-name">' + email + '</p>' +
+        '<p class="account-status-copy">Email verification is not enabled in this prototype. This account has no production privileges or real asset access.</p></div>' +
+      referral +
+      '<div class="account-recovery-warning"><strong>Password reset by email is not available yet.</strong><br>No reset email has been sent or will be sent by this prototype. Production email verification and password-reset delivery must be implemented and reviewed before real account use.</div>' +
+      '<div class="account-recovery-ok"><strong>Crypto-news preference</strong><br>' + escapeHtml(newsletter) + '</div>' +
+      '<div class="account-actions-stack"><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>' +
+      '<p class="account-provider-note">This is a development-only interaction test, not production authentication.</p>';
   }
 
   function renderRecover() {
-    title.textContent = "Recover your account";
-    content.innerHTML =
-      '<p class="account-dialog-description">Use one unused recovery code you saved when setting up the account. The code is consumed when your password is reset.</p>' +
-      '<form id="account-recover-form" class="account-form" autocomplete="on">' +
-        '<label class="account-field" for="account-username">Username' +
-          '<input id="account-username" name="username" type="text" autocomplete="username" minlength="3" maxlength="24" required autocapitalize="none" spellcheck="false">' +
+    title.textContent = "Forgot password?";
+    content.innerHTML = renderTabs("signin") +
+      '<p class="account-dialog-description">Enter the email address associated with your account. A production service would send a time-limited password-reset link to that inbox.</p>' +
+      '<div class="account-recovery-warning"><strong>Email reset is not enabled in this prototype.</strong><br>No email will be sent, and this demo cannot reset the password. We will not ask you to memorise or enter a one-time recovery code.</div>' +
+      '<form id="account-reset-request-form" class="account-form" autocomplete="on">' +
+        '<label class="account-field" for="account-email">Email' +
+          '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
         '</label>' +
-        '<label class="account-field" for="recovery-code">One-time recovery code' +
-          '<input id="recovery-code" name="recoveryCode" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" required placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX">' +
-        '</label>' +
-        '<label class="account-field" for="new-password">New password / passphrase' +
-          '<input id="new-password" name="newPassword" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required placeholder="At least 15 characters">' +
-        '</label>' +
-        '<label class="account-field" for="confirm-new-password">Confirm new password' +
-          '<input id="confirm-new-password" name="confirmNewPassword" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required>' +
-        '</label>' +
-        '<button class="account-primary" type="submit">Reset password</button>' +
+        '<button class="account-primary" type="submit">Request password reset</button>' +
       '</form>' +
-      '<div class="account-form-actions"><button class="account-text-button" type="button" data-account-mode="signin">Back to sign in</button>' +
-        '<button class="account-text-button" type="button" data-account-mode="create">Create an account instead</button></div>' +
-      '<p class="account-provider-note">Resetting the password revokes existing sessions. It does not recover a crypto wallet, admin access, payout destinations or encrypted data keys.</p>';
-  }
-
-  function renderRegenerate() {
-    title.textContent = "Replace recovery codes";
-    content.innerHTML =
-      '<p class="account-dialog-description">Generate a new set of one-time recovery codes. This immediately invalidates all codes from the previous set.</p>' +
-      '<form id="account-regenerate-form" class="account-form" autocomplete="on">' +
-        '<label class="account-field" for="current-password">Confirm your current password' +
-          '<input id="current-password" name="password" type="password" autocomplete="current-password" minlength="15" maxlength="1024" required>' +
-        '</label>' +
-        '<button class="account-primary" type="submit">Generate new codes</button>' +
-      '</form>' +
-      '<p class="account-provider-note">The new codes are not active until you confirm that you have saved them. If you skip, the previous set will already have been invalidated.</p>' +
-      '<button class="account-text-button" type="button" data-account-mode="account">Cancel</button>';
+      '<div class="account-form-actions"><button class="account-text-button" type="button" data-account-mode="signin">Back to Log In</button>' +
+        '<button class="account-text-button" type="button" data-account-mode="create">Create an account instead</button></div>';
   }
 
   function render() {
@@ -442,12 +349,10 @@
     if (mode === "signin") renderSignIn();
     else if (mode === "create") renderCreate();
     else if (mode === "recover") renderRecover();
-    else if (mode === "codes") renderRecoveryCodes();
-    else if (mode === "regenerate") renderRegenerate();
     else renderAccount();
     if (browserPreviewMode) {
       var previewNote = document.createElement("p");
-      previewNote.className = "account-provider-note";
+      previewNote.className = "account-provider-note account-environment-note";
       previewNote.textContent = environmentDetails();
       content.appendChild(previewNote);
     }
@@ -481,9 +386,7 @@
   }
 
   function setMode(next) {
-    if (next === "account" && !accountState.authenticated) next = "signin";
     mode = next;
-    recoveryCodes = [];
     render();
   }
 
@@ -492,87 +395,46 @@
     return item ? item.value : "";
   }
 
-  function codesText() { return recoveryCodes.join("\n") + "\n"; }
-
-  function downloadCodes() {
-    var blob = new Blob([codesText()], { type: "text/plain;charset=utf-8" });
-    var link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "AstroCrown-Recovery-Codes.txt";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(link.href);
-    showFeedback("Recovery-code file prepared. Store it somewhere private and separate from this device.", "success");
-  }
-
-  async function regenerateWithPassword(password) {
-    var result = await requestJson("/api/recovery/regenerate", { password: password });
-    recoveryCodes = result.recoveryCodes;
-    mode = "codes";
-    render();
-    showFeedback(result.message, "success");
-  }
-
   content.addEventListener("submit", async function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
     event.preventDefault();
     if (busy) return;
-    var payload;
+
+    if (form.id === "account-reset-request-form") {
+      showFeedback("No email was sent. Email-based password reset is not connected to this development prototype.", "error");
+      return;
+    }
+
     var endpoint;
+    var payload;
     if (form.id === "account-signin-form") {
       endpoint = "/api/account/login";
-      payload = { username: formValue(form, "username"), password: formValue(form, "password") };
+      payload = { email: formValue(form, "email"), password: formValue(form, "password") };
     } else if (form.id === "account-create-form") {
-      var password = formValue(form, "password");
-      if (password !== formValue(form, "confirmPassword")) {
-        showFeedback("The passwords do not match.", "error");
-        return;
-      }
       endpoint = "/api/account/register";
-      payload = { username: formValue(form, "username"), password: password };
-    } else if (form.id === "account-recover-form") {
-      var newPassword = formValue(form, "newPassword");
-      if (newPassword !== formValue(form, "confirmNewPassword")) {
-        showFeedback("The new passwords do not match.", "error");
-        return;
-      }
-      endpoint = "/api/account/recover";
       payload = {
-        username: formValue(form, "username"),
-        recoveryCode: formValue(form, "recoveryCode"),
-        newPassword: newPassword
+        email: formValue(form, "email"),
+        password: formValue(form, "password"),
+        referralId: formValue(form, "referralId"),
+        newsletterOptIn: Boolean(form.elements.namedItem("newsletterOptIn").checked),
+        termsAccepted: Boolean(form.elements.namedItem("termsAccepted").checked),
+        termsVersion: termsVersion
       };
-    } else if (form.id === "account-regenerate-form") {
-      setBusy(true);
-      try { await regenerateWithPassword(formValue(form, "password")); }
-      catch (error) { showFeedback(error.message, "error"); }
-      finally { setBusy(false); }
+    } else {
       return;
-    } else return;
+    }
 
     setBusy(true);
     try {
       var result = await requestJson(endpoint, payload);
+      accountState = result;
+      mode = "account";
+      render();
       if (form.id === "account-create-form") {
-        accountState = result;
-        recoveryCodes = result.recoveryCodes || [];
-        mode = "codes";
-        render();
-        showFeedback("Account created in test mode. Save your recovery codes now.", "success");
-      } else if (form.id === "account-signin-form") {
-        accountState = result;
-        await refreshStatus();
-        mode = "account";
-        render();
-        showFeedback("You are signed in to the test account.", "success");
+        showFeedback("Test account created. Email is unverified; no email or newsletter message was sent.", "success");
       } else {
-        accountState = { authenticated: false };
-        await refreshStatus();
-        mode = "signin";
-        render();
-        showFeedback("Password reset. Sign in with your new password.", "success");
+        showFeedback("You are signed in to the development test account.", "success");
       }
     } catch (error) {
       showFeedback(error.message, "error");
@@ -584,53 +446,15 @@
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.id === "account-other-options") {
+      var panel = document.getElementById("account-other-options-panel");
+      var expanded = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", expanded ? "false" : "true");
+      if (panel) panel.hidden = expanded;
+      return;
+    }
     if (button.dataset.accountMode) {
-      var next = button.dataset.accountMode;
-      if (next === "account") {
-        await refreshStatus();
-        setMode("account");
-      } else setMode(next);
-      return;
-    }
-    if (button.id === "acknowledge-recovery") {
-      setBusy(true);
-      try {
-        await requestJson("/api/recovery/ack", {});
-        await refreshStatus();
-        mode = "account";
-        recoveryCodes = [];
-        render();
-        showFeedback("Recovery codes are enabled for this local account.", "success");
-      } catch (error) { showFeedback(error.message, "error"); }
-      finally { setBusy(false); }
-      return;
-    }
-    if (button.id === "skip-recovery") {
-      setBusy(true);
-      try {
-        await requestJson("/api/recovery/skip", {});
-        await refreshStatus();
-        mode = "account";
-        recoveryCodes = [];
-        render();
-        showFeedback("Recovery codes were deleted. Add a recovery method before relying on this test account.", "info");
-      } catch (error) { showFeedback(error.message, "error"); }
-      finally { setBusy(false); }
-      return;
-    }
-    if (button.id === "download-recovery-codes") { downloadCodes(); return; }
-    if (button.id === "copy-recovery-codes") {
-      try {
-        await navigator.clipboard.writeText(codesText());
-        showFeedback("Recovery codes copied. Keep them private.", "success");
-      } catch (_error) {
-        showFeedback("Clipboard access was unavailable. Use Download .txt or select the codes manually.", "error");
-      }
-      return;
-    }
-    if (button.id === "manage-recovery") {
-      mode = "regenerate";
-      render();
+      setMode(button.dataset.accountMode);
       return;
     }
     if (button.id === "account-signout") {
@@ -640,11 +464,13 @@
         accountState = { authenticated: false };
         await refreshStatus();
         mode = "signin";
-        recoveryCodes = [];
         render();
-        showFeedback("Signed out of the test account.", "success");
-      } catch (error) { showFeedback(error.message, "error"); }
-      finally { setBusy(false); }
+        showFeedback("Signed out of the development test account.", "success");
+      } catch (error) {
+        showFeedback(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
     }
   });
 
