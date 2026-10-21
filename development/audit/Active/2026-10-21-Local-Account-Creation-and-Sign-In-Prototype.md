@@ -1,12 +1,14 @@
-# Active Navigation Plan — Local Account Creation and Sign-In Prototype
+# Historical Navigation Record — Previous Username-First Account Prototype
 
 **Date:** 2026-10-21  
-**Status:** IMPLEMENTED ON DRAFT BRANCH; account HTTP/recovery tests, browser flow, wallet-lab tests, NOVA CI, external review and CodeQL all PASS on implementation commit `027f2ce841ea7623994bced48057956f13251587`; production use BLOCKED  
+**Status:** HISTORICAL BASELINE — its implementation and test evidence apply only to the earlier username/recovery-code-first prototype, not the current email-account UI; latest implementation requires fresh exact-head verification  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Branch:** docs/provider-independent-wallet-auth-plan-2026-10-20  
 **Primary requirement source:** PR #132 — Account Continuity and Privacy-Preserving Access Roadmap  
 **Authentication decision:** Authentication Separation and Recovery Decision  
 **Provider research:** Sign-In Provider Research and Onboarding Plan
+
+> **Superseded for the current UX by** [CMC-Inspired Email Account Entry Plan](2026-10-21-CMC-Style-Email-Account-Flow.md). On 2026-10-21, the owner requested a familiar Log In / Sign Up flow using email and password, an optional Referral ID, an independently optional crypto-news email preference, and required Terms of Use / Privacy Policy acceptance. The one-time recovery-code setup was removed from the visible sign-up journey. The current prototype explicitly says no email verification, password-reset email, or newsletter message is sent. Earlier owner-test steps and green-check evidence below are historical only and must not be used to claim the current head passes. The new active plan is the acceptance source for this changed UX.
 
 ## 1. Goal
 
