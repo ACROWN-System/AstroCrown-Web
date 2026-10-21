@@ -230,6 +230,7 @@ These checks ran against source snapshot `f12c268558a0ae3a5a3382a90fc153576b667b
 - [Local Wallet Authentication Prototype Tests #91 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682606065).
 - [NOVA RSI Engine CI #743 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682605940).
 - [External Review Pipeline CI #304 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682605971).
-- [NOVA RSI CodeQL Security Analysis #314](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682606027) was still in progress at the time of this entry; do not describe it as passed until a successful conclusion is observed.
+- [NOVA RSI CodeQL Security Analysis #314](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682606027) was superseded and cancelled; it is not counted as a pass.
+- [NOVA RSI CodeQL Security Analysis #315 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682781586): completed successfully on subsequent audit-only commit `625d854fbe7c0e6509f7f192afe4b15be888cd7f`. The account HTML, CSS and JavaScript remained unchanged from the tested UI-source snapshot. All five workflows passed on that revision.
 
 The pinned Preview commit contains the corrected HTML and CSS, while the tested source commit additionally includes the browser test fix. Human visual confirmation of line weight, taper, and spacing remains open.
