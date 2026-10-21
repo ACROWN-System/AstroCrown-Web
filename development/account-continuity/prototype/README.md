@@ -1,26 +1,38 @@
-# AstroCrown local account creation and sign-in prototype
+# AstroCrown email-account entry prototype
 
-**Status: local development test only — not production authentication.**
+**Status: development test only — not production authentication.**
 
-This prototype makes the homepage's **Account** button open a working account-creation and sign-in flow in the no-installation browser preview or the optional local SQLite test. It follows the account-continuity foundation merged in PR #132 and the owner-approved separation of ordinary account authentication from optional wallet access.
+This prototype provides a familiar **Log In / Sign Up** account dialog in the development homepage. It uses the owner's requested email/password fields, optional Referral ID, separate optional crypto-news email preference, and required Terms of Use / Privacy Policy acceptance. It remains isolated under `development/`; the production/root homepage is unchanged.
 
 ## What you can test
 
-- Create an account with a username and password/passphrase.
-- Sign out and sign back in.
-- Set up and regenerate one-time recovery codes.
-- Reset a forgotten password with one enabled, unused recovery code.
-- Observe one-time recovery-code use and session revocation after password reset.
+- Open the homepage header's **Account** button.
+- Switch between **Log In** and **Sign Up**.
+- Create a test account using an invented email address and passphrase.
+- Enter or omit an optional Referral ID.
+- Opt in or leave unchecked the independent crypto-news email preference.
+- Accept or reject the required Terms of Use / Privacy Policy checkbox.
+- Sign out and log back in with email and password.
+- Open **Forgot password?** and verify the honest disabled-state message.
+- See which test preferences were recorded in local SQLite or the disposable browser-demo state.
 
-The ordinary-account prototype does **not** request a wallet, email, phone, Google/Apple/X/Facebook/LinkedIn account, or biometric. External provider integrations are not active in this local test; fake provider buttons are intentionally not shown. The account has no admin role. Passkeys, admin wallet enrollment, Imperial HSIAN recovery, production storage, notifications and the public site's account service are not implemented.
+The flow does **not** ask users to memorise one-time recovery codes at sign-up. Email verification, secure email-based password reset, email delivery, and newsletter delivery have **not been implemented**. The Forgot password view explicitly states that no email was sent. Do not use real credentials or rely on this prototype for an account containing real assets.
+
+The email-news checkbox is independent and unchecked by default. In this prototype, it records only a test preference; it does not subscribe anyone to a mailing list or send an email. Referral IDs are optional, stored as unverified test values, and do not trigger rewards or tracking.
+
+The linked Terms of Use and Privacy Policy are **development drafts**, not approved production policies or legal advice. Their acceptance state is recorded only to test the UI/API contract. Production must replace these drafts after appropriate product, privacy and legal review.
+
+Ordinary account access does not request a crypto wallet or a social sign-in provider. No fake Google/Apple/X/Facebook/LinkedIn/GitHub sign-in buttons are displayed.
 
 ## Direct browser preview (no installation)
 
-Open the [AstroCrown development homepage in the Git-Forge HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2F97232117e935b69733263bb83e519b7c4b548b31%2Fdevelopment%2Findex.html). Click **Account**, then **Create account**. This path does not require Git, Python or a local server.
+Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2F97232117e935b69733263bb83e519b7c4b548b31%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
 
-On the hosted preview origin, the Account button uses an isolated browser-only demo adapter. It performs the interaction flow in the page's JavaScript memory and makes no account API requests. It uses Web Crypto for the demonstration's password and one-time recovery-code hashes, but it is **not real authentication**. All demo account/session data disappear when the page reloads or you open a new tab; they are not written to browser storage or a database. A downloaded recovery-code file remains your responsibility to delete when finished.
+On the hosted preview origin, account interactions run in a browser-only demonstration adapter. It makes no account API requests and keeps the account, password hash, referral field and test consent values in page memory only. All of them disappear when the page reloads or when another tab is opened. This is an interaction harness, not real authentication.
 
-The preview site is a third-party HTML proxy. Use an invented username, a made-up passphrase and demo recovery codes only. Never enter a real/important password, valuable recovery material or wallet information; do not allow a password manager to save the demo credentials. The local Python/SQLite test described below is separate and provides the persistent, local-backend path.
+The preview uses a third-party HTML proxy. Use invented email/passphrase/referral values only. Never enter a real password, personal email address, wallet secret, valuable recovery material or real marketing preference. Do not let your password manager save the test credentials.
+
+The URL above is pinned to an earlier homepage content revision; after the latest branch updates land, use the latest **development/index.html** from PR #141 with the HTML Preview service rather than assuming a pinned older commit contains this new screen.
 
 ## Windows PowerShell: run locally
 
@@ -30,31 +42,42 @@ Use Python 3.12 from a terminal:
     cd .\AstroCrown-Account-Test
     py -3.12 .\development\account-continuity\prototype\server.py --port 8766
 
-Open exactly **http://localhost:8766/**. In the page header, click **Account**. The sign-in/create-account dialog opens directly, with tabs for **Sign in** and **Create account**. Do not open the HTML file directly, and do not use 127.0.0.1, a LAN address, tunnel, forwarded port or public hostname. The server accepts only the canonical localhost origin and binds to 127.0.0.1.
+Open exactly **http://localhost:8766/** and click **Account**. Do not open the HTML file directly, and do not use `127.0.0.1`, a LAN address, tunnel, forwarded port or public hostname. The server accepts only the canonical localhost origin and binds to `127.0.0.1`.
 
-If you already have the repository checked out, switch to the branch above and pull its latest changes, then run the command from the repository root.
+If you already have a checkout, switch to the branch above and pull its latest changes, then run the command from the repository root.
+
+For a clean dataset without old username-based test records, use a separate database file:
+
+    py -3.12 .\development\account-continuity\prototype\server.py --port 8766 --db "$env:TEMP\acrown-account-email-demo.sqlite3"
+
+Existing local SQLite records belong to earlier development prototypes; do not assume they have verified email addresses or usable recovery.
 
 ## Create a test account
 
-1. Click **Account**, then select the **Create account** tab in the dialog.
-2. Enter a test-only username (3–24 letters, digits, dots, underscores or hyphens).
-3. Use an invented passphrase of at least 15 characters. **Do not reuse a real or important password.**
-4. Save or download the eight recovery codes shown after account creation. Each can be used once. Click **I have saved these codes** to enable recovery.
-5. Sign out, sign in again, then test **Forgot password?** with one unused code.
-6. Records persist locally. The default SQLite database is under your user profile: Windows: %USERPROFILE%\.acrown-account-prototype\accounts.sqlite3; Linux/macOS: ~/.acrown-account-prototype/accounts.sqlite3.
+1. Click **Account**, then choose **Sign Up**.
+2. Enter an invented email address (for example, `test@example.test`) and a passphrase of at least 15 characters.
+3. Optionally enter a Referral ID. The prototype only validates and records the value; it does not provide a referral reward.
+4. Leave the crypto-news preference unchecked unless you are specifically testing the opt-in state. No emails will be sent in either case.
+5. Check the Terms of Use / Privacy Policy box. The pages are marked development drafts only.
+6. Create the test account, sign out, and sign in again.
+7. Test **Forgot password?**. The UI must tell you that no reset email was sent and password reset is not enabled.
 
-You can set a specific database path while testing:
-
-    py -3.12 .\development\account-continuity\prototype\server.py --port 8766 --db "$env:TEMP\acrown-account-demo.sqlite3"
-
-Use a different database filename for a clean test dataset. Stop the server with **Ctrl+C**.
+Stop the local server with **Ctrl+C**. The SQLite database is stored under your user profile unless you set `--db`; the clean-database command above uses a temporary Windows path.
 
 ## Data and security boundaries
 
-- Data stays on the computer running this server. The account prototype uses only Python standard-library components and makes no external authentication calls.
-- Passwords are stored as PBKDF2-HMAC-SHA256 hashes with random salts; raw passwords are not stored. Session tokens and recovery codes are stored only as hashes.
-- Local sessions use an HttpOnly, SameSite=Strict cookie. The local HTTP cookie configuration is **not** a production HTTPS configuration.
-- Requests are limited to the exact localhost Host/Origin, with a JSON size limit and basic attempt throttling. The server binds only to 127.0.0.1.
-- No admin privileges, role management, real passkey, social-login integration, wallet association or production data are included.
-- Homepage market figures remain illustrative demo data.
-- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. Production needs separate security, recovery, accessibility, privacy/retention, provider/cost, hosting and promotion reviews.
+- Local test data stays in the SQLite database on the computer running this server. The prototype uses Python standard-library components only and makes no external authentication or newsletter calls.
+- Passwords are stored as PBKDF2-HMAC-SHA256 hashes with random salts; raw passwords are not stored.
+- Session tokens are stored as hashes. Local sessions use an HttpOnly, SameSite=Strict cookie. The local HTTP cookie configuration is **not** a production HTTPS configuration.
+- Email is the account identifier in this UX prototype, but ownership is not verified and there is no password-reset email. Do not use it for real account access.
+- Terms acceptance and newsletter consent have timestamps/version metadata for prototype testing. No newsletter message is sent and the preference is not sent to an external service.
+- A Referral ID is optional and unverified. No reward, association, or benefit is promised or applied.
+- Requests are limited to the exact localhost Host/Origin, with a JSON size limit and basic in-process attempt throttling. The server binds only to `127.0.0.1`.
+- No admin privileges, role management, production storage, email verification, password-reset delivery, mailing list, wallet association or real passkey is included.
+- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery.
+
+## Production blockers
+
+Before using an email/password account for real user assets, AstroCrown must implement and verify: production identity/account storage and secure hosting; email ownership verification; email password-reset delivery with expiring, single-use reset links and session revocation; secure recovery alternatives and user notifications; newsletter consent history, unsubscribe, suppression and delivery operations; referral validation/abuse controls if referrals are activated; approved Terms of Use and Privacy Policy; retention/export/deletion and incident procedures; threat modelling, security testing, accessibility tests, and the project’s authoritative website/publishing verification.
+
+No email-delivery or newsletter provider has been selected or qualified under the project's $0/no-card rule. Do not merge/deploy or describe the account subsystem as production-ready merely because prototype CI passes.
