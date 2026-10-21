@@ -159,3 +159,33 @@ The pinned HTML-preview revision `42864fd11adfacee86dec996dca3bd7d5887395f` was 
 **If not implemented:** the existing clickable “Or” behavior distracts from its role as a separator, the empty expansion panel adds confusing interaction, and the white dialog does not align with AstroCrown’s card-based visual system.
 
 **Boundaries:** external providers remain unselected and unavailable; no logo slots should become clickable until a real integration has passed provider, cost, privacy, domain, and security qualification. This remains a development-only interface.
+
+## 13. Owner-directed account heading and divider refinement — 2026-10-22
+
+### Owner corrections
+
+The owner identified three remaining visual issues:
+
+1. Remove the redundant `ASTROCROWN · ACCOUNT ACCESS` kicker because the dialog title already says “AstroCrown account”.
+2. Shape the broken gold lines so they taper at their outer ends, while retaining exactly two side-line elements: one left and one right of the separator.
+3. Keep the “Or” label precisely centered in the divider row, with the arrowhead horizontally aligned beneath the label.
+
+### Implementation
+
+- `development/index.html`: removed the redundant kicker while preserving the dialog title and accessible `aria-labelledby` relationship.
+- `development/account-continuity/prototype/account-prototype.css`: changed the divider row to a three-column grid (`1fr / auto / 1fr)) so unequal text or icon sizing cannot shift the center label; retained two and only two line elements; applied a gradient mask to taper their dashed gold appearance at both ends; retained a non-interactive divider and centered downward arrow.
+- `development/account-continuity/prototype/tests/browser_smoke.mjs`: added checks for absence of the kicker, exactly two line elements, horizontal center alignment, arrow-to-label alignment, and taper styling in the browser.
+- `.github/workflows/account-continuity-prototype-tests.yml`: strengthened static guards for the removed kicker, explicit three-column centering, and gradient taper.
+
+### Acceptance status
+
+| ID | Criterion | Evidence | State |
+|---|---|---|---|
+| ACC-UI-VIS-006 | The redundant account-access kicker is absent; “AstroCrown account” remains the sole dialog heading | Static source assertion and browser DOM assertion | CI pending |
+| ACC-UI-VIS-007 | Exactly two dashed line elements flank a precisely centered “Or” label, with the line pattern tapering at both outer ends | Browser DOM geometry assertions and computed-style assertion | CI pending |
+| ACC-UI-VIS-008 | The downward arrowhead is horizontally centered under the “Or” label | Browser bounding-box assertion | CI pending |
+| ACC-UI-VIS-009 | The divider remains a static, non-clickable separator and existing account security boundaries remain intact | Existing static guards and end-to-end browser tests | CI pending |
+
+The HTML Preview revision for this correction is pinned to `877ad2d3b2e4fd653b6f51b9248426f4ae4658a5`. It contains the updated homepage and divider styling; later audit/README-only commits do not change those previewed UI assets.
+
+**Owner visual confirmation remains open.** CI is required to verify the DOM assertions and existing account journeys; the owner’s visual inspection still determines whether the line taper and center spacing match the intended appearance.
