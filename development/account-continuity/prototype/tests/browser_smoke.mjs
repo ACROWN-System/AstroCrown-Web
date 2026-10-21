@@ -177,6 +177,76 @@ try {
   await waitFor("sign-in with recovered password", () => evaluate("Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), username.toLowerCase());
 
+
+  // Exercise the hosted preview path without allowing any account API request.
+  // The query flag selects the same in-memory adapter that activates on remote hosts.
+  const previewUrl = localUrl + "?account-preview-demo=1";
+  await cdp("Page.navigate", { url: previewUrl });
+  await waitFor("browser-preview demo homepage", pageReady);
+  assert.equal(await evaluate("document.getElementById('account-demo-notice').dataset.mode"), "browser-preview-demo");
+  assert.match(await evaluate("document.getElementById('account-demo-notice').textContent"), /disappear on reload/);
+  await evaluate("window.fetch = function () { return Promise.reject(new Error('Network calls are forbidden in the browser-preview test')); };");
+  await evaluate("document.getElementById('open-account-dialog').click()");
+  await waitFor("browser-preview Account dialog", () => evaluate("document.getElementById('account-dialog').open"));
+  await evaluate("document.querySelector('[data-account-mode=create]').click()");
+  await waitFor("browser-preview create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
+
+  const demoUsername = "demo" + Date.now().toString(16);
+  const demoPassword = "AstroCrown-Browser-Demo-2026!";
+  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-confirm-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-create-form').requestSubmit()");
+  await waitFor("browser-preview recovery codes", () => evaluate("document.querySelectorAll('#recovery-code-list code').length === 8"), 30000);
+  const demoCode = await evaluate("document.querySelector('#recovery-code-list code').textContent");
+  await evaluate("document.getElementById('acknowledge-recovery').click()");
+  await waitFor("browser-preview account page", () => evaluate("Boolean(document.getElementById('account-signout'))"), 20000);
+  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoUsername.toLowerCase());
+
+  await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("browser-preview sign-in view", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
+  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-signin-form').requestSubmit()");
+  await waitFor("browser-preview sign-in", () => evaluate("Boolean(document.getElementById('account-signout'))"), 20000);
+
+  await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("browser-preview signed out", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
+  await evaluate("document.querySelector('[data-account-mode=recover]').click()");
+  await waitFor("browser-preview recovery form", () => evaluate("Boolean(document.getElementById('account-recover-form'))"));
+  const demoNewPassword = "AstroCrown-Browser-Recovered-2026!";
+  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await evaluate("document.getElementById('recovery-code').value = " + JSON.stringify(demoCode));
+  await evaluate("document.getElementById('new-password').value = " + JSON.stringify(demoNewPassword));
+  await evaluate("document.getElementById('confirm-new-password').value = " + JSON.stringify(demoNewPassword));
+  await evaluate("document.getElementById('account-recover-form').requestSubmit()");
+  await waitFor("browser-preview password reset", () => evaluate("/Demo password reset/.test(document.getElementById('account-feedback').textContent)"), 20000);
+
+  await evaluate("document.querySelector('[data-account-mode=recover]').click()");
+  await waitFor("browser-preview second recovery form", () => evaluate("Boolean(document.getElementById('account-recover-form'))"));
+  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await evaluate("document.getElementById('recovery-code').value = " + JSON.stringify(demoCode));
+  await evaluate("document.getElementById('new-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('confirm-new-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-recover-form').requestSubmit()");
+  await waitFor("browser-preview rejects spent recovery code", () =>
+    evaluate("/could not be verified/.test(document.getElementById('account-feedback').textContent)"), 20000);
+
+  // Reload destroys every in-memory account. Re-registering the same name must work.
+  await cdp("Page.navigate", { url: previewUrl });
+  await waitFor("reloaded browser-preview homepage", pageReady);
+  await evaluate("document.getElementById('open-account-dialog').click()");
+  await waitFor("reloaded Account dialog", () => evaluate("document.getElementById('account-dialog').open"));
+  await evaluate("document.querySelector('[data-account-mode=create]').click()");
+  await waitFor("reloaded create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
+  await evaluate("document.getElementById('account-username').value = " + JSON.stringify(demoUsername));
+  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-confirm-password').value = " + JSON.stringify(demoPassword));
+  await evaluate("document.getElementById('account-create-form').requestSubmit()");
+  await waitFor("same username can be created after page reload", () => evaluate("document.querySelectorAll('#recovery-code-list code').length === 8"), 30000);
+
+  console.log("PASS: local backend journey and browser-only preview journey; preview uses no fetch calls, consumes recovery codes once, and clears account memory on reload.");
+
   console.log("PASS: Account button, local registration, recovery-code setup, sign-out, sign-in, password reset, single-use code enforcement and restored login.");
 } catch (error) {
   console.error(String(error?.stack || error));
