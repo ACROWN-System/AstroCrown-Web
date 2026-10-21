@@ -14,6 +14,14 @@ This prototype makes the homepage's **Account** button open a working local acco
 
 The ordinary-account prototype does **not** request a wallet, email, phone, Google/Apple/X/Facebook/LinkedIn account, or biometric. External provider integrations are not active in this local test; fake provider buttons are intentionally not shown. The account has no admin role. Passkeys, admin wallet enrollment, Imperial HSIAN recovery, production storage, notifications and the public site's account service are not implemented.
 
+## Direct browser preview (no installation)
+
+Open the [AstroCrown development homepage in the Git-Forge HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2Fe6acb045d39763869147406c690b5d0249a39d1e%2Fdevelopment%2Findex.html). Click **Account**, then **Create account**. This path does not require Git, Python or a local server.
+
+On the hosted preview origin, the Account button uses an isolated browser-only demo adapter. It performs the interaction flow in the page's JavaScript memory and makes no account API requests. It uses Web Crypto for the demonstration's password and one-time recovery-code hashes, but it is **not real authentication**. All demo account/session data disappear when the page reloads or you open a new tab; they are not written to browser storage or a database. A downloaded recovery-code file remains your responsibility to delete when finished.
+
+The preview site is a third-party HTML proxy. Use an invented username, a made-up passphrase and demo recovery codes only. Never enter a real/important password, valuable recovery material or wallet information; do not allow a password manager to save the demo credentials. The local Python/SQLite test described below is separate and provides the persistent, local-backend path.
+
 ## Windows PowerShell: run locally
 
 Use Python 3.12 from a terminal:
