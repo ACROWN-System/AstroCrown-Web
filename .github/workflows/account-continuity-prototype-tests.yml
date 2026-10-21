@@ -50,10 +50,11 @@ jobs:
           html = Path("development/index.html").read_text(encoding="utf-8")
           server = Path("development/account-continuity/prototype/server.py").read_text(encoding="utf-8")
           ui = Path("development/account-continuity/prototype/account-ui.js").read_text(encoding="utf-8")
+          css = Path("development/account-continuity/prototype/account-prototype.css").read_text(encoding="utf-8")
           terms = Path("development/account-continuity/prototype/terms-of-use.html").read_text(encoding="utf-8")
           privacy = Path("development/account-continuity/prototype/privacy-policy.html").read_text(encoding="utf-8")
           required = (
-              'id="open-account-dialog"', 'id="account-dialog"', 'id="account-demo-notice"',
+              'id="open-account-dialog"', 'id="account-dialog"',
               'href="./account-continuity/prototype/account-prototype.css"',
               'src="./account-continuity/prototype/account-ui.js"', "Account"
           )
@@ -62,6 +63,17 @@ jobs:
               raise SystemExit(f"Account entry point or relative preview asset is missing: {missing}")
           if 'ThreadingHTTPServer(("127.0.0.1", port)' not in server:
               raise SystemExit("The local account prototype must bind only to loopback.")
+          for item in ('id="account-demo-notice"', "renderProviderSlots", "renderOrDivider"):
+              if item not in ui:
+                  raise SystemExit(f"Expected dynamically rendered account element missing: {item}")
+          if "account-other-options" in ui:
+              raise SystemExit("The Or divider must not be a clickable/toggle control.")
+          for item in (
+              ".account-provider-placeholder", ".account-or-divider", ".account-or-divider-arrow",
+              "repeating-linear-gradient", "pointer-events:none", "--gold", "rgba(15,31,52,.97)"
+          ):
+              if item not in css:
+                  raise SystemExit(f"Expected AstroCrown account visual styling missing: {item}")
           for item in (
               "newsletterOptIn", "data-account-mode", "Forgot password?", "A crypto wallet is not required",
               "Referral ID (Optional)", "Terms of Use", "Privacy Policy", "No email was sent",
