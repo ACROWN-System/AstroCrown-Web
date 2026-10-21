@@ -81,7 +81,11 @@ try {
 
   await waitFor("local account server", async () => {
     const response = await fetch(localUrl).catch(() => null);
-    return response && response.ok;
+    if (!response) return false;
+    // Drain every Node/Undici response before the polling loop retries. An
+    // unconsumed HTML body can leave the parser/socket active during teardown.
+    await response.arrayBuffer();
+    return response.ok;
   }, 12000);
 
   browser = spawn(chrome, [
