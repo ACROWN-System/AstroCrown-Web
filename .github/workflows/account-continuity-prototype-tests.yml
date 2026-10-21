@@ -7,6 +7,7 @@ on:
       - "development/index.html"
       - "development/account-continuity/**"
       - "development/audit/Active/2026-10-21-Local-Account-Creation-and-Sign-In-Prototype.md"
+      - "development/audit/Active/2026-10-21-CMC-Style-Email-Account-Flow.md"
       - ".github/workflows/account-continuity-prototype-tests.yml"
   push:
     branches: [main]
@@ -39,7 +40,7 @@ jobs:
           node --check development/account-continuity/prototype/account-ui.js
           node --check development/account-continuity/prototype/tests/browser_smoke.mjs
 
-      - name: Run loopback HTTP and recovery tests
+      - name: Run loopback HTTP and account-contract tests
         run: python -m unittest discover -s development/account-continuity/prototype/tests -p "test_*.py" -v
 
       - name: Verify account entry point and security boundaries
