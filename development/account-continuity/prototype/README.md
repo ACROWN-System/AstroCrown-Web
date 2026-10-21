@@ -22,13 +22,13 @@ Use Python 3.12 from a terminal:
     cd .\AstroCrown-Account-Test
     py -3.12 .\development\account-continuity\prototype\server.py --port 8766
 
-Open exactly **http://localhost:8766/**. In the page header, click **Account**, then choose **Sign in / Create account**. Do not open the HTML file directly, and do not use 127.0.0.1, a LAN address, tunnel, forwarded port or public hostname. The server accepts only the canonical localhost origin and binds to 127.0.0.1.
+Open exactly **http://localhost:8766/**. In the page header, click **Account**. The sign-in/create-account dialog opens directly, with tabs for **Sign in** and **Create account**. Do not open the HTML file directly, and do not use 127.0.0.1, a LAN address, tunnel, forwarded port or public hostname. The server accepts only the canonical localhost origin and binds to 127.0.0.1.
 
 If you already have the repository checked out, switch to the branch above and pull its latest changes, then run the command from the repository root.
 
 ## Create a test account
 
-1. Open **Account → Sign in / Create account → Create account**.
+1. Click **Account**, then select the **Create account** tab in the dialog.
 2. Enter a test-only username (3–24 letters, digits, dots, underscores or hyphens).
 3. Use an invented passphrase of at least 15 characters. **Do not reuse a real or important password.**
 4. Save or download the eight recovery codes shown after account creation. Each can be used once. Click **I have saved these codes** to enable recovery.
