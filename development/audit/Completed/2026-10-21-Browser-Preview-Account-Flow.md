@@ -7,6 +7,8 @@
 **Verified application/test revision:** `97232117e935b69733263bb83e519b7c4b548b31`  
 **Parent work:** PR #141 — Separate account authentication and add browser-preview demo; retain wallet lab
 
+> **Historical record:** This describes the earlier username/recovery-code-first preview implementation at revision `97232117e935b69733263bb83e519b7c4b548b31`. On 2026-10-21, the owner directed a familiar CMC-inspired email/password entry with optional referral ID, a separate opt-in newsletter preference, and required Terms/Privacy acceptance. The visible recovery-code journey has since been removed; the current email-account flow requires fresh exact-head verification. The historical PASS results below apply only to the identified older revision and must not be carried forward as current evidence. See [the active email-account plan](../Active/2026-10-21-CMC-Style-Email-Account-Flow.md).
+
 ## Objective and outcome
 
 The development homepage's **Account** button can now exercise account creation, sign-in and recovery in the hosted HTML Preview without a local Python process, Git checkout, or local runtime installation. A separate localhost Python/SQLite test mode remains in place for the backend-focused persistent journey.
