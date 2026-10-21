@@ -198,3 +198,38 @@ The account UI acceptance assertions passed on tested branch snapshot `47d875cd3
 - [External Review Pipeline CI #298 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39663622766): 11 tests.
 
 **Owner visual confirmation remains open.** CI is required to verify the DOM assertions and existing account journeys; the owner’s visual inspection still determines whether the line taper and center spacing match the intended appearance.
+
+## 14. Owner clarification — continuous gold side lines — 2026-10-22
+
+### Owner clarification
+
+The owner clarified that **“broken lines” means a single interruption in the middle only**. The two gold side segments must be continuous solid lines, not repeated dotted or dashed patterns. The only gap is between the left and right segments, where the centered **Or** label sits; its downward arrowhead is directly below. The outside ends may taper as they approach the edges, but the lines must remain continuous across their visible length.
+
+This clarification supersedes the repeating/dashed line treatment described in the previous visual refinement.
+
+### Implementation
+
+- `development/account-continuity/prototype/account-prototype.css`: replaced `repeating-linear-gradient` with one continuous `linear-gradient` for each line. The central opening is produced by the two-column elements separated by the centered “Or” label, not by a dotted texture. The gradient fades only at each line’s outer end. No repeating background, dash mask, or line-pattern animation is used.
+- `development/account-continuity/prototype/tests/browser_smoke.mjs`: checks both line elements use a gradient and rejects `repeating-linear-gradient`; retains the exact two-line count, central label alignment, arrow alignment, and static/non-clickable divider checks.
+- `.github/workflows/account-continuity-prototype-tests.yml`: requires the exact continuous tapered-gradient rule and fails if `repeating-linear-gradient` appears in the account stylesheet.
+- `development/account-continuity/prototype/README.md` and PR #141: refreshed the pinned HTML Preview link to `4d84af1b6faac6d450f5f633920d87959401e9c6`, which contains the corrected UI CSS.
+
+### Acceptance status
+
+| ID | Criterion | Evidence | State |
+|---|---|---|---|
+| ACC-UI-VIS-010 | Exactly two continuous solid gold lines flank “Or”; there is no dotted/repeating pattern, and the central gap accommodates the label and arrow | Browser computed-style assertion, exact CSS static guard, and two-line/centering DOM assertions | PASS |
+| ACC-UI-VIS-011 | The outer line ends taper while each line remains continuous over its visible span | Explicit linear-gradient CSS and browser check that both line backgrounds are non-repeating gradients | PASS |
+| ACC-UI-VIS-012 | “Or” remains centered and the arrowhead remains centered below it; divider remains non-clickable | Existing headless-browser geometry and non-interactivity assertions | PASS |
+
+### Exact UI-source CI evidence — 2026-10-22
+
+These checks ran against source snapshot `f12c268558a0ae3a5a3382a90fc153576b667b69`, which includes the continuous-line CSS and updated browser/workflow assertions:
+
+- [Local Account Continuity Prototype Tests #63 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682606012): 11 Python tests, static guards, and headless Chrome for local account flows and browser-only preview; the first test run exposed and helped correct a browser computed-style assertion before this passing run.
+- [Local Wallet Authentication Prototype Tests #91 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682606065).
+- [NOVA RSI Engine CI #743 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682605940).
+- [External Review Pipeline CI #304 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682605971).
+- [NOVA RSI CodeQL Security Analysis #314](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39682606027) was still in progress at the time of this entry; do not describe it as passed until a successful conclusion is observed.
+
+The pinned Preview commit contains the corrected HTML and CSS, while the tested source commit additionally includes the browser test fix. Human visual confirmation of line weight, taper, and spacing remains open.
