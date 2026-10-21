@@ -78,7 +78,11 @@ Keep the local EOA/SIWE experiment only as an isolated test of off-chain wallet 
 
 Multiple independently controlled wallets may help preserve access to a wallet-specific feature. They do not automatically recover an ordinary account, account encryption keys, administrator privileges or payout destination. Two addresses derived from the same seed, controlled by the same compromised device or backed up by the same recovery material are not independent. Linking or unlinking a wallet requires an explicit, authenticated, auditable action. The basic EOA path can test message verification without application-controlled blockchain RPC; that does not approve a production protocol or dependency.
 
-### 3.5 Backend, authorization and sessions
+### 3.5 Administrator wallet access and Imperial HSIAN recovery
+
+For the admin area only, the owner has specified that wallet registration is mandatory and that up to three registered wallets can provide access. A fresh admin sign-in requires a signature from any **one** registered wallet; this is not a multi-signature threshold. Each wallet must prove control when enrolled, and the server must independently check the admin role. Recommend registering multiple genuinely independent wallets. If every enrolled wallet is lost, deny self-service recovery and route the request to the Imperial HSIAN authority (owner and/or explicitly authorized NOVA governance process). That authority may approve restoration of the existing account or a replacement admin account after the defined review. No first-wallet/first-login privilege, email-only bypass, automatic NOVA self-promotion, or automatic role/payout change. The detailed procedure, evidence, revocation and audit steps remain to be specified and tested; this is not implemented.
+
+### 3.6 Backend, authorization and sessions
 
 A backend and durable account/role storage may still be needed; separating wallet auth does not remove these responsibilities. Before production integration, implement and test:
 - stable internal account IDs distinct from wallet addresses;
@@ -89,7 +93,7 @@ A backend and durable account/role storage may still be needed; separating walle
 - export, backup and restore behavior with a replaceable storage boundary;
 - no account-recovery shortcut to transfer funds, change payout destinations, or expose private/sensitive memory.
 
-### 3.6 Public-content availability and publishing
+### 3.7 Public-content availability and publishing
 
 Keep the public site independent from admin authentication and publishing availability. Public content must continue to render from the last known-good approved version during an admin/auth outage. A failed or unapproved edit must not be silently published or destroy the currently approved content. No public homepage, deployment config, secrets or production settings are changed by this plan.
 
@@ -112,6 +116,8 @@ Each criterion begins **BLOCKED** until evidence exists. An idea, a passing unit
 | AUTH-011 | Portability and provider resilience | Establish a tested export/migration/restore path for hosting and storage; identify shared dependencies and failover limitations. |
 | AUTH-012 | $0 eligibility | Verify actual service limits, terms, persistence, required payment method and failure behavior for selected hosting/storage. A stated free tier alone is not evidence. |
 | AUTH-013 | Promotion gate | Review the complete diff; run appropriate offline security/unit/contract tests and real integration/browser tests on the exact candidate; record unresolved items as BLOCKED. |
+| AUTH-014 | Admin wallet alternatives and lost-all-wallets recovery | Verify any one of up to three independently enrolled wallet addresses can authenticate the assigned admin; losing one does not lock access if another works; losing all three triggers the Imperial HSIAN review, revokes stale credentials/sessions and only permits a reviewed restoration or replacement admin account. |
+| AUTH-015 | Familiar ordinary-account onboarding and recovery prompts | Measure completion/confusion with a conventional username/password route and qualified social login; show at least one recovery route during setup, then present accessible/dismissible reminders in account security settings until the user has a viable backup. |
 
 Initial roles to test remain: **Owner/Security Administrator**, **Editor**, **Publisher**, and **Viewer/Auditor**. Their permission boundaries must be documented before implementation.
 
@@ -152,4 +158,4 @@ Initial roles to test remain: **Owner/Security Administrator**, **Editor**, **Pu
 - Production authentication, account recovery, role storage, publishing, hosting and durable storage: **NOT IMPLEMENTED / NOT APPROVED.**
 - Production changes: **NONE**.
 
-The next implementation should prototype ordinary account authentication without a wallet, independently of the SIWE lab, and should include recovery tests before promotion. Keep all development work under `development/`; do not merge or deploy on the strength of wallet-lab CI alone.
+The next implementation should prototype ordinary account authentication without a wallet, independently of the SIWE lab. Use a familiar first interaction; offer username/handle plus password (rather than an impossible identifier-free password) and any social provider only after its real integration and strict $0 eligibility are verified. Show a recovery method during setup and use non-blocking, dismissible security-setting reminders for additional backups. For administrators, any one of up to three registered wallets provides sign-in; loss of all wallets goes to Imperial HSIAN review. Include recovery tests before promotion. Keep all development work under `development/`; do not merge or deploy on the strength of wallet-lab CI alone.
