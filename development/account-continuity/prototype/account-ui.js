@@ -7,8 +7,6 @@
   var title = document.getElementById("account-dialog-title");
   var openButton = document.getElementById("open-account-dialog");
   var closeButton = document.getElementById("account-dialog-close");
-  var menuStatus = document.getElementById("account-menu-status");
-  var menuCopy = document.getElementById("account-menu-copy");
   var mode = "signin";
   var accountState = { authenticated: false };
   var recoveryCodes = [];
@@ -190,32 +188,15 @@
   async function refreshStatus() {
     try {
       accountState = await requestJson("/api/account/status");
-      if (accountState.authenticated) {
-        menuStatus.textContent = "Signed in";
-        menuStatus.style.color = "#78e6b2";
-        menuCopy.textContent = "Signed in as " + accountState.username + ". Open your local test account or sign out.";
-      } else {
-        menuStatus.textContent = "Not signed in";
-        menuStatus.style.color = "";
-        menuCopy.textContent = "Create a local test account or sign in. Ordinary account access does not need a crypto wallet.";
-      }
       return accountState;
     } catch (_error) {
       accountState = { authenticated: false };
-      menuStatus.textContent = "Local preview only";
-      menuCopy.textContent = "Start the local account server to test account creation and sign-in. No provider or wallet is connected.";
       return accountState;
     }
   }
 
   async function openAccountDialog() {
     focusBeforeOpen = document.querySelector('[data-menu="account-menu"]') || document.activeElement;
-    var slot = openButton.closest(".menu-slot");
-    if (slot) {
-      slot.classList.remove("is-open");
-      var trigger = slot.querySelector("[data-menu]");
-      if (trigger) trigger.setAttribute("aria-expanded", "false");
-    }
     var status = await refreshStatus();
     mode = status.authenticated ? "account" : "signin";
     render();
