@@ -550,16 +550,10 @@
 
     <div class="right-controls">
       <div class="menu-slot">
-        <button class="avatar-trigger" type="button" data-menu="account-menu" aria-expanded="false" aria-controls="account-menu" aria-label="Account">
+        <button class="avatar-trigger" id="open-account-dialog" type="button" aria-haspopup="dialog" aria-controls="account-dialog" aria-label="Account">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>
           <span>Account</span>
         </button>
-        <div class="control-panel" id="account-menu">
-          <div class="panel-label">Account</div>
-          <div style="padding:4px 9px 9px;"><span class="menu-status" id="account-menu-status">Local preview only</span><p id="account-menu-copy" style="margin:6px 0 0;color:#c2cede;font-size:11px;">Start the local account server to test account creation and sign-in. Ordinary account access does not need a crypto wallet.</p></div>
-          <button class="panel-action account-menu-action" id="open-account-dialog" type="button">Sign in / Create account <span>→</span></button>
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/132" target="_blank" rel="noreferrer">Account continuity roadmap <span>↗</span></a>
-        </div>
       </div>
       <div class="menu-slot">
         <button class="wallet-trigger" type="button" data-menu="wallet-menu" aria-expanded="false" aria-controls="wallet-menu">
