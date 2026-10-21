@@ -132,6 +132,23 @@ try {
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("Account button opens sign-in dialog directly", () => evaluate("document.getElementById('account-dialog').open"));
   assert.match(await evaluate("document.body.innerText"), /A crypto wallet is not required/);
+  assert.equal(
+    await evaluate("document.getElementById('account-content').firstElementChild.classList.contains('account-tabs')"),
+    true,
+    "Log In / Sign Up tabs must be the first account-content row"
+  );
+  assert.equal(await evaluate("document.querySelectorAll('.account-provider-placeholder').length"), 3);
+  assert.equal(await evaluate("document.querySelector('.account-or-divider').tagName"), "DIV",
+    "Or divider must be static, not a clickable control");
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-or-divider button, .account-or-divider a, #account-other-options'))"), false);
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.account-or-divider')).pointerEvents"), "none");
+  assert.match(await evaluate("getComputedStyle(document.querySelector('.account-or-divider-line')).backgroundImage"),
+    /repeating-linear-gradient/, "Or divider must use a broken gold line");
+  assert.equal(await evaluate(
+    "document.querySelector('.account-or-divider-arrow').getBoundingClientRect().top > document.querySelector('.account-or-divider-label').getBoundingClientRect().bottom"
+  ), true, "downward arrowhead must sit below Or");
+  assert.equal(await evaluate("document.querySelector('.account-provider-placeholders').querySelectorAll('button,a,input').length"), 0,
+    "future provider logo slots must not behave like fake provider buttons");
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("create-account form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
 
@@ -177,11 +194,15 @@ try {
   const previewUrl = localUrl + "?account-preview-demo=1";
   await cdp("Page.navigate", { url: previewUrl });
   await waitFor("browser-preview demo homepage", pageReady);
-  assert.equal(await evaluate("document.getElementById('account-demo-notice').dataset.mode"), "browser-preview-demo");
-  assert.match(await evaluate("document.getElementById('account-demo-notice').textContent"), /disappear on reload/);
   await evaluate("window.fetch = function () { return Promise.reject(new Error('Network calls are forbidden in the browser-preview test')); };");
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("browser-preview Account dialog", () => evaluate("document.getElementById('account-dialog').open"));
+  assert.equal(await evaluate("document.getElementById('account-demo-notice').dataset.mode"), "browser-preview-demo");
+  assert.match(await evaluate("document.getElementById('account-demo-notice').textContent"), /disappear on reload/);
+  assert.equal(await evaluate("document.getElementById('account-content').firstElementChild.classList.contains('account-tabs')"), true);
+  assert.equal(await evaluate("document.querySelectorAll('.account-provider-placeholder').length"), 3);
+  assert.equal(await evaluate("document.querySelector('.account-or-divider').tagName"), "DIV");
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-or-divider button, .account-or-divider a, #account-other-options'))"), false);
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("browser-preview create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
 
