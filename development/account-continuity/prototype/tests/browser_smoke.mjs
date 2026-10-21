@@ -148,12 +148,12 @@ try {
     "Or must be centered across the divider row");
   assert.ok(await evaluate("Math.abs((document.querySelector('.account-or-divider-arrow').getBoundingClientRect().left + document.querySelector('.account-or-divider-arrow').getBoundingClientRect().right) / 2 - (document.querySelector('.account-or-divider-label').getBoundingClientRect().left + document.querySelector('.account-or-divider-label').getBoundingClientRect().right) / 2) <= 1"),
     "downward arrowhead must share the Or label center");
-  assert.match(await evaluate("getComputedStyle(document.querySelector('.account-or-divider-line')).maskImage"),
-    /linear-gradient/, "gold dashes must taper toward both outer ends");
+  assert.ok(await evaluate("Array.from(document.querySelectorAll('.account-or-divider-line')).every(function (line) { var image = getComputedStyle(line).backgroundImage; return image.indexOf('linear-gradient') === 0 && image.indexOf('repeating-linear-gradient') === -1 && image.indexOf('transparent') !== -1; })"),
+    "both sides of Or must be continuous gold lines, tapered only at the outer ends");
   assert.equal(await evaluate("Boolean(document.querySelector('.account-or-divider button, .account-or-divider a, #account-other-options'))"), false);
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.account-or-divider')).pointerEvents"), "none");
-  assert.match(await evaluate("getComputedStyle(document.querySelector('.account-or-divider-line')).backgroundImage"),
-    /repeating-linear-gradient/, "Or divider must use a broken gold line");
+  assert.ok(await evaluate("Array.from(document.querySelectorAll('.account-or-divider-line')).every(function (line) { var image = getComputedStyle(line).backgroundImage; return image.indexOf('repeating-linear-gradient') === -1 && image.indexOf('linear-gradient') === 0; })"),
+    "Or divider side segments must render as solid continuous lines, not dotted or dashed");
   assert.equal(await evaluate(
     "document.querySelector('.account-or-divider-arrow').getBoundingClientRect().top > document.querySelector('.account-or-divider-label').getBoundingClientRect().bottom"
   ), true, "downward arrowhead must sit below Or");
