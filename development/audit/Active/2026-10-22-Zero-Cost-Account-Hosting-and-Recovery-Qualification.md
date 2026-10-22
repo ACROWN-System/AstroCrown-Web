@@ -176,7 +176,7 @@ The build log supplies decisive publication detail:
 - The `jekyll-readme-index` generator ran and Jekyll rendered `README.md`.
 - The output archive includes a generated `./index.html`; the log explicitly records writing `/github/workspace/_site/index.html`.
 
-The current `main` tree has no tracked root `index.html`; it contains the repository `README.md`, `SECURITY.md`, `LICENSE`, `_config.yml`, and `backup/`. Its `_config.yml` excludes `backup` and `development`. Combining the tree with the exact build log establishes that the root Pages output is generated from README content, not from the account prototype. This is a successful Jekyll deployment, but not evidence that the intended AstroCrown product homepage or account UI is deployed.
+The current `main` tree has no tracked root `index.html`; it contains `README.md`, `SECURITY.md`, `LICENSE`, `_config.yml`, `backup/`, and the `development/` source tree. Its `_config.yml` and the build log exclude `backup/` and `development/` from the published output. Combining the tree with the exact build log establishes that the root Pages output is generated from README content, not from the account prototype. This is a successful Jekyll deployment, but not evidence that the intended AstroCrown product homepage or account UI is deployed.
 
 Reference:
 - [Latest successful Pages deployment](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39215829931)
