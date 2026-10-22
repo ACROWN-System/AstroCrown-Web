@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import threading
 from functools import partial
@@ -24,6 +25,7 @@ CONSOLE_ERRORS: list[str] = []
 BLOCKED_NETWORK: list[dict] = []
 SOURCE_SIZE_METRICS: dict = {}
 PERFORMANCE_METRICS: dict = {}
+BROWSER_METRICS: dict = {}
 MAX_HTML_SOURCE_BYTES = 112 * 1024
 MAX_RUNTIME_ASSET_BYTES = 48 * 1024
 MAX_INITIAL_DECODED_BYTES = 160 * 1024
@@ -127,7 +129,17 @@ def main() -> int:
 
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser_executable = os.environ.get("CHROME_BIN")
+            launch_options = {"headless": True}
+            if browser_executable:
+                launch_options["executable_path"] = browser_executable
+            browser = playwright.chromium.launch(**launch_options)
+            BROWSER_METRICS.update({
+                "engine": "chromium",
+                "version": browser.version,
+                "launch_source": "runner-provided-browser" if browser_executable else "playwright-managed",
+                "executable_name": Path(browser_executable).name if browser_executable else None,
+            })
             context = browser.new_context(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
             context.route("**/*", guard_network)
             page = context.new_page()
@@ -575,6 +587,7 @@ def main() -> int:
             "blocked_non_loopback_requests": BLOCKED_NETWORK,
             "source_size_budget": SOURCE_SIZE_METRICS,
             "initial_navigation_performance": PERFORMANCE_METRICS,
+            "browser": BROWSER_METRICS,
         },
     }
     (out / "homepage-browser-smoke-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
