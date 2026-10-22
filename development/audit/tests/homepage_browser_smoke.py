@@ -303,11 +303,31 @@ def main() -> int:
                 check(f"viewport {width}px retains visible header controls",
                       metrics["visibleHeaderControls"] >= 5, metrics)
 
+            # Reload to reset transient interaction state, then disable smooth scrolling
+            # while positioning screenshot captures at the actual top of the document.
+            page.reload(wait_until="load", timeout=15000)
+            page.evaluate("""() => {
+              document.documentElement.style.scrollBehavior = "auto";
+              history.scrollRestoration = "manual";
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+              window.scrollTo({top: 0, left: 0, behavior: "instant"});
+            }""")
+            page.wait_for_function("window.scrollY === 0")
+            check("desktop viewport screenshot starts at the top of the page",
+                  page.evaluate("window.scrollY") == 0,
+                  {"scrollY": page.evaluate("window.scrollY"), "title": page.title()})
             page.set_viewport_size({"width": 1440, "height": 1000})
-            page.evaluate("window.scrollTo(0, 0)")
             page.screenshot(path=str(out / "homepage-desktop-1440x1000.png"), full_page=False)
             page.screenshot(path=str(out / "homepage-full-page-1440.png"), full_page=True)
             page.set_viewport_size({"width": 390, "height": 844})
+            page.evaluate("""() => {
+              document.documentElement.style.scrollBehavior = "auto";
+              document.documentElement.scrollTop = 0;
+              document.body.scrollTop = 0;
+              window.scrollTo({top: 0, left: 0, behavior: "instant"});
+            }""")
+            page.wait_for_function("window.scrollY === 0")
             page.screenshot(path=str(out / "homepage-mobile-smoke-390x844.png"), full_page=False)
 
             check("no page-level JavaScript exceptions", not PAGE_ERRORS, PAGE_ERRORS[:20])
