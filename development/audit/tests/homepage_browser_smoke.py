@@ -397,6 +397,8 @@ def main() -> int:
                 priorityDividerWidth: parseFloat(priorityStyle.borderRightWidth),
                 heroWidth: Math.round(heroBox.width * 100) / 100,
                 heroWidthPercent: Math.round(heroBox.width / contentWidth * 10000) / 100,
+                heroRightSpace: Math.round((window.innerWidth - heroBox.right) * 100) / 100,
+                heroRightSpacePercent: Math.round((window.innerWidth - heroBox.right) / window.innerWidth * 10000) / 100,
                 contentWidth: Math.round(contentWidth * 100) / 100
               };
             }""")
@@ -418,8 +420,8 @@ def main() -> int:
                 layout_metrics,
             )
             check(
-                "desktop hero-card group uses the evaluated 88% width cap",
-                87.5 <= layout_metrics["heroWidthPercent"] <= 88.5
+                "desktop hero-card group preserves approximately 20% right-side space for background art",
+                layout_metrics["heroRightSpacePercent"] >= 19.8
                 and layout_metrics["heroWidth"] <= 1320,
                 layout_metrics,
             )
