@@ -108,3 +108,47 @@ The active section sources are under `development/index-section/`; shared conven
 - Keep `development/` and `backup/` excluded from the public Pages artifact; never overwrite/delete dated backups.
 - For each work block, record exact base/head SHA, changed paths, checks, result report/artifact, remaining alternatives, blockers, and one clear next action.
 - Never equate test-source inspection, test workflow success, deployment success, or local rendered output with a different evidence class.
+
+
+## Paused-session handoff — 2026-10-22, 18:31 IST
+
+**The user explicitly asked to stop ongoing work and preserve a resume point. No further design work should be performed until resuming. PR #146 has not been merged; the live preview has not been updated by this candidate.**
+
+### Verified at the interruption
+
+- Current \`main\`: \`b3bad481cb20b69f9d0a05878e83e66168f54e80\` — \`Add persistent homepage investigation controls\`.
+- PR #144 browser-test foundation is merged. Its earlier inspected run passed 60 checks.
+- PR #145 persistent-investigation rules/checkpoint is merged. PR #143 is closed/superseded; no stale branch merge is pending.
+- PR #146 remains OPEN and UNMERGED: https://github.com/ACROWN-System/AstroCrown-Web/pull/146
+- PR #146 head at the interruption: \`0897bc876d69e230c123dfa1293b1446d485cd6a\`.
+- Exact-head checks at that SHA all report success:
+  - External Review Pipeline CI: run \`39787234387\`.
+  - NOVA RSI Engine CI: run \`39787234459\`.
+  - NOVA RSI CodeQL Security Analysis: run \`39787234161\`.
+  - Homepage Browser Smoke: run \`39787234011\`, success.
+- The exact-head browser artifact has been listed and remains available: artifact ID \`12429262961\`, name \`homepage-browser-smoke-39787234011\`. **It has not yet been downloaded/inspected**; this is the first pending action after resumption.
+- A prior exact code/test-equivalent run, \`39786404575\`, was inspected and reported 63 PASS / 0 FAIL / 0 BLOCKED, including a 60 px header, 50×50 px logo mark, 4.5/5.5 px clearances and 11.57:1 navigation / 10.47:1 Gold contrast. Do not substitute that older report for inspection of artifact \`12429262961\`.
+
+### Candidate under review
+
+PR #146 branch: \`design/header-space-blue-candidate-review-2026-10-22\`.
+
+Preview source at the latest verified head:
+- \`preview/index.html\`: \`878015793ec2551f208b25d8373c0143e92df5ee\`.
+- \`development/audit/tests/homepage_browser_smoke.py\`: \`ebc109899078cd2ffa97e5c510340e520cca9219\`.
+- \`.github/workflows/homepage-browser-smoke.yml\`: \`cbc9bf8e8b5a738016977fd5bdbe1b54f734b88d\`.
+
+The latest PR head also includes documentation updates recording selected Space Blue \`#102947\`, measured header geometry, and shared reference synchronization. No source changes were made after the last successful code/test-equivalent run apart from audit/reference documentation, but the newest report still must be inspected.
+
+### First actions on resumption
+
+1. Re-fetch \`main\`, PR #146's current head and state, latest Actions run list, and current Pages deployment state. Re-check because state may have advanced since pause.
+2. Download and inspect artifact \`12429262961\` from run \`39787234011\`. Read the actual JSON test report and inspect desktop, full-page and mobile screenshots. Confirm exact test count and the header metric assertions.
+3. Review the full PR #146 file diff, especially that changes remain limited to \`preview/index.html\` and development/audit documentation/test assertions; ensure no root homepage, publishing boundary, secret, or backup was modified.
+4. If any newest test fails or the screenshot reveals a material defect, fix the isolated PR branch and re-test. If it passes, make an evidence-backed decision on merging the preview change; merging it will trigger a Pages deployment of the isolated \`/preview/\` route, not promote it to the root homepage.
+5. After merge, verify the exact Pages deployment and preview route artifact. Keep real-origin browser/header/cache checks distinct from CI's loopback browser evidence.
+6. Next design work after this header: reconcile the information-bar gap/border and hero-row width, then investigate layered background/transparent-assets alternatives. Keep logo asset approval, full accessibility, live market data, authentication, wallet connection and production readiness as separate unresolved scopes.
+
+### Stop boundary
+
+There is no active tool job known to be modifying the repository at this pause. Do not merge PR #146, change main, or launch additional iterations during handoff. Continue only after the user resumes the work.
