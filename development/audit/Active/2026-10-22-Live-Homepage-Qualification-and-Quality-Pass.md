@@ -1,7 +1,7 @@
 # Active Navigation Plan — Live Homepage Qualification and Quality Pass
 
 **Date:** 2026-10-22  
-**Status:** ACTIVE — PR #147 merged as `8f51ff4b7c03684e27b0add89327b4f39a57948c`; its 69-check homepage budget suite passed. PR #148's homepage-only visual candidate has 73/73 browser checks and inspected desktop/full-page/mobile screenshots on code/test head `0b7d8b6ef17a44d607d006639b5166362cc60f10`; the next step is a fresh exact-head check after the evidence log update, then merge only if unchanged.  
+**Status:** ACTIVE — PR #149 merged as `f14bb4451d40db56ae454bcc3ef88e50f826b600`; its exact-head and post-merge homepage browser suites pass 73/73. The post-merge Pages build/report completed, but its `github-pages` deploy job is in a waiting state requiring an authorized deployment approval; no deployment promotion is claimed yet. Current development block is a measured, transparent SVG space-art candidate.  
 **Objective:** Evolve the AstroCrown homepage prototype into a polished and operable website through persistent, evidence-led refinement while preserving the $0/no-card preference, truthfulness about capabilities, and separation from production.
 
 ## Source of truth and exact baseline
@@ -170,3 +170,11 @@ The user resumed work and narrowed the current block to the public homepage only
 - PR #148 code/test head `0b7d8b6ef17a44d607d006639b5166362cc60f10` passed Homepage Browser Smoke run `39812122166` (73/73). Artifact `12439334381` was downloaded and its JSON and desktop/full-page/390 px mobile screenshots were inspected. The report records a 45 px header-to-information gap, 53 px bar, 2 px borders, 78% bar width, 88% hero width, 123,677 decoded initial bytes, three resource entries including the no-content favicon, no external HTTP(S) requests, and no page/console errors.
 - The earlier run `39810200236` was cancelled after remaining stuck in Chromium/system-dependency installation. The replacement workflow prefers the installed runner Chrome and retains the Playwright-managed fallback; the actual replacement browser-test step passed. PR #148's doc-only evidence update will need one fresh exact-head run before merge.
 - PR #148 does not change root Pages source or publishing configuration. Real-origin performance/load tests remain for after a commercial candidate host has been qualified.
+
+## Post-merge visual status and space-art candidate — 2026-10-22
+
+- PR #149 merged as `f14bb4451d40db56ae454bcc3ef88e50f826b600`. The exact-head browser run `39813411697` passed 73/73; the post-merge main browser run `39814161543` also passed 73/73. Its artifact `12441221932` was inspected. The current main smoke report used runner-provided Chrome 155.0.8059.39, measured 123,677 decoded bytes across HTML/CSS/JS, three subresource entries, zero off-origin requests and no browser/console errors.
+- Post-merge Pages build run `39814162227`: build and report-build-status jobs succeeded; the deploy job remains **waiting** at the `github-pages` environment. The available connected GitHub tools report `current_user_can_approve=false` with no listed reviewer, so I have not attempted to bypass or remove the environment gate. Do not claim the new main artifact is publicly deployed until that job completes successfully.
+- OpenSSF Scorecard run `39814161549` failed because GitHub GraphQL `ListCommits` returned an internal error (`CC20:529B6:6CF0DA0:15F0B07C:6ADA395A`). This is a tool/platform failure, not a project-specific Scorecard result and must not be counted as PASS.
+- Current main SHA: `f14bb4451d40db56ae454bcc3ef88e50f826b600`.
+- Current design branch: `design/homepage-layered-space-background-2026-10-22`. Its three authored SVGs are budgeted at <=24KiB combined; browser tests check real alpha transparency and fade-before-workspace behavior. Do not merge before exact-head browser, source-budget, screenshot and responsive evidence review.
