@@ -66,9 +66,10 @@ On resumption, first verify the current main SHA, the state of the preview route
 - **2026-10-22:** User inspected the exact live preview and reported that the composition communicates the direction, but sizing and styling are still clearly in development.
 - **2026-10-22:** Re-attempted direct page-reader access and a raw-source route; both returned `DisabledError`. These attempts are recorded as route/tool failures, not as evidence that the site is unavailable.
 - **2026-10-22:** Began checking this as a process flaw, not just a missing one-off attempt. PR #143 adds an explicit persistent-investigation and resume-checkpoint section to the development/audit convention; the PR remains subject to its exact-head checks and review. The source root and published preview files were not changed by that PR.
-- **Not yet performed:** Full source-to-requirement mapping, full interaction inventory and edge-case verification, visual-system refinements, and a real rendered-browser interaction pass.
-- **Current first next action:** Fetch the current `preview/index.html`, its local JavaScript/CSS dependencies, and the active section/reference documents; produce a source-to-requirement map and interaction inventory before editing design or behavior.
-- **Next after that:** Test each available static/deterministic path, implement a small high-value refinement in an isolated preview change, and retest. Explore other authorized rendering routes if available; if none works, keep real-browser criteria BLOCKED.
+- **Partially completed:** Initial source-to-requirement mapping and a broad interaction inventory now exist. The exact deployed artefact has been rendered offline with Chromium after inlining its own local assets. This does not close live-origin/production-HTTPS verification.
+- **Completed 2026-10-22:** Fetched preview/index.html (source SHA 62c107354dfa501dc4c29222dce88410528c5593), preview/account-ui.js (SHA c2c1775014d54949bdf1b6efb986f9145dcbe3b6), preview/account-prototype.css (SHA ffbd85057fc358c84331c2cf6ec47ef45bd3c67c) and key active section/reference specs. Retrieved the published GitHub Pages artifact from run 39760680495, artifact ID 12417792313.
+- **Current next action:** Turn the proven offline browser checks into repeatable source-controlled tests and a CI runner, preserving the no-network, demo-only boundary. Recheck the $0 requirement against official GitHub Actions usage documentation, keep the test dependencies CI-only, and classify actual-HTTPS account creation as unverified until tested in a secure browser context. Then continue visual/interaction requirement mapping before design edits.
+- **After repeatable test coverage:** Build the design decision record for the header Space Blue value and reconcile the information-bar geometry/border with the formal-but-evolvable requirements. Make a small, high-value improvement only after the relevant alternatives, contrast, responsive behavior, and tests have been evaluated.
 
 ## Impact Analysis
 
@@ -82,3 +83,45 @@ On resumption, first verify the current main SHA, the state of the preview route
 - Verify all linked commit, PR, deployment and route references are exact.
 - Update the progress log after material investigations and before any interruption.
 - Move this item from `Active/` only when its scope is actually complete or explicitly superseded, preserving unresolved blockers and evidence.
+
+
+## Additional investigation — exact published artifact rendered offline
+
+### Browser route investigation
+
+Three direct Chromium navigation attempts against distinct route types were blocked by the local execution environment with net::ERR_BLOCKED_BY_ADMINISTRATOR: the live GitHub Pages HTTPS route, a local loopback HTTP server, and the extracted artefact's file:// route. The page-reader/raw URL path had returned DisabledError earlier. These are environment/inspection-route blockers, not evidence that the deployed site is down. I did not try to bypass the administrator restriction.
+
+A supported alternative did work: download the exact github-pages artifact (ID 12417792313) from successful Pages run [39760680495](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39760680495), unpack its contents, and pass a controlled copy of its HTML to Chromium via Playwright page.set_content, inlining only the CSS and account JavaScript from that same artifact. All HTTP(S) requests were blocked and the run observed **zero attempted HTTP(S) requests**. Screenshots were generated in the local work environment at 1440×1000, full-page desktop, and a 390×844 smoke viewport; those local images are not yet checked into the repository.
+
+**Evidence type:** rendered browser evidence for the captured Pages build after locally inlining its own assets. This is stronger than source inspection alone, but it is not equivalent to opening the deployed HTTPS origin, observing server headers/cache behavior, or validating the site's real-origin secure-context behavior.
+
+### Offline browser smoke and interaction test results
+
+**41 PASS · 0 FAIL · 1 BLOCKED (42 checks total).** No JavaScript runtime exceptions, no console errors during tested paths, and no HTTP(S) requests were observed. Tested behavior includes:
+
+- title and visible demo/no-real-credentials notice;
+- rendering 24 illustrative sample assets and the expected 12-row first page;
+- all six category filters (AI, Gaming, Meme, RWA, DePIN, Stable) and reset to All;
+- all five sort options, both pagination pages, and next-page disabled state at the boundary;
+- minimum search length, visible suggestions, keyboard ArrowDown/Enter selection, and explicit empty/no-match handling;
+- primary-menu expansion state, one-menu-at-a-time behavior, click-away closing, and Escape;
+- local favorites, sample asset detail dialog, ecosystem concept dialog, open/close/Escape behavior;
+- account dialog/demo notice, form required fields, minimum password length, newsletter opt-in default-off, and a recovery submission that expressly reports no email was sent;
+- document-level horizontal overflow checks at viewport widths 1440, 1280, 1024, 768, 390, and 320 pixels.
+
+The sole BLOCKED item was full account creation. In the local about:blank test context, window.isSecureContext was false and crypto.subtle was absent, so the demo intentionally reported “This browser does not provide Web Crypto. Open the HTTPS preview in a current browser.” No account was created. This identifies a real limitation of this offline test context and must not be reported as a failure of the deployed HTTPS page. The next repeatable test path should use an authorized localhost secure context with the explicit browser-demo query flag, as supported by the existing account-preview branch, and continue to block external requests.
+
+### Initial requirement discrepancies to resolve
+
+- **Header:** formal R-019/R-005 and the Colors reference require a distinct approved AstroCrown Space Blue between Deep Space Blue #081426 and Light Space Blue #16345A, with contrast/hierarchy evidence. The formal value is still TBD. Current CSS instead uses rgba(8, 20, 38, .97), effectively the Deep Space Blue surface. Formal header target is approximately 59px while the current CSS minimum height is 62px. Formal logo target is approximately 51px while the current SVG is 40px. These are recorded discrepancies; do not blindly tune a color or dimensions before recording rationale and checking rendered states.
+- **Information bar:** R-020.1 targets about 45px between the header and bar and about 53px bar height. Current CSS margin-top is 39px and min-height is 53px. R-020.2 specifies an approximately 5px warning-yellow outer/inner division, which has potential readability/visual-weight concerns and must be evaluated as a mutable design baseline rather than applied mechanically; current CSS uses 1px for the outer border and divider. The originating specification explicitly permits refining/replacing details after compatibility, accessibility, redundancy and interaction tests.
+- **Hero cards:** R-021 says card dimensions should derive from information density and user task, not solely arbitrary viewport percentages. The current .hero-section uses percentage/max-width rules. Check the actual composition, relative width against the full-width market data/directory areas, and content hierarchy before deciding whether to adjust.
+- **Background:** the active background spec contains layered candidates and alpha-preserving-asset requirements that are not yet implemented by the current simple CSS gradients. Determine which layers are approved versus candidates before generating or integrating assets.
+
+### Scope still not verified
+
+- Render and behavior on the actual deployed HTTPS origin, especially secure-context/Web Crypto account-creation completion.
+- Full WCAG/accessibility audit (contrast ratio measurements and assistive-technology review); the current run is a practical interaction smoke, not an accessibility conformance declaration.
+- Browser history/back/forward semantics, complete keyboard-only traversal and focus return for every interactive pattern, all failure edge cases, actual cache/headers, and mobile refinement.
+- Live data APIs, provider access, real authentication, real email delivery, wallet connection, or production account handling. None is connected by this preview.
+
