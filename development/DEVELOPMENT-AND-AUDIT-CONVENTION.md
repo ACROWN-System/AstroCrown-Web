@@ -411,6 +411,7 @@ If evidence is insufficient, record BLOCKED rather than assuming success.
 If a requirement does not apply, record N/A with its reason.
 
 If a change is made to resolve a failure, re-test it.
+
 ## 19. Persistent Investigation, Alternative Paths, and Continuity
 
 The objective is to exhaust plausible, material investigation paths within the stated scope and constraints—not to stop after the first convenient explanation, successful automated check, unavailable tool, or initial risk label. Persistence means controlled progress supported by evidence, not blind repetition or unbounded experimentation.
