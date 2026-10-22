@@ -1,15 +1,15 @@
 # Active Navigation Plan — Live Homepage Qualification and Quality Pass
 
 **Date:** 2026-10-22  
-**Status:** ACTIVE — persistent-investigation continuity and repeatable browser tests are merged; PR #146 contains the selected/tested Space Blue header refinement, pending latest exact-head checks and final diff review.  
+**Status:** ACTIVE — PR #146 merged as a08220b66830b467a6be7fc93c403d5c84be02f2; the homepage preview header is deployed and its post-merge 63-check browser suite passes. Static performance budgets and provider-independent capacity/transition gates are now the active next work.  
 **Objective:** Evolve the AstroCrown homepage prototype into a polished and operable website through persistent, evidence-led refinement while preserving the $0/no-card preference, truthfulness about capabilities, and separation from production.
 
 ## Source of truth and exact baseline
 
 - **Repository:** https://github.com/ACROWN-System/AstroCrown-Web
-- **Main baseline after PR #145 merged:** `b3bad481cb20b69f9d0a05878e83e66168f54e80`
+- **Main baseline after PR #146 merged:** `a08220b66830b467a6be7fc93c403d5c84be02f2`
 - **Current preview route:** https://acrown-system.github.io/AstroCrown-Web/preview/
-- **Current preview source:** `preview/index.html` (blob SHA `62c107354dfa501dc4c29222dce88410528c5593`)
+- **Current preview source:** `preview/index.html` (blob SHA `878015793ec2551f208b25d8373c0143e92df5ee`)
 - **Account demo JavaScript:** `preview/account-ui.js` (blob SHA `c2c1775014d54949bdf1b6efb986f9145dcbe3b6`)
 - **Account demo CSS:** `preview/account-prototype.css` (blob SHA `ffbd85057fc358c84331c2cf6ec47ef45bd3c67c`)
 - **Repeatable browser suite:** `development/audit/tests/homepage_browser_smoke.py`
@@ -83,10 +83,10 @@ The active section sources are under `development/index-section/`; shared conven
 1. Revalidate current main, open PRs and latest workflow/deployment state before every new implementation. The latest verified main at this checkpoint refresh is `b3bad481cb20b69f9d0a05878e83e66168f54e80`.
 2. PR #144's test foundation is merged; its final exact-head run [39770755613](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39770755613) passed 60 checks. Inspect report/screenshot artifacts rather than relying on a green badge. Do not repeat the blocked navigation attempts as though they were new evidence.
 3. PR #145 is merged; Section 19 is on main. PR #143 was superseded and remains closed.
-4. **Current task:** review and complete the currently open PR #146 (revalidate its live head SHA; this checkpoint's own update creates a new head). Confirm exact-head CodeQL/CI/browser reports, inspect the latest artifact and full diff, and ensure no stale `TBD` or old height/color claims remain in active documents. The last reviewed browser candidate was `ed59db8db95d7ff256ee0afa1e2db3a7bb4c4c84` and passed 63 checks.
-5. If the header candidate passes the rendered screenshot, size, responsive, and interaction review, update the active palette/header records to distinguish prototype candidate from approved choice, and merge only after exact-head checks. If it does not pass, test another documented candidate.
-6. After the header is settled, evaluate the information-bar gap/border and hero-row width. Then investigate background layers and transparent-asset options in a separate work unit.
-7. Keep live HTTPS-origin headers/cache and production services distinct from loopback browser tests. The assistant execution environment's direct navigation is restricted; do not repeat blocked attempts unless the route or hypothesis changes.
+4. PR #146 is merged as a08220b66830b467a6be7fc93c403d5c84be02f2. The post-merge Pages build/deployment run 39807222283 passed, and Homepage Browser Smoke run 39807222430 passed 63/63 checks; its report artifact 12437958064 has been inspected.
+5. **Current task:** add repeatable source-size and initial-resource budgets to the homepage smoke suite, and record a provider-independent capacity/migration plan. Preserve the preview-only publishing boundary. Accounts, admin auth, live market data, AI/SI, and GPU integrations are not being implemented in this block.
+6. After the budget suite passes on the exact PR head, continue homepage-only visual refinements (information-bar spacing/divider, hero hierarchy, then background layers), each in a separate tested change.
+7. GitHub Pages is a development-preview host only for this project; qualify a commercial provider, real-origin telemetry, traffic/load testing, no-card signup, and crypto-payment renewal before a public commercial launch. Keep these separate from the loopback CI evidence.
 
 ## Session/resume log
 
@@ -110,7 +110,7 @@ The active section sources are under `development/index-section/`; shared conven
 - Never equate test-source inspection, test workflow success, deployment success, or local rendered output with a different evidence class.
 
 
-## Paused-session handoff — 2026-10-22, 18:31 IST
+## Historical paused-session handoff — 2026-10-22, 18:31 IST (superseded by the later resumption entry below)
 
 **The user explicitly asked to stop ongoing work and preserve a resume point. No further design work should be performed until resuming. PR #146 has not been merged; the live preview has not been updated by this candidate.**
 
@@ -152,3 +152,19 @@ The latest PR head also includes documentation updates recording selected Space 
 ### Stop boundary
 
 There is no active tool job known to be modifying the repository at this pause. Do not merge PR #146, change main, or launch additional iterations during handoff. Continue only after the user resumes the work.
+
+## Latest resumption and deployment verification — 2026-10-22
+
+The user resumed work and narrowed the current block to the public homepage only. Account creation, administrator authentication, wallet enrolment and the announcement editor are deferred. The objective is to improve the live test homepage while measuring page cost and designing a safe, provider-independent path to commercial hosting before quota pressure affects visitors.
+
+- PR #146 merged via squash as a08220b66830b467a6be7fc93c403d5c84be02f2.
+- Exact post-merge main preview browser run 39807222430 passed 63/63; artifact 12437958064 was downloaded. Its report states zero JavaScript exceptions, zero console errors and zero blocked non-loopback requests.
+- Pages build/deployment run 39807222283 succeeded for the merged candidate. This establishes deployment of the current Pages source, not permission for commercial use or production readiness.
+- OpenSSF Scorecard run 39807222453 failed because GitHub's GraphQL ListCommits query returned an internal error. The current attempt produced no project-specific Scorecard finding; do not count it as a passed assessment.
+- Main baseline for this capacity work: a08220b66830b467a6be7fc93c403d5c84be02f2.
+- The working branch for the next reviewable block is quality/homepage-capacity-readiness-2026-10-22.
+- CI source-size measurement in run 39808627276: HTML 89,827 bytes; critical CSS+JS 33,885 bytes; total 123,712 bytes. The browser report passed 69/69 checks; decoded resource bytes were 123,712, initial transfer bytes were 124,612, resource entries were 2, and external HTTP(S) resources were zero. These were measured in loopback CI, not on the live origin.
+- PR #147 initial test commit 19ec4e537940cbe3edc2fb3cfa1680943e658bb1 passed Homepage Browser Smoke, NOVA RSI CI, External Review Pipeline CI, and CodeQL; artifact 12437554803 was inspected. Documentation/test-suite reconciliation is being committed separately, so repeat the affected checks against that new head.
+- Important policy discovery: GitHub Pages' official current guidance restricts free Pages hosting for an online business/commercial transactions/commercial SaaS. Keep Pages as an explicitly labelled development preview and qualify a distinct host before commercial launch.
+- No account backend, admin authorization, production-root switch, live data source, paid plan, provider secret or payment rail was changed.
+- Next evidence required: rerun CI for the documentation-reconciled PR #147 head, review the updated diff, then continue the homepage-only visual pass. Real-origin performance/load tests remain for after a commercial candidate host has been qualified.

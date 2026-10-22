@@ -1,7 +1,7 @@
 """Browser smoke tests for the AstroCrown homepage preview.
 
 Serves checked-out repository files on loopback only, forces browser-memory demo mode,
-blocks non-loopback requests, and writes a JSON report plus desktop/mobile screenshots.
+blocks non-loopback requests, and writes a JSON report, source/performance budgets, plus desktop/mobile screenshots.
 No production credentials or external services are used.
 """
 from __future__ import annotations
@@ -22,6 +22,12 @@ RESULTS: list[dict] = []
 PAGE_ERRORS: list[str] = []
 CONSOLE_ERRORS: list[str] = []
 BLOCKED_NETWORK: list[dict] = []
+SOURCE_SIZE_METRICS: dict = {}
+PERFORMANCE_METRICS: dict = {}
+MAX_HTML_SOURCE_BYTES = 112 * 1024
+MAX_RUNTIME_ASSET_BYTES = 48 * 1024
+MAX_INITIAL_DECODED_BYTES = 160 * 1024
+MAX_INITIAL_RESOURCE_ENTRIES = 8
 
 
 def record(name: str, status: str, detail=None) -> None:
@@ -59,6 +65,48 @@ def main() -> int:
         print(f"ERROR: preview/index.html not found under repository root {ROOT}", file=sys.stderr)
         return 2
 
+    source_files = {
+        "homepage_html": ROOT / "preview" / "index.html",
+        "account_stylesheet": ROOT / "preview" / "account-prototype.css",
+        "account_script": ROOT / "preview" / "account-ui.js",
+    }
+    missing_source_files = [str(path.relative_to(ROOT)) for path in source_files.values() if not path.is_file()]
+    if missing_source_files:
+        print(f"ERROR: critical homepage source asset missing: {missing_source_files}", file=sys.stderr)
+        return 2
+
+    source_sizes = {name: path.stat().st_size for name, path in source_files.items()}
+    runtime_asset_bytes = source_sizes["account_stylesheet"] + source_sizes["account_script"]
+    critical_source_bytes = source_sizes["homepage_html"] + runtime_asset_bytes
+    SOURCE_SIZE_METRICS.update({
+        "source_bytes": source_sizes,
+        "runtime_css_js_bytes": runtime_asset_bytes,
+        "critical_html_css_js_bytes": critical_source_bytes,
+        "budgets_bytes": {
+            "homepage_html": MAX_HTML_SOURCE_BYTES,
+            "runtime_css_js": MAX_RUNTIME_ASSET_BYTES,
+            "critical_html_css_js": MAX_INITIAL_DECODED_BYTES,
+        },
+    })
+    check(
+        "homepage HTML source remains within the 112 KiB budget",
+        source_sizes["homepage_html"] <= MAX_HTML_SOURCE_BYTES,
+        {"bytes": source_sizes["homepage_html"], "budget_bytes": MAX_HTML_SOURCE_BYTES,
+         "kib": round(source_sizes["homepage_html"] / 1024, 2)},
+    )
+    check(
+        "critical runtime CSS and JavaScript remain within the 48 KiB budget",
+        runtime_asset_bytes <= MAX_RUNTIME_ASSET_BYTES,
+        {"bytes": runtime_asset_bytes, "budget_bytes": MAX_RUNTIME_ASSET_BYTES,
+         "css_bytes": source_sizes["account_stylesheet"], "javascript_bytes": source_sizes["account_script"]},
+    )
+    check(
+        "homepage HTML plus critical CSS and JavaScript remain within the 160 KiB budget",
+        critical_source_bytes <= MAX_INITIAL_DECODED_BYTES,
+        {"bytes": critical_source_bytes, "budget_bytes": MAX_INITIAL_DECODED_BYTES,
+         "kib": round(critical_source_bytes / 1024, 2)},
+    )
+
     server = ThreadingHTTPServer(("127.0.0.1", 0), partial(QuietHandler, directory=str(ROOT)))
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -87,6 +135,60 @@ def main() -> int:
             attach_diagnostics(page)
             response = page.goto(test_url, wait_until="load", timeout=15000)
             page.wait_for_timeout(150)
+
+            performance_snapshot = page.evaluate("""() => {
+              const navigation = performance.getEntriesByType("navigation")[0];
+              const resources = performance.getEntriesByType("resource");
+              const externalHttpResources = resources
+                .filter((entry) => /^https?:/i.test(entry.name) && new URL(entry.name).origin !== location.origin)
+                .map((entry) => entry.name);
+              const resourceDecodedBytes = resources.reduce((sum, entry) => sum + (entry.decodedBodySize || 0), 0);
+              const resourceTransferBytes = resources.reduce((sum, entry) => sum + (entry.transferSize || 0), 0);
+              const initialDecodedBytes = (navigation ? navigation.decodedBodySize || 0 : 0) + resourceDecodedBytes;
+              const initialTransferBytes = (navigation ? navigation.transferSize || 0 : 0) + resourceTransferBytes;
+              return {
+                navigation: {
+                  responseStartMs: navigation ? Math.round(navigation.responseStart) : null,
+                  domContentLoadedMs: navigation ? Math.round(navigation.domContentLoadedEventEnd) : null,
+                  loadEventMs: navigation ? Math.round(navigation.loadEventEnd) : null,
+                  decodedBodyBytes: navigation ? navigation.decodedBodySize || 0 : 0,
+                  transferBytes: navigation ? navigation.transferSize || 0 : 0
+                },
+                resourceCount: resources.length,
+                resourceDecodedBytes,
+                resourceTransferBytes,
+                initialDecodedBytes,
+                initialTransferBytes,
+                externalHttpResources,
+                resources: resources.map((entry) => ({
+                  pathname: new URL(entry.name).pathname,
+                  initiatorType: entry.initiatorType,
+                  decodedBodyBytes: entry.decodedBodySize || 0,
+                  transferBytes: entry.transferSize || 0,
+                  durationMs: Math.round(entry.duration)
+                }))
+              };
+            }""")
+            PERFORMANCE_METRICS.update(performance_snapshot)
+            check(
+                "initial decoded homepage resources remain within the 160 KiB budget",
+                performance_snapshot["initialDecodedBytes"] <= MAX_INITIAL_DECODED_BYTES,
+                {"decoded_bytes": performance_snapshot["initialDecodedBytes"],
+                 "budget_bytes": MAX_INITIAL_DECODED_BYTES,
+                 "timings": performance_snapshot["navigation"]},
+            )
+            check(
+                "initial homepage resource count remains within eight requests",
+                performance_snapshot["resourceCount"] <= MAX_INITIAL_RESOURCE_ENTRIES,
+                {"count": performance_snapshot["resourceCount"],
+                 "budget": MAX_INITIAL_RESOURCE_ENTRIES,
+                 "resources": performance_snapshot["resources"]},
+            )
+            check(
+                "initial page load does not depend on remote HTTP(S) resources",
+                not performance_snapshot["externalHttpResources"],
+                performance_snapshot["externalHttpResources"],
+            )
 
             check("loopback preview route responds successfully", response is not None and response.status == 200,
                   {"status": response.status if response else None, "url": page.url})
@@ -424,6 +526,8 @@ def main() -> int:
             "page_errors": PAGE_ERRORS,
             "console_errors": CONSOLE_ERRORS,
             "blocked_non_loopback_requests": BLOCKED_NETWORK,
+            "source_size_budget": SOURCE_SIZE_METRICS,
+            "initial_navigation_performance": PERFORMANCE_METRICS,
         },
     }
     (out / "homepage-browser-smoke-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
