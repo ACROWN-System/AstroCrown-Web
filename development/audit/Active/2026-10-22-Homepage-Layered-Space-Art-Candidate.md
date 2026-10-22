@@ -1,7 +1,7 @@
 # Homepage Layered Space Art — Alpha-Preserving Candidate
 
 **Date:** 2026-10-22  
-**Status:** DEVELOPMENT PREVIEW CANDIDATE — authored SVG assets and scroll-fade behavior are subject to exact-head browser review  
+**Status:** MERGED to main as PR #150, merge commit `632d2898e73ae8910bb425ceeb652c66277fa3ae`; exact-head browser verification passed 77/77. Post-merge public Pages publication remains unconfirmed pending a current-main deployment run.  
 **Branch:** `design/homepage-layered-space-background-2026-10-22`  
 **Scope:** homepage appearance and static assets only; public root and production publishing configuration are untouched.
 
@@ -41,10 +41,10 @@ These SVGs are authored from primitives and gradients directly in this repositor
 
 ## 5. Impact analysis
 
-**If accepted:** the page gains a layered planetary introduction and subtle atmospheric richness without an external media-provider dependency, and it can move foreground art out of the primary workspace area.
+**Accepted in the development source:** the page gains a layered planetary introduction and subtle atmospheric richness without an external media-provider dependency, and it moves foreground art out of the primary workspace area. Exact-head evidence is recorded in run `39815672410`, artifact `12441024381` (77/77 PASS). The post-merge public Pages deployment remains unconfirmed.
 
 **If rejected:** revert only the preview SVG references/CSS and corresponding regression checks. The prior gradient-only page remains usable.
 
 ## 6. Remaining gates
 
-Production hosting, commercial use of GitHub Pages (not approved for a commercial site), live data, account/authentication, AI/SI, GPU work, and payment integrations are outside this change. Keep the original SVGs and the resulting preview as design-only until screenshot/browser acceptance and separate production hosting/scale gates pass.
+Production hosting, commercial use of GitHub Pages (not approved for a commercial site), live data, account/authentication, AI/SI, GPU work, and payment integrations are outside this change. The code/test and screenshot/browser acceptance gates passed on PR #150. Keep deployment confirmation and separate production hosting/scale gates open; the latest successful Pages deployment known is for the prior main SHA, so do not assume the new artwork is live.
