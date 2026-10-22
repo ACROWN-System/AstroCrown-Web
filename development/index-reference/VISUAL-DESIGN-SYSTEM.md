@@ -19,7 +19,7 @@ The homepage must use the approved AstroCrown palette:
 | AstroCrown Gold | `#FFD700` | Brand identity and primary emphasis |
 | AstroCrown Black | `#050914` | Deepest background |
 | AstroCrown Deep Space Blue | `#081426` | Foundational deep-space environment |
-| AstroCrown Space Blue | TBD | Primary dark UI surfaces, including the homepage header and navigation controls |
+| AstroCrown Space Blue | `#102947` | Primary dark UI surfaces, including the homepage header and navigation controls |
 | AstroCrown Light Space Blue | `#16345A` | Borders, demarcation, separators |
 | AstroCrown Green | `#20C878` | Positive financial state |
 | AstroCrown Red | `#E5484D` | Negative financial state |
@@ -31,7 +31,7 @@ The three blue levels form a deliberate visual hierarchy:
 - AstroCrown Space Blue is the intermediate UI-surface blue and must remain visually distinct from both adjacent blue levels.
 - AstroCrown Light Space Blue `#16345A` is the lightest structural blue and is used primarily for borders, demarcation, and separators.
 
-The AstroCrown Space Blue HEX value remains TBD until a candidate is evaluated for visual hierarchy, text/UI contrast, header use, navigation-control use, and compatibility with the established palette. It must be darker than `#16345A` and lighter than `#081426` when evaluated by the chosen color model and visual result.
+The selected AstroCrown Space Blue value for the homepage header is `#102947`, based on the candidate evaluation, sRGB contrast calculations, rendered Chromium review, and exact-head browser checks recorded in [Homepage Header](../index-section/HEADER.md) and [Header Space Blue Candidate Evaluation](../audit/Active/2026-10-22-Header-Space-Blue-Candidate-Evaluation.md). Other blue surfaces and the wider accessibility audit remain subject to their own verification.
 
 Gold and Warning Yellow must remain semantically distinct.
 
@@ -64,11 +64,11 @@ The homepage header shall provide a persistent, coherent navigation and identity
 
 #### R-019.1 — Dimensions and Full-Width Surface
 
-The header shall occupy approximately 59 px in height, span the full viewport width, remain visually integrated with the homepage, and remain continuously available as required by the homepage scroll model. The exact implementation mechanism is not prescribed.
+The header shall occupy approximately 60 px in height, span the full viewport width, remain visually integrated with the homepage, and remain continuously available as required by the homepage scroll model. The 60 px target is based on Chromium measurement of the reviewed desktop header; the exact implementation mechanism is not prescribed.
 
 #### R-019.2 — Header Visual System
 
-The header surface shall use a new approved AstroCrown Space Blue palette color positioned between AstroCrown Deep Space Blue and AstroCrown Light Space Blue. AstroCrown Space Blue shall be distinct from both existing colors.
+The header surface shall use the selected AstroCrown Space Blue `#102947`, positioned between AstroCrown Deep Space Blue `#081426` and AstroCrown Light Space Blue `#16345A`. The surface shall be opaque and must preserve the three-level visual hierarchy. Evidence is recorded in the active Header Space Blue Candidate Evaluation.
 
 The header shall:
 
@@ -77,7 +77,7 @@ The header shall:
 - use a transparent or partially transparent treatment for the bottom border;
 - provide subtle visual delimitation between header and background without excessive contrast.
 
-The header shall use the approved AstroCrown Space Blue as its primary opaque surface. The Space Blue value must be established before implementation and must satisfy the R-005 three-level blue hierarchy and the applicable accessibility verification requirements. It must not be selected solely by name, midpoint arithmetic, or visual preference without evaluation evidence.
+The header shall use `#102947` as its primary opaque surface. Its selection is based on candidate comparison, sRGB contrast calculations, rendered review and exact-head browser tests—not on color naming, midpoint arithmetic, or visual preference alone. Applicable text/control contrast and other accessibility requirements remain mandatory.
 
 #### R-019.3 — Brand Elements
 

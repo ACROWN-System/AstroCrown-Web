@@ -98,6 +98,68 @@ def main() -> int:
             ribbon = page.locator(".preview-ribbon").inner_text()
             check("visible demo warning says values are illustrative and real credentials prohibited",
                   "ILLUSTRATIVE MARKET VALUES" in ribbon and "NEVER ENTER REAL CREDENTIALS" in ribbon, ribbon)
+            header_metrics = page.evaluate("""() => {
+              const header = document.querySelector('.site-header');
+              const mark = document.querySelector('.brand-mark');
+              const nav = document.querySelector('.nav-trigger');
+              const gold = getComputedStyle(document.documentElement).getPropertyValue('--gold').trim();
+              const parseColor = (value) => {
+                if (value.startsWith('#')) {
+                  const hex = value.slice(1);
+                  const full = hex.length === 3 ? hex.split('').map(c => c + c).join('') : hex;
+                  return [0, 2, 4].map(i => parseInt(full.slice(i, i + 2), 16));
+                }
+                return value.match(/[0-9.]+/g).slice(0, 3).map(Number);
+              };
+              const luminance = (color) => parseColor(color).map(value => value / 255).map(value =>
+                value <= 0.04045 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4)
+              ).reduce((sum, value, i) => sum + value * [0.2126, 0.7152, 0.0722][i], 0);
+              const contrast = (foreground, background) => {
+                const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
+                return (values[0] + 0.05) / (values[1] + 0.05);
+              };
+              const hb = header.getBoundingClientRect();
+              const mb = mark.getBoundingClientRect();
+              const bg = getComputedStyle(header);
+              const navColor = getComputedStyle(nav).color;
+              return {
+                background: bg.backgroundColor,
+                backgroundImage: bg.backgroundImage,
+                headerHeight: hb.height,
+                markWidth: mb.width,
+                markHeight: mb.height,
+                markTopClearance: mb.top - hb.top,
+                markBottomClearance: hb.bottom - mb.bottom,
+                navTextContrast: contrast(navColor, bg.backgroundColor),
+                goldContrast: contrast(gold, bg.backgroundColor),
+                borderBottomColor: bg.borderBottomColor
+              };
+            }""")
+            check(
+                "header uses the evaluated opaque Space Blue surface",
+                header_metrics["background"] == "rgb(16, 41, 71)"
+                and header_metrics["backgroundImage"] == "none",
+                header_metrics
+            )
+            check(
+                "desktop header and brand mark match the compact target geometry",
+                59 <= header_metrics["headerHeight"] <= 61
+                and header_metrics["markWidth"] == 50
+                and header_metrics["markHeight"] == 50
+                and 3 <= header_metrics["markTopClearance"] <= 6
+                and 3 <= header_metrics["markBottomClearance"] <= 6,
+                header_metrics
+            )
+            check(
+                "header navigation text and gold controls exceed 4.5:1 contrast",
+                header_metrics["navTextContrast"] >= 4.5
+                and header_metrics["goldContrast"] >= 4.5,
+                {
+                    "navTextContrast": round(header_metrics["navTextContrast"], 2),
+                    "goldContrast": round(header_metrics["goldContrast"], 2),
+                    "background": header_metrics["background"]
+                }
+            )
             resources = page.evaluate("() => performance.getEntriesByType('resource').map(x => x.name)")
             check("same-origin CSS and account JS are loaded",
                   any("account-prototype.css" in x for x in resources) and any("account-ui.js" in x for x in resources),

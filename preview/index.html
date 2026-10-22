@@ -16,6 +16,7 @@
       --space-950: #050914;
       --space-900: #081426;
       --space-850: #0b192c;
+      --space-blue: #102947;
       --space-800: #10233b;
       --space-700: #16345a;
       --gold: #ffd700;
@@ -66,22 +67,22 @@
     }
     .preview-ribbon .ribbon-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 9px rgba(255,210,74,.35); }
     .site-header {
-      position: sticky; top: 0; z-index: 30; width: 100%; min-height: 62px;
+      position: sticky; top: 0; z-index: 30; width: 100%; min-height: 60px;
       display: flex; align-items: center; gap: clamp(9px, 1.3vw, 22px);
-      padding: 7px clamp(14px, 1.5vw, 23px);
-      background: rgba(8, 20, 38, .97); border-bottom: 1px solid rgba(61, 94, 139, .68);
-      box-shadow: 0 5px 19px rgba(0,0,0,.11); backdrop-filter: blur(14px);
+      padding: 4px clamp(14px, 1.5vw, 23px);
+      background: var(--space-blue); border-bottom: 1px solid rgba(22, 52, 90, .82);
+      box-shadow: 0 5px 19px rgba(0,0,0,.11);
     }
     .brand-group { display: flex; align-items: center; flex: 0 0 auto; gap: 7px; min-width: 162px; }
     .brand-link {
-      height: 44px; display: inline-flex; align-items: center; justify-content: center;
+      height: 50px; display: inline-flex; align-items: center; justify-content: center;
       border-radius: 10px; transition: background .16s ease, transform .16s ease, color .16s ease;
     }
-    .brand-mark-link { width: 43px; }
+    .brand-mark-link { width: 53px; }
     .brand-word-link { padding: 0 4px; }
     .brand-group:hover .brand-link, .brand-group:focus-within .brand-link { background: rgba(255,215,0,.07); }
     .brand-link:active { transform: scale(.97); }
-    .brand-mark { display: block; width: 40px; height: 40px; }
+    .brand-mark { display: block; width: 50px; height: 50px; }
     .brand-word { font-size: 15px; line-height: 1; font-weight: 800; letter-spacing: .045em; white-space: nowrap; }
     .brand-word span { color: var(--gold); }
     .primary-nav { display: flex; align-items: center; gap: 1px; flex: 1 1 auto; min-width: 0; }
