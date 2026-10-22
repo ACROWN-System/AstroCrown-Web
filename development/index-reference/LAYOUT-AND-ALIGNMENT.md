@@ -140,11 +140,11 @@ The homepage header shall provide a persistent, coherent navigation and identity
 
 #### R-019.1 — Dimensions and Full-Width Surface
 
-The header shall occupy approximately 59 px in height, span the full viewport width, remain visually integrated with the homepage, and remain continuously available as required by the homepage scroll model. The exact implementation mechanism is not prescribed.
+The header shall occupy approximately 60 px in height, span the full viewport width, remain visually integrated with the homepage, and remain continuously available as required by the homepage scroll model. The 60 px target is based on Chromium measurement of the reviewed desktop header; the exact implementation mechanism is not prescribed.
 
 #### R-019.2 — Header Visual System
 
-The header surface shall use a new approved AstroCrown Space Blue palette color positioned between AstroCrown Deep Space Blue and AstroCrown Light Space Blue. AstroCrown Space Blue shall be distinct from both existing colors.
+The header surface shall use the selected AstroCrown Space Blue `#102947`, positioned between AstroCrown Deep Space Blue `#081426` and AstroCrown Light Space Blue `#16345A`. The surface shall be opaque and must preserve the three-level visual hierarchy. Evidence is recorded in the active Header Space Blue Candidate Evaluation.
 
 The header shall:
 
@@ -153,7 +153,7 @@ The header shall:
 - use a transparent or partially transparent treatment for the bottom border;
 - provide subtle visual delimitation between header and background without excessive contrast.
 
-The header shall use the approved AstroCrown Space Blue as its primary opaque surface. The Space Blue value must be established before implementation and must satisfy the R-005 three-level blue hierarchy and the applicable accessibility verification requirements. It must not be selected solely by name, midpoint arithmetic, or visual preference without evaluation evidence.
+The header shall use `#102947` as its primary opaque surface. Its selection is based on candidate comparison, sRGB contrast calculations, rendered review and exact-head browser tests—not on color naming, midpoint arithmetic, or visual preference alone. Applicable text/control contrast and other accessibility requirements remain mandatory.
 
 #### R-019.3 — Brand Elements
 
@@ -162,7 +162,7 @@ The header shall contain separate AstroCrown Logo and AstroCrown Title elements.
 The logo shall:
 
 - use the approved AstroCrown logo asset;
-- have a target rendered height of approximately 51 px within the approximately 59 px header;
+- have a target rendered height of approximately 50 px within the approximately 60 px header;
 - have approximately 4 px clearance above and below within the header;
 - have approximately 15–20 px clearance from the left viewport edge.
 
