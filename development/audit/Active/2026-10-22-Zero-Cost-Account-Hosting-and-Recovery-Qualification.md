@@ -114,6 +114,47 @@ Vercel's official Hobby plan is intended for personal projects and its current g
 
 These are evidence-based dispositions, not declarations that the vendors' paid services or every possible configuration are unusable.
 
+### 2.8 GUN / SEA — decentralized user-owned graph-data candidate
+
+GUN describes itself as a distributed graph database that synchronizes data across participating peers. Its documented SEA/User system uses public/private-key cryptographic identity and lets a user write to their own graph without a central application server. Browser peers can persist a subset of graph data locally (localStorage/IndexedDB) and synchronize through WebRTC/WebSockets or relays. Official sources:
+- https://gun.eco/docs/Introduction
+- https://gun.eco/docs/Auth
+- https://gun.eco/docs/SEA
+- https://gun.eco/docs/Todo-Dapp
+- https://github.com/amark/gun
+
+This directly merits a bounded prototype because it could make some user-owned profile/preferences data portable across client deployments without requiring AstroCrown to operate one central database for every user. It should not be dismissed merely because the main UI is on GitHub Pages.
+
+However, the same project documentation contains important limitations: GUN account usernames are not guaranteed to be globally unique; peers may be offline and data may become unavailable if no participating peer retains it; and its illustrative 3-friend recovery mechanism can still lock users out if they did not configure friends/backups. GUN's documentation explicitly cautions not to use that recovery model for banking applications. The browser-based security model also requires strict XSS/dependency hygiene; a compromised client can steal a user's password or private key.
+
+**Candidate boundary:** qualify GUN for *public or low-risk user-controlled profile/preferences, encrypted exports, and peer-synchronization experiments*. Do not use it as the sole authority for administrator privileges, publication rights, paid entitlements, financial assets, account suspension or recovery of all privileged data. A compromised/unavailable peer must not be able to grant roles; user ownership of a graph is not equivalent to AstroCrown's authorization. Avoid putting email addresses, session tokens, password-reset secrets or plaintext private data into public graph paths. Define deletion, replication, spam/abuse and loss-of-all-keys behaviour before any production use.
+
+GUN has a useful offline-first model, but no measured availability, abuse protection, deterministic data-retention guarantee or AstroCrown security qualification has yet been established. Its inclusion is a *test candidate*, not a provider selection or proof that operational hosting costs become zero.
+
+### 2.9 Hypercore / Hyperswarm and Nostr — useful complementary primitives, not turnkey hosting
+
+Hypercore is documented as a signed, Merkle-tree-verified, distributed append-only log. Its API requires storage and replication peers; it is a data-distribution primitive, not a managed, globally available account service. Official source: https://github.com/holepunchto/hypercore
+
+Nostr defines signed events and relay-client interactions, and some event types can represent profile metadata. It can be a candidate for a user-controlled public profile or public, signed statements, but relays can have differing support and data-retention practices; deletion requests are not guaranteed to remove every copy. Official sources:
+- https://github.com/nostr-protocol/nips
+- https://github.com/nostr-protocol/nips/blob/master/01.md
+- https://github.com/nostr-protocol/nips/blob/master/09.md
+
+**Candidate boundary:** test these only for use cases where signed replication is valuable. They do not remove the need for private-key protection, robust key recovery, role authorization, spam resistance, deletion/privacy policy, peer/relay discovery, backups, and a documented fallback when the user's chosen peers disappear.
+
+### 2.10 What "hosting-agnostic / swarm" can and cannot mean
+
+A distributed design can avoid dependence on any *one* host if it has multiple independently operated peers and a replication protocol. It cannot guarantee persistent storage, CPU, outbound email, or reachability at zero cost unless someone contributes those resources and continues to do so. A volunteer/agent swarm can be part of the resource pool but is not itself proof of uptime, privacy, authorization correctness, or funding.
+
+For AstroCrown, the promising hybrid to test is:
+1. Static frontend remains mirrorable.
+2. A replaceable, minimum central API provides rate-limited transactions where a canonical decision is necessary (e.g., administrator role and publishing approvals), while durable account data can be evaluated separately.
+3. A user-controlled decentralized data layer may sync explicitly consented, non-sensitive settings/profiles and encrypted exports.
+4. Identity/recovery uses an established cryptographic scheme and multiple independently held recovery methods; it does not depend on a public relay being permanently online.
+5. The account continues to work when a relay/peer, email provider, or one hosting provider is unavailable; failure and migration behaviour is tested.
+
+This hybrid remains a design hypothesis. Do not implement a central-plus-decentralized dual-write path until ownership, consistency, deletion, key lifecycle, backup/restore, and recovery tests define which store is authoritative for each datum.
+
 ## 3. Account routes to compare
 
 ### Route A — Preserve the familiar email/password UI, add a qualified sender
