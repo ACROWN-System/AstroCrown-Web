@@ -1,18 +1,18 @@
 # Active Navigation Plan — Live Homepage Qualification and Quality Pass
 
 **Date:** 2026-10-22  
-**Status:** ACTIVE — PR #146 merged as a08220b66830b467a6be7fc93c403d5c84be02f2; the homepage preview header is deployed and its post-merge 63-check browser suite passes. Static performance budgets and provider-independent capacity/transition gates are now the active next work.  
+**Status:** ACTIVE — PR #147 merged as 8f51ff4b7c03684e27b0add89327b4f39a57948c; the homepage budget suite passes 69/69 and post-merge main deployment/browser checks pass. Current work is a measured information-bar and hero-width refinement on a separate preview-only branch.  
 **Objective:** Evolve the AstroCrown homepage prototype into a polished and operable website through persistent, evidence-led refinement while preserving the $0/no-card preference, truthfulness about capabilities, and separation from production.
 
 ## Source of truth and exact baseline
 
 - **Repository:** https://github.com/ACROWN-System/AstroCrown-Web
-- **Main baseline after PR #146 merged:** `a08220b66830b467a6be7fc93c403d5c84be02f2`
+- **Main baseline after PR #147 merged:** `8f51ff4b7c03684e27b0add89327b4f39a57948c`
 - **Current preview route:** https://acrown-system.github.io/AstroCrown-Web/preview/
 - **Current preview source:** `preview/index.html` (blob SHA `878015793ec2551f208b25d8373c0143e92df5ee`)
 - **Account demo JavaScript:** `preview/account-ui.js` (blob SHA `c2c1775014d54949bdf1b6efb986f9145dcbe3b6`)
 - **Account demo CSS:** `preview/account-prototype.css` (blob SHA `ffbd85057fc358c84331c2cf6ec47ef45bd3c67c`)
-- **Repeatable browser suite:** `development/audit/tests/homepage_browser_smoke.py`
+- **Repeatable browser suite:** `development/audit/tests/homepage_browser_smoke.py` (source/initial-resource budgets and rendered header/bar/hero metrics; latest main blob `ac988229b088d8c4642d641f8893e55b5b162c74`).
 - **Browser workflow:** `.github/workflows/homepage-browser-smoke.yml`
 - **PR #144:** merged as `be8dbea754924a439346f5dcde595b8f443da555`; final exact-head browser run [39770755613](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39770755613).
 - **PR #145:** merged as `b3bad481cb20b69f9d0a05878e83e66168f54e80`, carrying the persistence protocol and active work checkpoint onto current main.
@@ -167,4 +167,6 @@ The user resumed work and narrowed the current block to the public homepage only
 - PR #147 initial test commit 19ec4e537940cbe3edc2fb3cfa1680943e658bb1 passed Homepage Browser Smoke, NOVA RSI CI, External Review Pipeline CI, and CodeQL; artifact 12437554803 was inspected. Documentation/test-suite reconciliation is being committed separately, so repeat the affected checks against that new head.
 - Important policy discovery: GitHub Pages' official current guidance restricts free Pages hosting for an online business/commercial transactions/commercial SaaS. Keep Pages as an explicitly labelled development preview and qualify a distinct host before commercial launch.
 - No account backend, admin authorization, production-root switch, live data source, paid plan, provider secret or payment rail was changed.
-- Next evidence required: rerun CI for the documentation-reconciled PR #147 head, review the updated diff, then continue the homepage-only visual pass. Real-origin performance/load tests remain for after a commercial candidate host has been qualified.
+- PR #147 merged as `8f51ff4b7c03684e27b0add89327b4f39a57948c`; its exact-head smoke run `39809210762` passed 69/69 and artifact `12438498416` was inspected. Post-merge main smoke run `39809469612`, Pages deployment `39809468231`, and OpenSSF Scorecard `39809469429` completed successfully. These are test/deployment results, not evidence of production-origin latency or concurrent-load capacity.
+- Current visual candidate branch: `design/homepage-information-bar-hero-balance-2026-10-22`. Hypothesis: increase the desktop info-bar gap from 39 to 45 px, use 2 px warning-yellow outline/divider while keeping the 53 px height, and expand the hero group from 82% to 88% capped at 1320 px. Responsive overrides remain in place. New Chromium assertions measure actual rendered geometry at the desktop viewport; existing six viewport overflow checks remain active.
+- Real-origin performance/load tests remain for after a commercial candidate host has been qualified.
