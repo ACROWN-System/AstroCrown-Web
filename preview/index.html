@@ -40,6 +40,12 @@
       min-width: 320px;
       color: var(--ink);
       background:
+        radial-gradient(1px 1px at 8% 9%, rgba(255,247,224,.42) 55%, transparent 100%),
+        radial-gradient(1px 1px at 22% 27%, rgba(177,206,255,.36) 55%, transparent 100%),
+        radial-gradient(1px 1px at 39% 13%, rgba(255,247,224,.3) 55%, transparent 100%),
+        radial-gradient(1px 1px at 66% 20%, rgba(177,206,255,.3) 55%, transparent 100%),
+        radial-gradient(1.2px 1.2px at 85% 11%, rgba(255,247,224,.36) 55%, transparent 100%),
+        radial-gradient(1px 1px at 93% 36%, rgba(177,206,255,.25) 55%, transparent 100%),
         radial-gradient(ellipse at 13% 0%, rgba(22, 52, 90, .22), transparent 31rem),
         linear-gradient(180deg, #050914 0%, #07111f 46%, #050914 100%);
       font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -150,7 +156,30 @@
     .menu-status { color:var(--warning); font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
     .mobile-more { display:none; }
 
-    .page-shell { width:min(100%, 1770px); margin:0 auto; padding:0 clamp(18px, 3.3vw, 58px) 55px; }
+    .page-shell { position:relative; isolation:isolate; width:min(100%, 1770px); margin:0 auto; padding:0 clamp(18px, 3.3vw, 58px) 55px; }
+    .space-intro-art {
+      position:absolute; z-index:-1; top:-5px; left:50%; width:100vw; height:clamp(470px, 78vh, 800px);
+      overflow:hidden; transform:translateX(-50%); opacity:.9; pointer-events:none; user-select:none;
+      transition:opacity .62s ease, transform .62s ease;
+    }
+    .space-intro-art::after {
+      content:""; position:absolute; inset:0;
+      background:linear-gradient(180deg, rgba(5,9,20,.04) 0%, rgba(5,9,20,.02) 35%, rgba(5,9,20,.26) 68%, #050914 100%);
+    }
+    .space-intro-art img {
+      position:absolute; display:block; max-width:none; height:auto; object-fit:contain; border:0;
+      filter:saturate(.88); mix-blend-mode:screen;
+    }
+    .space-art-earth-moon {
+      left:max(-110px, calc(50% - 625px)); top:92px; width:clamp(265px, 37vw, 520px); opacity:.75;
+    }
+    .space-art-rocky-planet {
+      right:max(-105px, calc(50% - 670px)); top:118px; width:clamp(230px, 29vw, 420px); opacity:.57;
+    }
+    .space-art-spiral-nebula {
+      left:calc(50% - 485px); top:-82px; width:clamp(310px, 37vw, 510px); opacity:.32;
+    }
+    .space-intro-art.is-fading { opacity:.08; transform:translate3d(-50%, -24px, 0); }
     .section-kicker { color:var(--gold); font-size:10px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
     .section-heading { margin:0; color:#f1f5fb; font-size:19px; font-weight:760; letter-spacing:-.025em; }
     .section-description { margin:5px 0 0; color:var(--muted); font-size:12px; }
@@ -386,6 +415,10 @@
       .discovery-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
     }
     @media (max-width: 820px) {
+      .space-intro-art { height:620px; opacity:.78; }
+      .space-art-earth-moon { left:-66px; top:135px; width:min(74vw, 370px); opacity:.66; }
+      .space-art-rocky-planet { right:-92px; top:228px; width:min(60vw, 285px); opacity:.42; }
+      .space-art-spiral-nebula { left:18%; top:-42px; width:min(72vw, 350px); opacity:.22; }
       .site-header { flex-wrap:wrap; padding:8px 13px; gap:7px; }
       .brand-group { min-width:0; flex:1 1 auto; }
       .primary-nav { order:3; flex:1 1 100%; overflow:visible; }
@@ -457,6 +490,8 @@
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+      .space-intro-art { transition:none!important; }
+      .space-intro-art.is-fading { transform:translateX(-50%); }
     }
   </style>
   <link rel="stylesheet" href="./account-prototype.css">
@@ -571,6 +606,11 @@
   </header>
 
   <main class="page-shell" id="main-content">
+    <div class="space-intro-art" id="space-intro-art" aria-hidden="true">
+      <img class="space-art-earth-moon" src="./assets/primitive-earth-moon.svg" width="1000" height="720" alt="" aria-hidden="true" decoding="async" fetchpriority="low">
+      <img class="space-art-rocky-planet" src="./assets/rocky-planet.svg" width="800" height="700" alt="" aria-hidden="true" decoding="async" fetchpriority="low">
+      <img class="space-art-spiral-nebula" src="./assets/spiral-nebula.svg" width="1000" height="760" alt="" aria-hidden="true" decoding="async" fetchpriority="low">
+    </div>
     <div id="top"></div>
     <section class="info-bar-wrap" aria-label="Homepage information">
       <div class="info-bar">
@@ -1220,6 +1260,27 @@
           else dialog.removeAttribute("open");
         }
       });
+    }());
+  </script>
+  <script>
+    (function () {
+      "use strict";
+      var art = document.getElementById("space-intro-art");
+      var workspace = document.getElementById("market-directory");
+      if (!art || !workspace) return;
+      var scheduled = false;
+      function updateIntroArt() {
+        if (scheduled) return;
+        scheduled = true;
+        window.requestAnimationFrame(function () {
+          scheduled = false;
+          var workspaceTop = workspace.getBoundingClientRect().top;
+          art.classList.toggle("is-fading", workspaceTop < window.innerHeight * 0.58);
+        });
+      }
+      window.addEventListener("scroll", updateIntroArt, { passive: true });
+      window.addEventListener("resize", updateIntroArt, { passive: true });
+      updateIntroArt();
     }());
   </script>
 </body>

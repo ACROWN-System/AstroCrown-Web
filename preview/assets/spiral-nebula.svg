@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 760" width="1000" height="760">
+  <defs>
+    <radialGradient id="nebulaCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffe8ae" stop-opacity=".92"/>
+      <stop offset=".12" stop-color="#ffac64" stop-opacity=".76"/>
+      <stop offset=".36" stop-color="#f16b66" stop-opacity=".28"/>
+      <stop offset=".68" stop-color="#9b69db" stop-opacity=".09"/>
+      <stop offset="1" stop-color="#4c66c9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="spiralGold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffbc6b" stop-opacity=".05"/>
+      <stop offset=".2" stop-color="#ffc56d" stop-opacity=".82"/>
+      <stop offset=".52" stop-color="#e77b9f" stop-opacity=".58"/>
+      <stop offset=".78" stop-color="#a17be8" stop-opacity=".46"/>
+      <stop offset="1" stop-color="#4d85d6" stop-opacity=".03"/>
+    </linearGradient>
+    <linearGradient id="radialRay" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffbc70" stop-opacity=".72"/>
+      <stop offset=".38" stop-color="#c67dd1" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#8d91f1" stop-opacity=".02"/>
+    </linearGradient>
+    <radialGradient id="nebulaDust" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#ffca83" stop-opacity=".66"/>
+      <stop offset="1" stop-color="#b17ae4" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g fill="none" stroke="url(#radialRay)" stroke-linecap="round" opacity=".52">
+    <path d="M499 382 118 238" stroke-width="2"/><path d="M500 381 205 128" stroke-width="1.5"/>
+    <path d="M500 381 407 54" stroke-width="2"/><path d="M500 381 639 76" stroke-width="1.4"/>
+    <path d="M500 381 826 171" stroke-width="2"/><path d="M500 381 934 352" stroke-width="1.5"/>
+    <path d="M500 381 873 529" stroke-width="2"/><path d="M500 381 745 674" stroke-width="1.4"/>
+    <path d="M500 381 493 710" stroke-width="2"/><path d="M500 381 291 664" stroke-width="1.2"/>
+    <path d="M500 381 111 531" stroke-width="2"/><path d="M500 381 54 397" stroke-width="1.4"/>
+    <path d="M500 381 300 252" stroke-width="1.2"/><path d="M500 381 701 255" stroke-width="1.2"/>
+    <path d="M500 381 684 475" stroke-width="1.6"/><path d="M500 381 354 527" stroke-width="1.1"/>
+  </g>
+  <circle cx="500" cy="381" r="250" fill="url(#nebulaCore)"/>
+  <g fill="none" stroke="url(#spiralGold)" stroke-linecap="round">
+    <path d="M500 381 C590 315 681 365 670 436 C656 522 536 564 437 518 C323 464 328 310 437 239 C566 157 741 220 777 359 C813 501 704 635 561 655" stroke-width="31" opacity=".35"/>
+    <path d="M501 382 C556 338 616 366 611 413 C605 469 530 496 469 468 C394 434 397 333 469 289 C553 239 671 280 694 372 C717 463 644 551 551 566" stroke-width="19" opacity=".56"/>
+    <path d="M499 380 C524 363 552 378 547 402 C541 431 504 438 482 419 C457 398 467 365 489 350 C520 330 558 349 569 380" stroke-width="10" opacity=".72"/>
+  </g>
+  <circle cx="500" cy="381" r="39" fill="url(#nebulaDust)"/>
+  <circle cx="500" cy="381" r="11" fill="#ffe6b3" fill-opacity=".62"/>
+  <g fill="#f6d7b7">
+    <circle cx="303" cy="243" r="3" opacity=".46"/><circle cx="733" cy="246" r="2.5" opacity=".4"/>
+    <circle cx="778" cy="452" r="3" opacity=".38"/><circle cx="360" cy="578" r="2.5" opacity=".35"/>
+    <circle cx="586" cy="158" r="2" opacity=".28"/><circle cx="204" cy="458" r="2" opacity=".28"/>
+  </g>
+</svg>

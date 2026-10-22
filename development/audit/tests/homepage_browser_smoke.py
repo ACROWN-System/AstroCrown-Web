@@ -11,6 +11,7 @@ import json
 import os
 import sys
 import threading
+from xml.etree import ElementTree
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -30,6 +31,12 @@ MAX_HTML_SOURCE_BYTES = 112 * 1024
 MAX_RUNTIME_ASSET_BYTES = 48 * 1024
 MAX_INITIAL_DECODED_BYTES = 160 * 1024
 MAX_INITIAL_RESOURCE_ENTRIES = 8
+MAX_SPACE_ART_ASSET_BYTES = 24 * 1024
+SPACE_ART_ASSET_PATHS = (
+    ROOT / "preview" / "assets" / "primitive-earth-moon.svg",
+    ROOT / "preview" / "assets" / "rocky-planet.svg",
+    ROOT / "preview" / "assets" / "spiral-nebula.svg",
+)
 
 
 def record(name: str, status: str, detail=None) -> None:
@@ -78,6 +85,36 @@ def main() -> int:
         return 2
 
     source_sizes = {name: path.stat().st_size for name, path in source_files.items()}
+    missing_art_assets = [str(path.relative_to(ROOT)) for path in SPACE_ART_ASSET_PATHS if not path.is_file()]
+    if missing_art_assets:
+        print(f"ERROR: required transparent space-art assets missing: {missing_art_assets}", file=sys.stderr)
+        return 2
+    art_asset_sizes = {str(path.relative_to(ROOT)): path.stat().st_size for path in SPACE_ART_ASSET_PATHS}
+    art_asset_bytes = sum(art_asset_sizes.values())
+    art_asset_roots = {}
+    for path in SPACE_ART_ASSET_PATHS:
+        try:
+            root = ElementTree.parse(path).getroot()
+        except (ElementTree.ParseError, OSError) as exc:
+            print(f"ERROR: invalid SVG space-art asset {path.relative_to(ROOT)}: {exc}", file=sys.stderr)
+            return 2
+        if not root.tag.endswith("svg") or not root.attrib.get("viewBox"):
+            print(f"ERROR: SVG space-art asset needs an svg root and viewBox: {path.relative_to(ROOT)}", file=sys.stderr)
+            return 2
+        art_asset_roots[str(path.relative_to(ROOT))] = {"viewBox": root.attrib["viewBox"], "root": root.tag}
+    art_asset_metrics = {
+        "asset_bytes": art_asset_sizes,
+        "combined_bytes": art_asset_bytes,
+        "combined_budget_bytes": MAX_SPACE_ART_ASSET_BYTES,
+        "svg_metadata": art_asset_roots,
+    }
+    SOURCE_SIZE_METRICS["transparent_space_art"] = art_asset_metrics
+    check(
+        "three original transparent SVG background assets remain within 24 KiB combined",
+        art_asset_bytes <= MAX_SPACE_ART_ASSET_BYTES
+        and all(size <= 12 * 1024 for size in art_asset_sizes.values()),
+        art_asset_metrics,
+    )
     runtime_asset_bytes = source_sizes["account_stylesheet"] + source_sizes["account_script"]
     critical_source_bytes = source_sizes["homepage_html"] + runtime_asset_bytes
     SOURCE_SIZE_METRICS.update({
@@ -201,6 +238,72 @@ def main() -> int:
                 not performance_snapshot["externalHttpResources"],
                 performance_snapshot["externalHttpResources"],
             )
+
+            space_art_metrics = page.evaluate("""async () => {
+              const art = document.querySelector("#space-intro-art");
+              if (!art || art.getAttribute("aria-hidden") !== "true") return {found:false, assets:[]};
+              const images = Array.from(art.querySelectorAll("img"));
+              const assets = await Promise.all(images.map(async (img) => {
+                try { await img.decode(); } catch (_) {}
+                if (!img.complete || !img.naturalWidth || !img.naturalHeight) {
+                  return {className:img.className, path:new URL(img.src).pathname, loaded:false};
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = img.naturalWidth;
+                canvas.height = img.naturalHeight;
+                const ctx = canvas.getContext("2d", {willReadFrequently:true});
+                ctx.drawImage(img, 0, 0);
+                const cornerAlpha = [
+                  ctx.getImageData(0,0,1,1).data[3],
+                  ctx.getImageData(img.naturalWidth-1,0,1,1).data[3],
+                  ctx.getImageData(0,img.naturalHeight-1,1,1).data[3],
+                  ctx.getImageData(img.naturalWidth-1,img.naturalHeight-1,1,1).data[3]
+                ];
+                let visibleSamples = 0;
+                for (let y=16; y<img.naturalHeight; y+=48) {
+                  for (let x=16; x<img.naturalWidth; x+=48) {
+                    if (ctx.getImageData(x,y,1,1).data[3] > 20) visibleSamples += 1;
+                  }
+                }
+                return {
+                  className:img.className,
+                  path:new URL(img.src).pathname,
+                  loaded:true,
+                  naturalWidth:img.naturalWidth,
+                  naturalHeight:img.naturalHeight,
+                  alt:img.getAttribute("alt"),
+                  hiddenFromAT:img.getAttribute("aria-hidden")==="true",
+                  cornerAlpha,
+                  visibleSamples
+                };
+              }));
+              return {found:true, ariaHidden:art.getAttribute("aria-hidden")==="true", count:images.length, assets};
+            }""")
+            check(
+                "Earth-Moon, rocky-planet and spiral-nebula SVG layers load from same-origin paths",
+                space_art_metrics["found"] and space_art_metrics["count"] == 3
+                and all(asset.get("loaded") for asset in space_art_metrics["assets"])
+                and all(asset.get("alt") == "" and asset.get("hiddenFromAT") for asset in space_art_metrics["assets"]),
+                space_art_metrics,
+            )
+            check(
+                "each foreground SVG preserves genuine transparency and visible artwork",
+                len(space_art_metrics.get("assets", [])) == 3
+                and all(asset.get("cornerAlpha") == [0,0,0,0] and asset.get("visibleSamples",0) > 10
+                        for asset in space_art_metrics.get("assets", [])),
+                space_art_metrics,
+            )
+            page.evaluate("""() => {
+              const workspace = document.getElementById("market-directory");
+              window.scrollTo(0, workspace.getBoundingClientRect().top + window.scrollY + 5);
+            }""")
+            page.wait_for_function("document.getElementById('space-intro-art').classList.contains('is-fading')")
+            check(
+                "foreground space art fades as the market workspace enters the reading area",
+                page.evaluate("document.getElementById('space-intro-art').classList.contains('is-fading')"),
+            )
+            page.evaluate("window.scrollTo(0, 0)")
+            page.wait_for_function("!document.getElementById('space-intro-art').classList.contains('is-fading')")
 
             check("loopback preview route responds successfully", response is not None and response.status == 200,
                   {"status": response.status if response else None, "url": page.url})
