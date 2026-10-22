@@ -412,3 +412,71 @@ If a requirement does not apply, record N/A with its reason.
 
 If a change is made to resolve a failure, re-test it.
 
+## 19. Persistent Investigation, Alternative Paths, and Continuity
+
+The objective is to exhaust plausible, material investigation paths within the stated scope and constraints—not to stop after the first convenient explanation, successful automated check, unavailable tool, or initial risk label. Persistence means controlled progress supported by evidence, not blind repetition or unbounded experimentation.
+
+### Investigation setup and candidate coverage
+
+Before substantive work, record or update an auditable work record containing:
+
+- the intended outcome, scope, acceptance criteria, preservation boundaries, and current source commit/version;
+- known facts, assumptions, unknowns, and competing explanations;
+- plausible solution and verification paths, including materially different alternatives and negative/adversarial cases;
+- evidence already available, what each item proves, and what it does not prove;
+- each attempted action/test, its result, the evidence reference, and the hypotheses it supports or rules out;
+- remaining paths, unresolved risks, exact blockers, and the next concrete action;
+- the conditions that justify closure, promotion, escalation, or a finding that remains BLOCKED.
+
+Inspect existing documentation, implementation, test fixtures, issues, prior attempts, failures, dependencies, workflows, deployment records, and backups where relevant before repeating work or creating a parallel mechanism. Preserve contradictory evidence rather than forcing premature agreement. Do not discard an approach solely because its first description appears impossible, unlawful, unethical, unsafe, or misaligned; establish the actual facts, context, authority, jurisdiction where relevant, and applicable constraints before classifying it.
+
+Enumerate material alternatives before selecting a candidate. The record must explain why an alternative was selected, rejected, deferred, or left blocked. It is not necessary to test every imaginable variation: pursue all plausible paths that could materially change the decision, and state any residual uncertainty rather than claiming exhaustive certainty without evidence.
+
+### Hypothesis-driven attempts and tool failure
+
+Every substantive retry should answer a stated question or test a changed hypothesis. Review prior outcomes first; avoid repeated attempts that cannot distinguish competing explanations.
+
+When one tool, endpoint, environment, browser, credential, dependency, or evidence source is unavailable:
+
+1. record the precise failure and what it does—and does not—establish;
+2. check whether a materially different authorized route is available;
+3. where relevant, use independent evidence such as official documentation, repository/API records, workflow logs and artifacts, a local build, deterministic tests, source inspection, or another supported interface;
+4. distinguish a verified failure from an inability to observe or test it;
+5. continue through the remaining useful routes, or record the specific unmet prerequisite and classify the affected verification as BLOCKED.
+
+One failed access method is not proof that the target system is unavailable. Source inspection, static checks, CI success, artifact presence, successful deployment, live integration, and rendered browser behavior are different evidence classes. Never substitute one for another or claim an observation that was not made. If the exact live behavior cannot be observed, state that limitation, triangulate using available evidence, and preserve the unverified criterion for follow-up.
+
+### Risk, legality, ethics, and alignment evaluation
+
+Treat risk labels as questions to investigate, not as substitutes for factual analysis. Where a path raises legal, ethical, privacy, security, policy, or alignment concerns, separate:
+
+- what is known and which facts remain uncertain;
+- the potential benefit, harm, affected parties, and plausible misuse;
+- applicable authority, consent, jurisdiction, contractual terms, and current rules where relevant;
+- whether the path can be researched, modeled, simulated, or tested in an owned and authorized environment;
+- which actions must not be performed, why, and which defensive or compliant adaptations preserve useful insight.
+
+Do not conduct unauthorized access, harmful actions, deception, or prohibited execution merely to resolve a question. When live execution is not appropriate, continue with safe evidence gathering, threat modeling, controlled simulation, non-destructive testing, and analysis of defensive lessons. A concern that prevents one execution path must not automatically discard the underlying defensive objective or other compliant solutions. Record the boundary and continue on the safe paths.
+
+Legal conclusions that depend on facts, jurisdiction, or changing rules require current authoritative research and appropriate qualification; do not declare something lawful or unlawful from surface resemblance alone. Likewise, an ethical or alignment judgment must identify the relevant stakeholders, values, consequences, and constraints rather than relying on a label alone.
+
+### Interruption and resume checkpoint
+
+Before ending a substantive work block, encountering a tool/session failure, or handing work to another person or process, update the durable work record with:
+
+- the exact repository, branch, commit, changed paths, and review/deployment state;
+- completed checks and their evidence, including failures and negative results;
+- work not yet done and why it remains undone;
+- all material alternatives already considered, the outcome of each, and those still open;
+- current blockers and safe/authorized routes that remain available;
+- the single clearest next action, with its required inputs and expected evidence.
+
+Store this record in the repository's established development/audit location or another durable project-controlled record—not only in transient conversation text. On resumption, read the checkpoint and revalidate the current repository/branch/deployment state before acting, because the remote state may have changed. Resume from the last verified point; do not silently restart, repeat completed work, or assume a prior result remains current.
+
+A durable checkpoint enables reliable resumption when work is interrupted; it does not imply that background work continues or that an ended session can restart itself without a new invocation.
+
+### Completion and continuation rule
+
+Continue while a plausible, material, safe and authorized route remains untested, or while obtainable evidence could change the decision. Stop an individual route only when evidence rules it out, its prerequisite is genuinely unavailable, its cost/risk is disproportionate to its decision value, or it crosses a clear execution boundary; document which reason applies and continue with other routes where possible.
+
+A work item is complete only when its acceptance criteria have been tested to the level they require, material alternatives and risks have been evaluated, regressions have been considered, and the durable record states what remains unverified. If any material criterion remains unresolved, retain it as open/BLOCKED and name the next viable action. Persistence must not be confused with declaring success without evidence.
