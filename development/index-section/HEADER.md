@@ -71,7 +71,7 @@ The header shall contain separate AstroCrown Logo and AstroCrown Title elements.
 The logo shall:
 
 - use the approved AstroCrown logo asset;
-- have a target rendered height of approximately 51 px within the approximately 59 px header;
+- have a target rendered height of approximately 50 px within the approximately 60 px header;
 - have approximately 4 px clearance above and below within the header;
 - have approximately 15–20 px clearance from the left viewport edge.
 
@@ -348,9 +348,9 @@ Each candidate must be evaluated against the actual requirements, compatibility,
 
 #### R-019.17 — Explicitly Undefined Header Decisions
 
-The following remain intentionally undefined until candidate evaluation and evidence are completed:
+The following decisions remain intentionally undefined until candidate evaluation and evidence are completed:
 
-- Exact AstroCrown Space Blue HEX value, subject to the R-005/R-019 hierarchy and accessibility evaluation.
+- The Space Blue HEX value is resolved for the current homepage header prototype as `#102947`; any future palette change requires a new evidence-backed decision.
 - Exact logo asset/version.
 - Exact typography family selections from the approved candidate families.
 - Exact font delivery mechanism.
@@ -374,7 +374,7 @@ These decisions must be evaluated rather than guessed during implementation.
 
 Header implementation shall be verified against at least:
 
-- approximately 59 px rendered height;
+- approximately 60 px rendered height;
 - full viewport-width coverage;
 - approved three-level blue hierarchy and header/background color relationship;
 - sufficient text and UI-control contrast for the selected Space Blue surface;
