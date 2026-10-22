@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: homepage-browser-smoke-${ github.ref }}
+  group: homepage-browser-smoke-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -53,7 +53,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: homepage-browser-smoke-${ github.run_id }}
-          path: ${ runner.temp }}/homepage-browser-smoke/
+          name: homepage-browser-smoke-${{ github.run_id }}
+          path: ${{ runner.temp }}/homepage-browser-smoke/
           if-no-files-found: warn
           retention-days: 7
