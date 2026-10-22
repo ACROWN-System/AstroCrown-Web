@@ -1,0 +1,119 @@
+name: Local Account Continuity Prototype Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/index.html"
+      - "development/account-continuity/**"
+      - "development/audit/Active/2026-10-21-Local-Account-Creation-and-Sign-In-Prototype.md"
+      - "development/audit/Active/2026-10-21-CMC-Style-Email-Account-Flow.md"
+      - ".github/workflows/account-continuity-prototype-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "development/index.html"
+      - "development/account-continuity/**"
+      - ".github/workflows/account-continuity-prototype-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  local-account-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Validate Python and browser JavaScript syntax
+        run: |
+          python -m py_compile development/account-continuity/prototype/server.py development/account-continuity/prototype/tests/test_account_server.py
+          node --check development/account-continuity/prototype/account-ui.js
+          node --check development/account-continuity/prototype/tests/browser_smoke.mjs
+
+      - name: Run loopback HTTP and account-contract tests
+        run: python -m unittest discover -s development/account-continuity/prototype/tests -p "test_*.py" -v
+
+      - name: Verify account entry point and security boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path("development/index.html").read_text(encoding="utf-8")
+          server = Path("development/account-continuity/prototype/server.py").read_text(encoding="utf-8")
+          ui = Path("development/account-continuity/prototype/account-ui.js").read_text(encoding="utf-8")
+          css = Path("development/account-continuity/prototype/account-prototype.css").read_text(encoding="utf-8")
+          terms = Path("development/account-continuity/prototype/terms-of-use.html").read_text(encoding="utf-8")
+          privacy = Path("development/account-continuity/prototype/privacy-policy.html").read_text(encoding="utf-8")
+          required = (
+              'id="open-account-dialog"', 'id="account-dialog"',
+              'href="./account-continuity/prototype/account-prototype.css"',
+              'src="./account-continuity/prototype/account-ui.js"', "Account"
+          )
+          missing = [item for item in required if item not in html]
+          if missing:
+              raise SystemExit(f"Account entry point or relative preview asset is missing: {missing}")
+          if "ASTROCROWN · ACCOUNT ACCESS" in html or 'class="account-dialog-kicker"' in html:
+              raise SystemExit("Remove the redundant AstroCrown account-access kicker above the dialog title.")
+          if 'ThreadingHTTPServer(("127.0.0.1", port)' not in server:
+              raise SystemExit("The local account prototype must bind only to loopback.")
+          for item in ('id="account-demo-notice"', "renderProviderSlots", "renderOrDivider"):
+              if item not in ui:
+                  raise SystemExit(f"Expected dynamically rendered account element missing: {item}")
+          if "account-other-options" in ui:
+              raise SystemExit("The Or divider must not be a clickable/toggle control.")
+          for item in (
+              ".account-provider-placeholder", ".account-or-divider", ".account-or-divider-arrow",
+              ".account-or-divider-line", ".account-or-divider-line-row",
+              "grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)",
+              "background-image:linear-gradient(90deg, transparent 0%, rgba(255,215,0,.9) 17%, rgba(255,215,0,.9) 83%, transparent 100%)",
+              "pointer-events:none", "--gold", "rgba(15,31,52,.97)"
+          ):
+              if item not in css:
+                  raise SystemExit(f"Expected AstroCrown account visual styling missing: {item}")
+          if "repeating-linear-gradient" in css:
+              raise SystemExit("The Or divider side segments must be solid continuous lines, not dotted or dashed.")
+          for item in (
+              "newsletterOptIn", "data-account-mode", "Forgot password?", "A crypto wallet is not required",
+              "Referral ID (Optional)", "Terms of Use", "Privacy Policy", "No email was sent",
+              "browserPreviewRequest", "browser-preview-memory-only", "600000", "termsAccepted"
+          ):
+              if item not in ui:
+                  raise SystemExit(f"Expected account UX/security boundary missing: {item}")
+          if "recoveryCodes" in ui or "account-recover-form" in ui:
+              raise SystemExit("One-time recovery codes must not be the default forgot-password journey.")
+          if "DRAFT ONLY" not in terms or "DRAFT ONLY" not in privacy:
+              raise SystemExit("Policy links must point to explicitly marked development drafts.")
+          for item in ("terms-of-use.html", "privacy-policy.html"):
+              if item not in server:
+                  raise SystemExit(f"Local allowlist missing development policy page: {item}")
+          if any(item in ui for item in ("localStorage.", "sessionStorage.", "indexedDB.")):
+              raise SystemExit("Preview account flow must not persist credentials or account state in browser storage.")
+          if "window.ethereum" in ui or "eth_requestAccounts" in ui:
+              raise SystemExit("Ordinary account prototype must not load or prompt a wallet.")
+          PY
+
+      - name: Run account flow in headless Chrome
+        shell: bash
+        env:
+          PYTHON: python
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v google-chrome)"
+          elif command -v chromium >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v chromium)"
+          elif command -v chromium-browser >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v chromium-browser)"
+          else
+            echo "::error::BLOCKED: no preinstalled Chrome/Chromium; account creation/sign-in browser evidence is required."
+            exit 1
+          fi
+          node development/account-continuity/prototype/tests/browser_smoke.mjs

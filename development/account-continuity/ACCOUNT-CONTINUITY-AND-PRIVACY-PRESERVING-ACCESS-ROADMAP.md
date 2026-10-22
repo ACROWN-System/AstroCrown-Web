@@ -632,3 +632,12 @@ The source list is a research index, not an exhaustive legal analysis, a guarant
 Create a **Requirements and Threat Model Register** before coding account creation. It should reference this roadmap and include for each requirement: ID, actor, scenario, required behavior, data accessed, trust boundary, legal/operational dependency, test, evidence, result and unresolved issues. Use it to select a minimal authentication/recovery prototype first; defer person-verification vendor selection and monetary benefits until their separate requirements are known.
 
 Only after that register is reviewed should implementation work start. Each implementation should have its own dated plan, branch, exact source-of-truth contract, test plan, evidence, impact analysis, review and explicit promotion decision.
+
+
+## 18. Follow-up prototype record — 2026-10-21
+
+The development homepage's Account button now has a separate local-only account-creation/sign-in test prototype under development/account-continuity/prototype/. It is intended to test the ordinary-user first-run/sign-in/recovery interaction before selection of production identity providers or passkey technology. It uses a local SQLite database, username/password prototype credentials and one-time recovery codes. It makes no provider or wallet calls and grants no admin role.
+
+This does not change the overall status above: the account-continuity subsystem remains a development proposal, and the new local prototype is not production account authentication. It does not implement person eligibility, benefit claims, passkeys, provider SSO, account recovery outside its test-code flow, admin wallet registration, Imperial HSIAN restoration, or cloud persistence. See the active test plan at development/audit/Active/2026-10-21-Local-Account-Creation-and-Sign-In-Prototype.md and local instructions at development/account-continuity/prototype/README.md.
+
+Before promotion, continue to verify accessibility, password and session controls, loss-of-device/recovery usability, external-provider qualification, privacy/retention, $0/no-card eligibility, account export/deletion, and the actual public publishing domain/source. Production integration remains blocked.

@@ -458,6 +458,8 @@
       *, *::before, *::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
     }
   </style>
+  <link rel="stylesheet" href="./account-continuity/prototype/account-prototype.css">
+  <script src="./account-continuity/prototype/account-ui.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -548,14 +550,10 @@
 
     <div class="right-controls">
       <div class="menu-slot">
-        <button class="avatar-trigger" type="button" data-menu="account-menu" aria-expanded="false" aria-controls="account-menu" aria-label="Account preview">
+        <button class="avatar-trigger" id="open-account-dialog" type="button" aria-haspopup="dialog" aria-controls="account-dialog" aria-label="Account">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>
+          <span>Account</span>
         </button>
-        <div class="control-panel" id="account-menu">
-          <div class="panel-label">Account</div>
-          <div style="padding:4px 9px 9px;"><span class="menu-status">Not connected</span><p style="margin:6px 0 0;color:#c2cede;font-size:11px;">Account creation, recovery, passkeys and identity choices need a dedicated implementation.</p></div>
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/132" target="_blank" rel="noreferrer">Account continuity roadmap <span>↗</span></a>
-        </div>
       </div>
       <div class="menu-slot">
         <button class="wallet-trigger" type="button" data-menu="wallet-menu" aria-expanded="false" aria-controls="wallet-menu">
@@ -819,7 +817,7 @@
       <div class="preview-note-icon" aria-hidden="true">i</div>
       <div>
         <h2>Prototype boundaries — please read before evaluating the numbers</h2>
-        <p>This is a visual and interaction prototype. Market figures, price changes, rankings, sentiment scores and influence weights are illustrative sample values, not live data or financial advice. Search, filters, sorting, pagination and preview dialogs operate only on the local sample set. Wallet, account, trading, token creation, external market data and separate destination pages are not connected.</p>
+        <p>This is a visual and interaction prototype. Market figures, price changes, rankings, sentiment scores and influence weights are illustrative sample values, not live data or financial advice. Search, filters, sorting, pagination and preview dialogs operate only on the local sample set. Account creation and sign-in can be tested in a disposable browser-preview demo or through the local loopback development server; neither is production authentication. Preview accounts are erased on reload. Wallet, trading, token creation, external market data and separate destination pages are not connected.</p>
       </div>
     </div>
 
@@ -852,6 +850,19 @@
       <p class="dialog-copy" id="dialog-copy"></p>
       <div class="dialog-note" id="dialog-note"></div>
       <div class="dialog-actions"><button class="dialog-close" type="button" id="dialog-close">Close preview</button><a class="dialog-link" href="#preview-notes" id="dialog-notes-link">Read prototype notes</a></div>
+    </div>
+  </dialog>
+
+  <dialog id="account-dialog" class="account-dialog" aria-labelledby="account-dialog-title">
+    <div class="account-dialog-shell">
+      <div class="account-dialog-header">
+        <div>
+          <h2 class="account-dialog-title" id="account-dialog-title">AstroCrown account</h2>
+        </div>
+        <button class="account-dialog-close" id="account-dialog-close" type="button" aria-label="Close account dialog">×</button>
+      </div>
+      <div class="account-feedback" id="account-feedback" role="status" aria-live="polite"></div>
+      <div id="account-content"></div>
     </div>
   </dialog>
 
