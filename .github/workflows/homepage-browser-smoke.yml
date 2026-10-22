@@ -51,7 +51,8 @@ jobs:
             echo "CHROME_BIN=$(command -v chromium)" >> "$GITHUB_ENV"
             chromium --version
           else
-            python -m playwright install --with-deps --only-shell chromium
+            echo "No runner-provided browser found; using the pinned Playwright Chromium fallback (maximum 5 minutes)."
+            timeout --signal=TERM 5m python -m playwright install --with-deps --only-shell chromium
           fi
 
       - name: Run homepage browser smoke checks
