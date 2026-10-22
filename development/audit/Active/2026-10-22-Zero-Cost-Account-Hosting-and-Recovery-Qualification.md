@@ -155,6 +155,37 @@ For AstroCrown, the promising hybrid to test is:
 
 This hybrid remains a design hypothesis. Do not implement a central-plus-decentralized dual-write path until ownership, consistency, deletion, key lifecycle, backup/restore, and recovery tests define which store is authoritative for each datum.
 
+## 2.11 Repository-side publishing verification — 2026-10-22
+
+**Status:** Partial verification completed; exact Pages publishing source and live published artifact remain BLOCKED.
+
+The owner supplied:
+- HTML Preview link pinned to commit `9784d4d3611f27ebad56a7245db58bacc1504ebf`, file `development/index.html`;
+- the public `ACROWN-System/NOVA` repository as related working documentation;
+- confirmation that the intended free static hosting is GitHub Pages.
+
+### Evidence independently re-checked
+
+1. The GitHub repository API reports `ACROWN-System/AstroCrown-Web` as public, with `main` as default branch, `has_pages: true`, and no advertised homepage URL (`homepage: null`). `has_pages: true` is only repository metadata; it does not reveal whether the latest build succeeded, the selected source, the custom domain, or which artifact is currently served.
+2. The current `main` root listing contains `.github/`, `LICENSE`, `README.md`, `SECURITY.md`, `_config.yml`, `backup/` and `development/`. There is no root `index.html` or root `CNAME`.
+3. Current `main` `_config.yml` explicitly excludes `development/` and `backup/` from normal Jekyll rendering:
+   - https://github.com/ACROWN-System/AstroCrown-Web/blob/main/_config.yml
+4. The six committed workflow files on `main` are `external-review-pipeline-ci.yml`, `media-generator-tests.yml`, `nova-credential-readiness.yml`, `nova-rsi-ci.yml`, `nova-rsi-codeql.yml`, and `ossf-scorecard.yml`. None is identifiable as a website-publishing workflow from its filename and inspected content. Branch listing/search did not find a `gh-pages` branch.
+5. The supplied HTML Preview URL is hosted on `html-preview.github.io`, and its query parameter points to a GitHub **blob URL for a pinned source revision**. It is an external HTML preview viewer, not the AstroCrown Pages publishing-settings page or proof of the production URL.
+6. At the supplied pinned commit `9784d4d3611f27ebad56a7245db58bacc1504ebf`, the `development/index.html` content does not contain the current `account-dialog` markup or the current account prototype CSS/JavaScript references. At commit `4d84af1b6faac6d450f5f633920d87959401e9c6`, `development/index.html` uses the current account-dialog markup and references `./account-continuity/prototype/account-prototype.css` and `account-ui.js`. The account homepage blob at `4d84af1b...` is identical to the current PR #141 head's `development/index.html` blob, so this is a stale pinned preview URL, not evidence of a regression in the current PR.
+7. A Pages REST endpoint query and the Settings → Pages web page could not be retrieved by the available read-only GitHub/web connectors. This is an interface/access limitation. A direct live request to the inferred default project URL `https://acrown-system.github.io/AstroCrown-Web/` also could not be made from this execution environment because external DNS resolution failed; this is not evidence the site is down.
+
+### Disposition
+
+- **Confirmed:** public GitHub repository; Pages metadata flag; no root `index.html` or `CNAME` on `main`; `development/` excluded from normal root Jekyll rendering; no obvious committed Pages workflow or `gh-pages` branch.
+- **Confirmed:** the supplied `9784d4d...` HTML Preview link is pinned to a revision that lacks the current account dialog.
+- **Not confirmed:** exact Settings → Pages source branch/folder or Actions selection; repository's configured canonical Pages URL/custom domain; latest successful Pages deployment; the content actually served to public visitors.
+- **No changes made:** no repository Pages settings, source branch, domain, DNS, workflow, public file, secret or production service was changed.
+
+GitHub's official process permits either branch/folder publishing or a custom Actions workflow, and the repository settings show the selected source and site URL. Reference: https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site.
+
+The sole additional evidence that cannot be recovered from the public tree is a readout of **Settings → Pages → Build and deployment** (source plus branch/folder, or Actions) and the displayed site URL/custom domain. Ask for a screenshot of that non-secret settings section only if it is required to finish AUTH-001; do not request credentials or secret values.
+
 ## 3. Account routes to compare
 
 ### Route A — Preserve the familiar email/password UI, add a qualified sender
