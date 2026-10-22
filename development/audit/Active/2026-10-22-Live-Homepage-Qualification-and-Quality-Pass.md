@@ -1,7 +1,7 @@
 # Active Navigation Plan — Live Homepage Qualification and Quality Pass
 
 **Date:** 2026-10-22  
-**Status:** ACTIVE — persistent-investigation continuity is merged; the repeatable browser suite is merged; the header candidate is being evaluated on an isolated design branch.  
+**Status:** ACTIVE — persistent-investigation continuity and repeatable browser tests are merged; PR #146 contains the selected/tested Space Blue header refinement, pending latest exact-head checks and final diff review.  
 **Objective:** Evolve the AstroCrown homepage prototype into a polished and operable website through persistent, evidence-led refinement while preserving the $0/no-card preference, truthfulness about capabilities, and separation from production.
 
 ## Source of truth and exact baseline
@@ -70,7 +70,7 @@ Other exact-head checks for PR #144 all passed: External Review Pipeline CI, NOV
 
 The active section sources are under `development/index-section/`; shared conventions live under `development/index-reference/`. Extracted cross-section references are navigation aids, not separate approval authorities. Candidate/TBD items remain candidates.
 
-1. **Header (R-005/R-019 and Colors reference):** palette requires a distinct intermediate AstroCrown Space Blue between Deep Space Blue `#081426` and Light Space Blue `#16345A`; the value has explicitly remained TBD pending hierarchy and contrast evaluation. Do not assign a HEX value from preference or arithmetic alone. Compare several candidates against adjacent palette colors, text/UI contrast, distinctness from card surfaces, and intended render states, then record the decision.
+1. **Header (R-005/R-019 and Colors reference):** `#102947` is now selected for the header after six candidate calculations, rendered comparison and exact-head CI tests. Its nav-text contrast was measured at 11.57:1 and Gold at 10.47:1. Other surfaces, full contrast coverage, actual logo asset selection and complete assistive-technology review remain open.
 2. **Header geometry:** existing spec targets approximately 59 px total height and a logo around 51 px, with roughly 4 px top/bottom clearance; current CSS uses 62 px minimum height, 40 px SVG and 7 px vertical padding. Evaluate whether the target can be met with smaller padding and without clipping controls at supported desktop widths.
 3. **Information bar (R-020):** target gap about 45 px and height about 53 px; current gap 39 px and height 53 px. Current border/divider are 1 px, while legacy detail says approximately 5 px. Evaluate hierarchy, content space, warning color semantics, readability, and responsive behavior before deciding thickness.
 4. **Hero cards (R-021):** design dimensions from user-task and information density, not arbitrary percentages. The current row is about 82% of the main content; confirm the visual relationship with information bar and market workspace before changing it.
@@ -83,7 +83,7 @@ The active section sources are under `development/index-section/`; shared conven
 1. Revalidate current main, open PRs and latest workflow/deployment state before every new implementation. The latest verified main at this checkpoint refresh is `b3bad481cb20b69f9d0a05878e83e66168f54e80`.
 2. PR #144's test foundation is merged; its final exact-head run [39770755613](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39770755613) passed 60 checks. Inspect report/screenshot artifacts rather than relying on a green badge. Do not repeat the blocked navigation attempts as though they were new evidence.
 3. PR #145 is merged; Section 19 is on main. PR #143 was superseded and remains closed.
-4. **Current task:** review branch `design/header-space-blue-candidate-review-2026-10-22` and its candidate render/CI. The design record is `development/audit/Active/2026-10-22-Header-Space-Blue-Candidate-Evaluation.md`; candidate value is currently `#102947), and is not yet approved for the repository-wide palette.
+4. **Current task:** review and complete PR #146, head `9d3fa6cef8ef33b16d7224a482d0c301c3d09871`, which contains the rendered header change, Space Blue decision record, updated source requirements and matching reference records. Before merge, verify exact-head CodeQL/CI/browser reports, inspect the latest artifact, and ensure no stale `TBD` or old height/color claims remain in active documents.
 5. If the header candidate passes the rendered screenshot, size, responsive, and interaction review, update the active palette/header records to distinguish prototype candidate from approved choice, and merge only after exact-head checks. If it does not pass, test another documented candidate.
 6. After the header is settled, evaluate the information-bar gap/border and hero-row width. Then investigate background layers and transparent-asset options in a separate work unit.
 7. Keep live HTTPS-origin headers/cache and production services distinct from loopback browser tests. The assistant execution environment's direct navigation is restricted; do not repeat blocked attempts unless the route or hypothesis changes.
@@ -92,7 +92,8 @@ The active section sources are under `development/index-section/`; shared conven
 
 - **2026-10-22:** Verified current main `b3bad481cb20b69f9d0a05878e83e66168f54e80`, PR #144 merged, PR #145 merged, PR #143 closed/superseded, and `development/` / `backup/` remain excluded from Pages publishing.
 - **2026-10-22:** Main preview source remained `preview/index.html` blob SHA `62c107354dfa501dc4c29222dce88410528c5593` before the current isolated design candidate.
-- **2026-10-22:** Began candidate evaluation using WCAG sRGB luminance/contrast calculations and a main-based branch. Preview candidate changes are not deployed. The next required evidence is the PR-hosted Chromium screenshot and exact-head browser report.
+- **2026-10-22:** PR #146 rendered candidate `#102947` on the exact preview source and passed 63 browser checks on its tested head: opaque surface, 60 px header, 50×50 px mark, clearances, text/Gold contrast, all existing interactions, and no horizontal overflow at six widths. Screenshots are captured from the top of the page; report/artifact evidence is in run 39786404575. This result applies to head `ed59db8db95d7ff256ee0afa1e2db3a7bb4c4c84`; later documentation commits changed the PR head, so latest runs must be verified before merge.
+- **2026-10-22:** Selected Space Blue and updated `development/index-section/HEADER.md` plus the Colors/Layout/Sizing/Visual Design reference records. The active logo asset/version and full accessibility review remain open. The candidate is not deployed until PR #146 is merged and Pages finishes deployment.
 - **Unresolved:** User has not yet inspected a post-change live route, and actual deployed-origin header/cache behavior remains unverified. Do not ask the user to do repeated micro-checks while the CI artifact can answer the current question.
 
 ## Impact Analysis
