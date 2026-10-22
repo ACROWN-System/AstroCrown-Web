@@ -1,7 +1,7 @@
 """Browser smoke tests for the AstroCrown homepage preview.
 
 Serves checked-out repository files on loopback only, forces browser-memory demo mode,
-blocks non-loopback requests, and writes a JSON report plus desktop/mobile screenshots.
+blocks non-loopback requests, and writes a JSON report, source/performance budgets, plus desktop/mobile screenshots.
 No production credentials or external services are used.
 """
 from __future__ import annotations

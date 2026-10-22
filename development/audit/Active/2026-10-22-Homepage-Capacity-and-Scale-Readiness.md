@@ -17,7 +17,7 @@ This record defines architecture and acceptance rules. It does not claim product
 - Current public test route: https://acrown-system.github.io/AstroCrown-Web/preview/.
 - Pages build/deployment run 39807222283 completed successfully against the current main commit.
 - Post-merge Homepage Browser Smoke run 39807222430: 63 PASS, 0 FAIL, 0 BLOCKED. Its report had no page exceptions, no console errors, and no blocked non-loopback requests. Artifact 12437958064 was retrieved and inspected.
-- Source footprint measured at the current baseline: preview/index.html 89,662 bytes; preview/account-prototype.css 10,292 bytes; preview/account-ui.js 23,578 bytes. Combined critical source is 123,532 bytes before HTTP compression and headers. This is a source measurement, not a live network-transfer measurement.
+- Source footprint measured by the exact-head CI harness (run 39808627276): preview/index.html 89,827 bytes; preview/account-prototype.css 10,294 bytes; preview/account-ui.js 23,591 bytes. Combined critical source is 123,712 bytes before HTTP compression and headers. The slight difference from connector-extracted text sizes is why the repeatable checkout-side measurement is the baseline. This is source/browser-harness evidence, not a live CDN network-transfer measurement.
 - The current preview uses illustrative market data and a disposable browser-memory account demo. It has no production API, live market-data adapter, durable account backend, or production authentication.
 - The site root remains separate from the prototype. No root publishing-source switch was made by the header merge. The current Pages artifact must not be treated as an approved commercial deployment.
 - OpenSSF Scorecard run 39807222453 failed with a GitHub GraphQL internal error during ListCommits. Its job log identifies the API/internal query error; it did not return a project-specific finding. Record this as an infrastructure/tool result, not a successful Scorecard assessment. Re-run only when needed to establish the current Scorecard status.
@@ -69,7 +69,7 @@ No single provider, database, domain, identity system, AI vendor, GPU marketplac
 
 ## 5. Repeatable homepage budgets added in this work block
 
-The existing Playwright test will record performance timings as diagnostics and enforce source/request-count budgets. Initial budgets are deliberately conservative and should change only with measured evidence and a reviewed diff:
+The existing Playwright test now records performance timings as diagnostics and enforces source/request-count budgets. Initial budgets are deliberately conservative and should change only with measured evidence and a reviewed diff:
 
 | Measure | Initial budget | Why |
 |---|---:|---|
@@ -80,7 +80,15 @@ The existing Playwright test will record performance timings as diagnostics and 
 | Initial browser resource entries | at most 8 | Detect accidental dependency/resource proliferation. |
 | External HTTP(S) dependencies in the loopback test | zero | Preserve independent offline rendering; any new external contract requires separate review. |
 
-At the current baseline, the combined source is approximately 120.6 KiB, below the 160 KiB budget. Local browser timings are reported for comparison but do not gate a build on unstable wall-clock values. Local-loopback timing is not a substitute for field data, CDN timing, load tests, or real-origin cache/header verification.
+At the exact-head CI run 39808627276 (test commit `19ec4e537940cbe3edc2fb3cfa1680943e658bb1`), all **69 checks passed** (0 FAIL, 0 BLOCKED). The report recorded:
+- combined critical source: 123,712 decoded bytes / 160 KiB budget;
+- initial decoded resources: 123,712 bytes;
+- initial transfer bytes in the loopback harness: 124,612;
+- initial subresource entries: 2 / 8 budget;
+- external HTTP(S) resources: 0;
+- DOMContentLoaded and load events: 112 ms each in that runner; response start: 13 ms.
+
+Artifact: [homepage-browser-smoke-39808627276, ID 12437554803](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39808627276). Timings are from a single loopback CI execution and are diagnostic only; they do not gate builds on unstable wall-clock values. This is not field data, a CDN measurement, a concurrent load test, or real-origin cache/header verification.
 
 The existing browser suite continues to check interactions and layout at 1440, 1280, 1024, 768, 390, and 320 CSS pixels. Its synthetic sample dataset does not prove behavior with large live datasets.
 
@@ -149,11 +157,11 @@ Before the free limit is approached, decide whether to upgrade, optimize, or deg
 
 ## 11. Next actions
 
-1. Run the augmented browser smoke workflow on the exact PR head and inspect the JSON source/resource-size budgets alongside the screenshots.
+1. Keep PR #147 open for exact-head review; its source-size and initial-resource checks passed on initial head 19ec4e537940cbe3edc2fb3cfa1680943e658bb1, and repeat the workflow on the documentation-reconciled head before promotion.
 2. Verify current main deployment status and keep the public preview route visibly labeled as a prototype.
-3. Finish the remaining homepage visual work in separate tested changes (information-bar spacing/divider, hero hierarchy, then background-layer candidates). Do not mix account/admin implementation into this workstream.
+3. Continue homepage presentation work in separate tested changes: first information-bar spacing/divider and hero hierarchy, then background-layer candidates. Do not mix account/admin implementation into this workstream.
 4. Before using GitHub Pages for anything beyond development preview, qualify a commercial production host. Cloudflare Pages/Workers is a candidate only; no-card and crypto-payment requirements remain unverified.
-5. Establish live-origin metrics and perform controlled load/soak tests only after a candidate commercial host has been qualified. Do not treat source budgets as a substitute for those tests.
+5. Establish live-origin metrics and perform controlled concurrent-load/soak tests only after a candidate commercial host has been qualified. Do not treat source budgets as a substitute for those tests.
 
 ## 12. Authoritative source record
 
