@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "preview/**"
+      - "_config.yml"
       - "development/audit/tests/homepage_browser_smoke.py"
       - ".github/workflows/homepage-browser-smoke.yml"
   push:
