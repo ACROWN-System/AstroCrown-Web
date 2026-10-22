@@ -77,7 +77,9 @@ Official sources:
 
 Cloudflare Email Service is not a free arbitrary-recipient sender: arbitrary-recipient outbound email requires Workers Paid; free sending is limited to verified destination addresses. Source: https://developers.cloudflare.com/email-service/
 
-**Architecture interpretation:** Workers + D1 is a credible low-traffic persistence candidate for an early prototype, but not approved yet. The no-card signup/deployment path must be tested, quotas must fail closed and visibly, database backup/export/restore must be exercised, and authentication crypto must fit the Free CPU budget. In particular, do not assume that a password-hashing configuration that works in the local Python server will fit a Worker request; measure CPU behavior and choose a maintained, appropriate implementation. The Workers Free limit is a hard engineering constraint, not a reason to silently weaken password hashing or rate limits.
+**No-card evidence:** Cloudflare's official Workers workshop explicitly says a free Cloudflare account can be created without a credit card: https://developers.cloudflare.com/labs/workers. This establishes a documented no-card path, rather than leaving it as an assumption. The owner's existing account's precise plan, current deployment permissions, and whether the intended app can remain within free limits still require operational verification.
+
+**Architecture interpretation:** Workers + D1 is a credible low-traffic persistence candidate for an early prototype, but not approved yet. Quotas must fail closed and visibly, database backup/export/restore must be exercised, and authentication crypto must fit the Free CPU budget. In particular, do not assume that a password-hashing configuration that works in the local Python server will fit a Worker request; measure CPU behavior and choose a maintained, appropriate implementation. The Workers Free limit is a hard engineering constraint, not a reason to silently weaken password hashing or rate limits.
 
 ### 2.4 GitHub Pages is only the static-host layer
 
@@ -95,6 +97,22 @@ Sources:
 - https://docs.ipfs.tech/how-to/pin-files/
 
 Therefore, P2P/agent/swarm architectures remain worth investigating for public assets, signed public records, replication, or user-controlled encrypted exports. They are not a drop-in trusted authority for private accounts, sessions, password reset, role authorization, or recovery. Any such design still needs an explicit model for persistence, key custody, write authorization, conflict resolution, abuse resistance, deletion, and availability. No specific free swarm/agent network is selected by this record.
+
+### 2.6 Deno Deploy — secondary runtime candidate; strict no-card limits unresolved
+
+Deno Deploy's current pricing page lists a Free plan with 1 million inbound requests/month, 20 GiB egress, 10 active CPU-hours/month, 1 GiB Deno KV storage, 1 million KV read units/month, and 500,000 KV write units/month. Source: https://deno.com/deploy/pricing
+
+However, Deno's official changelog states that organisations can only use restricted Free-plan limits until the organisation is verified by linking a credit card. Source: https://docs.deno.com/deploy/changelog/
+
+Therefore, do not assume that Deno's full published free quotas are available under the strict no-card rule. Keep it as a secondary candidate only if current documentation and/or an actual no-card account test proves the remaining restrictions and quotas are sufficient. Its current free tier also lists only one day of log retention, no reliability SLA, and no DPA on the pricing comparison; assess suitability and data obligations before storing real accounts. Deno KV is a platform-specific storage adapter, so keep export and migration requirements explicit.
+
+### 2.7 Render and Vercel — screened, not selected
+
+Render's current official free-deployment guide explicitly says Free instances are not for production applications. It also states that a Free web service has an ephemeral filesystem, local SQLite data can be lost on restart/spin-down/redeploy, and Free Postgres databases expire 30 days after creation. Source: https://render.com/docs/free. This excludes the documented free combination as a durable primary account store; it may still serve short-lived tests if data-loss behaviour is expected.
+
+Vercel's official Hobby plan is intended for personal projects and its current guidance describes non-commercial-use limits. Source: https://vercel.com/docs/plans/hobby. Do not select it for AstroCrown without first resolving eligibility under the project's commercial/product intent and current terms.
+
+These are evidence-based dispositions, not declarations that the vendors' paid services or every possible configuration are unusable.
 
 ## 3. Account routes to compare
 
