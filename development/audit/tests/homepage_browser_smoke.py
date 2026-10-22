@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import threading
 from functools import partial
@@ -24,6 +25,7 @@ CONSOLE_ERRORS: list[str] = []
 BLOCKED_NETWORK: list[dict] = []
 SOURCE_SIZE_METRICS: dict = {}
 PERFORMANCE_METRICS: dict = {}
+BROWSER_METRICS: dict = {}
 MAX_HTML_SOURCE_BYTES = 112 * 1024
 MAX_RUNTIME_ASSET_BYTES = 48 * 1024
 MAX_INITIAL_DECODED_BYTES = 160 * 1024
@@ -127,7 +129,17 @@ def main() -> int:
 
     try:
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser_executable = os.environ.get("CHROME_BIN")
+            launch_options = {"headless": True}
+            if browser_executable:
+                launch_options["executable_path"] = browser_executable
+            browser = playwright.chromium.launch(**launch_options)
+            BROWSER_METRICS.update({
+                "engine": "chromium",
+                "version": browser.version,
+                "launch_source": "runner-provided-browser" if browser_executable else "playwright-managed",
+                "executable_name": Path(browser_executable).name if browser_executable else None,
+            })
             context = browser.new_context(viewport={"width": 1440, "height": 1000}, device_scale_factor=1)
             context.route("**/*", guard_network)
             page = context.new_page()
@@ -262,6 +274,53 @@ def main() -> int:
                     "background": header_metrics["background"]
                 }
             )
+            layout_metrics = page.evaluate("""() => {
+              const header = document.querySelector(".site-header").getBoundingClientRect();
+              const shell = document.querySelector(".page-shell");
+              const shellBox = shell.getBoundingClientRect();
+              const shellStyle = getComputedStyle(shell);
+              const contentWidth = shellBox.width - parseFloat(shellStyle.paddingLeft) - parseFloat(shellStyle.paddingRight);
+              const info = document.querySelector(".info-bar");
+              const infoBox = info.getBoundingClientRect();
+              const infoStyle = getComputedStyle(info);
+              const priorityStyle = getComputedStyle(document.querySelector(".info-priority"));
+              const heroBox = document.querySelector(".hero-section").getBoundingClientRect();
+              return {
+                headerToInfoGap: Math.round((infoBox.top - header.bottom) * 100) / 100,
+                infoBarHeight: Math.round(infoBox.height * 100) / 100,
+                infoBarWidth: Math.round(infoBox.width * 100) / 100,
+                infoBarWidthPercent: Math.round(infoBox.width / contentWidth * 10000) / 100,
+                infoOuterBorderTop: parseFloat(infoStyle.borderTopWidth),
+                priorityDividerWidth: parseFloat(priorityStyle.borderRightWidth),
+                heroWidth: Math.round(heroBox.width * 100) / 100,
+                heroWidthPercent: Math.round(heroBox.width / contentWidth * 10000) / 100,
+                contentWidth: Math.round(contentWidth * 100) / 100
+              };
+            }""")
+            check(
+                "desktop information bar has the target 45px header clearance",
+                44.5 <= layout_metrics["headerToInfoGap"] <= 45.5,
+                layout_metrics,
+            )
+            check(
+                "desktop information bar preserves its 53px target height and 78% width",
+                52.5 <= layout_metrics["infoBarHeight"] <= 53.5
+                and 77.5 <= layout_metrics["infoBarWidthPercent"] <= 78.5,
+                layout_metrics,
+            )
+            check(
+                "information bar outer outline and priority divider have the evaluated 2px weight",
+                layout_metrics["infoOuterBorderTop"] == 2
+                and layout_metrics["priorityDividerWidth"] == 2,
+                layout_metrics,
+            )
+            check(
+                "desktop hero-card group uses the evaluated 88% width cap",
+                87.5 <= layout_metrics["heroWidthPercent"] <= 88.5
+                and layout_metrics["heroWidth"] <= 1320,
+                layout_metrics,
+            )
+
             resources = page.evaluate("() => performance.getEntriesByType('resource').map(x => x.name)")
             check("same-origin CSS and account JS are loaded",
                   any("account-prototype.css" in x for x in resources) and any("account-ui.js" in x for x in resources),
@@ -528,6 +587,7 @@ def main() -> int:
             "blocked_non_loopback_requests": BLOCKED_NETWORK,
             "source_size_budget": SOURCE_SIZE_METRICS,
             "initial_navigation_performance": PERFORMANCE_METRICS,
+            "browser": BROWSER_METRICS,
         },
     }
     (out / "homepage-browser-smoke-report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")

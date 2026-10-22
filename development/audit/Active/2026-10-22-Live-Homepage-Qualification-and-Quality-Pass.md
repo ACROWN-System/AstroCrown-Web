@@ -1,18 +1,18 @@
 # Active Navigation Plan — Live Homepage Qualification and Quality Pass
 
 **Date:** 2026-10-22  
-**Status:** ACTIVE — PR #146 merged as a08220b66830b467a6be7fc93c403d5c84be02f2; the homepage preview header is deployed and its post-merge 63-check browser suite passes. Static performance budgets and provider-independent capacity/transition gates are now the active next work.  
+**Status:** ACTIVE — PR #147 merged as `8f51ff4b7c03684e27b0add89327b4f39a57948c`; its 69-check homepage budget suite passed. PR #148's homepage-only visual candidate has 73/73 browser checks and inspected desktop/full-page/mobile screenshots on code/test head `0b7d8b6ef17a44d607d006639b5166362cc60f10`; the next step is a fresh exact-head check after the evidence log update, then merge only if unchanged.  
 **Objective:** Evolve the AstroCrown homepage prototype into a polished and operable website through persistent, evidence-led refinement while preserving the $0/no-card preference, truthfulness about capabilities, and separation from production.
 
 ## Source of truth and exact baseline
 
 - **Repository:** https://github.com/ACROWN-System/AstroCrown-Web
-- **Main baseline after PR #146 merged:** `a08220b66830b467a6be7fc93c403d5c84be02f2`
+- **Main baseline after PR #147 merged:** `8f51ff4b7c03684e27b0add89327b4f39a57948c`
 - **Current preview route:** https://acrown-system.github.io/AstroCrown-Web/preview/
 - **Current preview source:** `preview/index.html` (blob SHA `878015793ec2551f208b25d8373c0143e92df5ee`)
 - **Account demo JavaScript:** `preview/account-ui.js` (blob SHA `c2c1775014d54949bdf1b6efb986f9145dcbe3b6`)
 - **Account demo CSS:** `preview/account-prototype.css` (blob SHA `ffbd85057fc358c84331c2cf6ec47ef45bd3c67c`)
-- **Repeatable browser suite:** `development/audit/tests/homepage_browser_smoke.py`
+- **Repeatable browser suite:** `development/audit/tests/homepage_browser_smoke.py` (source/initial-resource budgets and rendered header/bar/hero metrics; latest main blob `ac988229b088d8c4642d641f8893e55b5b162c74`).
 - **Browser workflow:** `.github/workflows/homepage-browser-smoke.yml`
 - **PR #144:** merged as `be8dbea754924a439346f5dcde595b8f443da555`; final exact-head browser run [39770755613](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39770755613).
 - **PR #145:** merged as `b3bad481cb20b69f9d0a05878e83e66168f54e80`, carrying the persistence protocol and active work checkpoint onto current main.
@@ -72,21 +72,20 @@ The active section sources are under `development/index-section/`; shared conven
 
 1. **Header (R-005/R-019 and Colors reference):** `#102947` is now selected for the header after six candidate calculations, rendered comparison and exact-head CI tests. Its nav-text contrast was measured at 11.57:1 and Gold at 10.47:1. Other surfaces, full contrast coverage, actual logo asset selection and complete assistive-technology review remain open.
 2. **Header geometry:** current tested target is approximately 60 px header and 50 px logo, with 4.5 / 5.5 px top/bottom clearance at 1440 px. Header heights were measured at 1440, 1280, 1024, 768, 390 and 320 px; no document-level horizontal overflow was present, though complete responsive interaction testing remains open.
-3. **Information bar (R-020):** target gap about 45 px and height about 53 px; current gap 39 px and height 53 px. Current border/divider are 1 px, while legacy detail says approximately 5 px. Evaluate hierarchy, content space, warning color semantics, readability, and responsive behavior before deciding thickness.
-4. **Hero cards (R-021):** design dimensions from user-task and information density, not arbitrary percentages. The current row is about 82% of the main content; confirm the visual relationship with information bar and market workspace before changing it.
+3. **Information bar (R-020):** tested preview candidate now measures 45 px from header to bar, 53 px total height, 2 px yellow outer border/divider, and 78% width at 1440 px. Screenshot review found the border more legible without crowding text. The 5 px legacy suggestion remains rejected for this candidate because it would be disproportionate to the bar height.
+4. **Hero cards (R-021):** tested preview candidate uses 88% of the content width capped at 1,320 px. At the 1440 px desktop, the wider cards reduce the right-side empty space and better align with the market context/table hierarchy. Six viewport checks show no document-level overflow.
 5. **Background (R-014–R-018/R-036):** the spec describes distinct deep-space, dimmed-object, planetary, rocky-planet, spiral-nebula and alpha-preserving foreground layers as requirements/candidates. The current page mainly uses CSS gradients. Inspect source status and intended asset compositing before choosing CSS, transparent artwork, static imagery, or motion. Keep any image/video generator commercial-use and $0 qualification separate from design exploration.
 6. **Directory/scroll:** preserve native page scrolling and the specified scroll-handoff intent; verify implementation against R-012/R-013 before altering nested scroll behavior. Do not add a library to solve a behavior already achievable by simpler means.
 7. **Data integrity:** sentiment, winners/losers, influence weights and market table numbers are illustrative. Do not call a single numeric aggregation “consensus” without documented provider-scale normalization, timestamps, disagreement/missing-source behavior and a tested method. Do not imply influence bars establish causation. Actual data-provider integration remains out of scope until separate rights, access, reliability, $0/no-card and provenance gates pass.
 
 ## Continuation plan — next concrete work
 
-1. Revalidate current main, open PRs and latest workflow/deployment state before every new implementation. The latest verified main at this checkpoint refresh is `b3bad481cb20b69f9d0a05878e83e66168f54e80`.
-2. PR #144's test foundation is merged; its final exact-head run [39770755613](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39770755613) passed 60 checks. Inspect report/screenshot artifacts rather than relying on a green badge. Do not repeat the blocked navigation attempts as though they were new evidence.
-3. PR #145 is merged; Section 19 is on main. PR #143 was superseded and remains closed.
-4. PR #146 is merged as a08220b66830b467a6be7fc93c403d5c84be02f2. The post-merge Pages build/deployment run 39807222283 passed, and Homepage Browser Smoke run 39807222430 passed 63/63 checks; its report artifact 12437958064 has been inspected.
-5. **Current task:** add repeatable source-size and initial-resource budgets to the homepage smoke suite, and record a provider-independent capacity/migration plan. Preserve the preview-only publishing boundary. Accounts, admin auth, live market data, AI/SI, and GPU integrations are not being implemented in this block.
-6. After the budget suite passes on the exact PR head, continue homepage-only visual refinements (information-bar spacing/divider, hero hierarchy, then background layers), each in a separate tested change.
-7. GitHub Pages is a development-preview host only for this project; qualify a commercial provider, real-origin telemetry, traffic/load testing, no-card signup, and crypto-payment renewal before a public commercial launch. Keep these separate from the loopback CI evidence.
+1. Revalidate current main, open PRs and latest workflow/deployment state before each implementation. The latest verified main base for PR #148 is `8f51ff4b7c03684e27b0add89327b4f39a57948c`; PR #148 remains isolated from the root publishing configuration.
+2. PR #147 merged the static performance/resource budgets and provider-independent capacity transition plan. Its exact-head 69-check suite and post-merge Pages deployment/browser suite passed; evidence is recorded below.
+3. **Current task:** verify the documented final PR #148 head reruns the 73-check homepage smoke with rendered geometry assertions and inspect its screenshots/report. If unchanged and successful, merge PR #148 as a preview-only change; immediately verify the Pages deployment and post-merge main browser artifact.
+4. After PR #148 is accepted, evaluate the required deep-space/planet/nebula/alpha background layers (R-014–R-018/R-036) as a separate, size-budgeted visual asset experiment. Keep first-render independence and asset license/commercial-use provenance as hard gates.
+5. Keep user account creation, admin authorization, wallet enrolment, live data, AI/SI calls and GPU services outside this work block. These should remain independent, optional service boundaries rather than dependencies of homepage rendering.
+6. GitHub Pages remains a development-preview host; before a commercial launch, qualify a commercial host, no-card signup, crypto payment/top-up/renewal, cache and security headers, real-origin telemetry and concurrent-load/soak behavior. Maintain the 40/50/60/70% capacity warning/migration/protection thresholds in the scale-readiness plan, and do not treat loopback test timing as production evidence.
 
 ## Session/resume log
 
@@ -167,4 +166,7 @@ The user resumed work and narrowed the current block to the public homepage only
 - PR #147 initial test commit 19ec4e537940cbe3edc2fb3cfa1680943e658bb1 passed Homepage Browser Smoke, NOVA RSI CI, External Review Pipeline CI, and CodeQL; artifact 12437554803 was inspected. Documentation/test-suite reconciliation is being committed separately, so repeat the affected checks against that new head.
 - Important policy discovery: GitHub Pages' official current guidance restricts free Pages hosting for an online business/commercial transactions/commercial SaaS. Keep Pages as an explicitly labelled development preview and qualify a distinct host before commercial launch.
 - No account backend, admin authorization, production-root switch, live data source, paid plan, provider secret or payment rail was changed.
-- Next evidence required: rerun CI for the documentation-reconciled PR #147 head, review the updated diff, then continue the homepage-only visual pass. Real-origin performance/load tests remain for after a commercial candidate host has been qualified.
+- PR #147 merged as `8f51ff4b7c03684e27b0add89327b4f39a57948c`; its exact-head smoke run `39809210762` passed 69/69 and artifact `12438498416` was inspected. Post-merge main smoke run `39809469612`, Pages deployment `39809468231`, and OpenSSF Scorecard `39809469429` completed successfully. These are test/deployment results, not evidence of production-origin latency or concurrent-load capacity.
+- PR #148 code/test head `0b7d8b6ef17a44d607d006639b5166362cc60f10` passed Homepage Browser Smoke run `39812122166` (73/73). Artifact `12439334381` was downloaded and its JSON and desktop/full-page/390 px mobile screenshots were inspected. The report records a 45 px header-to-information gap, 53 px bar, 2 px borders, 78% bar width, 88% hero width, 123,677 decoded initial bytes, three resource entries including the no-content favicon, no external HTTP(S) requests, and no page/console errors.
+- The earlier run `39810200236` was cancelled after remaining stuck in Chromium/system-dependency installation. The replacement workflow prefers the installed runner Chrome and retains the Playwright-managed fallback; the actual replacement browser-test step passed. PR #148's doc-only evidence update will need one fresh exact-head run before merge.
+- PR #148 does not change root Pages source or publishing configuration. Real-origin performance/load tests remain for after a commercial candidate host has been qualified.
