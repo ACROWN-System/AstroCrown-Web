@@ -1,0 +1,60 @@
+name: Homepage Browser Smoke
+
+on:
+  pull_request:
+    paths:
+      - "preview/**"
+      - "_config.yml"
+      - "development/audit/tests/homepage_browser_smoke.py"
+      - ".github/workflows/homepage-browser-smoke.yml"
+  push:
+    branches: [main]
+    paths:
+      - "preview/**"
+      - "development/audit/tests/homepage_browser_smoke.py"
+      - ".github/workflows/homepage-browser-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: homepage-browser-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-smoke:
+    name: Chromium interaction and layout smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned Playwright test dependency
+        run: python -m pip install --disable-pip-version-check "playwright==1.57.0"
+
+      - name: Install Chromium headless shell and system dependencies
+        run: python -m playwright install --with-deps --only-shell chromium
+
+      - name: Run homepage browser smoke checks
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/homepage-browser-smoke"
+          python development/audit/tests/homepage_browser_smoke.py \
+            --output-dir "$RUNNER_TEMP/homepage-browser-smoke"
+
+      - name: Upload screenshots and machine-readable report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: homepage-browser-smoke-${{ github.run_id }}
+          path: ${{ runner.temp }}/homepage-browser-smoke/
+          if-no-files-found: warn
+          retention-days: 7
