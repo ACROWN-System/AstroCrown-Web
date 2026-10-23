@@ -146,6 +146,8 @@ Every reference must identify the version and the way it is used. Mapping select
 
 The Benchmark is an optional public recognition programme, not the reason a user must buy the security service. Customers who do not seek recognition must receive the same report quality for the same assessment scope.
 
+There must be no separate Benchmark entry fee, ranking surcharge, paid score or higher award probability by subscription tier. The same benchmark suite must be applied to all entrants in the category. If that suite cannot be offered without requiring a paid upgrade, the competitive edition must be postponed or supported by a disclosed, neutral, no-cost allocation policy. Paid-tier access must never buy a ranking advantage.
+
 Public participation requires separate, affirmative opt-in and verified authority over the assessed asset. Service registration, payment, a security scan, or accepting general terms must not automatically enroll a customer in the public Benchmark.
 
 ### 5.2 Comparable categories
@@ -183,7 +185,8 @@ The public Benchmark is a date-bound achievement record, not a live status dashb
 
 - Publish final rankings only after the edition's review and appeal window.
 - Public records show the edition, category, assessment date, method version and earned placement.
-- Do not publish non-winning entrants by default; do not label non-entrants, withdrawn entrants or non-qualifying entries as failed, held, suspicious or unsafe.
+- Publish only the award recipients in the public competitive listing. Do not publish scores or standings for non-winners under this charter.
+- Do not label non-entrants, non-winning entrants, withdrawn entrants or non-qualifying entries as failed, held, suspicious or unsafe.
 - Absence from a public listing never means that an asset failed, was tested, declined assessment, or is currently less secure.
 - Do not turn routine private score declines into public downgrade notices or disappearance signals.
 - A historical award does not prove present-day security. The date, assessed scope and method version must remain visible with the award record.
