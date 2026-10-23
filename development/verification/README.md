@@ -23,6 +23,7 @@ This subsystem preserves and operationalizes knowledge about external and intern
 - operations/ — status, schema, tracker, changelog.
 - evidence/ — source provenance and future snapshots/extracts.
 - benchmarks/ — benchmark-specific artifacts when justified.
+- [AstroCrown Security Assessment Service and Benchmark Governance Charter](benchmarks/ASTROCROWN-SECURITY-ASSESSMENT-AND-BENCHMARK-CHARTER.md) — proposed assessment service, pricing, optional public awards and Council-independence rules; not approved for public launch.
 - assessments/ — AstroCrown-specific pathway assessments.
 - paths/ — detailed external execution routes.
 - archive/ — dated historical snapshots, including the October 2026 X research lineage.
