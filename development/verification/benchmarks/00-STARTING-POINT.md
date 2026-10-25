@@ -52,7 +52,7 @@ For each capped plan/task, calculate:
 - `C_internal_alloc`: conservative share of our own service-operation and NOVA use, qualification, live monitoring, regression/security checks and maintenance required to deliver the service.
 - `C_free_alloc`: the explicit funded cost of any free-user allowance/monitoring we choose to offer.
 - `C_risk`: initially 20% contingency on variable provider/platform costs, until evidence supports a different buffer.
-- `p`: the verified variable payment-processing rate; `m`: a proposed minimum 30% contribution margin after allocated costs and payment processing, before income tax and corporate-level costs not already allocated.
+- `p`: the verified variable payment-processing rate; `m`: a proposed minimum 30% operating contribution margin after all direct and allocated service costs and payment processing; allocate internal use, maintenance, support and service-specific overhead rather than leaving them unfunded. Handle applicable taxes separately.
 
 `P_floor = ROUND_UP((C_provider_max + C_platform + C_internal_alloc + C_free_alloc + C_risk + fixed_payment_fees) / (1 - p - m))`
 
