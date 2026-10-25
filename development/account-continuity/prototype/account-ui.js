@@ -351,13 +351,16 @@
     var message = created
       ? "A development test account was created. Email ownership has not been verified and no email or newsletter message was sent."
       : "You are signed in to the development test account. This does not grant production access or administrator privileges.";
+    var persistenceNote = browserPreviewMode
+      ? "You can close this window without signing out. This browser demo keeps the test state only in this page's memory and loses it on reload."
+      : "You can close this window without signing out. The local test session remains on the loopback server until it expires or you sign out.";
     content.innerHTML =
       '<div class="account-success-panel">' +
         '<div class="account-success-mark" aria-hidden="true">✓</div>' +
         '<h3 class="account-success-heading">' + escapeHtml(heading) + '</h3>' +
         '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
         '<button class="account-primary" type="button" id="open-account-hub">Open your account</button>' +
-        '<p class="account-success-small">You can close this window at any time. Your test sign-in state remains active until you sign out, the session expires, or you reload the disposable browser demo.</p>' +
+        '<p class="account-success-small">' + escapeHtml(persistenceNote) + '</p>' +
       '</div>';
   }
 
