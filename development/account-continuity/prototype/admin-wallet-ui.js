@@ -178,14 +178,16 @@
         throw new Error("No compatible browser wallet is available. Wallet access is only needed here, not for ordinary account sign-in.");
       }
 
+      var walletOptions = await requestJson("/api/admin/wallet-options", {});
+      if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length === 0) {
+        throw new Error("No administrator wallets are registered for this account. The authorized local owner must provision a wallet before admin access can be used.");
+      }
       feedback("Requesting the wallet only because you explicitly selected administrator access…");
       var accounts = await provider.request({ method: "eth_requestAccounts" });
-      if (!Array.isArray(accounts) || !accounts.length || typeof accounts[0] !== "string") {
-        throw new Error("No wallet account was selected.");
-      }
-      var address = accounts[0];
-      if (!/^0x[0-9a-f]{40}$/i.test(address)) {
-        throw new Error("The connected provider returned an invalid wallet address.");
+      if (!Array.isArray(accounts) || !accounts.length || accounts.some(function (item) {
+        return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item);
+      })) {
+        throw new Error("The connected provider did not return a valid wallet account list.");
       }
       var chainHex = await provider.request({ method: "eth_chainId" });
       var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
@@ -194,8 +196,19 @@
       if (!Number.isSafeInteger(chainId) || chainId <= 0) {
         throw new Error("The connected wallet did not return a valid network identifier.");
       }
+      var matchingWallet = walletOptions.wallets.find(function (wallet) {
+        return wallet && typeof wallet.address === "string" &&
+          wallet.chainId === chainId &&
+          accounts.some(function (connectedAddress) {
+            return connectedAddress.toLowerCase() === wallet.address.toLowerCase();
+          });
+      });
+      if (!matchingWallet) {
+        throw new Error("None of the connected wallet accounts matches a registered administrator wallet on this network. Switch to one of your registered wallets and retry. No signature was requested.");
+      }
+      var address = matchingWallet.address;
 
-      feedback("Requesting a short-lived proof-of-control challenge from the local server…");
+      feedback("Requesting a short-lived proof-of-control challenge for the selected registered wallet…");
       var challenge = await requestJson("/api/admin/wallet-challenge", {
         address: address,
         chainId: chainId
