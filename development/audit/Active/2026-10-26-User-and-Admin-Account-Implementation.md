@@ -97,3 +97,33 @@ Production authentication stays BLOCKED until at least:
 ## 9. Preservation
 
 This work is confined to development files and the existing draft pull request. It must not update the root homepage, remove or overwrite backups, deploy an authentication service, use real credentials, or change the wallet-first direction of any unrelated system.
+
+## 10. Role-aware administrator entry and confirmation dialog — 2026-10-26
+
+### Decision and visible behavior
+
+- The account hub renders the **Administrator access** section only when the latest server-owned account state reports `adminRoleAssigned === true`. A normal `user` account renders no administrator section, button or disabled placeholder.
+- The server-assigned role, not the email pattern, browser storage, wallet connection or client state, determines visibility. The UI condition is a convenience only; the backend remains authoritative.
+- Every server-reported admin account receives an administrator entry action, including an account with no enrolled wallet. The section explains whether a wallet step-up is required or whether a wallet is not yet provisioned.
+- Clicking the entry opens a dedicated confirmation dialog. Nothing requests a wallet until the user chooses **Continue to administrator access**; **Cancel**, the close control, Escape or backdrop dismissal returns the user to the account hub without opening a wallet prompt.
+- After Continue, the existing access routine re-fetches `/api/account/status`, checks authentication and the server-owned admin role, and then obtains that account's registered wallet list. If the server says the current session already has a valid step-up, the console route is still revalidated by the backend; otherwise a registered wallet and fresh signature are required.
+- The separate wallet-signature review dialog continues to show the exact SIWE message before signature approval. The signature is proof of control only; it does not submit a transaction, create a role or replace account authentication.
+- If an administrator role has been revoked while a page is open, a subsequent status refresh hides the entry. Any stale visible action remains unable to bypass server-side role, session, wallet-registration or step-up checks.
+
+### Regression coverage added
+
+- Browser coverage asserts that an ordinary account has no administrator card, and that direct navigation to the admin route does not open the console or prompt for a wallet.
+- A browser-test-only response fixture simulates a server status response for an already assigned admin role to verify that the conditional entry appears, opens the confirmation dialog, and can be cancelled without requesting a wallet. The fixture is not account provisioning and does not grant server privileges.
+- After removing that test fixture, the browser test refreshes the real local account status and checks that the administrator section disappears for the regular account.
+- Existing Python/HTTP tests continue to cover registration role-escalation attempts, role-without-step-up denial, fresh-wallet challenge validation, account/session binding, challenge replay, wallet enrollment limits, audit events and revocation.
+- Exact-head automated verification is required for this increment; the current PR workflow results are linked in [PR #141](https://github.com/ACROWN-System/AstroCrown-Web/pull/141). Do not claim the update passes until the account headless-browser test and the other tracked workflows complete successfully on the same head.
+
+### Impact analysis
+
+**If completed:** administrators can discover a clear, separate entry within their ordinary account, while regular users see no admin control. An explicit confirmation step prevents a click alone from launching a wallet request and keeps role discovery separate from proof of wallet control.
+
+**If omitted:** an administrator entry can be difficult to discover, and wallet interaction may begin immediately after a button click instead of first explaining the action. Neither state may weaken server-side authorization.
+
+### Preservation
+
+Development-only change under PR #141. No public homepage deployment, production authentication, server-side admin provisioning endpoint, public role creation, transaction signing or production permission is added. Keep PR #141 draft and unmerged.
