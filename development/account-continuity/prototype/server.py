@@ -574,8 +574,9 @@ class AccountApplication:
             except sqlite3.IntegrityError:
                 raise ApiError(409, "An account with this email already exists. Try Log In.")
             token, expires = self.new_session(account_id)
-            with self.connect() as db:
-                account = db.execute("SELECT * FROM accounts WHERE account_id = ?", (account_id,)).fetchone()
+            account, expires = self.account_for_session(token)
+            if account is None:
+                raise ApiError(500, "The local account session could not be initialized.")
             result = self.account_summary(account, expires)
             result["message"] = (
                 "Development test account created. Email is not verified and no email or newsletter message was sent."
@@ -595,8 +596,9 @@ class AccountApplication:
                 raise ApiError(401, "Email address or password did not match.")
             self.rate_events.pop(("login", email), None)
             token, expires = self.new_session(account["account_id"])
-            with self.connect() as db:
-                account = db.execute("SELECT * FROM accounts WHERE account_id = ?", (account["account_id"],)).fetchone()
+            account, expires = self.account_for_session(token)
+            if account is None:
+                raise ApiError(500, "The local account session could not be initialized.")
             return 200, self.account_summary(account, expires), self.cookie_header(token)
 
         if path == "/api/account/avatar":
@@ -611,10 +613,9 @@ class AccountApplication:
                     "UPDATE accounts SET avatar_id = ? WHERE account_id = ?",
                     (avatar_id, account["account_id"]),
                 )
-                account = db.execute(
-                    "SELECT * FROM accounts WHERE account_id = ?",
-                    (account["account_id"],),
-                ).fetchone()
+            account, expires = self.account_for_session(self.get_cookie(handler))
+            if account is None:
+                raise ApiError(401, "The account session is no longer valid.")
             result = self.account_summary(account, expires)
             result["message"] = "The avatar was updated for this local test account."
             return 200, result, None
