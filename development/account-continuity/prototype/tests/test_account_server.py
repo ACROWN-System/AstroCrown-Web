@@ -10,9 +10,23 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from eth_account import Account
+from eth_account.messages import encode_defunct
+
 PROTOTYPE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROTOTYPE_DIR))
 from server import AccountApplication, TERMS_VERSION, create_server  # noqa: E402
+from provision_admin import grant_admin, revoke_admin  # noqa: E402
+
+# Public deterministic fixture keys for local tests only. Never use these for funds.
+TEST_WALLET_KEY_A = "0x" + "11" * 32
+TEST_WALLET_KEY_B = "0x" + "22" * 32
+TEST_WALLET_KEY_C = "0x" + "33" * 32
+TEST_WALLET_KEY_D = "0x" + "44" * 32
+TEST_WALLET_A = Account.from_key(TEST_WALLET_KEY_A)
+TEST_WALLET_B = Account.from_key(TEST_WALLET_KEY_B)
+TEST_WALLET_C = Account.from_key(TEST_WALLET_KEY_C)
+TEST_WALLET_D = Account.from_key(TEST_WALLET_KEY_D)
 
 PASSWORD = "AstroCrown-Local-Test-2026!"
 EMAIL = "test-user@example.test"
@@ -209,6 +223,217 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         status, _, _ = self.request("/api/account/avatar", {"avatarId": "moon"})
         self.assertEqual(status, 401, "a signed-out session must not change account preferences")
+
+    def test_admin_role_and_wallet_are_separate_and_wallet_step_up_authorizes_only_its_account_session(self):
+        email = "admin-step-up@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+
+        provisioned = grant_admin(
+            self.app,
+            email=email,
+            wallet_address=TEST_WALLET_A.address,
+            chain_id=1,
+            reason="Owner-approved deterministic local test provisioning",
+        )
+        self.assertEqual(provisioned["role"], "admin")
+        self.assertEqual(provisioned["active_wallet_count"], 1)
+
+        status, before, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertTrue(before["adminRoleAssigned"])
+        self.assertFalse(before["adminWalletAuthenticated"])
+        self.assertFalse(before["adminSessionAuthorized"])
+        self.assertFalse(before["admin"], "an assigned role must not be enough to enter admin functions")
+
+        status, admin_status, _ = self.request("/api/admin/status")
+        self.assertEqual(status, 200)
+        self.assertTrue(admin_status["adminRoleAssigned"])
+        self.assertFalse(admin_status["adminSessionAuthorized"])
+
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, challenge)
+        message = challenge["message"]
+        self.assertIn("Verify an already-authorized AstroCrown administrator session", message)
+        self.assertIn("does not authorize a transaction", message)
+        signature = Account.sign_message(
+            encode_defunct(text=message), private_key=TEST_WALLET_KEY_A
+        ).signature.hex()
+        if not signature.startswith("0x"):
+            signature = "0x" + signature
+
+        status, verified, _ = self.request(
+            "/api/admin/wallet-verify", {"message": message, "signature": signature}
+        )
+        self.assertEqual(status, 200, verified)
+        self.assertTrue(verified["adminWalletAuthenticated"])
+        self.assertTrue(verified["adminSessionAuthorized"])
+        self.assertTrue(verified["admin"])
+        self.assertEqual(verified["adminWalletAddress"], TEST_WALLET_A.address)
+        self.assertTrue(verified["adminSessionExpiresAt"])
+
+        status, replay, _ = self.request(
+            "/api/admin/wallet-verify", {"message": message, "signature": signature}
+        )
+        self.assertEqual(status, 401, replay)
+        status, still_admin, _ = self.request("/api/admin/status")
+        self.assertEqual(status, 200)
+        self.assertTrue(still_admin["adminSessionAuthorized"])
+
+        status, ended, _ = self.request("/api/admin/wallet-logout", {})
+        self.assertEqual(status, 200, ended)
+        self.assertTrue(ended["authenticated"], "ending admin step-up must not sign out the ordinary account")
+        self.assertTrue(ended["adminRoleAssigned"])
+        self.assertFalse(ended["admin"])
+        status, no_longer_admin, _ = self.request("/api/admin/status")
+        self.assertEqual(status, 200)
+        self.assertFalse(no_longer_admin["adminSessionAuthorized"])
+
+    def test_admin_wallet_challenge_rejects_unenrolled_wallet_wrong_signer_and_other_session(self):
+        first_email = "admin-binding-first@example.test"
+        second_email = "admin-binding-second@example.test"
+        status, _, _ = self.create_account(email=first_email)
+        grant_admin(
+            self.app, email=first_email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+            reason="Owner-approved first account test",
+        )
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_B.address, "chainId": 1},
+        )
+        self.assertEqual(status, 403, challenge)
+
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, challenge)
+        message = challenge["message"]
+        wrong_signature = Account.sign_message(
+            encode_defunct(text=message), private_key=TEST_WALLET_KEY_B
+        ).signature.hex()
+        if not wrong_signature.startswith("0x"):
+            wrong_signature = "0x" + wrong_signature
+        status, rejected, _ = self.request(
+            "/api/admin/wallet-verify",
+            {"message": message, "signature": wrong_signature},
+        )
+        self.assertEqual(status, 401, rejected)
+        status, still_denied, _ = self.request("/api/admin/status")
+        self.assertEqual(status, 200)
+        self.assertFalse(still_denied["adminSessionAuthorized"])
+
+        # A new challenge cannot be completed using a different admin's account
+        # cookie, even if the submitted wallet message/signature itself is valid.
+        status, new_challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, new_challenge)
+        message = new_challenge["message"]
+        signature = Account.sign_message(
+            encode_defunct(text=message), private_key=TEST_WALLET_KEY_A
+        ).signature.hex()
+        if not signature.startswith("0x"):
+            signature = "0x" + signature
+
+        other_cookies = http.cookiejar.CookieJar()
+        other_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(other_cookies)
+        )
+        status, second_created, _ = self.create_account(
+            email=second_email,
+            opener=other_opener,
+        )
+        self.assertEqual(status, 201, second_created)
+        grant_admin(
+            self.app, email=second_email, wallet_address=TEST_WALLET_B.address, chain_id=1,
+            reason="Owner-approved second account test",
+        )
+        status, cross_session, _ = self.request(
+            "/api/admin/wallet-verify",
+            {"message": message, "signature": signature},
+            opener=other_opener,
+        )
+        self.assertEqual(status, 401, cross_session)
+
+        status, correct_session, _ = self.request(
+            "/api/admin/wallet-verify", {"message": message, "signature": signature}
+        )
+        self.assertEqual(status, 200, correct_session)
+        self.assertTrue(correct_session["adminSessionAuthorized"])
+
+    def test_owner_cli_caps_admin_wallets_and_revoke_clears_privileged_sessions(self):
+        email = "admin-wallet-count@example.test"
+        status, _, _ = self.create_account(email=email)
+        grant_admin(
+            self.app, email=email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+            reason="Owner-approved first wallet for local cap test",
+        )
+        grant_admin(
+            self.app, email=email, wallet_address=TEST_WALLET_B.address, chain_id=1,
+            reason="Owner-approved second wallet for local cap test",
+        )
+        grant_admin(
+            self.app, email=email, wallet_address=TEST_WALLET_C.address, chain_id=1,
+            reason="Owner-approved third wallet for local cap test",
+        )
+        with self.assertRaisesRegex(ValueError, "no more than three"):
+            grant_admin(
+                self.app, email=email, wallet_address=TEST_WALLET_D.address, chain_id=1,
+                reason="Attempted fourth wallet must be rejected",
+            )
+        with self.assertRaisesRegex(ValueError, "different local admin account"):
+            other_email = "admin-wallet-collision@example.test"
+            status, _, _ = self.create_account(email=other_email)
+            self.assertEqual(status, 201)
+            grant_admin(
+                self.app, email=other_email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+                reason="Attempted cross-account wallet reuse must fail",
+            )
+
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, challenge)
+        message = challenge["message"]
+        signature = Account.sign_message(
+            encode_defunct(text=message), private_key=TEST_WALLET_KEY_A
+        ).signature.hex()
+        if not signature.startswith("0x"):
+            signature = "0x" + signature
+        status, authorized, _ = self.request(
+            "/api/admin/wallet-verify", {"message": message, "signature": signature}
+        )
+        self.assertEqual(status, 200, authorized)
+        self.assertTrue(authorized["admin"])
+
+        revoked = revoke_admin(
+            self.app, email=email, reason="Owner-approved local administrator revocation"
+        )
+        self.assertEqual(revoked["role"], "user")
+        self.assertEqual(revoked["revoked_wallet_count"], 3)
+        status, after, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertEqual(after["role"], "user")
+        self.assertFalse(after["adminRoleAssigned"])
+        self.assertFalse(after["adminWalletAuthenticated"])
+        self.assertFalse(after["admin"])
+        status, denied, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 403, denied)
+        with self.app.connect() as db:
+            audit = db.execute(
+                "SELECT event_type, actor, reason FROM account_admin_audit ORDER BY created_at"
+            ).fetchall()
+        self.assertGreaterEqual(len(audit), 5)
+        self.assertTrue(all(row["reason"] for row in audit))
 
     def test_newsletter_preference_is_separate_and_defaults_to_off(self):
         status, data, _ = self.create_account()
