@@ -24,7 +24,7 @@ Define one understandable account foundation for ordinary users and administrato
 7. Admin access is not self-service. There must be no public “Sign up as admin”, first-user privilege, client-side role toggle or promotion because an address connected first.
 8. Administrator wallet policy: up to three registered wallets; a valid proof-of-control signature from any one enrolled wallet can satisfy the wallet step for an already-authorized administrator. This is **one-of-N alternative access**, not a 2-of-3 multisignature transaction. The server must also authenticate the ordinary account and confirm its existing admin role.
 9. Losing all enrolled admin wallets requires a formal recovery request to the Imperial HSIAN authority (the owner and/or a specifically authorized NOVA-governed process). NOVA may collect evidence and execute only expressly authorized actions. It must not independently promote itself or an unverified claimant.
-10. The current browser preview is memory-only and disposable; the local SQLite server is loopback-only. Neither is production authentication. The local SQLite schema has a server-owned role field defaulting to `user`; registration ignores client-supplied role/admin flags. A role value alone does not grant admin access: the prototype deliberately has no admin provisioning, wallet enrollment, wallet-verified admin session, or protected admin endpoint. Root/production website files remain unchanged by this prototype work.
+10. The browser preview is memory-only and disposable; the local SQLite server is loopback-only. Neither is production authentication. New accounts default to the server-owned `user` role and registration ignores role/admin flags. A local owner-operated CLI can provision an existing test account and up to three wallet addresses; a fresh SIWE signature from one registered wallet then provides a maximum ten-minute step-up on the already-authenticated account session. A separate read-only admin console verifies that state with the backend. There is no public role/wallet provisioning endpoint, in-app wallet enrolment/removal, production admin operation, or all-wallet-loss recovery. Root/production website files remain unchanged.
 
 ## 3. Account concepts and permission boundary
 
@@ -186,12 +186,14 @@ References:
 - [ ] Do not introduce a production email provider until $0/no-card conditions, data handling, deliverability and exit options are verified.
 
 ### Phase 3 — Admin-wallet and privileged recovery lab
-- [ ] Integrate with the isolated SIWE lab only after reviewing its exact head, library and signatures.
-- [ ] Model wallet enrollment/revocation separately from role assignment; max three wallets; one enrolled signature plus normal account authentication for admin entry.
-- [ ] Resolve the minimum wallet count (provisionally propose two before activation).
-- [ ] Create role provisioning/bootstrap and negative authorization tests; no public admin signup.
+- [x] Reuse the shared local SIWE verifier instead of duplicating signature verification.
+- [x] Add owner-operated CLI provisioning/revocation with explicit confirmation and audit reasons; no public role-provisioning API.
+- [x] Store a maximum of three admin wallet addresses per account; require normal account authentication plus a fresh signature from one enrolled wallet.
+- [x] Bind the short-lived challenge to the account and exact session; reject expired/reused challenges, cross-account session use, unregistered wallets and invalid signers.
+- [x] Add a maximum ten-minute admin step-up and a separate read-only console with no privileged write operations.
+- [ ] Resolve the minimum enrolled-wallet count before any production activation (provisionally propose two independently controlled wallets).
 - [ ] Specify and test Imperial HSIAN recovery after all admin wallets are lost.
-- [ ] Keep production admin authority blocked until independent review and exact-head tests pass.
+- [ ] Review the local provisioning trust boundary and admin step-up threat model independently; production admin authority remains blocked.
 
 ### Phase 4 — Production decision
 - [ ] Resolve AUTH-001: authoritative website/origin, backend route, storage, hosting and deployment ownership.
