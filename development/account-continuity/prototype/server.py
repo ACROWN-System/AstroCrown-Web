@@ -722,6 +722,9 @@ def make_handler(application: AccountApplication):
                 "/account-continuity/prototype/account-ui.js": (
                     PROTOTYPE_DIR / "account-ui.js", "text/javascript; charset=utf-8"
                 ),
+                "/account-continuity/prototype/admin-wallet-ui.js": (
+                    PROTOTYPE_DIR / "admin-wallet-ui.js", "text/javascript; charset=utf-8"
+                ),
                 "/account-continuity/prototype/terms-of-use.html": (
                     PROTOTYPE_DIR / "terms-of-use.html", "text/html; charset=utf-8"
                 ),
