@@ -396,3 +396,30 @@
   .admin-wallet-proof-actions { flex-direction:column-reverse; }
   .admin-wallet-proof-actions button { width:100%; }
 }
+
+
+/* Additional administrator wallet enrollment — development-only, no wallet removal. */
+.account-admin-wallets-card .account-admin-wallet-list {
+  list-style:none;
+  margin:12px 0 14px;
+  padding:0;
+  display:grid;
+  gap:8px;
+}
+.account-admin-wallet-row {
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  align-items:center;
+  gap:7px 12px;
+  padding:10px;
+  border:1px solid rgba(153,178,213,.16);
+  border-radius:8px;
+  background:rgba(0,0,0,.14);
+}
+.account-admin-wallet-row .account-wallet-address { flex:1 1 240px; }
+.account-admin-wallet-chain { color:#8fa0b7;font-size:10px;white-space:nowrap; }
+.account-admin-wallet-limit { padding:10px;border:1px solid rgba(255,210,74,.24);border-radius:8px;color:#d7c46a;font-size:10px; }
+.account-admin-wallet-warning { color:#9ba9bd!important;font-size:10px!important; }
+.account-admin-wallets-card #admin-add-wallet { margin:4px 0 8px;min-height:41px; }
+#admin-wallet-enrollment-feedback:empty { display:none; }
