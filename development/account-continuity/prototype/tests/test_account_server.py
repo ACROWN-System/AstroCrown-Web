@@ -254,9 +254,8 @@ class AccountServerTests(unittest.TestCase):
         self.assertFalse(before["admin"], "an assigned role must not be enough to enter admin functions")
 
         status, admin_status, _ = self.request("/api/admin/status")
-        self.assertEqual(status, 200)
-        self.assertTrue(admin_status["adminRoleAssigned"])
-        self.assertFalse(admin_status["adminSessionAuthorized"])
+        self.assertEqual(status, 403, admin_status)
+        self.assertIn("fresh signature", admin_status["error"].lower())
 
         status, challenge, _ = self.request(
             "/api/admin/wallet-challenge",
