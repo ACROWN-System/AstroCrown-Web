@@ -37,20 +37,59 @@ Later candidates—APIs, authenticated applications, cloud environments, mobile 
 
 Active tests require recorded authority and explicit scope. No uncontrolled destructive test, denial-of-service activity, scope expansion, data exfiltration or autonomous production change is allowed. AI may help explain and triage evidence; it cannot invent findings, authorize tests or silently change customer systems.
 
-## 4. Proposed pricing to validate
+## 4. Provider-cost-backed pricing — no fixed prices yet
 
-These are planning hypotheses, not live offers or approved financial commitments.
+The earlier $4.99 / $14.99 / $39.99 monthly ideas and $19 assessment idea are **withdrawn as unvalidated**. Do not publish or use them in financial forecasts. Fixed prices will be set only after representative workloads have been measured and each plan has a hard usage cap.
 
-| Plan | Proposed price | Intended starting value |
-|---|---:|---|
-| Quick Check | Free | One on-demand, low-impact public website baseline; no card required |
-| Community Watch | Free | One verified asset, limited passive rechecks and 30-day history, only if capacity can support it |
-| Starter | $4.99/month or $49/year | One website, weekly checks, alerts, report and remediation guidance |
-| Builder | $14.99/month or $149/year | Up to five assets plus one supported repository; weekly checks and longer history |
-| Team | $39.99/month or $399/year | Up to ten assets, three seats, shared reports and audit history |
-| Extended automated assessment | $19 one-time | One authorized, deeper non-destructive assessment and one follow-up recheck within 30 days |
+**Non-negotiable resource rule:** do not consume NOVA/AstroCrown's limited free AI/API quotas for customer assessments, monitoring, service health probes, provider qualification, regression testing, internal analysis or maintenance. Every production provider call, including our own use, needs an approved paid/prepaid route, a separate budget and a metered cost record. If it cannot be funded, use deterministic/offline checks without external inference or stop the AI-dependent action.
 
-All plan limits, prices, quotas, support duties, taxes, false-positive handling, data retention, hosting/API costs and free-tier sustainability must be validated before the prices are published. These automated offers do not include or imply expert-led penetration testing, guaranteed response, or 24/7 protection. Professional human-led assessments require a separate, properly staffed and scoped service.
+### Pricing formula
+
+For each capped plan/task, calculate:
+
+- `C_provider_max`: the full maximum paid cost of the most expensive eligible provider route for the actual task, including input/output tokens, tools, all allowed retries and the sum of charges across any failover sequence.
+- `C_platform`: compute/runner, hosting, database, storage, egress, logging, monitoring, payment fixed fees, support and other direct service costs.
+- `C_internal_alloc`: conservative share of our own service-operation and NOVA use, qualification, live monitoring, regression/security checks and maintenance required to deliver the service.
+- `C_free_alloc`: the explicit funded cost of any free-user allowance/monitoring we choose to offer.
+- `C_risk`: initially 20% contingency on variable provider/platform costs, until evidence supports a different buffer.
+- `p`: the verified variable payment-processing rate; `m`: a proposed minimum 30% contribution margin after allocated costs and payment processing, before income tax and corporate-level costs not already allocated.
+
+`P_floor = ROUND_UP((C_provider_max + C_platform + C_internal_alloc + C_free_alloc + C_risk + fixed_payment_fees) / (1 - p - m))`
+
+This is a starting financial control, not a statistically proven industry margin. Check costs with representative runs, high-usage customers, failure/retry paths and downside volume. Add legally required taxes as applicable. If the floor is too high, reduce the included workload or cadence, optimize/localize the method, or use clear per-assessment pricing; do not price below cost.
+
+### Operational safeguards
+
+- Price using the highest eligible *paid* route for the specific task and the maximum included usage, never average usage or free credits.
+- The plan catalog must name each task's asset/check/AI credits, request/token and retry ceilings, schedule, retention and support scope.
+- Alert on usage budgets and stop new provider-dependent jobs at the hard cap; no hidden overages, surprise billing or automatic upgrades. Count failed attempts as billable unless actual provider billing proves otherwise.
+- Separate accounting for customer delivery, service operations, internal NOVA/AstroCrown usage and development/test use. Allocate internal/free-service costs to the price or a funded reserve; never hide them in free quotas or customer balances.
+- Free Quick Check may use bounded deterministic checks with no external AI/API call. Free Community Watch is disabled until its infrastructure/support cost is explicitly funded.
+- If a production paid billing path cannot be verified for a provider/model, it is not eligible. The current NOVA roster has Groq, Gemini and Cloudflare as active providers, but their existing health-probe qualification does not qualify them for security assessments. Mistral is currently deferred and must not be assumed available.
+- Review actual invoices and unit economics monthly. If a plan can lose money under its documented maximum workload, stop new sales or reduce future caps before resuming.
+
+### Current price-card observations (examples only, checked 2026-10-26)
+
+| Provider example | Published paid rate observed | Limitation |
+|---|---|---|
+| Groq GPT-OSS 20B | $0.075 / 1M input tokens and $0.30 / 1M output tokens | NOVA's current model qualification is for a bounded health-response contract, not security analysis. |
+| Gemini 3.1 Flash-Lite Standard | $0.25 / 1M text input tokens and $1.50 / 1M output tokens | Security-workload qualification and production paid billing still need separate verification. |
+| Cloudflare Workers AI | Model-specific; provider documentation states $0.011 per 1,000 neurons and a 10,000-neuron daily no-charge allocation | The exact model SKU and a paid billing path that does not consume protected development quota must be verified before use. |
+
+Rate cards change. These examples are not a complete eligible-route list and are not enough to set customer prices. Use the linked official pricing pages and record exact route, model, tier, region, billable units, price, date, and evidence in a versioned cost register before launch.
+
+### Plan concepts (price/allowance not set)
+
+| Plan | Intended purpose | Release/cost condition |
+|---|---|---|
+| Quick Check | Free, bounded, deterministic public-website baseline | No external AI/API call; infrastructure within a funded cap |
+| Community Watch | Limited passive monitoring/history for one verified asset | Do not launch until its real cost is funded without using free AI/API quotas |
+| Starter | One website, scheduled checks, private report and remediation | Price at provider-cost ceiling plus internal/operating cost and margin |
+| Builder | Multiple supported assets and a qualified repository | Explicit asset/check/AI credits and the same floor formula |
+| Team | Collaboration, private shared reports and history | Explicit seat/resource caps; no 24/7 response implied |
+| Extended automated assessment | One authorized, bounded non-destructive assessment and defined retest | Set a per-task price only after the task's maximum paid cost is measured |
+
+No fixed monthly price, annual discount or paid assessment price is approved until this model is validated. The detailed formula and launch gates are in the [full charter](ASTROCROWN-SECURITY-ASSESSMENT-AND-BENCHMARK-CHARTER.md).
 
 ## 5. Benchmark: optional, dated and independent
 
@@ -113,7 +152,9 @@ Never claim “unhackable”, “guaranteed secure”, “zero false positives�
 
 - Which exact first-release checks are safe, reproducible and feasible at $0 operating cost?
 - Can the free monitoring allowance be sustainably supported, and what exact cadence/retention caps apply?
-- Do the candidate paid prices cover real processing, hosting, support, taxes, data retention and abuse costs?
+- What are the measured maximum customer workload and maximum eligible paid-provider failover costs for each proposed plan?
+- Does a dedicated paid production provider path avoid the limited free/development quotas for every customer and internal service call?
+- Do prices cover customer usage, our own operational/internal usage, free-service allocation, infrastructure, a 20% variable-cost contingency and the proposed 30% contribution margin?
 - Which independent people can safely serve as assessors and appeal reviewers?
 - What exact score adapters, category eligibility thresholds, tie-breaks and evidence-freshness period will be validated in pilot testing?
 - What final prize-reserve formula is financially and legally appropriate in the applicable jurisdictions?
