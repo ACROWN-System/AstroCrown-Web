@@ -80,7 +80,7 @@ class AccountServerTests(unittest.TestCase):
                 payload = {"raw": body}
             return error.code, payload, error.headers
 
-    def create_account(self, email=EMAIL, password=PASSWORD, **overrides):
+    def create_account(self, email=EMAIL, password=PASSWORD, opener=None, **overrides):
         payload = {
             "email": email,
             "password": password,
@@ -90,7 +90,7 @@ class AccountServerTests(unittest.TestCase):
             "termsVersion": TERMS_VERSION,
         }
         payload.update(overrides)
-        return self.request("/api/account/register", payload)
+        return self.request("/api/account/register", payload, opener=opener)
 
     def test_homepage_assets_and_policy_drafts_are_served_locally(self):
         status, _, headers = self.request("/")
@@ -388,7 +388,11 @@ class AccountServerTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(ValueError, "different local admin account"):
             other_email = "admin-wallet-collision@example.test"
-            status, _, _ = self.create_account(email=other_email)
+            collision_cookies = http.cookiejar.CookieJar()
+            collision_opener = urllib.request.build_opener(
+                urllib.request.HTTPCookieProcessor(collision_cookies)
+            )
+            status, _, _ = self.create_account(email=other_email, opener=collision_opener)
             self.assertEqual(status, 201)
             grant_admin(
                 self.app, email=other_email, wallet_address=TEST_WALLET_A.address, chain_id=1,
