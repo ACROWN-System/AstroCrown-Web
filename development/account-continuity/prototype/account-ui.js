@@ -26,6 +26,61 @@
     failedLogins: Object.create(null)
   };
 
+  // Built-in glyphs only: no user-uploaded image, remote URL or third-party asset.
+  // The server independently validates the selected identifier.
+  var avatarOptions = {
+    person: {
+      label: "Classic",
+      glyph: '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/>'
+    },
+    crown: {
+      label: "Crown",
+      glyph: '<path d="m4 8 4 4 4-7 4 7 4-4-2 11H6L4 8Z"/><path d="M6 16h12"/>'
+    },
+    star: {
+      label: "Star",
+      glyph: '<path d="m12 3 2.6 5.4 6 .9-4.3 4.2 1 6-5.3-2.8-5.3 2.8 1-6-4.3-4.2 6-.9L12 3Z"/>'
+    },
+    moon: {
+      label: "Moon",
+      glyph: '<path d="M20.4 15.2A8.3 8.3 0 0 1 8.8 3.6 8.6 8.6 0 1 0 20.4 15.2Z"/>'
+    },
+    orbit: {
+      label: "Orbit",
+      glyph: '<circle cx="12" cy="12" r="2.4"/><ellipse cx="12" cy="12" rx="9" ry="4.8" transform="rotate(-32 12 12)"/><circle cx="19.4" cy="7.7" r="1.2"/>'
+    },
+    shield: {
+      label: "Shield",
+      glyph: '<path d="M12 3 19 5.7v5.1c0 4.6-2.9 7.6-7 9.2-4.1-1.6-7-4.6-7-9.2V5.7L12 3Z"/><path d="m8.5 12 2.2 2.2 4.8-4.8"/>'
+    }
+  };
+
+  function normalizeAvatarId(value) {
+    return Object.prototype.hasOwnProperty.call(avatarOptions, value) ? value : "person";
+  }
+
+  function avatarSvg(value, className) {
+    var avatarId = normalizeAvatarId(value);
+    return '<svg class="' + escapeHtml(className || "account-avatar-svg") +
+      ' avatar-glyph-' + avatarId + '" data-avatar-id="' + avatarId +
+      '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      avatarOptions[avatarId].glyph + '</svg>';
+  }
+
+  function renderAvatarChoices(selectedAvatarId) {
+    var selected = normalizeAvatarId(selectedAvatarId);
+    return Object.keys(avatarOptions).map(function (avatarId) {
+      var option = avatarOptions[avatarId];
+      var isSelected = avatarId === selected;
+      return '<button class="account-avatar-choice" type="button" data-avatar-id="' + avatarId +
+        '" aria-pressed="' + (isSelected ? "true" : "false") +
+        '" aria-label="Use ' + escapeHtml(option.label) + ' avatar" title="' + escapeHtml(option.label) + '">' +
+        avatarSvg(avatarId, "account-avatar-choice-svg") +
+        '<span>' + escapeHtml(option.label) + '</span></button>';
+    }).join("");
+  }
+
   function escapeHtml(value) {
     return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -141,6 +196,7 @@
       authenticated: current,
       email: current ? account.email : account.email,
       createdAt: account ? account.createdAt : undefined,
+      avatarId: normalizeAvatarId(account && account.avatarId),
       referralId: account ? account.referralId : "",
       newsletterOptIn: Boolean(account && account.newsletterOptIn),
       newsletterConsentAt: account && account.newsletterConsentAt ? account.newsletterConsentAt : null,
@@ -175,6 +231,7 @@
       var current = previewCurrentAccount();
       return current ? previewSummary(current) : {
         authenticated: false,
+        avatarId: "person",
         role: "user",
         adminRoleAssigned: false,
         adminWalletAuthenticated: false,
@@ -198,6 +255,7 @@
         passwordSalt: salt,
         passwordHash: await previewPasswordHash(password, salt),
         createdAt: now,
+        avatarId: "person",
         referralId: referralId,
         newsletterOptIn: payload.newsletterOptIn,
         newsletterConsentAt: payload.newsletterOptIn ? now : null,
@@ -230,6 +288,16 @@
       delete browserPreviewState.failedLogins[loginEmail];
       previewStartSession(loginEmail);
       return previewSummary(loginAccount);
+    }
+
+    if (path === "/api/account/avatar") {
+      var avatarAccount = previewCurrentAccount();
+      if (!avatarAccount) throw new Error("Sign in before changing your test avatar.");
+      if (typeof payload.avatarId !== "string" || !Object.prototype.hasOwnProperty.call(avatarOptions, payload.avatarId)) {
+        throw new Error("Choose one of the provided account avatars.");
+      }
+      avatarAccount.avatarId = payload.avatarId;
+      return previewSummary(avatarAccount);
     }
 
     if (path === "/api/account/logout") {
@@ -338,11 +406,13 @@
   }
 
   function syncAccountButton() {
-    var icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>';
+    var avatarId = normalizeAvatarId(accountState && accountState.avatarId);
+    var icon = avatarSvg(avatarId, "account-header-avatar-svg");
     if (accountState && accountState.authenticated) {
       openButton.classList.add("is-authenticated");
-      openButton.setAttribute("aria-label", "Open your account");
-      openButton.setAttribute("title", "Open your account");
+      openButton.setAttribute("aria-label", "Open your account, avatar: " + avatarOptions[avatarId].label);
+      openButton.setAttribute("title", "Open your account · " + avatarOptions[avatarId].label);
+      openButton.setAttribute("data-avatar-id", avatarId);
       openButton.removeAttribute("aria-haspopup");
       openButton.setAttribute("aria-controls", "account-dashboard");
       openButton.innerHTML = icon;
@@ -350,9 +420,10 @@
       openButton.classList.remove("is-authenticated");
       openButton.setAttribute("aria-label", "Account");
       openButton.setAttribute("title", "Account");
+      openButton.setAttribute("data-avatar-id", "person");
       openButton.setAttribute("aria-haspopup", "dialog");
       openButton.setAttribute("aria-controls", "account-dialog");
-      openButton.innerHTML = icon + '<span>Account</span>';
+      openButton.innerHTML = avatarSvg("person", "account-header-avatar-svg") + '<span>Account</span>';
     }
   }
 
@@ -392,15 +463,15 @@
       ? '<section class="account-dashboard-card"><h2>Administration</h2><p>Administrative access is enabled by the backend for this session. This prototype contains no production admin actions.</p></section>'
       : '';
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, profile avatar changes, session-management UI and administrator access are not implemented here. Use invented details only in the browser demo.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, production profile editing, image uploads, session-management UI and administrator access are not implemented here. Built-in avatar selection is test-only. Use invented details only in the browser demo.</div>' +
       '<div class="account-dashboard-welcome">' +
-        '<div class="account-dashboard-avatar" aria-hidden="true">' + 
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>' +
+        '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
+          avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
         '</div>' +
-        '<div class="account-dashboard-welcome-copy"><strong>' + email + '</strong><span>Signed in · local/browser test account · avatar customization planned, not enabled</span></div>' +
+        '<div class="account-dashboard-welcome-copy"><strong>' + email + '</strong><span>Signed in · local/browser test account · built-in avatar customization only</span></div>' +
       '</div>' +
       '<div class="account-dashboard-grid">' +
-        '<section class="account-dashboard-card"><h2>Profile</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Profile editing and avatar upload are not enabled. The current header icon is a placeholder.</p></section>' +
+        '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
         '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification + '<p>Password-reset email is unavailable. No reset email has been sent. Real accounts must not be used with this prototype.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         '<section class="account-dashboard-card"><h2>Wallets</h2><p class="account-dashboard-value">No wallet connected</p><p>A crypto wallet is not required for ordinary account access. A wallet must be requested only by a feature that needs proof of wallet control.</p></section>' +
         '<section class="account-dashboard-card"><h2>Preferences</h2><p class="account-dashboard-value">Crypto-news email: ' + escapeHtml(newsletter) + '</p><p>The preference is only recorded for this test; no mailing list or email provider is connected.</p></section>' +
@@ -623,7 +694,28 @@
 
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
-    if (!button || busy || button.id !== "account-signout") return;
+    if (!button || busy) return;
+    if (button.hasAttribute("data-avatar-id")) {
+      var requestedAvatar = button.getAttribute("data-avatar-id");
+      if (!Object.prototype.hasOwnProperty.call(avatarOptions, requestedAvatar)) return;
+      setBusy(true);
+      try {
+        accountState = await requestJson("/api/account/avatar", { avatarId: requestedAvatar });
+        syncAccountButton();
+        renderAccountDashboard();
+        var avatarFeedback = document.getElementById("account-avatar-feedback");
+        if (avatarFeedback) avatarFeedback.textContent = "Avatar updated for this test account.";
+        var selectedAvatar = dashboardContent.querySelector('#account-avatar-picker [data-avatar-id="' + requestedAvatar + '"]');
+        if (selectedAvatar) selectedAvatar.focus();
+      } catch (error) {
+        var avatarFeedbackOnError = document.getElementById("account-avatar-feedback");
+        if (avatarFeedbackOnError) avatarFeedbackOnError.textContent = error.message || "The avatar could not be updated.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id !== "account-signout") return;
     setBusy(true);
     try {
       await requestJson("/api/account/logout", {});
