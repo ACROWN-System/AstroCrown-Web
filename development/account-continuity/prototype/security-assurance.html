@@ -59,7 +59,7 @@
         <ul>
           <li>Email ownership verification, email delivery and password-reset delivery.</li>
           <li>Production HTTPS hosting, production session/CSRF configuration, persistent production storage and backup/restore.</li>
-          <li>Administrator provisioning or role-change operations, administrator wallet enrollment, wallet-verified admin sessions and protected admin endpoints. The local account schema defaults every new account to the server-owned <code>user</code> role; registration input cannot assign a role, and a role assignment alone is not an admin session.</li>
+          <li>Development-only administrator controls now include a local owner-operated provisioning CLI, a registry for up to three wallets, server-issued SIWE challenge/signature verification, a ten-minute wallet step-up on the existing account session, and a read-only gated admin console. Ordinary registration cannot assign a role and role assignment alone never authorizes admin access. There is no public provisioning endpoint and no production role administration, wallet enrollment interface, privileged admin operations, or all-wallet-loss recovery.</li>
           <li>Imperial HSIAN recovery for loss of every administrator wallet.</li>
           <li>Real passkeys, recovery-code flows, connected-wallet registration or user session management.</li>
           <li>Production profile/avatar synchronization or image uploads. Six built-in avatar glyphs can be selected in the local account prototype only; no external image is uploaded or fetched.</li>
