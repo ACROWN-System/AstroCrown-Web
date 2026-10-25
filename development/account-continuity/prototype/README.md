@@ -77,7 +77,7 @@ Stop the local server with **Ctrl+C**. The SQLite database is stored under your 
 - Terms acceptance and newsletter consent have timestamps/version metadata for prototype testing. No newsletter message is sent and the preference is not sent to an external service.
 - A Referral ID is optional and unverified. No reward, association, or benefit is promised or applied.
 - Requests are limited to the exact localhost Host/Origin, with a JSON size limit and basic in-process attempt throttling. The server binds only to `127.0.0.1`.
-- No admin privileges, role management, administrator wallet enrollment, production storage, email verification, password-reset delivery, mailing list, wallet association or real passkey is included. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the planned role and recovery model.
+- The local database now stores a server-owned role defaulting to `user`, and tests prove registration input cannot self-assign `admin`. There is still no admin-provisioning/role-change API, administrator wallet enrollment, wallet-verified admin session, production storage, email verification, password-reset delivery, mailing list, wallet association or real passkey. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the planned role and recovery model.
 - This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery.
 
 ## Production blockers
