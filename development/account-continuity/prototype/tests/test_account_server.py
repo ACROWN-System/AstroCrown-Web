@@ -180,6 +180,36 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 404)
         self.assertIn("not available", response["error"].lower())
 
+    def test_builtin_avatar_changes_require_a_session_and_are_server_validated(self):
+        status, data, _ = self.request("/api/account/avatar", {"avatarId": "star"})
+        self.assertEqual(status, 401)
+        self.assertIn("sign in", data["error"].lower())
+
+        status, data, _ = self.create_account(
+            email="avatar-test@example.test",
+            avatarId="https://invalid.example/avatar.svg",
+        )
+        self.assertEqual(status, 201, data)
+        self.assertEqual(data["avatarId"], "person", "registration must not accept an arbitrary avatar value")
+
+        status, data, _ = self.request("/api/account/avatar", {"avatarId": "star"})
+        self.assertEqual(status, 200, data)
+        self.assertEqual(data["avatarId"], "star")
+        self.assertFalse(data["admin"])
+
+        status, data, _ = self.request("/api/account/avatar", {"avatarId": '<svg onload="alert(1)">'})
+        self.assertEqual(status, 400)
+        self.assertIn("provided account avatars", data["error"].lower())
+
+        status, current, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertEqual(current["avatarId"], "star")
+
+        status, _, _ = self.request("/api/account/logout", {})
+        self.assertEqual(status, 200)
+        status, _, _ = self.request("/api/account/avatar", {"avatarId": "moon"})
+        self.assertEqual(status, 401, "a signed-out session must not change account preferences")
+
     def test_newsletter_preference_is_separate_and_defaults_to_off(self):
         status, data, _ = self.create_account()
         self.assertEqual(status, 201, data)
