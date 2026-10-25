@@ -2,7 +2,7 @@
 
 **Status:** local development prototype only; not production authentication.
 
-This prototype checks the basic EOA / EIP-191 message-signing flow using the ERC-4361 / Sign-In with Ethereum (SIWE) message format. It is **only a technical lab for a wallet-specific feature that genuinely needs proof of wallet control**, not AstroCrown's normal account login. Ordinary account access must work without connecting a wallet. It is deliberately isolated from the announcement editor and does not depend on PR #140 being merged.
+This prototype checks the basic EOA / EIP-191 message-signing flow using the ERC-4361 / Sign-In with Ethereum (SIWE) message format. Its challenge/signature verifier is in the shared development-only `wallet_auth_core.py` module so another local prototype can reuse the exact verifier rather than implement a second signature parser. It is **only a technical lab for a wallet-specific feature that genuinely needs proof of wallet control**, not AstroCrown's normal account login. Ordinary account access must work without connecting a wallet. It is deliberately isolated from the announcement editor and does not depend on PR #140 being merged.
 
 The governing product decision is [Authentication Separation and Recovery Decision](../audit/Active/2026-10-21-Authentication-Separation-and-Recovery-Decision.md).
 
