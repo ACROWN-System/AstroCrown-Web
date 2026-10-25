@@ -12,6 +12,8 @@ This prototype provides a familiar **Log In / Sign Up** account dialog in the de
 - See the success popup, close it without signing out, or choose **Open your account**.
 - Verify that a signed-in header control becomes a circular icon with no visible “Account” label.
 - Open the modular account hub, review the current test account/preferences, return to the homepage, and sign out.
+- The **Administrator access** section is rendered only when the server says this signed-in account already has the administrator role. Ordinary users do not see the section or button.
+- For an assigned administrator account, click **Access administrator account** to open a confirmation dialog. Cancel does not request a wallet; Continue rechecks the server role/session, then proceeds to the registered-wallet and signature-review steps. This local administrator path must be tested on the loopback server, not the hosted memory-only preview.
 - Enter or omit an optional Referral ID.
 - Opt in or leave unchecked the independent crypto-news email preference.
 - Accept or reject the required Terms of Use / Privacy Policy checkbox.
@@ -30,13 +32,13 @@ Ordinary account access does not request a crypto wallet or a social sign-in pro
 
 ## Direct browser preview (no installation)
 
-Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2Fb1687845b00888ca4f5b3038138ba42f00c4f817%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
+Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2F7cac6b3e103d613469ab208b07409dba5b1a22fc%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
 
 On the hosted preview origin, account interactions run in a browser-only demonstration adapter. It makes no account API requests and keeps the account, password hash, referral field and test consent values in page memory only. All of them disappear when the page reloads or when another tab is opened. This is an interaction harness, not real authentication.
 
 The preview uses a third-party HTML proxy. Use invented email/passphrase/referral values only. Never enter a real password, personal email address, wallet secret, valuable recovery material or real marketing preference. Do not let your password manager save the test credentials.
 
-The URL is pinned to source commit `b1687845b00888ca4f5b3038138ba42f00c4f817`, which includes the current development-only account UI: Log In / Sign Up, the static gold “Or” divider, success popup, circular signed-in account control, modular account hub, built-in avatar choices and Security assurance link. Relative assets and policy pages resolve from that same revision. The hosted preview is memory-only: it does not exercise the local SQLite account API or server-enforced administrator wallet step-up. Use the local loopback server for backend/admin regression testing and continue to use invented data.
+The URL is pinned to source commit `7cac6b3e103d613469ab208b07409dba5b1a22fc`, which includes the current development-only account UI and administrator-entry confirmation dialog. Relative assets and policy pages resolve from that same revision. The hosted preview is memory-only and simulates ordinary users only; it does not exercise the local SQLite account API or server-enforced administrator wallet step-up. Its ordinary account must not show an administrator entry. Use the local loopback server for backend/admin regression testing and continue to use invented data.
 
 ## Windows PowerShell: run locally
 
