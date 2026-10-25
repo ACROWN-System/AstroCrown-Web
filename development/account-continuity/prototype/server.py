@@ -380,6 +380,9 @@ def make_handler(application: AccountApplication):
                 "/account-continuity/prototype/privacy-policy.html": (
                     PROTOTYPE_DIR / "privacy-policy.html", "text/html; charset=utf-8"
                 ),
+                "/account-continuity/prototype/security-assurance.html": (
+                    PROTOTYPE_DIR / "security-assurance.html", "text/html; charset=utf-8"
+                ),
             }
             target = allowed.get(path)
             if target is None:
