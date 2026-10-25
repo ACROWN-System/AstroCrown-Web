@@ -465,36 +465,35 @@
     var adminCard = '';
     if (accountState.adminRoleAssigned === true) {
       var walletCount = Number(accountState.adminWalletCount || 0);
-      if (accountState.adminSessionAuthorized === true) {
-        adminCard =
-          '<section class="account-dashboard-card account-admin-access-card">' +
-            '<h2>Administrator access</h2>' +
-            '<span class="account-dashboard-status">Wallet verified for this session</span>' +
-            '<p>Administrator authority is assigned to this account and the backend currently confirms a wallet-authenticated admin session.</p>' +
-            '<div class="account-admin-access-actions">' +
-              '<button class="account-primary" type="button" id="open-admin-dashboard">Open administrator console</button>' +
-              '<button class="account-secondary" type="button" id="end-admin-access">End admin access</button>' +
-            '</div>' +
-          '</section>';
-      } else if (walletCount > 0) {
-        adminCard =
-          '<section class="account-dashboard-card account-admin-access-card">' +
-            '<h2>Administrator access</h2>' +
-            '<span class="account-dashboard-status">Wallet verification required</span>' +
-            '<p>This account has an administrator role assigned by the local owner. Verify control of one of the ' +
-              escapeHtml(String(walletCount)) +
-              ' registered wallet(s) to enter the read-only development console. This is a signature-only request, not a transaction.</p>' +
-            '<button class="account-primary" type="button" id="account-admin-wallet-access">Verify administrator wallet</button>' +
-            '<p id="account-admin-access-feedback" class="account-avatar-feedback" role="status"></p>' +
-          '</section>';
-      } else {
-        adminCard =
-          '<section class="account-dashboard-card account-admin-access-card">' +
-            '<h2>Administrator access</h2>' +
-            '<span class="account-dashboard-status">No wallet provisioned</span>' +
-            '<p>The local owner has assigned the administrator role, but no wallet is provisioned for step-up verification. A local owner must use the development-only provisioning utility. No website control can add an administrator wallet.</p>' +
-          '</section>';
-      }
+      var adminSessionVerified = accountState.adminSessionAuthorized === true;
+      var adminAccessStatus = adminSessionVerified
+        ? "Wallet verified for this session"
+        : walletCount > 0
+          ? "Wallet verification required"
+          : "No administrator wallet enrolled";
+      var adminAccessDescription = adminSessionVerified
+        ? "The server currently confirms a wallet-verified administrator session. Continue through the administrator access dialog to open the separate console."
+        : walletCount > 0
+          ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
+            escapeHtml(String(walletCount)) +
+            " registered wallet(s), then review a one-time signature request. It is not a blockchain transaction."
+          : "The system has assigned the administrator role, but no wallet is enrolled for step-up verification. Open administrator access to review the required next step; the backend will keep the console closed until an authorized owner provisions a wallet.";
+      var adminAccessAction = adminSessionVerified
+        ? "Open administrator console"
+        : walletCount > 0
+          ? "Access administrator account"
+          : "Review administrator access";
+      adminCard =
+        '<section class="account-dashboard-card account-admin-access-card">' +
+          '<h2>Administrator access</h2>' +
+          '<span class="account-dashboard-status">' + escapeHtml(adminAccessStatus) + '</span>' +
+          '<p>' + adminAccessDescription + '</p>' +
+          '<div class="account-admin-access-actions">' +
+            '<button class="account-primary" type="button" id="account-admin-wallet-access">' + escapeHtml(adminAccessAction) + '</button>' +
+            (adminSessionVerified ? '<button class="account-secondary" type="button" id="end-admin-access">End admin access</button>' : '') +
+          '</div>' +
+          '<p id="account-admin-access-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+        '</section>';
     }
     dashboardContent.innerHTML =
       '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, production profile editing, image uploads and session-management UI are not implemented here. Administrator role and wallet step-up are local-prototype only; no production admin actions or all-wallet-loss recovery are enabled. Built-in avatar selection is test-only. Use invented details only in the browser demo.</div>' +
@@ -826,14 +825,8 @@
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (button.id === "account-admin-wallet-access") {
-      var adminFeedback = document.getElementById("account-admin-access-feedback");
-      if (adminFeedback) adminFeedback.textContent = "Requesting an explicit wallet proof-of-control challenge…";
+    if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
-      return;
-    }
-    if (button.id === "open-admin-dashboard") {
-      window.location.hash = "admin";
       return;
     }
     if (button.id === "end-admin-access") {
