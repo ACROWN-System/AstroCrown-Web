@@ -460,6 +460,7 @@
   </style>
   <link rel="stylesheet" href="./account-continuity/prototype/account-prototype.css">
   <script src="./account-continuity/prototype/account-ui.js" defer></script>
+  <script src="./account-continuity/prototype/admin-wallet-ui.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -853,6 +854,20 @@
         <a class="account-dashboard-home" href="#top" id="account-dashboard-home">Return to homepage</a>
       </div>
       <div id="account-dashboard-content" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="admin-dashboard" class="account-dashboard-page account-admin-dashboard" hidden aria-labelledby="admin-dashboard-title">
+    <div class="account-dashboard-shell">
+      <div class="account-dashboard-header">
+        <div>
+          <p class="account-dashboard-kicker">ASTROCROWN · ADMINISTRATION</p>
+          <h1 id="admin-dashboard-title" tabindex="-1">Administrator console</h1>
+          <p class="account-dashboard-intro">This separate development console is shown only after the backend confirms the administrator role and a fresh signature from a registered wallet.</p>
+        </div>
+        <a class="account-dashboard-home" href="#account" id="admin-return-account">Return to your account</a>
+      </div>
+      <div id="admin-dashboard-content" aria-live="polite"></div>
     </div>
   </section>
 
