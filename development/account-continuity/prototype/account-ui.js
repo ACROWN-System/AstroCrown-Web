@@ -17,6 +17,7 @@
   var accountState = { authenticated: false };
   var focusBeforeOpen = null;
   var busy = false;
+  var pendingAdminWalletMessage = null;
   var termsVersion = "development-draft-2026-10-21";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var forceBrowserDemo = new URLSearchParams(window.location.search).get("account-preview-demo") === "1";
@@ -512,7 +513,15 @@
         '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Password recovery, email verification, passkeys, recovery management and active-session review are not implemented. Do not rely on this test account for real access.</p></section>' +
         adminCard +
       '</div>' +
-      '<div class="account-dashboard-actions"><p>Public listing and wallet connection are not required for ordinary account access. The separate administrator flow is not implemented in this prototype.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
+      '<div class="account-dashboard-actions"><p>Public listing and wallet connection are not required for ordinary account access. Administrator functions are separately gated and are not part of ordinary account permissions.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
+    if (pendingAdminWalletMessage) {
+      var walletNotice = document.createElement("p");
+      walletNotice.className = "account-dashboard-notice";
+      walletNotice.setAttribute("role", "status");
+      walletNotice.textContent = pendingAdminWalletMessage;
+      dashboardContent.prepend(walletNotice);
+      pendingAdminWalletMessage = null;
+    }
   }
 
   function showHomepage() {
@@ -586,7 +595,8 @@
         '<section class="account-dashboard-card account-admin-wallets-card"><h2>Registered administrator wallets</h2><p>Your local account may register up to three distinct public wallet addresses. A wallet is not added until it signs a separate server-issued enrollment message.</p>' +
           '<ul class="account-admin-wallet-list">' + walletRows + '</ul>' +
           enrollmentControl +
-          '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this console. A lost-wallet recovery workflow is not implemented.</p></section>' +
+          '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this console. A lost-wallet recovery workflow is not implemented.</p>' +
+          '<p id="admin-wallet-enrollment-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p></section>' +
         '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, role changes, wallet removal, account management, payments and all-wallet-loss recovery are not available in this console.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
       '</div>' +
       '<div class="account-dashboard-actions"><p>End administrator access to clear wallet step-up while keeping your ordinary account session active.</p><button class="account-secondary" type="button" id="admin-end-access">End administrator access</button></div>';
@@ -909,6 +919,10 @@
     } finally {
       setBusy(false);
     }
+  });
+
+  document.addEventListener("astrocrown:admin-wallet-enrolled", function () {
+    pendingAdminWalletMessage = "The additional administrator wallet was enrolled successfully. For safety, the previous administrator step-up was ended; verify one of the registered wallets again when you next open the administrator console.";
   });
 
   openButton.addEventListener("click", openAccountDialog);
