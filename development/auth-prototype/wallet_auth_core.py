@@ -75,9 +75,12 @@ def parse_chain_id(value: Any) -> int:
 class WalletAuthService:
     """Small in-memory EOA SIWE challenge/session coordinator."""
 
-    def __init__(self, domain: str, uri: str) -> None:
+    def __init__(self, domain: str, uri: str, statement: str = STATEMENT) -> None:
+        if not isinstance(statement, str) or not statement.strip() or len(statement) > 256:
+            raise ValueError("SIWE statement must be a non-empty string of at most 256 characters.")
         self.domain = domain
         self.uri = uri
+        self.statement = statement
         self.scheme = "http"  # HTTP is allowed only because this binds to loopback.
         self.challenges: dict[str, Challenge] = {}
         self.sessions: dict[str, LocalSession] = {}
@@ -110,7 +113,7 @@ class WalletAuthService:
                 scheme=self.scheme,
                 domain=self.domain,
                 address=address,
-                statement=STATEMENT,
+                statement=self.statement,
                 uri=self.uri,
                 version="1",
                 chain_id=chain_id,
