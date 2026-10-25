@@ -307,8 +307,13 @@ class AccountServerTests(unittest.TestCase):
         self.assertTrue(ended["adminRoleAssigned"])
         self.assertFalse(ended["admin"])
         status, no_longer_admin, _ = self.request("/api/admin/status")
-        self.assertEqual(status, 200)
-        self.assertFalse(no_longer_admin["adminSessionAuthorized"])
+        self.assertEqual(status, 403, no_longer_admin)
+        self.assertIn("fresh signature", no_longer_admin["error"].lower())
+        status, ordinary_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200, ordinary_status)
+        self.assertTrue(ordinary_status["authenticated"])
+        self.assertTrue(ordinary_status["adminRoleAssigned"])
+        self.assertFalse(ordinary_status["adminSessionAuthorized"])
 
     def test_admin_wallet_challenge_rejects_unenrolled_wallet_wrong_signer_and_other_session(self):
         first_email = "admin-binding-first@example.test"
@@ -341,8 +346,13 @@ class AccountServerTests(unittest.TestCase):
         )
         self.assertEqual(status, 401, rejected)
         status, still_denied, _ = self.request("/api/admin/status")
-        self.assertEqual(status, 200)
-        self.assertFalse(still_denied["adminSessionAuthorized"])
+        self.assertEqual(status, 403, still_denied)
+        self.assertIn("fresh signature", still_denied["error"].lower())
+        status, ordinary_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200, ordinary_status)
+        self.assertTrue(ordinary_status["authenticated"])
+        self.assertTrue(ordinary_status["adminRoleAssigned"])
+        self.assertFalse(ordinary_status["adminSessionAuthorized"])
 
         # A new challenge cannot be completed using a different admin's account
         # cookie, even if the submitted wallet message/signature itself is valid.
@@ -503,7 +513,8 @@ class AccountServerTests(unittest.TestCase):
         status, after_replay, _ = self.request("/api/account/status")
         self.assertEqual(status, 200)
         self.assertEqual(after_replay["adminWalletCount"], 2)
-        self.assertFalse(after_replay["admin"])
+        self.assertTrue(after_replay["adminSessionAuthorized"])
+        self.assertTrue(after_replay["admin"], "rejected enrollment replay must not invalidate the unrelated valid step-up")
 
     def test_owner_cli_caps_admin_wallets_and_revoke_clears_privileged_sessions(self):
         email = "admin-wallet-count@example.test"
