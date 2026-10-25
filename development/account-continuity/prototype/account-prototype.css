@@ -335,3 +335,64 @@
   .account-avatar-picker { grid-template-columns:repeat(3,minmax(0,1fr));gap:8px; }
   .account-avatar-choice { min-height:58px; }
 }
+
+
+/* Wallet verification is a separate, explicit admin step-up; no dialog opens on ordinary sign-in. */
+.account-admin-access-card .account-admin-access-actions {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:9px;
+  margin-top:13px;
+}
+.account-admin-access-card .account-admin-access-actions button { flex:1 1 175px; }
+.account-wallet-address {
+  overflow-wrap:anywhere;
+  word-break:break-word;
+  font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-size:11px!important;
+}
+.account-admin-dashboard .account-dashboard-header { border-bottom-color:rgba(255,215,0,.22); }
+
+.admin-wallet-proof-dialog {
+  width:min(680px,calc(100% - 24px));
+  max-width:680px;
+  max-height:min(86vh,820px);
+  padding:0;
+  overflow:hidden;
+  border:1px solid rgba(255,215,0,.28);
+  border-radius:15px;
+  background:linear-gradient(150deg,#102037,#050b15 78%);
+  color:#f2f5fb;
+  box-shadow:0 26px 90px rgba(0,0,0,.56);
+}
+.admin-wallet-proof-dialog::backdrop { background:rgba(0,5,12,.78);backdrop-filter:blur(5px); }
+.admin-wallet-proof-shell { padding:clamp(17px,3.8vw,25px); }
+.admin-wallet-proof-heading {
+  display:flex;align-items:flex-start;justify-content:space-between;gap:15px;
+  padding-bottom:14px;border-bottom:1px solid rgba(153,178,213,.18);
+}
+.admin-wallet-proof-heading h2 { margin:5px 0 0;font-size:clamp(19px,3vw,24px);line-height:1.2;letter-spacing:-.03em; }
+.admin-wallet-proof-close {
+  width:34px;height:34px;flex:0 0 34px;padding:0;border:1px solid rgba(153,178,213,.23);
+  border-radius:50%;background:rgba(255,255,255,.03);color:#d8e1ef;font-size:22px;line-height:1;cursor:pointer;
+}
+.admin-wallet-proof-explainer { margin:15px 0;color:#b6c4d7;font-size:12px;line-height:1.65; }
+.admin-wallet-proof-explainer strong { color:#ffe58a; }
+.admin-wallet-proof-message {
+  max-height:min(34vh,270px);min-height:130px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;
+  padding:13px;border:1px solid rgba(153,178,213,.2);border-radius:9px;
+  background:rgba(1,6,12,.88);color:#dce7f6;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;
+  user-select:text;
+}
+.admin-wallet-proof-status { min-height:1.5em;margin:10px 0;color:#b7c6da;font-size:11px;line-height:1.55; }
+.admin-wallet-proof-actions { display:flex;justify-content:flex-end;gap:10px;padding-top:12px;border-top:1px solid rgba(153,178,213,.16); }
+.admin-wallet-proof-actions button { min-width:130px;min-height:42px; }
+.admin-wallet-proof-actions button:disabled { cursor:wait;opacity:.56; }
+.admin-wallet-proof-close:focus-visible,.admin-wallet-proof-actions button:focus-visible {
+  outline:2px solid #ffd700;outline-offset:3px;
+}
+@media(max-width:560px) {
+  .admin-wallet-proof-actions { flex-direction:column-reverse; }
+  .admin-wallet-proof-actions button { width:100%; }
+}
