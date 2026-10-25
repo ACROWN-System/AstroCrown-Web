@@ -9,6 +9,8 @@
   var closeButton = document.getElementById("account-dialog-close");
   var dashboard = document.getElementById("account-dashboard");
   var dashboardContent = document.getElementById("account-dashboard-content");
+  var adminDashboard = document.getElementById("admin-dashboard");
+  var adminDashboardContent = document.getElementById("admin-dashboard-content");
   var mainContent = document.getElementById("main-content");
   var mode = "signin";
   var successKind = "signup";
@@ -459,11 +461,42 @@
     var newsletter = accountState.newsletterOptIn
       ? "Opted in for this test. No newsletter is sent."
       : "Not opted in.";
-    var adminCard = accountState.admin === true && accountState.adminWalletAuthenticated === true
-      ? '<section class="account-dashboard-card"><h2>Administration</h2><p>Administrative access is enabled by the backend for this session. This prototype contains no production admin actions.</p></section>'
-      : '';
+    var adminCard = '';
+    if (accountState.adminRoleAssigned === true) {
+      var walletCount = Number(accountState.adminWalletCount || 0);
+      if (accountState.adminSessionAuthorized === true) {
+        adminCard =
+          '<section class="account-dashboard-card account-admin-access-card">' +
+            '<h2>Administrator access</h2>' +
+            '<span class="account-dashboard-status">Wallet verified for this session</span>' +
+            '<p>Administrator authority is assigned to this account and the backend currently confirms a wallet-authenticated admin session.</p>' +
+            '<div class="account-admin-access-actions">' +
+              '<button class="account-primary" type="button" id="open-admin-dashboard">Open administrator console</button>' +
+              '<button class="account-secondary" type="button" id="end-admin-access">End admin access</button>' +
+            '</div>' +
+          '</section>';
+      } else if (walletCount > 0) {
+        adminCard =
+          '<section class="account-dashboard-card account-admin-access-card">' +
+            '<h2>Administrator access</h2>' +
+            '<span class="account-dashboard-status">Wallet verification required</span>' +
+            '<p>This account has an administrator role assigned by the local owner. Verify control of one of the ' +
+              escapeHtml(String(walletCount)) +
+              ' registered wallet(s) to enter the read-only development console. This is a signature-only request, not a transaction.</p>' +
+            '<button class="account-primary" type="button" id="account-admin-wallet-access">Verify administrator wallet</button>' +
+            '<p id="account-admin-access-feedback" class="account-avatar-feedback" role="status"></p>' +
+          '</section>';
+      } else {
+        adminCard =
+          '<section class="account-dashboard-card account-admin-access-card">' +
+            '<h2>Administrator access</h2>' +
+            '<span class="account-dashboard-status">No wallet provisioned</span>' +
+            '<p>The local owner has assigned the administrator role, but no wallet is provisioned for step-up verification. A local owner must use the development-only provisioning utility. No website control can add an administrator wallet.</p>' +
+          '</section>';
+      }
+    }
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, production profile editing, image uploads, session-management UI and administrator access are not implemented here. Built-in avatar selection is test-only. Use invented details only in the browser demo.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, production profile editing, image uploads and session-management UI are not implemented here. Administrator role and wallet step-up are local-prototype only; no production admin actions or all-wallet-loss recovery are enabled. Built-in avatar selection is test-only. Use invented details only in the browser demo.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
@@ -484,6 +517,7 @@
 
   function showHomepage() {
     dashboard.hidden = true;
+    if (adminDashboard) adminDashboard.hidden = true;
     mainContent.hidden = false;
   }
 
@@ -506,6 +540,7 @@
       return;
     }
     mainContent.hidden = true;
+    if (adminDashboard) adminDashboard.hidden = true;
     dashboard.hidden = false;
     renderAccountDashboard();
     var dashboardTitle = document.getElementById("account-dashboard-title");
@@ -520,9 +555,77 @@
     }
   }
 
+  function replaceRouteHash(route) {
+    var suffix = route ? "#" + route : "";
+    window.history.replaceState(null, "", window.location.pathname + window.location.search + suffix);
+  }
+
+  function renderAdminDashboard(status) {
+    var wallet = escapeHtml(status.adminWalletAddress || "");
+    var expires = escapeHtml(status.adminSessionExpiresAt || "");
+    adminDashboardContent.innerHTML =
+      '<div class="account-dashboard-notice"><strong>Development-only administrator session.</strong> The server has verified this account role and wallet signature for a short-lived session. This console is read-only; no publishing, role changes, account management, payments or other privileged operations are enabled.</div>' +
+      '<div class="account-dashboard-welcome">' +
+        '<div class="account-dashboard-avatar account-avatar-shield" aria-hidden="true">' + avatarSvg("shield", "account-dashboard-avatar-svg") + '</div>' +
+        '<div class="account-dashboard-welcome-copy"><strong>Administrator access verified</strong><span>Backend-authorized · development prototype · no production privileges</span></div>' +
+      '</div>' +
+      '<div class="account-dashboard-grid">' +
+        '<section class="account-dashboard-card"><h2>Authority</h2><p class="account-dashboard-value">Role: Administrator</p><p>Role assignment is stored by the server and is separate from the wallet signature. A connected wallet alone cannot create this role.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Verified wallet</h2><p class="account-dashboard-value account-wallet-address">' + wallet + '</p><p>Only the public address is shown. No private key, seed phrase or transaction is requested by this prototype.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Session expiration</h2><p class="account-dashboard-value">' + expires + '</p><p>Administrator step-up expires after ten minutes or when the underlying account session expires, whichever happens first.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Available operations</h2><p class="account-dashboard-value">None enabled</p><p>This page demonstrates gated entry only. Banner publishing, role administration, wallet roster changes and recovery are not enabled.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+      '</div>' +
+      '<div class="account-dashboard-actions"><p>End administrator access to clear the wallet step-up while keeping your ordinary account session active.</p><button class="account-secondary" type="button" id="admin-end-access">End administrator access</button></div>';
+  }
+
+  async function showAdminDashboard() {
+    var accountStatus = await refreshStatus();
+    if (!accountStatus.authenticated) {
+      replaceRouteHash("account");
+      await showAccountDashboard();
+      return;
+    }
+    if (accountStatus.adminRoleAssigned !== true || accountStatus.adminSessionAuthorized !== true) {
+      replaceRouteHash("account");
+      await showAccountDashboard();
+      if (accountStatus.adminRoleAssigned === true) {
+        var accessFeedback = document.getElementById("account-admin-access-feedback");
+        if (accessFeedback) accessFeedback.textContent = "Administrator entry was blocked because the server has no active wallet verification for this session.";
+      } else {
+        var notice = document.createElement("p");
+        notice.className = "account-dashboard-notice";
+        notice.setAttribute("role", "status");
+        notice.textContent = "This account has no administrator role. Connecting a wallet cannot grant administrator privileges.";
+        dashboardContent.prepend(notice);
+      }
+      return;
+    }
+    try {
+      var verified = await requestJson("/api/admin/status");
+      if (verified.adminSessionAuthorized !== true || verified.admin !== true) {
+        throw new Error("The backend did not confirm administrator access.");
+      }
+      accountState = verified;
+      syncAccountButton();
+      mainContent.hidden = true;
+      dashboard.hidden = true;
+      adminDashboard.hidden = false;
+      renderAdminDashboard(verified);
+      var adminTitle = document.getElementById("admin-dashboard-title");
+      if (adminTitle) adminTitle.focus();
+    } catch (_error) {
+      replaceRouteHash("account");
+      await showAccountDashboard();
+      var feedback = document.getElementById("account-admin-access-feedback");
+      if (feedback) feedback.textContent = "Administrator access could not be verified. The console remains closed.";
+    }
+  }
+
   async function handleRouteChange() {
     if (window.location.hash === "#account") {
       await showAccountDashboard();
+    } else if (window.location.hash === "#admin") {
+      await showAdminDashboard();
     } else {
       showHomepage();
     }
@@ -695,6 +798,30 @@
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.id === "account-admin-wallet-access") {
+      var adminFeedback = document.getElementById("account-admin-access-feedback");
+      if (adminFeedback) adminFeedback.textContent = "Requesting an explicit wallet proof-of-control challenge…";
+      document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
+      return;
+    }
+    if (button.id === "open-admin-dashboard") {
+      window.location.hash = "admin";
+      return;
+    }
+    if (button.id === "end-admin-access") {
+      setBusy(true);
+      try {
+        accountState = await requestJson("/api/admin/wallet-logout", {});
+        syncAccountButton();
+        renderAccountDashboard();
+      } catch (error) {
+        var adminFeedbackOnError = document.getElementById("account-admin-access-feedback");
+        if (adminFeedbackOnError) adminFeedbackOnError.textContent = error.message || "Administrator access could not be ended.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (button.hasAttribute("data-avatar-id")) {
       var requestedAvatar = button.getAttribute("data-avatar-id");
       if (!Object.prototype.hasOwnProperty.call(avatarOptions, requestedAvatar)) return;
@@ -733,6 +860,30 @@
         notice.textContent = error.message || "Sign-out could not be completed.";
         message.prepend(notice);
       }
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  adminDashboardContent.addEventListener("click", async function (event) {
+    var button = event.target.closest("button");
+    if (!button || busy) return;
+    if (button.id === "admin-return-account") {
+      window.location.hash = "account";
+      return;
+    }
+    if (button.id !== "admin-end-access") return;
+    setBusy(true);
+    try {
+      accountState = await requestJson("/api/admin/wallet-logout", {});
+      syncAccountButton();
+      window.location.hash = "account";
+    } catch (_error) {
+      var notice = document.createElement("p");
+      notice.className = "account-dashboard-notice";
+      notice.setAttribute("role", "status");
+      notice.textContent = "Administrator access could not be ended by the server. Leave this console and sign out if the issue persists.";
+      adminDashboardContent.prepend(notice);
     } finally {
       setBusy(false);
     }
