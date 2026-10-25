@@ -30,13 +30,13 @@ Ordinary account access does not request a crypto wallet or a social sign-in pro
 
 ## Direct browser preview (no installation)
 
-Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2F4d84af1b6faac6d450f5f633920d87959401e9c6%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
+Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2Fb1687845b00888ca4f5b3038138ba42f00c4f817%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
 
 On the hosted preview origin, account interactions run in a browser-only demonstration adapter. It makes no account API requests and keeps the account, password hash, referral field and test consent values in page memory only. All of them disappear when the page reloads or when another tab is opened. This is an interaction harness, not real authentication.
 
 The preview uses a third-party HTML proxy. Use invented email/passphrase/referral values only. Never enter a real password, personal email address, wallet secret, valuable recovery material or real marketing preference. Do not let your password manager save the test credentials.
 
-The URL is pinned to the draft revision containing the latest account UI hierarchy: Log In / Sign Up first, three non-interactive future-provider logo circles, the static broken-gold “Or” divider with a down arrow, and the dark AstroCrown card styling. Its relative CSS/JavaScript and policy pages resolve from the same revision.
+The URL is pinned to source commit `b1687845b00888ca4f5b3038138ba42f00c4f817`, which includes the current development-only account UI: Log In / Sign Up, the static gold “Or” divider, success popup, circular signed-in account control, modular account hub, built-in avatar choices and Security assurance link. Relative assets and policy pages resolve from that same revision. The hosted preview is memory-only: it does not exercise the local SQLite account API or server-enforced administrator wallet step-up. Use the local loopback server for backend/admin regression testing and continue to use invented data.
 
 ## Windows PowerShell: run locally
 
