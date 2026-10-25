@@ -151,6 +151,10 @@
       passwordResetAvailable: false,
       sessionExpiresAt: current ? new Date(browserPreviewState.sessionExpiresAt).toISOString() : null,
       scope: "browser-preview-memory-only",
+      role: "user",
+      adminRoleAssigned: false,
+      adminWalletAuthenticated: false,
+      adminSessionAuthorized: false,
       admin: false
     };
   }
@@ -169,7 +173,15 @@
   async function browserPreviewRequest(path, payload) {
     if (path === "/api/account/status") {
       var current = previewCurrentAccount();
-      return current ? previewSummary(current) : { authenticated: false, admin: false, scope: "browser-preview-memory-only" };
+      return current ? previewSummary(current) : {
+        authenticated: false,
+        role: "user",
+        adminRoleAssigned: false,
+        adminWalletAuthenticated: false,
+        adminSessionAuthorized: false,
+        admin: false,
+        scope: "browser-preview-memory-only"
+      };
     }
 
     if (path === "/api/account/register") {
