@@ -115,7 +115,7 @@
         if (event.target === dialog) finish(null);
       }
       async function onSign() {
-        if (busy) return;
+        if (signButton.disabled) return;
         signButton.disabled = true;
         statusNode.textContent = "Checking that the selected wallet and chain have not changed…";
         try {
