@@ -176,6 +176,8 @@ class AccountServerTests(unittest.TestCase):
         self.assertFalse(data["adminWalletAuthenticated"])
         self.assertFalse(data["adminSessionAuthorized"])
         self.assertFalse(data["admin"])
+        status, wallet_options, _ = self.request("/api/admin/wallet-options", {})
+        self.assertEqual(status, 403, wallet_options)
 
         # Simulate a separately authorized, out-of-band role assignment in the
         # test database. Role assignment alone must still not authenticate a
@@ -245,6 +247,16 @@ class AccountServerTests(unittest.TestCase):
         )
         self.assertEqual(provisioned["role"], "admin")
         self.assertEqual(provisioned["active_wallet_count"], 1)
+
+        status, wallet_options, _ = self.request("/api/admin/wallet-options", {})
+        self.assertEqual(status, 200, wallet_options)
+        self.assertEqual(wallet_options["maxWallets"], 3)
+        self.assertTrue(wallet_options["requiresFreshSignature"])
+        self.assertFalse(wallet_options["transactionAuthorized"])
+        self.assertEqual(
+            wallet_options["wallets"],
+            [{"address": TEST_WALLET_A.address, "chainId": 1}],
+        )
 
         status, before, _ = self.request("/api/account/status")
         self.assertEqual(status, 200)
@@ -438,6 +450,8 @@ class AccountServerTests(unittest.TestCase):
             {"address": TEST_WALLET_A.address, "chainId": 1},
         )
         self.assertEqual(status, 403, denied)
+        status, options_after_revoke, _ = self.request("/api/admin/wallet-options", {})
+        self.assertEqual(status, 403, options_after_revoke)
         with self.app.connect() as db:
             audit = db.execute(
                 "SELECT event_type, actor, reason FROM account_admin_audit ORDER BY created_at"
