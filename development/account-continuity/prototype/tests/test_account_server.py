@@ -98,6 +98,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertIn("text/html", headers.get("Content-Type", ""))
         for path, expected_type in (
             ("/account-continuity/prototype/account-ui.js", "javascript"),
+            ("/account-continuity/prototype/admin-wallet-ui.js", "javascript"),
             ("/account-continuity/prototype/account-prototype.css", "text/css"),
             ("/account-continuity/prototype/terms-of-use.html", "text/html"),
             ("/account-continuity/prototype/privacy-policy.html", "text/html"),
@@ -109,6 +110,12 @@ class AccountServerTests(unittest.TestCase):
             if path.endswith("security-assurance.html"):
                 self.assertIn("Development prototype only", data.get("body", ""))
                 self.assertIn("Not implemented", data.get("body", ""))
+            if path.endswith("account-ui.js"):
+                self.assertNotIn("window.ethereum", data.get("body", ""))
+                self.assertNotIn("eth_requestAccounts", data.get("body", ""))
+            if path.endswith("admin-wallet-ui.js"):
+                self.assertIn("astrocrown:request-admin-wallet-access", data.get("body", ""))
+                self.assertIn("personal_sign", data.get("body", ""))
 
     def test_register_login_logout_and_password_not_exposed(self):
         status, data, headers = self.create_account(
