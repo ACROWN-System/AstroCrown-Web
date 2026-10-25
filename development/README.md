@@ -13,6 +13,8 @@ Current major development subsystems include:
 - `nova-context-memory-optimization/` — evaluation and integration of established memory, semantic compression, retrieval, context-pruning, token-budgeting, caching, and related efficiency techniques.
 - `nova-recursive-self-improvement/` — autonomous RSI experimentation, protected evaluation, evidence, and candidate retention.
 - `account-continuity/` — development-only roadmap for account continuity, accessible authentication, privacy-preserving eligibility, recovery, member benefits, and optional community resource contribution; includes an ephemeral browser-preview account-flow demo and a separate loopback-only Python/SQLite test backend under account-continuity/prototype/.
+- [User and Administrator Account Requirements](account-continuity/USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) — account roles, user/admin journeys, wallet-based admin step-up, recovery, threat model and production gates; not production authentication.
+- `account-continuity/prototype/security-assurance.html` — development-only account prototype assurance page; it documents implemented controls and current gaps, not certification.
 - `ai-sanctuary/` — Sanctuary research/protection architecture, AI welfare evidence mapping, and cross-repository integration with NOVA.
 - `index-section/` — active homepage section requirements, discoveries, and implementation-specific documentation.
 - `index-reference/` — shared homepage reference conventions.
