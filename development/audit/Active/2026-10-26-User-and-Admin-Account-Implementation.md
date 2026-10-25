@@ -116,7 +116,13 @@ This work is confined to development files and the existing draft pull request. 
 - A browser-test-only response fixture simulates a server status response for an already assigned admin role to verify that the conditional entry appears, opens the confirmation dialog, and can be cancelled without requesting a wallet. The fixture is not account provisioning and does not grant server privileges.
 - After removing that test fixture, the browser test refreshes the real local account status and checks that the administrator section disappears for the regular account.
 - Existing Python/HTTP tests continue to cover registration role-escalation attempts, role-without-step-up denial, fresh-wallet challenge validation, account/session binding, challenge replay, wallet enrollment limits, audit events and revocation.
-- Exact-head automated verification is required for this increment; the current PR workflow results are linked in [PR #141](https://github.com/ACROWN-System/AstroCrown-Web/pull/141). Do not claim the update passes until the account headless-browser test and the other tracked workflows complete successfully on the same head.
+- Exact branch head `d407e3806701e7aba658ab8d23e4daea78f05a43` passed all five tracked workflows:
+  - [Local Account Continuity Prototype Tests #155 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40246317983), including the headless-browser regression for role-based visibility, opening/cancelling the administrator confirmation dialog without a wallet prompt, and hiding the admin section after the authoritative status reverts to a regular user.
+  - [Local Wallet Authentication Prototype Tests #183 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40246318006).
+  - [NOVA RSI Engine CI #881 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40246318035).
+  - [External Review Pipeline CI #438 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40246318082).
+  - [NOVA RSI CodeQL Security Analysis #448 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40246318113).
+- The browser test uses a temporary response fixture solely to test UI rendering for a server-reported admin role; it does not create a persistent admin role or prove successful real-wallet signing. Existing HTTP tests remain the evidence for server-side role and wallet authorization.
 
 ### Impact analysis
 
