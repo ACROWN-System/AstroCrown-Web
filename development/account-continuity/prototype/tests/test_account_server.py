@@ -87,10 +87,14 @@ class AccountServerTests(unittest.TestCase):
             ("/account-continuity/prototype/account-prototype.css", "text/css"),
             ("/account-continuity/prototype/terms-of-use.html", "text/html"),
             ("/account-continuity/prototype/privacy-policy.html", "text/html"),
+            ("/account-continuity/prototype/security-assurance.html", "text/html"),
         ):
-            status, _, headers = self.request(path)
+            status, data, headers = self.request(path)
             self.assertEqual(status, 200, path)
             self.assertIn(expected_type, headers.get("Content-Type", ""))
+            if path.endswith("security-assurance.html"):
+                self.assertIn("Development prototype only", data.get("body", ""))
+                self.assertIn("Not implemented", data.get("body", ""))
 
     def test_register_login_logout_and_password_not_exposed(self):
         status, data, headers = self.create_account(
