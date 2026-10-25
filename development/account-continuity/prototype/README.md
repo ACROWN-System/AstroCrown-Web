@@ -9,11 +9,15 @@ This prototype provides a familiar **Log In / Sign Up** account dialog in the de
 - Open the homepage header's **Account** button.
 - Switch between **Log In** and **Sign Up**.
 - Create a test account using an invented email address and passphrase.
+- See the success popup, close it without signing out, or choose **Open your account**.
+- Verify that a signed-in header control becomes a circular icon with no visible “Account” label.
+- Open the modular account hub, review the current test account/preferences, return to the homepage, and sign out.
 - Enter or omit an optional Referral ID.
 - Opt in or leave unchecked the independent crypto-news email preference.
 - Accept or reject the required Terms of Use / Privacy Policy checkbox.
 - Sign out and log back in with email and password.
 - Open **Forgot password?** and verify the honest disabled-state message.
+- Open the separate [Security assurance page](security-assurance.html) to review controls, evidence and explicit production gaps.
 - See which test preferences were recorded in local SQLite or the disposable browser-demo state.
 
 The flow does **not** ask users to memorise one-time recovery codes at sign-up. Email verification, secure email-based password reset, email delivery, and newsletter delivery have **not been implemented**. The Forgot password view explicitly states that no email was sent. Do not use real credentials or rely on this prototype for an account containing real assets.
@@ -73,7 +77,7 @@ Stop the local server with **Ctrl+C**. The SQLite database is stored under your 
 - Terms acceptance and newsletter consent have timestamps/version metadata for prototype testing. No newsletter message is sent and the preference is not sent to an external service.
 - A Referral ID is optional and unverified. No reward, association, or benefit is promised or applied.
 - Requests are limited to the exact localhost Host/Origin, with a JSON size limit and basic in-process attempt throttling. The server binds only to `127.0.0.1`.
-- No admin privileges, role management, production storage, email verification, password-reset delivery, mailing list, wallet association or real passkey is included.
+- No admin privileges, role management, administrator wallet enrollment, production storage, email verification, password-reset delivery, mailing list, wallet association or real passkey is included. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the planned role and recovery model.
 - This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery.
 
 ## Production blockers
