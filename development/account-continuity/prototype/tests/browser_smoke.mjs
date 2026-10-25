@@ -206,7 +206,7 @@ try {
   await waitFor("administrator role card appears for a server-reported admin account", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.querySelector('.account-admin-access-card')) && Boolean(document.getElementById('account-admin-wallet-access'))"));
   assert.equal(await evaluate("document.getElementById('account-admin-wallet-access').textContent.trim()"), "Access administrator account");
   await evaluate("document.getElementById('account-admin-wallet-access').click()");
-  await waitFor("administrator access confirmation popup", () => evaluate("Boolean(document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open"));
+  await waitFor("administrator access confirmation popup", () => evaluate("Boolean(document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open)"));
   assert.match(await evaluate("document.getElementById('admin-access-dialog').innerText"), /administrator role.*server|server.*administrator role/i);
   assert.match(await evaluate("document.getElementById('admin-access-dialog').innerText"), /signature does not authorize a blockchain transaction/i);
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
