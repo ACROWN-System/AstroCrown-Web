@@ -560,11 +560,21 @@
     window.history.replaceState(null, "", window.location.pathname + window.location.search + suffix);
   }
 
-  function renderAdminDashboard(status) {
+  function renderAdminDashboard(status, walletOptions) {
     var wallet = escapeHtml(status.adminWalletAddress || "");
     var expires = escapeHtml(status.adminSessionExpiresAt || "");
+    var registeredWallets = Array.isArray(walletOptions && walletOptions.wallets)
+      ? walletOptions.wallets : [];
+    var walletRows = registeredWallets.map(function (item) {
+      return '<li class="account-admin-wallet-row"><span class="account-wallet-address">' +
+        escapeHtml(item.address || "") + '</span><span class="account-admin-wallet-chain">Chain ID ' +
+        escapeHtml(String(item.chainId)) + '</span></li>';
+    }).join("");
+    var enrollmentControl = registeredWallets.length < 3
+      ? '<button class="account-primary" type="button" id="admin-add-wallet">Add another wallet</button>'
+      : '<p class="account-admin-wallet-limit">Three active wallets are registered. The prototype does not permit a fourth wallet.</p>';
     adminDashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development-only administrator session.</strong> The server has verified this account role and wallet signature for a short-lived session. This console is read-only; no publishing, role changes, account management, payments or other privileged operations are enabled.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development-only administrator session.</strong> The backend verified the assigned role and a wallet signature for a short-lived session. This is not production authentication. The only privileged operation in this prototype is registering another wallet with a separate signature; publishing, account administration, payments and recovery remain disabled.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-shield" aria-hidden="true">' + avatarSvg("shield", "account-dashboard-avatar-svg") + '</div>' +
         '<div class="account-dashboard-welcome-copy"><strong>Administrator access verified</strong><span>Backend-authorized · development prototype · no production privileges</span></div>' +
@@ -573,9 +583,13 @@
         '<section class="account-dashboard-card"><h2>Authority</h2><p class="account-dashboard-value">Role: Administrator</p><p>Role assignment is stored by the server and is separate from the wallet signature. A connected wallet alone cannot create this role.</p></section>' +
         '<section class="account-dashboard-card"><h2>Verified wallet</h2><p class="account-dashboard-value account-wallet-address">' + wallet + '</p><p>Only the public address is shown. No private key, seed phrase or transaction is requested by this prototype.</p></section>' +
         '<section class="account-dashboard-card"><h2>Session expiration</h2><p class="account-dashboard-value">' + expires + '</p><p>Administrator step-up expires after ten minutes or when the underlying account session expires, whichever happens first.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Available operations</h2><p class="account-dashboard-value">None enabled</p><p>This page demonstrates gated entry only. Banner publishing, role administration, wallet roster changes and recovery are not enabled.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        '<section class="account-dashboard-card account-admin-wallets-card"><h2>Registered administrator wallets</h2><p>Your local account may register up to three distinct public wallet addresses. A wallet is not added until it signs a separate server-issued enrollment message.</p>' +
+          '<ul class="account-admin-wallet-list">' + walletRows + '</ul>' +
+          enrollmentControl +
+          '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this console. A lost-wallet recovery workflow is not implemented.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, role changes, wallet removal, account management, payments and all-wallet-loss recovery are not available in this console.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
       '</div>' +
-      '<div class="account-dashboard-actions"><p>End administrator access to clear the wallet step-up while keeping your ordinary account session active.</p><button class="account-secondary" type="button" id="admin-end-access">End administrator access</button></div>';
+      '<div class="account-dashboard-actions"><p>End administrator access to clear wallet step-up while keeping your ordinary account session active.</p><button class="account-secondary" type="button" id="admin-end-access">End administrator access</button></div>';
   }
 
   async function showAdminDashboard() {
@@ -605,12 +619,16 @@
       if (verified.adminSessionAuthorized !== true || verified.admin !== true) {
         throw new Error("The backend did not confirm administrator access.");
       }
+      var walletOptions = await requestJson("/api/admin/wallet-options", {});
+      if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length > 3) {
+        throw new Error("The backend returned an invalid administrator wallet registry.");
+      }
       accountState = verified;
       syncAccountButton();
       mainContent.hidden = true;
       dashboard.hidden = true;
       adminDashboard.hidden = false;
-      renderAdminDashboard(verified);
+      renderAdminDashboard(verified, walletOptions);
       var adminTitle = document.getElementById("admin-dashboard-title");
       if (adminTitle) adminTitle.focus();
     } catch (_error) {
@@ -870,6 +888,10 @@
     if (!button || busy) return;
     if (button.id === "admin-return-account") {
       window.location.hash = "account";
+      return;
+    }
+    if (button.id === "admin-add-wallet") {
+      document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-enrollment"));
       return;
     }
     if (button.id !== "admin-end-access") return;
