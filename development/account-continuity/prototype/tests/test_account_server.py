@@ -139,6 +139,47 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(data["email"], "test-user@example.test")
         self.assertFalse(data["admin"])
 
+    def test_registration_cannot_grant_admin_role_and_role_alone_never_authorizes_admin(self):
+        status, data, _ = self.create_account(
+            email="role-escalation@example.test",
+            role="admin",
+            admin=True,
+            adminRoleAssigned=True,
+            adminWalletAuthenticated=True,
+            adminSessionAuthorized=True,
+            permissions=["admin", "owner"],
+        )
+        self.assertEqual(status, 201, data)
+        self.assertEqual(data["role"], "user")
+        self.assertFalse(data["adminRoleAssigned"])
+        self.assertFalse(data["adminWalletAuthenticated"])
+        self.assertFalse(data["adminSessionAuthorized"])
+        self.assertFalse(data["admin"])
+
+        # Simulate a separately authorized, out-of-band role assignment in the
+        # test database. Role assignment alone must still not authenticate a
+        # wallet or create an admin-authorized session.
+        with self.app.connect() as db:
+            db.execute(
+                "UPDATE accounts SET role = 'admin' WHERE email = ?",
+                ("role-escalation@example.test",),
+            )
+        status, assigned, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertTrue(assigned["authenticated"])
+        self.assertEqual(assigned["role"], "admin")
+        self.assertTrue(assigned["adminRoleAssigned"])
+        self.assertFalse(assigned["adminWalletAuthenticated"])
+        self.assertFalse(assigned["adminSessionAuthorized"])
+        self.assertFalse(assigned["admin"])
+
+        status, response, _ = self.request(
+            "/api/admin/provision",
+            {"email": "role-escalation@example.test", "role": "admin"},
+        )
+        self.assertEqual(status, 404)
+        self.assertIn("not available", response["error"].lower())
+
     def test_newsletter_preference_is_separate_and_defaults_to_off(self):
         status, data, _ = self.create_account()
         self.assertEqual(status, 201, data)
