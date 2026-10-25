@@ -330,10 +330,10 @@ Calculate the maximum chargeable execution path for that capped envelope using t
 For each plan or billable task, define:
 
 - `C_provider_max`: maximum paid provider/API/tool cost at the rate-card ceiling for the full included usage cap and every allowed retry/failover attempt.
-- `C_platform`: hosting/runner/compute, data transfer, database, storage, logging/observability, monitoring, report delivery, payment fixed fees, customer support and other direct service costs.
+- `C_platform`: hosting/runner/compute, data transfer, database, storage, logging/observability, monitoring, report delivery, customer support and other direct service costs; payment fixed fees are itemized separately in the formula.
 - `C_internal_alloc`: conservative per-unit allocation for service-owned provider use, maintenance checks, qualification, security regression work and internal NOVA use needed to deliver/operate the service.
 - `C_free_alloc`: the explicitly funded cost allocation for any free baseline, free-user infrastructure or free monitoring promised to users.
-- `C_risk`: a proposed minimum 20% contingency on variable provider and platform costs, until measured operating history justifies a different buffer.
+- `C_risk`: initially `0.20 × (C_provider_max + variable portion of C_platform)` as a proposed contingency on variable provider/platform costs, until measured operating history justifies a different buffer.
 - `p`: the variable payment processing rate, verified for the selected payment method and region.
 - `m`: a proposed minimum 30% contribution margin after the costs above and payment processing, before income tax and any corporate-level costs not already allocated.
 
