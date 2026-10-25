@@ -474,6 +474,27 @@ class AccountServerTests(unittest.TestCase):
             {row["address"].lower() for row in options["wallets"]},
             {TEST_WALLET_A.address.lower(), TEST_WALLET_B.address.lower()},
         )
+        # Wallet enrollment clears the privileged step-up. Re-authenticate
+        # with an already enrolled wallet so this assertion tests one-time
+        # challenge replay, rather than only the missing-step-up guard.
+        status, stepup_challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, stepup_challenge)
+        stepup_message = stepup_challenge["message"]
+        stepup_signature = Account.sign_message(
+            encode_defunct(text=stepup_message), private_key=TEST_WALLET_KEY_A
+        ).signature.hex()
+        if not stepup_signature.startswith("0x"):
+            stepup_signature = "0x" + stepup_signature
+        status, reauthenticated, _ = self.request(
+            "/api/admin/wallet-verify",
+            {"message": stepup_message, "signature": stepup_signature},
+        )
+        self.assertEqual(status, 200, reauthenticated)
+        self.assertTrue(reauthenticated["adminSessionAuthorized"])
+
         status, replay, _ = self.request(
             "/api/admin/wallet-enrollment-verify",
             {"message": new_message, "signature": new_signature},
