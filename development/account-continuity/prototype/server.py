@@ -123,7 +123,8 @@ class AccountApplication:
                     newsletter_consent_at TEXT,
                     terms_version TEXT NOT NULL DEFAULT '',
                     terms_accepted_at TEXT NOT NULL DEFAULT '',
-                    email_verified INTEGER NOT NULL DEFAULT 0
+                    email_verified INTEGER NOT NULL DEFAULT 0,
+                    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin'))
                 );
                 CREATE TABLE IF NOT EXISTS sessions (
                     token_hash TEXT PRIMARY KEY,
@@ -145,6 +146,7 @@ class AccountApplication:
                 "terms_version": "TEXT NOT NULL DEFAULT ''",
                 "terms_accepted_at": "TEXT NOT NULL DEFAULT ''",
                 "email_verified": "INTEGER NOT NULL DEFAULT 0",
+                "role": "TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin'))",
             }
             for name, definition in migrations.items():
                 if name not in columns:
@@ -225,6 +227,14 @@ class AccountApplication:
             "passwordResetAvailable": False,
             "sessionExpiresAt": utc_iso(expires_at) if expires_at else None,
             "scope": "local-test-account-only",
+            # The role is server-owned. A role assignment alone never grants
+            # admin access; this prototype has no admin-wallet verification or
+            # privileged-session implementation, so all admin authorization
+            # flags deliberately remain false.
+            "role": account["role"],
+            "adminRoleAssigned": account["role"] == "admin",
+            "adminWalletAuthenticated": False,
+            "adminSessionAuthorized": False,
             "admin": False,
         }
 
@@ -233,7 +243,15 @@ class AccountApplication:
         if path == "/api/account/status":
             account, expires = self.account_for_session(self.get_cookie(handler))
             if account is None:
-                return 200, {"authenticated": False, "admin": False, "passwordResetAvailable": False}, None
+                return 200, {
+                    "authenticated": False,
+                    "role": "user",
+                    "adminRoleAssigned": False,
+                    "adminWalletAuthenticated": False,
+                    "adminSessionAuthorized": False,
+                    "admin": False,
+                    "passwordResetAvailable": False,
+                }, None
             return 200, self.account_summary(account, expires), None
 
         if path == "/api/account/register":
