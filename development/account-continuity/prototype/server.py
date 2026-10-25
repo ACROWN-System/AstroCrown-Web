@@ -626,6 +626,29 @@ class AccountApplication:
             result["message"] = "The avatar was updated for this local test account."
             return 200, result, None
 
+        if path == "/api/admin/wallet-options":
+            if payload:
+                raise ApiError(400, "Unexpected administrator wallet-options fields.")
+            account, _expires, _token = self.require_account_session(handler)
+            if account["role"] != "admin":
+                raise ApiError(403, "Administrator authority is not assigned to this account.")
+            with self.connect() as db:
+                rows = db.execute(
+                    """SELECT address, chain_id FROM admin_wallets
+                       WHERE account_id = ? AND active = 1
+                       ORDER BY created_at, address""",
+                    (account["account_id"],),
+                ).fetchall()
+            return 200, {
+                "wallets": [
+                    {"address": row["address"], "chainId": int(row["chain_id"])}
+                    for row in rows
+                ],
+                "maxWallets": 3,
+                "requiresFreshSignature": True,
+                "transactionAuthorized": False,
+            }, None
+
         if path == "/api/admin/wallet-challenge":
             return self.issue_admin_wallet_challenge(payload, handler)
 
