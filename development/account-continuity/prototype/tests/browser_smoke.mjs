@@ -190,6 +190,16 @@ try {
     "dashboard must link to the separate security assurance page");
   const storedAccount = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(storedAccount.email, email.toLowerCase());
+  assert.equal(storedAccount.avatarId, "person", "new accounts start with the built-in default avatar");
+  await evaluate("document.querySelector('#account-avatar-picker [data-avatar-id=star]').click()");
+  await waitFor("locally persisted avatar choice", () => evaluate("document.querySelector('#account-avatar-picker [data-avatar-id=star]').getAttribute('aria-pressed') === 'true'"));
+  const avatarAfterUpdate = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(avatarAfterUpdate.avatarId, "star");
+  assert.equal(await evaluate("document.getElementById('open-account-dialog').getAttribute('data-avatar-id')"), "star");
+  const invalidAvatar = await evaluate("fetch('/api/account/avatar', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({avatarId:'<svg onload=alert(1)>'})}).then(async r => [r.status, await r.json()])");
+  assert.equal(invalidAvatar[0], 400, "arbitrary avatar markup must not be accepted");
+  assert.equal(avatarAfterUpdate.role, "user");
+  assert.equal(avatarAfterUpdate.admin, false);
   assert.equal(storedAccount.referralId, "ACROWN_E2E_7");
   assert.equal(storedAccount.newsletterOptIn, true);
   assert.ok(storedAccount.newsletterConsentAt);
@@ -214,6 +224,9 @@ try {
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("account dashboard after reopening signed-in avatar", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), email.toLowerCase());
+  const avatarAfterRelogin = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(avatarAfterRelogin.avatarId, "star", "local server should retain the selected avatar after sign-out/sign-in");
+  assert.equal(await evaluate("document.getElementById('open-account-dialog').getAttribute('data-avatar-id')"), "star");
 
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("home after second sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
@@ -259,6 +272,10 @@ try {
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("browser-preview account dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
+  assert.equal(await evaluate("document.querySelector('#account-avatar-picker [data-avatar-id=person]').getAttribute('aria-pressed')"), "true");
+  await evaluate("document.querySelector('#account-avatar-picker [data-avatar-id=moon]').click()");
+  await waitFor("browser-preview avatar choice", () => evaluate("document.querySelector('#account-avatar-picker [data-avatar-id=moon]').getAttribute('aria-pressed') === 'true'"));
+  assert.equal(await evaluate("document.getElementById('open-account-dialog').getAttribute('data-avatar-id')"), "moon");
   assert.match(await evaluate("document.body.innerText"), /Crypto-news email: Opted in for this test/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
 
@@ -273,6 +290,8 @@ try {
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("browser-preview dashboard after sign-in", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
+  const previewAvatarAfterRelogin = await evaluate("document.getElementById('open-account-dialog').getAttribute('data-avatar-id')");
+  assert.equal(previewAvatarAfterRelogin, "moon", "same-page demo should retain the chosen avatar until reload");
 
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("browser-preview home after second sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
@@ -299,8 +318,10 @@ try {
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("recreated browser-preview account dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
+  assert.equal(await evaluate("document.getElementById('open-account-dialog').getAttribute('data-avatar-id')"), "person",
+    "the reloaded memory-only preview creates a new disposable account with the default avatar");
 
-  console.log("PASS: email signup/login, success popup, circular avatar, account dashboard, separate security assurance page, referral/consent handling, reset disclosure, local backend guardrails and memory-only browser preview.");
+  console.log("PASS: email signup/login, success popup, built-in avatar selection and validation, avatar persistence in local account state, circular header control, account dashboard, separate security assurance page, referral/consent handling, reset disclosure, local role boundary and memory-only browser preview.");
 
 } catch (error) {
   console.error(String(error?.stack || error));
