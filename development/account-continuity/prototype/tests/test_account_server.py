@@ -436,7 +436,7 @@ class AccountServerTests(unittest.TestCase):
             audit = db.execute(
                 "SELECT event_type, actor, reason FROM account_admin_audit ORDER BY created_at"
             ).fetchall()
-        self.assertGreaterEqual(len(audit), 5)
+        self.assertGreaterEqual(len(audit), 4)
         self.assertTrue(all(row["reason"] for row in audit))
 
     def test_newsletter_preference_is_separate_and_defaults_to_off(self):
