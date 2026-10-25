@@ -289,37 +289,107 @@ Before the first award edition, establish an independent review panel whose memb
 
 Publish the appeal window and expected process before entries open. Provide at least one written appeal route, a reviewer independent of the initial decision, written outcomes and a restricted audit trail. Public explanations must not reveal private vulnerabilities. Obtain qualified legal review of the final sanctions, terms, privacy obligations and award conditions before commercial operation.
 
-## 7. Proposed pricing
+## 7. Provider-cost-backed pricing and resource policy
 
-**All prices below are planning proposals in USD, not current offers.** These deliberately low entry prices are for bounded, primarily automated checks, not a substitute for managed incident response or a professional penetration test. Verify actual delivery cost, processing fees, taxes, free-tier capacity, false-positive burden, support time and retention cost before announcing or accepting payment.
+**No fixed prices are approved yet.** Earlier price ideas are withdrawn as unvalidated hypotheses; they must not be used in a proposal, website, checkout, invoice or financial forecast. We will not choose low prices first and hope cheaper providers make them work. We will measure the bounded workload, price it using the most expensive eligible paid execution path, allocate our own service-operation usage, add a cost-volatility reserve, and only then set the price.
 
-| Proposed plan | Monthly | Annual | Intended limits and value |
-|---|---:|---:|---|
-| **Quick Check** | $0 | $0 | On-demand, low-impact public website baseline; one target per run; no card and no account required for a basic result. Only what was actually checked is reported. |
-| **Community Watch** | $0 | $0 | One verified asset; a low-frequency passive recheck, 30-day history and basic change notice. Launch only after capacity and cost tests prove this can be reliably supported within a published cap. |
-| **Starter** | $4.99 | $49 | One verified website; weekly scheduled non-destructive checks, 90-day history, alerts, downloadable report and remediation guidance. |
-| **Builder** | $14.99 | $149 | Up to five supported assets, plus one connected repository for qualified dependency/configuration/static checks; weekly schedule, change alerts and 180-day history. |
-| **Team** | $39.99 | $399 | Up to ten supported assets and three seats; shared private reports, role-specific access, activity/audit history, a monthly summary and 365-day history. No 24/7 response is implied. |
-| **Extended automated assessment** | — | **$19 one-time** | Proposed deeper, explicitly authorized, non-destructive assessment of one supported asset, with a structured private report and one follow-up recheck within 30 days. Do not call this a human penetration test. |
+### 7.1 Absolute separation from limited free quotas
 
-Annual amounts are proposed discounts of roughly 17–18% compared with paying monthly. Applicable taxes and the precise included limits must be disclosed before sale. Do not require a card for a $0 plan. Paid plans should be cancellable without hidden exit charges; no automatic plan upgrade or surprise overage is allowed. Show the target count and schedule before a customer confirms a purchase.
+The Security Assessment service must not consume NOVA's, AstroCrown's or the maintainer's limited free AI/API allowances for customer assessments, production monitoring, internal service health probes, model qualification, regression evaluation, failure investigation or maintenance.
 
-**Professional human-led assessment:** do not include it in the initial self-serve plan table or promise it until qualified reviewers, scope controls, report quality, contracting, liability/insurance, data handling, capacity and retest responsibility have been established. When that service is ready, quote it against the actual target scope and assessor effort. A published supplier currently advertises AI-powered web-application penetration tests starting at $3,500 per test; this is a supplier-specific price, not a universal market average.
+- Use a dedicated production billing project/account and separate credentials for all service-provider calls. Keep development and service operating costs separated in accounts, ledgers, credentials and reports.
+- Every production AI/API call, including our own service-operation calls, must be routed through an explicitly paid/prepaid path whose billing behavior has been verified. Do not use a provider's free tier, trial credit, free daily token/neuron/request allocation or development allowance as if it were a sustainable production resource.
+- If a provider cannot offer a verified paid route that preserves the protected development quotas, that provider/model is ineligible for the security service until an acceptable paid arrangement is established.
+- Mistral remains deferred in the current NOVA roster and must not be counted as an active fallback or included in the service's eligible rate pool until it is explicitly requalified and approved.
+- If the paid account has no available budget/credits, use deterministic checks that require no external AI inference, or stop/block the AI-dependent action before the call. Do not silently fall back to a free quota.
+- Do not send customer source code, secrets or private findings to any external AI provider by default. A paid route does not replace data-flow review, task-specific qualification or customer consent requirements.
 
-### 7.1 Why these prices are plausible—but still need validation
+### 7.2 Separate cost centres
 
-Public vendor pages observed on 2026-10-24 show examples such as Wordfence Premium at $149/year, Sucuri Basic at $229/year, and Intruder offering a free tier alongside application penetration tests advertised from $3,500/test. These products do not provide identical functions: some include firewall protection, malware cleanup, incident response or broader infrastructure testing. They are price references, not like-for-like equivalence.
+Every provider call and meaningful workload must be accounted for as one of these categories:
 
-The proposed entry plans are intentionally lower-cost and have narrower scope. They should compete on transparent evidence, helpful remediation, clear limits and accessibility—not on unsupported claims that they replace a firewall, malware-removal service or expert-led pentest.
+1. **Customer delivery:** provider inference, tools and infrastructure used for the customer's explicitly authorized job.
+2. **Service operations:** provider health/availability checks, monitoring, incident diagnosis, production qualification, security regression tests, false-positive analysis and service-quality evaluation.
+3. **NOVA/AstroCrown internal use:** the service owner's own use and internal experiments associated with operating or improving the product.
+4. **Development/test:** offline fixtures and local tests by default; any funded paid test call must be tagged separately.
 
-### 7.2 Protect users from pressure to upgrade
+Internal use must never be hidden inside customer quotas or funded by consuming limited development free allocations. Allocate the expected service-operation and internal-use cost to the service cost model and recover it through revenue, or reduce/disable that usage until separately funded. Free-user service costs must also be explicitly budgeted; do not assume free access has zero cost.
 
-- Never hide or blur a confirmed in-scope finding to sell a more expensive plan.
-- Show the user when a result is unavailable because a particular check is outside their plan; do not represent an unperformed test as a pass.
-- Basic remediation guidance and downloadable results for checks actually performed remain available at the free level.
-- Paid plans buy greater scope, monitoring frequency, retention, collaboration and qualified service—not better grades or the suppression of risk.
-- Do not require public listing, award participation, marketing permission, or use of a badge to purchase or use the service.
-- Publish clear limits, retention periods, cancellation, tax, recheck and support terms before payment.
+### 7.3 Price every plan against the highest-cost eligible paid route
+
+Maintain a versioned rate card containing provider, exact model/service ID, billing tier/region, input/output or equivalent unit rates, tool fees, caching/context bands, minimums, rate source, date verified, billing path and commercial eligibility. Recheck the source before launch and after any provider/model/plan change.
+
+For each proposed plan and one-time assessment, define a hard maximum usage envelope: supported assets/pages/files, checks, model input/output tokens, tool/search/embedding/vision units, scan cadence, attempts, retries/failover, retained history, storage/egress, report generation and retests. Do not estimate cost only from an average customer's usage.
+
+Calculate the maximum chargeable execution path for that capped envelope using the highest-priced *eligible paid route for the actual task*, including the sum of all billable attempts across failover/retry paths. Use published standard paid rates or a verified written quotation. Do not rely on free credits, introductory credits, temporary discounts, batch/caching discounts or assumed volume discounts. If a route has no published rate or its exact model price/billing route cannot be verified, exclude it from a fixed-price plan until a rate is established.
+
+**Provider cost ceiling for a plan** = the highest cost of any permitted execution/failover sequence at the maximum included usage and current verified paid rate card. A fallback sequence can incur several provider charges, so its cost must be summed; it is not simply the most expensive single call.
+
+### 7.4 Formula and proposed financial guardrails
+
+For each plan or billable task, define:
+
+- `C_provider_max`: maximum paid provider/API/tool cost at the rate-card ceiling for the full included usage cap and every allowed retry/failover attempt.
+- `C_platform`: hosting/runner/compute, data transfer, database, storage, logging/observability, monitoring, report delivery, payment fixed fees, customer support and other direct service costs.
+- `C_internal_alloc`: conservative per-unit allocation for service-owned provider use, maintenance checks, qualification, security regression work and internal NOVA use needed to deliver/operate the service.
+- `C_free_alloc`: the explicitly funded cost allocation for any free baseline, free-user infrastructure or free monitoring promised to users.
+- `C_risk`: a proposed minimum 20% contingency on variable provider and platform costs, until measured operating history justifies a different buffer.
+- `p`: the variable payment processing rate, verified for the selected payment method and region.
+- `m`: a proposed minimum 30% contribution margin after the costs above and payment processing, before income tax and any corporate-level costs not already allocated.
+
+Calculate the pre-indirect-tax price floor as:
+
+`P_floor = ROUND_UP((C_provider_max + C_platform + C_internal_alloc + C_free_alloc + C_risk + fixed_payment_fees) / (1 - p - m))`
+
+This is a proposed operating rule, not a claim that 20% is a statistically calibrated risk reserve or 30% is an industry standard. Validate the assumptions with representative runs and sensitivity analysis. Include any additional costs required to operate legally and safely in the applicable jurisdictions. Indirect taxes are handled as required by the customer's jurisdiction; do not silently treat tax collected for authorities as margin.
+
+Do not set a fixed monthly price until the included maximum usage fits within that floor. If the resulting price is too high for the intended customer, lower the plan's included workload or frequency, simplify/localize the computation, select a cheaper provider only after equivalent qualification, or offer transparent pay-per-assessment pricing. Do not simply reduce the price below cost.
+
+### 7.5 Spend limits, free access and safe degradation
+
+- Put hard per-job, per-customer, per-day and per-month spend caps ahead of provider calls. Count failed calls/retries conservatively unless invoice evidence proves they were not billed.
+- Set alerts at 50%, 75%, 90% and 100% of the approved budget. At the cap, open no further provider-dependent jobs without explicit budget authorization; do not allow retries or fallback to bypass the cap.
+- Monthly subscription tiers must contain explicit scan/AI credits and maximum per-job usage. No unbounded scanning or hidden overages. When the allowance is exhausted, show it clearly; preserve prior reports and offer deterministic, no-inference checks where available. Never auto-upgrade or charge a surprise overage.
+- The free Quick Check may use a carefully bounded deterministic path with no external AI call. Any hosted compute or storage still has a cost and must remain within a measured, funded free-service budget.
+- The Community Watch / free monitoring plan is disabled until a paid-revenue allocation or separately funded operating budget covers its infrastructure and support. It must not consume free API quotas.
+- Internal NOVA/provider health and qualification jobs are separately budgeted. If there is no paid operational budget, use offline fixtures/local tests and do not make live model calls for this service.
+- Review actual provider bills and unit economics monthly. If actual costs exceed the forecast envelope, stop new sales or reduce future allowances immediately, protect existing customer data, and correct pricing/limits before resuming.
+
+### 7.6 Current official rate-card observations (not yet the production service rate card)
+
+Official vendor pages checked on 2026-10-26 illustrate why a provider-agnostic cost ceiling is necessary:
+
+| Published route example | Observed published rate | Important qualification |
+|---|---|---|
+| Groq `openai/gpt-oss-20b` | $0.075 / 1M input tokens; $0.30 / 1M output tokens | The current NOVA roster has this model qualified for a bounded health response only. Security-assessment suitability and commercial billing must be qualified separately. |
+| Google Gemini `gemini-3.1-flash-lite` | Standard paid tier: $0.25 / 1M text input tokens; $1.50 / 1M output tokens | Current NOVA qualification relates to a specific bounded health contract, not to general security analysis. Verify the paid billing tier and exact task before production use. |
+| Cloudflare Workers AI | Billing is model-specific; pricing documentation states $0.011 per 1,000 neurons and also describes a 10,000-neuron daily no-charge allocation. Prepaid AI Gateway credits are documented as a paid route. | Do not assume the no-charge allocation is available for this service. Confirm the exact deployed model SKU and verify that the chosen paid billing path does not consume protected development quota before allowing this provider. |
+
+These are observed snapshots, not a permanent price guarantee or a complete list of permitted routes. Models with a contract failure, preview/retirement risk, unknown billing, or unverified production entitlement must not enter the cost calculation as eligible routes. Reconfirm prices and terms from the linked official pages immediately before approving the production rate card.
+
+### 7.7 Plan structure while the price is being calculated
+
+Keep the customer-facing plan concepts, but show **“price and allowance not set—cost validation pending”** internally until the calculation above is complete:
+
+| Plan concept | Intended purpose | Economic gate |
+|---|---|---|
+| **Quick Check** | Free, bounded, deterministic public-website baseline | No external AI/API inference; infrastructure bounded by a funded free-service cap |
+| **Community Watch** | Limited passive checks/history for one verified asset | Do not launch until its real infrastructure and support cost is funded without using free AI/API quotas |
+| **Starter** | One website; scheduled checks, report and remediation guidance | Monthly price must cover the maximum included paid-provider path, operation/internal-cost allocation, contingency and target margin |
+| **Builder** | Multiple supported assets and a qualified repository | Explicit asset/check/AI credits; same cost-floor rule |
+| **Team** | Collaboration, private shared reports and audit history | Explicit seats and resource limits; no implied 24/7 response |
+| **Extended automated assessment** | One explicitly authorized, capped, non-destructive assessment and a defined retest | Price per task computed from its measured maximum workload and paid-provider rate ceiling |
+
+Annual discounts may be introduced only after the cost model is validated across the whole commitment term. An annual discount must not reduce the price below the worst-case contracted workload cost plus the required margin. Human-led professional assessments remain separate and scope-quoted only after qualified reviewers, capacity, contracts and liability/data-handling arrangements are established.
+
+### 7.8 The user must never pay for a hidden test
+
+- Never hide or blur a confirmed in-scope finding to push an upgrade.
+- Identify any unperformed or plan-excluded check; untested is not PASS.
+- Users keep their private findings and remediation guidance; the Benchmark and public listing remain optional.
+- Paid plans buy greater verified scope, frequency, retention, collaboration or qualified service—not a better grade, a suppressed vulnerability or a higher chance of winning.
+- Show plan limits, maximum usage, retest conditions, cancellation, taxes and any separately authorized cost before confirmation.
+- Price changes apply prospectively with clear notice and consent where required; never silently increase costs already committed under a fixed term.
 
 ## 8. Prize funding and commercial independence
 
@@ -406,12 +476,13 @@ Until these gates are passed, the correct external status is **proposed / develo
 7. Honest mistakes are corrected proportionately; serious sanctions require substantiated serious misconduct and fair process.
 8. A proven serious breach may result in ten-year Benchmark exclusion and lifetime exclusion from Benchmark-related Council decision-making.
 9. Award revocation requires substantiated, materially relevant intentional fraud; allegations and honest errors alone are insufficient.
-10. Proposed prices remain unapproved until unit economics and service capability are validated.
-11. The launch must not depend on paid AI APIs or third-party commercial services unless their costs and terms have been explicitly approved.
+10. Fixed plan prices are not approved until each workload is capped and priced at the highest eligible paid-provider route, with the service's own operating/internal usage, free-plan allocation, 20% contingency and 30% target contribution margin included.
+11. No service or internal provider call may consume limited development/free-tier quotas. Production provider use requires a separately budgeted paid route; if funding is unavailable, use deterministic/offline checks or stop.
+12. The launch must not depend on paid AI APIs or third-party commercial services unless their costs and terms have been explicitly approved.
 
 ## 12. References
 
-External sources reviewed on 2026-10-24; the vendor pricing pages can change and must be rechecked before the price list is approved.
+External sources reviewed on 2026-10-26; provider rates and terms change and must be rechecked before approving a rate card. No rate card or customer price has been approved.
 
 ### Security methods and governance
 - OWASP ASVS 5.0.0: https://asvs.owasp.org/
@@ -428,6 +499,12 @@ External sources reviewed on 2026-10-24; the vendor pricing pages can change and
 ### Pricing reference pages
 - Wordfence pricing: https://lp.wordfence.com/en/wordfence-plans-pricing
 - Sucuri security platform: https://www.sucuri.net/
-- Intruder pricing: https://www.intruder.io/pricing
+- Intruder pricing (market reference only; not a cost proxy for this service): https://www.intruder.io/pricing
+
+### Provider rate-card sources
+- Groq supported models/pricing: https://console.groq.com/docs/models
+- Google Gemini API pricing: https://ai.google.dev/gemini-api/docs/pricing
+- Cloudflare Workers AI pricing and billing: https://developers.cloudflare.com/workers-ai/platform/pricing/
+- Mistral API pricing (Mistral remains deferred in the current NOVA provider roster and is not an approved route for this proposal): https://docs.mistral.ai/inference/pricing
 
 This is a project proposal and planning document, not legal advice. Obtain appropriate legal, privacy, tax and security-professional review before operating paid assessments or awarding prizes.
