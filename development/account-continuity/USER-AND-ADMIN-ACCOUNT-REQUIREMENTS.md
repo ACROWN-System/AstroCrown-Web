@@ -24,7 +24,7 @@ Define one understandable account foundation for ordinary users and administrato
 7. Admin access is not self-service. There must be no public “Sign up as admin”, first-user privilege, client-side role toggle or promotion because an address connected first.
 8. Administrator wallet policy: up to three registered wallets; a valid proof-of-control signature from any one enrolled wallet can satisfy the wallet step for an already-authorized administrator. This is **one-of-N alternative access**, not a 2-of-3 multisignature transaction. The server must also authenticate the ordinary account and confirm its existing admin role.
 9. Losing all enrolled admin wallets requires a formal recovery request to the Imperial HSIAN authority (the owner and/or a specifically authorized NOVA-governed process). NOVA may collect evidence and execute only expressly authorized actions. It must not independently promote itself or an unverified claimant.
-10. The current browser preview is memory-only and disposable; the local SQLite server is loopback-only. Neither is production authentication. Root/production website files remain unchanged by this prototype work.
+10. The current browser preview is memory-only and disposable; the local SQLite server is loopback-only. Neither is production authentication. The local SQLite schema has a server-owned role field defaulting to `user`; registration ignores client-supplied role/admin flags. A role value alone does not grant admin access: the prototype deliberately has no admin provisioning, wallet enrollment, wallet-verified admin session, or protected admin endpoint. Root/production website files remain unchanged by this prototype work.
 
 ## 3. Account concepts and permission boundary
 
