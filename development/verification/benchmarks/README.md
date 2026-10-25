@@ -4,7 +4,7 @@ This directory contains benchmark-specific methods, governance, pilot plans and 
 
 ## AstroCrown Security Assessment Service and Benchmark
 
-- [00 — Security Assessment and Benchmark Starting Point](00-STARTING-POINT.md) — concise feature summary, candidate plans/pricing, fairness rules, launch sequence and unresolved decisions.
+- [00 — Security Assessment and Benchmark Starting Point](00-STARTING-POINT.md) — concise feature summary, provider-cost pricing rule, fairness rules, launch sequence and unresolved decisions.
 
 - [Security Assessment Service and Benchmark Governance Charter](ASTROCROWN-SECURITY-ASSESSMENT-AND-BENCHMARK-CHARTER.md) — proposed service scope, private assessment reports, optional public awards, Council conflict-of-interest rules and candidate pricing.
 
