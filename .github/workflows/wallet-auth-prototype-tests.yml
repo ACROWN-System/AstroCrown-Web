@@ -37,7 +37,7 @@ jobs:
           python -m pip freeze
 
       - name: Compile prototype
-        run: python -m py_compile development/auth-prototype/server.py development/auth-prototype/tests/test_auth.py
+        run: python -m py_compile development/auth-prototype/wallet_auth_core.py development/auth-prototype/server.py development/auth-prototype/tests/test_auth.py
 
       - name: Validate browser JavaScript syntax
         run: |
