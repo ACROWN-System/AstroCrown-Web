@@ -95,10 +95,22 @@ class WalletAuthService:
                 self.sessions.pop(token, None)
 
     def issue_challenge(
-        self, address_value: Any, chain_id_value: Any, now: datetime | None = None
+        self,
+        address_value: Any,
+        chain_id_value: Any,
+        now: datetime | None = None,
+        *,
+        statement: str | None = None,
     ) -> dict[str, str]:
         address = parse_address(address_value)
         chain_id = parse_chain_id(chain_id_value)
+        challenge_statement = self.statement if statement is None else statement
+        if (
+            not isinstance(challenge_statement, str)
+            or not challenge_statement.strip()
+            or len(challenge_statement) > 256
+        ):
+            raise AuthenticationError("The wallet challenge statement is invalid.")
         issued_at = now or utc_now()
         issued_at = issued_at.astimezone(timezone.utc).replace(microsecond=0)
         expires_at = issued_at + CHALLENGE_TTL
@@ -113,7 +125,7 @@ class WalletAuthService:
                 scheme=self.scheme,
                 domain=self.domain,
                 address=address,
-                statement=self.statement,
+                statement=challenge_statement,
                 uri=self.uri,
                 version="1",
                 chain_id=chain_id,
