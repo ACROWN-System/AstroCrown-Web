@@ -35,6 +35,7 @@ MAX_BODY_BYTES = 16 * 1024
 TERMS_VERSION = "development-draft-2026-10-21"
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REFERRAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+AVATAR_IDS = frozenset({"person", "crown", "star", "moon", "orbit", "shield"})
 
 
 class ApiError(Exception):
@@ -124,7 +125,10 @@ class AccountApplication:
                     terms_version TEXT NOT NULL DEFAULT '',
                     terms_accepted_at TEXT NOT NULL DEFAULT '',
                     email_verified INTEGER NOT NULL DEFAULT 0,
-                    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin'))
+                    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin')),
+                    avatar_id TEXT NOT NULL DEFAULT 'person' CHECK(
+                        avatar_id IN ('person', 'crown', 'star', 'moon', 'orbit', 'shield')
+                    )
                 );
                 CREATE TABLE IF NOT EXISTS sessions (
                     token_hash TEXT PRIMARY KEY,
@@ -147,6 +151,7 @@ class AccountApplication:
                 "terms_accepted_at": "TEXT NOT NULL DEFAULT ''",
                 "email_verified": "INTEGER NOT NULL DEFAULT 0",
                 "role": "TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('user', 'admin'))",
+                "avatar_id": "TEXT NOT NULL DEFAULT 'person' CHECK(avatar_id IN ('person', 'crown', 'star', 'moon', 'orbit', 'shield'))",
             }
             for name, definition in migrations.items():
                 if name not in columns:
@@ -217,6 +222,7 @@ class AccountApplication:
             "authenticated": True,
             "email": account["email"] or account["username"],
             "createdAt": account["created_at"],
+            "avatarId": account["avatar_id"],
             "referralId": account["referral_id"] or "",
             "newsletterOptIn": bool(account["newsletter_opt_in"]),
             "newsletterConsentAt": account["newsletter_consent_at"],
@@ -245,6 +251,7 @@ class AccountApplication:
             if account is None:
                 return 200, {
                     "authenticated": False,
+                    "avatarId": "person",
                     "role": "user",
                     "adminRoleAssigned": False,
                     "adminWalletAuthenticated": False,
@@ -313,6 +320,26 @@ class AccountApplication:
             with self.connect() as db:
                 account = db.execute("SELECT * FROM accounts WHERE account_id = ?", (account["account_id"],)).fetchone()
             return 200, self.account_summary(account, expires), self.cookie_header(token)
+
+        if path == "/api/account/avatar":
+            account, expires = self.account_for_session(self.get_cookie(handler))
+            if account is None:
+                raise ApiError(401, "Sign in before changing your test avatar.")
+            avatar_id = payload.get("avatarId")
+            if not isinstance(avatar_id, str) or avatar_id not in AVATAR_IDS:
+                raise ApiError(400, "Choose one of the provided account avatars.")
+            with self.connect() as db:
+                db.execute(
+                    "UPDATE accounts SET avatar_id = ? WHERE account_id = ?",
+                    (avatar_id, account["account_id"]),
+                )
+                account = db.execute(
+                    "SELECT * FROM accounts WHERE account_id = ?",
+                    (account["account_id"],),
+                ).fetchone()
+            result = self.account_summary(account, expires)
+            result["message"] = "The avatar was updated for this local test account."
+            return 200, result, None
 
         if path == "/api/account/logout":
             token = self.get_cookie(handler)
