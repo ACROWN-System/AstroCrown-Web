@@ -25,7 +25,7 @@ Continue the user-account and administrator foundation using the smallest safe i
 
 - PR #141 already contains a familiar Log In / Sign Up interface, optional Referral ID, independent crypto-news preference, required development Terms/Privacy acknowledgement, browser-memory preview, local loopback SQLite server, password hashing, session cookie handling and automated tests.
 - A separate `development/auth-prototype/` lab demonstrates local EIP-4361/SIWE wallet proof-of-control, but it is not connected to account roles and does not authorize admin access.
-- There is no production email delivery, account verification/reset, account role management, admin wallet registry, admin-recovery flow, production backend, or account security assurance page on the branch at plan start.
+- Phase 1 now has a separate prototype Security assurance page, success popup and modular user account hub. The local account database has a server-owned role field that defaults to `user`, and registration cannot set it. There is still no production email delivery, account verification/reset, admin provisioning/role-change API, admin wallet registry, wallet-verified admin session, admin-recovery flow, production backend or production account service.
 - Root/production website files remain unchanged. The authoritative public deployment route remains a separate prerequisite before production integration.
 
 ## 4. Phase 1 work in this block
