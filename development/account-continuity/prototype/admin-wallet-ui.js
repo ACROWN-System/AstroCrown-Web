@@ -55,6 +55,82 @@
     else dialog.removeAttribute("open");
   }
 
+  var accessPromptTrigger = null;
+
+  function administratorAccessDialog() {
+    var dialog = document.getElementById("admin-access-dialog");
+    if (dialog) return dialog;
+
+    dialog = document.createElement("dialog");
+    dialog.id = "admin-access-dialog";
+    dialog.className = "admin-wallet-proof-dialog";
+    dialog.setAttribute("aria-labelledby", "admin-access-title");
+    dialog.innerHTML =
+      '<div class="admin-wallet-proof-shell">' +
+        '<div class="admin-wallet-proof-heading">' +
+          '<div><p class="account-dashboard-kicker">ASTROCROWN · ADMIN ACCESS</p><h2 id="admin-access-title">Administrator access</h2></div>' +
+          '<button class="admin-wallet-proof-close" id="admin-access-close" type="button" aria-label="Close administrator access dialog">×</button>' +
+        '</div>' +
+        '<p class="admin-wallet-proof-explainer">Administrator access is available only when the signed-in account already has an administrator role assigned by the server. Continuing rechecks that role, then asks you to choose a registered wallet and review a one-time signature. <strong>The signature does not authorize a blockchain transaction.</strong></p>' +
+        '<p class="admin-wallet-proof-explainer">No wallet is requested until you select Continue. Never enter or share a seed phrase, private key or recovery secret.</p>' +
+        '<p class="admin-wallet-proof-status" id="admin-access-status" role="status" aria-live="polite">No wallet request has been sent. Continue when you are ready, or cancel to return to your account.</p>' +
+        '<div class="admin-wallet-proof-actions">' +
+          '<button class="account-secondary" id="admin-access-cancel" type="button">Cancel</button>' +
+          '<button class="account-primary" id="admin-access-continue" type="button">Continue to administrator access</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(dialog);
+
+    var closeButton = document.getElementById("admin-access-close");
+    var cancelButton = document.getElementById("admin-access-cancel");
+    var continueButton = document.getElementById("admin-access-continue");
+
+    function closePrompt(restoreFocus) {
+      closeDialog(dialog);
+      if (restoreFocus && accessPromptTrigger && typeof accessPromptTrigger.focus === "function") {
+        accessPromptTrigger.focus();
+      }
+      accessPromptTrigger = null;
+    }
+    function cancelPrompt() {
+      closePrompt(true);
+    }
+    function onNativeCancel(event) {
+      event.preventDefault();
+      cancelPrompt();
+    }
+    function onBackdrop(event) {
+      if (event.target === dialog) cancelPrompt();
+    }
+
+    closeButton.addEventListener("click", cancelPrompt);
+    cancelButton.addEventListener("click", cancelPrompt);
+    dialog.addEventListener("cancel", onNativeCancel);
+    dialog.addEventListener("click", onBackdrop);
+    continueButton.addEventListener("click", function () {
+      // The step-up routine rechecks the server role and active account session
+      // before it can request a wallet connection or signature.
+      closePrompt(true);
+      requestAdminWalletAccess();
+    });
+    return dialog;
+  }
+
+  function openAdministratorAccessPrompt() {
+    if (busy) return;
+    var dialog = administratorAccessDialog();
+    if (dialog.open) return;
+    accessPromptTrigger = document.activeElement;
+    var statusNode = document.getElementById("admin-access-status");
+    if (statusNode) {
+      statusNode.textContent = "No wallet request has been sent. Continue when you are ready, or cancel to return to your account.";
+    }
+    if (typeof dialog.showModal === "function") dialog.showModal();
+    else dialog.setAttribute("open", "open");
+    var continueButton = document.getElementById("admin-access-continue");
+    if (continueButton) continueButton.focus();
+  }
+
   function signatureReviewDialog() {
     var dialog = document.getElementById("admin-wallet-proof-dialog");
     if (dialog) return dialog;
@@ -336,6 +412,6 @@
     }
   }
 
-  document.addEventListener("astrocrown:request-admin-wallet-access", requestAdminWalletAccess);
+  document.addEventListener("astrocrown:request-admin-wallet-access", openAdministratorAccessPrompt);
   document.addEventListener("astrocrown:request-admin-wallet-enrollment", requestAdditionalWalletEnrollment);
 }());
