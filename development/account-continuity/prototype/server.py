@@ -1002,7 +1002,15 @@ def make_handler(application: AccountApplication):
                 return
             path = urlsplit(self.path).path
             if path in {"/api/account/status", "/api/admin/status"}:
-                status, payload, cookie = application.handle(path, {}, self)
+                try:
+                    status, payload, cookie = application.handle(path, {}, self)
+                except ApiError as error:
+                    self.json_response(error.status, {"error": error.message})
+                    return
+                except Exception:
+                    # Keep internal details out of the HTTP response, matching POST handling.
+                    self.json_response(500, {"error": "The local prototype encountered an unexpected error."})
+                    return
                 self.json_response(status, payload, cookie)
                 return
             self.html_or_asset(path)
