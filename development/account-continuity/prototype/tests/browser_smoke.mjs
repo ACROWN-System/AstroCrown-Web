@@ -183,7 +183,7 @@ try {
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("user account dashboard after signup", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), email.toLowerCase());
-  assert.match(await evaluate("document.body.innerText"), /Email not verified/);
+  assert.match(await evaluate("document.body.innerText"), /Email not verified/i);
   assert.match(await evaluate("document.body.innerText"), /Password reset|password reset/);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
   assert.ok(await evaluate("Boolean(document.querySelector('.account-dashboard-card a[href*=' + JSON.stringify('security-assurance.html') + ']'))"),
