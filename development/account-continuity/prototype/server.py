@@ -537,7 +537,13 @@ class AccountApplication:
                 raise ApiError(401, "Sign in to your account before checking administrator access.")
             if account["role"] != "admin":
                 raise ApiError(403, "Administrator authority is not assigned to this account.")
-            return 200, self.account_summary(account, expires), None
+            summary = self.account_summary(account, expires)
+            if summary["adminSessionAuthorized"] is not True:
+                raise ApiError(
+                    403,
+                    "A fresh signature from an enrolled administrator wallet is required for the admin console.",
+                )
+            return 200, summary, None
 
         if path == "/api/account/register":
             email = normalize_email(payload.get("email"))
