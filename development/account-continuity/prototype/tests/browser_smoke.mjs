@@ -129,6 +129,11 @@ try {
   await waitFor("homepage load", pageReady);
   assert.equal(await evaluate("Boolean(window.ethereum)"), false, "ordinary account test must not require a wallet");
 
+  const assuranceResult = await evaluate("fetch('/account-continuity/prototype/security-assurance.html').then(async function (response) { return [response.status, await response.text()]; })");
+  assert.equal(assuranceResult[0], 200, "security assurance page must be served by the local prototype");
+  assert.match(assuranceResult[1], /Development prototype only/);
+  assert.match(assuranceResult[1], /Not implemented/);
+
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("Account button opens sign-in dialog directly", () => evaluate("document.getElementById('account-dialog').open"));
   assert.match(await evaluate("document.body.innerText"), /A crypto wallet is not required/);
@@ -170,10 +175,19 @@ try {
   await evaluate("document.getElementById('account-newsletter-opt-in').checked = true");
   await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
-  await waitFor("signed-in account after email signup", () => evaluate("Boolean(document.getElementById('account-signout'))"));
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), email.toLowerCase());
-  assert.match(await evaluate("document.body.innerText"), /Email verification is not enabled/);
+  await waitFor("account-created success popup", () => evaluate("Boolean(document.getElementById('open-account-hub'))"));
+  assert.equal(await evaluate("document.getElementById('open-account-dialog').classList.contains('is-authenticated')"), true);
+  assert.equal(await evaluate("document.getElementById('open-account-dialog').querySelectorAll('span').length"), 0,
+    "signed-in header control must become a circular icon without the Account text");
+  assert.match(await evaluate("document.body.innerText"), /no email or newsletter message was sent/i);
+  await evaluate("document.getElementById('open-account-hub').click()");
+  await waitFor("user account dashboard after signup", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), email.toLowerCase());
+  assert.match(await evaluate("document.body.innerText"), /Email not verified/);
+  assert.match(await evaluate("document.body.innerText"), /Password reset|password reset/);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
+  assert.ok(await evaluate("Boolean(document.querySelector('.account-dashboard-card a[href*=' + JSON.stringify('security-assurance.html') + ']'))"),
+    "dashboard must link to the separate security assurance page");
   const storedAccount = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(storedAccount.email, email.toLowerCase());
   assert.equal(storedAccount.referralId, "ACROWN_E2E_7");
@@ -184,14 +198,26 @@ try {
   assert.equal(storedAccount.emailVerified, false);
 
   await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("home after sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
+  await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("signed-out Log In view", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
   await evaluate("document.getElementById('account-email').value = " + JSON.stringify(email));
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(password));
   await evaluate("document.getElementById('account-signin-form').requestSubmit()");
-  await waitFor("successful email sign-in", () => evaluate("Boolean(document.getElementById('account-signout'))"));
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), email.toLowerCase());
+  await waitFor("successful email sign-in", () => evaluate("Boolean(document.getElementById('open-account-hub'))"));
+  await evaluate("document.getElementById('account-dialog-close').click()");
+  await waitFor("closing success popup without signing out", () => evaluate("!document.getElementById('account-dialog').open"));
+  assert.equal(await evaluate("document.getElementById('open-account-dialog').classList.contains('is-authenticated')"), true,
+    "closing the success popup must retain the authenticated test state");
+  assert.equal(await evaluate("document.getElementById('main-content').hidden"), false,
+    "closing the success popup must leave the user on the homepage");
+  await evaluate("document.getElementById('open-account-dialog').click()");
+  await waitFor("account dashboard after reopening signed-in avatar", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), email.toLowerCase());
 
   await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("home after second sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
+  await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("Log In view after second sign-out", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
   await evaluate("document.querySelector('[data-account-mode=recover]').click()");
   await waitFor("password-reset information form", () => evaluate("Boolean(document.getElementById('account-reset-request-form'))"));
@@ -228,21 +254,29 @@ try {
   await evaluate("document.getElementById('account-newsletter-opt-in').checked = true");
   await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
-  await waitFor("browser-preview email account creation", () => evaluate("Boolean(document.getElementById('account-signout'))"), 30000);
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoEmail.toLowerCase());
+  await waitFor("browser-preview account-created success popup", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 30000);
   assert.match(await evaluate("document.body.innerText"), /no email or newsletter message was sent/i);
+  await evaluate("document.getElementById('open-account-hub').click()");
+  await waitFor("browser-preview account dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
   assert.match(await evaluate("document.body.innerText"), /opted in to crypto-news email updates/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
 
   await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("browser-preview home after sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
+  await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("browser-preview Log In view", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
   await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
   await evaluate("document.getElementById('account-signin-form').requestSubmit()");
-  await waitFor("browser-preview email sign-in", () => evaluate("Boolean(document.getElementById('account-signout'))"), 20000);
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoEmail.toLowerCase());
+  await waitFor("browser-preview sign-in success popup", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 20000);
+  await evaluate("document.getElementById('open-account-hub').click()");
+  await waitFor("browser-preview dashboard after sign-in", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
 
   await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("browser-preview home after second sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
+  await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("browser-preview signed out", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
   await evaluate("document.querySelector('[data-account-mode=recover]').click()");
   await waitFor("browser-preview password-reset form", () => evaluate("Boolean(document.getElementById('account-reset-request-form'))"));
@@ -261,10 +295,12 @@ try {
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
   await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
-  await waitFor("same email can be used after page reload", () => evaluate("Boolean(document.getElementById('account-signout'))"), 30000);
-  assert.equal(await evaluate("document.querySelector('.account-account-name').textContent"), demoEmail.toLowerCase());
+  await waitFor("same email can be used after page reload", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 30000);
+  await evaluate("document.getElementById('open-account-hub').click()");
+  await waitFor("recreated browser-preview account dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
 
-  console.log("PASS: email signup/login, referral and consent handling, reset-email disclosure, local backend guardrails, and memory-only browser preview.");
+  console.log("PASS: email signup/login, success popup, circular avatar, account dashboard, separate security assurance page, referral/consent handling, reset disclosure, local backend guardrails and memory-only browser preview.");
 
 } catch (error) {
   console.error(String(error?.stack || error));
