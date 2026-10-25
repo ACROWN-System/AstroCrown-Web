@@ -259,7 +259,7 @@ try {
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("browser-preview account dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
-  assert.match(await evaluate("document.body.innerText"), /opted in to crypto-news email updates/i);
+  assert.match(await evaluate("document.body.innerText"), /Crypto-news email: Opted in for this test/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
 
   await evaluate("document.getElementById('account-signout').click()");
