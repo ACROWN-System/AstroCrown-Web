@@ -25,7 +25,7 @@ Continue the user-account and administrator foundation using the smallest safe i
 
 - PR #141 already contains a familiar Log In / Sign Up interface, optional Referral ID, independent crypto-news preference, required development Terms/Privacy acknowledgement, browser-memory preview, local loopback SQLite server, password hashing, session cookie handling and automated tests.
 - A separate `development/auth-prototype/` lab demonstrates local EIP-4361/SIWE wallet proof-of-control, but it is not connected to account roles and does not authorize admin access.
-- Phase 1 now has a separate prototype Security assurance page, success popup and modular user account hub. The local account database has a server-owned role field that defaults to `user`, and registration cannot set it. There is still no production email delivery, account verification/reset, admin provisioning/role-change API, admin wallet registry, wallet-verified admin session, admin-recovery flow, production backend or production account service.
+- Phase 1 now has a separate prototype Security assurance page, success popup, modular user account hub and six built-in avatar choices. Avatar changes use an allowlisted ID; arbitrary markup/URLs and uploads are rejected/not supported. The local account database has a server-owned role field defaulting to `user`, registration cannot set it, and admin remains unauthorized even if a role is separately assigned in the test database. There is still no production email delivery, account verification/reset, admin provisioning/role-change API, admin wallet registry, wallet-verified admin session, admin-recovery flow, production backend or production account service.
 - Root/production website files remain unchanged. The authoritative public deployment route remains a separate prerequisite before production integration.
 
 ## 4. Phase 1 work in this block
@@ -35,9 +35,10 @@ Continue the user-account and administrator foundation using the smallest safe i
 3. Serve that page in the local loopback prototype and link it from sign-in/sign-up/recovery.
 4. Add the post-authentication success state with close control and **Open your account** action; closing does not sign out.
 5. Change the signed-in header control to a circular icon/avatar control with no visible “Account” label.
-6. Add a modular account hub view that can be opened after sign-in, while keeping password/session/wallet/admin actions clearly labeled according to their actual prototype status.
-7. Update and extend browser and HTTP tests, then run exact-head automated verification.
-8. Keep PR #141 in draft; do not modify production/root homepage authentication or deploy to public routes.
+6. Add a modular account hub with six built-in avatar choices; validate avatar identifiers on the server and persist only the chosen built-in ID. Do not support image uploads or external image URLs.
+7. Add the server-owned role baseline: new accounts default to `user`, client-supplied role flags are ignored, and a role assignment alone never authorizes administrator access.
+8. Update and extend browser and HTTP tests, then run exact-head automated verification.
+9. Keep PR #141 in draft; do not modify production/root homepage authentication or deploy to public routes.
 
 ## 5. Admin phase remains separate
 
@@ -60,7 +61,7 @@ Do not integrate the existing SIWE lab into the ordinary account server until it
 
 - Run existing Python account server tests.
 - Run headless browser smoke tests for both the local-cookie path and memory-only hosted-preview path.
-- Test success popup X/close behavior, persistence of the signed-in state after closing, CTA navigation to the account hub, return-to-home, signed-in avatar state, sign-out and signed-out header state.
+- Test success popup X/close behavior, persistence of the signed-in state after closing, CTA navigation to the account hub, return-to-home, signed-in header and built-in avatar state, avatar allowlist/authentication/persistence, sign-out and signed-out header state.
 - Test that the Security assurance link opens the separate page and that all statements accurately identify the prototype-only status.
 - Retest malformed/oversized request, incorrect or missing Origin/Host, throttling, failed password, invalid/expired/revoked session and logout invalidation.
 - Confirm no test or implementation accidentally uses production credentials, sends email, calls external identity APIs, enables admin status, adds external provider dependencies or changes root files.
