@@ -16,6 +16,7 @@ import secrets
 import sqlite3
 import sys
 import time
+import threading
 import uuid
 from datetime import datetime, timezone
 from http.cookies import SimpleCookie
@@ -36,6 +37,30 @@ TERMS_VERSION = "development-draft-2026-10-21"
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REFERRAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 AVATAR_IDS = frozenset({"person", "crown", "star", "moon", "orbit", "shield"})
+ADMIN_WALLET_SESSION_SECONDS = 10 * 60
+AUTH_PROTOTYPE_DIR = DEVELOPMENT_DIR / "auth-prototype"
+
+# Keep ordinary email account UX available in a stdlib-only local environment.
+# Admin wallet proof-of-control fails closed when the pinned SIWE dependencies
+# are not installed; no mocked or client-only administrator login is allowed.
+if str(AUTH_PROTOTYPE_DIR) not in sys.path:
+    sys.path.insert(0, str(AUTH_PROTOTYPE_DIR))
+try:
+    from wallet_auth_core import (
+        AuthenticationError as WalletAuthenticationError,
+        CHALLENGE_TTL as WALLET_CHALLENGE_TTL,
+        WalletAuthService,
+        parse_address as parse_wallet_address,
+        parse_chain_id as parse_wallet_chain_id,
+    )
+    WALLET_AUTH_IMPORT_ERROR = None
+except ImportError as wallet_import_error:
+    WalletAuthenticationError = None
+    WALLET_CHALLENGE_TTL = None
+    WalletAuthService = None
+    parse_wallet_address = None
+    parse_wallet_chain_id = None
+    WALLET_AUTH_IMPORT_ERROR = type(wallet_import_error).__name__
 
 
 class ApiError(Exception):
@@ -97,9 +122,24 @@ class AccountApplication:
         except OSError:
             pass
         self.rate_events: dict[tuple[str, str], list[float]] = {}
+        self.wallet_auth_service = None
+        self.admin_challenge_bindings: dict[str, dict[str, object]] = {}
+        self.admin_challenge_lock = threading.RLock()
         self.dummy_salt = b"acrown-local-prototype"
         self.dummy_hash = self.hash_password("not-a-real-account-password", self.dummy_salt)
         self.initialize_database()
+
+    def configure_wallet_auth(self, port: int) -> bool:
+        """Configure SIWE to the exact localhost origin for this local server."""
+        self.wallet_auth_service = None
+        if WalletAuthService is None:
+            return False
+        host = f"localhost:{port}"
+        self.wallet_auth_service = WalletAuthService(
+            domain=host,
+            uri=f"http://{host}/",
+        )
+        return True
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(str(self.database_path), timeout=10)
@@ -134,9 +174,32 @@ class AccountApplication:
                     token_hash TEXT PRIMARY KEY,
                     account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
                     created_at INTEGER NOT NULL,
-                    expires_at INTEGER NOT NULL
+                    expires_at INTEGER NOT NULL,
+                    admin_wallet_address TEXT,
+                    admin_authenticated_at INTEGER,
+                    admin_expires_at INTEGER
                 );
                 CREATE INDEX IF NOT EXISTS sessions_account_idx ON sessions(account_id);
+                CREATE TABLE IF NOT EXISTS admin_wallets (
+                    wallet_id TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    address TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                    chain_id INTEGER NOT NULL CHECK(chain_id > 0),
+                    created_at TEXT NOT NULL,
+                    active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1)),
+                    provisioning_source TEXT NOT NULL DEFAULT 'local-owner-provisioning'
+                );
+                CREATE INDEX IF NOT EXISTS admin_wallets_account_idx
+                    ON admin_wallets(account_id, active);
+                CREATE TABLE IF NOT EXISTS account_admin_audit (
+                    audit_id TEXT PRIMARY KEY,
+                    event_type TEXT NOT NULL,
+                    actor TEXT NOT NULL,
+                    target_account_id TEXT,
+                    target_wallet_address TEXT,
+                    reason TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
                 """
             )
             # Upgrade an older local test database in place. The old username value
@@ -158,6 +221,17 @@ class AccountApplication:
                     db.execute(f"ALTER TABLE accounts ADD COLUMN {name} {definition}")
             db.execute("UPDATE accounts SET email = username WHERE email IS NULL OR email = ''")
             db.execute("CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_ci_idx ON accounts(email COLLATE NOCASE)")
+            session_columns = {
+                row["name"] for row in db.execute("PRAGMA table_info(sessions)").fetchall()
+            }
+            session_migrations = {
+                "admin_wallet_address": "TEXT",
+                "admin_authenticated_at": "INTEGER",
+                "admin_expires_at": "INTEGER",
+            }
+            for name, definition in session_migrations.items():
+                if name not in session_columns:
+                    db.execute(f"ALTER TABLE sessions ADD COLUMN {name} {definition}")
         try:
             os.chmod(self.database_path, 0o600)
         except OSError:
@@ -206,7 +280,21 @@ class AccountApplication:
         now = int(time.time())
         with self.connect() as db:
             row = db.execute(
-                """SELECT a.*, s.expires_at FROM sessions s
+                """SELECT a.*, s.expires_at,
+                          s.token_hash AS session_token_hash,
+                          s.admin_wallet_address AS session_admin_wallet_address,
+                          s.admin_authenticated_at AS session_admin_authenticated_at,
+                          s.admin_expires_at AS session_admin_expires_at,
+                          CASE WHEN EXISTS (
+                              SELECT 1 FROM admin_wallets aw
+                              WHERE aw.account_id = a.account_id
+                                AND aw.address = s.admin_wallet_address COLLATE NOCASE
+                                AND aw.active = 1
+                          ) THEN 1 ELSE 0 END AS session_admin_wallet_active,
+                          (SELECT COUNT(*) FROM admin_wallets aw_count
+                              WHERE aw_count.account_id = a.account_id AND aw_count.active = 1
+                          ) AS admin_wallet_count
+                   FROM sessions s
                    JOIN accounts a ON a.account_id = s.account_id
                    WHERE s.token_hash = ? AND s.expires_at > ?""",
                 (hash_session_token(token), now),
@@ -218,6 +306,16 @@ class AccountApplication:
 
     @staticmethod
     def account_summary(account: sqlite3.Row, expires_at: int | None) -> dict:
+        role_assigned = account["role"] == "admin"
+        wallet_address = account["session_admin_wallet_address"]
+        wallet_step_up_expires = int(account["session_admin_expires_at"] or 0)
+        wallet_is_enrolled = bool(account["session_admin_wallet_active"])
+        wallet_authenticated = bool(
+            role_assigned
+            and wallet_address
+            and wallet_is_enrolled
+            and wallet_step_up_expires > int(time.time())
+        )
         return {
             "authenticated": True,
             "email": account["email"] or account["username"],
@@ -233,15 +331,14 @@ class AccountApplication:
             "passwordResetAvailable": False,
             "sessionExpiresAt": utc_iso(expires_at) if expires_at else None,
             "scope": "local-test-account-only",
-            # The role is server-owned. A role assignment alone never grants
-            # admin access; this prototype has no admin-wallet verification or
-            # privileged-session implementation, so all admin authorization
-            # flags deliberately remain false.
             "role": account["role"],
-            "adminRoleAssigned": account["role"] == "admin",
-            "adminWalletAuthenticated": False,
-            "adminSessionAuthorized": False,
-            "admin": False,
+            "adminRoleAssigned": role_assigned,
+            "adminWalletCount": int(account["admin_wallet_count"] or 0) if role_assigned else 0,
+            "adminWalletAuthenticated": wallet_authenticated,
+            "adminSessionAuthorized": wallet_authenticated,
+            "admin": wallet_authenticated,
+            "adminWalletAddress": wallet_address if wallet_authenticated else None,
+            "adminSessionExpiresAt": utc_iso(wallet_step_up_expires) if wallet_authenticated else None,
         }
 
     def handle(self, path: str, payload: dict, handler: BaseHTTPRequestHandler) -> tuple[int, dict, str | None]:
@@ -254,9 +351,12 @@ class AccountApplication:
                     "avatarId": "person",
                     "role": "user",
                     "adminRoleAssigned": False,
+                    "adminWalletCount": 0,
                     "adminWalletAuthenticated": False,
                     "adminSessionAuthorized": False,
                     "admin": False,
+                    "adminWalletAddress": None,
+                    "adminSessionExpiresAt": None,
                     "passwordResetAvailable": False,
                 }, None
             return 200, self.account_summary(account, expires), None
@@ -517,6 +617,7 @@ def make_handler(application: AccountApplication):
 def create_server(application: AccountApplication, port: int = 8766) -> ThreadingHTTPServer:
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(application))
     server.daemon_threads = True
+    application.configure_wallet_auth(server.server_port)
     return server
 
 
