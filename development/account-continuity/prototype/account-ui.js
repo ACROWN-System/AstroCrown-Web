@@ -7,7 +7,11 @@
   var title = document.getElementById("account-dialog-title");
   var openButton = document.getElementById("open-account-dialog");
   var closeButton = document.getElementById("account-dialog-close");
+  var dashboard = document.getElementById("account-dashboard");
+  var dashboardContent = document.getElementById("account-dashboard-content");
+  var mainContent = document.getElementById("main-content");
   var mode = "signin";
+  var successKind = "signup";
   var accountState = { authenticated: false };
   var focusBeforeOpen = null;
   var busy = false;
@@ -227,9 +231,11 @@
 
   function setBusy(value) {
     busy = value;
-    Array.prototype.forEach.call(content.querySelectorAll("button, input"), function (element) {
-      if (element.dataset.keepEnabled === "true") return;
-      element.disabled = value || element.dataset.originalDisabled === "true";
+    [content, dashboardContent].forEach(function (container) {
+      Array.prototype.forEach.call(container.querySelectorAll("button, input"), function (element) {
+        if (element.dataset.keepEnabled === "true") return;
+        element.disabled = value || element.dataset.originalDisabled === "true";
+      });
     });
   }
 
@@ -286,6 +292,7 @@
         '<div class="account-form-actions"><button class="account-primary" type="submit">Log In</button>' +
           '<button class="account-text-button" type="button" data-account-mode="recover">Forgot password?</button></div>' +
       '</form>' +
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-provider-note">A crypto wallet is not required for ordinary account access. This development prototype does not verify email ownership or provide email password-reset delivery.</p>';
   }
 
@@ -314,7 +321,125 @@
         '</label>' +
         '<button class="account-primary account-create-submit" type="submit">Create an account</button>' +
       '</form>' +
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-provider-note">This prototype stores test information only. No verification email or crypto-news newsletter will be sent.</p>';
+  }
+
+  function syncAccountButton() {
+    var icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>';
+    if (accountState && accountState.authenticated) {
+      openButton.classList.add("is-authenticated");
+      openButton.setAttribute("aria-label", "Open your account");
+      openButton.setAttribute("title", "Open your account");
+      openButton.removeAttribute("aria-haspopup");
+      openButton.setAttribute("aria-controls", "account-dashboard");
+      openButton.innerHTML = icon;
+    } else {
+      openButton.classList.remove("is-authenticated");
+      openButton.setAttribute("aria-label", "Account");
+      openButton.setAttribute("title", "Account");
+      openButton.setAttribute("aria-haspopup", "dialog");
+      openButton.setAttribute("aria-controls", "account-dialog");
+      openButton.innerHTML = icon + '<span>Account</span>';
+    }
+  }
+
+  function renderSuccess() {
+    var created = successKind === "signup";
+    title.textContent = created ? "Account created" : "Welcome back";
+    var heading = created ? "Your account is ready for this test" : "You're signed in";
+    var message = created
+      ? "A development test account was created. Email ownership has not been verified and no email or newsletter message was sent."
+      : "You are signed in to the development test account. This does not grant production access or administrator privileges.";
+    content.innerHTML =
+      '<div class="account-success-panel">' +
+        '<div class="account-success-mark" aria-hidden="true">✓</div>' +
+        '<h3 class="account-success-heading">' + escapeHtml(heading) + '</h3>' +
+        '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
+        '<button class="account-primary" type="button" id="open-account-hub">Open your account</button>' +
+        '<p class="account-success-small">You can close this window at any time. Your test sign-in state remains active until you sign out, the session expires, or you reload the disposable browser demo.</p>' +
+      '</div>';
+  }
+
+  function renderAccountDashboard() {
+    if (!accountState || !accountState.authenticated) return;
+    var email = escapeHtml(accountState.email || "");
+    var referral = accountState.referralId
+      ? escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(unverified test value; no reward is applied)</span>'
+      : 'Not supplied';
+    var verification = accountState.emailVerified
+      ? '<span class="account-dashboard-status">Verified by prototype state</span>'
+      : '<span class="account-dashboard-status">Email not verified</span>';
+    var newsletter = accountState.newsletterOptIn
+      ? "Opted in for this test. No newsletter is sent."
+      : "Not opted in.";
+    var adminCard = accountState.admin === true && accountState.adminWalletAuthenticated === true
+      ? '<section class="account-dashboard-card"><h2>Administration</h2><p>Administrative access is enabled by the backend for this session. This prototype contains no production admin actions.</p></section>'
+      : '';
+    dashboardContent.innerHTML =
+      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, profile avatar changes, session-management UI and administrator access are not implemented here. Use invented details only in the browser demo.</div>' +
+      '<div class="account-dashboard-welcome">' +
+        '<div class="account-dashboard-avatar" aria-hidden="true">' + 
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>' +
+        '</div>' +
+        '<div class="account-dashboard-welcome-copy"><strong>' + email + '</strong><span>Signed in · local/browser test account · avatar customization planned, not enabled</span></div>' +
+      '</div>' +
+      '<div class="account-dashboard-grid">' +
+        '<section class="account-dashboard-card"><h2>Profile</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Profile editing and avatar upload are not enabled. The current header icon is a placeholder.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification + '<p>Password-reset email is unavailable. No reset email has been sent. Real accounts must not be used with this prototype.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        '<section class="account-dashboard-card"><h2>Wallets</h2><p class="account-dashboard-value">No wallet connected</p><p>A crypto wallet is not required for ordinary account access. A wallet must be requested only by a feature that needs proof of wallet control.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Preferences</h2><p class="account-dashboard-value">Crypto-news email: ' + escapeHtml(newsletter) + '</p><p>The preference is only recorded for this test; no mailing list or email provider is connected.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Password recovery, email verification, passkeys, recovery management and active-session review are not implemented. Do not rely on this test account for real access.</p></section>' +
+        adminCard +
+      '</div>' +
+      '<div class="account-dashboard-actions"><p>Public listing and wallet connection are not required for ordinary account access. The separate administrator flow is not implemented in this prototype.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
+  }
+
+  function showHomepage() {
+    dashboard.hidden = true;
+    mainContent.hidden = false;
+  }
+
+  function clearAccountRoute() {
+    var cleanUrl = window.location.pathname + window.location.search;
+    window.history.replaceState(null, "", cleanUrl);
+    showHomepage();
+  }
+
+  async function showAccountDashboard() {
+    var status = await refreshStatus();
+    if (!status.authenticated) {
+      clearAccountRoute();
+      mode = "signin";
+      render();
+      if (typeof dialog.showModal === "function" && !dialog.open) dialog.showModal();
+      else dialog.setAttribute("open", "open");
+      var first = content.querySelector("input, button");
+      if (first) first.focus();
+      return;
+    }
+    mainContent.hidden = true;
+    dashboard.hidden = false;
+    renderAccountDashboard();
+    var dashboardTitle = document.getElementById("account-dashboard-title");
+    if (dashboardTitle) dashboardTitle.focus();
+  }
+
+  function navigateToAccount() {
+    if (window.location.hash === "#account") {
+      showAccountDashboard();
+    } else {
+      window.location.hash = "account";
+    }
+  }
+
+  async function handleRouteChange() {
+    if (window.location.hash === "#account") {
+      await showAccountDashboard();
+    } else {
+      showHomepage();
+    }
   }
 
   function renderAccount() {
@@ -348,6 +473,7 @@
         '</label>' +
         '<button class="account-primary" type="submit">Request password reset</button>' +
       '</form>' +
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<div class="account-form-actions"><button class="account-text-button" type="button" data-account-mode="signin">Back to Log In</button>' +
         '<button class="account-text-button" type="button" data-account-mode="create">Create an account instead</button></div>';
   }
@@ -357,26 +483,33 @@
     if (mode === "signin") renderSignIn();
     else if (mode === "create") renderCreate();
     else if (mode === "recover") renderRecover();
-    else renderAccount();
+    else if (mode === "success") renderSuccess();
+    else renderSignIn();
     applyPreviewFormPrivacy();
   }
 
   async function refreshStatus() {
     try {
       accountState = await requestJson("/api/account/status");
+      syncAccountButton();
       return accountState;
     } catch (_error) {
       accountState = { authenticated: false };
+      syncAccountButton();
       return accountState;
     }
   }
 
   async function openAccountDialog() {
-    focusBeforeOpen = document.querySelector('[data-menu="account-menu"]') || document.activeElement;
     var status = await refreshStatus();
-    mode = status.authenticated ? "account" : "signin";
+    if (status.authenticated) {
+      navigateToAccount();
+      return;
+    }
+    focusBeforeOpen = document.activeElement;
+    mode = "signin";
     render();
-    if (typeof dialog.showModal === "function") dialog.showModal();
+    if (typeof dialog.showModal === "function" && !dialog.open) dialog.showModal();
     else dialog.setAttribute("open", "open");
     var first = content.querySelector("input, button");
     if (first) first.focus();
@@ -431,13 +564,12 @@
     try {
       var result = await requestJson(endpoint, payload);
       accountState = result;
-      mode = "account";
+      successKind = form.id === "account-create-form" ? "signup" : "signin";
+      mode = "success";
+      syncAccountButton();
       render();
-      if (form.id === "account-create-form") {
-        showFeedback("Test account created. Email is unverified; no email or newsletter message was sent.", "success");
-      } else {
-        showFeedback("You are signed in to the development test account.", "success");
-      }
+      var successAction = document.getElementById("open-account-hub");
+      if (successAction) successAction.focus();
     } catch (error) {
       showFeedback(error.message, "error");
     } finally {
@@ -450,6 +582,11 @@
     if (!button || busy) return;
     if (button.dataset.accountMode) {
       setMode(button.dataset.accountMode);
+      return;
+    }
+    if (button.id === "open-account-hub") {
+      closeDialog();
+      navigateToAccount();
       return;
     }
     if (button.id === "account-signout") {
@@ -469,6 +606,31 @@
     }
   });
 
+  dashboardContent.addEventListener("click", async function (event) {
+    var button = event.target.closest("button");
+    if (!button || busy || button.id !== "account-signout") return;
+    setBusy(true);
+    try {
+      await requestJson("/api/account/logout", {});
+      accountState = { authenticated: false };
+      await refreshStatus();
+      mode = "signin";
+      if (dialog.open) closeDialog();
+      clearAccountRoute();
+    } catch (error) {
+      var message = document.getElementById("account-dashboard-content");
+      if (message) {
+        var notice = document.createElement("p");
+        notice.className = "account-dashboard-notice";
+        notice.setAttribute("role", "status");
+        notice.textContent = error.message || "Sign-out could not be completed.";
+        message.prepend(notice);
+      }
+    } finally {
+      setBusy(false);
+    }
+  });
+
   openButton.addEventListener("click", openAccountDialog);
   closeButton.addEventListener("click", closeDialog);
   dialog.addEventListener("close", function () {
@@ -481,6 +643,12 @@
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && dialog.open) closeDialog();
   });
+  window.addEventListener("hashchange", handleRouteChange);
 
-  refreshStatus();
+  refreshStatus().then(function (status) {
+    if (window.location.hash === "#account") {
+      if (status.authenticated) showAccountDashboard();
+      else clearAccountRoute();
+    }
+  });
 }());
