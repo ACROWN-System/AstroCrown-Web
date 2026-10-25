@@ -283,3 +283,55 @@
   .account-dashboard-actions .account-secondary { width:100%; }
   .account-success-panel { padding:16px; }
 }
+
+
+/* Built-in account avatar choices — no uploads or external images. */
+.account-header-avatar-svg { width:18px;height:18px;display:block; }
+.account-dashboard-avatar-svg { width:22px;height:22px;display:block; }
+.avatar-trigger.is-authenticated[data-avatar-id="crown"],
+.account-avatar-crown { color:#ffe58a;border-color:rgba(255,215,0,.55); }
+.avatar-trigger.is-authenticated[data-avatar-id="star"],
+.account-avatar-star { color:#ffdf74; }
+.avatar-trigger.is-authenticated[data-avatar-id="moon"],
+.account-avatar-moon { color:#d8ddff; }
+.avatar-trigger.is-authenticated[data-avatar-id="orbit"],
+.account-avatar-orbit { color:#a8e9ff; }
+.avatar-trigger.is-authenticated[data-avatar-id="shield"],
+.account-avatar-shield { color:#9de7c4; }
+.account-avatar-picker {
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:7px;
+  margin:13px 0 8px;
+}
+.account-avatar-choice {
+  min-width:0;
+  min-height:62px;
+  padding:8px 4px 6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border:1px solid rgba(153,178,213,.22);
+  border-radius:9px;
+  background:rgba(255,255,255,.025);
+  color:#b9c7da;
+  cursor:pointer;
+  transition:border-color .15s ease,background .15s ease,color .15s ease,transform .15s ease;
+}
+.account-avatar-choice:hover { border-color:rgba(255,215,0,.48);color:#fff0a8;background:rgba(255,215,0,.045); }
+.account-avatar-choice[aria-pressed="true"] {
+  border-color:rgba(255,215,0,.82);
+  background:rgba(255,215,0,.085);
+  color:#ffe58a;
+  box-shadow:inset 0 0 0 1px rgba(255,215,0,.11);
+}
+.account-avatar-choice:active { transform:translateY(1px); }
+.account-avatar-choice-svg { width:20px;height:20px;display:block; }
+.account-avatar-choice > span { font-size:9px;line-height:1.2;font-weight:750; }
+.account-avatar-feedback { min-height:1.5em;margin:8px 0 0!important;color:#8fa0b7!important;font-size:10px!important; }
+@media(max-width:640px) {
+  .account-avatar-picker { grid-template-columns:repeat(3,minmax(0,1fr));gap:8px; }
+  .account-avatar-choice { min-height:58px; }
+}
