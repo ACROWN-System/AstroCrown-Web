@@ -166,6 +166,7 @@ try {
     "future provider logo slots must not behave like fake provider buttons");
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("create-account form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
+  await evaluate("window.__walletPromptCount = 0; window.ethereum = { request: async function (request) { window.__walletPromptCount += 1; if (request.method === 'eth_requestAccounts') return ['0x1111111111111111111111111111111111111111']; throw new Error('unexpected wallet call: ' + request.method); } };");
 
   const email = "e2euser" + Date.now().toString(16) + "@example.test";
   const password = "AstroCrown-Local-Test-2026!";
@@ -188,6 +189,13 @@ try {
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
   assert.ok(await evaluate("Boolean(document.querySelector('.account-dashboard-card a[href*=' + JSON.stringify('security-assurance.html') + ']'))"),
     "dashboard must link to the separate security assurance page");
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false,
+    "ordinary accounts must not see an administrator access card");
+  await evaluate("window.location.hash = 'admin'");
+  await waitFor("direct admin route blocked for ordinary user", () => evaluate("document.getElementById('admin-dashboard').hidden && window.location.hash === '#account'"));
+  assert.equal(await evaluate("window.__walletPromptCount"), 0,
+    "a direct admin-route attempt must not prompt for a wallet");
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false);
   const storedAccount = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(storedAccount.email, email.toLowerCase());
   assert.equal(storedAccount.avatarId, "person", "new accounts start with the built-in default avatar");
@@ -258,6 +266,7 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('.account-or-divider button, .account-or-divider a, #account-other-options'))"), false);
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("browser-preview create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
+  await evaluate("window.__walletPromptCount = 0; window.ethereum = { request: async function (request) { window.__walletPromptCount += 1; if (request.method === 'eth_requestAccounts') return ['0x1111111111111111111111111111111111111111']; throw new Error('unexpected wallet call: ' + request.method); } };");
 
   const demoEmail = "browserdemo" + Date.now().toString(16) + "@example.test";
   const demoPassword = "AstroCrown-Browser-Demo-2026!";
@@ -278,6 +287,11 @@ try {
   assert.equal(await evaluate("document.getElementById('open-account-dialog').getAttribute('data-avatar-id')"), "moon");
   assert.match(await evaluate("document.body.innerText"), /Crypto-news email: Opted in for this test/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false);
+  await evaluate("window.location.hash = 'admin'");
+  await waitFor("browser-preview direct admin route stays closed", () => evaluate("document.getElementById('admin-dashboard').hidden && window.location.hash === '#account'"));
+  assert.equal(await evaluate("window.__walletPromptCount"), 0,
+    "ordinary browser-preview access must not prompt for a wallet");
 
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("browser-preview home after sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
