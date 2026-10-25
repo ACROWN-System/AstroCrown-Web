@@ -10,7 +10,10 @@
   var MAX_MESSAGE_CHARS = 8192;
 
   function feedback(message) {
-    var target = document.getElementById("account-admin-access-feedback");
+    var adminDashboard = document.getElementById("admin-dashboard");
+    var target = adminDashboard && !adminDashboard.hidden
+      ? document.getElementById("admin-wallet-enrollment-feedback")
+      : document.getElementById("account-admin-access-feedback");
     if (target) target.textContent = message || "";
   }
 
@@ -245,5 +248,94 @@
     }
   }
 
+
+  async function requestAdditionalWalletEnrollment() {
+    if (busy) return;
+    busy = true;
+    try {
+      feedback("Checking the current administrator session before wallet enrollment…");
+      var accountStatus = await requestJson("/api/account/status");
+      if (accountStatus.authenticated !== true ||
+          accountStatus.adminRoleAssigned !== true ||
+          accountStatus.adminSessionAuthorized !== true) {
+        throw new Error("A currently wallet-verified administrator session is required before another wallet can be enrolled.");
+      }
+      var walletOptions = await requestJson("/api/admin/wallet-options", {});
+      if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length >= 3) {
+        throw new Error("This account already has the maximum of three active wallets.");
+      }
+      var provider = window.ethereum;
+      if (!provider || typeof provider.request !== "function") {
+        throw new Error("No compatible browser wallet is available. No wallet prompt was opened.");
+      }
+
+      feedback("Choose the wallet you want to register. The existing administrator wallet must already have verified this session.");
+      var accounts = await provider.request({ method: "eth_requestAccounts" });
+      if (!Array.isArray(accounts) || !accounts.length || accounts.some(function (item) {
+        return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item);
+      })) {
+        throw new Error("The connected provider did not return a valid wallet account list.");
+      }
+      var chainHex = await provider.request({ method: "eth_chainId" });
+      var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
+        ? Number.parseInt(chainHex, 16)
+        : NaN;
+      if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+        throw new Error("The connected wallet did not return a valid network identifier.");
+      }
+      var currentWallets = walletOptions.wallets;
+      var candidate = accounts.find(function (address) {
+        return !currentWallets.some(function (item) {
+          return item && item.chainId === chainId &&
+            typeof item.address === "string" &&
+            item.address.toLowerCase() === address.toLowerCase();
+        });
+      });
+      if (!candidate) {
+        throw new Error("None of the connected wallet accounts is a new address on this network. Switch to a wallet not already registered and retry. No enrollment signature was requested.");
+      }
+
+      feedback("Requesting a one-time enrollment message for the new wallet…");
+      var challenge = await requestJson("/api/admin/wallet-enrollment-challenge", {
+        address: candidate,
+        chainId: chainId
+      });
+      if (challenge.transactionAuthorized !== false ||
+          challenge.purpose !== "administrator-wallet-enrollment" ||
+          typeof challenge.message !== "string" ||
+          typeof challenge.address !== "string") {
+        throw new Error("The server response did not match the expected signature-only wallet enrollment challenge.");
+      }
+      var signature = await reviewAndSign(provider, challenge.address, challenge.chainId, challenge.message);
+      if (!signature) {
+        feedback("Wallet enrollment was cancelled. No wallet was added.");
+        return;
+      }
+
+      feedback("Verifying proof-of-control for the proposed wallet…");
+      var enrolled = await requestJson("/api/admin/wallet-enrollment-verify", {
+        message: challenge.message,
+        signature: signature
+      });
+      if (enrolled.adminRoleAssigned !== true ||
+          enrolled.adminWalletCount < 1 ||
+          enrolled.adminWalletAuthenticated !== false ||
+          enrolled.adminSessionAuthorized !== false ||
+          enrolled.admin !== false) {
+        throw new Error("The server did not return the expected post-enrollment state. Keep the console closed and verify the account state.");
+      }
+
+      document.dispatchEvent(new CustomEvent("astrocrown:admin-wallet-enrolled"));
+      window.location.hash = "account";
+    } catch (error) {
+      feedback(error && typeof error.message === "string"
+        ? error.message
+        : "The additional wallet could not be enrolled. No change was confirmed.");
+    } finally {
+      busy = false;
+    }
+  }
+
   document.addEventListener("astrocrown:request-admin-wallet-access", requestAdminWalletAccess);
+  document.addEventListener("astrocrown:request-admin-wallet-enrollment", requestAdditionalWalletEnrollment);
 }());
