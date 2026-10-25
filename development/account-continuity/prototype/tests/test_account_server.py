@@ -384,6 +384,106 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200, correct_session)
         self.assertTrue(correct_session["adminSessionAuthorized"])
 
+    def test_additional_admin_wallet_requires_active_admin_step_up_and_new_wallet_signature(self):
+        email = "admin-wallet-enrollment@example.test"
+        status, _, _ = self.create_account(email=email)
+        grant_admin(
+            self.app, email=email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+            reason="Owner-approved wallet enrollment test setup",
+        )
+
+        # A password-authenticated role without the current wallet step-up
+        # cannot begin enrollment or learn the wallet enrollment challenge.
+        status, denied, _ = self.request(
+            "/api/admin/wallet-enrollment-challenge",
+            {"address": TEST_WALLET_B.address, "chainId": 1},
+        )
+        self.assertEqual(status, 403, denied)
+
+        # First complete the existing-wallet proof-of-control step-up.
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, challenge)
+        old_message = challenge["message"]
+        old_signature = Account.sign_message(
+            encode_defunct(text=old_message), private_key=TEST_WALLET_KEY_A
+        ).signature.hex()
+        if not old_signature.startswith("0x"):
+            old_signature = "0x" + old_signature
+        status, stepped_up, _ = self.request(
+            "/api/admin/wallet-verify",
+            {"message": old_message, "signature": old_signature},
+        )
+        self.assertEqual(status, 200, stepped_up)
+        self.assertTrue(stepped_up["adminSessionAuthorized"])
+
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-enrollment-challenge",
+            {"address": TEST_WALLET_B.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, challenge)
+        self.assertEqual(challenge["purpose"], "administrator-wallet-enrollment")
+        self.assertFalse(challenge["transactionAuthorized"])
+        self.assertIn("Register this wallet as an additional", challenge["message"])
+        self.assertNotIn(TEST_WALLET_A.address.lower(), challenge["address"].lower())
+
+        # The new wallet, not the existing admin wallet, must sign enrollment.
+        enroll_message = challenge["message"]
+        wrong_signature = Account.sign_message(
+            encode_defunct(text=enroll_message), private_key=TEST_WALLET_A.key
+        ).signature.hex()
+        if not wrong_signature.startswith("0x"):
+            wrong_signature = "0x" + wrong_signature
+        status, rejected, _ = self.request(
+            "/api/admin/wallet-enrollment-verify",
+            {"message": enroll_message, "signature": wrong_signature},
+        )
+        self.assertEqual(status, 401, rejected)
+
+        # The one-shot challenge has been consumed; issue a new one and sign
+        # with the proposed address's fixture key.
+        status, new_challenge, _ = self.request(
+            "/api/admin/wallet-enrollment-challenge",
+            {"address": TEST_WALLET_B.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, new_challenge)
+        new_message = new_challenge["message"]
+        new_signature = Account.sign_message(
+            encode_defunct(text=new_message), private_key=TEST_WALLET_KEY_B
+        ).signature.hex()
+        if not new_signature.startswith("0x"):
+            new_signature = "0x" + new_signature
+        status, enrolled, _ = self.request(
+            "/api/admin/wallet-enrollment-verify",
+            {"message": new_message, "signature": new_signature},
+        )
+        self.assertEqual(status, 200, enrolled)
+        self.assertEqual(enrolled["walletEnrolledAddress"], TEST_WALLET_B.address)
+        self.assertEqual(enrolled["adminWalletCount"], 2)
+        self.assertTrue(enrolled["adminRoleAssigned"])
+        self.assertFalse(enrolled["adminSessionAuthorized"],
+                         "Adding an authenticator must end the existing admin step-up.")
+
+        # The ordinary account session remains active; both wallet entries are
+        # available for future explicit step-up, but the old SIWE message replays fail.
+        status, options, _ = self.request("/api/admin/wallet-options", {})
+        self.assertEqual(status, 200, options)
+        self.assertEqual(
+            {row["address"].lower() for row in options["wallets"]},
+            {TEST_WALLET_A.address.lower(), TEST_WALLET_B.address.lower()},
+        )
+        status, replay, _ = self.request(
+            "/api/admin/wallet-enrollment-verify",
+            {"message": new_message, "signature": new_signature},
+        )
+        self.assertEqual(status, 401, replay)
+        status, after_replay, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertEqual(after_replay["adminWalletCount"], 2)
+        self.assertFalse(after_replay["admin"])
+
     def test_owner_cli_caps_admin_wallets_and_revoke_clears_privileged_sessions(self):
         email = "admin-wallet-count@example.test"
         status, _, _ = self.create_account(email=email)
