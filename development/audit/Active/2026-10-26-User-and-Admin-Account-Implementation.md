@@ -27,7 +27,7 @@ Continue the user-account and administrator foundation using the smallest safe i
 - A separate `development/auth-prototype/` lab demonstrates local EIP-4361/SIWE wallet proof-of-control, but it is not connected to account roles and does not authorize admin access.
 - Phase 1 now has a separate prototype Security assurance page, success popup, modular user account hub and six built-in avatar choices. The local database has a server-owned role field; registration cannot assign `admin`.
 - The admin development increment reuses the shared SIWE verifier, adds a local owner-operated provisioning/revocation CLI (no HTTP provisioning endpoint), stores up to three registered public wallet addresses, and requires a fresh server-issued SIWE signature from one enrolled wallet on an existing authenticated account session. The step-up lasts at most ten minutes, is bound to the account/session and is rechecked by the backend. The separately gated admin console can enroll an additional wallet only after an existing admin step-up and a distinct new-wallet signature; enrollment clears existing step-up state. The console has no wallet-removal UI, publishing or other business-admin actions.
-- Python tests now cover successful step-up, role assignment without step-up, replay, wrong signer, unregistered wallet, cross-session replay attempts, the three-wallet limit, global wallet uniqueness, revoke clearing privileged sessions, and audit records. CI is being re-run against the current head; passing CI is not yet claimed until confirmed.
+- Python tests cover successful step-up, role assignment without step-up, replay, wrong signer, unregistered wallet, cross-session replay attempts, the three-wallet limit, global wallet uniqueness, revocation clearing privileged sessions, and audit events. The code/test revision `b1687845b00888ca4f5b3038138ba42f00c4f817` passed all five tracked automated workflows on 2026-10-26 local time; details are recorded in Section 6. Any later branch-head change still requires verification against that exact head.
 - Still not production: email delivery/verification/reset, production identity/session infrastructure, user-session management UI, wallet-removal UI, admin publishing/role-change/business operations, all-wallet-loss Imperial HSIAN recovery, independent security review and production deployment.
 - Root/production website files remain unchanged. The authoritative public deployment route remains a separate prerequisite before production integration.
 
@@ -43,32 +43,39 @@ Continue the user-account and administrator foundation using the smallest safe i
 8. Update and extend browser and HTTP tests, then run exact-head automated verification.
 9. Keep PR #141 in draft; do not modify production/root homepage authentication or deploy to public routes.
 
-## 5. Admin phase remains separate
+## 5. Administrator implementation status and remaining work
 
-Do not implement a public admin registration route, fake admin toggle, client-controlled roles or an unreviewed privileged account bootstrap in Phase 1.
+The development-only increment is now implemented and regression-tested on the recorded code/test revision:
 
-Next admin increment must document and test:
-- server-owned role grants and default-deny role authorization;
-- controlled initial Owner/Admin provisioning;
-- normal account authentication plus a fresh signature from one enrolled wallet;
-- maximum three wallets; independent custody, enrollment and revocation;
-- the proposed minimum enrolled-wallet gate before production activation;
-- step-up checks for high-impact admin actions;
-- session revocation and immutable audit trail for role/wallet changes;
-- Imperial HSIAN recovery after loss of all admin wallets; and
-- direct API negative tests that a normal user cannot gain admin through registration, query parameters, local storage, connected-wallet events or email patterns.
+- New accounts are assigned the server-owned `user` role. Registration does not accept a role grant, and the local owner-operated CLI is the only implemented role/wallet provisioning path; there is no network provisioning endpoint.
+- The standalone SIWE lab remains available under `development/auth-prototype/`. The account prototype reuses its pinned verifier core only for the separate privileged wallet step-up; normal sign-in still does not load a wallet or require a wallet signature.
+- Admin access requires an already authenticated account with an already provisioned `admin` role and a fresh signature from one of up to three registered wallets. The challenge is bound to the account and ordinary session; replay, wrong-signature, cross-session and unregistered-wallet cases are rejected. The step-up lasts at most ten minutes and never authorizes a blockchain transaction.
+- Adding an additional wallet requires a currently authorized admin session and a separate fresh signature from the proposed wallet. The operation is audited in the local SQLite database and clears all active admin step-ups for that account. The fourth wallet and a wallet already registered elsewhere are rejected.
+- `/api/admin/status` returns a denial unless the server confirms that the admin role and fresh wallet step-up are both valid. The ordinary account session remains separate and can remain signed in when privileged step-up is ended.
+- The admin console is a prototype, not a business-administration tool. It does not publish content, change roles, remove wallets or perform payments.
 
-Do not integrate the existing SIWE lab into the ordinary account server until its current exact head, dependency and challenge-validation behavior have been reviewed and the account-role boundary tests are prepared.
+Still blocked or not implemented:
+- The proposed requirement to enroll at least two independently controlled wallets before production admin activation is not yet a final governance decision and is not a production gate in this prototype.
+- In-app session management, wallet removal/replacement, exceptional all-wallet-loss recovery through Imperial HSIAN, production owner/recovery authority, and high-impact admin business actions remain unimplemented.
+- Local SQLite audit rows are useful test evidence but are not a tamper-resistant or immutable production audit service.
+- Negative tests cover the main server-side role and wallet boundaries, but do not by themselves establish resistance to every production attack vector.
+- Independent security review, production hosting/storage, verified email and reset delivery, legal/privacy approval, recovery operations and authoritative public publishing verification remain blocked.
 
-## 6. Verification plan
+Do not promote or deploy this prototype. Wallet signatures prove control of a registered address only; they do not create account identity or grant a role.
 
-- Run existing Python account server tests.
-- Run headless browser smoke tests for both the local-cookie path and memory-only hosted-preview path.
-- Test success popup X/close behavior, persistence of the signed-in state after closing, CTA navigation to the account hub, return-to-home, signed-in header and built-in avatar state, avatar allowlist/authentication/persistence, sign-out and signed-out header state.
-- Test that the Security assurance link opens the separate page and that all statements accurately identify the prototype-only status.
-- Retest malformed/oversized request, incorrect or missing Origin/Host, throttling, failed password, invalid/expired/revoked session and logout invalidation.
-- Confirm no test or implementation accidentally uses production credentials, sends email, calls external identity APIs, enables admin status, adds external provider dependencies or changes root files.
-- Treat missing dependencies or unavailable browser tooling as BLOCKED; do not equate unavailable validation with PASS.
+## 6. Exact-head verification and remaining manual checks
+
+The code/test revision `b1687845b00888ca4f5b3038138ba42f00c4f817` completed all five tracked workflows successfully:
+
+- [Local Account Continuity Prototype Tests #146 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40244036177): Python/HTTP account-contract tests, account-role/admin-step-up regression tests, static UX/security guards, and headless Chrome browser smoke test.
+- [Local Wallet Authentication Prototype Tests #174 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40244036179): standalone loopback SIWE lab, dependency/validation tests and browser smoke test.
+- [NOVA RSI Engine CI #872 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40244036212).
+- [External Review Pipeline CI #429 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40244036206).
+- [NOVA RSI CodeQL Security Analysis #439 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40244036181).
+
+The account test run initially exposed two mismatches: GET authorization errors escaped the HTTP handler rather than returning JSON, and tests expected a successful admin-status response without step-up. The handler now serializes expected `ApiError` responses; the tests assert 403 for unverified admin access, verify that ordinary account access remains active, re-authenticate before the one-time enrollment-challenge replay check, and ensure a rejected replay does not destroy an unrelated valid step-up. The updated exact-head suite passes.
+
+Manual/independent gates still open: review the complete current diff; visually inspect the updated development preview; confirm accessibility at high zoom and by keyboard/screen reader; review the detailed threat model and dependency supply-chain posture; and keep production/email/legal/recovery/publishing gates blocked. A green prototype CI run is not a security certification or production readiness claim.
 
 ## 7. Phase exit criteria
 
