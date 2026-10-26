@@ -68,6 +68,34 @@ Existing local SQLite records belong to earlier development prototypes; do not a
 6. Create the test account, sign out, and sign in again.
 7. Test **Forgot password?**. The UI must tell you that no reset email was sent and password reset is not enabled.
 
+## Register the administrator account (local prototype only)
+
+There is no separate public **Sign Up as Administrator** form. The administrator must first create an ordinary account, and an authorized local owner must then register that existing account in the local database. The server stores the `admin` role against the account identified by its email; a public wallet address is separately enrolled for the administrator step-up. This is what allows `/api/account/status` to report the admin role and makes the **Open administrator dashboard** button appear in the account hub.
+
+1. Create the account using the regular **Sign Up** flow above. Use the exact email address you will pass to the provisioning command. Use invented test details only.
+2. Keep the local server running. Open a **second PowerShell terminal** in the repository root. Install the pinned wallet-verification dependencies once, if they are not already available:
+
+       py -3.12 -m pip install -r .\development\auth-prototype\requirements.txt
+
+   This installs open-source packages for the local verification prototype; it does not call a paid AI/API provider or consume provider quota.
+3. Run the owner-operated provisioning command, replacing the email, public wallet address and chain ID with the values intended for this **local test**:
+
+       py -3.12 .\development\account-continuity\prototype\provision_admin.py --actor "local-authorized-owner" grant --email "admin@example.test" --wallet "<PUBLIC_WALLET_ADDRESS>" --chain-id <CHAIN_ID> --reason "Owner-approved initial local administrator provisioning" --confirm "GRANT LOCAL ADMIN"
+
+   Use a **public address only**. Never enter a seed phrase, private key, password or recovery secret. Use a disposable test wallet and the matching development/test network for testing. The `--actor` option is an audit label, not an independent proof of operator identity; the prototype relies on authorized access to the local computer and database.
+4. If you started the server with a custom database using `--db`, pass that exact same `--db "PATH"` argument to `provision_admin.py`, before the `grant` subcommand. Otherwise, both scripts use the default database under your user profile. **Do not provision a different database from the one the server is using.**
+5. Refresh the browser page (or sign out and sign back in), then open **Account** and your account hub. The server-reported admin role should make **Open administrator dashboard** appear. This only identifies the account as an administrator; it does not yet authorize the administrator dashboard.
+6. Click the button and choose **Continue**. The server rechecks the account role and session. Unless a valid admin step-up already exists, connect one of the registered wallets and review/sign the one-time message. The fresh wallet proof is required before opening the dashboard; it is not a blockchain transaction.
+7. The same command can register another distinct, controlled public wallet for the account using the same email and a new audit reason. A maximum of three wallets is permitted. A fourth wallet, a duplicate wallet, or a previously revoked wallet is rejected.
+
+To revoke the local administrator role and disable its enrolled wallets, use the same local database and a clear audit reason:
+
+    py -3.12 .\development\account-continuity\prototype\provision_admin.py --actor "local-authorized-owner" revoke --email "admin@example.test" --reason "Owner-approved local administrator access revocation" --confirm "REVOKE LOCAL ADMIN"
+
+Revocation returns that account to the ordinary `user` role, clears its administrator step-up sessions and leaves the ordinary account credentials intact. Refresh the account view; the administrator button should disappear.
+
+This is only the owner-operated local-development process. It has no public admin-role endpoint and must not be treated as production identity verification, production owner authentication or the final Imperial HSIAN all-wallet-loss recovery process. The hosted HTML preview cannot persist this role or test the actual CLI; use the loopback server and its same SQLite database.
+
 Stop the local server with **Ctrl+C**. The SQLite database is stored under your user profile unless you set `--db`; the clean-database command above uses a temporary Windows path.
 
 ## Data and security boundaries

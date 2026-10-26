@@ -3,6 +3,7 @@ from __future__ import annotations
 import http.cookiejar
 import json
 import sys
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -159,6 +160,72 @@ class AccountServerTests(unittest.TestCase):
         self.assertTrue(data["authenticated"])
         self.assertEqual(data["email"], "test-user@example.test")
         self.assertFalse(data["admin"])
+
+    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(self):
+        email = "cli-provision-admin@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        self.assertEqual(created["role"], "user")
+        self.assertFalse(created["adminRoleAssigned"])
+
+        # Run the actual script from outside the repository root. This checks
+        # that the shipped CLI resolves its verifier module and targets the same
+        # database as the running account server.
+        command = [
+            sys.executable,
+            str(PROTOTYPE_DIR / "provision_admin.py"),
+            "--db", str(self.app.database_path),
+            "--actor", "local-test-owner",
+            "grant",
+            "--email", email,
+            "--wallet", TEST_WALLET_A.address,
+            "--chain-id", "1",
+            "--reason", "Owner-approved local CLI provisioning test",
+            "--confirm", "GRANT LOCAL ADMIN",
+        ]
+        result = subprocess.run(
+            command,
+            cwd=self.temp.name,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        self.assertEqual(
+            result.returncode, 0,
+            "The local provisioning CLI failed. stdout=" + result.stdout + " stderr=" + result.stderr,
+        )
+        self.assertIn("Development-only administrator provisioning completed.", result.stdout)
+        self.assertIn("A fresh signature from this registered wallet is still required", result.stdout)
+
+        status, account_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200, account_status)
+        self.assertTrue(account_status["authenticated"])
+        self.assertEqual(account_status["role"], "admin")
+        self.assertTrue(account_status["adminRoleAssigned"])
+        self.assertEqual(account_status["adminWalletCount"], 1)
+        self.assertFalse(account_status["adminWalletAuthenticated"])
+        self.assertFalse(account_status["adminSessionAuthorized"])
+        self.assertFalse(account_status["admin"],
+                         "the registered role must not bypass the fresh wallet step-up")
+
+        with self.app.connect() as db:
+            wallet = db.execute(
+                "SELECT address, chain_id, active FROM admin_wallets WHERE account_id = ?",
+                (account_status["accountId"],),
+            ).fetchone()
+            audit = db.execute(
+                "SELECT actor, event_type, reason FROM account_admin_audit WHERE target_account_id = ?",
+                (account_status["accountId"],),
+            ).fetchone()
+        self.assertIsNotNone(wallet)
+        self.assertEqual(wallet["address"], TEST_WALLET_A.address)
+        self.assertEqual(wallet["chain_id"], 1)
+        self.assertEqual(wallet["active"], 1)
+        self.assertIsNotNone(audit)
+        self.assertEqual(audit["actor"], "local-test-owner")
+        self.assertEqual(audit["event_type"], "admin_wallet_provisioned")
+        self.assertEqual(audit["reason"], "Owner-approved local CLI provisioning test")
 
     def test_registration_cannot_grant_admin_role_and_role_alone_never_authorizes_admin(self):
         status, data, _ = self.create_account(
