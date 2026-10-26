@@ -472,17 +472,13 @@
           ? "Wallet verification required"
           : "No administrator wallet enrolled";
       var adminAccessDescription = adminSessionVerified
-        ? "The server currently confirms a wallet-verified administrator session. Continue through the administrator access dialog to open the separate console."
+        ? "The server currently confirms a wallet-verified administrator session. Continue through the administrator access dialog to open the separate administrator dashboard."
         : walletCount > 0
           ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
             escapeHtml(String(walletCount)) +
             " registered wallet(s), then review a one-time signature request. It is not a blockchain transaction."
-          : "The system has assigned the administrator role, but no wallet is enrolled for step-up verification. Open administrator access to review the required next step; the backend will keep the console closed until an authorized owner provisions a wallet.";
-      var adminAccessAction = adminSessionVerified
-        ? "Open administrator console"
-        : walletCount > 0
-          ? "Access administrator account"
-          : "Review administrator access";
+          : "The system has assigned the administrator role, but no wallet is enrolled for step-up verification. Open administrator access to review the required next step; the backend will keep the dashboard closed until an authorized owner provisions a wallet.";
+      var adminAccessAction = "Open administrator dashboard";
       adminCard =
         '<section class="account-dashboard-card account-admin-access-card">' +
           '<h2>Administrator access</h2>' +
@@ -594,7 +590,7 @@
         '<section class="account-dashboard-card account-admin-wallets-card"><h2>Registered administrator wallets</h2><p>Your local account may register up to three distinct public wallet addresses. A wallet is not added until it signs a separate server-issued enrollment message.</p>' +
           '<ul class="account-admin-wallet-list">' + walletRows + '</ul>' +
           enrollmentControl +
-          '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this console. A lost-wallet recovery workflow is not implemented.</p>' +
+          '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this dashboard. A lost-wallet recovery workflow is not implemented.</p>' +
           '<p id="admin-wallet-enrollment-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p></section>' +
         '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, role changes, wallet removal, account management, payments and all-wallet-loss recovery are not available in this console.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
       '</div>' +
@@ -644,7 +640,7 @@
       replaceRouteHash("account");
       await showAccountDashboard();
       var feedback = document.getElementById("account-admin-access-feedback");
-      if (feedback) feedback.textContent = "Administrator access could not be verified. The console remains closed.";
+      if (feedback) feedback.textContent = "Administrator access could not be verified. The dashboard remains closed.";
     }
   }
 

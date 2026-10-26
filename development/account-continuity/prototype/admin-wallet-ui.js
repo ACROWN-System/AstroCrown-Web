@@ -71,7 +71,7 @@
           '<div><p class="account-dashboard-kicker">ASTROCROWN · ADMIN ACCESS</p><h2 id="admin-access-title">Administrator access</h2></div>' +
           '<button class="admin-wallet-proof-close" id="admin-access-close" type="button" aria-label="Close administrator access dialog">×</button>' +
         '</div>' +
-        '<p class="admin-wallet-proof-explainer">Administrator access is available only when the signed-in account already has an administrator role assigned by the server. Continuing rechecks that role, then asks you to choose a registered wallet and review a one-time signature. <strong>The signature does not authorize a blockchain transaction.</strong></p>' +
+        '<p class="admin-wallet-proof-explainer">Administrator access is available only when the signed-in account already has an administrator role assigned by the server. Continuing rechecks that role and reuses any still-valid administrator step-up; otherwise, it asks you to choose a registered wallet and review a one-time signature. <strong>The signature does not authorize a blockchain transaction.</strong></p>' +
         '<p class="admin-wallet-proof-explainer">No wallet is requested until you select Continue. Never enter or share a seed phrase, private key or recovery secret.</p>' +
         '<p class="admin-wallet-proof-status" id="admin-access-status" role="status" aria-live="polite">No wallet request has been sent. Continue when you are ready, or cancel to return to your account.</p>' +
         '<div class="admin-wallet-proof-actions">' +
@@ -311,7 +311,7 @@
       });
       if (verified.adminRoleAssigned !== true || verified.adminWalletAuthenticated !== true ||
           verified.adminSessionAuthorized !== true || verified.admin !== true) {
-        throw new Error("The server did not authorize the administrator session. The console remains closed.");
+        throw new Error("The server did not authorize the administrator session. The dashboard remains closed.");
       }
       feedback("Administrator wallet verification succeeded. Opening the read-only development console…");
       window.location.hash = "admin";
