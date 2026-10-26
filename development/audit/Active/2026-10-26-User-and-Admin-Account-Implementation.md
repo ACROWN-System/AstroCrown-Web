@@ -133,3 +133,37 @@ This work is confined to development files and the existing draft pull request. 
 ### Preservation
 
 Development-only change under PR #141. No public homepage deployment, production authentication, server-side admin provisioning endpoint, public role creation, transaction signing or production permission is added. Keep PR #141 draft and unmerged.
+
+## 11. Separate dashboard navigation and stable administrator entry — 2026-10-26
+
+### Decision and implemented behavior
+
+- Preserve two separate views: the ordinary account hub at `#account` and the privileged administrator dashboard at `#admin`. The admin view is not a group of extra controls mixed into the normal dashboard.
+- Use one consistent entry button, **Open administrator dashboard**, inside the **Administrator access** section. It is present only when the latest server status confirms the account's existing administrator role. Normal users continue to see no administrator entry.
+- Keep status information separate from the action label. The account hub explains whether the step-up wallet is verified, verification is required, or no administrator wallet is provisioned. The stable button label does not grant authority or imply that verification has already passed.
+- The entry first opens the confirmation dialog. Cancel, Escape, close and backdrop dismissal do not prompt for a wallet. Continue rechecks the server-owned role/session and either reuses a still-valid admin step-up or starts the existing registered-wallet proof flow.
+- The separate administrator dashboard is titled **Administrator dashboard** and has a **Return to your account** link. Returning does not itself end the short-lived admin step-up; **End administrator access** remains the explicit operation to clear it. Backend route and endpoint checks remain authoritative.
+- No production/homepage behavior, backend authorization rules, privileged operation scope, public provisioning, secrets, wallet registry or deployment configuration was changed.
+
+### Regression coverage and implementation evidence
+
+- Browser smoke tests verify the stable button label, role-gated visibility, the no-wallet confirmation/cancel behavior, navigation into the separate dashboard when the test fixture reports an already-valid server step-up, return to the regular account hub, and hiding the admin entry when the simulated role is removed.
+- The browser fixture replaces response payloads only within the test run. It does not provision an administrator, mutate the real role database, or simulate a wallet signature. Existing HTTP tests remain the evidence for actual role/step-up authorization boundaries.
+- Implementation and test commit [`7bc59c65905fd961e591186a0158688b20bb0111`](https://github.com/ACROWN-System/AstroCrown-Web/commit/7bc59c65905fd961e591186a0158688b20bb0111) passed all five tracked workflows:
+  - [Local Account Continuity Prototype Tests #157 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40274842957).
+  - [Local Wallet Authentication Prototype Tests #185 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40274842817).
+  - [NOVA RSI Engine CI #883 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40274842898).
+  - [External Review Pipeline CI #440 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40274842909).
+  - [NOVA RSI CodeQL Security Analysis #450 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40274842910).
+- These results verify the development prototype and tests only. They do not establish production readiness, full security certification or successful real-wallet manual acceptance.
+
+### Impact analysis
+
+**If retained:** the role-qualified administrator has one obvious, stable entry point from the ordinary account hub, a clearly separate administrator workspace and a simple path back, while the server remains the source of authorization.
+
+**If omitted:** the same route separation would remain possible, but labels would vary with session state and browser regression would not cover the full UI navigation loop.
+
+### Preservation
+
+Keep PR #141 draft and unmerged. The hosted browser preview remains an ordinary-user, memory-only demo; the admin route must be exercised through the local prototype and tested server responses. Production account infrastructure, the banner editor, role management, wallet-loss recovery and publishing remain separate blocked work.
+
