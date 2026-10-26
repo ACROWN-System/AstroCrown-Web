@@ -167,3 +167,38 @@ Development-only change under PR #141. No public homepage deployment, production
 
 Keep PR #141 draft and unmerged. The hosted browser preview remains an ordinary-user, memory-only demo; the admin route must be exercised through the local prototype and tested server responses. Production account infrastructure, the banner editor, role management, wallet-loss recovery and publishing remain separate blocked work.
 
+## 12. Registering an existing account as administrator — 2026-10-26
+
+### Decision and operational flow
+
+- Do not add a separate public administrator sign-up form. Standard account creation remains open to normal users and always creates a server-owned `user` role, even if a client submits `admin`, `role`, wallet-authentication or permission fields.
+- Administrator registration applies to an existing account. In this local prototype, the owner runs `development/account-continuity/prototype/provision_admin.py grant`, targeting the same account email and SQLite database used by the loopback server. The tool assigns `role = 'admin'`, enrolls one explicitly supplied public wallet and chain ID, invalidates any old administrator step-up state, and records the actor label, reason, target and timestamp in the local audit table.
+- The account email locates the existing account; there is no additional administrator username/identity table. The UI recognizes the administrator from authoritative `/api/account/status` data (`adminRoleAssigned === true`), then shows the existing **Open administrator dashboard** entry after a status refresh or re-login.
+- Role assignment is not sufficient for privileged access. The administrator must continue through the confirmation flow, where the backend rechecks the account/role and then requires a still-valid step-up or a fresh signature from a registered wallet. A role-assigned account without a verified step-up remains denied by `/api/admin/status`.
+- The README now gives the local PowerShell sequence, explains pinned verifier dependency installation, warns to use the *same database path* as the server, distinguishes public wallet address from private secrets, shows registration and revocation commands, and explains the role-refresh and subsequent wallet-verification stages.
+- The CLI's `--actor` is an audit label only, not proof of the operator's actual identity. The trust boundary is local operating-system/database access, appropriate only for this isolated prototype. A production implementation still needs a reviewed owner/bootstrap authentication and authorization mechanism, trusted role administration, protected/tamper-resistant audit records, notifications and formal recovery. No public provisioning endpoint is added.
+
+### Regression coverage and exact-head evidence
+
+- Added an integration test that creates an ordinary account over the loopback HTTP API, runs the actual provisioning script as a subprocess from outside the repository root against the same test SQLite database, and verifies the resulting signed-in account is reported as role `admin` with one active wallet and an audit record.
+- The test explicitly verifies that role assignment does **not** authenticate the wallet, create an authorized admin step-up or make `admin` true. Existing negative tests continue to reject client-side role escalation and the nonexistent public provisioning route.
+- Implementation/test commit [`c0691d9e053c982ee783bc343f0764210030d5d0`](https://github.com/ACROWN-System/AstroCrown-Web/commit/c0691d9e053c982ee783bc343f0764210030d5d0) passed account continuity tests [#160](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278110654), wallet authentication tests [#188](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278110401), NOVA RSI Engine CI [#886](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278110403) and External Review Pipeline CI [#443](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278110398). Its CodeQL run was superseded by the next documentation commit, so it is not counted as an exact-head CodeQL pass.
+- Latest implementation-plus-instructions branch head [`8c0f10e60482d03a4e7a851ac68a4a35271ff36e`](https://github.com/ACROWN-System/AstroCrown-Web/commit/8c0f10e60482d03a4e7a851ac68a4a35271ff36e) passed all five workflows:
+  - [Local Account Continuity Prototype Tests #161 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278157749).
+  - [Local Wallet Authentication Prototype Tests #189 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278157598).
+  - [NOVA RSI Engine CI #887 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278157675).
+  - [External Review Pipeline CI #444 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278157714).
+  - [NOVA RSI CodeQL Security Analysis #454 — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/40278157591).
+
+These checks validate the local development account flow and owner CLI integration only. They do not prove the named operator's real-world identity, production role governance, verified email ownership or production readiness.
+
+### Impact analysis
+
+**If completed:** an existing normal account can be promoted through an auditable, owner-operated local procedure, the server reports that role, and the same account hub reveals its administrator entry only after status refresh. A wallet signature remains a separate gate for actual admin access.
+
+**If omitted:** the role-gated UI could be implemented correctly, but the owner would lack a clearly documented, tested procedure for making a real local account eligible to see that UI.
+
+### Preservation
+
+Development-only under PR #141. Keep draft and unmerged. Do not create a public admin-registration endpoint, do not infer authority from email patterns or connected wallets, and do not use a memory-only browser preview as evidence that server-side role provisioning works. Production authority/bootstrap, account recovery and all-wallet-loss HSIAN recovery remain blocked for separate review.
+
