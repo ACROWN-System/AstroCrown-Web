@@ -80,9 +80,12 @@ There is no separate public **Sign Up as Administrator** form. The administrator
    This installs open-source packages for the local verification prototype; it does not call a paid AI/API provider or consume provider quota.
 3. Run the owner-operated provisioning command, replacing the email, public wallet address and chain ID with the values intended for this **local test**:
 
-       py -3.12 .\development\account-continuity\prototype\provision_admin.py --actor "local-authorized-owner" grant --email "admin@example.test" --wallet "<PUBLIC_WALLET_ADDRESS>" --chain-id <CHAIN_ID> --reason "Owner-approved initial local administrator provisioning" --confirm "GRANT LOCAL ADMIN"
+       $AdminEmail = "admin@example.test"
+       $AdminWallet = Read-Host "Administrator public wallet address (never a secret)"
+       $AdminChainId = [int](Read-Host "Matching development/test network chain ID")
+       py -3.12 .\development\account-continuity\prototype\provision_admin.py --actor "local-authorized-owner" grant --email $AdminEmail --wallet $AdminWallet --chain-id $AdminChainId --reason "Owner-approved initial local administrator provisioning" --confirm "GRANT LOCAL ADMIN"
 
-   Use a **public address only**. Never enter a seed phrase, private key, password or recovery secret. Use a disposable test wallet and the matching development/test network for testing. The `--actor` option is an audit label, not an independent proof of operator identity; the prototype relies on authorized access to the local computer and database.
+   Use a **public address only**. Never enter a seed phrase, private key, password or recovery secret. Use a disposable test wallet and the matching development/test network for testing. The chain ID must match the network the wallet will use during the step-up. The `--actor` option is an audit label, not an independent proof of operator identity; the prototype relies on authorized access to the local computer and database.
 4. If you started the server with a custom database using `--db`, pass that exact same `--db "PATH"` argument to `provision_admin.py`, before the `grant` subcommand. Otherwise, both scripts use the default database under your user profile. **Do not provision a different database from the one the server is using.**
 5. Refresh the browser page (or sign out and sign back in), then open **Account** and your account hub. The server-reported admin role should make **Open administrator dashboard** appear. This only identifies the account as an administrator; it does not yet authorize the administrator dashboard.
 6. Click the button and choose **Continue**. The server rechecks the account role and session. Unless a valid admin step-up already exists, connect one of the registered wallets and review/sign the one-time message. The fresh wallet proof is required before opening the dashboard; it is not a blockchain transaction.
