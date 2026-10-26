@@ -210,13 +210,18 @@ class AccountServerTests(unittest.TestCase):
                          "the registered role must not bypass the fresh wallet step-up")
 
         with self.app.connect() as db:
+            account_row = db.execute(
+                "SELECT account_id FROM accounts WHERE email = ? COLLATE NOCASE",
+                (email,),
+            ).fetchone()
+            self.assertIsNotNone(account_row)
             wallet = db.execute(
                 "SELECT address, chain_id, active FROM admin_wallets WHERE account_id = ?",
-                (account_status["accountId"],),
+                (account_row["account_id"],),
             ).fetchone()
             audit = db.execute(
                 "SELECT actor, event_type, reason FROM account_admin_audit WHERE target_account_id = ?",
-                (account_status["accountId"],),
+                (account_row["account_id"],),
             ).fetchone()
         self.assertIsNotNone(wallet)
         self.assertEqual(wallet["address"], TEST_WALLET_A.address)
