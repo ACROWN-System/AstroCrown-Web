@@ -122,15 +122,25 @@ def validate_result(
 
 
 def _case_metrics(
-    result: dict[str, Any], case: dict[str, Any], validation_errors: list[str]
+    result: Any, case: dict[str, Any], validation_errors: list[str]
 ) -> dict[str, Any]:
-    selected = set(result.get("selected_ids", []))
+    # Derive metrics only from safely typed fields. Malformed candidate output
+    # must become failed evidence, not an exception or a trusted numeric score.
+    if not isinstance(result, dict):
+        result = {}
+    raw_selected = result.get("selected_ids")
+    selected = (
+        set(raw_selected)
+        if isinstance(raw_selected, list) and all(isinstance(item_id, str) for item_id in raw_selected)
+        else set()
+    )
+    context = result.get("context")
     required = set(case["required_item_ids"])
     return {
         "required_hits": len(selected & required),
         "required_total": len(required),
         "unrequired_records": len(selected - required),
-        "characters": result.get("character_count"),
+        "characters": len(context) if isinstance(context, str) else 0,
         "integrity_pass": not validation_errors,
         "integrity_errors": validation_errors,
     }
@@ -146,6 +156,7 @@ def compare_implementations(
     per_case: list[dict[str, Any]] = []
     baseline_totals = {"required_hits": 0, "required_total": 0, "unrequired_records": 0, "characters": 0}
     candidate_totals = {"required_hits": 0, "required_total": 0, "unrequired_records": 0, "characters": 0}
+    baseline_integrity = True
     candidate_integrity = True
     no_case_regressions = True
     no_noise_regressions = True
@@ -180,6 +191,7 @@ def compare_implementations(
             no_case_regressions = False
         if cand_metrics["unrequired_records"] > base_metrics["unrequired_records"]:
             no_noise_regressions = False
+        baseline_integrity = baseline_integrity and not base_errors
         candidate_integrity = candidate_integrity and not cand_errors
         per_case.append(
             {
@@ -198,7 +210,8 @@ def compare_implementations(
         )
     )
     candidate_better = (
-        candidate_integrity
+        baseline_integrity
+        and candidate_integrity
         and no_case_regressions
         and no_noise_regressions
         and strict_gain
@@ -211,6 +224,7 @@ def compare_implementations(
         "baseline": baseline_totals,
         "candidate": candidate_totals,
         "checks": {
+            "baseline_reference_integrity": baseline_integrity,
             "candidate_integrity_and_budget": candidate_integrity,
             "no_per_case_required_evidence_regression": no_case_regressions,
             "no_unrequired_record_regression": no_noise_regressions,
