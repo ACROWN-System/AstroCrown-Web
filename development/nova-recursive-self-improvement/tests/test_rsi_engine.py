@@ -292,7 +292,7 @@ diff --git a/development/x.txt b/development/x.txt
                     path.read_text(encoding="utf-8"),
                 )
 
-    def test_workflow_has_always_run_sandbox_cleanup_before_evidence_upload(self):
+    def test_workflow_enforces_bounded_job_cycle_and_cleanup_timeouts(self):
         workflow = (self.ROOT / "development/nova-recursive-self-improvement/suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml").read_text(encoding="utf-8")
         initialize = workflow.index("name: Initialize per-run sandbox cleanup identifier")
         run_cycle = workflow.index("name: Run bounded autonomous RSI cycle")
@@ -426,6 +426,25 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertFalse(implementation_ready(policy))
         self.assertEqual(policy["implementation_readiness"]["status"], "INCOMPLETE")
 
+    def test_ready_status_cannot_override_suspended_unknown_or_missing_lifecycle(self):
+        policy = load_policy(self.ROOT)
+        policy["implementation_readiness"].update({
+            "status": "READY",
+            "require_explicit_ready": True,
+            "promotion_blocked_until_ready": True,
+        })
+        for lifecycle in ("SUSPENDED", "UNKNOWN", ""):
+            with self.subTest(lifecycle=lifecycle):
+                policy["strong_rsi_safety"]["lifecycle_status"] = lifecycle
+                self.assertFalse(implementation_ready(policy))
+        del policy["strong_rsi_safety"]["lifecycle_status"]
+        self.assertFalse(implementation_ready(policy))
+        del policy["strong_rsi_safety"]
+        self.assertFalse(implementation_ready(policy))
+
+        policy["strong_rsi_safety"] = {"lifecycle_status": "ACTIVE"}
+        self.assertTrue(implementation_ready(policy))
+
     def test_path_traversal_and_alternate_separators_are_rejected(self):
         self.assertEqual(normalize_repo_path("../../.github/workflows/x.yml"), "")
         self.assertEqual(
@@ -535,6 +554,8 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertNotIn("workflow_dispatch", events)
         self.assertIn("max_cycles_per_utc_month", workflow)
         self.assertIn("needs.rsi-cycle.outputs.decision == 'PASS'", workflow)
+        self.assertIn('safety.get("lifecycle_status") == "ACTIVE"', workflow)
+        self.assertIn('"strong_rsi_lifecycle_active"', workflow)
 
         policy = json.loads(
             (self.ROOT / "development/nova-recursive-self-improvement/rsi_policy.json")
