@@ -577,6 +577,8 @@ diff --git a/development/x.txt b/development/x.txt
         self.assertEqual(classify_decision([]), "BLOCKED")
         self.assertEqual(classify_decision(["PASS", "UNKNOWN"]), "BLOCKED")
         self.assertEqual(classify_decision(["PASS", "SKIPPED"]), "BLOCKED")
+        self.assertEqual(classify_decision([[]]), "BLOCKED")
+        self.assertEqual(classify_decision(["PASS", None]), "BLOCKED")
         self.assertEqual(classify_decision(["FAIL", "UNKNOWN"]), "FAIL")
 
 
