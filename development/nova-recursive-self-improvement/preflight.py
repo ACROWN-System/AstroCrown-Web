@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 from provider_client import ProviderConfig, ProviderError, validate_base_url
+from rsi_engine import implementation_ready
 
 
 def load_policy(root: Path) -> dict:
@@ -59,12 +60,17 @@ def check_non_secret_configuration(root: Path, policy: dict) -> list[str]:
 def run(root: Path, require_secret: bool = False, check_non_secret_only: bool = False) -> int:
     policy = load_policy(root)
     readiness = policy.get("implementation_readiness", {})
-    if readiness.get("status") != "READY":
+    safety = policy.get("strong_rsi_safety", {})
+    if not implementation_ready(policy):
         print(json.dumps({
             "decision": "BLOCKED",
             "stage": "implementation-readiness",
-            "status": readiness.get("status"),
-            "next_boundary": "complete protected RSI implementation before provider configuration",
+            "status": readiness.get("status", "UNKNOWN"),
+            "lifecycle_status": safety.get("lifecycle_status", "UNKNOWN"),
+            "next_boundary": (
+                "complete protected implementation readiness and obtain explicit "
+                "ACTIVE lifecycle release before provider configuration"
+            ),
         }, indent=2, sort_keys=True))
         return 1
 

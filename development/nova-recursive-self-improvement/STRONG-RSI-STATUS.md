@@ -5,6 +5,8 @@
 **Implementation readiness:** `INCOMPLETE`  
 **Active GitHub Actions workflow:** No. The monthly workflow template is preserved in `suspended/STRONG-RSI-MONTHLY-WORKFLOW.yml`, outside `.github/workflows/`.
 
+**Fail-closed execution contract:** the runtime, provider preflight, workflow template and candidate-retention verifier require both explicit implementation readiness (`READY` plus its two required flags) and `strong_rsi_safety.lifecycle_status == "ACTIVE"`. Missing, unknown or `SUSPENDED` lifecycle state blocks execution and candidate retention. `ACTIVE` alone is not sufficient: all independent benchmark, provider/data-use, sandbox, permissions, rollback and human-release requirements below still apply.
+
 ## Why Strong RSI is suspended
 
 A monthly workflow that always exits at an incomplete-readiness gate is not the requested Strong RSI capability. It does not establish a real self-improvement result, and a scheduled blocked run still consumes runner time. Therefore the workflow is removed from active GitHub Actions discovery until the entire Strong RSI lifecycle is ready to run with meaningful, reviewable evidence.

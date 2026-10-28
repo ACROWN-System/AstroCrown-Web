@@ -71,11 +71,13 @@ jobs:
 
           policy = json.loads(Path("development/nova-recursive-self-improvement/rsi_policy.json").read_text(encoding="utf-8"))
           readiness = policy.get("implementation_readiness", {})
+          safety = policy.get("strong_rsi_safety", {})
           budget = policy.get("budget", {})
           gates = {
               "implementation_ready": readiness.get("status") == "READY"
                   and readiness.get("require_explicit_ready") is True
                   and readiness.get("promotion_blocked_until_ready") is True,
+              "strong_rsi_lifecycle_active": safety.get("lifecycle_status") == "ACTIVE",
               "commercial_data_use_eligibility_pass": os.environ.get("RSI_AI_COMMERCIAL_ELIGIBILITY", "").strip() == "PASS",
               "task_matched_benchmark_configured": bool(os.environ.get("RSI_BENCHMARK_COMMAND", "").strip()),
               "no_direct_main_promotion": policy.get("promotion", {}).get("allow_main") is False,
@@ -86,6 +88,7 @@ jobs:
               "scheduled_cadence": "17 3 1 * * (UTC)",
               "monthly_cycle_budget": budget.get("max_cycles_per_utc_month"),
               "readiness_status": readiness.get("status", "UNKNOWN"),
+              "lifecycle_status": safety.get("lifecycle_status", "UNKNOWN"),
               "gates": gates,
               "decision": "READY_TO_CONTINUE" if all(gates.values()) else "BLOCKED",
               "provider_call_allowed_by_this_report": False,
@@ -122,18 +125,22 @@ jobs:
               .read_text(encoding="utf-8")
           )
           readiness = policy.get("implementation_readiness", {})
+          safety = policy.get("strong_rsi_safety", {})
           status = readiness.get("status")
           required = readiness.get("require_explicit_ready")
           promotion_blocked = readiness.get("promotion_blocked_until_ready")
+          lifecycle = safety.get("lifecycle_status", "UNKNOWN")
 
           print(f"RSI implementation readiness: {status}")
+          print(f"Strong RSI lifecycle: {lifecycle}")
           if not (
               status == "READY"
               and required is True
               and promotion_blocked is True
+              and lifecycle == "ACTIVE"
           ):
               raise SystemExit(
-                  "RSI implementation is incomplete; autonomous proposal/evaluation/promotion is blocked."
+                  "RSI requires READY implementation status and an explicit ACTIVE lifecycle release."
               )
           PY
 

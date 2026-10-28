@@ -143,7 +143,10 @@ def verify_evidence(
 
     trusted_policy = policy if policy is not None else load_policy(repo_root)
     if not isinstance(trusted_policy, dict) or not implementation_ready(trusted_policy):
-        raise EvidenceVerificationError("Trusted RSI policy is not READY; candidate retention is blocked.")
+        raise EvidenceVerificationError(
+            "Trusted RSI policy is not READY or Strong RSI lifecycle is not ACTIVE; "
+            "candidate retention is blocked."
+        )
 
     cycle = _read_json(evidence_dir / "cycle.json", "RSI cycle evidence")
     evaluation = _read_json(evidence_dir / "evaluation.json", "Protected evaluator evidence")

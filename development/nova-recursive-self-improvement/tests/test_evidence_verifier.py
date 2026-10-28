@@ -64,6 +64,7 @@ def test_policy():
             "require_explicit_ready": True,
             "promotion_blocked_until_ready": True,
         },
+        "strong_rsi_safety": {"lifecycle_status": "ACTIVE"},
     }
 
 
@@ -343,6 +344,12 @@ class EvidenceVerifierTests(unittest.TestCase):
         policy = test_policy()
         policy["implementation_readiness"]["status"] = "INCOMPLETE"
         with self.assertRaisesRegex(EvidenceVerificationError, "not READY"):
+            verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=policy)
+
+    def test_candidate_retention_is_blocked_while_strong_rsi_is_suspended(self):
+        policy = test_policy()
+        policy["strong_rsi_safety"]["lifecycle_status"] = "SUSPENDED"
+        with self.assertRaisesRegex(EvidenceVerificationError, "lifecycle is not ACTIVE"):
             verify_evidence(self.evidence, self.root, expected_baseline=BASELINE, policy=policy)
 
     def test_applied_worktree_paths_and_tree_match_verified_candidate(self):
