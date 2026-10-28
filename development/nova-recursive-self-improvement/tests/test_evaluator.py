@@ -147,6 +147,51 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         }
         self.assertFalse(implementation_ready(policy))
 
+    def test_unrecognized_benchmark_status_blocks_evaluator_decision(self):
+        candidate_commit = "b" * 40
+        paths = ["development/sample.py"]
+        policy = {
+            "evaluation": {"timeout_seconds": 10, "require_benchmark": True},
+            "candidate_scope": {
+                "allowed_prefixes": ["development/"],
+                "protected_paths": [],
+                "forbidden_path_fragments": [".env", ".git", "secret"],
+            },
+            "budget": {},
+            "implementation_readiness": {
+                "status": "READY",
+                "require_explicit_ready": True,
+                "promotion_blocked_until_ready": True,
+            },
+            "strong_rsi_safety": {"lifecycle_status": "ACTIVE"},
+        }
+
+        def fake_git(root, *args):
+            return "c" * 40 if args and args[-1] == "HEAD^{tree}" else candidate_commit
+
+        with patch("evaluator.git", side_effect=fake_git), patch(
+            "evaluator.changed_files", return_value=paths
+        ), patch(
+            "evaluator.changed_statuses", return_value=[("A", paths[0])]
+        ), patch(
+            "evaluator.unsafe_file_types", return_value=[]
+        ), patch(
+            "evaluator.secret_findings", return_value=[]
+        ), patch(
+            "evaluator.run", return_value=(0, "ok", 0.01)
+        ), patch(
+            "evaluator.run_sandboxed", return_value=(0, "ok", 0.01)
+        ), patch(
+            "evaluator.benchmark", return_value={"status": "UNRECOGNIZED"}
+        ):
+            result = evaluate(self.ROOT, "a" * 40, policy, profile_registry={"test": True})
+
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertIn(
+            "UNRECOGNIZED",
+            [item["status"] for item in result["results"]],
+        )
+
     def test_ready_but_suspended_lifecycle_blocks_evaluator_before_candidate_checks(self):
         candidate_commit = "b" * 40
         policy = {
