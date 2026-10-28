@@ -1,3 +1,4 @@
+import json
 import os
 import shlex
 import sys
@@ -220,6 +221,22 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
         self.assertEqual(result["results"][0]["name"], "implementation-readiness")
         self.assertEqual(result["results"][0]["status"], "BLOCKED")
 
+    def _valid_benchmark_payload(self, *, candidate_better, baseline_commit, candidate_commit):
+        return {
+            "benchmark_id": "test-benchmark-v1",
+            "candidate_better": candidate_better,
+            "baseline_commit": baseline_commit,
+            "candidate_commit": candidate_commit,
+            "baseline": {"quality": 0.91, "latency_ms": 420},
+            "candidate": {"quality": 0.94, "latency_ms": 390},
+            "checks": {
+                "correctness": True,
+                "regression_free": True,
+                "strict_improvement": candidate_better,
+            },
+            "evidence": "Fixed test workload compared both exact commit snapshots.",
+        }
+
     def test_benchmark_requires_boolean_and_exact_commits(self):
         with self.assertRaises(ValueError):
             parse_benchmark_output(
@@ -234,12 +251,46 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
                 "candidate-sha",
             )
 
+    def test_benchmark_rejects_success_without_comparison_evidence(self):
+        weak_payload = {
+            "candidate_better": True,
+            "baseline_commit": "a" * 40,
+            "candidate_commit": "b" * 40,
+        }
+        with self.assertRaisesRegex(ValueError, "benchmark_id"):
+            parse_benchmark_output(json.dumps(weak_payload), "a" * 40, "b" * 40)
+
+    def test_benchmark_requires_comparable_metrics_and_named_boolean_checks(self):
+        invalid_payloads = [
+            {
+                **self._valid_benchmark_payload(candidate_better=True, baseline_commit="a"*40, candidate_commit="b"*40),
+                "candidate": {"quality": 0.94},
+            },
+            {
+                **self._valid_benchmark_payload(candidate_better=True, baseline_commit="a"*40, candidate_commit="b"*40),
+                "checks": {"correctness": 1},
+            },
+            {
+                **self._valid_benchmark_payload(candidate_better=True, baseline_commit="a"*40, candidate_commit="b"*40),
+                "evidence": " ",
+            },
+        ]
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                with self.assertRaises(ValueError):
+                    parse_benchmark_output(json.dumps(payload), "a"*40, "b"*40)
+
     def test_benchmark_passes_machine_verifiable_success(self):
         os.environ["RSI_BENCHMARK_COMMAND"] = (
             "python -c 'import json,os; print(json.dumps({"
+            "\"benchmark_id\": \"test-benchmark-v1\", "
             "\"candidate_better\": True, "
             "\"baseline_commit\": os.environ[\"RSI_BASELINE_COMMIT\"], "
-            "\"candidate_commit\": os.environ[\"RSI_CANDIDATE_COMMIT\"]}))'"
+            "\"candidate_commit\": os.environ[\"RSI_CANDIDATE_COMMIT\"], "
+            "\"baseline\": {\"quality\": 0.91, \"latency_ms\": 420}, "
+            "\"candidate\": {\"quality\": 0.94, \"latency_ms\": 390}, "
+            "\"checks\": {\"correctness\": True, \"regression_free\": True, \"strict_improvement\": True}, "
+            "\"evidence\": \"Fixed test workload compared exact commits.\"}))'"
         )
         result = self._run_benchmark_with_fake_sandbox(
             self.ROOT,
@@ -253,9 +304,14 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
     def test_benchmark_fails_when_candidate_is_not_better(self):
         os.environ["RSI_BENCHMARK_COMMAND"] = (
             "python -c 'import json,os; print(json.dumps({"
+            "\"benchmark_id\": \"test-benchmark-v1\", "
             "\"candidate_better\": False, "
             "\"baseline_commit\": os.environ[\"RSI_BASELINE_COMMIT\"], "
-            "\"candidate_commit\": os.environ[\"RSI_CANDIDATE_COMMIT\"]}))'"
+            "\"candidate_commit\": os.environ[\"RSI_CANDIDATE_COMMIT\"], "
+            "\"baseline\": {\"quality\": 0.91, \"latency_ms\": 420}, "
+            "\"candidate\": {\"quality\": 0.89, \"latency_ms\": 430}, "
+            "\"checks\": {\"correctness\": True, \"regression_free\": False, \"strict_improvement\": False}, "
+            "\"evidence\": \"Fixed test workload compared exact commits.\"}))'"
         )
         result = self._run_benchmark_with_fake_sandbox(
             self.ROOT,
