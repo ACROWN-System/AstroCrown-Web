@@ -37,8 +37,8 @@ def validate_cases(cases: Any) -> list[dict[str, Any]]:
         if (
             not isinstance(case_id, str)
             or not case_id.strip()
-            or "\\n" in case_id
-            or "\\r" in case_id
+            or "\n" in case_id
+            or "\r" in case_id
             or case_id in seen_case_ids
         ):
             raise ValueError("Benchmark case identifiers must be unique, non-empty single-line strings.")
@@ -75,7 +75,7 @@ def validate_cases(cases: Any) -> list[dict[str, Any]]:
                 or not observed_at.strip()
                 or not isinstance(status, str)
                 or not status.strip()
-                or any("\\n" in field or "\\r" in field for field in (item_id, source, observed_at, status))
+                or any("\n" in field or "\r" in field for field in (item_id, source, observed_at, status))
                 or not isinstance(content, str)
                 or not content.strip()
             ):
