@@ -274,6 +274,18 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
                 **self._valid_benchmark_payload(candidate_better=True, baseline_commit="a"*40, candidate_commit="b"*40),
                 "evidence": " ",
             },
+            {
+                **self._valid_benchmark_payload(candidate_better=True, baseline_commit="a"*40, candidate_commit="b"*40),
+                "checks": {"correctness": True, "regression_free": False},
+            },
+            {
+                **self._valid_benchmark_payload(candidate_better=True, baseline_commit="a"*40, candidate_commit="b"*40),
+                "candidate": {"quality": float("inf"), "latency_ms": 390},
+            },
+            {
+                **self._valid_benchmark_payload(candidate_better=True, baseline_commit="a"*40, candidate_commit="b"*40),
+                "baseline": {"quality": float("nan"), "latency_ms": 420},
+            },
         ]
         for payload in invalid_payloads:
             with self.subTest(payload=payload):
