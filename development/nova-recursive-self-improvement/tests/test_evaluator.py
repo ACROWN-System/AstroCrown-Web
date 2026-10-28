@@ -110,6 +110,7 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
                 "require_explicit_ready": True,
                 "promotion_blocked_until_ready": True,
             },
+            "strong_rsi_safety": {"lifecycle_status": "ACTIVE"},
         }
         def fake_git(root, *args):
             return "c" * 40 if args and args[-1] == "HEAD^{tree}" else candidate_commit
@@ -145,6 +146,34 @@ class EvaluatorBenchmarkTests(unittest.TestCase):
             }
         }
         self.assertFalse(implementation_ready(policy))
+
+    def test_ready_but_suspended_lifecycle_blocks_evaluator_before_candidate_checks(self):
+        candidate_commit = "b" * 40
+        policy = {
+            "evaluation": {"timeout_seconds": 10, "require_benchmark": True},
+            "implementation_readiness": {
+                "status": "READY",
+                "require_explicit_ready": True,
+                "promotion_blocked_until_ready": True,
+            },
+            "strong_rsi_safety": {"lifecycle_status": "SUSPENDED"},
+        }
+
+        def fake_git(root, *args):
+            return "c" * 40 if args and args[-1] == "HEAD^{tree}" else candidate_commit
+
+        with patch("evaluator.git", side_effect=fake_git), patch(
+            "evaluator.changed_files", return_value=[]
+        ), patch(
+            "evaluator.run_sandboxed", side_effect=AssertionError("candidate command must not run")
+        ), patch(
+            "evaluator.benchmark", side_effect=AssertionError("benchmark must not run")
+        ):
+            result = evaluate(self.ROOT, "a" * 40, policy)
+
+        self.assertEqual(result["decision"], "BLOCKED")
+        self.assertEqual(result["results"][0]["name"], "implementation-readiness")
+        self.assertEqual(result["results"][0]["status"], "BLOCKED")
 
     def test_benchmark_requires_boolean_and_exact_commits(self):
         with self.assertRaises(ValueError):
