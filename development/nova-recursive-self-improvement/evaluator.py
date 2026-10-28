@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import shlex
@@ -220,6 +221,50 @@ def parse_benchmark_output(
         raise ValueError("Benchmark baseline_commit does not match RSI_BASELINE_COMMIT.")
     if payload.get("candidate_commit") != candidate:
         raise ValueError("Benchmark candidate_commit does not match RSI_CANDIDATE_COMMIT.")
+
+    benchmark_id = payload.get("benchmark_id")
+    if not isinstance(benchmark_id, str) or not benchmark_id.strip():
+        raise ValueError("Benchmark JSON must identify a non-empty benchmark_id.")
+
+    baseline_metrics = payload.get("baseline")
+    candidate_metrics = payload.get("candidate")
+    if (
+        not isinstance(baseline_metrics, dict)
+        or not baseline_metrics
+        or not isinstance(candidate_metrics, dict)
+        or not candidate_metrics
+    ):
+        raise ValueError("Benchmark JSON must include non-empty baseline and candidate metric objects.")
+    if set(baseline_metrics) != set(candidate_metrics):
+        raise ValueError("Baseline and candidate metric objects must contain the same metric keys.")
+
+    comparable_numeric_metric = any(
+        type(baseline_metrics[key]) in (int, float)
+        and type(candidate_metrics[key]) in (int, float)
+        and math.isfinite(float(baseline_metrics[key]))
+        and math.isfinite(float(candidate_metrics[key]))
+        for key in baseline_metrics
+    )
+    if not comparable_numeric_metric:
+        raise ValueError("Benchmark JSON must provide at least one finite, comparable numeric metric.")
+
+    checks = payload.get("checks")
+    if (
+        not isinstance(checks, dict)
+        or not checks
+        or any(
+            not isinstance(name, str)
+            or not name.strip()
+            or type(passed) is not bool
+            for name, passed in checks.items()
+        )
+    ):
+        raise ValueError("Benchmark JSON must include named boolean checks.")
+
+    evidence = payload.get("evidence")
+    if not isinstance(evidence, str) or not evidence.strip():
+        raise ValueError("Benchmark JSON must include a non-empty evidence description.")
+
     return payload
 
 
