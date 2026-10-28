@@ -238,10 +238,16 @@ def parse_benchmark_output(
     if set(baseline_metrics) != set(candidate_metrics):
         raise ValueError("Baseline and candidate metric objects must contain the same metric keys.")
 
+    if any(
+        type(metrics[key]) not in (int, float)
+        or not math.isfinite(float(metrics[key]))
+        for metrics in (baseline_metrics, candidate_metrics)
+        for key in metrics
+    ):
+        raise ValueError("Baseline and candidate metrics must all be finite numeric values.")
+
     comparable_numeric_metric = any(
-        type(baseline_metrics[key]) in (int, float)
-        and type(candidate_metrics[key]) in (int, float)
-        and math.isfinite(float(baseline_metrics[key]))
+        math.isfinite(float(baseline_metrics[key]))
         and math.isfinite(float(candidate_metrics[key]))
         for key in baseline_metrics
     )
@@ -260,6 +266,11 @@ def parse_benchmark_output(
         )
     ):
         raise ValueError("Benchmark JSON must include named boolean checks.")
+
+    if candidate_better and not all(checks.values()):
+        raise ValueError(
+            "Benchmark cannot report candidate_better=true when any mandatory check is false."
+        )
 
     evidence = payload.get("evidence")
     if not isinstance(evidence, str) or not evidence.strip():
