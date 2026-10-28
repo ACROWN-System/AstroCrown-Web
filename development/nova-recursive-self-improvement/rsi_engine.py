@@ -218,11 +218,14 @@ def classify_decision(statuses: list[str]) -> str:
 
 
 def implementation_ready(policy: dict[str, Any]) -> bool:
+    """Require explicit implementation readiness and an explicit lifecycle release."""
     readiness = policy.get("implementation_readiness", {})
+    safety = policy.get("strong_rsi_safety", {})
     return (
         readiness.get("status") == "READY"
         and readiness.get("require_explicit_ready") is True
         and readiness.get("promotion_blocked_until_ready") is True
+        and safety.get("lifecycle_status") == "ACTIVE"
     )
 
 
