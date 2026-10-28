@@ -82,7 +82,7 @@ Benchmark output becomes part of the RSI evidence package and must be retained w
 
 ## Initial workload implementation candidate
 
-A narrow, deterministic workload is being developed for query-aware repository context packing at:
+A narrow, deterministic workload has been implemented as an unapproved candidate for query-aware repository context packing at:
 
 - Runner: `benchmarks/run_context_packing_benchmark.py`
 - Fixed synthetic corpus: `benchmarks/context-packing-cases.json`
