@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from benchmark_dispatcher import resolve_profile
+from rsi_engine import implementation_ready
 from sandbox_runtime import SandboxUnavailableError, run_sandboxed
 
 
@@ -343,15 +344,6 @@ def benchmark(
         except OSError:
             pass
         shutil.rmtree(input_dir, ignore_errors=True)
-
-
-def implementation_ready(policy: dict[str, Any]) -> bool:
-    readiness = policy.get("implementation_readiness", {})
-    return (
-        readiness.get("status") == "READY"
-        and readiness.get("require_explicit_ready") is True
-        and readiness.get("promotion_blocked_until_ready") is True
-    )
 
 
 def evaluate(
