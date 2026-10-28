@@ -16,6 +16,8 @@ from run_context_packing_benchmark import (
     baseline_first_fit,
     compare_implementations,
     validate_result,
+    validate_cases,
+    validate_corpus,
     _isolated_packer,
 )
 
@@ -27,6 +29,55 @@ class ContextPackingBenchmarkTests(unittest.TestCase):
             (BENCHMARK_DIR / "context-packing-cases.json").read_text(encoding="utf-8")
         )
         cls.cases = cls.payload["cases"]
+
+    def test_reference_corpus_passes_explicit_schema_validation(self):
+        self.assertEqual(validate_corpus(self.payload), self.cases)
+
+    def test_reference_corpus_rejects_missing_or_unknown_required_records(self):
+        invalid_mutations = []
+        empty_required = copy.deepcopy(self.payload)
+        empty_required["cases"][0]["required_item_ids"] = []
+        invalid_mutations.append(empty_required)
+
+        unknown_required = copy.deepcopy(self.payload)
+        unknown_required["cases"][0]["required_item_ids"] = ["not-in-corpus"]
+        invalid_mutations.append(unknown_required)
+
+        duplicate_required = copy.deepcopy(self.payload)
+        duplicate_required["cases"][0]["required_item_ids"].append(
+            duplicate_required["cases"][0]["required_item_ids"][0]
+        )
+        invalid_mutations.append(duplicate_required)
+
+        for mutated in invalid_mutations:
+            with self.subTest(cases=mutated["cases"][0]["required_item_ids"]):
+                with self.assertRaises(ValueError):
+                    validate_corpus(mutated)
+
+    def test_reference_corpus_rejects_duplicate_item_and_case_ids(self):
+        duplicate_item = copy.deepcopy(self.payload)
+        first_case = duplicate_item["cases"][0]
+        first_case["items"][1]["id"] = first_case["items"][0]["id"]
+
+        duplicate_case = copy.deepcopy(self.payload)
+        duplicate_case["cases"][1]["case_id"] = duplicate_case["cases"][0]["case_id"]
+
+        for mutated in (duplicate_item, duplicate_case):
+            with self.subTest(cases=mutated["cases"]):
+                with self.assertRaises(ValueError):
+                    validate_corpus(mutated)
+
+    def test_reference_corpus_rejects_invalid_schema_and_empty_cases(self):
+        invalid_schema = copy.deepcopy(self.payload)
+        invalid_schema["schema_version"] = True
+
+        empty_cases = copy.deepcopy(self.payload)
+        empty_cases["cases"] = []
+
+        for mutated in (invalid_schema, empty_cases):
+            with self.subTest(mutated=mutated):
+                with self.assertRaises(ValueError):
+                    validate_corpus(mutated)
 
     def test_required_records_are_retrieved_without_integrity_regression(self):
         for case in self.cases:
