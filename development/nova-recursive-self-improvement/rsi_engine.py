@@ -215,7 +215,10 @@ def classify_decision(statuses: list[str]) -> str:
         return 'BLOCKED'
     if 'FAIL' in statuses:
         return 'FAIL'
-    if any(status not in {'PASS', 'FAIL', 'BLOCKED'} for status in statuses):
+    if any(
+        not isinstance(status, str) or status not in {'PASS', 'FAIL', 'BLOCKED'}
+        for status in statuses
+    ):
         return 'BLOCKED'
     if 'BLOCKED' in statuses:
         return 'BLOCKED'
