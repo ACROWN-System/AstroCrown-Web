@@ -267,6 +267,8 @@ def _isolated_packer(
             output = json.loads(result.stdout)
         except (json.JSONDecodeError, TypeError) as exc:
             raise RuntimeError("Isolated benchmark implementation returned invalid JSON.") from exc
+        if not isinstance(output, dict):
+            raise RuntimeError("Isolated benchmark implementation did not return a JSON object.")
         return output
 
     return invoke
@@ -321,7 +323,7 @@ def _worker_main(arguments: list[str]) -> int:
             separators=(",", ":"),
             allow_nan=False,
         )
-        trusted_stdout.write(encoded + "\\n")
+        trusted_stdout.write(encoded + "\n")
         trusted_stdout.flush()
     except (Exception, RecursionError):
         return 2
