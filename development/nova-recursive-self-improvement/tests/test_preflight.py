@@ -1,9 +1,12 @@
+import io
 import json
 import os
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -34,6 +37,32 @@ class PreflightTests(unittest.TestCase):
         for name in self.names:
             os.environ.pop(name, None)
         self.assertEqual(run(self.ROOT, require_secret=True), 1)
+
+    def test_ready_status_cannot_bypass_suspended_lifecycle_before_provider_configuration(self):
+        policy = {
+            "implementation_readiness": {
+                "status": "READY",
+                "require_explicit_ready": True,
+                "promotion_blocked_until_ready": True,
+            },
+            "strong_rsi_safety": {"lifecycle_status": "SUSPENDED"},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / "development/nova-recursive-self-improvement/rsi_policy.json"
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps(policy), encoding="utf-8")
+            output = io.StringIO()
+            with patch("preflight.check_non_secret_configuration", side_effect=AssertionError("must block before configuration")):
+                with patch.dict(os.environ, {"TEST_RSI_PROVIDER_KEY": "must-not-be-used"}):
+                    with redirect_stdout(output):
+                        result = run(root, require_secret=True)
+
+        self.assertEqual(result, 1)
+        record = json.loads(output.getvalue())
+        self.assertEqual(record["decision"], "BLOCKED")
+        self.assertEqual(record["stage"], "implementation-readiness")
+        self.assertEqual(record["lifecycle_status"], "SUSPENDED")
 
     def test_non_secret_configuration_requires_explicit_eligibility_and_benchmark(self):
         policy = {
@@ -113,7 +142,12 @@ class PreflightTests(unittest.TestCase):
                 "require_benchmark": True,
                 "benchmark_command_env": "RSI_BENCHMARK_COMMAND",
             },
-            "implementation_readiness": {"status": "READY"},
+            "implementation_readiness": {
+                "status": "READY",
+                "require_explicit_ready": True,
+                "promotion_blocked_until_ready": True,
+            },
+            "strong_rsi_safety": {"lifecycle_status": "ACTIVE"},
         }
         root = Path(tempfile.mkdtemp())
         try:
