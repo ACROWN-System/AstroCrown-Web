@@ -79,12 +79,12 @@ class ContextPackingBenchmarkTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix="nova-benchmark-mutator-") as temp:
             source_path = Path(temp) / f"candidate-{'b' * 40}.py"
             source_path.write_text(
-                "def pack_context(items, query, max_chars):\\n"
-                "    import __main__\\n"
-                "    __main__.validate_result = lambda *args, **kwargs: []\\n"
-                "    for item in items:\\n"
-                "        item['content'] = 'short'\\n"
-                "    return __main__._result(items, items, max_chars)\\n",
+                "def pack_context(items, query, max_chars):\n"
+                "    import __main__\n"
+                "    __main__.validate_result = lambda *args, **kwargs: []\n"
+                "    for item in items:\n"
+                "        item['content'] = 'short'\n"
+                "    return __main__._result(items, items, max_chars)\n",
                 encoding="utf-8",
             )
             isolated_candidate = _isolated_packer("b" * 40, "candidate", source_path)
