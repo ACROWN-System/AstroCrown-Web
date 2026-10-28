@@ -30,22 +30,28 @@ The value is executed by the protected evaluator inside the candidate environmen
 
 ## Output contract
 
-The command must emit only a JSON object containing at least:
+The command must emit only a JSON object containing a benchmark identity, matching baseline/candidate commit SHAs, a boolean `candidate_better`, non-empty metric objects for both baseline and candidate with the same metric keys and at least one finite comparable numeric metric, named boolean checks, and a non-empty evidence description.
 
-`candidate_better: true`
-
-It should also provide machine-readable evidence sufficient to explain the comparison, for example:
+Example (illustrative values only):
 
 ```json
 {
+  "benchmark_id": "example-task-v1",
   "candidate_better": true,
+  "baseline_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "candidate_commit": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "baseline": {"quality": 0.91, "latency_ms": 420},
   "candidate": {"quality": 0.94, "latency_ms": 390},
-  "evidence": "held-out workload result"
+  "checks": {
+    "correctness": true,
+    "regression_free": true,
+    "strict_improvement": true
+  },
+  "evidence": "Fixed workload comparison for the exact baseline and candidate commits."
 }
 ```
 
-The actual metrics are task-dependent. A benchmark must not manufacture improvement by changing the direction of a metric without documenting the intended interpretation. The protected evaluator accepts PASS only when the command exits successfully and `candidate_better` is the boolean value `true`.
+The evaluator validates this evidence envelope and commit binding; it does **not** independently prove that metric definitions, benchmark implementation, or claimed improvement are sound. Those remain task-specific review and validation requirements. The actual metrics are task-dependent. A benchmark must not manufacture improvement by changing the direction of a metric without documenting the intended interpretation. The evaluator accepts PASS only when the command exits successfully, the evidence envelope is valid, and `candidate_better` is the boolean value `true`.
 
 ## Baseline comparison
 
