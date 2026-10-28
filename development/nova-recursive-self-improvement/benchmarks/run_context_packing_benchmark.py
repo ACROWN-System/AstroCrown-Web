@@ -7,10 +7,14 @@ under a fixed character budget. It does not measure general intelligence.
 
 from __future__ import annotations
 
+import contextlib
+import copy
+import io
 import json
 import os
-import subprocess
 import re
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Callable
 
@@ -118,15 +122,25 @@ def validate_result(
 
 
 def _case_metrics(
-    result: dict[str, Any], case: dict[str, Any], validation_errors: list[str]
+    result: Any, case: dict[str, Any], validation_errors: list[str]
 ) -> dict[str, Any]:
-    selected = set(result.get("selected_ids", []))
+    # Derive metrics only from safely typed fields. Malformed candidate output
+    # must become failed evidence, not an exception or a trusted numeric score.
+    if not isinstance(result, dict):
+        result = {}
+    raw_selected = result.get("selected_ids")
+    selected = (
+        set(raw_selected)
+        if isinstance(raw_selected, list) and all(isinstance(item_id, str) for item_id in raw_selected)
+        else set()
+    )
+    context = result.get("context")
     required = set(case["required_item_ids"])
     return {
         "required_hits": len(selected & required),
         "required_total": len(required),
         "unrequired_records": len(selected - required),
-        "characters": result.get("character_count"),
+        "characters": len(context) if isinstance(context, str) else 0,
         "integrity_pass": not validation_errors,
         "integrity_errors": validation_errors,
     }
@@ -142,6 +156,7 @@ def compare_implementations(
     per_case: list[dict[str, Any]] = []
     baseline_totals = {"required_hits": 0, "required_total": 0, "unrequired_records": 0, "characters": 0}
     candidate_totals = {"required_hits": 0, "required_total": 0, "unrequired_records": 0, "characters": 0}
+    baseline_integrity = True
     candidate_integrity = True
     no_case_regressions = True
     no_noise_regressions = True
@@ -152,10 +167,17 @@ def compare_implementations(
         budget = case["max_chars"]
         required = set(case["required_item_ids"])
 
-        base_result = baseline_pack(items, query, budget)
-        cand_result = candidate_pack(items, query, budget)
-        base_errors = validate_result(base_result, items, budget)
-        cand_errors = validate_result(cand_result, items, budget)
+        # Candidate code is untrusted. Give each implementation its own input
+        # copy and validate both outputs against the untouched trusted corpus.
+        # This prevents in-place record edits from changing the validator's
+        # reference data or making an altered record appear provenance-preserving.
+        trusted_items = copy.deepcopy(items)
+        baseline_input = copy.deepcopy(trusted_items)
+        candidate_input = copy.deepcopy(trusted_items)
+        base_result = baseline_pack(baseline_input, query, budget)
+        cand_result = candidate_pack(candidate_input, query, budget)
+        base_errors = validate_result(base_result, trusted_items, budget)
+        cand_errors = validate_result(cand_result, trusted_items, budget)
         base_metrics = _case_metrics(base_result, case, base_errors)
         cand_metrics = _case_metrics(cand_result, case, cand_errors)
 
@@ -169,6 +191,7 @@ def compare_implementations(
             no_case_regressions = False
         if cand_metrics["unrequired_records"] > base_metrics["unrequired_records"]:
             no_noise_regressions = False
+        baseline_integrity = baseline_integrity and not base_errors
         candidate_integrity = candidate_integrity and not cand_errors
         per_case.append(
             {
@@ -187,7 +210,8 @@ def compare_implementations(
         )
     )
     candidate_better = (
-        candidate_integrity
+        baseline_integrity
+        and candidate_integrity
         and no_case_regressions
         and no_noise_regressions
         and strict_gain
@@ -200,6 +224,7 @@ def compare_implementations(
         "baseline": baseline_totals,
         "candidate": candidate_totals,
         "checks": {
+            "baseline_reference_integrity": baseline_integrity,
             "candidate_integrity_and_budget": candidate_integrity,
             "no_per_case_required_evidence_regression": no_case_regressions,
             "no_unrequired_record_regression": no_noise_regressions,
@@ -211,6 +236,112 @@ def compare_implementations(
             "integrity. Scope is context packing only, not general intelligence."
         ),
     }
+
+
+def _isolated_packer(
+    commit: str, role: str, source_path: Path
+) -> Callable[[list[dict[str, Any]], str, int], dict[str, Any]]:
+    """Call one commit-pinned packer in a child process separate from the verifier."""
+    def invoke(
+        items: list[dict[str, Any]], query: str, max_chars: int
+    ) -> dict[str, Any]:
+        try:
+            request = json.dumps(
+                {"items": items, "query": query, "max_chars": max_chars},
+                ensure_ascii=False,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+        except (TypeError, ValueError) as exc:
+            raise RuntimeError("Benchmark input could not be serialized safely.") from exc
+
+        command = [
+            sys.executable,
+            str(Path(__file__).resolve()),
+            "--worker",
+            commit,
+            role,
+            str(source_path),
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                input=request,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise RuntimeError("Isolated benchmark implementation did not complete.") from exc
+        if result.returncode != 0:
+            raise RuntimeError("Isolated benchmark implementation exited unsuccessfully.")
+        try:
+            output = json.loads(result.stdout)
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise RuntimeError("Isolated benchmark implementation returned invalid JSON.") from exc
+        if not isinstance(output, dict):
+            raise RuntimeError("Isolated benchmark implementation did not return a JSON object.")
+        return output
+
+    return invoke
+
+
+def _worker_main(arguments: list[str]) -> int:
+    """Worker entrypoint: run one untrusted packer, never the trusted verifier."""
+    if len(arguments) != 3:
+        return 2
+    commit, role, source_name = arguments
+    if not _SHA_RE.fullmatch(commit) or role not in {"baseline", "candidate"}:
+        return 2
+    source_path = Path(source_name)
+    if source_path.name != f"{role}-{commit}.py":
+        return 2
+
+    try:
+        request = json.loads(sys.stdin.read())
+    except (json.JSONDecodeError, RecursionError):
+        return 2
+    if (
+        not isinstance(request, dict)
+        or not isinstance(request.get("items"), list)
+        or not isinstance(request.get("query"), str)
+        or isinstance(request.get("max_chars"), bool)
+        or not isinstance(request.get("max_chars"), int)
+        or request["max_chars"] < 0
+    ):
+        return 2
+
+    try:
+        source = source_path.read_text(encoding="utf-8")
+    except OSError:
+        return 2
+
+    # Capture trusted serializer and original stdout before executing candidate
+    # source. Candidate prints are discarded; only the worker's result goes to
+    # the parent verifier's JSON channel.
+    serialize_json = json.dumps
+    trusted_stdout = sys.stdout
+    namespace: dict[str, Any] = {"__name__": f"_context_packer_{commit[:12]}"}
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            exec(compile(source, f"{commit}:{PACKER_PATH}", "exec"), namespace)
+            packer = namespace.get("pack_context")
+            if not callable(packer):
+                return 2
+            output = packer(request["items"], request["query"], request["max_chars"])
+        encoded = serialize_json(
+            output,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+        trusted_stdout.write(encoded + "\n")
+        trusted_stdout.flush()
+    except (Exception, RecursionError):
+        return 2
+    return 0
 
 
 def _load_packer(
@@ -225,17 +356,12 @@ def _load_packer(
     # supplied by candidate-controlled code.
     if source_path.parent != Path("/benchmark-input") or source_path.name != source_name:
         raise RuntimeError(f"{env_name} does not identify the expected immutable source snapshot.")
-    try:
-        source = source_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise RuntimeError(f"Required benchmark source snapshot is unavailable: {source_name}") from exc
-    ref = f"{commit}:{PACKER_PATH}"
-    namespace: dict[str, Any] = {"__name__": f"_context_packer_{commit[:12]}"}
-    exec(compile(source, ref, "exec"), namespace)
-    function = namespace.get("pack_context")
-    if not callable(function):
-        raise RuntimeError(f"{ref} does not expose pack_context.")
-    return function
+    if not source_path.is_file():
+        raise RuntimeError(f"Required benchmark source snapshot is unavailable: {source_name}")
+    # Do not exec candidate-controlled source inside the trusted benchmark
+    # verifier. A separate process prevents it from monkeypatching validation
+    # functions or other verifier globals in memory.
+    return _isolated_packer(commit, role, source_path)
 
 
 def main() -> int:
@@ -253,19 +379,32 @@ def main() -> int:
     candidate_pack = _load_packer(
         candidate_commit, "RSI_CANDIDATE_PACKER_FILE", "candidate"
     )
-    result = compare_implementations(
-        baseline_pack,
-        candidate_pack,
-        payload["cases"],
-        baseline_commit,
-        candidate_commit,
-    )
+    try:
+        result = compare_implementations(
+            baseline_pack,
+            candidate_pack,
+            payload["cases"],
+            baseline_commit,
+            candidate_commit,
+        )
+    except (OSError, ValueError, RuntimeError, subprocess.SubprocessError):
+        # A failed isolated baseline/candidate execution is not benchmark success.
+        result = {
+            "benchmark_id": "nova-context-packing-v1",
+            "candidate_better": False,
+            "baseline_commit": baseline_commit,
+            "candidate_commit": candidate_commit,
+            "status": "BLOCKED",
+            "evidence": "Isolated benchmark execution did not yield a verifiable result.",
+        }
     print(json.dumps(result, sort_keys=True, separators=(",", ":")))
     return 0
 
 
 if __name__ == "__main__":
     try:
+        if len(sys.argv) > 1 and sys.argv[1] == "--worker":
+            raise SystemExit(_worker_main(sys.argv[2:]))
         raise SystemExit(main())
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
         # The protected evaluator treats missing/invalid JSON as BLOCKED.

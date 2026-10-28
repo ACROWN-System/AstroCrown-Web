@@ -1,5 +1,7 @@
+import copy
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,6 +16,7 @@ from run_context_packing_benchmark import (
     baseline_first_fit,
     compare_implementations,
     validate_result,
+    _isolated_packer,
 )
 
 
@@ -41,11 +44,65 @@ class ContextPackingBenchmarkTests(unittest.TestCase):
             "b" * 40,
         )
         self.assertIs(result["candidate_better"], True)
+        self.assertTrue(result["checks"]["baseline_reference_integrity"])
         self.assertTrue(result["checks"]["candidate_integrity_and_budget"])
         self.assertTrue(result["checks"]["no_per_case_required_evidence_regression"])
         self.assertTrue(result["checks"]["no_unrequired_record_regression"])
         self.assertGreater(
             result["candidate"]["required_hits"], result["baseline"]["required_hits"]
+        )
+
+    def test_mutating_candidate_cannot_change_trusted_validation_corpus(self):
+        items = [
+            {
+                "id": "noise",
+                "source": "synthetic://noise",
+                "observed_at": "2026-10-01",
+                "status": "background",
+                "content": "n" * 50,
+            },
+            {
+                "id": "required",
+                "source": "synthetic://required",
+                "observed_at": "2026-10-01",
+                "status": "verified",
+                "content": "r" * 100,
+            },
+        ]
+        case = {
+            "case_id": "mutation-must-not-improve-score",
+            "items": items,
+            "query": "required",
+            "max_chars": 210,
+            "required_item_ids": ["required"],
+        }
+        original_items = copy.deepcopy(items)
+        with tempfile.TemporaryDirectory(prefix="nova-benchmark-mutator-") as temp:
+            source_path = Path(temp) / f"candidate-{'b' * 40}.py"
+            source_path.write_text(
+                "def pack_context(items, query, max_chars):\n"
+                "    import __main__\n"
+                "    __main__.validate_result = lambda *args, **kwargs: []\n"
+                "    for item in items:\n"
+                "        item['content'] = 'short'\n"
+                "    return __main__._result(items, items, max_chars)\n",
+                encoding="utf-8",
+            )
+            isolated_candidate = _isolated_packer("b" * 40, "candidate", source_path)
+            result = compare_implementations(
+                baseline_first_fit,
+                isolated_candidate,
+                [case],
+                "a" * 40,
+                "b" * 40,
+            )
+
+        self.assertFalse(result["candidate_better"])
+        self.assertFalse(result["checks"]["candidate_integrity_and_budget"])
+        self.assertEqual(items, original_items)
+        self.assertIn(
+            "context differs from the exact full records plus provenance headers",
+            result["per_case"][0]["candidate"]["integrity_errors"],
         )
 
     def test_selection_is_deterministic(self):
