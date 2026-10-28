@@ -24,6 +24,91 @@ CASES_PATH = Path(__file__).with_name("context-packing-cases.json")
 _SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
+def validate_cases(cases: Any) -> list[dict[str, Any]]:
+    """Fail closed when the reference workload cannot test evidence retrieval."""
+    if not isinstance(cases, list) or not cases:
+        raise ValueError("Benchmark corpus must contain a non-empty cases list.")
+
+    seen_case_ids: set[str] = set()
+    for case_index, case in enumerate(cases):
+        if not isinstance(case, dict):
+            raise ValueError(f"Benchmark case {case_index} must be an object.")
+        case_id = case.get("case_id")
+        if (
+            not isinstance(case_id, str)
+            or not case_id.strip()
+            or "\n" in case_id
+            or "\r" in case_id
+            or case_id in seen_case_ids
+        ):
+            raise ValueError("Benchmark case identifiers must be unique, non-empty single-line strings.")
+        seen_case_ids.add(case_id)
+
+        query = case.get("query")
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError(f"Benchmark case {case_id} needs a non-empty query.")
+        budget = case.get("max_chars")
+        if isinstance(budget, bool) or not isinstance(budget, int) or budget < 0:
+            raise ValueError(f"Benchmark case {case_id} has an invalid character budget.")
+
+        items = case.get("items")
+        if not isinstance(items, list) or not items:
+            raise ValueError(f"Benchmark case {case_id} must contain non-empty records.")
+        seen_item_ids: set[str] = set()
+        for item_index, item in enumerate(items):
+            if not isinstance(item, dict):
+                raise ValueError(f"Benchmark case {case_id} item {item_index} must be an object.")
+            item_id = item.get("id")
+            source = item.get("source")
+            content = item.get("content")
+            observed_at = item.get("observed_at")
+            status = item.get("status")
+            if not isinstance(item_id, str) or not item_id.strip():
+                raise ValueError(f"Benchmark case {case_id} has an item without a valid id.")
+            if item_id in seen_item_ids:
+                raise ValueError(f"Benchmark case {case_id} contains duplicate item id {item_id}.")
+            seen_item_ids.add(item_id)
+            if (
+                not isinstance(source, str)
+                or not source.strip()
+                or not isinstance(observed_at, str)
+                or not observed_at.strip()
+                or not isinstance(status, str)
+                or not status.strip()
+                or any("\n" in field or "\r" in field for field in (item_id, source, observed_at, status))
+                or not isinstance(content, str)
+                or not content.strip()
+            ):
+                raise ValueError(f"Benchmark case {case_id} contains invalid record content or provenance metadata.")
+
+        required_ids = case.get("required_item_ids")
+        if (
+            not isinstance(required_ids, list)
+            or not required_ids
+            or any(not isinstance(item_id, str) or not item_id.strip() for item_id in required_ids)
+        ):
+            raise ValueError(f"Benchmark case {case_id} must identify at least one required record.")
+        if len(required_ids) != len(set(required_ids)):
+            raise ValueError(f"Benchmark case {case_id} contains duplicate required item ids.")
+        missing = sorted(set(required_ids) - seen_item_ids)
+        if missing:
+            raise ValueError(f"Benchmark case {case_id} requires unknown item ids: {missing}.")
+
+    return cases
+
+
+def validate_corpus(payload: Any) -> list[dict[str, Any]]:
+    """Validate the identity and schema of the reference corpus before running code."""
+    if (
+        not isinstance(payload, dict)
+        or type(payload.get("schema_version")) is not int
+        or payload.get("schema_version") != 1
+        or payload.get("benchmark_id") != "nova-context-packing-v1"
+    ):
+        raise ValueError("Context-packing benchmark corpus identity or schema is invalid.")
+    return validate_cases(payload.get("cases"))
+
+
 def _render_record(item: dict[str, Any]) -> str:
     observed_at = item.get("observed_at", "undated")
     status = item.get("status", "unspecified")
@@ -153,6 +238,7 @@ def compare_implementations(
     baseline_commit: str,
     candidate_commit: str,
 ) -> dict[str, Any]:
+    cases = validate_cases(cases)
     per_case: list[dict[str, Any]] = []
     baseline_totals = {"required_hits": 0, "required_total": 0, "unrequired_records": 0, "characters": 0}
     candidate_totals = {"required_hits": 0, "required_total": 0, "unrequired_records": 0, "characters": 0}
@@ -371,8 +457,7 @@ def main() -> int:
         raise ValueError("RSI_BASELINE_COMMIT and RSI_CANDIDATE_COMMIT must be exact full SHAs.")
 
     payload = json.loads(CASES_PATH.read_text(encoding="utf-8"))
-    if payload.get("benchmark_id") != "nova-context-packing-v1":
-        raise ValueError("Unexpected context-packing benchmark identity.")
+    cases = validate_corpus(payload)
     baseline_pack = _load_packer(
         baseline_commit, "RSI_BASELINE_PACKER_FILE", "baseline"
     )
@@ -383,7 +468,7 @@ def main() -> int:
         result = compare_implementations(
             baseline_pack,
             candidate_pack,
-            payload["cases"],
+            cases,
             baseline_commit,
             candidate_commit,
         )
