@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from benchmark_dispatcher import resolve_profile
-from rsi_engine import implementation_ready
+from rsi_engine import classify_decision, implementation_ready
 from sandbox_runtime import SandboxUnavailableError, run_sandboxed
 
 
@@ -482,11 +482,7 @@ def evaluate(
         })
 
     statuses_only = [item["status"] for item in results]
-    decision = (
-        "FAIL"
-        if "FAIL" in statuses_only
-        else ("BLOCKED" if "BLOCKED" in statuses_only else "PASS")
-    )
+    decision = classify_decision(statuses_only)
     return {
         "schema_version": 1,
         "decision": decision,

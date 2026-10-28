@@ -210,8 +210,16 @@ def validate_candidate_payload(
     return sorted(set(errors))
 
 def classify_decision(statuses: list[str]) -> str:
+    """Reduce known check states without allowing missing or unknown states to pass."""
+    if not isinstance(statuses, list) or not statuses:
+        return 'BLOCKED'
     if 'FAIL' in statuses:
         return 'FAIL'
+    if any(
+        not isinstance(status, str) or status not in {'PASS', 'FAIL', 'BLOCKED'}
+        for status in statuses
+    ):
+        return 'BLOCKED'
     if 'BLOCKED' in statuses:
         return 'BLOCKED'
     return 'PASS'
