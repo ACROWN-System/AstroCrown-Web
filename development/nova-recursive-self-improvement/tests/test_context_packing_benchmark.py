@@ -44,6 +44,7 @@ class ContextPackingBenchmarkTests(unittest.TestCase):
             "b" * 40,
         )
         self.assertIs(result["candidate_better"], True)
+        self.assertTrue(result["checks"]["baseline_reference_integrity"])
         self.assertTrue(result["checks"]["candidate_integrity_and_budget"])
         self.assertTrue(result["checks"]["no_per_case_required_evidence_regression"])
         self.assertTrue(result["checks"]["no_unrequired_record_regression"])
