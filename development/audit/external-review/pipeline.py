@@ -111,6 +111,27 @@ def validate_record(record: dict[str, Any]) -> None:
     if forecast is not None and (not _is_number(forecast) or not 0 <= forecast <= 100):
         raise ValueError(f"{record['id']}: forecast_valid_review_percent must be from 0 to 100 or null")
 
+    forecast_recorded_date = record.get("forecast_recorded_date")
+    if forecast is None:
+        if forecast_recorded_date is not None:
+            raise ValueError(f"{record['id']}: forecast_recorded_date requires a forecast")
+    else:
+        if not isinstance(forecast_recorded_date, str) or not forecast_recorded_date.strip():
+            raise ValueError(f"{record['id']}: a forecast requires forecast_recorded_date")
+        try:
+            parsed_forecast_date = date.fromisoformat(forecast_recorded_date)
+        except ValueError as exc:
+            raise ValueError(
+                f"{record['id']}: forecast_recorded_date must be YYYY-MM-DD"
+            ) from exc
+        if parsed_forecast_date.isoformat() != forecast_recorded_date:
+            raise ValueError(f"{record['id']}: forecast_recorded_date must be YYYY-MM-DD")
+        if parsed_forecast_date >= date.fromisoformat(record["sent_date"]):
+            raise ValueError(
+                f"{record['id']}: forecast_recorded_date must be before sent_date; "
+                "date-only sent records cannot prove same-day ordering"
+            )
+
     if record.get("accepted") is not None and record.get("replied") is not True:
         raise ValueError(f"{record['id']}: acceptance is only observed after a reply")
     if record.get("completed") is not None and record.get("accepted") is not True:
@@ -229,7 +250,12 @@ def summarize_cohort(rows: list[dict[str, Any]]) -> dict[str, Any]:
                 if not forecasted_closed
                 else "DESCRIPTIVE_ONLY_LOW_SAMPLE_NOT_CALIBRATED"
                 if len(forecasted_closed) < MINIMUM_COMPARABLE_OUTCOMES
-                else "FORECAST_ERROR_MEASURED_CALIBRATION_STILL_REQUIRES_REVIEW"
+                else "FORECAST_ERROR_MEASURED_BUT_TIMING_PROVENANCE_UNVERIFIED_CALIBRATION_STILL_REQUIRES_REVIEW"
+            ),
+            "timing_provenance_status": (
+                "NO_MATURED_FORECASTS"
+                if not forecasted_closed
+                else "SELF_REPORTED_DATE_ONLY_NOT_INDEPENDENTLY_VERIFIED"
             ),
         },
         "rule": "Observed rates are not calibrated predictions; fit scores are not probabilities.",
