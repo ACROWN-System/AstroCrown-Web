@@ -62,6 +62,7 @@ class ConversionMeasurementTests(unittest.TestCase):
             "completed": None,
             "qualified_independent_review": None,
             "forecast_valid_review_percent": None,
+            "forecast_recorded_date": None,
         }
         base.update(overrides)
         return base
@@ -91,6 +92,7 @@ class ConversionMeasurementTests(unittest.TestCase):
                 completed=True,
                 qualified_independent_review=True,
                 forecast_valid_review_percent=75,
+                forecast_recorded_date="2026-10-10",
             ),
             self.record("pending", replied=None),
         ]
@@ -124,6 +126,44 @@ class ConversionMeasurementTests(unittest.TestCase):
         self.assertEqual(interval["lower_percent"], 0.0)
         self.assertGreater(interval["upper_percent"], 70.0)
         self.assertLess(interval["upper_percent"], 85.0)
+
+    def test_forecast_requires_a_recorded_date_before_outreach(self):
+        with self.assertRaisesRegex(ValueError, "requires forecast_recorded_date"):
+            pipeline.validate_record(self.record(
+                "missing-forecast-date",
+                forecast_valid_review_percent=60,
+            ))
+
+        valid = self.record(
+            "prospective-forecast",
+            forecast_valid_review_percent=60,
+            forecast_recorded_date="2026-10-10",
+        )
+        pipeline.validate_record(valid)
+
+    def test_forecast_date_must_precede_sent_date(self):
+        for recorded_date in ("2026-10-11", "2026-10-12"):
+            with self.subTest(recorded_date=recorded_date):
+                with self.assertRaisesRegex(ValueError, "must be before sent_date"):
+                    pipeline.validate_record(self.record(
+                        "non-prospective-forecast",
+                        forecast_valid_review_percent=60,
+                        forecast_recorded_date=recorded_date,
+                    ))
+
+    def test_forecast_timing_is_explicitly_not_independently_verified(self):
+        row = self.record(
+            "forecasted-closed",
+            closed=True,
+            replied=False,
+            forecast_valid_review_percent=60,
+            forecast_recorded_date="2026-10-10",
+        )
+        result = pipeline.summarize_cohort([row])
+        self.assertEqual(
+            result["forecast_validation"]["timing_provenance_status"],
+            "SELF_REPORTED_DATE_ONLY_NOT_INDEPENDENTLY_VERIFIED",
+        )
 
     def test_invalid_stage_order_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "only observed after a reply"):
