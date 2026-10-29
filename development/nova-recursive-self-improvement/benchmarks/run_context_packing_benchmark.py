@@ -206,6 +206,16 @@ def validate_result(
     return errors
 
 
+def _selected_required_ids(result: Any, required_ids: set[str]) -> set[str]:
+    """Return selected required IDs only from safely typed benchmark output."""
+    if not isinstance(result, dict):
+        return set()
+    selected = result.get("selected_ids")
+    if not isinstance(selected, list) or not all(isinstance(item_id, str) for item_id in selected):
+        return set()
+    return set(selected) & required_ids
+
+
 def _case_metrics(
     result: Any, case: dict[str, Any], validation_errors: list[str]
 ) -> dict[str, Any]:
@@ -246,6 +256,7 @@ def compare_implementations(
     candidate_integrity = True
     no_case_regressions = True
     no_noise_regressions = True
+    all_required_items_present = True
 
     for case in cases:
         items = case["items"]
@@ -267,14 +278,26 @@ def compare_implementations(
         base_metrics = _case_metrics(base_result, case, base_errors)
         cand_metrics = _case_metrics(cand_result, case, cand_errors)
 
+        base_required_ids = _selected_required_ids(base_result, required)
+        candidate_required_ids = _selected_required_ids(cand_result, required)
+        missing_candidate_required_ids = sorted(required - candidate_required_ids)
+        base_metrics["required_item_ids_selected"] = sorted(base_required_ids)
+        cand_metrics["required_item_ids_selected"] = sorted(candidate_required_ids)
+        cand_metrics["missing_required_item_ids"] = missing_candidate_required_ids
+        cand_metrics["all_required_items_present"] = not missing_candidate_required_ids
         base_metrics["case_id"] = case["case_id"]
         cand_metrics["case_id"] = case["case_id"]
         for metric in ("required_hits", "required_total", "unrequired_records", "characters"):
             baseline_totals[metric] += int(base_metrics[metric] or 0)
             candidate_totals[metric] += int(cand_metrics[metric] or 0)
 
-        if cand_metrics["required_hits"] < base_metrics["required_hits"]:
+        # Compare required-record identity, not only the count of records hit.
+        # Losing one mandatory record while substituting another is a regression,
+        # even when the per-case number of hits stays constant.
+        if not base_required_ids.issubset(candidate_required_ids):
             no_case_regressions = False
+        if missing_candidate_required_ids:
+            all_required_items_present = False
         if cand_metrics["unrequired_records"] > base_metrics["unrequired_records"]:
             no_noise_regressions = False
         baseline_integrity = baseline_integrity and not base_errors
@@ -300,6 +323,7 @@ def compare_implementations(
         and candidate_integrity
         and no_case_regressions
         and no_noise_regressions
+        and all_required_items_present
         and strict_gain
     )
     return {
@@ -314,6 +338,7 @@ def compare_implementations(
             "candidate_integrity_and_budget": candidate_integrity,
             "no_per_case_required_evidence_regression": no_case_regressions,
             "no_unrequired_record_regression": no_noise_regressions,
+            "all_required_items_present": all_required_items_present,
             "strict_improvement": strict_gain,
         },
         "per_case": per_case,
