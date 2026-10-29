@@ -19,6 +19,7 @@ from run_context_packing_benchmark import (
     validate_cases,
     validate_corpus,
     _isolated_packer,
+    _result,
 )
 
 
@@ -85,6 +86,61 @@ class ContextPackingBenchmarkTests(unittest.TestCase):
                 result = pack_context(case["items"], case["query"], case["max_chars"])
                 self.assertEqual(validate_result(result, case["items"], case["max_chars"]), [])
                 self.assertTrue(set(case["required_item_ids"]).issubset(result["selected_ids"]))
+
+    def test_required_record_identity_loss_blocks_benchmark_improvement(self):
+        items = [
+            {
+                "id": "required-a",
+                "source": "synthetic://required-a",
+                "observed_at": "2026-10-01",
+                "status": "required",
+                "content": "Evidence A must always be preserved.",
+            },
+            {
+                "id": "required-b",
+                "source": "synthetic://required-b",
+                "observed_at": "2026-10-01",
+                "status": "required",
+                "content": "Evidence B must always be preserved.",
+            },
+            {
+                "id": "noise",
+                "source": "synthetic://noise",
+                "observed_at": "2026-10-01",
+                "status": "background",
+                "content": "Unrequired background context.",
+            },
+        ]
+        case = {
+            "case_id": "required-record-identity-must-not-be-substituted",
+            "items": items,
+            "query": "evidence",
+            "max_chars": 2000,
+            "required_item_ids": ["required-a", "required-b"],
+        }
+        by_id = {item["id"]: item for item in items}
+
+        def baseline_pack(records, query, budget):
+            del query
+            return _result(records, [by_id["required-a"], by_id["noise"]], budget)
+
+        def candidate_pack(records, query, budget):
+            del query
+            return _result(records, [by_id["required-b"]], budget)
+
+        result = compare_implementations(
+            baseline_pack, candidate_pack, [case], "a" * 40, "b" * 40
+        )
+
+        self.assertTrue(result["checks"]["baseline_reference_integrity"])
+        self.assertTrue(result["checks"]["candidate_integrity_and_budget"])
+        self.assertFalse(result["checks"]["no_per_case_required_evidence_regression"])
+        self.assertFalse(result["checks"]["all_required_items_present"])
+        self.assertFalse(result["candidate_better"])
+        self.assertEqual(
+            result["per_case"][0]["candidate"]["missing_required_item_ids"],
+            ["required-a"],
+        )
 
     def test_candidate_strictly_improves_over_first_fit_reference(self):
         result = compare_implementations(
