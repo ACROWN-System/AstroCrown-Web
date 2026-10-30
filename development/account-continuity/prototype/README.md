@@ -109,7 +109,7 @@ Open the local portal at:
 
 The portal supports:
 - Submitting a grievance or suggestion with deterministic local intake classification, priority routing, a receipt, an ACR-XXXX-XXXX case reference and a separate high-entropy private access key.
-- Opening an existing case with the reference and key, reading the submitter-visible timeline and adding information without an active account session.
+- Opening an existing case with the reference and key, reading the submitter-visible timeline, downloading a copy of that public case history and adding information without an active account session.
 - Viewing cases linked to the currently signed-in account as a convenience, without making that account session the only way to access them.
 - Requesting recovery when the case key, reference, or both have been lost. The request has its own ACRR-XXXX-XXXX reference and private status key. A request can be made without an account login.
 - A restricted administrator queue, public replies, internal notes, status changes, escalation, and case-access recovery review. The case administrator workspace appears only after the backend confirms both the server-assigned administrator role and a valid wallet step-up.

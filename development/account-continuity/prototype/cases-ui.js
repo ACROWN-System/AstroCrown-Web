@@ -100,8 +100,30 @@
       '<div class="case-card-top"><div><h3>' + esc(item.title) + '</h3><div class="case-meta">' + esc(item.referenceCode) + ' · ' + esc(item.kind) + ' · ' + esc(item.priority) + ' priority</div></div>' +
       '<span class="case-status">' + esc(item.status) + '</span></div>' +
       '<p>' + esc(item.description) + '</p><p class="case-meta">First update target: ' + esc(item.firstUpdateExpectation) + ' · Created: ' + esc(item.createdAt) + '</p>' +
+      '<div class="case-receipt-actions"><button class="case-button case-button-quiet" type="button" data-download-case-history>Download case history</button></div>' +
       '<h3>Case history</h3>' + renderTimeline(item.events) +
       '<form id="case-message-form" class="case-reply-form"><label>Add information or request a review<textarea name="message" minlength="3" maxlength="5000" required placeholder="Add relevant information or explain why you are requesting a further review."></textarea></label><button class="case-button case-button-secondary" type="submit">Send case update</button><p class="case-feedback" id="case-message-feedback" role="status"></p></form>';
+    container.querySelector("[data-download-case-history]").addEventListener("click", function () {
+      var historyText = [
+        "ASTROCROWN CASE HISTORY",
+        "Reference: " + item.referenceCode,
+        "Title: " + item.title,
+        "Type: " + item.kind,
+        "Topic: " + item.topic,
+        "Status: " + item.status,
+        "Priority: " + item.priority,
+        "Created: " + item.createdAt,
+        "Last updated: " + item.updatedAt,
+        "",
+        "PUBLIC CASE TIMELINE",
+        (item.events || []).map(function (entry) {
+          return "[" + entry.created_at + "] " + eventLabel(entry.event_type) + "\n" + entry.message;
+        }).join("\n\n"),
+        "",
+        "This export contains the submitter-visible timeline only."
+      ].join("\n");
+      downloadText("astrocrown-case-history-" + item.referenceCode + ".txt", historyText);
+    });
     $("case-message-form").addEventListener("submit", async function (event) {
       event.preventDefault();
       var message = formValues(this).message;
