@@ -33,7 +33,7 @@ PASSWORD_MIN_LENGTH = 15
 PASSWORD_MAX_LENGTH = 1024
 SESSION_LIFETIME_SECONDS = 30 * 60
 MAX_BODY_BYTES = 16 * 1024
-TERMS_VERSION = "development-terms-2026-10-30-v0.2"
+TERMS_VERSION = "development-terms-2026-10-31-v0.3"
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REFERRAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 AVATAR_IDS = frozenset({"person", "crown", "star", "moon", "orbit", "shield"})
@@ -61,6 +61,15 @@ except ImportError as wallet_import_error:
     parse_wallet_address = None
     parse_wallet_chain_id = None
     WALLET_AUTH_IMPORT_ERROR = type(wallet_import_error).__name__
+
+try:
+    from case_management import CaseError, CaseStore
+except ImportError as case_import_error:
+    CaseError = None
+    CaseStore = None
+    CASE_IMPORT_ERROR = type(case_import_error).__name__
+else:
+    CASE_IMPORT_ERROR = None
 
 
 class ApiError(Exception):
@@ -128,6 +137,26 @@ class AccountApplication:
         self.dummy_salt = b"acrown-local-prototype"
         self.dummy_hash = self.hash_password("not-a-real-account-password", self.dummy_salt)
         self.initialize_database()
+        if CaseStore is None:
+            raise RuntimeError("The local case-management module could not be loaded: " + str(CASE_IMPORT_ERROR))
+        self.case_store = CaseStore(self.database_path)
+
+    @staticmethod
+    def case_rate_subject(handler: BaseHTTPRequestHandler) -> str:
+        address = getattr(handler, "client_address", ("local-test",))
+        return str(address[0] if address else "local-test")[:64]
+
+    def require_case_admin_session(
+        self, handler: BaseHTTPRequestHandler
+    ) -> sqlite3.Row:
+        account, expires, _token = self.require_account_session(handler)
+        summary = self.account_summary(account, expires)
+        if account["role"] != "admin" or summary["adminSessionAuthorized"] is not True:
+            raise ApiError(
+                403,
+                "A server-assigned administrator role and a valid wallet-verified administrator session are required.",
+            )
+        return account
 
     def configure_wallet_auth(self, port: int) -> bool:
         """Configure SIWE to the exact localhost origin for this local server."""
@@ -720,6 +749,14 @@ class AccountApplication:
 
     def handle(self, path: str, payload: dict, handler: BaseHTTPRequestHandler) -> tuple[int, dict, str | None]:
         """Return (status, JSON, optional Set-Cookie header)."""
+        if path == "/api/cases/mine":
+            account, _expires, _token = self.require_account_session(handler)
+            return 200, self.case_store.list_for_account(account["account_id"]), None
+
+        if path == "/api/cases/admin/list":
+            self.require_case_admin_session(handler)
+            return 200, self.case_store.admin_list(), None
+
         if path == "/api/account/status":
             account, expires = self.account_for_session(self.get_cookie(handler))
             if account is None:
@@ -813,6 +850,58 @@ class AccountApplication:
             if account is None:
                 raise ApiError(500, "The local account session could not be initialized.")
             return 200, self.account_summary(account, expires), self.cookie_header(token)
+
+
+        if path == "/api/cases/create":
+            subject = self.case_rate_subject(handler)
+            if not self.rate_allowed("case-create", subject, limit=8, window=600):
+                raise ApiError(429, "Too many new case submissions from this connection. Please try again later.")
+            account, _expires = self.account_for_session(self.get_cookie(handler))
+            account_id = account["account_id"] if account is not None else None
+            return 201, self.case_store.create(payload, account_id=account_id), None
+
+        if path == "/api/cases/lookup":
+            subject = self.case_rate_subject(handler)
+            if not self.rate_allowed("case-lookup", subject, limit=30, window=60):
+                raise ApiError(429, "Too many case-access attempts. Please wait before trying again.")
+            return 200, self.case_store.lookup(payload), None
+
+        if path == "/api/cases/message":
+            subject = self.case_rate_subject(handler)
+            if not self.rate_allowed("case-message", subject, limit=20, window=300):
+                raise ApiError(429, "Too many case updates from this connection. Please try again later.")
+            return 200, self.case_store.submit_message(payload), None
+
+        if path == "/api/cases/account-view":
+            account, _expires, _token = self.require_account_session(handler)
+            return 200, self.case_store.lookup_for_account(payload, account["account_id"]), None
+
+        if path == "/api/cases/account-message":
+            account, _expires, _token = self.require_account_session(handler)
+            subject = account["account_id"]
+            if not self.rate_allowed("case-account-message", subject, limit=20, window=300):
+                raise ApiError(429, "Too many case updates. Please try again later.")
+            return 200, self.case_store.submit_message_for_account(payload, account["account_id"]), None
+
+        if path == "/api/cases/recovery-request":
+            subject = self.case_rate_subject(handler)
+            if not self.rate_allowed("case-recovery-request", subject, limit=5, window=3600):
+                raise ApiError(429, "Too many case-recovery requests from this connection. Please try again later.")
+            return 201, self.case_store.request_recovery(payload), None
+
+        if path == "/api/cases/recovery-status":
+            subject = self.case_rate_subject(handler)
+            if not self.rate_allowed("case-recovery-status", subject, limit=20, window=300):
+                raise ApiError(429, "Too many recovery-status checks. Please try again later.")
+            return 200, self.case_store.recovery_status(payload), None
+
+        if path == "/api/cases/admin/action":
+            account = self.require_case_admin_session(handler)
+            return 200, self.case_store.admin_action(payload, account["account_id"]), None
+
+        if path == "/api/cases/admin/recovery-action":
+            account = self.require_case_admin_session(handler)
+            return 200, self.case_store.admin_decide_recovery(payload, account["account_id"]), None
 
         if path == "/api/account/avatar":
             account, expires = self.account_for_session(self.get_cookie(handler))
@@ -976,6 +1065,15 @@ def make_handler(application: AccountApplication):
                 "/account-continuity/prototype/security-assurance.html": (
                     PROTOTYPE_DIR / "security-assurance.html", "text/html; charset=utf-8"
                 ),
+                "/account-continuity/prototype/cases.html": (
+                    PROTOTYPE_DIR / "cases.html", "text/html; charset=utf-8"
+                ),
+                "/account-continuity/prototype/cases.css": (
+                    PROTOTYPE_DIR / "cases.css", "text/css; charset=utf-8"
+                ),
+                "/account-continuity/prototype/cases-ui.js": (
+                    PROTOTYPE_DIR / "cases-ui.js", "text/javascript; charset=utf-8"
+                ),
             }
             target = allowed.get(path)
             if target is None:
@@ -1001,10 +1099,13 @@ def make_handler(application: AccountApplication):
                 self.json_response(403, {"error": "Open the preview using its exact localhost address."})
                 return
             path = urlsplit(self.path).path
-            if path in {"/api/account/status", "/api/admin/status"}:
+            if path in {
+                "/api/account/status", "/api/admin/status",
+                "/api/cases/mine", "/api/cases/admin/list",
+            }:
                 try:
                     status, payload, cookie = application.handle(path, {}, self)
-                except ApiError as error:
+                except (ApiError, CaseError) as error:
                     self.json_response(error.status, {"error": error.message})
                     return
                 except Exception:
@@ -1047,7 +1148,7 @@ def make_handler(application: AccountApplication):
                 return
             try:
                 status, response, cookie = application.handle(urlsplit(self.path).path, payload, self)
-            except ApiError as error:
+            except (ApiError, CaseError) as error:
                 self.json_response(error.status, {"error": error.message})
                 return
             except Exception:

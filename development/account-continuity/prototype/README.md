@@ -101,6 +101,29 @@ This is only the owner-operated local-development process. It has no public admi
 
 Stop the local server with **Ctrl+C**. The SQLite database is stored under your user profile unless you set `--db`; the clean-database command above uses a temporary Windows path.
 
+## Feedback, grievances and independent case access
+
+Open the local portal at:
+
+    http://localhost:8766/account-continuity/prototype/cases.html
+
+The portal supports:
+- Submitting a grievance or suggestion with deterministic local intake classification, priority routing, a receipt, an ACR-XXXX-XXXX case reference and a separate high-entropy private access key.
+- Opening an existing case with the reference and key, reading the submitter-visible timeline and adding information without an active account session.
+- Viewing cases linked to the currently signed-in account as a convenience, without making that account session the only way to access them.
+- Requesting recovery when the case key, reference, or both have been lost. The request has its own ACRR-XXXX-XXXX reference and private status key. A request can be made without an account login.
+- A restricted administrator queue, public replies, internal notes, status changes, escalation, and case-access recovery review. The case administrator workspace appears only after the backend confirms both the server-assigned administrator role and a valid wallet step-up.
+
+**Account separation:** Case rows store an optional account identifier as a non-foreign-key reference. Account deletion or termination does not cascade-delete a grievance. Each case access key is stored only as a SHA-256 hash. A case reference alone cannot disclose case contents. The independent credentials should be saved outside AstroCrown by the submitter.
+
+**Lost reference and key:** The recovery request can be submitted with a case title/description, approximate date, contact route and explanation even when the original case reference is unknown. An authorized administrator must independently verify the claimant and match the request to a case. Approval rotates the case access key and returns the replacement key once to the administrator for delivery through a separately verified channel. The prototype does not send email/SMS, does not verify contact details automatically and does not guarantee recovery. Do not enter real personal or contact information.
+
+**Independent review:** A grievance marked as concerning an administrator requires the administrator handling it to attest that they are not personally implicated. The same safeguard applies to replacement-key approval for such a case. The attestation is an auditable declaration, not machine proof that the reviewer is independent.
+
+**Automation and timing:** Receipt generation, timestamps and first-pass triage are deterministic and local. Higher-priority grievances currently receive an indicative first substantive update target of 2 working days; other cases and suggestions receive 5 working days. These are development targets, not guaranteed resolution times. No AI provider receives the submission, no AI decides the merits, and no substantive grievance is automatically accepted or rejected. No external message notifications or file attachments are enabled.
+
+Use the case portal and tests with invented details only. The current implementation is local SQLite development software, not a production complaint service. Production requires a deployed and hardened data service, protected administrator operations, independently tested recovery verification and delivery, retention/deletion rules, privacy/legal review and a published working contact route.
+
 ## Data and security boundaries
 
 - Local test data stays in the SQLite database on the computer running this server. The prototype uses Python standard-library components only and makes no external authentication or newsletter calls.

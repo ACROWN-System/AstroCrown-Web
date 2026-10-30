@@ -41,8 +41,9 @@ jobs:
 
       - name: Validate Python and browser JavaScript syntax
         run: |
-          python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py
+          python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/case_management.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py development/account-continuity/prototype/tests/test_case_management.py
           node --check development/account-continuity/prototype/account-ui.js
+          node --check development/account-continuity/prototype/cases-ui.js
           node --check development/account-continuity/prototype/tests/browser_smoke.mjs
 
       - name: Run loopback HTTP and account-contract tests
@@ -58,6 +59,9 @@ jobs:
           css = Path("development/account-continuity/prototype/account-prototype.css").read_text(encoding="utf-8")
           terms = Path("development/account-continuity/prototype/terms-of-use.html").read_text(encoding="utf-8")
           privacy = Path("development/account-continuity/prototype/privacy-policy.html").read_text(encoding="utf-8")
+          cases_html = Path("development/account-continuity/prototype/cases.html").read_text(encoding="utf-8")
+          cases_ui = Path("development/account-continuity/prototype/cases-ui.js").read_text(encoding="utf-8")
+          cases_module = Path("development/account-continuity/prototype/case_management.py").read_text(encoding="utf-8")
           required = (
               'id="open-account-dialog"', 'id="account-dialog"',
               'href="./account-continuity/prototype/account-prototype.css"',
@@ -97,6 +101,17 @@ jobs:
               raise SystemExit("One-time recovery codes must not be the default forgot-password journey.")
           if "DRAFT ONLY" not in terms or "DRAFT ONLY" not in privacy:
               raise SystemExit("Policy links must point to explicitly marked development drafts.")
+          for item in ("case-create-form", "case-lookup-form", "case-recovery-form", "administrator-case-panel"):
+              if item not in cases_html:
+                  raise SystemExit(f"Case portal control missing: {item}")
+          for item in ("/admin/action", "/recovery-request", "/recovery-status", "/account-view"):
+              if item not in cases_ui:
+                  raise SystemExit(f"Case portal API client route missing: {item}")
+          for item in ("community_cases", "access_key_hash", "manualVerificationConfirmed", "case_reference_hint"):
+              if item not in cases_module:
+                  raise SystemExit(f"Case storage or independent recovery control missing: {item}")
+          if "cases.html" not in server or "cases-ui.js" not in server:
+              raise SystemExit("The local server allowlist must serve the case portal and its script.")
           for item in ("terms-of-use.html", "privacy-policy.html"):
               if item not in server:
                   raise SystemExit(f"Local allowlist missing development policy page: {item}")

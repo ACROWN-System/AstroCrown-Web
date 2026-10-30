@@ -18,7 +18,7 @@
   var focusBeforeOpen = null;
   var busy = false;
   var pendingAdminWalletMessage = null;
-  var termsVersion = "development-terms-2026-10-30-v0.2";
+  var termsVersion = "development-terms-2026-10-31-v0.3";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var forceBrowserDemo = new URLSearchParams(window.location.search).get("account-preview-demo") === "1";
   var browserPreviewMode = forceBrowserDemo || loopbackHosts.indexOf(window.location.hostname) === -1;
@@ -376,6 +376,7 @@
           '<button class="account-text-button" type="button" data-account-mode="recover">Forgot password?</button></div>' +
       '</form>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
       '<p class="account-provider-note">A crypto wallet is not required for ordinary account access. This development prototype does not verify email ownership or provide email password-reset delivery.</p>';
   }
 
@@ -405,6 +406,7 @@
         '<button class="account-primary account-create-submit" type="submit">Create an account</button>' +
       '</form>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
       '<p class="account-provider-note">This prototype stores test information only. No verification email or crypto-news newsletter will be sent.</p>';
   }
 
@@ -506,6 +508,7 @@
         '<section class="account-dashboard-card"><h2>Preferences</h2><p class="account-dashboard-value">Crypto-news email: ' + escapeHtml(newsletter) + '</p><p>The preference is only recorded for this test; no mailing list or email provider is connected.</p></section>' +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
         '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Password recovery, email verification, passkeys, recovery management and active-session review are not implemented. Do not rely on this test account for real access.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
         adminCard +
       '</div>' +
       '<div class="account-dashboard-actions"><p>Public listing and wallet connection are not required for ordinary account access. Administrator functions are separately gated and are not part of ordinary account permissions.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
@@ -686,6 +689,7 @@
         '<button class="account-primary" type="submit">Request password reset</button>' +
       '</form>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
       '<div class="account-form-actions"><button class="account-text-button" type="button" data-account-mode="signin">Back to Log In</button>' +
         '<button class="account-text-button" type="button" data-account-mode="create">Create an account instead</button></div>';
   }

@@ -253,7 +253,7 @@ try {
   assert.equal(storedAccount.newsletterOptIn, true);
   assert.ok(storedAccount.newsletterConsentAt);
   assert.equal(storedAccount.termsAccepted, true);
-  assert.match(storedAccount.termsVersion, /development-draft/);
+  assert.equal(storedAccount.termsVersion, "development-terms-2026-10-31-v0.3");
   assert.equal(storedAccount.emailVerified, false);
 
   await evaluate("document.getElementById('account-signout').click()");
@@ -376,7 +376,32 @@ try {
   assert.equal(await evaluate("document.getElementById('open-account-dialog').getAttribute('data-avatar-id')"), "person",
     "the reloaded memory-only preview creates a new disposable account with the default avatar");
 
-  console.log("PASS: email signup/login, success popup, built-in avatar selection and validation, avatar persistence in local account state, circular header control, account dashboard, separate security assurance page, referral/consent handling, reset disclosure, local role boundary and memory-only browser preview.");
+
+  // The case portal is public to reach and does not depend on a signed-in account.
+  await cdp("Page.navigate", { url: localUrl + "account-continuity/prototype/cases.html" });
+  await waitFor("independent case portal", () => evaluate("document.readyState === 'complete' && Boolean(document.getElementById('case-create-form'))"));
+  assert.match(await evaluate("document.body.innerText"), /Account not required/);
+  assert.match(await evaluate("document.body.innerText"), /private access key/);
+  const guestAccountStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(guestAccountStatus.authenticated, false, "the public case portal must work without an account session");
+  await evaluate("document.getElementById('case-kind').value = 'grievance'; document.querySelector('#case-create-form [name=topic]').value = 'account_access'; document.querySelector('#case-create-form [name=title]').value = 'Account termination appeal'; document.querySelector('#case-create-form [name=description]').value = 'I believe my account was terminated in error and request an independent review of the decision.'; document.getElementById('case-create-form').requestSubmit();");
+  await waitFor("guest grievance receipt with independent credentials", () => evaluate("!document.getElementById('case-receipt').hidden && document.querySelectorAll('#case-receipt .case-secret-row strong').length === 2"), 20000);
+  const caseCredentials = await evaluate("Array.from(document.querySelectorAll('#case-receipt .case-secret-row strong')).map(node => node.textContent)");
+  assert.match(caseCredentials[0], /^ACR-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
+  assert.ok(caseCredentials[1].length >= 32, "the private case key must have high entropy");
+  assert.match(await evaluate("document.getElementById('case-receipt').innerText"), /within 2 working days/);
+  await evaluate("document.querySelector('#case-lookup-form [name=referenceCode]').value = " + JSON.stringify(caseCredentials[0]) + "; document.querySelector('#case-lookup-form [name=accessKey]').value = " + JSON.stringify(caseCredentials[1]) + "; document.getElementById('case-lookup-form').requestSubmit();");
+  await waitFor("guest opens the case using its separate credentials", () => evaluate("!document.getElementById('case-detail').hidden && document.getElementById('case-detail').innerText.includes('Account termination appeal')"));
+  await evaluate("document.querySelector('#case-message-form [name=message]').value = 'I am adding relevant details after the account restriction and request this remain under review.'; document.getElementById('case-message-form').requestSubmit();");
+  await waitFor("guest adds a message to the independent case", () => evaluate("document.getElementById('case-detail').innerText.includes('I am adding relevant details after the account restriction')"));
+  const createdRecovery = await evaluate("fetch('/api/cases/recovery-request', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({caseReference:'', caseTitle:'Account termination appeal', approximateDate:'31 October 2026', contactMethod:'other', contactValue:'Previously established test contact route', explanation:'I lost both the case reference and access key after my account was terminated.'})}).then(async r => ({status:r.status, body:await r.json()}))");
+  assert.equal(createdRecovery.status, 201, "recovery requests must not require a case reference or account login");
+  const recoveryStatus = await evaluate("fetch('/api/cases/recovery-status', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({recoveryReference:" + JSON.stringify(createdRecovery.body.recoveryReference) + ", recoveryKey:" + JSON.stringify(createdRecovery.body.recoveryKey) + "})}).then(async r => ({status:r.status, body:await r.json()}))");
+  assert.equal(recoveryStatus.status, 200);
+  assert.equal(recoveryStatus.body.status, "pending");
+  assert.match(recoveryStatus.body.message, /independent identity verification/);
+
+  console.log("PASS: email signup/login, account dashboard, terms version, security assurance, separate public case portal, guest grievance receipt, high-entropy case key, independent case lookup and reply, loss-of-both-credentials recovery request/status, admin role boundaries and browser-only preview.");
 
 } catch (error) {
   console.error(String(error?.stack || error));
