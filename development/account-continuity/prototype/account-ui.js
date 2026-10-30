@@ -18,7 +18,7 @@
   var focusBeforeOpen = null;
   var busy = false;
   var pendingAdminWalletMessage = null;
-  var termsVersion = "development-draft-2026-10-21";
+  var termsVersion = "development-terms-2026-10-30-v0.2";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var forceBrowserDemo = new URLSearchParams(window.location.search).get("account-preview-demo") === "1";
   var browserPreviewMode = forceBrowserDemo || loopbackHosts.indexOf(window.location.hostname) === -1;
