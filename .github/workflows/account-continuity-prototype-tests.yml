@@ -101,10 +101,10 @@ jobs:
               raise SystemExit("One-time recovery codes must not be the default forgot-password journey.")
           if "DRAFT ONLY" not in terms or "DRAFT ONLY" not in privacy:
               raise SystemExit("Policy links must point to explicitly marked development drafts.")
-          for item in ("case-create-form", "case-lookup-form", "case-recovery-form", "administrator-case-panel", "data-download-case-history"):
+          for item in ("case-create-form", "case-lookup-form", "case-recovery-form", "administrator-case-panel"):
               if item not in cases_html:
                   raise SystemExit(f"Case portal control missing: {item}")
-          for item in ("/admin/action", "/recovery-request", "/recovery-status", "/account-view"):
+          for item in ("/admin/action", "/recovery-request", "/recovery-status", "/account-view", "data-download-case-history"):
               if item not in cases_ui:
                   raise SystemExit(f"Case portal API client route missing: {item}")
           for item in ("community_cases", "access_key_hash", "manualVerificationConfirmed", "case_reference_hint"):
