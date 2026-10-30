@@ -132,7 +132,7 @@ class CaseManagementTests(unittest.TestCase):
         receipt = self.submit()
         recovery = self.store.request_recovery({
             "caseReference": receipt["referenceCode"],
-            "caseTitle": receipt["title"],
+            "caseTitle": receipt["case"]["title"],
             "approximateDate": "31 October 2026",
             "contactMethod": "email",
             "contactValue": "verified-contact@example.test",
@@ -177,7 +177,7 @@ class CaseManagementTests(unittest.TestCase):
         receipt = self.submit()
         recovery = self.store.request_recovery({
             "caseReference": "",
-            "caseTitle": receipt["title"],
+            "caseTitle": receipt["case"]["title"],
             "approximateDate": receipt["case"]["createdAt"][:10],
             "contactMethod": "other",
             "contactValue": "Previously verified private contact route",
@@ -199,13 +199,13 @@ class CaseManagementTests(unittest.TestCase):
             "referenceCode": receipt["referenceCode"],
             "accessKey": decision["replacementCaseAccessKey"],
         })
-        self.assertEqual(recovered["title"], receipt["title"])
+        self.assertEqual(recovered["title"], receipt["case"]["title"])
 
     def test_administrator_concern_also_requires_independent_recovery_review(self):
         receipt = self.submit(administratorConcern=True)
         recovery = self.store.request_recovery({
             "caseReference": receipt["referenceCode"],
-            "caseTitle": receipt["title"],
+            "caseTitle": receipt["case"]["title"],
             "approximateDate": "31 October 2026",
             "contactMethod": "other",
             "contactValue": "Previously verified private contact channel",
