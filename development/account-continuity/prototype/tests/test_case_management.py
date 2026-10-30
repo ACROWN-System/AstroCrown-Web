@@ -47,7 +47,10 @@ class CaseManagementTests(unittest.TestCase):
                 self.store.lookup({"referenceCode": receipt["referenceCode"], "accessKey": key})
             self.assertEqual(denied.exception.status, 403)
 
-    def test_case_record_is_not_foreign_keyed_to_account(self):
+    def test_case_survives_deletion_of_linked_account_record(self):
+        with self.store.connect() as db:
+            db.execute("CREATE TABLE accounts (account_id TEXT PRIMARY KEY)")
+            db.execute("INSERT INTO accounts(account_id) VALUES ('terminated-account')")
         receipt = self.store.create({
             "kind": "grievance",
             "topic": "account_access",
@@ -55,10 +58,13 @@ class CaseManagementTests(unittest.TestCase):
             "description": "My account was terminated and I believe this decision was made in error.",
         }, account_id="terminated-account")
         with self.store.connect() as db:
+            db.execute("DELETE FROM accounts WHERE account_id = 'terminated-account'")
+            remaining = db.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]
             fk_tables = {
                 row["table"] for row in db.execute("PRAGMA foreign_key_list(community_cases)")
             }
-        self.assertNotIn("accounts", fk_tables)
+        self.assertEqual(remaining, 0, "the account record is deleted in this test")
+        self.assertNotIn("accounts", fk_tables, "case storage must not cascade with account storage")
         found = self.store.lookup({
             "referenceCode": receipt["referenceCode"],
             "accessKey": receipt["accessKey"],
