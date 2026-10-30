@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="AstroCrown feedback, grievance and independent case-access portal.">
+<title>AstroCrown · Feedback &amp; Case Access</title>
+<link rel="stylesheet" href="cases.css">
+<script src="cases-ui.js" defer></script>
+</head>
+<body>
+<header class="case-header">
+  <a class="case-brand" href="../../index.html" aria-label="AstroCrown development homepage">
+    <span class="case-brand-mark" aria-hidden="true">A</span>
+    <span>ASTROCROWN</span>
+  </a>
+  <a class="case-home-link" href="../../index.html">Return to AstroCrown</a>
+</header>
+<main class="case-main">
+  <section class="case-hero">
+    <p class="case-eyebrow">COMMUNITY FEEDBACK · GRIEVANCES · SUGGESTIONS</p>
+    <h1>Feedback &amp; case access</h1>
+    <p>Submit a suggestion or raise a concern. Each submission receives a reference and a separate private access key so that an existing case can remain accessible even when an AstroCrown account is restricted, closed or unavailable.</p>
+    <div id="case-backend-notice" class="case-important-note" hidden role="status"></div>
+    <div class="case-important-note"><strong>Keep your case receipt.</strong> Your reference code and private access key are separate. The access key is displayed only when issued; save the downloadable receipt somewhere secure. The reference code alone does not reveal your case.</div>
+  </section>
+
+  <section class="case-panel" aria-labelledby="new-case-heading">
+    <div class="case-panel-heading">
+      <div><p class="case-step">01 · NEW SUBMISSION</p><h2 id="new-case-heading">Send feedback or raise a grievance</h2></div>
+      <span class="case-pill">Account not required</span>
+    </div>
+    <p class="case-muted">You may submit while signed in or without an account. If an active local account session is present, the case is also linked to that account for convenience. The independent case credentials remain valid separately.</p>
+    <form id="case-create-form" class="case-form">
+      <div class="case-form-grid">
+        <label>Submission type
+          <select name="kind" id="case-kind" required>
+            <option value="grievance">Grievance · something needs review</option>
+            <option value="suggestion">Suggestion · proposed improvement</option>
+          </select>
+        </label>
+        <label>Topic
+          <select name="topic" required>
+            <option value="account_access">Account access or termination</option>
+            <option value="case_access">Case access or recovery</option>
+            <option value="security">Security</option>
+            <option value="privacy">Privacy or personal information</option>
+            <option value="technical">Technical problem</option>
+            <option value="data_accuracy">Data accuracy</option>
+            <option value="service">Service or general experience</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+      </div>
+      <label>Title
+        <input name="title" minlength="6" maxlength="160" required placeholder="Describe the main point in a few words">
+      </label>
+      <label>Description
+        <textarea name="description" minlength="20" maxlength="7000" rows="6" required placeholder="Explain what happened, what you suggest, or what you would like reviewed. Include only information needed to understand the matter."></textarea>
+      </label>
+      <label id="administrator-concern-field" class="case-check-row">
+        <input type="checkbox" name="administratorConcern">
+        <span>This grievance concerns an administrator, an administrative decision, or the handling of an earlier grievance. It should be routed for independent review.</span>
+      </label>
+      <p class="case-small-print">Do not include passwords, private keys, seed phrases, full payment credentials or unrelated sensitive information. File attachments are not supported by this development prototype.</p>
+      <button class="case-button" type="submit">Submit and create case</button>
+      <p id="case-create-feedback" class="case-feedback" role="status" aria-live="polite"></p>
+    </form>
+    <section id="case-receipt" class="case-receipt" hidden aria-live="polite"></section>
+  </section>
+
+  <section class="case-panel" aria-labelledby="lookup-heading">
+    <div class="case-panel-heading">
+      <div><p class="case-step">02 · INDEPENDENT ACCESS</p><h2 id="lookup-heading">Open an existing case</h2></div>
+      <span class="case-pill">No account sign-in</span>
+    </div>
+    <p class="case-muted">Enter the case reference and private access key from your receipt. This independent route continues to work if your AstroCrown account has been suspended, terminated or closed.</p>
+    <form id="case-lookup-form" class="case-form case-inline-form">
+      <label>Case reference
+        <input name="referenceCode" autocapitalize="characters" spellcheck="false" required placeholder="ACR-XXXX-XXXX">
+      </label>
+      <label>Private access key
+        <input name="accessKey" type="password" autocomplete="off" required minlength="32" placeholder="Enter the private key from your receipt">
+      </label>
+      <button class="case-button" type="submit">Open case</button>
+      <p id="case-lookup-feedback" class="case-feedback" role="status" aria-live="polite"></p>
+    </form>
+    <section id="case-detail" class="case-detail" hidden aria-live="polite"></section>
+  </section>
+
+  <section class="case-panel" aria-labelledby="recovery-heading">
+    <div class="case-panel-heading">
+      <div><p class="case-step">03 · LOST ACCESS</p><h2 id="recovery-heading">Recover case access</h2></div>
+      <span class="case-pill">Manual review</span>
+    </div>
+    <p class="case-muted">You can request recovery if you lose the private case key, the case reference, or both. You do not need an active AstroCrown account. A reference or title/date description helps us locate the case. A reviewer must independently verify your identity and match the request before a replacement key can be issued. A request does not automatically restore access.</p>
+    <form id="case-recovery-form" class="case-form">
+      <label>Case reference (optional if lost)
+        <input name="caseReference" autocapitalize="characters" spellcheck="false" placeholder="ACR-XXXX-XXXX">
+      </label>
+      <div class="case-form-grid">
+        <label>Case title or description
+          <input name="caseTitle" minlength="4" maxlength="160" required placeholder="A few words that help identify the case">
+        </label>
+        <label>Approximate submission date
+          <input name="approximateDate" minlength="4" maxlength="40" required placeholder="For example, 31 October 2026">
+        </label>
+      </div>
+      <div class="case-form-grid">
+        <label>Contact method for independent verification
+          <select name="contactMethod" required>
+            <option value="email">Email</option><option value="phone">Phone</option><option value="other">Other previously established route</option>
+          </select>
+        </label>
+        <label>Contact detail
+          <input name="contactValue" minlength="5" maxlength="254" required placeholder="A contact channel you can access">
+        </label>
+      </div>
+      <label>Why access needs to be recovered
+        <textarea name="explanation" minlength="10" maxlength="2000" rows="3" required placeholder="Explain what was lost and any relevant context."></textarea>
+      </label>
+      <p class="case-small-print">Only provide a contact detail needed for verification. The contact information entered here is not considered verified merely because it was submitted. This prototype has no email or SMS delivery provider; review and any replacement-key delivery are manual.</p>
+      <button class="case-button case-button-secondary" type="submit">Request independent recovery</button>
+      <p id="case-recovery-feedback" class="case-feedback" role="status" aria-live="polite"></p>
+    </form>
+    <section id="case-recovery-receipt" class="case-receipt" hidden aria-live="polite"></section>
+    <div class="case-subsection">
+      <h3>Check a recovery request</h3>
+      <form id="case-recovery-status-form" class="case-form case-inline-form">
+        <label>Recovery reference
+          <input name="recoveryReference" autocapitalize="characters" required placeholder="ACRR-XXXX-XXXX">
+        </label>
+        <label>Private recovery key
+          <input name="recoveryKey" type="password" autocomplete="off" required minlength="32" placeholder="Enter the key from the recovery receipt">
+        </label>
+        <button class="case-button case-button-quiet" type="submit">Check request</button>
+        <p id="case-recovery-status-feedback" class="case-feedback" role="status" aria-live="polite"></p>
+      </form>
+      <div id="case-recovery-status-result" class="case-status-result" hidden></div>
+    </div>
+  </section>
+
+  <section id="account-linked-cases" class="case-panel" hidden aria-labelledby="my-cases-heading">
+    <div class="case-panel-heading"><div><p class="case-step">04 · SIGNED-IN VIEW</p><h2 id="my-cases-heading">Cases linked to this account</h2></div></div>
+    <p class="case-muted">This is a convenience view. It does not replace the independent case reference and access key.</p>
+    <div id="my-cases-list" class="case-list"></div>
+  </section>
+
+  <section id="administrator-case-panel" class="case-panel case-admin-panel" hidden aria-labelledby="admin-cases-heading">
+    <div class="case-panel-heading">
+      <div><p class="case-step">RESTRICTED WORKSPACE</p><h2 id="admin-cases-heading">Administrator case review</h2></div>
+      <span class="case-pill case-pill-admin">Server-authorized session</span>
+    </div>
+    <p class="case-muted">Visible only after the backend confirms an assigned administrator role and a valid wallet step-up session. Keep internal notes separate from public replies. A grievance concerning an administrator requires an independent-review attestation before any action.</p>
+    <div id="administrator-cases-list" class="case-list"></div>
+    <div class="case-subsection"><h3>Case-access recovery queue</h3><p class="case-muted">Before approving a replacement key, independently verify identity outside this case portal. Where the original case reference was lost, match the request to the exact case before approval. Do not send a replacement key through an unverified channel.</p><div id="administrator-recoveries-list" class="case-list"></div></div>
+  </section>
+
+  <footer class="case-footer">
+    <p><strong>How this prototype works:</strong> Receipt generation, deterministic category/priority routing, timestamps and case histories run locally in the prototype backend. No AI provider receives submission contents. Substantive findings and decisions require authorized review; this system does not automatically decide whether a grievance is valid.</p>
+    <p>This is a development prototype using local SQLite storage. No email, SMS or push notifications are sent. Do not enter real personal information or use it for real disputes. See the current <a href="terms-of-use.html">Terms of Use draft</a> and <a href="privacy-policy.html">Privacy Policy draft</a>.</p>
+  </footer>
+</main>
+</body>
+</html>

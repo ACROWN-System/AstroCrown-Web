@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Security assurance · AstroCrown account prototype</title>
+  <style>
+    :root { color-scheme: dark; --gold:#ffd700; --ink:#f2f5fb; --muted:#aab8cb; --line:rgba(153,178,213,.22); }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(ellipse at 15% 0%,rgba(22,52,90,.35),transparent 32rem),linear-gradient(145deg,#071322,#030811 70%); color:var(--ink); font:14px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { width:min(920px,calc(100% - 28px)); margin:40px auto 70px; }
+    .topline { height:3px; border-radius:9px; background:linear-gradient(90deg,transparent,var(--gold) 18%,#7b6a21 62%,transparent); margin-bottom:24px; }
+    .eyebrow { color:#d7c46a; font-size:11px; letter-spacing:.12em; font-weight:800; text-transform:uppercase; }
+    h1 { margin:8px 0 10px; font-size:clamp(27px,5vw,42px); line-height:1.12; letter-spacing:-.04em; }
+    h2 { margin:0 0 9px; font-size:17px; }
+    p { color:var(--muted); margin:8px 0 12px; }
+    .status { border:1px solid rgba(255,210,74,.38); background:rgba(255,210,74,.065); border-radius:12px; padding:14px 16px; margin:22px 0; color:#ecdca5; }
+    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:18px; }
+    section { border:1px solid var(--line); border-radius:13px; padding:18px; background:linear-gradient(145deg,rgba(15,31,52,.9),rgba(5,12,23,.94)); }
+    ul { color:var(--muted); padding-left:20px; margin:8px 0 0; }
+    li { margin:6px 0; }
+    strong { color:#e7edf6; }
+    a { color:#ffe58a; text-underline-offset:3px; }
+    a:focus-visible { outline:2px solid var(--gold); outline-offset:4px; border-radius:3px; }
+    .footer { margin-top:22px; padding-top:17px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between; }
+    @media(max-width:640px) { main { margin-top:24px; } .grid { grid-template-columns:1fr; } section { padding:15px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="topline"></div>
+    <div class="eyebrow">AstroCrown · Account access</div>
+    <h1>Security assurance</h1>
+    <p>This page explains the current evidence and limitations of the <strong>development-only account prototype</strong>. It is separate from the Terms of Use and Privacy Policy.</p>
+
+    <div class="status">
+      <strong>Status: Development prototype only.</strong>
+      <p>The prototype is not production authentication, has not received an independent security audit or certification, and must not be used with real credentials, personal email accounts, crypto wallets or valuable assets.</p>
+    </div>
+
+    <div class="grid">
+      <section>
+        <h2>Controls present in the local prototype</h2>
+        <ul>
+          <li>Password verifiers use PBKDF2-HMAC-SHA256 with a random salt and 600,000 iterations; raw passwords are not stored.</li>
+          <li>Session tokens are generated randomly; the SQLite session store keeps a token hash.</li>
+          <li>The test server binds to loopback and checks the expected localhost Host/Origin.</li>
+          <li>Request bodies are bounded; account and sign-in attempts have in-process rate limits.</li>
+          <li>Local cookies are HttpOnly and SameSite=Strict. This HTTP-only localhost setting is not a production cookie configuration.</li>
+          <li>Basic response headers, a Content Security Policy, and no-store responses are set by the local server.</li>
+          <li>The hosted browser preview uses a disposable in-memory demonstration and makes no account API request.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Not implemented</h2>
+        <ul>
+          <li>Email ownership verification, email delivery and password-reset delivery.</li>
+          <li>Production HTTPS hosting, production session/CSRF configuration, persistent production storage and backup/restore.</li>
+          <li>Development-only administrator controls include a local owner-operated provisioning/revocation CLI, a registry of up to three wallets, server-issued SIWE challenge/signature verification, a ten-minute wallet step-up on the existing account session, and a gated admin console. From that console, a currently wallet-verified administrator can enroll an additional wallet with a separate signature from the proposed wallet; successful enrollment invalidates the previous admin step-up. Ordinary registration cannot assign a role and role assignment alone never authorizes admin access. There is no public provisioning endpoint, wallet-removal UI, production role administration, publishing or other privileged business operation, or all-wallet-loss recovery. Additional-wallet enrollment is a development-only, separately signed operation; it clears the previous admin step-up.</li>
+          <li>The shared SIWE verifier checks EOA/EIP-191 signatures only in this local prototype. Contract-wallet/ERC-1271 verification, remote RPC fallback, production origin/domain configuration, and wallet removal through the UI are not implemented. The additional-wallet enrollment route is not production-reviewed.</li>
+          <li>Imperial HSIAN recovery for loss of every administrator wallet.</li>
+          <li>Real passkeys, recovery-code flows, connected-wallet registration or user session management.</li>
+          <li>Production profile/avatar synchronization or image uploads. Six built-in avatar glyphs can be selected in the local account prototype only; no external image is uploaded or fetched.</li>
+          <li>Newsletter delivery, a verified referral/reward system, approved production Terms/Privacy, or user account deletion/export.</li>
+          <li>Independent penetration testing, external certification, production incident response and a complete ASVS verification.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>What the tests mean</h2>
+        <p>Automated tests can demonstrate the specific local prototype behaviors that they exercise, such as password verification, request validation, session invalidation and the browser demo journey. A passing test suite does not establish that every security control is present or that future production deployment is secure.</p>
+        <p>The account UI and wallet-signature lab are separate development components. Connecting a wallet is not ordinary account login and must not create administrator privileges.</p>
+      </section>
+
+      <section>
+        <h2>References used for design</h2>
+        <ul>
+          <li><a href="https://csrc.nist.gov/pubs/sp/800/63/B/4/final" target="_blank" rel="noopener noreferrer">NIST SP 800-63B-4</a> — authenticator and password guidance.</li>
+          <li><a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener noreferrer">OWASP ASVS 5.0.0</a> — application security verification requirements.</li>
+          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Password Storage Cheat Sheet</a>.</li>
+          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Session Management Cheat Sheet</a>.</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="footer">
+      <a href="../../index.html">Return to the development homepage</a>
+      <span>Evidence scope: local account prototype · Not a certification or security guarantee</span>
+    </div>
+  </main>
+</body>
+</html>
