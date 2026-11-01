@@ -4,6 +4,7 @@
   var title = document.getElementById("email-action-title");
   var intro = document.getElementById("email-action-intro");
   var status = document.getElementById("email-action-status");
+  var verifyForm = document.getElementById("email-action-verify-form");
   var form = document.getElementById("email-action-reset-form");
   var token = "";
   var action = "";
@@ -58,18 +59,9 @@
 
     if (action === "verify") {
       title.textContent = "Verify your email address";
-      intro.textContent = "Confirming the email address associated with your AstroCrown account.";
-      var verificationToken = token;
-      try {
-        var result = await postJson("/api/account/email/verify", { token: verificationToken });
-        token = "";
-        setStatus(result.message || "Your email address has been verified.", "success");
-        intro.textContent = "Email verification is complete.";
-      } catch (error) {
-        token = "";
-        setStatus(error.message || "This verification link is invalid or has expired.", "error");
-        intro.textContent = "Email verification could not be completed.";
-      }
+      intro.textContent = "Confirm that this email address belongs to your AstroCrown account.";
+      verifyForm.hidden = false;
+      setStatus("Press Verify email address to complete this action. Opening the link alone does not verify the account.", "");
       return;
     }
 
@@ -86,6 +78,30 @@
     intro.textContent = "This account link does not identify a supported action.";
     setStatus("Request a new verification or password-reset email from AstroCrown.", "error");
   }
+
+  verifyForm.addEventListener("submit", async function (event) {
+    event.preventDefault();
+    if (!token || action !== "verify") {
+      setStatus("This verification link is no longer available. Request a new one.", "error");
+      return;
+    }
+    var verifyButton = verifyForm.querySelector("button[type=submit]");
+    verifyButton.disabled = true;
+    try {
+      var result = await postJson("/api/account/email/verify", { token: token });
+      token = "";
+      verifyForm.hidden = true;
+      intro.textContent = "Email verification is complete.";
+      setStatus(result.message || "Your email address has been verified.", "success");
+    } catch (error) {
+      token = "";
+      verifyForm.hidden = true;
+      intro.textContent = "Email verification could not be completed.";
+      setStatus(error.message || "This verification link is invalid or has expired.", "error");
+    } finally {
+      verifyButton.disabled = false;
+    }
+  });
 
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
