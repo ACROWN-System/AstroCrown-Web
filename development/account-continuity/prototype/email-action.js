@@ -38,9 +38,8 @@
     return result;
   }
 
-  function clearToken() {
-    token = "";
-    // The token is never retained in browser storage or left in the address bar.
+  function scrubAddressBar() {
+    // Keep the token only in this page's closure; remove it from browser history immediately.
     window.history.replaceState(null, "", window.location.pathname);
   }
 
@@ -48,7 +47,7 @@
     var parameters = new URLSearchParams(window.location.search);
     action = parameters.get("type") || "";
     token = parameters.get("token") || "";
-    clearToken();
+    scrubAddressBar();
 
     if (!token || token.length < 20 || token.length > 256) {
       title.textContent = "Account link unavailable";
