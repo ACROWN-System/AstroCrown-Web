@@ -161,7 +161,52 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(data["email"], "test-user@example.test")
         self.assertFalse(data["admin"])
 
-    def test_other_sessions_require_current_password_and_revoke_only_other_sessions(self):
+    def test_login_does_not_issue_session_when_password_changes_after_verification(self):
+        email = "stale-login-race@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        status, _, _ = self.request("/api/account/logout", {})
+        self.assertEqual(status, 200)
+
+        original_verify = self.app.verify_password
+        changed_password = "AstroCrown-Concurrent-Password-2026!"
+
+        def verify_then_simulate_concurrent_password_change(account, password):
+            verified = original_verify(account, password)
+            if verified and account is not None:
+                new_salt = self.app.dummy_salt + b"-race"
+                new_hash = self.app.hash_password(changed_password, new_salt)
+                with self.app.connect() as db:
+                    db.execute(
+                        "UPDATE accounts SET password_salt = ?, password_hash = ? WHERE account_id = ?",
+                        (new_salt, new_hash, account["account_id"]),
+                    )
+            return verified
+
+        self.app.verify_password = verify_then_simulate_concurrent_password_change
+        try:
+            status, rejected, _ = self.request(
+                "/api/account/login",
+                {"email": email, "password": PASSWORD},
+            )
+        finally:
+            self.app.verify_password = original_verify
+
+        self.assertEqual(status, 401, rejected)
+        self.assertIn("did not match", rejected["error"].lower())
+        status, anonymous, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertFalse(anonymous["authenticated"])
+        with self.app.connect() as db:
+            count = db.execute(
+                "SELECT COUNT(*) FROM sessions WHERE account_id = "
+                "(SELECT account_id FROM accounts WHERE email = ?)",
+                (email,),
+            ).fetchone()[0]
+        self.assertEqual(count, 0, "stale password verification must not create a live session")
+
+    def test_other_sessions_require_current_password_and_revoke_only_other_sessions(selfself):
+
         status, created, _ = self.create_account(email="session-controls@example.test")
         self.assertEqual(status, 201, created)
         self.assertEqual(created["activeSessionCount"], 1)
