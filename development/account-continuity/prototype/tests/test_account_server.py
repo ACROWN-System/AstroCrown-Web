@@ -147,7 +147,7 @@ class AccountServerTests(unittest.TestCase):
             "a successful authentication reset must clear the persistent login window",
         )
 
-    def test_register_login_logout_and_password_not_exposed(selfself):
+    def test_register_login_logout_and_password_not_exposed(self):
 
         status, data, headers = self.create_account(
             email=" Test-User@Example.Test ",
