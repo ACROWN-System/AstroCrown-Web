@@ -140,12 +140,14 @@ class AccountApplication:
         self.database_path = Path(database_path).expanduser().resolve()
         if email_sender is _AUTO_EMAIL_SENDER:
             self.email_sender, configured_base_url = SMTPEmailSender.from_environment()
-            self.email_public_base_url = public_base_url or configured_base_url
-            if self.email_sender is not None and not self.email_public_base_url:
-                raise RuntimeError("Email delivery requires a configured public base URL.")
+            self.email_public_base_url = configured_base_url
         else:
             self.email_sender = email_sender
-            self.email_public_base_url = public_base_url
+            self.email_public_base_url = None
+        if public_base_url is not None:
+            self.email_public_base_url = SMTPEmailSender.validate_public_base_url(public_base_url)
+        if self.email_sender is not None and not self.email_public_base_url:
+            raise RuntimeError("Email delivery requires a configured public base URL.")
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             os.chmod(self.database_path.parent, 0o700)
@@ -521,15 +523,36 @@ class AccountApplication:
         expires = now + lifetime_seconds
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
+            # Bound token-table growth without deleting still-valid links. A
+            # failed resend must not invalidate a previously delivered link.
             db.execute(
-                "DELETE FROM account_email_tokens WHERE account_id = ? AND token_type = ? AND used_at IS NULL",
-                (account_id, token_type),
+                "DELETE FROM account_email_tokens WHERE expires_at <= ? OR (used_at IS NOT NULL AND used_at <= ?)",
+                (now, now - 30 * 24 * 60 * 60),
             )
             db.execute(
                 "INSERT INTO account_email_tokens(token_hash, account_id, token_type, created_at, expires_at, used_at) VALUES (?, ?, ?, ?, ?, NULL)",
                 (token_hash, account_id, token_type, now, expires),
             )
         return raw_token, expires
+
+    def activate_email_action_token(self, raw_token: str) -> bool:
+        token_hash = hash_session_token(raw_token)
+        now = int(time.time())
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                """SELECT account_id, token_type FROM account_email_tokens
+                   WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?""",
+                (token_hash, now),
+            ).fetchone()
+            if row is None:
+                return False
+            db.execute(
+                """DELETE FROM account_email_tokens
+                   WHERE account_id = ? AND token_type = ? AND token_hash <> ? AND used_at IS NULL""",
+                (row["account_id"], row["token_type"], token_hash),
+            )
+        return True
 
     def invalidate_email_action_token(self, raw_token: str) -> None:
         with self.connect() as db:
@@ -595,7 +618,7 @@ class AccountApplication:
         )
         if self.deliver_account_action_email(
             recipient=email, action="verify", raw_token=raw_token
-        ):
+        ) and self.activate_email_action_token(raw_token):
             return True
         self.invalidate_email_action_token(raw_token)
         return False
@@ -1493,6 +1516,8 @@ class AccountApplication:
                     action="reset",
                     raw_token=raw_token,
                 )
+                if sent:
+                    sent = self.activate_email_action_token(raw_token)
                 if not sent:
                     self.invalidate_email_action_token(raw_token)
             else:
