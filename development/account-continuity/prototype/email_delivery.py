@@ -1,7 +1,7 @@
-"""Optional provider-independent SMTP delivery for account action emails.
+"""Explicit provider-selected TLS SMTP delivery and a persistent quota guard.
 
-No mail service is used unless every required setting is supplied. TLS is
-mandatory, errors are deliberately sanitized, and callers must never log tokens.
+No mail service is used unless a provider is selected and all required settings
+are supplied. TLS is mandatory, errors are sanitized, and tokens must never be logged.
 """
 from __future__ import annotations
 
