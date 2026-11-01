@@ -384,7 +384,86 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0]["detail"], "revoked_sessions=2")
 
+    def test_failed_verification_resend_preserves_previously_delivered_link(self):
+        sender = self.configure_fake_email()
+        email = "verification-resend-failure@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        self.assertTrue(created["emailVerificationEmailSent"])
+        original_token = self.extract_email_token(sender.messages[0])
+
+        sender.fail_next = True
+        status, resend, _ = self.request("/api/account/verification/resend", {})
+        self.assertEqual(status, 200, resend)
+        self.assertFalse(resend["emailSent"])
+        self.assertIn("No email was sent", resend["message"])
+        self.assertEqual(len(sender.messages), 1)
+
+        with self.app.connect() as db:
+            active = db.execute(
+                """SELECT token_hash FROM account_email_tokens
+                   WHERE account_id = (SELECT account_id FROM accounts WHERE email = ?)
+                     AND token_type = 'verification' AND used_at IS NULL""",
+                (email,),
+            ).fetchall()
+        self.assertEqual(len(active), 1)
+        self.assertEqual(
+            active[0]["token_hash"],
+            hashlib.sha256(original_token.encode("utf-8")).hexdigest(),
+        )
+
+        status, verified, _ = self.request(
+            "/api/account/email/verify", {"token": original_token}
+        )
+        self.assertEqual(status, 200, verified)
+        self.assertTrue(verified["verified"])
+
+    def test_failed_password_reset_resend_preserves_previously_delivered_link(self):
+        sender = self.configure_fake_email()
+        email = "password-reset-resend-failure@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        first_request_status, first_request, _ = self.request(
+            "/api/account/password-reset/request", {"email": email}
+        )
+        self.assertEqual(first_request_status, 200, first_request)
+        first_reset_token = self.extract_email_token(sender.messages[-1])
+
+        sender.fail_next = True
+        second_status, second_request, _ = self.request(
+            "/api/account/password-reset/request", {"email": email}
+        )
+        self.assertEqual(second_status, 200, second_request)
+        self.assertEqual(first_request, second_request)
+        self.assertEqual(len(sender.messages), 2)
+
+        with self.app.connect() as db:
+            active = db.execute(
+                """SELECT token_hash FROM account_email_tokens
+                   WHERE account_id = (SELECT account_id FROM accounts WHERE email = ?)
+                     AND token_type = 'password_reset' AND used_at IS NULL""",
+                (email,),
+            ).fetchall()
+        self.assertEqual(len(active), 1)
+        self.assertEqual(
+            active[0]["token_hash"],
+            hashlib.sha256(first_reset_token.encode("utf-8")).hexdigest(),
+        )
+
+        new_password = "AstroCrown-Preserved-Reset-2026!"
+        status, reset, _ = self.request(
+            "/api/account/password/reset/complete",
+            {
+                "token": first_reset_token,
+                "newPassword": new_password,
+                "newPasswordConfirmation": new_password,
+            },
+        )
+        self.assertEqual(status, 200, reset)
+        self.assertTrue(reset["passwordReset"])
+
     def test_email_delivery_failure_invalidates_new_token_and_no_mailer_sends_nothing(self):
+
         email = "no-email-transport@example.test"
         status, created, _ = self.create_account(email=email)
         self.assertEqual(status, 201, created)
