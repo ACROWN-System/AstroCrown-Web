@@ -402,7 +402,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertFalse(new_login["adminSessionAuthorized"])
         self.assertFalse(new_login["admin"])
 
-    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(selfself):
+    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(self):
 
 
 
