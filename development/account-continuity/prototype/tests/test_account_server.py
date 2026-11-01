@@ -118,7 +118,37 @@ class AccountServerTests(unittest.TestCase):
                 self.assertIn("astrocrown:request-admin-wallet-access", data.get("body", ""))
                 self.assertIn("personal_sign", data.get("body", ""))
 
-    def test_register_login_logout_and_password_not_exposed(self):
+    def test_sensitive_account_rate_limits_persist_without_storing_subject_identifiers(self):
+        subject = "rate-limit-private@example.test"
+        self.assertTrue(self.app.auth_rate_allowed("login", subject, limit=2, window=300))
+
+        # A second application instance represents a server restart or a
+        # replacement worker opening the same local account database.
+        restarted_app = AccountApplication(self.app.database_path)
+        self.assertTrue(restarted_app.auth_rate_allowed("login", subject, limit=2, window=300))
+        self.assertFalse(
+            self.app.auth_rate_allowed("login", subject, limit=2, window=300),
+            "the limit must remain enforced across application instances",
+        )
+
+        with restarted_app.connect() as db:
+            rows = db.execute(
+                "SELECT action, subject_hash, attempted_at FROM account_auth_rate_events WHERE action = ?",
+                ("login",),
+            ).fetchall()
+        self.assertEqual(len(rows), 2)
+        self.assertEqual({row["action"] for row in rows}, {"login"})
+        self.assertTrue(all(len(row["subject_hash"]) == 64 for row in rows))
+        self.assertNotIn(subject, {row["subject_hash"] for row in rows})
+
+        restarted_app.clear_auth_rate_limit("login", subject)
+        self.assertTrue(
+            self.app.auth_rate_allowed("login", subject, limit=2, window=300),
+            "a successful authentication reset must clear the persistent login window",
+        )
+
+    def test_register_login_logout_and_password_not_exposed(selfself):
+
         status, data, headers = self.create_account(
             email=" Test-User@Example.Test ",
             referralId="ACROWN_42",
