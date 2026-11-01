@@ -18,13 +18,13 @@ This prototype provides a familiar **Log In / Sign Up** account dialog in the de
 - Opt in or leave unchecked the independent crypto-news email preference.
 - Accept or reject the required Terms of Use / Privacy Policy checkbox.
 - Sign out and log back in with email and password.
-- Open **Forgot password?** and verify the honest disabled-state message.
+- Open **Forgot password?**. With no mail transport configured, the form reports that no email was sent; with a configured secure SMTP transport, it submits a request without revealing whether an account exists.
 - Open the separate [Security assurance page](security-assurance.html) to review controls, evidence and explicit production gaps.
 - See the number of active local sign-in sessions. When more than one session exists, enter the current password to sign out the other sessions while keeping the current session active.
 - Change the account password after confirming the current password and matching the new passphrase twice. The local server rotates the current session, signs out the other sessions and removes any administrator step-up.
 - See which test preferences were recorded in local SQLite or the disposable browser-demo state.
 
-The flow does **not** ask users to memorise one-time recovery codes at sign-up. Email verification, secure email-based password reset, email delivery, and newsletter delivery have **not been implemented**. The Forgot password view explicitly states that no email was sent. Do not use real credentials or rely on this prototype for an account containing real assets.
+The flow does **not** ask users to memorise one-time recovery codes at sign-up. The local prototype now implements expiring, single-use email-verification and password-reset links. Tokens are stored only as hashes; verification links expire after 24 hours and reset links after 30 minutes. Completing a password reset invalidates every existing account session and administrator step-up. Actual email delivery remains optional: no provider is selected or qualified by the project, and without a deliberately configured secure SMTP transport the server sends no email and says so. Newsletter delivery is still not implemented. Do not use real credentials or rely on this prototype for an account containing real assets.
 
 The email-news checkbox is independent and unchecked by default. In this prototype, it records only a test preference; it does not subscribe anyone to a mailing list or send an email. Referral IDs are optional, stored as unverified test values, and do not trigger rewards or tracking.
 
@@ -65,10 +65,10 @@ Existing local SQLite records belong to earlier development prototypes; do not a
 1. Click **Account**, then choose **Sign Up**.
 2. Enter an invented email address (for example, `test@example.test`) and a passphrase of at least 15 characters.
 3. Optionally enter a Referral ID. The prototype only validates and records the value; it does not provide a referral reward.
-4. Leave the crypto-news preference unchecked unless you are specifically testing the opt-in state. No emails will be sent in either case.
+4. Leave the crypto-news preference unchecked unless you are specifically testing the opt-in state. Newsletter messages are not sent. Verification email is sent only when the optional SMTP transport is explicitly configured.
 5. Check the Terms of Use / Privacy Policy box. The pages are marked development drafts only.
 6. Create the test account, sign out, and sign in again.
-7. Test **Forgot password?**. The UI must tell you that no reset email was sent and password reset is not enabled.
+7. Test **Forgot password?**. Without an SMTP transport, the UI must clearly state that no reset email was sent. With a fake mail sender in automated tests, verify that the one-time link works without contacting an external provider.
 
 ## Register the administrator account (local prototype only)
 
@@ -126,12 +126,25 @@ The portal supports:
 
 Use the case portal and tests with invented details only. The current implementation is local SQLite development software, not a production complaint service. Production requires a deployed and hardened data service, protected administrator operations, independently tested recovery verification and delivery, retention/deletion rules, privacy/legal review and a published working contact route.
 
+## Optional email delivery configuration
+
+The prototype exposes a provider-independent SMTP transport. It is disabled unless configured explicitly. SMTP requires TLS (STARTTLS by default, or SSL); the public base URL must be HTTPS, except for localhost-only HTTP development. All of the following environment variables are required when enabling it:
+
+- `ASTROCROWN_SMTP_HOST`
+- `ASTROCROWN_SMTP_PORT` (optional; defaults to `587`)
+- `ASTROCROWN_SMTP_USERNAME` and `ASTROCROWN_SMTP_PASSWORD` (both set together, or both omitted)
+- `ASTROCROWN_SMTP_FROM`
+- `ASTROCROWN_SMTP_MODE` (`starttls` or `ssl`; defaults to `starttls`)
+- `ASTROCROWN_PUBLIC_BASE_URL` (must serve the same email-action page and account API routes)
+
+A successful SMTP submission means the transport accepted the message; it does not guarantee inbox delivery. The project has not selected or qualified an email provider, so leave this configuration unset during ordinary development and CI. Automated tests inject a fake sender and never send real email.
+
 ## Data and security boundaries
 
-- Local test data stays in the SQLite database on the computer running this server. The prototype uses Python standard-library components only and makes no external authentication or newsletter calls.
+- Local test data stays in the SQLite database on the computer running this server. The prototype uses Python standard-library components only and makes no external authentication or newsletter calls unless the optional SMTP transport is explicitly configured.
 - Passwords are stored as PBKDF2-HMAC-SHA256 hashes with random salts; raw passwords are not stored.
 - Session tokens are stored as hashes. Local sessions use an HttpOnly, SameSite=Strict cookie. The local HTTP cookie configuration is **not** a production HTTPS configuration.
-- Email is the account identifier in this UX prototype, but ownership is not verified and there is no password-reset email. Password changes are available only to a signed-in user who knows the current password. Do not use it for real account access.
+- Email is the account identifier. The local prototype can verify ownership with an expiring, single-use token and reset passwords with a separate expiring, single-use token. Tokens are stored as SHA-256 hashes; raw tokens are sent only through the explicitly configured mail transport and are not written to the database or logs. Email ownership remains unverified until the verification link is used. Password-reset completion revokes all sessions and administrator step-up state.
 - Terms acceptance and newsletter consent have timestamps/version metadata for prototype testing. No newsletter message is sent and the preference is not sent to an external service.
 - A Referral ID is optional and unverified. No reward, association, or benefit is promised or applied.
 - Requests are limited to the exact localhost Host/Origin, with a JSON size limit. Account registration, sign-in, password changes, session revocation and administrator wallet challenges use atomic SQLite-backed rate limits that survive application restarts; rate-limit subject identifiers are stored as SHA-256 digests, not raw email addresses or account IDs. Case-portal throttles remain in-process for this local prototype. The server binds only to `127.0.0.1`.
@@ -139,10 +152,10 @@ Use the case portal and tests with invented details only. The current implementa
 - Password changes require the current password and matching confirmation, use a new random salt, rotate the current session, revoke every previous session and clear administrator step-up state. A minimal security audit event records the action and count of other sessions invalidated; it does not record passwords, tokens, IP addresses or device fingerprints.
 - The prototype does not collect device fingerprints, IP history or user-agent labels.
 - The local database stores a server-owned role defaulting to `user`; registration cannot self-assign `admin`. A local owner-operated CLI can provision an existing test account and up to three registered wallet addresses, with an audit reason and explicit confirmation. After a user explicitly requests admin access, the browser fetches only that account's registered wallet options, prompts the user to connect a wallet, checks the account/network match, displays the exact SIWE message, and requests a signature only after the user clicks the signing button. The backend binds the challenge to the account and ordinary session, rejects replay/cross-session/wrong-wallet attempts, and grants at most a ten-minute admin step-up. The separate admin dashboard exposes one additional privileged action: enrolling another public wallet after an already-verified admin session and a separate signature from the proposed wallet. The connected address and chain must match an unused address; enrollment ends the prior admin step-up. No wallet-removal UI, publishing, role-changing operation or other business-admin action is available. There is no public provisioning endpoint, production role administration, all-wallet-loss recovery, production hosting, email verification/reset delivery, newsletter delivery, or real passkey. Six built-in avatar glyphs remain available for the local test account; uploads and remote images are unsupported. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the long-term role and recovery model.
-- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery.
+- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. The email-action routes are local prototype behavior; production still requires an approved HTTPS deployment, mail-service qualification, domain authentication (SPF/DKIM/DMARC), abuse monitoring, delivery/bounce handling, privacy review and operational recovery procedures.
 
 ## Production blockers
 
-Before using an email/password account for real user assets, AstroCrown must implement and verify: production identity/account storage and secure hosting; email ownership verification; email password-reset delivery with expiring, single-use reset links and session revocation; production session review and revocation with appropriate reauthentication and device context; secure recovery alternatives and user notifications; newsletter consent history, unsubscribe, suppression and delivery operations; referral validation/abuse controls if referrals are activated; approved Terms of Use and Privacy Policy; retention/export/deletion and incident procedures; threat modelling, security testing, accessibility tests, and the project’s authoritative website/publishing verification.
+Before using an email/password account for real user assets, AstroCrown must implement and verify: production identity/account storage and secure hosting; production integration and qualification of the email transport for verification and password-reset links; domain authentication and mail-delivery/bounce operations; production session review and revocation with appropriate reauthentication and device context; secure recovery alternatives and user notifications; newsletter consent history, unsubscribe, suppression and delivery operations; referral validation/abuse controls if referrals are activated; approved Terms of Use and Privacy Policy; retention/export/deletion and incident procedures; threat modelling, security testing, accessibility tests, and the project’s authoritative website/publishing verification.
 
 No email-delivery or newsletter provider has been selected or qualified under the project's $0/no-card rule. Do not merge/deploy or describe the account subsystem as production-ready merely because prototype CI passes.
