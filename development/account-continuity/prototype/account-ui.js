@@ -295,6 +295,28 @@
       return previewSummary(loginAccount);
     }
 
+    if (path === "/api/account/password/change") {
+      var passwordAccount = previewCurrentAccount();
+      if (!passwordAccount) throw new Error("Sign in before changing your password.");
+      if (!(await previewVerifyPassword(passwordAccount, payload.currentPassword))) {
+        throw new Error("Your current password did not match. Your password was not changed.");
+      }
+      var newPreviewPassword = validatePassword(payload.newPassword);
+      if (newPreviewPassword !== payload.newPasswordConfirmation) {
+        throw new Error("The new password confirmation does not match.");
+      }
+      if (newPreviewPassword === payload.currentPassword) {
+        throw new Error("Choose a new password that is different from your current password.");
+      }
+      var newPreviewSalt = previewHex(previewRandomBytes(16));
+      passwordAccount.passwordSalt = newPreviewSalt;
+      passwordAccount.passwordHash = await previewPasswordHash(newPreviewPassword, newPreviewSalt);
+      previewStartSession(passwordAccount.email);
+      return Object.assign(previewSummary(passwordAccount), {
+        message: "Password updated for this browser-preview demo. This session was renewed."
+      });
+    }
+
     if (path === "/api/account/avatar") {
       var avatarAccount = previewCurrentAccount();
       if (!avatarAccount) throw new Error("Sign in before changing your test avatar.");
@@ -477,6 +499,18 @@
         '</details>'
       : '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) +
         '. Only this session is active.</p>';
+    var passwordManagement =
+      '<details class="account-session-manager account-password-manager">' +
+        '<summary>Change password</summary>' +
+        '<p>Confirm your current password and choose a new passphrase of at least 15 characters. Changing it signs out other sessions and renews this one.</p>' +
+        '<label for="account-current-password">Current password</label>' +
+        '<input id="account-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
+        '<label for="account-new-password">New password</label>' +
+        '<input id="account-new-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
+        '<label for="account-new-password-confirmation">Confirm new password</label>' +
+        '<input id="account-new-password-confirmation" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
+        '<button class="account-secondary" type="button" id="account-change-password">Update password</button>' +
+        '</details>';
     var adminCard = '';
     if (accountState.adminRoleAssigned === true) {
       var walletCount = Number(accountState.adminWalletCount || 0);
@@ -519,6 +553,7 @@
         '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification +
           '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
           sessionManagement +
+          passwordManagement +
           '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
           '<p>Password-reset email is unavailable. No reset email has been sent. Real accounts must not be used with this prototype.</p>' +
           '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
@@ -845,6 +880,42 @@
     if (!button || busy) return;
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
+      return;
+    }
+    if (button.id === "account-change-password") {
+      var currentPasswordInput = document.getElementById("account-current-password");
+      var newPasswordInput = document.getElementById("account-new-password");
+      var newPasswordConfirmationInput = document.getElementById("account-new-password-confirmation");
+      var passwordFeedback = document.getElementById("account-session-feedback");
+      var currentPassword = currentPasswordInput ? currentPasswordInput.value : "";
+      var newPassword = newPasswordInput ? newPasswordInput.value : "";
+      var newPasswordConfirmation = newPasswordConfirmationInput ? newPasswordConfirmationInput.value : "";
+      if (!currentPassword || !newPassword || !newPasswordConfirmation) {
+        if (passwordFeedback) passwordFeedback.textContent = "Complete all password fields before continuing.";
+        return;
+      }
+      if (newPassword !== newPasswordConfirmation) {
+        if (passwordFeedback) passwordFeedback.textContent = "The new password confirmation does not match.";
+        if (newPasswordConfirmationInput) newPasswordConfirmationInput.focus();
+        return;
+      }
+      setBusy(true);
+      try {
+        accountState = await requestJson("/api/account/password/change", {
+          currentPassword: currentPassword,
+          newPassword: newPassword,
+          newPasswordConfirmation: newPasswordConfirmation
+        });
+        syncAccountButton();
+        renderAccountDashboard();
+        var passwordFeedbackAfter = document.getElementById("account-session-feedback");
+        if (passwordFeedbackAfter) passwordFeedbackAfter.textContent = accountState.message || "Password updated.";
+      } catch (error) {
+        var passwordFeedbackOnError = document.getElementById("account-session-feedback");
+        if (passwordFeedbackOnError) passwordFeedbackOnError.textContent = error.message || "The password could not be changed.";
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "account-revoke-other-sessions") {
