@@ -372,11 +372,15 @@
   }
 
   function renderDevelopmentNotice() {
+    var mailNotice = !browserPreviewMode && accountState &&
+      accountState.emailVerificationDeliveryAvailable === true
+      ? " The optional secure SMTP transport is configured for account-action messages; submission does not guarantee inbox delivery. Newsletter email is not enabled."
+      : " No verification, password-reset or newsletter email is sent by this environment.";
     return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' +
       (browserPreviewMode ? "browser-preview-demo" : "local-server-test") + '">' +
       (browserPreviewMode
-        ? "BROWSER PREVIEW DEMO ONLY — account details exist only in this page’s memory and disappear on reload. Use invented details only. No verification, password-reset or newsletter email is sent."
-        : "LOCAL DEVELOPMENT TEST ONLY — test account details are stored in this computer’s local SQLite database. No verification, password-reset or newsletter email is sent. This is not production authentication.") +
+        ? "BROWSER PREVIEW DEMO ONLY — account details exist only in this page’s memory and disappear on reload. Use invented details only. No account API or email transport is used."
+        : "LOCAL DEVELOPMENT TEST ONLY — test account details are stored in this computer’s local SQLite database." + mailNotice + " This is not production authentication.") +
       '</p>';
   }
 
@@ -423,7 +427,7 @@
       '</form>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-provider-note">A crypto wallet is not required for ordinary account access. This development prototype does not verify email ownership or provide email password-reset delivery.</p>';
+      '<p class="account-provider-note">A crypto wallet is not required for ordinary account access. Email verification and password reset use single-use links only when secure SMTP delivery is explicitly configured; no provider is selected or enabled by default.</p>';
   }
 
   function renderCreate() {
@@ -457,7 +461,7 @@
       '</form>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-provider-note">This prototype stores test information only. No verification email or crypto-news newsletter will be sent.</p>';
+      '<p class="account-provider-note">This prototype stores test information only. An email-verification message is submitted only when secure SMTP delivery is configured; crypto-news newsletter delivery is not enabled.</p>';
   }
 
   function syncAccountButton() {
