@@ -213,6 +213,15 @@ class AccountApplication:
                     admin_expires_at INTEGER
                 );
                 CREATE INDEX IF NOT EXISTS sessions_account_idx ON sessions(account_id);
+                CREATE TABLE IF NOT EXISTS account_security_audit (
+                    audit_id TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    event_type TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    detail TEXT NOT NULL DEFAULT ''
+                );
+                CREATE INDEX IF NOT EXISTS account_security_audit_account_idx
+                    ON account_security_audit(account_id, created_at);
                 CREATE TABLE IF NOT EXISTS admin_wallets (
                     wallet_id TEXT PRIMARY KEY,
                     account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
@@ -795,6 +804,57 @@ class AccountApplication:
                 )
             return 200, summary, None
 
+        if path == "/api/account/password/change":
+            account, _expires, _old_token = self.require_account_session(handler)
+            current_password = payload.get("currentPassword")
+            if not isinstance(current_password, str) or not current_password or len(current_password) > PASSWORD_MAX_LENGTH:
+                raise ApiError(400, "Enter your current password.")
+            new_password = validate_password(payload.get("newPassword"))
+            confirmation = payload.get("newPasswordConfirmation")
+            if not isinstance(confirmation, str) or not hmac.compare_digest(new_password, confirmation):
+                raise ApiError(400, "The new password confirmation does not match.")
+            if new_password == current_password:
+                raise ApiError(400, "Choose a new password that is different from your current password.")
+            if not self.rate_allowed("password-change", account["account_id"], limit=5, window=300):
+                raise ApiError(429, "Too many password-change attempts. Please wait before trying again.")
+            if not self.verify_password(account, current_password):
+                raise ApiError(401, "Your current password did not match. Your password was not changed.")
+
+            new_salt = secrets.token_bytes(16)
+            new_hash = self.hash_password(new_password, new_salt)
+            new_token = secrets.token_urlsafe(32)
+            now = int(time.time())
+            new_expires = now + SESSION_LIFETIME_SECONDS
+            with self.connect() as db:
+                existing_sessions = db.execute(
+                    "SELECT COUNT(*) FROM sessions WHERE account_id = ? AND expires_at > ?",
+                    (account["account_id"], now),
+                ).fetchone()[0]
+                db.execute(
+                    "UPDATE accounts SET password_salt = ?, password_hash = ? WHERE account_id = ?",
+                    (new_salt, new_hash, account["account_id"]),
+                )
+                # Password changes invalidate every old session and every
+                # administrator step-up. Only the newly rotated session survives.
+                db.execute("DELETE FROM sessions WHERE account_id = ?", (account["account_id"],))
+                db.execute(
+                    "INSERT INTO sessions(token_hash, account_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+                    (hash_session_token(new_token), account["account_id"], now, new_expires),
+                )
+                db.execute(
+                    "INSERT INTO account_security_audit(audit_id, account_id, event_type, created_at, detail) VALUES (?, ?, ?, ?, ?)",
+                    (
+                        str(uuid.uuid4()), account["account_id"], "password_changed", utc_iso(),
+                        f"previous_active_sessions={max(0, int(existing_sessions) - 1)}",
+                    ),
+                )
+            updated_account, updated_expires = self.account_for_session(new_token)
+            if updated_account is None:
+                raise ApiError(500, "The renewed account session could not be initialized.")
+            result = self.account_summary(updated_account, updated_expires)
+            result["message"] = "Password updated. Other sessions were signed out and this session was renewed."
+            return 200, result, self.cookie_header(new_token)
+
         if path == "/api/account/sessions/revoke-others":
             account, _expires, token = self.require_account_session(handler)
             password = payload.get("password")
@@ -810,6 +870,10 @@ class AccountApplication:
                     (account["account_id"], hash_session_token(token)),
                 )
                 revoked = max(0, int(cursor.rowcount))
+                db.execute(
+                    "INSERT INTO account_security_audit(audit_id, account_id, event_type, created_at, detail) VALUES (?, ?, ?, ?, ?)",
+                    (str(uuid.uuid4()), account["account_id"], "other_sessions_revoked", utc_iso(), f"revoked_count={revoked}"),
+                )
             current, current_expires = self.account_for_session(token)
             if current is None:
                 raise ApiError(401, "Your current account session is no longer valid.")
