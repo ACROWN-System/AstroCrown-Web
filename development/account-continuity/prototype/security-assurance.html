@@ -49,7 +49,7 @@
           <li>Active sessions are counted server-side. A user can revoke other sessions after confirming the current password; the current session remains active. Password changes and session revocations create minimal audit events without storing passwords or session tokens.</li>
           <li>Session tokens are generated randomly; the SQLite session store keeps a token hash.</li>
           <li>The test server binds to loopback and checks the expected localhost Host/Origin.</li>
-          <li>Request bodies are bounded; account and sign-in attempts have in-process rate limits.</li>
+          <li>Request bodies are bounded. Account registration, sign-in, password changes, session revocation and administrator wallet challenges use atomic SQLite-backed rate limits that survive application restarts; rate-limit subjects are stored as SHA-256 digests rather than raw email addresses or account IDs. Case-portal throttles remain in-process in this prototype.</li>
           <li>Local cookies are HttpOnly and SameSite=Strict. This HTTP-only localhost setting is not a production cookie configuration.</li>
           <li>Basic response headers, a Content Security Policy, and no-store responses are set by the local server.</li>
           <li>The hosted browser preview uses a disposable in-memory demonstration and makes no account API request.</li>
