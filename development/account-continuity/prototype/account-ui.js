@@ -791,7 +791,7 @@
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
       '<p class="account-dialog-description">Enter the email address associated with your account. When secure email delivery is configured, a single-use password-reset link will be sent if an account matches.</p>' +
       (accountState && accountState.passwordResetAvailable === true
-        ? '<div class="account-recovery-ok"><strong>Reset links expire after 30 minutes and can be used once.</strong><br>For privacy, the response will not reveal whether an account exists.</div>'
+        ? '<div class="account-recovery-ok"><strong>Reset links expire after 30 minutes and can be used once.</strong><br>For privacy, the response will not reveal whether an account exists. A mail-transport submission does not confirm inbox delivery.</div>'
         : '<div class="account-recovery-warning"><strong>Email delivery is not configured.</strong><br>No password-reset email will be sent by this development environment.</div>') +
       '<form id="account-reset-request-form" class="account-form" autocomplete="on">' +
         '<label class="account-field" for="account-email">Email' +
