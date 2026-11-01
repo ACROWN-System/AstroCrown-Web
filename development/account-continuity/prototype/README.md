@@ -24,7 +24,7 @@ This prototype provides a familiar **Log In / Sign Up** account dialog in the de
 - Change the account password after confirming the current password and matching the new passphrase twice. The local server rotates the current session, signs out the other sessions and removes any administrator step-up.
 - See which test preferences were recorded in local SQLite or the disposable browser-demo state.
 
-The flow does **not** ask users to memorise one-time recovery codes at sign-up. The local prototype now implements expiring, single-use email-verification and password-reset links. Tokens are stored only as hashes; verification links expire after 24 hours and reset links after 30 minutes. Completing a password reset invalidates every existing account session and administrator step-up. Actual email delivery remains optional: no provider is selected or qualified by the project, and without a deliberately configured secure SMTP transport the server sends no email and says so. Newsletter delivery is still not implemented. Do not use real credentials or rely on this prototype for an account containing real assets.
+The flow does **not** ask users to memorise one-time recovery codes at sign-up. The local prototype implements expiring, single-use email-verification and password-reset links. Tokens are stored only as hashes; verification links expire after 24 hours and reset links after 30 minutes. Completing a password reset invalidates every existing account session and administrator step-up. A Mailjet-specific SMTP configuration path and a persistent free-tier email budget are now implemented, but no Mailjet account, sending domain, credentials or live delivery has yet been qualified. Delivery remains disabled until an owner deliberately configures the provider. Newsletter delivery is still not implemented. Do not use real credentials or rely on this prototype for an account containing real assets.
 
 The email-news checkbox is independent and unchecked by default. In this prototype, it records only a test preference; it does not subscribe anyone to a mailing list or send an email. Referral IDs are optional, stored as unverified test values, and do not trigger rewards or tracking.
 
@@ -126,34 +126,64 @@ The portal supports:
 
 Use the case portal and tests with invented details only. The current implementation is local SQLite development software, not a production complaint service. Production requires a deployed and hardened data service, protected administrator operations, independently tested recovery verification and delivery, retention/deletion rules, privacy/legal review and a published working contact route.
 
-## Optional email delivery configuration
+## Mailjet Free-tier transactional email
 
-The prototype exposes a provider-independent SMTP transport. It is disabled unless configured explicitly. SMTP requires TLS (STARTTLS by default, or SSL); the public base URL must be HTTPS, except for localhost-only HTTP development. All of the following environment variables are required when enabling it:
+**Repository status:** the Mailjet provider configuration and local quota guard are implemented. The external Mailjet account, sender/domain verification, credentials and successful delivery remain **NOT CONFIGURED / NOT QUALIFIED**. No real email has been sent by CI. No provider account or paid plan was created.
 
-- `ASTROCROWN_SMTP_HOST`
-- `ASTROCROWN_SMTP_PORT` (optional; defaults to `587`)
-- `ASTROCROWN_SMTP_USERNAME` and `ASTROCROWN_SMTP_PASSWORD` (both set together, or both omitted)
-- `ASTROCROWN_SMTP_FROM`
-- `ASTROCROWN_SMTP_MODE` (`starttls` or `ssl`; defaults to `starttls`)
-- `ASTROCROWN_PUBLIC_BASE_URL` (must serve the same email-action page and account API routes)
+### Free-tier limits and AstroCrown's own safety ceiling
 
-A successful SMTP submission means the transport accepted the message; it does not guarantee inbox delivery. The project has not selected or qualified an email provider, so leave this configuration unset during ordinary development and CI. Automated tests inject a fake sender and never send real email.
+Mailjet currently advertises its Free plan at $0/month with no credit card required, a maximum of 6,000 emails per month and 200 emails per day. The Free plan also lists 1,000 stored contacts. Mailjet's daily and monthly limits are separate and both apply. New accounts may initially be placed in a 10-emails-per-hour test mode until Mailjet verifies account information.
 
-For an optional local-only test, set the variables in the same PowerShell window before starting the server. Use a mail relay you are authorized to test and invented AstroCrown account addresses only:
+AstroCrown deliberately uses less than half of the published send allowance for account verification and password-reset messages:
 
-    $env:ASTROCROWN_SMTP_HOST = "smtp.example.test"
-    $env:ASTROCROWN_SMTP_PORT = "587"
-    $env:ASTROCROWN_SMTP_USERNAME = "your-test-mailbox"
-    $env:ASTROCROWN_SMTP_PASSWORD = [System.Net.NetworkCredential]::new("", (Read-Host "SMTP password" -AsSecureString)).Password
-    $env:ASTROCROWN_SMTP_FROM = "AstroCrown Test <no-reply@example.test>"
-    $env:ASTROCROWN_SMTP_MODE = "starttls"
+| Window | Mailjet Free allowance | AstroCrown account-mail ceiling | Reserved outside account email |
+|---|---:|---:|---:|
+| Rolling 24 hours | 200 | 100 | At least 100 |
+| Rolling 30 days | 6,000/month | 3,000 | At least 3,000 |
+
+The application enforces both ceilings atomically in SQLite before SMTP submission. The reservation ledger survives process restarts and stores only a random reservation ID and timestamp—no recipient address, email body, token or credential. A submission attempt consumes one reservation even if the relay returns an ambiguous failure: the relay might have accepted the message before a connection timeout, so refunding could allow a duplicate attempt to exceed the budget. At either ceiling, the application fails closed and does not submit another message. There is no paid fallback, automatic upgrade, or overage request.
+
+These are rolling application windows, intentionally stricter than a provider calendar-day/month counter. They reserve at least half of Mailjet's published capacity for other AstroCrown email needs. They only count messages submitted through this local account-email code. Sending from the Mailjet dashboard, another API key, another application or another integration is not included in this local ledger. Keep the Mailjet account dedicated to controlled AstroCrown email workloads and monitor the provider's aggregate dashboard; this guard cannot stop independent senders using the same Mailjet account.
+
+### One-time Mailjet account setup
+
+1. Create **one** Mailjet account and select the **Free** plan. Confirm the account shows $0/month and no payment method is required. Do not start a paid trial, choose a paid plan, add a card or enable an upgrade. Mailjet's free policy does not permit creating multiple free accounts for the same company/use case.
+2. In **Account Settings → Senders & Domains**, add the sending domain you control. Complete Mailjet's domain ownership check using the exact DNS verification record it displays. If you cannot edit that domain's DNS, do not claim domain authentication is complete.
+3. Set up the SPF and DKIM records shown by Mailjet. Merge Mailjet's SPF include into the existing SPF TXT record if one exists—do not publish multiple SPF records for the same domain. Publish the exact DKIM record/value supplied in the Mailjet dashboard. Add and validate a DMARC policy for the sending domain before production use.
+4. In **Account Settings → SMTP and SEND API settings**, copy the Mailjet **API Key** and **Secret Key**. The API Key is the SMTP username; the Secret Key is the SMTP password. These are not the credentials used to sign in to the Mailjet website. Mailjet may show the secret only once; store it in a secure password manager.
+5. Select a From address on the verified domain and enter that exact sender in the local environment. Mailjet requires ownership verification for a sender address or domain; successful account setup does not prove inbox placement.
+
+Mailjet's documented SMTP endpoint is `in-v3.mailjet.com`, port `587`, using STARTTLS. The repository locks the Mailjet provider to those settings so a typo cannot silently switch it to an unencrypted or unrelated relay.
+
+### Local PowerShell configuration
+
+This enables sending only from the loopback-only prototype on the same computer. It does not make the GitHub Pages preview or public website a working account service. Open PowerShell in the repository root and set the variables there before starting the server:
+
+    $env:ASTROCROWN_EMAIL_PROVIDER = "mailjet"
+    $env:ASTROCROWN_MAILJET_API_KEY = Read-Host "Mailjet API Key"
+    $secret = Read-Host "Mailjet Secret Key" -AsSecureString
+    $env:ASTROCROWN_MAILJET_SECRET_KEY = [System.Net.NetworkCredential]::new("", $secret).Password
+    $env:ASTROCROWN_MAILJET_FROM = "AstroCrown <no-reply@YOUR-VERIFIED-DOMAIN>"
     $env:ASTROCROWN_PUBLIC_BASE_URL = "http://localhost:8766"
 
-The localhost action link is usable only on the same computer while the local server is running. Do not use this URL for external recipients. To disable delivery again in that PowerShell window:
+Replace the placeholder From address with the exact sender you verified in Mailjet. Do not commit, paste into GitHub issues/PRs, screenshot, or print either key. These environment variables exist only in that PowerShell process environment. Start the local server:
 
-    Remove-Item Env:ASTROCROWN_SMTP_HOST, Env:ASTROCROWN_SMTP_PORT, Env:ASTROCROWN_SMTP_USERNAME, Env:ASTROCROWN_SMTP_PASSWORD, Env:ASTROCROWN_SMTP_FROM, Env:ASTROCROWN_SMTP_MODE, Env:ASTROCROWN_PUBLIC_BASE_URL -ErrorAction SilentlyContinue
+    py -3.12 .\development\account-continuity\prototype\server.py --port 8766
 
-Never commit SMTP credentials, include them in screenshots/logs, or use a production mailbox for prototype tests.
+Open exactly `http://localhost:8766/`. Email action links point back to localhost and can only be completed on that same computer while the server is running. Use an inbox you control for a deliberate live test; do not send to a stranger or an invented address that could belong to someone else. Check Mailjet's delivery events as well as the recipient inbox. A successful SMTP submission means the relay accepted the message, not that the recipient's provider placed it in the inbox.
+
+To disable delivery in that PowerShell window:
+
+    Remove-Item Env:ASTROCROWN_EMAIL_PROVIDER, Env:ASTROCROWN_MAILJET_API_KEY, Env:ASTROCROWN_MAILJET_SECRET_KEY, Env:ASTROCROWN_MAILJET_FROM, Env:ASTROCROWN_PUBLIC_BASE_URL -ErrorAction SilentlyContinue
+    Remove-Variable secret -ErrorAction SilentlyContinue
+
+The generic SMTP path remains available only when `ASTROCROWN_EMAIL_PROVIDER=smtp` is selected explicitly and its required `ASTROCROWN_SMTP_*` fields are configured. A provider is never inferred from an SMTP hostname. Do not set Mailjet and generic SMTP settings at the same time.
+
+### What this does not activate
+
+The account server still binds only to `127.0.0.1`, checks for the canonical localhost Host/Origin, and stores test accounts in a local SQLite file. The hosted HTML Preview uses disposable browser memory and makes no requests to this server. The current AstroCrown public website does not host this backend, the email-action page/API, or an account database. A public HTTPS application backend, durable shared database, protected secrets, reverse-proxy token-log redaction, asynchronous mail queue, monitoring, bounce/suppression handling and operational recovery must be built and qualified before external users can register or recover accounts.
+
+Mailjet's free account can also begin in temporary test mode (10 messages/hour) until the provider completes its account review. Do not assume the advertised 200/day limit is immediately available. No code can bypass provider review, domain ownership verification, DNS propagation or provider-side restrictions.
 
 ## Data and security boundaries
 
@@ -168,10 +198,10 @@ Never commit SMTP credentials, include them in screenshots/logs, or use a produc
 - Password changes require the current password and matching confirmation, use a new random salt, rotate the current session, revoke every previous session and clear administrator step-up state. A minimal security audit event records the action and count of other sessions invalidated; it does not record passwords, tokens, IP addresses or device fingerprints.
 - The prototype does not collect device fingerprints, IP history or user-agent labels.
 - The local database stores a server-owned role defaulting to `user`; registration cannot self-assign `admin`. A local owner-operated CLI can provision an existing test account and up to three registered wallet addresses, with an audit reason and explicit confirmation. After a user explicitly requests admin access, the browser fetches only that account's registered wallet options, prompts the user to connect a wallet, checks the account/network match, displays the exact SIWE message, and requests a signature only after the user clicks the signing button. The backend binds the challenge to the account and ordinary session, rejects replay/cross-session/wrong-wallet attempts, and grants at most a ten-minute admin step-up. The separate admin dashboard exposes one additional privileged action: enrolling another public wallet after an already-verified admin session and a separate signature from the proposed wallet. The connected address and chain must match an unused address; enrollment ends the prior admin step-up. No wallet-removal UI, publishing, role-changing operation or other business-admin action is available. There is no public provisioning endpoint, production role administration, all-wallet-loss recovery, production hosting, production-qualified email delivery, newsletter delivery, or real passkey. Six built-in avatar glyphs remain available for the local test account; uploads and remote images are unsupported. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the long-term role and recovery model.
-- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. The email-action routes are local prototype behavior; production still requires an approved HTTPS deployment, mail-service qualification, domain authentication (SPF/DKIM/DMARC), abuse monitoring, delivery/bounce handling, proxy/access-log redaction for email-action query tokens, privacy review and operational recovery procedures.
+- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. The email-action routes are local prototype behavior; production still requires an approved HTTPS deployment, a provisioned and tested Mailjet account, domain authentication (SPF/DKIM/DMARC), abuse monitoring, delivery/bounce handling, proxy/access-log redaction for email-action query tokens, privacy review and operational recovery procedures.
 
 ## Production blockers
 
 Before using an email/password account for real user assets, AstroCrown must implement and verify: production identity/account storage and secure hosting; production integration and qualification of the email transport for verification and password-reset links; an asynchronous mail queue and response-timing controls for account recovery; domain authentication and mail-delivery/bounce operations; production session review and revocation with appropriate reauthentication and device context; secure recovery alternatives and user notifications; newsletter consent history, unsubscribe, suppression and delivery operations; referral validation/abuse controls if referrals are activated; approved Terms of Use and Privacy Policy; retention/export/deletion and incident procedures; threat modelling, security testing, accessibility tests, and the project’s authoritative website/publishing verification.
 
-No email-delivery or newsletter provider has been selected or qualified under the project's $0/no-card rule. Do not merge/deploy or describe the account subsystem as production-ready merely because prototype CI passes.
+Mailjet is the selected zero-cost provider candidate and its repository adapter is implemented, but the external account, sending domain, credentials and live delivery are not yet qualified. Newsletter sending remains disabled. Do not merge/deploy or describe the account subsystem as production-ready merely because prototype CI passes.
