@@ -45,6 +45,8 @@
         <h2>Controls present in the local prototype</h2>
         <ul>
           <li>Password verifiers use PBKDF2-HMAC-SHA256 with a random salt and 600,000 iterations; raw passwords are not stored.</li>
+          <li>A signed-in user can change their password after confirming the current password and matching the new passphrase twice. The server creates a new random salt, rotates the current session, revokes every prior session and clears administrator step-up state.</li>
+          <li>Active sessions are counted server-side. A user can revoke other sessions after confirming the current password; the current session remains active. Password changes and session revocations create minimal audit events without storing passwords or session tokens.</li>
           <li>Session tokens are generated randomly; the SQLite session store keeps a token hash.</li>
           <li>The test server binds to loopback and checks the expected localhost Host/Origin.</li>
           <li>Request bodies are bounded; account and sign-in attempts have in-process rate limits.</li>
@@ -62,7 +64,7 @@
           <li>Development-only administrator controls include a local owner-operated provisioning/revocation CLI, a registry of up to three wallets, server-issued SIWE challenge/signature verification, a ten-minute wallet step-up on the existing account session, and a gated admin console. From that console, a currently wallet-verified administrator can enroll an additional wallet with a separate signature from the proposed wallet; successful enrollment invalidates the previous admin step-up. Ordinary registration cannot assign a role and role assignment alone never authorizes admin access. There is no public provisioning endpoint, wallet-removal UI, production role administration, publishing or other privileged business operation, or all-wallet-loss recovery. Additional-wallet enrollment is a development-only, separately signed operation; it clears the previous admin step-up.</li>
           <li>The shared SIWE verifier checks EOA/EIP-191 signatures only in this local prototype. Contract-wallet/ERC-1271 verification, remote RPC fallback, production origin/domain configuration, and wallet removal through the UI are not implemented. The additional-wallet enrollment route is not production-reviewed.</li>
           <li>Imperial HSIAN recovery for loss of every administrator wallet.</li>
-          <li>Real passkeys, recovery-code flows, connected-wallet registration or user session management.</li>
+          <li>Real passkeys and recovery-code flows; production session/device history, trusted-device recognition, production session revocation and production reauthentication controls. The local session controls do not identify individual devices.</li>
           <li>Production profile/avatar synchronization or image uploads. Six built-in avatar glyphs can be selected in the local account prototype only; no external image is uploaded or fetched.</li>
           <li>Newsletter delivery, a verified referral/reward system, approved production Terms/Privacy, or user account deletion/export.</li>
           <li>Independent penetration testing, external certification, production incident response and a complete ASVS verification.</li>
