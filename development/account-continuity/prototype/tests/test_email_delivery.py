@@ -56,7 +56,7 @@ class SMTPEmailSenderTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "sender address"):
             SMTPEmailSender(
                 host="smtp.example.test", port=587, username=None, password=None,
-                sender="security@example.test\\r\\nBcc: victim@example.test",
+                sender="security@example.test" + chr(13) + chr(10) + "Bcc: victim@example.test",
                 mode="starttls", public_base_url="https://accounts.example.test",
             )
         invalid_urls = (
@@ -64,7 +64,7 @@ class SMTPEmailSenderTests(unittest.TestCase):
             "https://user:password@accounts.example.test",
             "https://accounts.example.test/?token=secret",
             "https://accounts.example.test:bad",
-            "https://accounts.example.test\\n.evil.test",
+            "https://accounts.example.test" + chr(10) + ".evil.test",
         )
         for url in invalid_urls:
             with self.subTest(url=url):
