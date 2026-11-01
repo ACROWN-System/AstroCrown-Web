@@ -326,11 +326,15 @@ class AccountApplication:
                           ) THEN 1 ELSE 0 END AS session_admin_wallet_active,
                           (SELECT COUNT(*) FROM admin_wallets aw_count
                               WHERE aw_count.account_id = a.account_id AND aw_count.active = 1
-                          ) AS admin_wallet_count
+                          ) AS admin_wallet_count,
+                          (SELECT COUNT(*) FROM sessions active_sessions
+                              WHERE active_sessions.account_id = a.account_id
+                                AND active_sessions.expires_at > ?
+                          ) AS active_session_count
                    FROM sessions s
                    JOIN accounts a ON a.account_id = s.account_id
                    WHERE s.token_hash = ? AND s.expires_at > ?""",
-                (hash_session_token(token), now),
+                (now, hash_session_token(token), now),
             ).fetchone()
             if row is None:
                 db.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_session_token(token),))
@@ -363,6 +367,7 @@ class AccountApplication:
             "emailVerified": bool(account["email_verified"]),
             "passwordResetAvailable": False,
             "sessionExpiresAt": utc_iso(expires_at) if expires_at else None,
+            "activeSessionCount": int(account["active_session_count"] or 0),
             "scope": "local-test-account-only",
             "role": account["role"],
             "adminRoleAssigned": role_assigned,
@@ -772,6 +777,7 @@ class AccountApplication:
                     "adminWalletAddress": None,
                     "adminSessionExpiresAt": None,
                     "passwordResetAvailable": False,
+                    "activeSessionCount": 0,
                 }, None
             return 200, self.account_summary(account, expires), None
 
@@ -788,6 +794,31 @@ class AccountApplication:
                     "A fresh signature from an enrolled administrator wallet is required for the admin console.",
                 )
             return 200, summary, None
+
+        if path == "/api/account/sessions/revoke-others":
+            account, _expires, token = self.require_account_session(handler)
+            password = payload.get("password")
+            if not isinstance(password, str) or not password or len(password) > PASSWORD_MAX_LENGTH:
+                raise ApiError(400, "Enter your current password to confirm this action.")
+            if not self.rate_allowed("session-revoke-others", account["account_id"], limit=5, window=300):
+                raise ApiError(429, "Too many session-management attempts. Please wait before trying again.")
+            if not self.verify_password(account, password):
+                raise ApiError(401, "Your current password did not match. No sessions were changed.")
+            with self.connect() as db:
+                cursor = db.execute(
+                    "DELETE FROM sessions WHERE account_id = ? AND token_hash <> ?",
+                    (account["account_id"], hash_session_token(token)),
+                )
+                revoked = max(0, int(cursor.rowcount))
+            current, current_expires = self.account_for_session(token)
+            if current is None:
+                raise ApiError(401, "Your current account session is no longer valid.")
+            result = self.account_summary(current, current_expires)
+            result["revokedSessions"] = revoked
+            result["message"] = (
+                f"Signed out of {revoked} other session(s). This session remains active."
+            )
+            return 200, result, None
 
         if path == "/api/account/register":
             email = normalize_email(payload.get("email"))
