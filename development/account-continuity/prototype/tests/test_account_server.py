@@ -205,7 +205,7 @@ class AccountServerTests(unittest.TestCase):
             ).fetchone()[0]
         self.assertEqual(count, 0, "stale password verification must not create a live session")
 
-    def test_other_sessions_require_current_password_and_revoke_only_other_sessions(selfself):
+    def test_other_sessions_require_current_password_and_revoke_only_other_sessions(self):
 
         status, created, _ = self.create_account(email="session-controls@example.test")
         self.assertEqual(status, 201, created)
