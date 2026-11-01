@@ -15,7 +15,7 @@ Define one understandable account foundation for ordinary users and administrato
 
 ## 2. Decisions already established
 
-1. Ordinary account entry uses a familiar **Log In / Sign Up** experience. Email and password are the initial UX. Email verification and secure reset delivery are not currently implemented.
+1. Ordinary account entry uses a familiar **Log In / Sign Up** experience. Email and password are the initial UX. The **local development server** now implements email-verification and password-reset token issuance/consumption, single-use and expiry controls, token hashing, and session revocation after reset. An explicit Mailjet SMTP adapter and persistent quota guard are implemented, but no Mailjet account, sender domain, credentials or live delivery have been configured or qualified. The browser-only preview sends no email. None of this constitutes production email delivery.
 2. Account creation requires email, password and explicit Terms/Privacy acknowledgement. Referral ID is optional. The crypto-news email preference is optional, separately consented and unchecked by default.
 3. The sign-in screen must include a separate **Security assurance** link below the form actions and above the small explanatory text. It must not be conflated with Terms or Privacy.
 4. After sign-up or sign-in, show a success state with a close button and a clear **Open your account** action. Closing the success state must not sign the user out. The header control then becomes a compact circular account/avatar control without its “Account” text label. The development prototype offers six built-in avatar glyph choices, validates the selected identifier on the server and stores it in the local test database or memory-only browser demo. Image uploads and production profile synchronization remain out of scope.
@@ -127,7 +127,7 @@ The sign-in form's Security assurance link must open a separate page containing 
 - external review/certification status (currently none for this prototype); and
 - production blockers.
 
-It must not claim “secure”, “fully protected”, certified, production-ready, or complete. At minimum, disclose that email verification/reset, production hosting/TLS, real role management, admin wallet integration, admin recovery and independent security audit are not implemented. Keep the page separate from Terms of Use and Privacy Policy.
+It must not claim “secure”, “fully protected”, certified, production-ready, or complete. The page must distinguish: (a) local prototype email-verification/reset token flows from an externally configured and inbox-tested delivery service; (b) local SQLite accounts/sessions and owner-operated role provisioning from production identity infrastructure; (c) the local SIWE administrator-wallet step-up from production administrator governance and recovery; and (d) automated tests from independent security review. Production HTTPS hosting, durable shared storage, qualified email delivery and operations, formal all-admin-wallet-loss recovery, approved legal policies and independent security review remain outstanding. Keep the page separate from Terms of Use and Privacy Policy.
 
 ## 7. Threat model
 
@@ -170,30 +170,32 @@ References:
 
 ## 9. Phased implementation plan
 
-### Phase 1 — Finish the development user journey
-- [ ] Keep the existing Log In / Sign Up fields and tests.
-- [ ] Add sign-in and sign-up security-assurance links.
-- [ ] Add the success state and persistent signed-in header/avatar state.
-- [ ] Create the modular user account hub and navigation back to the homepage.
-- [ ] Clearly label email verification, password reset, avatar upload, wallet link and account closure as not implemented where appropriate.
-- [ ] Keep browser preview memory-only and the local server loopback-only.
+### Phase 1 — Local account journey and UI prototype
+- [x] Implement and test the Log In / Sign Up fields and account-entry flow.
+- [x] Add the separate Security assurance page/link.
+- [x] Add the success state, signed-in circular account control and modular account hub/navigation.
+- [x] Keep optional wallet access separate from ordinary account registration and sign-in.
+- [x] Keep the browser preview disposable and memory-only; keep the Python/SQLite server bound to loopback.
+- [x] Keep production-only or unavailable features clearly distinguished from working local prototype controls. This does not make the browser preview a real account service.
 
-### Phase 2 — User lifecycle backend prototype
-- [ ] Review the account DB/session schema and negative tests.
-- [ ] Add a tested server-side account role model that defaults to ordinary user and cannot be set by registration input.
-- [ ] Implement or explicitly block secure email verification/reset, session inventory/revocation and authenticator lifecycle. No fake mail delivery.
-- [ ] Test access control, session fixation, CSRF/origin, rate limiting, user enumeration, XSS, invalid input, revoke/logout and recovery.
-- [ ] Do not introduce a production email provider until $0/no-card conditions, data handling, deliverability and exit options are verified.
+### Phase 2 — Local user-lifecycle backend prototype
+- [x] Implement the local SQLite account/session schema, server-side role model and registration default of `user`; registration input cannot grant administrator authority.
+- [x] Implement local email-verification and password-reset token flows, expiry/single-use enforcement, hashed token storage, neutral reset responses and session revocation after password reset.
+- [x] Implement explicit provider selection and a persistent, atomic account-email quota guard; tests use a fake sender and do not contact an external provider.
+- [x] Add tests for registration/login/logout, password changes, session revocation, email token handling, rate limits, administrator role boundaries and administrator wallet step-up.
+- [ ] Complete broader adversarial review and coverage for deployment-specific CSRF, session fixation, XSS/CSP, recovery and operational failure cases.
+- [ ] Qualify real provider delivery only when a controlled sender domain and credentials are available. No paid plan, card, trial, automatic upgrade or paid fallback is permitted; until then, keep real delivery disabled.
 
-### Phase 3 — Admin-wallet and privileged recovery lab
+### Phase 3 — Local administrator and wallet-authentication lab
 - [x] Reuse the shared local SIWE verifier instead of duplicating signature verification.
-- [x] Add owner-operated CLI provisioning/revocation with explicit confirmation and audit reasons; no public role-provisioning API.
-- [x] Store a maximum of three admin wallet addresses per account; require normal account authentication plus a fresh signature from one enrolled wallet.
-- [x] Bind the short-lived challenge to the account and exact session; reject expired/reused challenges, cross-account session use, unregistered wallets and invalid signers.
-- [x] Add a maximum ten-minute admin step-up and a separate read-only console with no privileged write operations.
-- [ ] Resolve the minimum enrolled-wallet count before any production activation (provisionally propose two independently controlled wallets).
-- [ ] Specify and test Imperial HSIAN recovery after all admin wallets are lost.
-- [ ] Review the local provisioning trust boundary and admin step-up threat model independently; production admin authority remains blocked.
+- [x] Add owner-operated local CLI provisioning/revocation with explicit confirmation and audit reasons; no public role-provisioning API.
+- [x] Store a maximum of three administrator wallet addresses per account; require an existing administrator role and ordinary account session plus a fresh signature from one enrolled wallet.
+- [x] Bind short-lived challenges to the account and exact session; reject expired/reused challenges, cross-account/session use, unregistered wallets and invalid signers.
+- [x] Add a maximum ten-minute administrator step-up and a separate administrator view; server endpoints independently enforce administrator authorization.
+- [x] Require an active verified administrator step-up and a separate signature from the proposed wallet before enrolling an additional wallet; adding a wallet invalidates the previous step-up.
+- [ ] Resolve the minimum enrolled-wallet count before production activation (two independently controlled wallets remains a proposal, not a final decision).
+- [ ] Specify and test Imperial HSIAN recovery after all administrator wallets are lost.
+- [ ] Independently review the local provisioning trust boundary and administrator step-up threat model; production administrator authority remains blocked.
 
 ### Phase 4 — Production decision
 - [ ] Resolve AUTH-001: authoritative website/origin, backend route, storage, hosting and deployment ownership.
@@ -205,9 +207,11 @@ References:
 
 ## 10. Current evidence and status
 
-- Current draft PR #141 provides the familiar ordinary-account UI, a loopback SQLite test server, browser-memory preview mode, optional Referral ID, newsletter consent test field and Terms/Privacy draft links.
-- Current prototype explicitly has no real email verification, password-reset delivery, newsletter sending, account role management, admin wallets, admin recovery or production hosting.
-- Separate `development/auth-prototype/` is an isolated, local SIWE/EIP-4361 experiment. It is not linked to accounts or roles and does not authorize admin access.
+- Draft PR #141 contains the ordinary-account UI, modular account hub, loopback SQLite server, disposable browser-memory preview, optional Referral ID, separately recorded newsletter preference, and Terms/Privacy development drafts.
+- The local server implements email-verification and password-reset token flows; the Mailjet SMTP adapter and separate daily/long-window quota guard are implemented and covered with fake-sender tests. No Mailjet account, API credentials, verified sender domain, DNS records or real inbox delivery have been configured or qualified. Newsletter delivery is not implemented.
+- The local server owns account roles and defaults registrations to `user`. An owner-operated local CLI provisions existing test accounts. The linked SIWE wallet lab supports up to three administrator wallets and a short-lived, session-bound administrator step-up; it does not provide production provisioning, production administrator governance or all-wallet-loss recovery.
+- A local case-management/recovery-request prototype is also present; its local test behavior must not be confused with a staffed production support operation or the formal Imperial HSIAN recovery procedure.
+- The separate `development/auth-prototype/` remains an isolated SIWE/EIP-4361 experiment and is not the authority for account roles.
 - The current public-host homepage/root publication path remains a separate deployment gate; a prototype test does not prove public account service deployment.
 - No production authentication, legal, security or recovery capability may be inferred from the prototype CI result.
 
