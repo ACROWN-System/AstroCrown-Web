@@ -577,6 +577,8 @@ class AccountApplication:
     ) -> bool:
         if not self.email_delivery_available:
             return False
+        if action not in {"verify", "reset"}:
+            raise ValueError("Unknown account email action.")
         # Reserve from the persistent Free-tier allocation before network I/O.
         # Count even ambiguous failures: the relay may have accepted before timeout.
         if not self.email_send_budget.reserve():
@@ -590,8 +592,6 @@ class AccountApplication:
             subject = "Reset your AstroCrown password"
             title = "Reset your password"
             explanation = "Use this one-time link to choose a new password for your AstroCrown account."
-        else:
-            raise ValueError("Unknown account email action.")
         text_body = (
             f"{title}\n\n{explanation}\n\n{link}\n\n"
             "This link is single-use and expires. If you did not request it, you can ignore this email. "
@@ -1776,11 +1776,22 @@ def main(argv: list[str] | None = None) -> int:
     print("Open exactly: http://localhost:" + str(args.port) + "/")
     print("Bound to 127.0.0.1 only. No external account provider or wallet is used.")
     print("Local database: " + str(application.database_path))
-    print(
-        "Account email delivery: configured SMTP transport available."
-        if application.email_delivery_available
-        else "Account email delivery: not configured; verification and password-reset messages will not be sent."
-    )
+    if application.email_delivery_available:
+        provider = os.environ.get("ASTROCROWN_EMAIL_PROVIDER", "smtp").strip().lower()
+        usage = application.email_send_budget.usage()
+        print(
+            f"Account email delivery: {provider} SMTP transport configured "
+            "(connectivity and inbox delivery not yet verified)."
+        )
+        print(
+            "Local account-email quota: "
+            f"{usage['daily_count']}/{usage['daily_limit']} rolling 24h; "
+            f"{usage['monthly_count']}/{usage['monthly_limit']} rolling 30d."
+        )
+    else:
+        print(
+            "Account email delivery: not configured; verification and password-reset messages will not be sent."
+        )
     print("Crypto-news newsletter delivery is not configured.")
     print("Do not use real credentials, production accounts or wallet secrets.")
     print("Press Ctrl+C to stop.")
