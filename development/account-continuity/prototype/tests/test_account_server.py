@@ -316,7 +316,94 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(audit[0]["event_type"], "password_changed")
         self.assertIn("previous_active_sessions=1", audit[0]["detail"])
 
-    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(self):
+    def test_password_change_clears_administrator_step_up_and_revokes_old_sessions(self):
+        email = "admin-password-change@example.test"
+        new_password = "AstroCrown-Admin-Password-Updated-2026!"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        grant_admin(
+            self.app,
+            email=email,
+            wallet_address=TEST_WALLET_A.address,
+            chain_id=1,
+            reason="Owner-approved local admin password-change regression setup",
+        )
+
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": TEST_WALLET_A.address, "chainId": 1},
+        )
+        self.assertEqual(status, 200, challenge)
+        message = challenge["message"]
+        signature = Account.sign_message(
+            encode_defunct(text=message), private_key=TEST_WALLET_KEY_A
+        ).signature.hex()
+        if not signature.startswith("0x"):
+            signature = "0x" + signature
+        status, elevated, _ = self.request(
+            "/api/admin/wallet-verify",
+            {"message": message, "signature": signature},
+        )
+        self.assertEqual(status, 200, elevated)
+        self.assertTrue(elevated["adminSessionAuthorized"])
+        self.assertTrue(elevated["admin"])
+
+        other_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        status, second_login, _ = self.request(
+            "/api/account/login",
+            {"email": email, "password": PASSWORD},
+            opener=other_opener,
+        )
+        self.assertEqual(status, 200, second_login)
+        self.assertEqual(second_login["activeSessionCount"], 2)
+
+        status, changed, _ = self.request(
+            "/api/account/password/change",
+            {
+                "currentPassword": PASSWORD,
+                "newPassword": new_password,
+                "newPasswordConfirmation": new_password,
+            },
+        )
+        self.assertEqual(status, 200, changed)
+        self.assertEqual(changed["role"], "admin")
+        self.assertTrue(changed["adminRoleAssigned"])
+        self.assertFalse(changed["adminWalletAuthenticated"])
+        self.assertFalse(changed["adminSessionAuthorized"])
+        self.assertFalse(changed["admin"])
+        self.assertEqual(changed["activeSessionCount"], 1)
+        self.assertEqual(changed["revokedSessions"], 1)
+
+        status, current_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200, current_status)
+        self.assertTrue(current_status["authenticated"])
+        self.assertTrue(current_status["adminRoleAssigned"])
+        self.assertFalse(current_status["admin"])
+        status, admin_status, _ = self.request("/api/admin/status")
+        self.assertEqual(status, 403, admin_status)
+        self.assertIn("fresh signature", admin_status["error"].lower())
+
+        status, old_session, _ = self.request("/api/account/status", opener=other_opener)
+        self.assertEqual(status, 200)
+        self.assertFalse(old_session["authenticated"])
+
+        fresh_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        status, new_login, _ = self.request(
+            "/api/account/login",
+            {"email": email, "password": new_password},
+            opener=fresh_opener,
+        )
+        self.assertEqual(status, 200, new_login)
+        self.assertTrue(new_login["adminRoleAssigned"])
+        self.assertFalse(new_login["adminSessionAuthorized"])
+        self.assertFalse(new_login["admin"])
+
+    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(selfself):
+
 
 
         email = "cli-provision-admin@example.test"
