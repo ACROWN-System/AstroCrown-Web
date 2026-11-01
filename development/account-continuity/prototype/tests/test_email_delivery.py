@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 PROTOTYPE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROTOTYPE_DIR))
-from email_delivery import EmailDeliveryError, SMTPEmailSender  # noqa: E402
+from email_delivery import EmailDeliveryError, EmailSendBudget, SMTPEmailSender  # noqa: E402
 
 
 class SMTPEmailSenderTests(unittest.TestCase):
     def configured_environment(self, **overrides):
         values = {
+            "ASTROCROWN_EMAIL_PROVIDER": "smtp",
             "ASTROCROWN_SMTP_HOST": "smtp.example.test",
             "ASTROCROWN_SMTP_PORT": "587",
             "ASTROCROWN_SMTP_USERNAME": "mailer",
@@ -33,7 +35,7 @@ class SMTPEmailSenderTests(unittest.TestCase):
 
     def test_partial_configuration_fails_closed(self):
         with patch.dict(os.environ, {"ASTROCROWN_SMTP_HOST": "smtp.example.test"}, clear=True):
-            with self.assertRaisesRegex(ValueError, "partially configured"):
+            with self.assertRaisesRegex(ValueError, "EMAIL_PROVIDER"):
                 SMTPEmailSender.from_environment()
 
     def test_configuration_defaults_to_starttls_and_preserves_password(self):
@@ -50,6 +52,51 @@ class SMTPEmailSenderTests(unittest.TestCase):
         values = self.configured_environment(ASTROCROWN_SMTP_PASSWORD="")
         with patch.dict(os.environ, values, clear=True):
             with self.assertRaisesRegex(ValueError, "must either both be set"):
+                SMTPEmailSender.from_environment()
+
+
+    def test_mailjet_provider_is_explicit_and_uses_fixed_tls_relay_settings(self):
+        values = {
+            "ASTROCROWN_EMAIL_PROVIDER": "mailjet",
+            "ASTROCROWN_MAILJET_API_KEY": "public-api-key",
+            "ASTROCROWN_MAILJET_SECRET_KEY": "  secret-key-with-spaces  ",
+            "ASTROCROWN_MAILJET_FROM": "AstroCrown <security@example.test>",
+            "ASTROCROWN_PUBLIC_BASE_URL": "https://accounts.example.test",
+        }
+        with patch.dict(os.environ, values, clear=True):
+            sender, base_url = SMTPEmailSender.from_environment()
+        self.assertEqual(sender.host, "in-v3.mailjet.com")
+        self.assertEqual(sender.port, 587)
+        self.assertEqual(sender.mode, "starttls")
+        self.assertEqual(sender.username, "public-api-key")
+        self.assertEqual(sender.password, "  secret-key-with-spaces  ")
+        self.assertEqual(base_url, "https://accounts.example.test")
+
+    def test_mailjet_provider_rejects_partial_or_mixed_configuration(self):
+        partial = {
+            "ASTROCROWN_EMAIL_PROVIDER": "mailjet",
+            "ASTROCROWN_MAILJET_API_KEY": "public-api-key",
+            "ASTROCROWN_PUBLIC_BASE_URL": "https://accounts.example.test",
+        }
+        with patch.dict(os.environ, partial, clear=True):
+            with self.assertRaisesRegex(ValueError, "Mailjet is partially configured"):
+                SMTPEmailSender.from_environment()
+
+        mixed = {
+            "ASTROCROWN_EMAIL_PROVIDER": "mailjet",
+            "ASTROCROWN_MAILJET_API_KEY": "public-api-key",
+            "ASTROCROWN_MAILJET_SECRET_KEY": "secret",
+            "ASTROCROWN_MAILJET_FROM": "security@example.test",
+            "ASTROCROWN_SMTP_HOST": "smtp.other.test",
+            "ASTROCROWN_PUBLIC_BASE_URL": "https://accounts.example.test",
+        }
+        with patch.dict(os.environ, mixed, clear=True):
+            with self.assertRaisesRegex(ValueError, "Do not mix"):
+                SMTPEmailSender.from_environment()
+
+    def test_unknown_provider_fails_closed(self):
+        with patch.dict(os.environ, {"ASTROCROWN_EMAIL_PROVIDER": "unknown"}, clear=True):
+            with self.assertRaisesRegex(ValueError, "must be 'mailjet' or 'smtp'"):
                 SMTPEmailSender.from_environment()
 
     def test_sender_and_public_url_inputs_are_validated(self):
@@ -135,6 +182,42 @@ class SMTPEmailSenderTests(unittest.TestCase):
                 host="smtp.example.test", port=25, username=None, password=None,
                 sender="security@example.test", mode="plain",
                 public_base_url="https://accounts.example.test",
+            )
+
+
+class EmailSendBudgetTests(unittest.TestCase):
+    def test_daily_rolling_limit_is_enforced_and_recovers_after_24_hours(self):
+        with tempfile.TemporaryDirectory() as folder:
+            budget = EmailSendBudget(Path(folder) / "accounts.sqlite3", daily_limit=2, monthly_limit=10)
+            start = 1_800_000_000
+            self.assertTrue(budget.reserve(now=start))
+            self.assertTrue(budget.reserve(now=start + 1))
+            self.assertFalse(budget.reserve(now=start + 2))
+            self.assertTrue(budget.reserve(now=start + 24 * 60 * 60 + 2))
+
+    def test_rolling_30_day_limit_is_enforced(self):
+        with tempfile.TemporaryDirectory() as folder:
+            budget = EmailSendBudget(Path(folder) / "accounts.sqlite3", daily_limit=10, monthly_limit=2)
+            start = 1_800_000_000
+            self.assertTrue(budget.reserve(now=start))
+            self.assertTrue(budget.reserve(now=start + 1))
+            self.assertFalse(budget.reserve(now=start + 2))
+            self.assertTrue(budget.reserve(now=start + 30 * 24 * 60 * 60 + 2))
+
+    def test_usage_and_reservations_persist_across_budget_instances(self):
+        with tempfile.TemporaryDirectory() as folder:
+            database = Path(folder) / "accounts.sqlite3"
+            first = EmailSendBudget(database, daily_limit=5, monthly_limit=8)
+            self.assertTrue(first.reserve(now=1_800_000_000))
+            second = EmailSendBudget(database, daily_limit=5, monthly_limit=8)
+            self.assertEqual(
+                second.usage(now=1_800_000_001),
+                {
+                    "daily_count": 1,
+                    "daily_limit": 5,
+                    "monthly_count": 1,
+                    "monthly_limit": 8,
+                },
             )
 
 
