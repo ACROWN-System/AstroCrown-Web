@@ -139,11 +139,11 @@ AstroCrown deliberately uses less than half of the published send allowance for 
 | Window | Mailjet Free allowance | AstroCrown account-mail ceiling | Reserved outside account email |
 |---|---:|---:|---:|
 | Rolling 24 hours | 200 | 100 | At least 100 |
-| Rolling 30 days | 6,000/month | 3,000 | At least 3,000 |
+| Rolling 31 days | 6,000/month | 3,000 | At least 3,000 |
 
 The application enforces both ceilings atomically in SQLite before SMTP submission. The reservation ledger survives process restarts and stores only a random reservation ID and timestamp—no recipient address, email body, token or credential. A submission attempt consumes one reservation even if the relay returns an ambiguous failure: the relay might have accepted the message before a connection timeout, so refunding could allow a duplicate attempt to exceed the budget. At either ceiling, the application fails closed and does not submit another message. There is no paid fallback, automatic upgrade, or overage request.
 
-These are rolling application windows, intentionally stricter than a provider calendar-day/month counter. They reserve at least half of Mailjet's published capacity for other AstroCrown email needs. They only count messages submitted through this local account-email code. Sending from the Mailjet dashboard, another API key, another application or another integration is not included in this local ledger. Keep the Mailjet account dedicated to controlled AstroCrown email workloads and monitor the provider's aggregate dashboard; this guard cannot stop independent senders using the same Mailjet account.
+The daily guard is a rolling 24-hour window; the monthly guard is a rolling 31-day window. Mailjet describes its daily ceiling as a calendar-day limit and publishes a separate monthly limit, but its public Free-plan limit page does not define the monthly reset boundary. The application therefore uses the more conservative rolling windows instead of assuming a provider reset date. This caps AstroCrown account mail at no more than 3,000 in any 31-day span, including a full 31-day calendar month, while retaining at least half of the published plan allocation for other project email workloads. These counters only include messages submitted through this local account-email code. Sending from the Mailjet dashboard, another API key, another application or another integration is not included in this local ledger. Keep the Mailjet account dedicated to controlled AstroCrown email workloads and monitor the provider's aggregate dashboard; this guard cannot stop independent senders using the same Mailjet account.
 
 ### One-time Mailjet account setup
 
