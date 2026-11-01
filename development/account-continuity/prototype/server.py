@@ -25,9 +25,9 @@ from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
 try:
-    from .email_delivery import EmailDeliveryError, SMTPEmailSender
+    from .email_delivery import EmailDeliveryError, EmailSendBudget, SMTPEmailSender
 except ImportError:  # Direct script execution
-    from email_delivery import EmailDeliveryError, SMTPEmailSender
+    from email_delivery import EmailDeliveryError, EmailSendBudget, SMTPEmailSender
 
 _AUTO_EMAIL_SENDER = object()
 
@@ -160,6 +160,7 @@ class AccountApplication:
         self.dummy_salt = b"acrown-local-prototype"
         self.dummy_hash = self.hash_password("not-a-real-account-password", self.dummy_salt)
         self.initialize_database()
+        self.email_send_budget = EmailSendBudget(self.database_path)
         if CaseStore is None:
             raise RuntimeError("The local case-management module could not be loaded: " + str(CASE_IMPORT_ERROR))
         self.case_store = CaseStore(self.database_path)
@@ -575,6 +576,10 @@ class AccountApplication:
         self, *, recipient: str, action: str, raw_token: str
     ) -> bool:
         if not self.email_delivery_available:
+            return False
+        # Reserve from the persistent Free-tier allocation before network I/O.
+        # Count even ambiguous failures: the relay may have accepted before timeout.
+        if not self.email_send_budget.reserve():
             return False
         link = self.account_email_action_url(action, raw_token)
         if action == "verify":
