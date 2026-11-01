@@ -214,7 +214,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertFalse(second_signed_out["authenticated"])
 
-    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(selfself):
+    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(self):
 
         email = "cli-provision-admin@example.test"
         status, created, _ = self.create_account(email=email)
