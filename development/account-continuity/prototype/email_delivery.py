@@ -30,22 +30,48 @@ class SMTPEmailSender:
         public_base_url: str,
         timeout: float = 12.0,
     ) -> None:
+        if (
+            not isinstance(host, str) or not host or len(host) > 253
+            or any(char.isspace() or ord(char) < 33 for char in host)
+        ):
+            raise ValueError("SMTP host must be a valid host name or address.")
+        _sender_name, sender_address = parseaddr(sender)
+        if (
+            not sender_address or sender_address.count("@") != 1
+            or any(char in sender for char in "\r\n")
+        ):
+            raise ValueError("SMTP sender must be a valid email address.")
+        if mode not in {"starttls", "ssl"}:
+            raise ValueError("SMTP mode must be starttls or ssl.")
+        if any(char in (username or "") for char in "\r\n\x00"):
+            raise ValueError("SMTP username contains an invalid control character.")
+        if any(char in (password or "") for char in "\r\n\x00"):
+            raise ValueError("SMTP password contains an invalid control character.")
         self.host = host
         self.port = port
         self.username = username
         self.password = password
         self.sender = sender
         self.mode = mode
-        self.public_base_url = public_base_url.rstrip("/")
+        self.public_base_url = self.validate_public_base_url(public_base_url)
         self.timeout = timeout
 
     @staticmethod
     def validate_public_base_url(value: str) -> str:
+        if (
+            not isinstance(value, str) or not value
+            or any(char.isspace() or ord(char) < 32 for char in value)
+        ):
+            raise ValueError("ASTROCROWN_PUBLIC_BASE_URL must be a valid absolute URL.")
         parsed = urlsplit(value)
         local_http = parsed.scheme == "http" and parsed.hostname in {"localhost", "127.0.0.1"}
         secure_https = parsed.scheme == "https" and bool(parsed.hostname)
         if not (local_http or secure_https) or parsed.username or parsed.password or parsed.query or parsed.fragment:
             raise ValueError("ASTROCROWN_PUBLIC_BASE_URL must use HTTPS, or localhost HTTP for local development.")
+        try:
+            _ = parsed.port
+        except ValueError:
+            raise ValueError("ASTROCROWN_PUBLIC_BASE_URL contains an invalid port.") from None
         return value.rstrip("/")
 
     @classmethod
