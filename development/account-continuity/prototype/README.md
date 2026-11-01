@@ -40,7 +40,7 @@ On the hosted preview origin, account interactions run in a browser-only demonst
 
 The preview uses a third-party HTML proxy. Use invented email/passphrase/referral values only. Never enter a real password, personal email address, wallet secret, valuable recovery material or real marketing preference. Do not let your password manager save the test credentials.
 
-The URL is pinned to source commit `7cac6b3e103d613469ab208b07409dba5b1a22fc`, which includes the current development-only account UI and administrator-entry confirmation dialog. Relative assets and policy pages resolve from that same revision. The hosted preview is memory-only and simulates ordinary users only; it does not exercise the local SQLite account API or server-enforced administrator wallet step-up. Its ordinary account must not show an administrator entry. Use the local loopback server for backend/admin regression testing and continue to use invented data.
+The HTML Preview URL follows the active development branch so it reflects the latest account UI changes. The hosted preview is memory-only and simulates ordinary users only; it does not exercise the local SQLite account API, SMTP delivery, one-time email-action endpoints or server-enforced administrator wallet step-up. Its ordinary account must not show an administrator entry. Use the local loopback server for backend/admin regression testing and continue to use invented data.
 
 ## Windows PowerShell: run locally
 
@@ -139,6 +139,22 @@ The prototype exposes a provider-independent SMTP transport. It is disabled unle
 
 A successful SMTP submission means the transport accepted the message; it does not guarantee inbox delivery. The project has not selected or qualified an email provider, so leave this configuration unset during ordinary development and CI. Automated tests inject a fake sender and never send real email.
 
+For an optional local-only test, set the variables in the same PowerShell window before starting the server. Use a mail relay you are authorized to test and invented AstroCrown account addresses only:
+
+    $env:ASTROCROWN_SMTP_HOST = "smtp.example.test"
+    $env:ASTROCROWN_SMTP_PORT = "587"
+    $env:ASTROCROWN_SMTP_USERNAME = "your-test-mailbox"
+    $env:ASTROCROWN_SMTP_PASSWORD = [System.Net.NetworkCredential]::new("", (Read-Host "SMTP password" -AsSecureString)).Password
+    $env:ASTROCROWN_SMTP_FROM = "AstroCrown Test <no-reply@example.test>"
+    $env:ASTROCROWN_SMTP_MODE = "starttls"
+    $env:ASTROCROWN_PUBLIC_BASE_URL = "http://localhost:8766"
+
+The localhost action link is usable only on the same computer while the local server is running. Do not use this URL for external recipients. To disable delivery again in that PowerShell window:
+
+    Remove-Item Env:ASTROCROWN_SMTP_HOST, Env:ASTROCROWN_SMTP_PORT, Env:ASTROCROWN_SMTP_USERNAME, Env:ASTROCROWN_SMTP_PASSWORD, Env:ASTROCROWN_SMTP_FROM, Env:ASTROCROWN_SMTP_MODE, Env:ASTROCROWN_PUBLIC_BASE_URL -ErrorAction SilentlyContinue
+
+Never commit SMTP credentials, include them in screenshots/logs, or use a production mailbox for prototype tests.
+
 ## Data and security boundaries
 
 - Local test data stays in the SQLite database on the computer running this server. The prototype uses Python standard-library components only and makes no external authentication or newsletter calls unless the optional SMTP transport is explicitly configured.
@@ -151,8 +167,8 @@ A successful SMTP submission means the transport accepted the message; it does n
 - Active local sessions are counted server-side. Signing out other sessions requires the current password, applies a bounded attempt limit, preserves the current session, and invalidates the other server-side session records.
 - Password changes require the current password and matching confirmation, use a new random salt, rotate the current session, revoke every previous session and clear administrator step-up state. A minimal security audit event records the action and count of other sessions invalidated; it does not record passwords, tokens, IP addresses or device fingerprints.
 - The prototype does not collect device fingerprints, IP history or user-agent labels.
-- The local database stores a server-owned role defaulting to `user`; registration cannot self-assign `admin`. A local owner-operated CLI can provision an existing test account and up to three registered wallet addresses, with an audit reason and explicit confirmation. After a user explicitly requests admin access, the browser fetches only that account's registered wallet options, prompts the user to connect a wallet, checks the account/network match, displays the exact SIWE message, and requests a signature only after the user clicks the signing button. The backend binds the challenge to the account and ordinary session, rejects replay/cross-session/wrong-wallet attempts, and grants at most a ten-minute admin step-up. The separate admin dashboard exposes one additional privileged action: enrolling another public wallet after an already-verified admin session and a separate signature from the proposed wallet. The connected address and chain must match an unused address; enrollment ends the prior admin step-up. No wallet-removal UI, publishing, role-changing operation or other business-admin action is available. There is no public provisioning endpoint, production role administration, all-wallet-loss recovery, production hosting, email verification/reset delivery, newsletter delivery, or real passkey. Six built-in avatar glyphs remain available for the local test account; uploads and remote images are unsupported. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the long-term role and recovery model.
-- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. The email-action routes are local prototype behavior; production still requires an approved HTTPS deployment, mail-service qualification, domain authentication (SPF/DKIM/DMARC), abuse monitoring, delivery/bounce handling, privacy review and operational recovery procedures.
+- The local database stores a server-owned role defaulting to `user`; registration cannot self-assign `admin`. A local owner-operated CLI can provision an existing test account and up to three registered wallet addresses, with an audit reason and explicit confirmation. After a user explicitly requests admin access, the browser fetches only that account's registered wallet options, prompts the user to connect a wallet, checks the account/network match, displays the exact SIWE message, and requests a signature only after the user clicks the signing button. The backend binds the challenge to the account and ordinary session, rejects replay/cross-session/wrong-wallet attempts, and grants at most a ten-minute admin step-up. The separate admin dashboard exposes one additional privileged action: enrolling another public wallet after an already-verified admin session and a separate signature from the proposed wallet. The connected address and chain must match an unused address; enrollment ends the prior admin step-up. No wallet-removal UI, publishing, role-changing operation or other business-admin action is available. There is no public provisioning endpoint, production role administration, all-wallet-loss recovery, production hosting, production-qualified email delivery, newsletter delivery, or real passkey. Six built-in avatar glyphs remain available for the local test account; uploads and remote images are unsupported. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the long-term role and recovery model.
+- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. The email-action routes are local prototype behavior; production still requires an approved HTTPS deployment, mail-service qualification, domain authentication (SPF/DKIM/DMARC), abuse monitoring, delivery/bounce handling, proxy/access-log redaction for email-action query tokens, privacy review and operational recovery procedures.
 
 ## Production blockers
 
