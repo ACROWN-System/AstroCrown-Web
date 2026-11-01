@@ -137,6 +137,16 @@ try {
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("Account button opens sign-in dialog directly", () => evaluate("document.getElementById('account-dialog').open"));
   assert.match(await evaluate("document.body.innerText"), /A crypto wallet is not required/);
+  assert.equal(await evaluate("document.getElementById('account-password').type"), "password");
+  await evaluate("document.getElementById('account-password').value = 'Visibility-Test-Password'; document.querySelector('[data-password-toggle=account-password]').click()");
+  assert.equal(await evaluate("document.getElementById('account-password').type"), "text",
+    "the sign-in password visibility control should reveal the entered value");
+  assert.equal(await evaluate("document.querySelector('[data-password-toggle=account-password]').getAttribute('aria-pressed')"), "true");
+  assert.equal(await evaluate("document.querySelector('[data-password-toggle=account-password]').getAttribute('aria-label')"), "Hide password");
+  await evaluate("document.querySelector('[data-password-toggle=account-password]').click()");
+  assert.equal(await evaluate("document.getElementById('account-password').type"), "password",
+    "the sign-in password visibility control should hide the entered value again");
+  assert.equal(await evaluate("document.querySelector('[data-password-toggle=account-password]').getAttribute('aria-pressed')"), "false");
   assert.equal(
     await evaluate("document.getElementById('account-content').firstElementChild.classList.contains('account-tabs')"),
     true,
@@ -166,6 +176,12 @@ try {
     "future provider logo slots must not behave like fake provider buttons");
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("create-account form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
+  await evaluate("document.getElementById('account-password').value = 'Signup-Visibility-Test'; document.querySelector('[data-password-toggle=account-password]').click()");
+  assert.equal(await evaluate("document.getElementById('account-password').type"), "text",
+    "the sign-up password visibility control should reveal the entered value");
+  await evaluate("document.querySelector('[data-password-toggle=account-password]').click()");
+  assert.equal(await evaluate("document.getElementById('account-password').type"), "password",
+    "the sign-up password visibility control should hide the entered value again");
   await evaluate("window.__walletPromptCount = 0; window.ethereum = { request: async function (request) { window.__walletPromptCount += 1; if (request.method === 'eth_requestAccounts') return ['0x1111111111111111111111111111111111111111']; throw new Error('unexpected wallet call: ' + request.method); } };");
 
   const email = "e2euser" + Date.now().toString(16) + "@example.test";
@@ -333,7 +349,21 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('.account-password-manager'))"), true,
     "the account hub must provide password management");
   await evaluate("document.querySelector('.account-password-manager').open = true; document.getElementById('account-current-password').value = " +
-    JSON.stringify(demoPassword) + "; document.getElementById('account-new-password').value = " +
+    JSON.stringify(demoPassword) + "; document.querySelector('[data-password-toggle=account-current-password]').click()");
+  assert.equal(await evaluate("document.getElementById('account-current-password').type"), "text",
+    "the password-change current-password field should support show/hide");
+  await evaluate("document.querySelector('[data-password-toggle=account-current-password]').click(); document.getElementById('account-new-password').value = " +
+    JSON.stringify(demoNewPassword) + "; document.getElementById('account-new-password-confirmation').value = " +
+    JSON.stringify(demoNewPassword) + "; document.getElementById('account-change-password').click();");
+  await waitFor("browser-preview password change", () => evaluate("document.getElementById('account-session-feedback').textContent.includes('Password updated')"));
+  assert.match(await evaluate("document.getElementById('account-session-feedback').textContent"), /session was renewed/i);
+  await evaluate("window.location.hash = 'admin'");
+  await waitFor("browser-preview direct admin route stays closed", () => evaluate("document.getElementById('admin-dashboard').hidden && window.location.hash === '#account'"));
+  assert.equal(await evaluate("window.__walletPromptCount"), 0,
+    "ordinary browser-preview access must not prompt for a wallet");
+
+  /*REMOVED*/
+  //
     JSON.stringify(demoNewPassword) + "; document.getElementById('account-new-password-confirmation').value = " +
     JSON.stringify(demoNewPassword) + "; document.getElementById('account-change-password').click();");
   await waitFor("browser-preview password change", () => evaluate("document.getElementById('account-session-feedback').textContent.includes('Password updated')"));
