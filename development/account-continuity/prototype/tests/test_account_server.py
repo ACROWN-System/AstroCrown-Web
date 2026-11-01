@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.cookiejar
 import json
+import re
 import sys
 import subprocess
 import tempfile
@@ -31,6 +32,25 @@ TEST_WALLET_D = Account.from_key(TEST_WALLET_KEY_D)
 
 PASSWORD = "AstroCrown-Local-Test-2026!"
 EMAIL = "test-user@example.test"
+
+
+class FakeEmailSender:
+    """Deterministic test transport. It never contacts an external mail service."""
+
+    def __init__(self):
+        self.messages = []
+        self.fail_next = False
+
+    def send(self, recipient, subject, text_body, html_body):
+        if self.fail_next:
+            self.fail_next = False
+            raise RuntimeError("simulated transport failure")
+        self.messages.append({
+            "recipient": recipient,
+            "subject": subject,
+            "text": text_body,
+            "html": html_body,
+        })
 
 
 class AccountServerTests(unittest.TestCase):
@@ -80,6 +100,19 @@ class AccountServerTests(unittest.TestCase):
             except json.JSONDecodeError:
                 payload = {"raw": body}
             return error.code, payload, error.headers
+
+    def configure_fake_email(self):
+        sender = FakeEmailSender()
+        self.app.email_sender = sender
+        self.app.email_public_base_url = self.origin
+        return sender
+
+    @staticmethod
+    def extract_email_token(message):
+        match = re.search(r"[?&]token=([A-Za-z0-9_-]{20,256})", message["text"])
+        if match is None:
+            raise AssertionError("The fake email did not contain a valid one-time action token.")
+        return match.group(1)
 
     def create_account(self, email=EMAIL, password=PASSWORD, opener=None, **overrides):
         payload = {
@@ -190,6 +223,187 @@ class AccountServerTests(unittest.TestCase):
         self.assertTrue(data["authenticated"])
         self.assertEqual(data["email"], "test-user@example.test")
         self.assertFalse(data["admin"])
+
+    def test_email_verification_uses_hashed_single_use_tokens_and_resend_invalidates_old_link(self):
+        sender = self.configure_fake_email()
+        email = "verify-email@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        self.assertTrue(created["emailVerificationDeliveryAvailable"])
+        self.assertTrue(created["emailVerificationEmailSent"])
+        self.assertFalse(created["emailVerified"])
+        self.assertEqual(len(sender.messages), 1)
+        self.assertEqual(sender.messages[0]["recipient"], email)
+        self.assertIn("single-use", sender.messages[0]["text"].lower())
+
+        first_token = self.extract_email_token(sender.messages[0])
+        first_hash = hashlib.sha256(first_token.encode("utf-8")).hexdigest()
+        with self.app.connect() as db:
+            stored = db.execute(
+                "SELECT token_hash, token_type, used_at FROM account_email_tokens"
+            ).fetchall()
+        self.assertEqual(len(stored), 1)
+        self.assertEqual(stored[0]["token_hash"], first_hash)
+        self.assertNotIn(first_token, stored[0]["token_hash"])
+        self.assertEqual(stored[0]["token_type"], "verification")
+        self.assertIsNone(stored[0]["used_at"])
+
+        status, resent, _ = self.request("/api/account/verification/resend", {})
+        self.assertEqual(status, 200, resent)
+        self.assertTrue(resent["emailSent"])
+        self.assertEqual(len(sender.messages), 2)
+        second_token = self.extract_email_token(sender.messages[1])
+        self.assertNotEqual(first_token, second_token)
+
+        status, stale, _ = self.request("/api/account/email/verify", {"token": first_token})
+        self.assertEqual(status, 400, stale)
+        status, verified, _ = self.request("/api/account/email/verify", {"token": second_token})
+        self.assertEqual(status, 200, verified)
+        self.assertTrue(verified["verified"])
+
+        status, account_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200, account_status)
+        self.assertTrue(account_status["emailVerified"])
+
+        status, replay, _ = self.request("/api/account/email/verify", {"token": second_token})
+        self.assertEqual(status, 400, replay)
+        self.assertIn("already used", replay["error"].lower())
+
+        with self.app.connect() as db:
+            audit = db.execute(
+                "SELECT event_type FROM account_security_audit WHERE event_type = 'email_verified'"
+            ).fetchall()
+        self.assertEqual(len(audit), 1)
+
+    def test_password_reset_is_generic_single_use_and_revokes_every_session(self):
+        sender = self.configure_fake_email()
+        email = "password-reset@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        self.assertEqual(len(sender.messages), 1)  # signup verification message
+        sender.messages.clear()
+
+        other_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        status, second_login, _ = self.request(
+            "/api/account/login",
+            {"email": email, "password": PASSWORD},
+            opener=other_opener,
+        )
+        self.assertEqual(status, 200, second_login)
+        self.assertEqual(second_login["activeSessionCount"], 2)
+
+        status, known_response, _ = self.request(
+            "/api/account/password-reset/request", {"email": email}
+        )
+        self.assertEqual(status, 200, known_response)
+        self.assertTrue(known_response["requestAccepted"])
+        self.assertEqual(len(sender.messages), 1)
+        raw_token = self.extract_email_token(sender.messages[0])
+
+        status, unknown_response, _ = self.request(
+            "/api/account/password-reset/request", {"email": "not-present@example.test"}
+        )
+        self.assertEqual(status, 200, unknown_response)
+        self.assertEqual(known_response, unknown_response,
+                         "known and unknown addresses must receive identical reset-request responses")
+        self.assertEqual(len(sender.messages), 1,
+                         "no email should be sent for an unknown address")
+
+        with self.app.connect() as db:
+            saved = db.execute(
+                "SELECT token_hash, token_type FROM account_email_tokens WHERE token_type = 'password_reset'"
+            ).fetchone()
+        self.assertIsNotNone(saved)
+        self.assertEqual(saved["token_hash"], hashlib.sha256(raw_token.encode("utf-8")).hexdigest())
+        self.assertEqual(saved["token_type"], "password_reset")
+
+        new_password = "AstroCrown-Reset-Password-2026!"
+        status, reset, _ = self.request(
+            "/api/account/password/reset/complete",
+            {
+                "token": raw_token,
+                "newPassword": new_password,
+                "newPasswordConfirmation": new_password,
+            },
+        )
+        self.assertEqual(status, 200, reset)
+        self.assertTrue(reset["passwordReset"])
+        self.assertEqual(reset["revokedSessions"], 2)
+
+        status, old_current_session, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertFalse(old_current_session["authenticated"])
+        status, old_second_session, _ = self.request("/api/account/status", opener=other_opener)
+        self.assertEqual(status, 200)
+        self.assertFalse(old_second_session["authenticated"])
+
+        status, old_password_login, _ = self.request(
+            "/api/account/login", {"email": email, "password": PASSWORD}
+        )
+        self.assertEqual(status, 401, old_password_login)
+        status, new_password_login, _ = self.request(
+            "/api/account/login", {"email": email, "password": new_password}
+        )
+        self.assertEqual(status, 200, new_password_login)
+        self.assertTrue(new_password_login["emailVerified"])
+        self.assertEqual(new_password_login["activeSessionCount"], 1)
+
+        status, replay, _ = self.request(
+            "/api/account/password/reset/complete",
+            {
+                "token": raw_token,
+                "newPassword": new_password,
+                "newPasswordConfirmation": new_password,
+            },
+        )
+        self.assertEqual(status, 400, replay)
+        self.assertIn("already used", replay["error"].lower())
+
+        with self.app.connect() as db:
+            events = db.execute(
+                "SELECT event_type, detail FROM account_security_audit WHERE event_type = 'password_reset_completed'"
+            ).fetchall()
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0]["detail"], "revoked_sessions=2")
+
+    def test_email_delivery_failure_invalidates_new_token_and_no_mailer_sends_nothing(self):
+        email = "no-email-transport@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        self.assertFalse(created["emailVerificationDeliveryAvailable"])
+        self.assertFalse(created["emailVerificationEmailSent"])
+        self.assertFalse(created["passwordResetAvailable"])
+
+        status, reset_request, _ = self.request(
+            "/api/account/password-reset/request", {"email": email}
+        )
+        self.assertEqual(status, 200, reset_request)
+        self.assertFalse(reset_request["requestAccepted"] is False)
+        self.assertIn("No password-reset email was sent", reset_request["message"])
+
+        sender = self.configure_fake_email()
+        sender.fail_next = True
+        status, resend_result, _ = self.request("/api/account/verification/resend", {})
+        self.assertEqual(status, 200, resend_result)
+        self.assertFalse(resend_result["emailSent"])
+        self.assertIn("No email was sent", resend_result["message"])
+        with self.app.connect() as db:
+            remaining = db.execute(
+                "SELECT COUNT(*) FROM account_email_tokens WHERE account_id = "
+                "(SELECT account_id FROM accounts WHERE email = ?) AND used_at IS NULL",
+                (email,),
+            ).fetchone()[0]
+        self.assertEqual(remaining, 0, "failed transport must not leave an actionable token")
+
+    def test_reset_request_rejects_extra_fields_without_processing(self):
+        self.configure_fake_email()
+        status, rejected, _ = self.request(
+            "/api/account/password-reset/request",
+            {"email": EMAIL, "password": "should-not-be-accepted"},
+        )
+        self.assertEqual(status, 400, rejected)
 
     def test_login_does_not_issue_session_when_password_changes_after_verification(self):
         email = "stale-login-race@example.test"
