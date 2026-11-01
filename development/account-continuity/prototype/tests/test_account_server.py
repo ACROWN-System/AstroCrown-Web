@@ -396,7 +396,7 @@ class AccountServerTests(unittest.TestCase):
             "/api/account/password-reset/request", {"email": email}
         )
         self.assertEqual(status, 200, reset_request)
-        self.assertTrue(reset_request["requestAccepted"])
+        self.assertFalse(reset_request["emailSent"])
         self.assertIn("No password-reset email was sent", reset_request["message"])
 
         sender = self.configure_fake_email()
@@ -1310,9 +1310,9 @@ class AccountServerTests(unittest.TestCase):
         status, data, _ = self.request(
             "/api/account/password-reset/request", {"email": EMAIL},
         )
-        self.assertEqual(status, 501)
-        self.assertIn("not enabled", data["error"].lower())
-        self.assertIn("no email was sent", data["error"].lower())
+        self.assertEqual(status, 200, data)
+        self.assertFalse(data["emailSent"])
+        self.assertIn("No password-reset email was sent", data["message"])
 
     def test_recovery_code_api_is_not_part_of_the_new_signup_contract(self):
         status, data, _ = self.create_account()
