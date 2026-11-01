@@ -362,7 +362,7 @@ try {
   await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
   await waitFor("browser-preview account-created success popup", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 30000);
-  assert.match(await evaluate("document.body.innerText"), /no email or newsletter message was sent/i);
+  assert.match(await evaluate("document.body.innerText"), /no verification or newsletter message was sent/i);
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("browser-preview account dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
