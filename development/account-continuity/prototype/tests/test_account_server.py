@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import http.cookiejar
 import json
 import re
@@ -380,7 +381,7 @@ class AccountServerTests(unittest.TestCase):
             "/api/account/password-reset/request", {"email": email}
         )
         self.assertEqual(status, 200, reset_request)
-        self.assertFalse(reset_request["requestAccepted"] is False)
+        self.assertTrue(reset_request["requestAccepted"])
         self.assertIn("No password-reset email was sent", reset_request["message"])
 
         sender = self.configure_fake_email()
@@ -396,6 +397,49 @@ class AccountServerTests(unittest.TestCase):
                 (email,),
             ).fetchone()[0]
         self.assertEqual(remaining, 0, "failed transport must not leave an actionable token")
+
+    def test_verification_and_password_reset_tokens_expire(self):
+        sender = self.configure_fake_email()
+        email = "expired-email-link@example.test"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+        verification_token = self.extract_email_token(sender.messages[0])
+        with self.app.connect() as db:
+            db.execute(
+                "UPDATE account_email_tokens SET expires_at = ? WHERE token_hash = ?",
+                (int(time.time()) - 1, hashlib.sha256(verification_token.encode("utf-8")).hexdigest()),
+            )
+        status, expired_verification, _ = self.request(
+            "/api/account/email/verify", {"token": verification_token}
+        )
+        self.assertEqual(status, 400, expired_verification)
+        status, account_status, _ = self.request("/api/account/status")
+        self.assertFalse(account_status["emailVerified"])
+
+        status, reset_response, _ = self.request(
+            "/api/account/password-reset/request", {"email": email}
+        )
+        self.assertEqual(status, 200, reset_response)
+        reset_token = self.extract_email_token(sender.messages[-1])
+        with self.app.connect() as db:
+            db.execute(
+                "UPDATE account_email_tokens SET expires_at = ? WHERE token_hash = ?",
+                (int(time.time()) - 1, hashlib.sha256(reset_token.encode("utf-8")).hexdigest()),
+            )
+        new_password = "AstroCrown-Expired-Reset-2026!"
+        status, expired_reset, _ = self.request(
+            "/api/account/password/reset/complete",
+            {
+                "token": reset_token,
+                "newPassword": new_password,
+                "newPasswordConfirmation": new_password,
+            },
+        )
+        self.assertEqual(status, 400, expired_reset)
+        status, old_password_login, _ = self.request(
+            "/api/account/login", {"email": email, "password": PASSWORD}
+        )
+        self.assertEqual(status, 200, old_password_login)
 
     def test_reset_request_rejects_extra_fields_without_processing(self):
         self.configure_fake_email()
