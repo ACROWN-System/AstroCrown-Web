@@ -41,7 +41,7 @@ jobs:
 
       - name: Validate Python and browser JavaScript syntax
         run: |
-          python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/case_management.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py development/account-continuity/prototype/tests/test_case_management.py
+          python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/case_management.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py development/account-continuity/prototype/tests/test_case_management.py development/account-continuity/prototype/tests/test_email_delivery.py
           node --check development/account-continuity/prototype/account-ui.js
           node --check development/account-continuity/prototype/cases-ui.js
           node --check development/account-continuity/prototype/tests/browser_smoke.mjs
