@@ -214,7 +214,110 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertFalse(second_signed_out["authenticated"])
 
-    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(self):
+    def test_password_change_requires_reauthentication_rotates_sessions_and_records_audit(self):
+        email = "password-change@example.test"
+        new_password = "AstroCrown-New-Password-2026!"
+        status, created, _ = self.create_account(email=email)
+        self.assertEqual(status, 201, created)
+
+        other_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        status, second_login, _ = self.request(
+            "/api/account/login",
+            {"email": email, "password": PASSWORD},
+            opener=other_opener,
+        )
+        self.assertEqual(status, 200, second_login)
+        self.assertEqual(second_login["activeSessionCount"], 2)
+
+        status, rejected, _ = self.request(
+            "/api/account/password/change",
+            {
+                "currentPassword": "incorrect-password",
+                "newPassword": new_password,
+                "newPasswordConfirmation": new_password,
+            },
+        )
+        self.assertEqual(status, 401, rejected)
+        status, current_status, _ = self.request("/api/account/status")
+        self.assertEqual(current_status["activeSessionCount"], 2)
+
+        status, mismatch, _ = self.request(
+            "/api/account/password/change",
+            {
+                "currentPassword": PASSWORD,
+                "newPassword": new_password,
+                "newPasswordConfirmation": "different-confirmation",
+            },
+        )
+        self.assertEqual(status, 400, mismatch)
+        self.assertIn("confirmation does not match", mismatch["error"].lower())
+
+        status, unchanged, _ = self.request(
+            "/api/account/password/change",
+            {
+                "currentPassword": PASSWORD,
+                "newPassword": PASSWORD,
+                "newPasswordConfirmation": PASSWORD,
+            },
+        )
+        self.assertEqual(status, 400, unchanged)
+
+        status, changed, headers = self.request(
+            "/api/account/password/change",
+            {
+                "currentPassword": PASSWORD,
+                "newPassword": new_password,
+                "newPasswordConfirmation": new_password,
+            },
+        )
+        self.assertEqual(status, 200, changed)
+        self.assertEqual(changed["activeSessionCount"], 1)
+        self.assertEqual(changed["revokedSessions"], 1)
+        self.assertIn("renewed", changed["message"].lower())
+        self.assertIn("HttpOnly", headers.get("Set-Cookie", ""))
+
+        status, current_session, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertTrue(current_session["authenticated"])
+        self.assertEqual(current_session["activeSessionCount"], 1)
+
+        status, revoked_session, _ = self.request("/api/account/status", opener=other_opener)
+        self.assertEqual(status, 200)
+        self.assertFalse(revoked_session["authenticated"])
+
+        fresh_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        status, old_password_login, _ = self.request(
+            "/api/account/login",
+            {"email": email, "password": PASSWORD},
+            opener=fresh_opener,
+        )
+        self.assertEqual(status, 401, old_password_login)
+
+        status, new_password_login, _ = self.request(
+            "/api/account/login",
+            {"email": email, "password": new_password},
+            opener=fresh_opener,
+        )
+        self.assertEqual(status, 200, new_password_login)
+        self.assertTrue(new_password_login["authenticated"])
+        self.assertFalse(new_password_login["admin"])
+
+        with self.app.connect() as db:
+            audit = db.execute(
+                "SELECT event_type, detail FROM account_security_audit WHERE account_id = "
+                "(SELECT account_id FROM accounts WHERE email = ?)",
+                (email,),
+            ).fetchall()
+        self.assertEqual(len(audit), 1)
+        self.assertEqual(audit[0]["event_type"], "password_changed")
+        self.assertIn("previous_active_sessions=1", audit[0]["detail"])
+
+    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(selfself):
+
 
         email = "cli-provision-admin@example.test"
         status, created, _ = self.create_account(email=email)
