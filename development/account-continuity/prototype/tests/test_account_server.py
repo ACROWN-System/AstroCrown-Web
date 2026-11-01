@@ -492,6 +492,47 @@ class AccountServerTests(unittest.TestCase):
             ).fetchone()[0]
         self.assertEqual(remaining, 0, "failed transport must not leave an actionable token")
 
+    def test_invalid_password_reset_tokens_are_rejected_before_password_kdf_and_ip_throttled(self):
+        original_hash_password = self.app.hash_password
+        kdf_calls = []
+
+        def tracked_hash_password(password, salt):
+            kdf_calls.append(True)
+            return original_hash_password(password, salt)
+
+        self.app.hash_password = tracked_hash_password
+        password = "AstroCrown-Invalid-Reset-Password-2026!"
+        try:
+            for attempt in range(10):
+                token = ("invalid-reset-token-" + str(attempt)).ljust(40, "x")
+                status, rejected, _ = self.request(
+                    "/api/account/password/reset/complete",
+                    {
+                        "token": token,
+                        "newPassword": password,
+                        "newPasswordConfirmation": password,
+                    },
+                )
+                self.assertEqual(status, 400, rejected)
+                self.assertIn("invalid", rejected["error"].lower())
+            self.assertEqual(
+                kdf_calls, [],
+                "unknown reset tokens must be rejected before the expensive password KDF",
+            )
+            status, throttled, _ = self.request(
+                "/api/account/password/reset/complete",
+                {
+                    "token": "another-invalid-reset-token-123456789",
+                    "newPassword": password,
+                    "newPasswordConfirmation": password,
+                },
+            )
+            self.assertEqual(status, 429, throttled)
+            self.assertIn("too many password-reset attempts", throttled["error"].lower())
+            self.assertEqual(kdf_calls, [])
+        finally:
+            self.app.hash_password = original_hash_password
+
     def test_verification_and_password_reset_tokens_expire(self):
         sender = self.configure_fake_email()
         email = "expired-email-link@example.test"
