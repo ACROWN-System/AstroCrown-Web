@@ -142,12 +142,12 @@ class SMTPEmailSender:
         _sender_name, sender_address = parseaddr(values["ASTROCROWN_SMTP_FROM"])
         if (
             not sender_address or sender_address.count("@") != 1
-            or any(char in values["ASTROCROWN_SMTP_FROM"] for char in "\\r\\n")
+            or any(char in values["ASTROCROWN_SMTP_FROM"] for char in "\r\n")
         ):
             raise ValueError("ASTROCROWN_SMTP_FROM must be a valid email sender address.")
-        if any(char in values["ASTROCROWN_SMTP_USERNAME"] for char in "\\r\\n\\x00"):
+        if any(char in values["ASTROCROWN_SMTP_USERNAME"] for char in "\r\n\x00"):
             raise ValueError("ASTROCROWN_SMTP_USERNAME contains an invalid control character.")
-        if any(char in values["ASTROCROWN_SMTP_PASSWORD"] for char in "\\r\\n\\x00"):
+        if any(char in values["ASTROCROWN_SMTP_PASSWORD"] for char in "\r\n\x00"):
             raise ValueError("ASTROCROWN_SMTP_PASSWORD contains an invalid control character.")
         try:
             port = int(values["ASTROCROWN_SMTP_PORT"] or "587")
