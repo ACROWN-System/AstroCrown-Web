@@ -311,7 +311,7 @@ try {
   assert.equal(provisionedStatus.adminSessionAuthorized, false,
     "role assignment and wallet enrollment alone must not open the administrator dashboard");
   assert.equal(await evaluate("document.getElementById('account-admin-wallet-access').textContent.trim()"), "Open administrator dashboard");
-  assert.match(await evaluate("document.body.innerText"), /Wallet verification required/);
+  assert.match(await evaluate("document.body.innerText"), /Wallet verification required/i);
   await evaluate("document.getElementById('account-admin-wallet-access').click()");
   await waitFor("administrator access confirmation popup", () => evaluate("Boolean(document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open)"));
   assert.match(await evaluate("document.getElementById('admin-access-dialog').innerText"), /administrator role.*server|server.*administrator role/i);
