@@ -311,6 +311,7 @@ try {
 
   const demoEmail = "browserdemo" + Date.now().toString(16) + "@example.test";
   const demoPassword = "AstroCrown-Browser-Demo-2026!";
+  const demoNewPassword = "AstroCrown-Browser-Updated-2026!";
   await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
   await evaluate("document.getElementById('account-referral-id').value = 'PREVIEW_22'");
@@ -329,6 +330,14 @@ try {
   assert.match(await evaluate("document.body.innerText"), /Crypto-news email: Opted in for this test/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false);
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-password-manager'))"), true,
+    "the account hub must provide password management");
+  await evaluate("document.querySelector('.account-password-manager').open = true; document.getElementById('account-current-password').value = " +
+    JSON.stringify(demoPassword) + "; document.getElementById('account-new-password').value = " +
+    JSON.stringify(demoNewPassword) + "; document.getElementById('account-new-password-confirmation').value = " +
+    JSON.stringify(demoNewPassword) + "; document.getElementById('account-change-password').click();");
+  await waitFor("browser-preview password change", () => evaluate("document.getElementById('account-session-feedback').textContent.includes('Password updated')"));
+  assert.match(await evaluate("document.getElementById('account-session-feedback').textContent"), /session was renewed/i);
   await evaluate("window.location.hash = 'admin'");
   await waitFor("browser-preview direct admin route stays closed", () => evaluate("document.getElementById('admin-dashboard').hidden && window.location.hash === '#account'"));
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
@@ -341,7 +350,10 @@ try {
   await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
   await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoPassword));
   await evaluate("document.getElementById('account-signin-form').requestSubmit()");
-  await waitFor("browser-preview sign-in success popup", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 20000);
+  await waitFor("old browser-preview password is rejected after change", () => evaluate("document.getElementById('account-feedback').textContent.includes('did not match')"));
+  await evaluate("document.getElementById('account-password').value = " + JSON.stringify(demoNewPassword));
+  await evaluate("document.getElementById('account-signin-form').requestSubmit()");
+  await waitFor("browser-preview sign-in with new password", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 20000);
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("browser-preview dashboard after sign-in", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), demoEmail.toLowerCase());
@@ -402,7 +414,7 @@ try {
   assert.equal(recoveryStatus.body.status, "pending");
   assert.match(recoveryStatus.body.message, /independent identity verification/);
 
-  console.log("PASS: email signup/login, account dashboard, terms version, security assurance, separate public case portal, guest grievance receipt, high-entropy case key, independent case lookup and reply, loss-of-both-credentials recovery request/status, admin role boundaries and browser-only preview.");
+  console.log("PASS: email signup/login, account dashboard, password change and old-password rejection, terms version, security assurance, separate public case portal, guest grievance receipt, high-entropy case key, independent case lookup and reply, loss-of-both-credentials recovery request/status, admin role boundaries and browser-only preview.");
 
 } catch (error) {
   console.error(String(error?.stack || error));
