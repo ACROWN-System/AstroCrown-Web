@@ -271,6 +271,17 @@
 .account-dashboard-card .account-dashboard-value { color:#d9e3f2;font-weight:750; }
 .account-dashboard-card .account-dashboard-status { display:inline-flex;align-items:center;gap:6px;margin:4px 0 7px;color:#d7c46a;font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase; }
 .account-dashboard-card a { display:inline-block;margin-top:7px;color:#ffe58a;font-size:10px;text-decoration:underline;text-underline-offset:3px; }
+.account-session-count { color:#d9e3f2 !important;font-weight:650; }
+.account-session-manager { margin:10px 0 4px;padding-top:9px;border-top:1px solid rgba(153,178,213,.15); }
+.account-session-manager summary { color:#ffe58a;font-size:11px;font-weight:700;cursor:pointer; }
+.account-session-manager p { margin:8px 0;color:#9aa9be;font-size:10px;line-height:1.55; }
+.account-session-manager label { display:block;margin:9px 0 5px;color:#c5d1e1;font-size:10px;font-weight:650; }
+.account-session-manager input {
+  display:block;width:100%;min-width:0;padding:10px 11px;border:1px solid rgba(153,178,213,.3);
+  border-radius:8px;background:rgba(4,12,23,.8);color:#f2f5fb;font:inherit;font-size:12px;
+}
+.account-session-manager input:focus { outline:2px solid rgba(255,215,0,.55);outline-offset:2px; }
+.account-session-manager button { margin-top:9px; }
 .account-dashboard-actions { display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(153,178,213,.18); }
 .account-dashboard-actions p { margin:0;color:#74859d;font-size:10px;line-height:1.55; }
 .account-dashboard-actions .account-secondary { flex:0 0 auto; }
