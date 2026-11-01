@@ -103,6 +103,22 @@
     }
   });
 
+  form.addEventListener("click", function (event) {
+    var button = event.target.closest("button[data-password-toggle]");
+    if (!button) return;
+    var input = document.getElementById(button.getAttribute("data-password-toggle"));
+    if (!input) return;
+    var reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    button.textContent = reveal ? "Hide" : "Show";
+    button.setAttribute("aria-pressed", reveal ? "true" : "false");
+    button.setAttribute(
+      "aria-label",
+      (reveal ? "Hide " : "Show ") +
+        (input.id === "email-action-new-password" ? "new password" : "password confirmation")
+    );
+  });
+
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
     if (!token || action !== "reset") {
