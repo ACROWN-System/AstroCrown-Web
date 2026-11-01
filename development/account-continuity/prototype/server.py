@@ -1551,7 +1551,7 @@ class AccountApplication:
             # Keep the response identical for existing and unknown email addresses.
             return 200, {
                 "requestAccepted": True,
-                "message": "If an account exists for this address, a password-reset email may be sent. Check your inbox shortly.",
+                "message": "If an account exists and the configured mail transport accepts the message, a reset link may arrive. This response does not confirm account existence or inbox delivery.",
             }, None
 
         raise ApiError(404, "That local account action is not available.")
