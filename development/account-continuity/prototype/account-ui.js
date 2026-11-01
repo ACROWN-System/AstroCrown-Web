@@ -393,9 +393,13 @@
         '<label class="account-field" for="account-email">Email' +
           '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
         '</label>' +
-        '<label class="account-field" for="account-password">Password' +
-          '<input id="account-password" name="password" type="password" autocomplete="current-password" required maxlength="1024" placeholder="Enter your password...">' +
-        '</label>' +
+        '<div class="account-field">' +
+          '<label class="account-field-label" for="account-password">Password</label>' +
+          '<div class="account-password-control">' +
+            '<input id="account-password" name="password" type="password" autocomplete="current-password" required maxlength="1024" placeholder="Enter your password...">' +
+            '<button class="account-password-toggle" type="button" data-password-toggle="account-password" data-password-label="password" aria-controls="account-password" aria-pressed="false" aria-label="Show password">Show</button>' +
+          '</div>' +
+        '</div>' +
         '<div class="account-form-actions"><button class="account-primary" type="submit">Log In</button>' +
           '<button class="account-text-button" type="button" data-account-mode="recover">Forgot password?</button></div>' +
       '</form>' +
@@ -412,10 +416,14 @@
         '<label class="account-field" for="account-email">Email' +
           '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
         '</label>' +
-        '<label class="account-field" for="account-password">Password' +
-          '<input id="account-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required placeholder="Enter your password...">' +
+        '<div class="account-field">' +
+          '<label class="account-field-label" for="account-password">Password</label>' +
+          '<div class="account-password-control">' +
+            '<input id="account-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required placeholder="Enter your password...">' +
+            '<button class="account-password-toggle" type="button" data-password-toggle="account-password" data-password-label="password" aria-controls="account-password" aria-pressed="false" aria-label="Show password">Show</button>' +
+          '</div>' +
           '<small>For this test, use an invented passphrase at least 15 characters long. Do not reuse a real password.</small>' +
-        '</label>' +
+        '</div>' +
         '<label class="account-field" for="account-referral-id">Referral ID (Optional)' +
           '<input id="account-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
@@ -494,7 +502,10 @@
         String(activeSessionCount - 1) + ')</summary>' +
         '<p>Enter your current password to sign out other devices. This browser session will remain active.</p>' +
         '<label for="account-session-current-password">Current password</label>' +
-        '<input id="account-session-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
+        '<div class="account-password-control">' +
+          '<input id="account-session-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
+          '<button class="account-password-toggle" type="button" data-password-toggle="account-session-current-password" data-password-label="current password" aria-controls="account-session-current-password" aria-pressed="false" aria-label="Show current password">Show</button>' +
+        '</div>' +
         '<button class="account-secondary" type="button" id="account-revoke-other-sessions">Sign out other sessions</button>' +
         '</details>'
       : '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) +
@@ -504,11 +515,20 @@
         '<summary>Change password</summary>' +
         '<p>Confirm your current password and choose a new passphrase of at least 15 characters. Changing it signs out other sessions and renews this one.</p>' +
         '<label for="account-current-password">Current password</label>' +
-        '<input id="account-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
+        '<div class="account-password-control">' +
+          '<input id="account-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
+          '<button class="account-password-toggle" type="button" data-password-toggle="account-current-password" data-password-label="current password" aria-controls="account-current-password" aria-pressed="false" aria-label="Show current password">Show</button>' +
+        '</div>' +
         '<label for="account-new-password">New password</label>' +
-        '<input id="account-new-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
+        '<div class="account-password-control">' +
+          '<input id="account-new-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
+          '<button class="account-password-toggle" type="button" data-password-toggle="account-new-password" data-password-label="new password" aria-controls="account-new-password" aria-pressed="false" aria-label="Show new password">Show</button>' +
+        '</div>' +
         '<label for="account-new-password-confirmation">Confirm new password</label>' +
-        '<input id="account-new-password-confirmation" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
+        '<div class="account-password-control">' +
+          '<input id="account-new-password-confirmation" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
+          '<button class="account-password-toggle" type="button" data-password-toggle="account-new-password-confirmation" data-password-label="new password confirmation" aria-controls="account-new-password-confirmation" aria-pressed="false" aria-label="Show new password confirmation">Show</button>' +
+        '</div>' +
         '<button class="account-secondary" type="button" id="account-change-password">Update password</button>' +
         '</details>';
     var adminCard = '';
@@ -799,6 +819,20 @@
     return item ? item.value : "";
   }
 
+  function togglePasswordVisibility(button) {
+    var inputId = button.getAttribute("data-password-toggle");
+    var input = inputId ? document.getElementById(inputId) : null;
+    if (!input) return;
+    var reveal = input.type === "password";
+    input.type = reveal ? "text" : "password";
+    button.textContent = reveal ? "Hide" : "Show";
+    button.setAttribute("aria-pressed", reveal ? "true" : "false");
+    button.setAttribute(
+      "aria-label",
+      (reveal ? "Hide " : "Show ") + (button.getAttribute("data-password-label") || "password")
+    );
+  }
+
   content.addEventListener("submit", async function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
@@ -849,6 +883,10 @@
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.dataset.passwordToggle) {
+      togglePasswordVisibility(button);
+      return;
+    }
     if (button.dataset.accountMode) {
       setMode(button.dataset.accountMode);
       return;
@@ -878,6 +916,10 @@
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.dataset.passwordToggle) {
+      togglePasswordVisibility(button);
+      return;
+    }
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
       return;
