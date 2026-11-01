@@ -8,6 +8,7 @@ import sys
 import subprocess
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.request
@@ -282,6 +283,7 @@ class AccountServerTests(unittest.TestCase):
         status, created, _ = self.create_account(email=email)
         self.assertEqual(status, 201, created)
         self.assertEqual(len(sender.messages), 1)  # signup verification message
+        outstanding_verification_token = self.extract_email_token(sender.messages[0])
         sender.messages.clear()
 
         other_opener = urllib.request.build_opener(
@@ -332,6 +334,10 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200, reset)
         self.assertTrue(reset["passwordReset"])
         self.assertEqual(reset["revokedSessions"], 2)
+        status, invalidated_verification, _ = self.request(
+            "/api/account/email/verify", {"token": outstanding_verification_token}
+        )
+        self.assertEqual(status, 400, invalidated_verification)
 
         status, old_current_session, _ = self.request("/api/account/status")
         self.assertEqual(status, 200)
