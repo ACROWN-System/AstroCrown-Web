@@ -141,6 +141,17 @@ try {
   assert.equal(emailActionScript[0], 200, "email action client must be served locally");
   assert.match(emailActionScript[1], /history\.replaceState/);
   assert.match(emailActionScript[1], /password\/reset\/complete/);
+  await cdp("Page.navigate", {
+    url: localUrl + "account-continuity/prototype/email-action.html?type=verify&token=BrowserPreviewVerificationToken-1234567890"
+  });
+  await waitFor("verification landing page requires explicit confirmation", () =>
+    evaluate("Boolean(document.getElementById('email-action-verify-form')) && !document.getElementById('email-action-verify-form').hidden"));
+  assert.equal(await evaluate("window.location.search"), "",
+    "the one-time token must be removed from the address bar");
+  assert.match(await evaluate("document.getElementById('email-action-status').textContent"), /Press Verify email address/,
+    "opening the link must not consume the token or verify the address automatically");
+  await cdp("Page.navigate", { url: localUrl });
+  await waitFor("homepage restored after email-action check", pageReady);
 
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("Account button opens sign-in dialog directly", () => evaluate("document.getElementById('account-dialog').open"));
