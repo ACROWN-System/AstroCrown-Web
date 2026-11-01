@@ -133,6 +133,14 @@ try {
   assert.equal(assuranceResult[0], 200, "security assurance page must be served by the local prototype");
   assert.match(assuranceResult[1], /Development prototype only/);
   assert.match(assuranceResult[1], /Not implemented/);
+  const emailActionResult = await evaluate("fetch('/account-continuity/prototype/email-action.html').then(async function (response) { return [response.status, await response.text()]; })");
+  assert.equal(emailActionResult[0], 200, "email action landing page must be served locally");
+  assert.match(emailActionResult[1], /email-action-reset-form/);
+  assert.match(emailActionResult[1], /no-referrer/);
+  const emailActionScript = await evaluate("fetch('/account-continuity/prototype/email-action.js').then(async function (response) { return [response.status, await response.text()]; })");
+  assert.equal(emailActionScript[0], 200, "email action client must be served locally");
+  assert.match(emailActionScript[1], /history\.replaceState/);
+  assert.match(emailActionScript[1], /password\/reset\/complete/);
 
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("Account button opens sign-in dialog directly", () => evaluate("document.getElementById('account-dialog').open"));
@@ -393,9 +401,10 @@ try {
   await waitFor("browser-preview signed out", () => evaluate("Boolean(document.getElementById('account-signin-form'))"));
   await evaluate("document.querySelector('[data-account-mode=recover]').click()");
   await waitFor("browser-preview password-reset form", () => evaluate("Boolean(document.getElementById('account-reset-request-form'))"));
+  assert.match(await evaluate("document.body.innerText"), /Email delivery is not configured/);
   await evaluate("document.getElementById('account-email').value = " + JSON.stringify(demoEmail));
   await evaluate("document.getElementById('account-reset-request-form').requestSubmit()");
-  assert.match(await evaluate("document.getElementById('account-feedback').textContent"), /No email was sent/);
+  assert.match(await evaluate("document.getElementById('account-feedback').textContent"), /No password-reset email was sent/);
 
   // The hosted preview has no backend or persistence. Reloading loses the test account.
   await cdp("Page.navigate", { url: previewUrl });
