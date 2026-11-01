@@ -292,6 +292,8 @@
   border-radius:8px;background:rgba(4,12,23,.8);color:#f2f5fb;font:inherit;font-size:12px;
 }
 .account-session-manager input:focus { outline:2px solid rgba(255,215,0,.55);outline-offset:2px; }
+.account-session-manager .account-password-control input { padding-right:68px; }
+.account-session-manager .account-password-toggle { top:50%;transform:translateY(-50%);margin-top:0; }
 .account-session-manager button { margin-top:9px; }
 .account-dashboard-actions { display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(153,178,213,.18); }
 .account-dashboard-actions p { margin:0;color:#74859d;font-size:10px;line-height:1.55; }
