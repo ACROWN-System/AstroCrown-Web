@@ -468,8 +468,7 @@ class AccountApplication:
                 return None, None
             return row, int(row["expires_at"])
 
-    @staticmethod
-    def account_summary(account: sqlite3.Row, expires_at: int | None) -> dict:
+    def account_summary(self, account: sqlite3.Row, expires_at: int | None) -> dict:
         role_assigned = account["role"] == "admin"
         wallet_address = account["session_admin_wallet_address"]
         wallet_step_up_expires = int(account["session_admin_expires_at"] or 0)
@@ -1092,7 +1091,8 @@ class AccountApplication:
                     "admin": False,
                     "adminWalletAddress": None,
                     "adminSessionExpiresAt": None,
-                    "passwordResetAvailable": False,
+                    "emailVerificationDeliveryAvailable": self.email_delivery_available,
+                    "passwordResetAvailable": self.email_delivery_available,
                     "activeSessionCount": 0,
                 }, None
             return 200, self.account_summary(account, expires), None
@@ -1250,9 +1250,23 @@ class AccountApplication:
             if account is None:
                 raise ApiError(500, "The local account session could not be initialized.")
             result = self.account_summary(account, expires)
-            result["message"] = (
-                "Development test account created. Email is not verified and no email or newsletter message was sent."
+            email_sent = (
+                self.send_verification_email(account_id, email)
+                if self.email_delivery_available else False
             )
+            result["emailVerificationEmailSent"] = email_sent
+            if email_sent:
+                result["message"] = (
+                    "Development test account created. A verification email was submitted to the configured mail transport."
+                )
+            elif self.email_delivery_available:
+                result["message"] = (
+                    "Development test account created, but the verification email could not be submitted. No email was sent."
+                )
+            else:
+                result["message"] = (
+                    "Development test account created. Email is not verified and no email or newsletter message was sent."
+                )
             return 201, result, self.cookie_header(token)
 
         if path == "/api/account/login":
@@ -1278,6 +1292,49 @@ class AccountApplication:
                 raise ApiError(500, "The local account session could not be initialized.")
             return 200, self.account_summary(account, expires), self.cookie_header(token)
 
+
+        if path == "/api/account/verification/resend":
+            account, _expires, _token = self.require_account_session(handler)
+            if payload:
+                raise ApiError(400, "No additional fields are accepted for verification resend.")
+            if bool(account["email_verified"]):
+                return 200, {
+                    "emailVerified": True,
+                    "emailSent": False,
+                    "message": "Your email address is already verified.",
+                }, None
+            if not self.auth_rate_allowed("verification-resend", account["account_id"], limit=3, window=3600):
+                raise ApiError(429, "Too many verification-email requests. Try again later.")
+            if not self.email_delivery_available:
+                return 200, {
+                    "emailVerified": False,
+                    "emailSent": False,
+                    "message": "Email delivery is not configured. No verification email was sent.",
+                }, None
+            sent = self.send_verification_email(account["account_id"], account["email"] or account["username"])
+            return 200, {
+                "emailVerified": False,
+                "emailSent": sent,
+                "message": (
+                    "A verification email was submitted to the configured mail transport."
+                    if sent else "The verification email could not be submitted. No email was sent."
+                ),
+            }, None
+
+        if path == "/api/account/email/verify":
+            if set(payload) != {"token"}:
+                raise ApiError(400, "Only the verification token is accepted.")
+            return 200, self.complete_email_verification(payload.get("token")), None
+
+        if path == "/api/account/password/reset/complete":
+            if set(payload) != {"token", "newPassword", "newPasswordConfirmation"}:
+                raise ApiError(400, "The password-reset request is incomplete.")
+            result = self.complete_password_reset(
+                payload.get("token"),
+                payload.get("newPassword"),
+                payload.get("newPasswordConfirmation"),
+            )
+            return 200, result, self.clear_cookie_header()
 
         if path == "/api/cases/create":
             subject = self.case_rate_subject(handler)
@@ -1410,10 +1467,43 @@ class AccountApplication:
             return 200, {"authenticated": False, "message": "You have signed out."}, self.clear_cookie_header()
 
         if path == "/api/account/password-reset/request":
-            raise ApiError(
-                501,
-                "Email-based password reset is not enabled in this development prototype. No email was sent.",
-            )
+            email = normalize_email(payload.get("email"))
+            if set(payload) != {"email"}:
+                raise ApiError(400, "Only the account email address is accepted for password reset.")
+            if not self.auth_rate_allowed("password-reset-request", email, limit=3, window=3600):
+                raise ApiError(429, "Too many password-reset requests. Try again later.")
+            if not self.email_delivery_available:
+                return 200, {
+                    "emailSent": False,
+                    "message": "Email delivery is not configured. No password-reset email was sent.",
+                }, None
+            with self.connect() as db:
+                account = db.execute(
+                    "SELECT account_id, email FROM accounts WHERE email = ? COLLATE NOCASE",
+                    (email,),
+                ).fetchone()
+            if account is not None:
+                raw_token, _expires = self.issue_email_action_token(
+                    account["account_id"], "password_reset", 30 * 60
+                )
+                sent = self.deliver_account_action_email(
+                    recipient=account["email"],
+                    action="reset",
+                    raw_token=raw_token,
+                )
+                if not sent:
+                    self.invalidate_email_action_token(raw_token)
+            else:
+                sent = False
+            # Keep the response identical for existing and unknown email addresses.
+            return 200, {
+                "emailSent": bool(sent),
+                "message": (
+                    "If an account exists for this address, a password-reset email has been submitted."
+                    if sent or account is None
+                    else "If an account exists for this address, a password-reset email will be submitted."
+                ),
+            }, None
 
         raise ApiError(404, "That local account action is not available.")
 
@@ -1602,6 +1692,8 @@ def make_handler(application: AccountApplication):
 def create_server(application: AccountApplication, port: int = 8766) -> ThreadingHTTPServer:
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(application))
     server.daemon_threads = True
+    if application.email_sender is not None and not application.email_public_base_url:
+        application.email_public_base_url = f"http://localhost:{server.server_port}"
     application.configure_wallet_auth(server.server_port)
     return server
 
