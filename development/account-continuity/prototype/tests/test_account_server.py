@@ -226,6 +226,24 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(data["email"], "test-user@example.test")
         self.assertFalse(data["admin"])
 
+    def test_account_email_delivery_enforces_persistent_budget_before_submission(self):
+        sender = self.configure_fake_email()
+        self.app.email_send_budget.daily_limit = 1
+        first = self.app.deliver_account_action_email(
+            recipient="first-recipient@example.test", action="verify", raw_token="a" * 40
+        )
+        second = self.app.deliver_account_action_email(
+            recipient="second-recipient@example.test", action="verify", raw_token="b" * 40
+        )
+        self.assertTrue(first)
+        self.assertFalse(second, "the account email budget must block submission before contacting the sender")
+        self.assertEqual(len(sender.messages), 1)
+        usage = self.app.email_send_budget.usage()
+        self.assertEqual(usage["daily_count"], 1)
+        self.assertEqual(usage["daily_limit"], 1)
+        self.assertEqual(usage["monthly_count"], 1)
+        self.assertEqual(usage["monthly_limit"], 3000)
+
     def test_email_verification_uses_hashed_single_use_tokens_and_resend_invalidates_old_link(self):
         sender = self.configure_fake_email()
         email = "verify-email@example.test"
