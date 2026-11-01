@@ -669,9 +669,20 @@ class AccountApplication:
         token_hash = hash_session_token(raw_token)
         if not self.auth_rate_allowed("password-reset-complete", token_hash, limit=5, window=3600):
             raise ApiError(429, "Too many password-reset attempts. Request a new reset link later.")
+        now = int(time.time())
+        # Reject arbitrary or expired tokens before performing the expensive
+        # password KDF. The token is checked again under the write lock below.
+        with self.connect() as db:
+            candidate = db.execute(
+                """SELECT account_id FROM account_email_tokens
+                   WHERE token_hash = ? AND token_type = 'password_reset'
+                     AND used_at IS NULL AND expires_at > ?""",
+                (token_hash, now),
+            ).fetchone()
+        if candidate is None:
+            raise ApiError(400, "This password-reset link is invalid, expired or already used.")
         salt = secrets.token_bytes(16)
         encoded = self.hash_password(new_password, salt)
-        now = int(time.time())
         with self.connect() as db:
             db.execute("BEGIN IMMEDIATE")
             row = db.execute(
@@ -1349,11 +1360,21 @@ class AccountApplication:
         if path == "/api/account/email/verify":
             if set(payload) != {"token"}:
                 raise ApiError(400, "Only the verification token is accepted.")
+            if not self.auth_rate_allowed(
+                "email-verification-consume-ip", self.case_rate_subject(handler),
+                limit=30, window=3600,
+            ):
+                raise ApiError(429, "Too many email-verification attempts. Please request a new link later.")
             return 200, self.complete_email_verification(payload.get("token")), None
 
         if path == "/api/account/password/reset/complete":
             if set(payload) != {"token", "newPassword", "newPasswordConfirmation"}:
                 raise ApiError(400, "The password-reset request is incomplete.")
+            if not self.auth_rate_allowed(
+                "password-reset-complete-ip", self.case_rate_subject(handler),
+                limit=10, window=3600,
+            ):
+                raise ApiError(429, "Too many password-reset attempts from this connection. Please try again later.")
             result = self.complete_password_reset(
                 payload.get("token"),
                 payload.get("newPassword"),
@@ -1495,6 +1516,11 @@ class AccountApplication:
             email = normalize_email(payload.get("email"))
             if set(payload) != {"email"}:
                 raise ApiError(400, "Only the account email address is accepted for password reset.")
+            if not self.auth_rate_allowed(
+                "password-reset-request-ip", self.case_rate_subject(handler),
+                limit=15, window=3600,
+            ):
+                raise ApiError(429, "Too many password-reset requests from this connection. Please try again later.")
             if not self.auth_rate_allowed("password-reset-request", email, limit=3, window=3600):
                 raise ApiError(429, "Too many password-reset requests. Try again later.")
             if not self.email_delivery_available:
