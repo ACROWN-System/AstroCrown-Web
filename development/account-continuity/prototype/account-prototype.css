@@ -120,6 +120,17 @@
 }
 .account-field input:focus { border-color:rgba(255,215,0,.68); outline:0; background:rgba(3,9,17,.62); box-shadow:0 0 0 3px rgba(255,215,0,.09); }
 .account-field input::placeholder { color:#6f8199; }
+.account-field-label { color:#d9e3f2;font-size:11px;font-weight:740; }
+.account-password-control { position:relative;display:flex;align-items:center;min-width:0; }
+.account-password-control input { width:100%;min-width:0;padding-right:68px; }
+.account-password-control input:focus-visible { outline:2px solid rgba(255,215,0,.55);outline-offset:1px; }
+.account-password-toggle {
+  position:absolute;right:7px;min-height:28px;padding:4px 8px;border:0;border-radius:6px;
+  background:rgba(255,255,255,.045);color:#ffe48a;font-size:10px;font-weight:800;cursor:pointer;
+}
+.account-password-toggle:hover { background:rgba(255,215,0,.10);color:#fff3bc; }
+.account-password-toggle:focus-visible { outline:2px solid rgba(255,215,0,.72);outline-offset:2px; }
+.account-password-toggle:disabled { cursor:not-allowed;opacity:.55; }
 .account-field small { color:#8494aa; font-size:10px; font-weight:500; line-height:1.5; }
 .account-form-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-top:3px; }
 .account-primary, .account-secondary, .account-text-button {
