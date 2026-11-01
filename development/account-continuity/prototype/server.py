@@ -677,8 +677,10 @@ class AccountApplication:
                 "DELETE FROM sessions WHERE account_id = ?",
                 (row["account_id"],),
             )
+            # A successful password reset proves control of the mailbox and
+            # invalidates every outstanding account-email action link.
             db.execute(
-                "DELETE FROM account_email_tokens WHERE account_id = ? AND token_type = 'password_reset'",
+                "DELETE FROM account_email_tokens WHERE account_id = ?",
                 (row["account_id"],),
             )
             db.execute(
