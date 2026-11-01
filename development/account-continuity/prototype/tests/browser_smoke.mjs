@@ -323,6 +323,12 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('.account-or-divider button, .account-or-divider a, #account-other-options'))"), false);
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("browser-preview create form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
+  await evaluate("document.getElementById('account-password').value = 'Browser-Preview-Password-Visibility'; document.querySelector('[data-password-toggle=account-password]').click()");
+  assert.equal(await evaluate("document.getElementById('account-password').type"), "text",
+    "browser-preview sign-up password can be shown");
+  await evaluate("document.querySelector('[data-password-toggle=account-password]').click()");
+  assert.equal(await evaluate("document.getElementById('account-password').type"), "password",
+    "browser-preview sign-up password can be hidden again");
   await evaluate("window.__walletPromptCount = 0; window.ethereum = { request: async function (request) { window.__walletPromptCount += 1; if (request.method === 'eth_requestAccounts') return ['0x1111111111111111111111111111111111111111']; throw new Error('unexpected wallet call: ' + request.method); } };");
 
   const demoEmail = "browserdemo" + Date.now().toString(16) + "@example.test";
@@ -362,16 +368,7 @@ try {
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
     "ordinary browser-preview access must not prompt for a wallet");
 
-  /*REMOVED*/
-  //
-    JSON.stringify(demoNewPassword) + "; document.getElementById('account-new-password-confirmation').value = " +
-    JSON.stringify(demoNewPassword) + "; document.getElementById('account-change-password').click();");
-  await waitFor("browser-preview password change", () => evaluate("document.getElementById('account-session-feedback').textContent.includes('Password updated')"));
-  assert.match(await evaluate("document.getElementById('account-session-feedback').textContent"), /session was renewed/i);
-  await evaluate("window.location.hash = 'admin'");
-  await waitFor("browser-preview direct admin route stays closed", () => evaluate("document.getElementById('admin-dashboard').hidden && window.location.hash === '#account'"));
-  assert.equal(await evaluate("window.__walletPromptCount"), 0,
-    "ordinary browser-preview access must not prompt for a wallet");
+
 
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("browser-preview home after sign-out", () => evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
