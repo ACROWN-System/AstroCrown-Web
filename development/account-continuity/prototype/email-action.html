@@ -25,7 +25,10 @@
       border:0 !important;border-radius:6px !important;background:rgba(255,255,255,.07) !important;
       color:#ffe48a !important;font-size:11px; }
     .email-action-password-toggle:focus-visible { outline:2px solid #ffd700;outline-offset:2px; }
-    .email-action-panel form button { width:100%; margin-top:18px; }
+    .email-action-panel .email-action-password-control .email-action-password-toggle {
+      position:absolute;right:7px;width:auto;margin-top:0;padding:5px 9px;
+    }
+    .email-action-panel form > button { width:100%; margin-top:18px; }
     .email-action-panel a { color:#ffe48a; }
     .email-action-status { min-height:25px; margin:12px 0; }
     .email-action-status[data-kind="error"] { color:#ffb5b5; }
