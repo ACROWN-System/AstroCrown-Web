@@ -203,14 +203,14 @@ class EmailSendBudget:
     """Persistent, fail-closed quota guard for the Mailjet Free account-mail allocation.
 
     Account-triggered messages are capped at 100 in any rolling 24 hours and
-    3,000 in any rolling 30 days. This deliberately keeps at least half of the
+    3,000 in any rolling 31 days. This deliberately keeps at least half of the
     published 200/day and 6,000/month free allowance outside this subsystem.
     Each attempted submission reserves one slot; failed/ambiguous attempts are
     not refunded because the relay may have accepted a message before a timeout.
     """
 
     DAILY_WINDOW_SECONDS = 24 * 60 * 60
-    MONTH_WINDOW_SECONDS = 30 * 24 * 60 * 60
+    MONTH_WINDOW_SECONDS = 31 * 24 * 60 * 60
 
     def __init__(
         self,
