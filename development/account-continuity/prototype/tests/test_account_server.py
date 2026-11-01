@@ -240,6 +240,15 @@ class AccountServerTests(unittest.TestCase):
 
         first_token = self.extract_email_token(sender.messages[0])
         first_hash = hashlib.sha256(first_token.encode("utf-8")).hexdigest()
+        status, email_action_page, _ = self.request(
+            "/account-continuity/prototype/email-action.html?type=verify&token=" + first_token
+        )
+        self.assertEqual(status, 200)
+        self.assertIn('id="email-action-verify-form"', email_action_page["body"])
+        status, pre_verification_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertFalse(pre_verification_status["emailVerified"],
+                         "opening the email link must not verify the address automatically")
         with self.app.connect() as db:
             stored = db.execute(
                 "SELECT token_hash, token_type, used_at FROM account_email_tokens"
