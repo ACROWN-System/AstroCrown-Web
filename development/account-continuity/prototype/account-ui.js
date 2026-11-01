@@ -206,7 +206,8 @@
       termsAccepted: Boolean(account && account.termsAccepted),
       termsVersion: account ? account.termsVersion : termsVersion,
       termsAcceptedAt: account ? account.termsAcceptedAt : null,
-      emailVerified: false,
+      emailVerified: Boolean(account && account.emailVerified),
+      emailVerificationDeliveryAvailable: false,
       passwordResetAvailable: false,
       sessionExpiresAt: current ? new Date(browserPreviewState.sessionExpiresAt).toISOString() : null,
       activeSessionCount: current ? 1 : 0,
@@ -272,7 +273,8 @@
       previewStartSession(email);
       return Object.assign(previewSummary(account), {
         authenticated: true,
-        message: "Development test account created. Your email is not verified, and no emails or newsletter messages have been sent."
+        emailVerificationEmailSent: false,
+        message: "Development test account created. Your email is not verified, and no verification or newsletter emails have been sent."
       });
     }
 
@@ -293,6 +295,22 @@
       delete browserPreviewState.failedLogins[loginEmail];
       previewStartSession(loginEmail);
       return previewSummary(loginAccount);
+    }
+
+    if (path === "/api/account/verification/resend") {
+      if (!previewCurrentAccount()) throw new Error("Sign in before requesting email verification.");
+      return {
+        emailVerified: false,
+        emailSent: false,
+        message: "Email delivery is not configured in this browser preview. No verification email was sent."
+      };
+    }
+
+    if (path === "/api/account/password-reset/request") {
+      return {
+        requestAccepted: true,
+        message: "Email delivery is not configured in this browser preview. No password-reset email was sent."
+      };
     }
 
     if (path === "/api/account/password/change") {
@@ -469,7 +487,9 @@
     title.textContent = created ? "Account created" : "Welcome back";
     var heading = created ? "Your account is ready for this test" : "You're signed in";
     var message = created
-      ? "A development test account was created. Email ownership has not been verified and no email or newsletter message was sent."
+      ? (accountState.emailVerificationEmailSent === true
+          ? "A development test account was created. A verification email was submitted to the configured mail transport; follow its single-use link to verify your address."
+          : "A development test account was created. Email ownership has not been verified and no verification or newsletter message was sent.")
       : "You are signed in to the development test account. This does not grant production access or administrator privileges.";
     var persistenceNote = browserPreviewMode
       ? "You can close this window without signing out. This browser demo keeps the test state only in this page's memory and loses it on reload."
@@ -491,8 +511,13 @@
       ? escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(unverified test value; no reward is applied)</span>'
       : 'Not supplied';
     var verification = accountState.emailVerified
-      ? '<span class="account-dashboard-status">Verified by prototype state</span>'
+      ? '<span class="account-dashboard-status">Email verified</span>'
       : '<span class="account-dashboard-status">Email not verified</span>';
+    var verificationAction = !accountState.emailVerified
+      ? (accountState.emailVerificationDeliveryAvailable === true
+          ? '<button class="account-secondary" type="button" id="account-resend-verification">Resend verification email</button>'
+          : '<p class="account-muted-inline">Email delivery is not configured; no verification email has been sent.</p>')
+      : '<p class="account-session-count">Your email address is verified.</p>';
     var newsletter = accountState.newsletterOptIn
       ? "Opted in for this test. No newsletter is sent."
       : "Not opted in.";
@@ -561,7 +586,7 @@
         '</section>';
     }
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, production profile editing and image uploads are not implemented here. Local session controls can revoke other active sessions after password confirmation; production session history and device identification remain unimplemented. Administrator role and wallet step-up are local-prototype only. Use invented details only in the browser demo.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification and password reset use single-use links only when a secure mail transport is configured; production hosting, account recovery, profile editing and image uploads remain unimplemented. Local session controls can revoke other active sessions after password confirmation; production session/device history remains unimplemented. Administrator role and wallet step-up are local-prototype only. Use invented details only in the browser demo.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
@@ -571,16 +596,19 @@
       '<div class="account-dashboard-grid">' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
         '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification +
+          verificationAction +
           '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
           sessionManagement +
           passwordManagement +
           '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
-          '<p>Password-reset email is unavailable. No reset email has been sent. Real accounts must not be used with this prototype.</p>' +
+          (accountState.passwordResetAvailable === true
+            ? '<p>Password reset is available through a single-use email link.</p>'
+            : '<p>Email delivery is not configured. No password-reset email has been sent.</p>') +
           '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         '<section class="account-dashboard-card"><h2>Wallets</h2><p class="account-dashboard-value">No wallet connected</p><p>A crypto wallet is not required for ordinary account access. A wallet must be requested only by a feature that needs proof of wallet control.</p></section>' +
         '<section class="account-dashboard-card"><h2>Preferences</h2><p class="account-dashboard-value">Crypto-news email: ' + escapeHtml(newsletter) + '</p><p>The preference is only recorded for this test; no mailing list or email provider is connected.</p></section>' +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Password recovery, email verification, passkeys and recovery management are not implemented. Do not rely on this test account for real access.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Single-use email verification and password-reset links are available only when a secure email transport is configured. Passkeys, recovery alternatives and production account recovery are not implemented. Do not use this prototype for real assets.</p></section>' +
         '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
         adminCard +
       '</div>' +
@@ -742,9 +770,13 @@
     content.innerHTML =
       '<div class="account-account-card"><p class="account-account-status">Signed in · development test account</p>' +
         '<p class="account-account-name">' + email + '</p>' +
-        '<p class="account-status-copy">Email verification is not enabled in this prototype. This account has no production privileges or real asset access.</p></div>' +
+        '<p class="account-status-copy">' + (accountState.emailVerified ? 'Email address verified.' : 'Email address not verified. This account has no production privileges or real asset access.') + '</p></div>' +
       referral +
-      '<div class="account-recovery-warning"><strong>Password reset by email is not available yet.</strong><br>No reset email has been sent or will be sent by this prototype. Production email verification and password-reset delivery must be implemented and reviewed before real account use.</div>' +
+      '<div class="account-recovery-warning"><strong>Account recovery</strong><br>' +
+        (accountState.passwordResetAvailable === true
+          ? 'Password reset is available through a single-use email link.'
+          : 'Email delivery is not configured. No password-reset email was sent.') +
+        '</div>' +
       '<div class="account-recovery-ok"><strong>Crypto-news preference</strong><br>' + escapeHtml(newsletter) + '</div>' +
       '<div class="account-actions-stack"><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>' +
       '<p class="account-provider-note">This is a development-only interaction test, not production authentication.</p>';
@@ -753,8 +785,10 @@
   function renderRecover() {
     title.textContent = "Account recovery";
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Enter the email address associated with your account. A production service would send a time-limited password-reset link to that inbox.</p>' +
-      '<div class="account-recovery-warning"><strong>Email reset is not enabled in this prototype.</strong><br>No email will be sent, and this demo cannot reset the password. We will not ask you to memorise or enter a one-time recovery code.</div>' +
+      '<p class="account-dialog-description">Enter the email address associated with your account. When secure email delivery is configured, a single-use password-reset link will be sent if an account matches.</p>' +
+      (accountState && accountState.passwordResetAvailable === true
+        ? '<div class="account-recovery-ok"><strong>Reset links expire after 30 minutes and can be used once.</strong><br>For privacy, the response will not reveal whether an account exists.</div>'
+        : '<div class="account-recovery-warning"><strong>Email delivery is not configured.</strong><br>No password-reset email will be sent by this development environment.</div>') +
       '<form id="account-reset-request-form" class="account-form" autocomplete="on">' +
         '<label class="account-field" for="account-email">Email' +
           '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
@@ -840,7 +874,17 @@
     if (busy) return;
 
     if (form.id === "account-reset-request-form") {
-      showFeedback("No email was sent. Email-based password reset is not connected to this development prototype.", "error");
+      setBusy(true);
+      try {
+        var resetRequest = await requestJson("/api/account/password-reset/request", {
+          email: formValue(form, "email")
+        });
+        showFeedback(resetRequest.message || "If an account exists for this address, it may receive a reset link.", "success");
+      } catch (error) {
+        showFeedback(error.message || "The reset request could not be processed.", "error");
+      } finally {
+        setBusy(false);
+      }
       return;
     }
 
@@ -922,6 +966,22 @@
     }
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
+      return;
+    }
+    if (button.id === "account-resend-verification") {
+      setBusy(true);
+      try {
+        var verificationResult = await requestJson("/api/account/verification/resend", {});
+        accountState = await requestJson("/api/account/status");
+        renderAccountDashboard();
+        var feedback = document.getElementById("account-session-feedback");
+        if (feedback) feedback.textContent = verificationResult.message || "Verification status updated.";
+      } catch (error) {
+        var verificationFeedback = document.getElementById("account-session-feedback");
+        if (verificationFeedback) verificationFeedback.textContent = error.message || "The verification email could not be requested.";
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "account-change-password") {
