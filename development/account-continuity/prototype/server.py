@@ -852,6 +852,7 @@ class AccountApplication:
             if updated_account is None:
                 raise ApiError(500, "The renewed account session could not be initialized.")
             result = self.account_summary(updated_account, updated_expires)
+            result["revokedSessions"] = max(0, int(existing_sessions) - 1)
             result["message"] = "Password updated. Other sessions were signed out and this session was renewed."
             return 200, result, self.cookie_header(new_token)
 
