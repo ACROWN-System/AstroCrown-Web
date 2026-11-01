@@ -213,6 +213,14 @@ class AccountApplication:
                     admin_expires_at INTEGER
                 );
                 CREATE INDEX IF NOT EXISTS sessions_account_idx ON sessions(account_id);
+                CREATE TABLE IF NOT EXISTS account_auth_rate_events (
+                    event_id TEXT PRIMARY KEY,
+                    action TEXT NOT NULL,
+                    subject_hash TEXT NOT NULL,
+                    attempted_at INTEGER NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS account_auth_rate_events_lookup_idx
+                    ON account_auth_rate_events(action, subject_hash, attempted_at);
                 CREATE TABLE IF NOT EXISTS account_security_audit (
                     audit_id TEXT PRIMARY KEY,
                     account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
@@ -303,6 +311,56 @@ class AccountApplication:
             return False
         candidate = self.hash_password(password, bytes(account["password_salt"]))
         return hmac.compare_digest(candidate, bytes(account["password_hash"]))
+
+    @staticmethod
+    def auth_rate_subject_hash(subject: str) -> str:
+        return hashlib.sha256(subject.encode("utf-8")).hexdigest()
+
+    def auth_rate_allowed(
+        self, action: str, subject: str, *, limit: int = 10, window: int = 60
+    ) -> bool:
+        """Persist sensitive account-action throttles across process restarts."""
+        if (
+            not isinstance(action, str) or not action or len(action) > 80
+            or not isinstance(subject, str) or not subject or len(subject) > 512
+            or isinstance(limit, bool) or not isinstance(limit, int) or limit < 1
+            or isinstance(window, bool) or not isinstance(window, int) or window < 1
+        ):
+            raise ValueError("Invalid account authentication rate-limit configuration.")
+        now = int(time.time())
+        subject_hash = self.auth_rate_subject_hash(subject)
+        cutoff = now - window
+        with self.connect() as db:
+            # Serialize count-and-insert so parallel requests cannot all pass
+            # the same remaining allowance. Email/account identifiers are never stored.
+            db.execute("BEGIN IMMEDIATE")
+            db.execute(
+                "DELETE FROM account_auth_rate_events WHERE attempted_at <= ?",
+                (now - 86400,),
+            )
+            db.execute(
+                "DELETE FROM account_auth_rate_events WHERE action = ? AND subject_hash = ? AND attempted_at <= ?",
+                (action, subject_hash, cutoff),
+            )
+            count = int(db.execute(
+                "SELECT COUNT(*) FROM account_auth_rate_events WHERE action = ? AND subject_hash = ? AND attempted_at > ?",
+                (action, subject_hash, cutoff),
+            ).fetchone()[0])
+            if count >= limit:
+                return False
+            db.execute(
+                "INSERT INTO account_auth_rate_events(event_id, action, subject_hash, attempted_at) VALUES (?, ?, ?, ?)",
+                (str(uuid.uuid4()), action, subject_hash, now),
+            )
+        return True
+
+    def clear_auth_rate_limit(self, action: str, subject: str) -> None:
+        subject_hash = self.auth_rate_subject_hash(subject)
+        with self.connect() as db:
+            db.execute(
+                "DELETE FROM account_auth_rate_events WHERE action = ? AND subject_hash = ?",
+                (action, subject_hash),
+            )
 
     def new_session(self, account_id: str) -> tuple[str, int]:
         token = secrets.token_urlsafe(32)
@@ -443,7 +501,7 @@ class AccountApplication:
                 503,
                 "Local wallet verification dependencies are not installed; administrator wallet access is disabled.",
             )
-        if not self.rate_allowed("admin-wallet-challenge", account["account_id"], limit=5, window=60):
+        if not self.auth_rate_allowed("admin-wallet-challenge", account["account_id"], limit=5, window=60):
             raise ApiError(429, "Too many administrator wallet challenges. Wait before trying again.")
         try:
             address = parse_wallet_address(payload["address"])
@@ -599,7 +657,7 @@ class AccountApplication:
             raise ApiError(403, "Re-verify an enrolled administrator wallet before adding another wallet.")
         if self.wallet_auth_service is None or WalletAuthService is None:
             raise ApiError(503, "Local wallet verification dependencies are not installed; wallet enrollment is disabled.")
-        if not self.rate_allowed("admin-wallet-enrollment-challenge", account["account_id"], limit=3, window=60):
+        if not self.auth_rate_allowed("admin-wallet-enrollment-challenge", account["account_id"], limit=3, window=60):
             raise ApiError(429, "Too many wallet-enrollment attempts. Wait before trying again.")
         try:
             address = parse_wallet_address(payload["address"])
@@ -844,7 +902,7 @@ class AccountApplication:
                 raise ApiError(400, "The new password confirmation does not match.")
             if new_password == current_password:
                 raise ApiError(400, "Choose a new password that is different from your current password.")
-            if not self.rate_allowed("password-change", account["account_id"], limit=5, window=300):
+            if not self.auth_rate_allowed("password-change", account["account_id"], limit=5, window=300):
                 raise ApiError(429, "Too many password-change attempts. Please wait before trying again.")
             if not self.verify_password(account, current_password):
                 raise ApiError(401, "Your current password did not match. Your password was not changed.")
@@ -909,7 +967,7 @@ class AccountApplication:
             password = payload.get("password")
             if not isinstance(password, str) or not password or len(password) > PASSWORD_MAX_LENGTH:
                 raise ApiError(400, "Enter your current password to confirm this action.")
-            if not self.rate_allowed("session-revoke-others", account["account_id"], limit=5, window=300):
+            if not self.auth_rate_allowed("session-revoke-others", account["account_id"], limit=5, window=300):
                 raise ApiError(429, "Too many session-management attempts. Please wait before trying again.")
             if not self.verify_password(account, password):
                 raise ApiError(401, "Your current password did not match. No sessions were changed.")
@@ -944,7 +1002,7 @@ class AccountApplication:
             newsletter_opt_in = payload.get("newsletterOptIn", False)
             if not isinstance(newsletter_opt_in, bool):
                 raise ApiError(400, "The optional email-news preference must be true or false.")
-            if not self.rate_allowed("register", email, limit=5):
+            if not self.auth_rate_allowed("register", email, limit=5):
                 raise ApiError(429, "Too many account-creation attempts for this email. Try again shortly.")
             salt = secrets.token_bytes(16)
             encoded = self.hash_password(password, salt)
@@ -982,13 +1040,13 @@ class AccountApplication:
             password = payload.get("password")
             if not isinstance(password, str) or len(password) > PASSWORD_MAX_LENGTH:
                 raise ApiError(400, "Enter your email address and password.")
-            if not self.rate_allowed("login", email, limit=10):
+            if not self.auth_rate_allowed("login", email, limit=10):
                 raise ApiError(429, "Too many sign-in attempts. Wait a minute before trying again.")
             with self.connect() as db:
                 account = db.execute("SELECT * FROM accounts WHERE email = ? COLLATE NOCASE", (email,)).fetchone()
             if not self.verify_password(account, password):
                 raise ApiError(401, "Email address or password did not match.")
-            self.rate_events.pop(("login", email), None)
+            self.clear_auth_rate_limit("login", email)
             issued_session = self.new_session_for_password_auth(account)
             if issued_session is None:
                 # The credential changed after password verification. Do not
