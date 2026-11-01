@@ -150,6 +150,47 @@ try {
     "the one-time token must be removed from the address bar");
   assert.match(await evaluate("document.getElementById('email-action-status').textContent"), /Press Verify email address/,
     "opening the link must not consume the token or verify the address automatically");
+  await evaluate("window.__emailActionRequest = null; window.fetch = async function (path, init) { window.__emailActionRequest = {path:path, body:JSON.parse(init.body)}; return new Response(JSON.stringify({verified:true, message:'Your email address has been verified.'}), {status:200, headers:{'Content-Type':'application/json'}}); };");
+  await evaluate("document.getElementById('email-action-verify-form').requestSubmit()");
+  await waitFor("explicit email verification succeeds in the browser action page", () =>
+    evaluate("document.getElementById('email-action-status').textContent.includes('verified')"));
+  const verificationRequest = await evaluate("window.__emailActionRequest");
+  assert.equal(verificationRequest.path, "/api/account/email/verify");
+  assert.equal(verificationRequest.body.token, "BrowserPreviewVerificationToken-1234567890",
+    "the verification token stays in page memory until the user confirms");
+  assert.equal(await evaluate("document.getElementById('email-action-verify-form').hidden"), true);
+
+  const browserResetToken = "BrowserPreviewResetToken-1234567890";
+  await cdp("Page.navigate", {
+    url: localUrl + "account-continuity/prototype/email-action.html?type=reset&token=" + browserResetToken
+  });
+  await waitFor("password-reset action page loads", () =>
+    evaluate("Boolean(document.getElementById('email-action-reset-form')) && !document.getElementById('email-action-reset-form').hidden"));
+  assert.equal(await evaluate("window.location.search"), "",
+    "password-reset tokens must also be removed from the address bar");
+  await evaluate("window.__emailActionRequest = null; window.fetch = async function (path, init) { window.__emailActionRequest = {path:path, body:JSON.parse(init.body)}; return new Response(JSON.stringify({passwordReset:true, message:'Your password has been reset. Sign in with your new password.'}), {status:200, headers:{'Content-Type':'application/json'}}); };");
+  const browserResetPassword = "AstroCrown-Browser-Reset-Password-2026!";
+  await evaluate("document.getElementById('email-action-new-password').value = " + JSON.stringify(browserResetPassword));
+  await evaluate("document.getElementById('email-action-confirm-password').value = 'Not-the-same-password-2026!'; document.getElementById('email-action-reset-form').requestSubmit()");
+  await waitFor("mismatched reset confirmation is rejected locally", () =>
+    evaluate("document.getElementById('email-action-status').textContent.includes('does not match')"));
+  assert.equal(await evaluate("window.__emailActionRequest"), null,
+    "a mismatched confirmation must not be submitted to the server");
+  await evaluate("document.getElementById('email-action-confirm-password').value = " + JSON.stringify(browserResetPassword) + "; document.querySelector('[data-password-toggle=email-action-new-password]').click()");
+  assert.equal(await evaluate("document.getElementById('email-action-new-password').type"), "text");
+  assert.equal(await evaluate("document.querySelector('[data-password-toggle=email-action-new-password]').getAttribute('aria-pressed')"), "true");
+  await evaluate("document.querySelector('[data-password-toggle=email-action-new-password]').click()");
+  assert.equal(await evaluate("document.getElementById('email-action-new-password').type"), "password");
+  await evaluate("document.getElementById('email-action-reset-form').requestSubmit()");
+  await waitFor("password reset completes in the browser action page", () =>
+    evaluate("document.getElementById('email-action-status').textContent.includes('Sign in with your new password')"));
+  const passwordResetRequest = await evaluate("window.__emailActionRequest");
+  assert.equal(passwordResetRequest.path, "/api/account/password/reset/complete");
+  assert.equal(passwordResetRequest.body.token, browserResetToken);
+  assert.equal(passwordResetRequest.body.newPassword, browserResetPassword);
+  assert.equal(passwordResetRequest.body.newPasswordConfirmation, browserResetPassword);
+  assert.equal(await evaluate("document.getElementById('email-action-reset-form').hidden"), true);
+
   await cdp("Page.navigate", { url: localUrl });
   await waitFor("homepage restored after email-action check", pageReady);
 
