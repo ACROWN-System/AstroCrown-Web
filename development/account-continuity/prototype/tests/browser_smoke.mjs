@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -11,6 +11,7 @@ const prototypeDir = resolve("development/account-continuity/prototype");
 const work = mkdtempSync(join(tmpdir(), "acrown-account-browser-"));
 const [port, debugPort] = await freePorts(2);
 const localUrl = "http://localhost:" + port + "/";
+const databasePath = join(work, "browser-test.sqlite3");
 let server = null;
 let browser = null;
 let socket = null;
@@ -74,7 +75,7 @@ async function pageReady() {
 try {
   const env = { ...process.env, PYTHONDONTWRITEBYTECODE: "1" };
   server = spawn(process.env.PYTHON || "python", [
-    "server.py", "--port", String(port), "--db", join(work, "browser-test.sqlite3")
+    "server.py", "--port", String(port), "--db", databasePath
   ], { cwd: prototypeDir, env, stdio: ["ignore", "ignore", "pipe"] });
   server.stderr.setEncoding("utf8");
   server.stderr.on("data", chunk => { browserOutput = (browserOutput + chunk).slice(-4000); });
@@ -273,19 +274,48 @@ try {
     "a direct admin-route attempt must not prompt for a wallet");
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false);
 
-  // UI-only response fixtures simulate a server-assigned admin role and a valid
-  // short-lived step-up. They do not provision an account or grant real privileges.
-  // First confirm that opening/cancelling the entry prompt makes no wallet request.
-  await evaluate("window.__pretendAdminRole = true; window.__pretendAdminAuthorized = false; window.__nativeFetchForRoleTest = window.fetch.bind(window); window.fetch = async function(input, init) { var url = typeof input === 'string' ? input : (input && input.url) || ''; if (window.__pretendAdminRole && window.__pretendAdminAuthorized === true && url.indexOf('/api/admin/status') >= 0) { return new Response(JSON.stringify({authenticated:true, role:'admin', adminRoleAssigned:true, adminSessionAuthorized:true, admin:true, email:'admin-ui-fixture@example.invalid', avatarId:'shield', adminWalletAddress:'0x1111111111111111111111111111111111111111', adminSessionExpiresAt:'test fixture only'}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } if (window.__pretendAdminRole && window.__pretendAdminAuthorized === true && url.indexOf('/api/admin/wallet-options') >= 0) { return new Response(JSON.stringify({wallets:[{address:'0x1111111111111111111111111111111111111111', chainId:1}]}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } var response = await window.__nativeFetchForRoleTest(input, init); if (window.__pretendAdminRole && url.indexOf('/api/account/status') >= 0) { var payload = await response.clone().json(); if (payload.authenticated === true) { payload.role = 'admin'; payload.adminRoleAssigned = true; payload.adminWalletCount = 1; payload.adminWalletAuthenticated = window.__pretendAdminAuthorized === true; payload.adminSessionAuthorized = window.__pretendAdminAuthorized === true; payload.admin = false; } return new Response(JSON.stringify(payload), {status:response.status, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } return response; }; window.location.hash = 'top';");
-  await waitFor("homepage before simulated admin role view", () => evaluate("document.getElementById('account-dashboard').hidden && window.location.hash === '#top'"));
+  // Provision this same ordinary test account through the shipped owner-only CLI.
+  // This exercises the real SQLite role change rather than inventing an admin API response.
+  const adminWallet = "0x1111111111111111111111111111111111111111";
+  const grantResult = spawnSync(process.env.PYTHON || "python", [
+    join(prototypeDir, "provision_admin.py"),
+    "--db", databasePath,
+    "--actor", "local-browser-smoke-owner",
+    "grant",
+    "--email", email,
+    "--wallet", adminWallet,
+    "--chain-id", "1",
+    "--reason", "Owner-approved local browser smoke admin provisioning",
+    "--confirm", "GRANT LOCAL ADMIN"
+  ], {
+    cwd: resolve("."),
+    encoding: "utf8",
+    timeout: 15000,
+    env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" }
+  });
+  assert.equal(grantResult.error, undefined, "owner provisioning CLI must start: " + String(grantResult.error || ""));
+  assert.equal(grantResult.status, 0,
+    "owner provisioning CLI must succeed. stdout=" + grantResult.stdout + " stderr=" + grantResult.stderr);
+  assert.match(grantResult.stdout, /Development-only administrator provisioning completed\./);
+  assert.match(grantResult.stdout, /A fresh signature from this registered wallet is still required/);
+
+  // A refreshed server status must now identify this existing account as admin.
+  await evaluate("window.location.hash = 'top';");
+  await waitFor("homepage before checking real administrator role", () => evaluate("document.getElementById('account-dashboard').hidden && window.location.hash === '#top'"));
   await evaluate("window.location.hash = 'account'");
-  await waitFor("administrator role card appears for a server-reported admin account", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.querySelector('.account-admin-access-card')) && Boolean(document.getElementById('account-admin-wallet-access'))"));
+  await waitFor("owner-provisioned administrator entry appears from real account status", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.querySelector('.account-admin-access-card')) && Boolean(document.getElementById('account-admin-wallet-access'))"));
+  const provisionedStatus = await evaluate("fetch('/api/account/status').then(function (response) { return response.json(); })");
+  assert.equal(provisionedStatus.role, "admin");
+  assert.equal(provisionedStatus.adminRoleAssigned, true);
+  assert.equal(provisionedStatus.adminWalletCount, 1);
+  assert.equal(provisionedStatus.adminSessionAuthorized, false,
+    "role assignment and wallet enrollment alone must not open the administrator dashboard");
   assert.equal(await evaluate("document.getElementById('account-admin-wallet-access').textContent.trim()"), "Open administrator dashboard");
+  assert.match(await evaluate("document.body.innerText"), /Wallet verification required/);
   await evaluate("document.getElementById('account-admin-wallet-access').click()");
   await waitFor("administrator access confirmation popup", () => evaluate("Boolean(document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open)"));
   assert.match(await evaluate("document.getElementById('admin-access-dialog').innerText"), /administrator role.*server|server.*administrator role/i);
   assert.match(await evaluate("document.getElementById('admin-access-dialog').innerText"), /signature does not authorize a blockchain transaction/i);
-  assert.match(await evaluate("document.getElementById('admin-access-dialog').innerText"), /reuses any still-valid administrator step-up/i);
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
     "opening the administrator popup must not itself request a wallet");
   await evaluate("document.getElementById('admin-access-cancel').click()");
@@ -293,24 +323,56 @@ try {
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
     "cancelling the administrator popup must not request a wallet");
 
-  // The same role-gated entry opens a separate #admin dashboard when the server
-  // fixture reports an already-valid step-up; no wallet signature is simulated.
-  await evaluate("window.__pretendAdminAuthorized = true; document.getElementById('account-admin-wallet-access').click()");
+  // A direct #admin route remains blocked without a wallet signature, even though
+  // the database has assigned the admin role and enrolled its public address.
+  await evaluate("window.location.hash = 'admin'");
+  await waitFor("admin dashboard stays closed before wallet proof", () =>
+    evaluate("document.getElementById('admin-dashboard').hidden && window.location.hash === '#account'"));
+  assert.equal(await evaluate("window.__walletPromptCount"), 0,
+    "direct navigation must not trigger a wallet connection");
+
+  // Mock only a previously verified step-up response to cover the separate admin
+  // dashboard presentation. The role and wallet registry remain real SQLite data.
+  await evaluate("window.__pretendAdminAuthorized = true; window.__nativeFetchForStepUpTest = window.fetch.bind(window); window.fetch = async function(input, init) { var url = typeof input === 'string' ? input : (input && input.url) || ''; if (window.__pretendAdminAuthorized && url.indexOf('/api/admin/status') >= 0) { return new Response(JSON.stringify({authenticated:true, role:'admin', adminRoleAssigned:true, adminSessionAuthorized:true, admin:true, email:" + JSON.stringify(email.toLowerCase()) + ", avatarId:'person', adminWalletAddress:" + JSON.stringify(adminWallet) + ", adminSessionExpiresAt:'test fixture only'}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } if (window.__pretendAdminAuthorized && url.indexOf('/api/admin/wallet-options') >= 0) { return new Response(JSON.stringify({wallets:[{address:" + JSON.stringify(adminWallet) + ", chainId:1}]}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } return window.__nativeFetchForStepUpTest(input, init); };");
+  await evaluate("document.getElementById('account-admin-wallet-access').click()");
   await waitFor("administrator entry confirmation reopens", () => evaluate("Boolean(document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open)"));
   await evaluate("document.getElementById('admin-access-continue').click()");
   await waitFor("same entry opens the separate administrator dashboard", () => evaluate("window.location.hash === '#admin' && document.getElementById('account-dashboard').hidden && !document.getElementById('admin-dashboard').hidden && document.getElementById('admin-dashboard-title').textContent.trim() === 'Administrator dashboard'"));
   assert.equal(await evaluate("document.getElementById('admin-return-account').textContent.trim()"), "Return to your account");
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
-    "the fixture's already-authorized server session must not request a new wallet");
+    "the verified-step-up fixture must not request a second wallet connection");
   await evaluate("document.getElementById('admin-return-account').click()");
   await waitFor("administrator returns to the separate regular account dashboard", () => evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden"));
   assert.equal(await evaluate("document.getElementById('account-admin-wallet-access').textContent.trim()"), "Open administrator dashboard");
 
-  await evaluate("window.__pretendAdminAuthorized = false; window.__pretendAdminRole = false; window.location.hash = 'top';");
-  await waitFor("return to homepage after role-visibility test", () => evaluate("document.getElementById('account-dashboard').hidden && window.location.hash === '#top'"));
+  await evaluate("window.fetch = window.__nativeFetchForStepUpTest; delete window.__nativeFetchForStepUpTest; delete window.__pretendAdminAuthorized;");
+
+  // Revoke through the same owner CLI and prove the UI removes the entry on refresh.
+  const revokeResult = spawnSync(process.env.PYTHON || "python", [
+    join(prototypeDir, "provision_admin.py"),
+    "--db", databasePath,
+    "--actor", "local-browser-smoke-owner",
+    "revoke",
+    "--email", email,
+    "--reason", "Owner-approved local browser smoke admin revocation",
+    "--confirm", "REVOKE LOCAL ADMIN"
+  ], {
+    cwd: resolve("."),
+    encoding: "utf8",
+    timeout: 15000,
+    env: { ...process.env, PYTHONDONTWRITEBYTECODE: "1" }
+  });
+  assert.equal(revokeResult.error, undefined, "owner revocation CLI must start: " + String(revokeResult.error || ""));
+  assert.equal(revokeResult.status, 0,
+    "owner revocation CLI must succeed. stdout=" + revokeResult.stdout + " stderr=" + revokeResult.stderr);
+  await evaluate("window.location.hash = 'top';");
+  await waitFor("homepage before checking revoked administrator role", () => evaluate("document.getElementById('account-dashboard').hidden && window.location.hash === '#top'"));
   await evaluate("window.location.hash = 'account'");
-  await waitFor("revoked role disappears from account dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden && !document.querySelector('.account-admin-access-card')"));
-  await evaluate("window.fetch = window.__nativeFetchForRoleTest; delete window.__nativeFetchForRoleTest; delete window.__pretendAdminRole; delete window.__pretendAdminAuthorized;");
+  await waitFor("revoked administrator entry disappears from real account status", () => evaluate("!document.getElementById('account-dashboard').hidden && !document.querySelector('.account-admin-access-card')"));
+  const revokedStatus = await evaluate("fetch('/api/account/status').then(function (response) { return response.json(); })");
+  assert.equal(revokedStatus.role, "user");
+  assert.equal(revokedStatus.adminRoleAssigned, false);
+  assert.equal(revokedStatus.adminSessionAuthorized, false);
   assert.equal(await evaluate("window.__walletPromptCount"), 0);
 
   const storedAccount = await evaluate("fetch('/api/account/status').then(r => r.json())");
