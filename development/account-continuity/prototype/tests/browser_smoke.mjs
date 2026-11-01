@@ -215,7 +215,7 @@ try {
   assert.equal(await evaluate("document.getElementById('open-account-dialog').classList.contains('is-authenticated')"), true);
   assert.equal(await evaluate("document.getElementById('open-account-dialog').querySelectorAll('span').length"), 0,
     "signed-in header control must become a circular icon without the Account text");
-  assert.match(await evaluate("document.body.innerText"), /no email or newsletter message was sent/i);
+  assert.match(await evaluate("document.body.innerText"), /no verification or newsletter message was sent/i);
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("user account dashboard after signup", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), email.toLowerCase());
