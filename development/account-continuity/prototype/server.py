@@ -316,6 +316,35 @@ class AccountApplication:
             )
         return token, expires
 
+    def new_session_for_password_auth(
+        self, verified_account: sqlite3.Row
+    ) -> tuple[str, int] | None:
+        """Issue a login session only if the verified password is still current."""
+        token = secrets.token_urlsafe(32)
+        now = int(time.time())
+        expires = now + SESSION_LIFETIME_SECONDS
+        with self.connect() as db:
+            # Serialize credential revalidation and session creation against a
+            # concurrent password change so a stale login cannot revive access.
+            db.execute("BEGIN IMMEDIATE")
+            current = db.execute(
+                "SELECT password_salt, password_hash FROM accounts WHERE account_id = ?",
+                (verified_account["account_id"],),
+            ).fetchone()
+            if current is None:
+                return None
+            if not (
+                hmac.compare_digest(bytes(current["password_salt"]), bytes(verified_account["password_salt"]))
+                and hmac.compare_digest(bytes(current["password_hash"]), bytes(verified_account["password_hash"]))
+            ):
+                return None
+            db.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))
+            db.execute(
+                "INSERT INTO sessions(token_hash, account_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+                (hash_session_token(token), verified_account["account_id"], now, expires),
+            )
+        return token, expires
+
     def account_for_session(self, token: str | None) -> tuple[sqlite3.Row | None, int | None]:
         if not token:
             return None, None
@@ -805,7 +834,7 @@ class AccountApplication:
             return 200, summary, None
 
         if path == "/api/account/password/change":
-            account, _expires, _old_token = self.require_account_session(handler)
+            account, _expires, old_token = self.require_account_session(handler)
             current_password = payload.get("currentPassword")
             if not isinstance(current_password, str) or not current_password or len(current_password) > PASSWORD_MAX_LENGTH:
                 raise ApiError(400, "Enter your current password.")
@@ -826,6 +855,25 @@ class AccountApplication:
             now = int(time.time())
             new_expires = now + SESSION_LIFETIME_SECONDS
             with self.connect() as db:
+                # Lock before rechecking the credential and current session.
+                # This prevents concurrent password changes from overwriting
+                # each other through a session that another change invalidated.
+                db.execute("BEGIN IMMEDIATE")
+                current_credentials = db.execute(
+                    "SELECT password_salt, password_hash FROM accounts WHERE account_id = ?",
+                    (account["account_id"],),
+                ).fetchone()
+                if current_credentials is None or not (
+                    hmac.compare_digest(bytes(current_credentials["password_salt"]), bytes(account["password_salt"]))
+                    and hmac.compare_digest(bytes(current_credentials["password_hash"]), bytes(account["password_hash"]))
+                ):
+                    raise ApiError(401, "The account password changed. Sign in again before changing it.")
+                current_session = db.execute(
+                    "SELECT 1 FROM sessions WHERE account_id = ? AND token_hash = ? AND expires_at > ?",
+                    (account["account_id"], hash_session_token(old_token), now),
+                ).fetchone()
+                if current_session is None:
+                    raise ApiError(401, "Your account session is no longer valid. Sign in again.")
                 existing_sessions = db.execute(
                     "SELECT COUNT(*) FROM sessions WHERE account_id = ? AND expires_at > ?",
                     (account["account_id"], now),
@@ -941,7 +989,12 @@ class AccountApplication:
             if not self.verify_password(account, password):
                 raise ApiError(401, "Email address or password did not match.")
             self.rate_events.pop(("login", email), None)
-            token, expires = self.new_session(account["account_id"])
+            issued_session = self.new_session_for_password_auth(account)
+            if issued_session is None:
+                # The credential changed after password verification. Do not
+                # issue a session based on a stale password snapshot.
+                raise ApiError(401, "Email address or password did not match.")
+            token, expires = issued_session
             account, expires = self.account_for_session(token)
             if account is None:
                 raise ApiError(500, "The local account session could not be initialized.")
