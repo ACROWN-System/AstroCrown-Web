@@ -1497,12 +1497,8 @@ class AccountApplication:
                 sent = False
             # Keep the response identical for existing and unknown email addresses.
             return 200, {
-                "emailSent": bool(sent),
-                "message": (
-                    "If an account exists for this address, a password-reset email has been submitted."
-                    if sent or account is None
-                    else "If an account exists for this address, a password-reset email will be submitted."
-                ),
+                "requestAccepted": True,
+                "message": "If an account exists for this address, and email delivery is available, it will receive a password-reset link.",
             }, None
 
         raise ApiError(404, "That local account action is not available.")
@@ -1581,6 +1577,12 @@ def make_handler(application: AccountApplication):
                 ),
                 "/account-continuity/prototype/security-assurance.html": (
                     PROTOTYPE_DIR / "security-assurance.html", "text/html; charset=utf-8"
+                ),
+                "/account-continuity/prototype/email-action.html": (
+                    PROTOTYPE_DIR / "email-action.html", "text/html; charset=utf-8"
+                ),
+                "/account-continuity/prototype/email-action.js": (
+                    PROTOTYPE_DIR / "email-action.js", "text/javascript; charset=utf-8"
                 ),
                 "/account-continuity/prototype/cases.html": (
                     PROTOTYPE_DIR / "cases.html", "text/html; charset=utf-8"
@@ -1716,7 +1718,12 @@ def main(argv: list[str] | None = None) -> int:
     print("Open exactly: http://localhost:" + str(args.port) + "/")
     print("Bound to 127.0.0.1 only. No external account provider or wallet is used.")
     print("Local database: " + str(application.database_path))
-    print("No email verification, password-reset delivery or newsletter delivery is configured.")
+    print(
+        "Account email delivery: configured SMTP transport available."
+        if application.email_delivery_available
+        else "Account email delivery: not configured; verification and password-reset messages will not be sent."
+    )
+    print("Crypto-news newsletter delivery is not configured.")
     print("Do not use real credentials, production accounts or wallet secrets.")
     print("Press Ctrl+C to stop.")
     try:
