@@ -53,7 +53,7 @@ class SMTPEmailSenderTests(unittest.TestCase):
                 SMTPEmailSender.from_environment()
 
     def test_sender_and_public_url_inputs_are_validated(self):
-        with self.assertRaisesRegex(ValueError, "sender address"):
+        with self.assertRaisesRegex(ValueError, "sender must be a valid email address"):
             SMTPEmailSender(
                 host="smtp.example.test", port=587, username=None, password=None,
                 sender="security@example.test" + chr(13) + chr(10) + "Bcc: victim@example.test",
