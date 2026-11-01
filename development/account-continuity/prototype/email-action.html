@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex,nofollow">
+  <title>AstroCrown account security</title>
+  <link rel="stylesheet" href="./account-prototype.css">
+  <style>
+    body.email-action-page { min-height:100vh; margin:0; padding:30px 16px; display:grid; place-items:center;
+      background:#081426; color:#f2f5fb; font-family:Arial,Helvetica,sans-serif; }
+    .email-action-panel { width:min(520px,100%); padding:26px; border:1px solid rgba(153,178,213,.24);
+      border-radius:16px; background:linear-gradient(145deg,#10233c,#091729); box-shadow:0 18px 60px rgba(0,0,0,.28); }
+    .email-action-panel h1 { margin:0 0 12px; font-size:22px; }
+    .email-action-panel p { color:#adbbcf; font-size:13px; line-height:1.65; }
+    .email-action-panel label { display:block; margin:14px 0 6px; color:#d9e3f2; font-size:12px; font-weight:700; }
+    .email-action-panel input { box-sizing:border-box; width:100%; min-height:44px; padding:10px 12px;
+      border:1px solid rgba(153,178,213,.3); border-radius:9px; background:#071222; color:#fff; font-size:14px; }
+    .email-action-panel button { min-height:43px; padding:10px 16px; border:1px solid #ffe45b;
+      border-radius:9px; background:#ffd700; color:#121923; font-weight:800; cursor:pointer; }
+    .email-action-panel form button { width:100%; margin-top:18px; }
+    .email-action-panel a { color:#ffe48a; }
+    .email-action-status { min-height:25px; margin:12px 0; }
+    .email-action-status[data-kind="error"] { color:#ffb5b5; }
+    .email-action-status[data-kind="success"] { color:#a6efc5; }
+    .email-action-note { margin-top:18px; font-size:11px !important; }
+    [hidden] { display:none !important; }
+  </style>
+</head>
+<body class="email-action-page">
+  <main class="email-action-panel">
+    <h1 id="email-action-title">AstroCrown account security</h1>
+    <p id="email-action-intro">Checking your account link…</p>
+    <p id="email-action-status" class="email-action-status" role="status" aria-live="polite"></p>
+    <form id="email-action-reset-form" hidden autocomplete="off">
+      <label for="email-action-new-password">New password</label>
+      <input id="email-action-new-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>
+      <label for="email-action-confirm-password">Confirm new password</label>
+      <input id="email-action-confirm-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>
+      <button type="submit">Reset password</button>
+    </form>
+    <p class="email-action-note">AstroCrown will never ask for your password, private key or wallet recovery phrase. This link is single-use and expires.</p>
+    <p><a href="../../index.html">Return to AstroCrown</a></p>
+  </main>
+  <script src="./email-action.js" defer></script>
+</body>
+</html>
