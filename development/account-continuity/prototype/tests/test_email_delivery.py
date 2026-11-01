@@ -195,14 +195,14 @@ class EmailSendBudgetTests(unittest.TestCase):
             self.assertFalse(budget.reserve(now=start + 2))
             self.assertTrue(budget.reserve(now=start + 24 * 60 * 60 + 2))
 
-    def test_rolling_30_day_limit_is_enforced(self):
+    def test_rolling_31_day_limit_is_enforced(self):
         with tempfile.TemporaryDirectory() as folder:
             budget = EmailSendBudget(Path(folder) / "accounts.sqlite3", daily_limit=10, monthly_limit=2)
             start = 1_800_000_000
             self.assertTrue(budget.reserve(now=start))
             self.assertTrue(budget.reserve(now=start + 1))
             self.assertFalse(budget.reserve(now=start + 2))
-            self.assertTrue(budget.reserve(now=start + 30 * 24 * 60 * 60 + 2))
+            self.assertTrue(budget.reserve(now=start + 31 * 24 * 60 * 60 + 2))
 
     def test_usage_and_reservations_persist_across_budget_instances(self):
         with tempfile.TemporaryDirectory() as folder:
