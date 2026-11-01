@@ -209,6 +209,7 @@
       emailVerified: false,
       passwordResetAvailable: false,
       sessionExpiresAt: current ? new Date(browserPreviewState.sessionExpiresAt).toISOString() : null,
+      activeSessionCount: current ? 1 : 0,
       scope: "browser-preview-memory-only",
       role: "user",
       adminRoleAssigned: false,
@@ -240,6 +241,7 @@
         adminWalletAuthenticated: false,
         adminSessionAuthorized: false,
         admin: false,
+        activeSessionCount: 0,
         scope: "browser-preview-memory-only"
       };
     }
@@ -464,6 +466,17 @@
     var newsletter = accountState.newsletterOptIn
       ? "Opted in for this test. No newsletter is sent."
       : "Not opted in.";
+    var activeSessionCount = Math.max(1, Number(accountState.activeSessionCount || 1));
+    var sessionManagement = activeSessionCount > 1
+      ? '<details class="account-session-manager"><summary>Sign out other sessions (' +
+        String(activeSessionCount - 1) + ')</summary>' +
+        '<p>Enter your current password to sign out other devices. This browser session will remain active.</p>' +
+        '<label for="account-session-current-password">Current password</label>' +
+        '<input id="account-session-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
+        '<button class="account-secondary" type="button" id="account-revoke-other-sessions">Sign out other sessions</button>' +
+        '</details>'
+      : '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) +
+        '. Only this session is active.</p>';
     var adminCard = '';
     if (accountState.adminRoleAssigned === true) {
       var walletCount = Number(accountState.adminWalletCount || 0);
@@ -494,7 +507,7 @@
         '</section>';
     }
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, production profile editing, image uploads and session-management UI are not implemented here. Administrator role and wallet step-up are local-prototype only; no production admin actions or all-wallet-loss recovery are enabled. Built-in avatar selection is test-only. Use invented details only in the browser demo.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification, email password reset, production account recovery, production profile editing and image uploads are not implemented here. Local session controls can revoke other active sessions after password confirmation; production session history and device identification remain unimplemented. Administrator role and wallet step-up are local-prototype only. Use invented details only in the browser demo.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
@@ -503,11 +516,16 @@
       '</div>' +
       '<div class="account-dashboard-grid">' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification + '<p>Password-reset email is unavailable. No reset email has been sent. Real accounts must not be used with this prototype.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification +
+          '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
+          sessionManagement +
+          '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+          '<p>Password-reset email is unavailable. No reset email has been sent. Real accounts must not be used with this prototype.</p>' +
+          '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         '<section class="account-dashboard-card"><h2>Wallets</h2><p class="account-dashboard-value">No wallet connected</p><p>A crypto wallet is not required for ordinary account access. A wallet must be requested only by a feature that needs proof of wallet control.</p></section>' +
         '<section class="account-dashboard-card"><h2>Preferences</h2><p class="account-dashboard-value">Crypto-news email: ' + escapeHtml(newsletter) + '</p><p>The preference is only recorded for this test; no mailing list or email provider is connected.</p></section>' +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Password recovery, email verification, passkeys, recovery management and active-session review are not implemented. Do not rely on this test account for real access.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Password recovery, email verification, passkeys and recovery management are not implemented. Do not rely on this test account for real access.</p></section>' +
         '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
         adminCard +
       '</div>' +
@@ -827,6 +845,30 @@
     if (!button || busy) return;
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
+      return;
+    }
+    if (button.id === "account-revoke-other-sessions") {
+      var sessionPasswordInput = document.getElementById("account-session-current-password");
+      var sessionFeedback = document.getElementById("account-session-feedback");
+      var sessionPassword = sessionPasswordInput ? sessionPasswordInput.value : "";
+      if (!sessionPassword) {
+        if (sessionFeedback) sessionFeedback.textContent = "Enter your current password to continue.";
+        if (sessionPasswordInput) sessionPasswordInput.focus();
+        return;
+      }
+      setBusy(true);
+      try {
+        accountState = await requestJson("/api/account/sessions/revoke-others", { password: sessionPassword });
+        syncAccountButton();
+        renderAccountDashboard();
+        var sessionFeedbackAfter = document.getElementById("account-session-feedback");
+        if (sessionFeedbackAfter) sessionFeedbackAfter.textContent = accountState.message || "Other sessions have been signed out.";
+      } catch (error) {
+        var sessionFeedbackOnError = document.getElementById("account-session-feedback");
+        if (sessionFeedbackOnError) sessionFeedbackOnError.textContent = error.message || "Other sessions could not be signed out.";
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "end-admin-access") {
