@@ -19,6 +19,12 @@
       border:1px solid rgba(153,178,213,.3); border-radius:9px; background:#071222; color:#fff; font-size:14px; }
     .email-action-panel button { min-height:43px; padding:10px 16px; border:1px solid #ffe45b;
       border-radius:9px; background:#ffd700; color:#121923; font-weight:800; cursor:pointer; }
+    .email-action-password-control { position:relative;display:flex;align-items:center; }
+    .email-action-password-control input { padding-right:70px; }
+    .email-action-password-toggle { position:absolute;right:7px;min-height:29px !important;padding:5px 9px !important;
+      border:0 !important;border-radius:6px !important;background:rgba(255,255,255,.07) !important;
+      color:#ffe48a !important;font-size:11px; }
+    .email-action-password-toggle:focus-visible { outline:2px solid #ffd700;outline-offset:2px; }
     .email-action-panel form button { width:100%; margin-top:18px; }
     .email-action-panel a { color:#ffe48a; }
     .email-action-status { min-height:25px; margin:12px 0; }
@@ -38,9 +44,15 @@
     </form>
     <form id="email-action-reset-form" hidden autocomplete="off">
       <label for="email-action-new-password">New password</label>
-      <input id="email-action-new-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>
+      <div class="email-action-password-control">
+        <input id="email-action-new-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>
+        <button class="email-action-password-toggle" type="button" data-password-toggle="email-action-new-password" aria-controls="email-action-new-password" aria-pressed="false" aria-label="Show new password">Show</button>
+      </div>
       <label for="email-action-confirm-password">Confirm new password</label>
-      <input id="email-action-confirm-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>
+      <div class="email-action-password-control">
+        <input id="email-action-confirm-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>
+        <button class="email-action-password-toggle" type="button" data-password-toggle="email-action-confirm-password" aria-controls="email-action-confirm-password" aria-pressed="false" aria-label="Show password confirmation">Show</button>
+      </div>
       <button type="submit">Reset password</button>
     </form>
     <p class="email-action-note">AstroCrown will never ask for your password, private key or wallet recovery phrase. This link is single-use and expires.</p>
