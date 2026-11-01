@@ -161,7 +161,61 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(data["email"], "test-user@example.test")
         self.assertFalse(data["admin"])
 
-    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(self):
+    def test_other_sessions_require_current_password_and_revoke_only_other_sessions(self):
+        status, created, _ = self.create_account(email="session-controls@example.test")
+        self.assertEqual(status, 201, created)
+        self.assertEqual(created["activeSessionCount"], 1)
+
+        other_cookies = http.cookiejar.CookieJar()
+        other_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(other_cookies)
+        )
+        status, second_login, _ = self.request(
+            "/api/account/login",
+            {"email": "session-controls@example.test", "password": PASSWORD},
+            opener=other_opener,
+        )
+        self.assertEqual(status, 200, second_login)
+        self.assertEqual(second_login["activeSessionCount"], 2)
+
+        status, current_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200, current_status)
+        self.assertEqual(current_status["activeSessionCount"], 2)
+
+        status, rejected, _ = self.request(
+            "/api/account/sessions/revoke-others",
+            {"password": "incorrect-password"},
+        )
+        self.assertEqual(status, 401, rejected)
+        self.assertIn("no sessions were changed", rejected["error"].lower())
+        status, second_still_active, _ = self.request(
+            "/api/account/status", opener=other_opener
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(second_still_active["authenticated"])
+
+        status, revoked, _ = self.request(
+            "/api/account/sessions/revoke-others",
+            {"password": PASSWORD},
+        )
+        self.assertEqual(status, 200, revoked)
+        self.assertEqual(revoked["revokedSessions"], 1)
+        self.assertEqual(revoked["activeSessionCount"], 1)
+        self.assertIn("this session remains active", revoked["message"].lower())
+
+        status, current_still_active, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200)
+        self.assertTrue(current_still_active["authenticated"])
+        self.assertEqual(current_still_active["activeSessionCount"], 1)
+
+        status, second_signed_out, _ = self.request(
+            "/api/account/status", opener=other_opener
+        )
+        self.assertEqual(status, 200)
+        self.assertFalse(second_signed_out["authenticated"])
+
+    def test_owner_cli_provisions_existing_regular_account_for_admin_visibility(selfself):
+
         email = "cli-provision-admin@example.test"
         status, created, _ = self.create_account(email=email)
         self.assertEqual(status, 201, created)
