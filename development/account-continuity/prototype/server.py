@@ -22,7 +22,14 @@ from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
+
+try:
+    from .email_delivery import EmailDeliveryError, SMTPEmailSender
+except ImportError:  # Direct script execution
+    from email_delivery import EmailDeliveryError, SMTPEmailSender
+
+_AUTO_EMAIL_SENDER = object()
 
 DEVELOPMENT_DIR = Path(__file__).resolve().parents[2]
 PROTOTYPE_DIR = Path(__file__).resolve().parent
@@ -123,8 +130,22 @@ def hash_session_token(token: str) -> str:
 class AccountApplication:
     """Local SQLite account store. Passwords and sessions are never logged."""
 
-    def __init__(self, database_path: Path | str):
+    def __init__(
+        self,
+        database_path: Path | str,
+        *,
+        email_sender: object = _AUTO_EMAIL_SENDER,
+        public_base_url: str | None = None,
+    ):
         self.database_path = Path(database_path).expanduser().resolve()
+        if email_sender is _AUTO_EMAIL_SENDER:
+            self.email_sender, configured_base_url = SMTPEmailSender.from_environment()
+            self.email_public_base_url = public_base_url or configured_base_url
+            if self.email_sender is not None and not self.email_public_base_url:
+                raise RuntimeError("Email delivery requires a configured public base URL.")
+        else:
+            self.email_sender = email_sender
+            self.email_public_base_url = public_base_url
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             os.chmod(self.database_path.parent, 0o700)
@@ -213,6 +234,16 @@ class AccountApplication:
                     admin_expires_at INTEGER
                 );
                 CREATE INDEX IF NOT EXISTS sessions_account_idx ON sessions(account_id);
+                CREATE TABLE IF NOT EXISTS account_email_tokens (
+                    token_hash TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    token_type TEXT NOT NULL CHECK(token_type IN ('verification', 'password_reset')),
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    used_at INTEGER
+                );
+                CREATE INDEX IF NOT EXISTS account_email_tokens_account_idx
+                    ON account_email_tokens(account_id, token_type, expires_at);
                 CREATE TABLE IF NOT EXISTS account_auth_rate_events (
                     event_id TEXT PRIMARY KEY,
                     action TEXT NOT NULL,
@@ -461,7 +492,8 @@ class AccountApplication:
             "termsVersion": account["terms_version"],
             "termsAcceptedAt": account["terms_accepted_at"],
             "emailVerified": bool(account["email_verified"]),
-            "passwordResetAvailable": False,
+            "emailVerificationDeliveryAvailable": self.email_delivery_available,
+            "passwordResetAvailable": self.email_delivery_available,
             "sessionExpiresAt": utc_iso(expires_at) if expires_at else None,
             "activeSessionCount": int(account["active_session_count"] or 0),
             "scope": "local-test-account-only",
@@ -473,6 +505,194 @@ class AccountApplication:
             "admin": wallet_authenticated,
             "adminWalletAddress": wallet_address if wallet_authenticated else None,
             "adminSessionExpiresAt": utc_iso(wallet_step_up_expires) if wallet_authenticated else None,
+        }
+
+    @property
+    def email_delivery_available(self) -> bool:
+        return self.email_sender is not None and bool(self.email_public_base_url)
+
+    def issue_email_action_token(
+        self, account_id: str, token_type: str, lifetime_seconds: int
+    ) -> tuple[str, int]:
+        if token_type not in {"verification", "password_reset"}:
+            raise ValueError("Unknown account email token type.")
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = hash_session_token(raw_token)
+        now = int(time.time())
+        expires = now + lifetime_seconds
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            db.execute(
+                "DELETE FROM account_email_tokens WHERE account_id = ? AND token_type = ? AND used_at IS NULL",
+                (account_id, token_type),
+            )
+            db.execute(
+                "INSERT INTO account_email_tokens(token_hash, account_id, token_type, created_at, expires_at, used_at) VALUES (?, ?, ?, ?, ?, NULL)",
+                (token_hash, account_id, token_type, now, expires),
+            )
+        return raw_token, expires
+
+    def invalidate_email_action_token(self, raw_token: str) -> None:
+        with self.connect() as db:
+            db.execute(
+                "DELETE FROM account_email_tokens WHERE token_hash = ? AND used_at IS NULL",
+                (hash_session_token(raw_token),),
+            )
+
+    def account_email_action_url(self, action: str, raw_token: str) -> str:
+        if not self.email_public_base_url:
+            raise RuntimeError("Email action links require a public base URL.")
+        query = urlencode({"type": action, "token": raw_token})
+        return (
+            self.email_public_base_url.rstrip("/")
+            + "/account-continuity/prototype/email-action.html?"
+            + query
+        )
+
+    def deliver_account_action_email(
+        self, *, recipient: str, action: str, raw_token: str
+    ) -> bool:
+        if not self.email_delivery_available:
+            return False
+        link = self.account_email_action_url(action, raw_token)
+        if action == "verify":
+            subject = "Verify your AstroCrown email address"
+            title = "Verify your email address"
+            explanation = "Confirm that this email address belongs to your AstroCrown account."
+        elif action == "reset":
+            subject = "Reset your AstroCrown password"
+            title = "Reset your password"
+            explanation = "Use this one-time link to choose a new password for your AstroCrown account."
+        else:
+            raise ValueError("Unknown account email action.")
+        text_body = (
+            f"{title}\n\n{explanation}\n\n{link}\n\n"
+            "This link is single-use and expires. If you did not request it, you can ignore this email. "
+            "AstroCrown will never ask for your password, private key or wallet recovery phrase."
+        )
+        escaped_link = (
+            link.replace("&", "&amp;").replace('"', "&quot;").replace("<", "&lt;").replace(">", "&gt;")
+        )
+        html_body = (
+            "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"
+            f"<title>{title}</title><body><main><h1>{title}</h1>"
+            f"<p>{explanation}</p><p><a href=\"{escaped_link}\">Continue</a></p>"
+            "<p>This link is single-use and expires. Ignore this message if you did not request it.</p>"
+            "<p>AstroCrown will never ask for your password, private key or wallet recovery phrase.</p>"
+            "</main></body></html>"
+        )
+        try:
+            self.email_sender.send(recipient, subject, text_body, html_body)
+            return True
+        except EmailDeliveryError:
+            return False
+        except Exception:
+            # Custom injected senders are also treated as an untrusted transport.
+            return False
+
+    def send_verification_email(self, account_id: str, email: str) -> bool:
+        raw_token, _expires = self.issue_email_action_token(
+            account_id, "verification", 24 * 60 * 60
+        )
+        if self.deliver_account_action_email(
+            recipient=email, action="verify", raw_token=raw_token
+        ):
+            return True
+        self.invalidate_email_action_token(raw_token)
+        return False
+
+    def complete_email_verification(self, raw_token: object) -> dict:
+        if not isinstance(raw_token, str) or not 20 <= len(raw_token) <= 256:
+            raise ApiError(400, "This verification link is invalid or has expired.")
+        token_hash = hash_session_token(raw_token)
+        now = int(time.time())
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                """SELECT account_id FROM account_email_tokens
+                   WHERE token_hash = ? AND token_type = 'verification'
+                     AND used_at IS NULL AND expires_at > ?""",
+                (token_hash, now),
+            ).fetchone()
+            if row is None:
+                raise ApiError(400, "This verification link is invalid, expired or already used.")
+            cursor = db.execute(
+                "UPDATE account_email_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL",
+                (now, token_hash),
+            )
+            if cursor.rowcount != 1:
+                raise ApiError(400, "This verification link is invalid, expired or already used.")
+            db.execute(
+                "UPDATE accounts SET email_verified = 1 WHERE account_id = ?",
+                (row["account_id"],),
+            )
+            db.execute(
+                "INSERT INTO account_security_audit(audit_id, account_id, event_type, created_at, detail) VALUES (?, ?, ?, ?, ?)",
+                (str(uuid.uuid4()), row["account_id"], "email_verified", utc_iso(), ""),
+            )
+            db.execute(
+                "DELETE FROM account_email_tokens WHERE account_id = ? AND token_type = 'verification' AND token_hash <> ?",
+                (row["account_id"], token_hash),
+            )
+        return {"verified": True, "message": "Your email address has been verified."}
+
+    def complete_password_reset(
+        self, raw_token: object, new_password_value: object, confirmation: object
+    ) -> dict:
+        if not isinstance(raw_token, str) or not 20 <= len(raw_token) <= 256:
+            raise ApiError(400, "This password-reset link is invalid or has expired.")
+        new_password = validate_password(new_password_value)
+        if not isinstance(confirmation, str) or not hmac.compare_digest(new_password, confirmation):
+            raise ApiError(400, "The new password confirmation does not match.")
+        token_hash = hash_session_token(raw_token)
+        if not self.auth_rate_allowed("password-reset-complete", token_hash, limit=5, window=3600):
+            raise ApiError(429, "Too many password-reset attempts. Request a new reset link later.")
+        salt = secrets.token_bytes(16)
+        encoded = self.hash_password(new_password, salt)
+        now = int(time.time())
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(
+                """SELECT account_id FROM account_email_tokens
+                   WHERE token_hash = ? AND token_type = 'password_reset'
+                     AND used_at IS NULL AND expires_at > ?""",
+                (token_hash, now),
+            ).fetchone()
+            if row is None:
+                raise ApiError(400, "This password-reset link is invalid, expired or already used.")
+            cursor = db.execute(
+                "UPDATE account_email_tokens SET used_at = ? WHERE token_hash = ? AND used_at IS NULL",
+                (now, token_hash),
+            )
+            if cursor.rowcount != 1:
+                raise ApiError(400, "This password-reset link is invalid, expired or already used.")
+            existing_sessions = int(db.execute(
+                "SELECT COUNT(*) FROM sessions WHERE account_id = ? AND expires_at > ?",
+                (row["account_id"], now),
+            ).fetchone()[0])
+            db.execute(
+                "UPDATE accounts SET password_salt = ?, password_hash = ?, email_verified = 1 WHERE account_id = ?",
+                (salt, encoded, row["account_id"]),
+            )
+            db.execute(
+                "DELETE FROM sessions WHERE account_id = ?",
+                (row["account_id"],),
+            )
+            db.execute(
+                "DELETE FROM account_email_tokens WHERE account_id = ? AND token_type = 'password_reset'",
+                (row["account_id"],),
+            )
+            db.execute(
+                "INSERT INTO account_security_audit(audit_id, account_id, event_type, created_at, detail) VALUES (?, ?, ?, ?, ?)",
+                (
+                    str(uuid.uuid4()), row["account_id"], "password_reset_completed",
+                    utc_iso(), f"revoked_sessions={existing_sessions}",
+                ),
+            )
+        return {
+            "passwordReset": True,
+            "revokedSessions": existing_sessions,
+            "message": "Your password has been reset. Sign in with your new password.",
         }
 
     def require_account_session(
