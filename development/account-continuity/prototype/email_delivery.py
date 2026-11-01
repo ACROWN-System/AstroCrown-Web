@@ -9,6 +9,7 @@ import os
 import smtplib
 import ssl
 from email.message import EmailMessage
+from email.utils import parseaddr
 from urllib.parse import urlsplit
 
 
@@ -59,6 +60,8 @@ class SMTPEmailSender:
             "ASTROCROWN_PUBLIC_BASE_URL",
         )
         values = {name: os.environ.get(name, "").strip() for name in names}
+        # SMTP passwords are opaque credentials; never strip meaningful spaces.
+        values["ASTROCROWN_SMTP_PASSWORD"] = os.environ.get("ASTROCROWN_SMTP_PASSWORD", "")
         if not any(values.values()):
             return None, None
         if not values["ASTROCROWN_SMTP_HOST"] or not values["ASTROCROWN_SMTP_FROM"]:
@@ -67,6 +70,19 @@ class SMTPEmailSender:
             raise ValueError("SMTP username and password must either both be set or both be empty.")
         if not values["ASTROCROWN_PUBLIC_BASE_URL"]:
             raise ValueError("ASTROCROWN_PUBLIC_BASE_URL is required when email delivery is configured.")
+        host = values["ASTROCROWN_SMTP_HOST"]
+        if len(host) > 253 or any(char.isspace() or ord(char) < 33 for char in host):
+            raise ValueError("ASTROCROWN_SMTP_HOST must be a valid host name or address.")
+        sender_name, sender_address = parseaddr(values["ASTROCROWN_SMTP_FROM"])
+        if (
+            not sender_address or sender_address.count("@") != 1
+            or any(char in values["ASTROCROWN_SMTP_FROM"] for char in "\r\n")
+        ):
+            raise ValueError("ASTROCROWN_SMTP_FROM must be a valid email sender address.")
+        if any(char in values["ASTROCROWN_SMTP_USERNAME"] for char in "\r\n\x00"):
+            raise ValueError("ASTROCROWN_SMTP_USERNAME contains an invalid control character.")
+        if any(char in values["ASTROCROWN_SMTP_PASSWORD"] for char in "\r\n\x00"):
+            raise ValueError("ASTROCROWN_SMTP_PASSWORD contains an invalid control character.")
         try:
             port = int(values["ASTROCROWN_SMTP_PORT"] or "587")
         except ValueError:
