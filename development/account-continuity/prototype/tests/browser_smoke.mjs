@@ -320,7 +320,9 @@ try {
   await waitFor("password-reset information form", () => evaluate("Boolean(document.getElementById('account-reset-request-form'))"));
   await evaluate("document.getElementById('account-email').value = " + JSON.stringify(email));
   await evaluate("document.getElementById('account-reset-request-form').requestSubmit()");
-  assert.match(await evaluate("document.getElementById('account-feedback').textContent"), /No email was sent/);
+  await waitFor("browser-preview reset request reports no delivery", () =>
+    evaluate("document.getElementById('account-feedback').textContent.includes('No password-reset email was sent')"));
+  assert.match(await evaluate("document.getElementById('account-feedback').textContent"), /No password-reset email was sent/);
 
   // Exercise the hosted preview path without allowing any account API request.
   // The query flag selects the same in-memory adapter that activates on remote hosts.
