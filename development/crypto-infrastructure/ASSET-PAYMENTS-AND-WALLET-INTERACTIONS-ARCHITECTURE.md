@@ -162,6 +162,17 @@ Requirements:
 - Hardware wallets and wallet-mediated confirmation should remain compatible where supported by the selected adapter.
 - A connected wallet is not automatically a verified account owner, approved recipient, trusted token issuer or eligible payment instrument.
 
+## 4.2 Zero-balance wallet access and no retained-balance requirement
+
+Wallet connection, address discovery, wallet linking, proof-of-control authentication and administrator step-up must work for an empty wallet. AstroCrown must not impose a minimum asset balance, minimum gas-token balance, deposit, stake, proof-of-funds condition or retained reserve for these account-access actions. A wallet balance must not be queried as an authentication prerequisite.
+
+Use an off-chain message-signing protocol for authentication. Solana's official developer guide states that message signing requires no transaction, fee or network call. SIWE is an off-chain signed authentication message. BIP-322 defines Bitcoin signed-message proofs with wallet/script-specific compatibility considerations. If a wallet cannot sign a supported message, do not downgrade to an on-chain no-op transaction; report the limitation and permit ordinary account login or another supported wallet.
+
+Do not conflate a minimum-balance rule with the funding needed for a particular transaction. A user-initiated transfer can require the exact spend amount and a fee at execution time; a Bitcoin transaction needs spendable UTXOs; an EVM/Solana transaction needs its applicable fee payer unless fee sponsorship is qualified. These are transaction-specific execution conditions, not account-access or retained-balance requirements. Do not force a wallet to keep an arbitrary leftover amount after a transaction.
+
+Where a chain supports safe fee sponsorship, AstroCrown may later offer it under a separate budget, abuse-prevention and release gate. Ethereum ERC-4337 paymasters are one EVM mechanism; this is not universal across all networks and sponsorship transfers the cost to the sponsor rather than removing it. No fee sponsorship is implemented or authorized by this document.
+
+
 ## 5. Website capabilities to support through independent adapters
 
 The website should be designed to add these capability modules without assuming all are available on every chain:
