@@ -476,7 +476,7 @@ try {
         "return new Promise(function (resolve) { window.__resolveAdminWalletSignature = resolve; });" +
       "}" +
       "throw new Error('Unexpected wallet method in browser test: ' + request.method);" +
-    "}; true"
+    "}}; true"
   );
   assert.equal(walletProviderSetup, true);
 
