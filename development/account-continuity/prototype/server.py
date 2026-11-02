@@ -150,8 +150,14 @@ class AccountApplication:
         self.enable_legacy_email_auth = bool(enable_legacy_email_auth)
         self.database_path = Path(database_path).expanduser().resolve()
         if email_sender is _AUTO_EMAIL_SENDER:
-            self.email_sender, configured_base_url = SMTPEmailSender.from_environment()
-            self.email_public_base_url = configured_base_url
+            if self.enable_legacy_email_auth:
+                self.email_sender, configured_base_url = SMTPEmailSender.from_environment()
+                self.email_public_base_url = configured_base_url
+            else:
+                # The adopted passkey-first flow has no mail-provider dependency.
+                # Legacy email delivery can be enabled only by explicit test mode.
+                self.email_sender = None
+                self.email_public_base_url = None
         else:
             self.email_sender = email_sender
             self.email_public_base_url = None
