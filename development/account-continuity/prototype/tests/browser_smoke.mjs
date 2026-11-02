@@ -292,6 +292,9 @@ try {
     "--wallet", adminWallet,
     "--chain-id", "11155111",
     "--reason", "Owner-approved local browser smoke admin provisioning",
+    "--permission", "admin.roles.grant",
+    "--permission", "admin.roles.revoke",
+    "--delegable-permission", "admin.roles.grant",
     "--confirm", "GRANT LOCAL ADMIN"
   ], {
     cwd: resolve("."),
@@ -339,12 +342,18 @@ try {
 
   // Mock only a previously verified step-up response to cover the separate admin
   // dashboard presentation. The role and wallet registry remain real SQLite data.
-  await evaluate("window.__pretendAdminAuthorized = true; window.__nativeFetchForStepUpTest = window.fetch.bind(window); window.fetch = async function(input, init) { var url = typeof input === 'string' ? input : (input && input.url) || ''; var response = await window.__nativeFetchForStepUpTest(input, init); if (window.__pretendAdminAuthorized && url.indexOf('/api/account/status') >= 0) { var payload = await response.clone().json(); if (payload.authenticated === true && payload.adminRoleAssigned === true) { payload.adminWalletAuthenticated = true; payload.adminSessionAuthorized = true; payload.admin = true; payload.adminWalletAddress = " + JSON.stringify(adminWallet) + "; payload.adminSessionExpiresAt = 'test fixture only'; } return new Response(JSON.stringify(payload), {status:response.status, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } if (window.__pretendAdminAuthorized && url.indexOf('/api/admin/status') >= 0) { return new Response(JSON.stringify({authenticated:true, role:'admin', adminRoleAssigned:true, adminSessionAuthorized:true, admin:true, email:" + JSON.stringify(email.toLowerCase()) + ", avatarId:'person', adminWalletAddress:" + JSON.stringify(adminWallet) + ", adminSessionExpiresAt:'test fixture only'}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } if (window.__pretendAdminAuthorized && url.indexOf('/api/admin/wallet-options') >= 0) { return new Response(JSON.stringify({wallets:[{address:" + JSON.stringify(adminWallet) + ", chainId:11155111}]}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } return response; };");
+  await evaluate("window.__pretendAdminAuthorized = true; window.__nativeFetchForStepUpTest = window.fetch.bind(window); window.fetch = async function(input, init) { var url = typeof input === 'string' ? input : (input && input.url) || ''; var response = await window.__nativeFetchForStepUpTest(input, init); if (window.__pretendAdminAuthorized && url.indexOf('/api/account/status') >= 0) { var payload = await response.clone().json(); if (payload.authenticated === true && payload.adminRoleAssigned === true) { payload.adminWalletAuthenticated = true; payload.adminSessionAuthorized = true; payload.admin = true; payload.adminWalletAddress = " + JSON.stringify(adminWallet) + "; payload.adminSessionExpiresAt = 'test fixture only'; } return new Response(JSON.stringify(payload), {status:response.status, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } if (window.__pretendAdminAuthorized && url.indexOf('/api/admin/status') >= 0) { return new Response(JSON.stringify({authenticated:true, role:'admin', adminRoleAssigned:true, adminPermissions:['admin.roles.grant','admin.roles.revoke'], adminDelegablePermissions:['admin.roles.grant'], adminSessionAuthorized:true, admin:true, email:" + JSON.stringify(email.toLowerCase()) + ", avatarId:'person', adminWalletAddress:" + JSON.stringify(adminWallet) + ", adminSessionExpiresAt:'test fixture only'}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } if (window.__pretendAdminAuthorized && url.indexOf('/api/admin/wallet-options') >= 0) { return new Response(JSON.stringify({wallets:[{address:" + JSON.stringify(adminWallet) + ", chainId:11155111}]}), {status:200, headers:{'Content-Type':'application/json', 'Cache-Control':'no-store'}}); } return response; };");
   await evaluate("document.getElementById('account-admin-wallet-access').click()");
   await waitFor("administrator entry confirmation reopens", () => evaluate("Boolean(document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open)"));
   await evaluate("document.getElementById('admin-access-continue').click()");
   await waitFor("same entry opens the separate administrator dashboard", () => evaluate("window.location.hash === '#admin' && document.getElementById('account-dashboard').hidden && !document.getElementById('admin-dashboard').hidden && document.getElementById('admin-dashboard-title').textContent.trim() === 'Administrator dashboard'"));
   assert.match(await evaluate("document.getElementById('admin-dashboard-content').innerText"), /Personal user-facing services and transactions remain in the User dashboard/i);
+  assert.equal(await evaluate("Boolean(document.getElementById('admin-role-grant'))"), true,
+    "the appointment controls appear only for the server-reported grant permission");
+  assert.equal(await evaluate("Boolean(document.getElementById('admin-role-revoke'))"), true,
+    "the revocation control appears only for the server-reported revoke permission");
+  assert.equal(await evaluate("document.getElementById('admin-role-grant-email').type"), "email");
+  assert.equal(await evaluate("document.getElementById('admin-role-grant').textContent.trim()"), "Grant administrator role");
   assert.equal(await evaluate("document.getElementById('admin-return-account').textContent.trim()"), "Return to user dashboard");
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
     "the verified-step-up fixture must not request a second wallet connection");
@@ -576,7 +585,7 @@ try {
   assert.equal(recoveryStatus.body.status, "pending");
   assert.match(recoveryStatus.body.message, /independent identity verification/);
 
-  console.log("PASS: email signup/login, account dashboard, password change and old-password rejection, terms version, security assurance, separate public case portal, guest grievance receipt, high-entropy case key, independent case lookup and reply, loss-of-both-credentials recovery request/status, admin role boundaries and browser-only preview.");
+  console.log("PASS: email signup/login, account dashboard, password change and old-password rejection, terms version, security assurance, separate public case portal, guest grievance receipt, high-entropy case key, independent case lookup and reply, loss-of-both-credentials recovery request/status, permission-gated admin role controls and wallet-entry boundaries.");
 
 } catch (error) {
   console.error(String(error?.stack || error));
