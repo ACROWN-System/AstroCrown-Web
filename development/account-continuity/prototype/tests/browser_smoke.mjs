@@ -228,6 +228,8 @@ try {
   assert.equal(await evaluate("document.getElementById('open-account-hub').textContent.trim()"), "Open your dashboard");
   assert.equal(await evaluate("document.getElementById('open-account-hub').disabled"), true,
     "the dashboard action stays blocked until the user acknowledges saving the recovery key");
+  const successAccountIdentifier = await evaluate("document.getElementById('account-one-time-account-identifier').value");
+  assert.match(successAccountIdentifier, /^AC-[A-F0-9]{10}$/);
   const initialRecoveryKey = await evaluate("document.getElementById('account-one-time-recovery-key').value");
   assert.match(initialRecoveryKey, /^ACR1-[A-Za-z0-9_-]{43}$/);
   assert.match(await evaluate("document.body.innerText"), /save your offline recovery key now/i);
@@ -245,10 +247,8 @@ try {
   await evaluate("document.getElementById('open-account-hub').click()");
   await waitFor("User dashboard after passkey registration", () =>
     evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
-  const accountIdentifier = await evaluate(
-    "document.querySelector('.account-dashboard-welcome-copy strong').textContent"
-  );
-  assert.match(accountIdentifier, /^AC-[A-F0-9]{10}$/);
+  const accountIdentifier = successAccountIdentifier;
+  assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), accountIdentifier);
   assert.equal(await evaluate("Boolean(document.querySelector('.account-user-services-card'))"), true);
   assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"),
     /regular users and administrators/i);
