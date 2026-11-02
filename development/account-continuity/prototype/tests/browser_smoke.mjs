@@ -604,6 +604,41 @@ try {
   assert.equal(afterAdminStepUpLogout.adminRoleAssigned, true);
   assert.equal(afterAdminStepUpLogout.adminSessionAuthorized, false);
 
+  // Simulate an authorized external role revocation after this account has
+  // used the Administrator dashboard. The target keeps its ordinary session,
+  // receives the recorded reason in the User dashboard and can acknowledge it.
+  const revokeRoleFixture = runAdminWalletFixturePython(
+    "import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); account=db.execute('SELECT account_id FROM accounts WHERE username=?',(sys.argv[2],)).fetchone(); assert account; account_id=account[0]; db.execute(\"UPDATE admin_wallets SET active=0 WHERE account_id=? AND active=1\",(account_id,)); db.execute('DELETE FROM account_admin_permissions WHERE account_id=?',(account_id,)); db.execute(\"UPDATE accounts SET role='user' WHERE account_id=?\",(account_id,)); db.execute('UPDATE sessions SET admin_wallet_address=NULL,admin_authenticated_at=NULL,admin_expires_at=NULL WHERE account_id=?',(account_id,)); db.execute(\"INSERT INTO account_admin_audit(audit_id,event_type,actor,target_account_id,target_wallet_address,reason,created_at,detail) VALUES ('browser-admin-revoke-notice','admin_role_revoked_by_admin','test-authorized-admin',?,NULL,'Administrative appointment withdrawn after review','2026-11-03T00:00:00Z','{}')\",(account_id,)); db.commit(); print('revoked')",
+    [databasePath, accountIdentifier]
+  );
+  assert.equal(revokeRoleFixture.status, 0, revokeRoleFixture.stderr || "The isolated administrator revocation fixture failed");
+  assert.equal(revokeRoleFixture.stdout.trim(), "revoked");
+  await evaluate("window.location.hash = '#admin'");
+  await waitFor("revoked administrator is returned to User dashboard with explanation", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden && Boolean(document.getElementById('admin-revocation-notice-title'))"));
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false,
+    "a revoked administrator must no longer see the administrator entry button");
+  assert.match(await evaluate("document.getElementById('account-dashboard-content').innerText"),
+    /Administrative appointment withdrawn after review/);
+  assert.match(await evaluate("document.getElementById('account-dashboard-content').innerText"),
+    /ordinary account and User dashboard remain active/i);
+  const revokedTargetStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(revokedTargetStatus.authenticated, true);
+  assert.equal(revokedTargetStatus.role, "user");
+  assert.equal(revokedTargetStatus.adminRoleAssigned, false);
+  assert.equal(revokedTargetStatus.adminSessionAuthorized, false);
+  assert.equal(revokedTargetStatus.administratorRevocationNotice.reason,
+    "Administrative appointment withdrawn after review");
+
+  await evaluate("document.getElementById('acknowledge-admin-revocation').click()");
+  await waitFor("revocation notice acknowledged and removed", () =>
+    evaluate("!document.getElementById('admin-revocation-notice-title')"));
+  const acknowledgedRevocationStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(acknowledgedRevocationStatus.authenticated, true);
+  assert.equal(acknowledgedRevocationStatus.role, "user");
+  assert.equal(acknowledgedRevocationStatus.administratorRevocationNotice, null,
+    "the acknowledgement must persist across account status refreshes");
+
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("recovered account session is cleared before preview checks", () =>
     evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
