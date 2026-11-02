@@ -1079,7 +1079,7 @@ class AccountServerTests(unittest.TestCase):
         status, created, _ = self.create_account(email=successor_email, opener=successor_opener)
         self.assertEqual(status, 201, created)
 
-        status, root_status = self.sign_admin_wallet(self.opener, TEST_WALLET_A.address, TEST_WALLET_KEY_A)
+        status, root_status, _ = self.sign_admin_wallet(self.opener, TEST_WALLET_A.address, TEST_WALLET_KEY_A)
         self.assertEqual(status, 200, root_status)
         self.assertTrue(root_status["adminSessionAuthorized"])
         self.assertEqual(root_status["adminPermissions"], ["admin.roles.grant", "admin.roles.revoke"])
@@ -1169,7 +1169,7 @@ class AccountServerTests(unittest.TestCase):
         )
         self.assertEqual(status, 401, replay)
 
-        status, target_authorized = self.sign_admin_wallet(
+        status, target_authorized, _ = self.sign_admin_wallet(
             target_opener, TEST_WALLET_B.address, TEST_WALLET_KEY_B
         )
         self.assertEqual(status, 200, target_authorized)
@@ -1252,7 +1252,7 @@ class AccountServerTests(unittest.TestCase):
         )
         status, created, _ = self.create_account(email=target_email, opener=target_opener)
         self.assertEqual(status, 201, created)
-        status, authorized = self.sign_admin_wallet(
+        status, authorized, _ = self.sign_admin_wallet(
             actor_opener, TEST_WALLET_C.address, TEST_WALLET_KEY_C
         )
         self.assertEqual(status, 200, authorized)
