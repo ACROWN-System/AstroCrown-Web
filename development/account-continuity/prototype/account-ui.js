@@ -322,6 +322,32 @@
     });
   }
 
+  function syncAccountButton() {
+    if (!openButton) return;
+    var authenticated = Boolean(accountState && accountState.authenticated === true);
+    if (authenticated) {
+      var avatarId = normalizeAvatarId(accountState.avatarId);
+      openButton.classList.add("is-authenticated");
+      openButton.dataset.avatarId = avatarId;
+      openButton.innerHTML = avatarSvg(avatarId, "account-avatar-trigger-svg");
+      openButton.setAttribute("aria-label", "Open your AstroCrown account");
+      openButton.setAttribute("title", "Open your AstroCrown account");
+      openButton.setAttribute("aria-haspopup", "dialog");
+      openButton.setAttribute("aria-controls", "account-dialog");
+      return;
+    }
+    openButton.classList.remove("is-authenticated");
+    openButton.removeAttribute("data-avatar-id");
+    openButton.removeAttribute("title");
+    openButton.setAttribute("aria-label", "Account");
+    openButton.setAttribute("aria-haspopup", "dialog");
+    openButton.setAttribute("aria-controls", "account-dialog");
+    openButton.innerHTML =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">' +
+        '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/>' +
+      '</svg><span>Account</span>';
+  }
+
   function renderTabs(selected) {
     return '<div class="account-tabs" role="tablist" aria-label="Account access">' +
       '<button type="button" class="account-tab" role="tab" data-account-mode="signin" aria-selected="' + (selected === "signin" ? "true" : "false") + '">Log In</button>' +
