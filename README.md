@@ -14,6 +14,7 @@ These documents are internal governance guidance in draft. The project does not 
 ## Crypto infrastructure and asset interactions
 
 - [Asset, Payment and Wallet-Interaction Architecture](development/crypto-infrastructure/ASSET-PAYMENTS-AND-WALLET-INTERACTIONS-ARCHITECTURE.md) — proposed multi-chain asset model, wallet adapters, payment acceptance, swaps, bridges, future interaction modules, security gates and $0-first integration stages. It is an architecture proposal, not a claim of implemented support.
+- [Astro-Wallet (AW) Product Concept and Security Architecture Study](development/crypto-infrastructure/ASTRO-WALLET-STRATEGY-AND-SECURITY-ARCHITECTURE.md) — future multi-chain wallet research, no-minimum-balance principle, user-controlled key protection, recovery design and post-quantum cryptographic agility. Concept only; no wallet implementation is authorized.
 
 ## License
 
