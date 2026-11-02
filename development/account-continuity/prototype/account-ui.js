@@ -503,7 +503,7 @@
         '<div class="account-success-mark" aria-hidden="true">✓</div>' +
         '<h3 class="account-success-heading">' + escapeHtml(heading) + '</h3>' +
         '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
-        '<button class="account-primary" type="button" id="open-account-hub">Open your account</button>' +
+        '<button class="account-primary" type="button" id="open-account-hub">Open your dashboard</button>' +
         '<p class="account-success-small">' + escapeHtml(persistenceNote) + '</p>' +
       '</div>';
   }
@@ -590,7 +590,7 @@
         '</section>';
     }
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development test account.</strong> This page is part of a local/browser prototype. Email verification and password reset use single-use links only when a secure mail transport is configured; production hosting, account recovery, profile editing and image uploads remain unimplemented. Local session controls can revoke other active sessions after password confirmation; production session/device history remains unimplemented. Administrator role and wallet step-up are local-prototype only. Use invented details only in the browser demo.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype currently tests account access and settings only. Transaction workflows and the wider service catalog are not enabled. Email delivery, production hosting, account recovery, profile editing and image uploads remain subject to the stated development limitations. Use invented details only in the browser demo.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
@@ -598,6 +598,7 @@
         '<div class="account-dashboard-welcome-copy"><strong>' + email + '</strong><span>Signed in · local/browser test account · built-in avatar customization only</span></div>' +
       '</div>' +
       '<div class="account-dashboard-grid">' +
+        '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and transactions belong to this User dashboard and remain subject to the same member rules for every account.</p><p>Transaction workflows and other service modules are not enabled in this account prototype. They will be added here when their backend behavior, authorization and confirmations are implemented.</p></section>' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
         '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification +
           verificationAction +
@@ -686,7 +687,7 @@
       ? '<button class="account-primary" type="button" id="admin-add-wallet">Add another wallet</button>'
       : '<p class="account-admin-wallet-limit">Three active wallets are registered. The prototype does not permit a fourth wallet.</p>';
     adminDashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development-only administrator session.</strong> The backend verified the assigned role and a wallet signature for a short-lived session. This is not production authentication. The only privileged operation in this prototype is registering another wallet with a separate signature; publishing, account administration, payments and recovery remain disabled.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development-only Administrator dashboard.</strong> This workspace is for administrative duties only and is separate from the shared User dashboard. Personal user-facing services and transactions remain in the User dashboard under the same ordinary member rules. The backend verified the assigned role and a wallet signature for a short-lived session. The only administrative operation in this prototype is registering another wallet with a separate signature; publishing, account administration, payments and recovery remain disabled.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-shield" aria-hidden="true">' + avatarSvg("shield", "account-dashboard-avatar-svg") + '</div>' +
         '<div class="account-dashboard-welcome-copy"><strong>Administrator access verified</strong><span>Backend-authorized · development prototype · no production privileges</span></div>' +
@@ -763,7 +764,7 @@
   }
 
   function renderAccount() {
-    title.textContent = "Your AstroCrown account";
+    title.textContent = "Your AstroCrown user dashboard";
     var email = escapeHtml(accountState.email || "");
     var referral = accountState.referralId
       ? '<p class="account-status-copy"><strong>Referral ID:</strong> ' + escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(recorded as an unverified test value; no reward is applied)</span></p>'
