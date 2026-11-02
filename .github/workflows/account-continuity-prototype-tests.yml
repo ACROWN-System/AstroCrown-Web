@@ -81,7 +81,7 @@ jobs:
               raise SystemExit("The local account prototype must bind only to loopback.")
           for item in (
               'id="account-demo-notice"', "function registerWithPasskey", "function signInWithPasskey",
-              "navigator.credentials.create", "navigator.credentials.get",
+              "function syncAccountButton", "navigator.credentials.create", "navigator.credentials.get",
               "account-passkey-signin", "hosted-preview-no-authentication"
           ):
               if item not in ui:
