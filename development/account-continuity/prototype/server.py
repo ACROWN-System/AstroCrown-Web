@@ -510,6 +510,316 @@ class AccountApplication:
             )
         return token, expires
 
+    def _passkey_service(self):
+        if self.passkey_auth_service is None:
+            raise ApiError(
+                503,
+                "Passkey authentication is unavailable in this local environment. No fallback login is enabled.",
+            )
+        return self.passkey_auth_service
+
+    @staticmethod
+    def _passkey_challenge_id(value: object) -> str:
+        if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9_-]{32,64}", value):
+            raise ApiError(400, "The passkey challenge reference is invalid.")
+        return value
+
+    def issue_passkey_registration_options(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        service = self._passkey_service()
+        if set(payload) - {"termsAccepted", "termsVersion", "referralId"}:
+            raise ApiError(400, "The passkey registration request contains unsupported fields.")
+        if payload.get("termsAccepted") is not True:
+            raise ApiError(400, "Accept the Terms of Use and Privacy Policy to create an account.")
+        if payload.get("termsVersion") != TERMS_VERSION:
+            raise ApiError(400, "The development Terms of Use and Privacy Policy version is not acknowledged.")
+        referral_id = normalize_referral_id(payload.get("referralId", ""))
+        subject = self.case_rate_subject(handler)
+        if not self.auth_rate_allowed("passkey-register-options", subject, limit=5, window=3600):
+            raise ApiError(429, "Too many account-creation attempts. Please try again later.")
+
+        account_id = str(uuid.uuid4())
+        account_label = "AC-" + secrets.token_hex(5).upper()
+        challenge_id = secrets.token_urlsafe(24)
+        challenge = secrets.token_bytes(service.CHALLENGE_BYTES)
+        options = service.registration_options(
+            user_id=uuid.UUID(account_id).bytes,
+            user_name=account_label,
+            user_display_name="AstroCrown member",
+            challenge=challenge,
+        )
+        metadata = {
+            "accountLabel": account_label,
+            "referralId": referral_id,
+            "termsVersion": TERMS_VERSION,
+        }
+        now = int(time.time())
+        with self.connect() as db:
+            db.execute(
+                """DELETE FROM account_passkey_challenges
+                   WHERE expires_at <= ? OR (used_at IS NOT NULL AND used_at <= ?)""",
+                (now, now - 86400),
+            )
+            db.execute(
+                """INSERT INTO account_passkey_challenges(
+                       challenge_id, challenge, ceremony, account_id, payload_json,
+                       created_at, expires_at
+                   ) VALUES (?, ?, 'registration', ?, ?, ?, ?)""",
+                (
+                    challenge_id, challenge, account_id,
+                    json.dumps(metadata, separators=(",", ":")), now, now + 180,
+                ),
+            )
+        return 200, {
+            "challengeId": challenge_id,
+            "publicKey": options,
+            "accountLabel": account_label,
+            "expiresIn": 180,
+        }, None
+
+    def verify_passkey_registration(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        service = self._passkey_service()
+        if set(payload) != {"challengeId", "credential"}:
+            raise ApiError(400, "The passkey registration response is incomplete.")
+        challenge_id = self._passkey_challenge_id(payload.get("challengeId"))
+        credential = payload.get("credential")
+        if not isinstance(credential, dict):
+            raise ApiError(400, "A valid passkey registration response is required.")
+        subject = self.case_rate_subject(handler)
+        if not self.auth_rate_allowed("passkey-register-verify", subject, limit=10, window=3600):
+            raise ApiError(429, "Too many passkey registration attempts. Please try again later.")
+        now = int(time.time())
+        with self.connect() as db:
+            challenge_row = db.execute(
+                """SELECT * FROM account_passkey_challenges
+                   WHERE challenge_id = ? AND ceremony = 'registration'
+                     AND used_at IS NULL AND expires_at > ?""",
+                (challenge_id, now),
+            ).fetchone()
+        if challenge_row is None:
+            raise ApiError(410, "This passkey registration request has expired or was already used. Start again.")
+        try:
+            verified = service.verify_registration(
+                credential=credential,
+                challenge=bytes(challenge_row["challenge"]),
+            )
+            credential_id, credential_id_bytes = service.credential_id_from_response(credential)
+        except PasskeyVerificationError:
+            raise ApiError(401, "The passkey registration proof was not accepted. Start again.") from None
+        if not hmac.compare_digest(bytes(verified.credential_id), credential_id_bytes):
+            raise ApiError(401, "The passkey registration proof was not accepted. Start again.")
+
+        response_data = credential.get("response", {})
+        transports = response_data.get("transports", []) if isinstance(response_data, dict) else []
+        allowed_transports = {"usb", "nfc", "ble", "internal", "hybrid", "smart-card"}
+        if not isinstance(transports, list) or any(
+            not isinstance(item, str) or item not in allowed_transports for item in transports
+        ):
+            transports = []
+        metadata = json.loads(challenge_row["payload_json"])
+        account_id = str(challenge_row["account_id"])
+        account_label = metadata["accountLabel"]
+        created_at = utc_iso()
+        # The legacy NOT NULL password columns remain as random, unusable values
+        # for old SQLite compatibility. Passkey accounts are explicitly marked
+        # auth_method='webauthn'; the default server refuses password login.
+        placeholder_salt = secrets.token_bytes(16)
+        placeholder_hash = secrets.token_bytes(32)
+        device_type = getattr(
+            verified.credential_device_type,
+            "value",
+            str(verified.credential_device_type),
+        )
+        try:
+            with self.connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                live = db.execute(
+                    """SELECT * FROM account_passkey_challenges
+                       WHERE challenge_id = ? AND ceremony = 'registration'
+                         AND used_at IS NULL AND expires_at > ?""",
+                    (challenge_id, int(time.time())),
+                ).fetchone()
+                if live is None:
+                    raise ApiError(410, "This passkey registration request has expired or was already used. Start again.")
+                if db.execute(
+                    "SELECT 1 FROM account_passkey_credentials WHERE credential_id = ? OR credential_id_bytes = ?",
+                    (credential_id, credential_id_bytes),
+                ).fetchone():
+                    raise ApiError(409, "This passkey is already registered. Use another authenticator.")
+                db.execute(
+                    """INSERT INTO accounts(
+                           account_id, username, email, password_salt, password_hash,
+                           auth_method, created_at, referral_id, newsletter_opt_in,
+                           newsletter_consent_at, terms_version, terms_accepted_at,
+                           email_verified, role
+                       ) VALUES (?, ?, NULL, ?, ?, 'webauthn', ?, ?, 0, NULL, ?, ?, 0, 'user')""",
+                    (
+                        account_id, account_label, placeholder_salt, placeholder_hash,
+                        created_at, metadata["referralId"], metadata["termsVersion"], created_at,
+                    ),
+                )
+                db.execute(
+                    """INSERT INTO account_passkey_credentials(
+                           credential_id, credential_id_bytes, account_id, public_key,
+                           sign_count, transports_json, device_type, backed_up, created_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        credential_id, credential_id_bytes, account_id,
+                        bytes(verified.credential_public_key), int(verified.sign_count),
+                        json.dumps(transports, separators=(",", ":")), device_type,
+                        int(bool(verified.credential_backed_up)), created_at,
+                    ),
+                )
+                db.execute(
+                    "UPDATE account_passkey_challenges SET used_at = ? WHERE challenge_id = ? AND used_at IS NULL",
+                    (int(time.time()), challenge_id),
+                )
+        except sqlite3.IntegrityError:
+            raise ApiError(409, "This passkey or account identifier is already registered. Start again.") from None
+
+        self.clear_auth_rate_limit("passkey-register-options", subject)
+        token, expires = self.new_session(account_id)
+        account, expires = self.account_for_session(token)
+        if account is None:
+            raise ApiError(500, "The passkey account session could not be initialized.")
+        result = self.account_summary(account, expires)
+        result["accountLabel"] = account_label
+        result["message"] = "Your AstroCrown passkey account has been created."
+        return 201, result, self.cookie_header(token)
+
+    def issue_passkey_authentication_options(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        service = self._passkey_service()
+        if payload:
+            raise ApiError(400, "Passkey sign-in does not accept an email address or account identifier.")
+        subject = self.case_rate_subject(handler)
+        if not self.auth_rate_allowed("passkey-auth-options", subject, limit=30, window=3600):
+            raise ApiError(429, "Too many passkey sign-in attempts. Please try again later.")
+        challenge_id = secrets.token_urlsafe(24)
+        challenge = secrets.token_bytes(service.CHALLENGE_BYTES)
+        options = service.authentication_options(challenge=challenge)
+        now = int(time.time())
+        with self.connect() as db:
+            db.execute(
+                """DELETE FROM account_passkey_challenges
+                   WHERE expires_at <= ? OR (used_at IS NOT NULL AND used_at <= ?)""",
+                (now, now - 86400),
+            )
+            db.execute(
+                """INSERT INTO account_passkey_challenges(
+                       challenge_id, challenge, ceremony, account_id, payload_json,
+                       created_at, expires_at
+                   ) VALUES (?, ?, 'authentication', NULL, '{}', ?, ?)""",
+                (challenge_id, challenge, now, now + 180),
+            )
+        return 200, {"challengeId": challenge_id, "publicKey": options, "expiresIn": 180}, None
+
+    def verify_passkey_authentication(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        service = self._passkey_service()
+        if set(payload) != {"challengeId", "credential"}:
+            raise ApiError(400, "The passkey sign-in response is incomplete.")
+        challenge_id = self._passkey_challenge_id(payload.get("challengeId"))
+        credential = payload.get("credential")
+        if not isinstance(credential, dict):
+            raise ApiError(400, "A valid passkey sign-in response is required.")
+        subject = self.case_rate_subject(handler)
+        if not self.auth_rate_allowed("passkey-auth-verify", subject, limit=10, window=300):
+            raise ApiError(429, "Too many passkey sign-in attempts. Please wait before trying again.")
+        now = int(time.time())
+        with self.connect() as db:
+            challenge_row = db.execute(
+                """SELECT * FROM account_passkey_challenges
+                   WHERE challenge_id = ? AND ceremony = 'authentication'
+                     AND used_at IS NULL AND expires_at > ?""",
+                (challenge_id, now),
+            ).fetchone()
+        try:
+            credential_id, credential_id_bytes = service.credential_id_from_response(credential)
+        except PasskeyVerificationError:
+            raise ApiError(401, "Passkey sign-in could not be completed. Check your authenticator and try again.") from None
+        if challenge_row is None:
+            raise ApiError(410, "This passkey sign-in request has expired or was already used. Start again.")
+        with self.connect() as db:
+            credential_row = db.execute(
+                """SELECT pc.*, a.auth_method, a.role
+                   FROM account_passkey_credentials pc
+                   JOIN accounts a ON a.account_id = pc.account_id
+                   WHERE pc.credential_id = ? AND pc.credential_id_bytes = ?
+                     AND pc.active = 1 AND a.auth_method = 'webauthn'""",
+                (credential_id, credential_id_bytes),
+            ).fetchone()
+        if credential_row is None:
+            raise ApiError(401, "Passkey sign-in could not be completed. Check your authenticator and try again.")
+        try:
+            verified = service.verify_authentication(
+                credential=credential,
+                challenge=bytes(challenge_row["challenge"]),
+                credential_public_key=bytes(credential_row["public_key"]),
+                current_sign_count=int(credential_row["sign_count"]),
+            )
+            if not hmac.compare_digest(bytes(verified.credential_id), credential_id_bytes):
+                raise PasskeyVerificationError("Credential ID mismatch.")
+            user_handle = service.user_handle_from_response(credential)
+            if user_handle is not None and not hmac.compare_digest(
+                user_handle, uuid.UUID(credential_row["account_id"]).bytes
+            ):
+                raise PasskeyVerificationError("User handle mismatch.")
+        except (PasskeyVerificationError, ValueError):
+            raise ApiError(401, "Passkey sign-in could not be completed. Check your authenticator and try again.") from None
+
+        account_id = str(credential_row["account_id"])
+        device_type = getattr(
+            verified.credential_device_type,
+            "value",
+            str(verified.credential_device_type),
+        )
+        now_int = int(time.time())
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            live_challenge = db.execute(
+                """SELECT 1 FROM account_passkey_challenges
+                   WHERE challenge_id = ? AND ceremony = 'authentication'
+                     AND used_at IS NULL AND expires_at > ?""",
+                (challenge_id, now_int),
+            ).fetchone()
+            live_credential = db.execute(
+                """SELECT sign_count FROM account_passkey_credentials
+                   WHERE credential_id = ? AND account_id = ? AND active = 1""",
+                (credential_id, account_id),
+            ).fetchone()
+            if live_challenge is None or live_credential is None:
+                raise ApiError(410, "This passkey sign-in request has expired or was already used. Start again.")
+            if int(live_credential["sign_count"]) != int(credential_row["sign_count"]):
+                raise ApiError(401, "This passkey response is no longer current. Start sign-in again.")
+            db.execute(
+                """UPDATE account_passkey_credentials
+                   SET sign_count = ?, device_type = ?, backed_up = ?, last_used_at = ?
+                   WHERE credential_id = ? AND account_id = ?""",
+                (
+                    int(verified.new_sign_count), device_type,
+                    int(bool(verified.credential_backed_up)), utc_iso(now_int),
+                    credential_id, account_id,
+                ),
+            )
+            db.execute(
+                "UPDATE account_passkey_challenges SET used_at = ? WHERE challenge_id = ? AND used_at IS NULL",
+                (now_int, challenge_id),
+            )
+        self.clear_auth_rate_limit("passkey-auth-verify", subject)
+        token, expires = self.new_session(account_id)
+        account, expires = self.account_for_session(token)
+        if account is None:
+            raise ApiError(500, "The passkey account session could not be initialized.")
+        result = self.account_summary(account, expires)
+        result["message"] = "You are signed in to AstroCrown with your passkey."
+        return 200, result, self.cookie_header(token)
+
     def account_for_session(self, token: str | None) -> tuple[sqlite3.Row | None, int | None]:
         if not token:
             return None, None
