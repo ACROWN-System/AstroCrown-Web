@@ -92,9 +92,11 @@ The user's own device may perform local biometric/PIN verification. AstroCrown d
 
 ## 5. Data privacy and operator-access boundary
 
-Public-key authentication means AstroCrown does not possess the private authentication key and cannot create a valid WebAuthn assertion for the user. It does **not**, by itself, prevent an authorized application/database operator from reading account data stored in plaintext.
+Public-key authentication means AstroCrown does not possess the user's passkey private key and cannot create a valid WebAuthn assertion using that credential. The application has no staff-facing password reset, credential-minting or user-impersonation function. A normal administrator role also cannot reset another user's authenticator or recover their account.
 
-Any promise that even AstroCrown operators cannot read particular user content requires a separate, designed and tested client-side/end-to-end encryption system with user-controlled encryption keys, key recovery decisions, metadata analysis and limitations documented. Do not make that promise as a consequence of WebAuthn alone.
+**Important trust boundary:** the current application still creates server-side sessions after a valid WebAuthn assertion and stores account/role/session state in a database. A person with privileged control of the application server, database, deployment pipeline or runtime could alter that state, mint or hijack application sessions, change roles, or modify the service to bypass authentication. WebAuthn does not cryptographically prevent a malicious infrastructure operator or compromised backend from doing this. This local prototype therefore removes ordinary support/staff recovery backdoors; it does not prove that the organization or infrastructure operator is technically incapable of all account access or impersonation.
+
+Any stronger "not even the operator can access or impersonate" guarantee would require a separate threat model and architecture in which clients cryptographically authorize sensitive operations, the server cannot unilaterally manufacture accepted authorization, user data is protected with client-side/end-to-end encryption where confidentiality is intended, and key recovery/rotation, metadata, account deletion and administrative governance are redesigned accordingly. Those properties require independent design and adversarial testing and are not implemented here.
 
 Similarly, authentication does not eliminate the need for secure backend authorization, server-side role checks, least privilege, audit controls, session protection, secure deployment, vulnerability management or independent review.
 
@@ -109,9 +111,9 @@ Similarly, authentication does not eliminate the need for secure backend authori
 
 ## 7. Migration from the legacy local prototype
 
-The current PR #141 local account prototype was built around email/password, email-verification/reset tokens and an optional EVM/SIWE administrator step-up. That implementation is historical development behavior, not the adopted target authentication model.
+The current PR #141 local account prototype originated with email/password and email-verification/reset tokens. Those routes are now disabled in the default server mode and retained only for explicit legacy regression tests. The default local account flow is WebAuthn passkey-first with one-time offline recovery. The existing EVM/SIWE administrator step-up remains a separate purpose.
 
-This decision is documentation/design only. It does not silently convert the existing prototype, make it safe for real accounts, or authorize exposing it publicly. Before implementation:
+This specification records the target and the current local implementation state; it does not make the prototype production-ready or authorize public onboarding. Before production implementation/release:
 
 1. Add WebAuthn registration, sign-in, credential lifecycle and recovery to the local prototype using a maintained library.
 2. Add offline recovery-key generation, hashed storage, throttling, single-use enforcement and replacement tests.
