@@ -381,8 +381,8 @@ class PasskeyApiTests(unittest.TestCase):
                    WHERE account_id = ? AND event_type = 'account_recovered_with_recovery_key'""",
                 (account_id,),
             ).fetchall()
-        self.assertEqual([(row["credential_id"], row["active"]) for row in passkeys],
-                         [(original_encoded, 0), (replacement_encoded, 1)])
+        active_by_credential = {row["credential_id"]: row["active"] for row in passkeys}
+        self.assertEqual(active_by_credential, {original_encoded: 0, replacement_encoded: 1})
         self.assertEqual([row["key_version"] for row in recovery_rows], [1, 2])
         self.assertIsNotNone(recovery_rows[0]["used_at"])
         self.assertIsNone(recovery_rows[1]["used_at"])
