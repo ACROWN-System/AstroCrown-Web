@@ -14,7 +14,7 @@ Continue the user-account and administrator foundation using the smallest safe i
 ## 2. Source-of-truth decisions
 
 - Every account uses a WebAuthn passkey as its primary authenticator and can be created without a crypto wallet, email address, password, SMS number or paid/external identity provider.
-- The current local prototype still contains the previous email/password and email-token implementation; it is legacy development behavior. The new WebAuthn registration/sign-in and offline recovery-key flow are not yet implemented. No production authentication or live user account is qualified.
+- The current local prototype now uses WebAuthn passkeys for registration/sign-in and a one-time offline recovery key for lost-passkey replacement. Email/password routes remain only for explicit legacy regression tests; the default server rejects them and does not load an email sender. No production authentication or live user account is qualified.
 - A user-selected wallet may be enrolled as an optional additional account authenticator/backup, with a fresh purpose-bound off-chain signature. Wallet connection never creates an account or grants an administrator role. The user account hub and administrator dashboard remain separate; admin role is a backend authority, never a client-side flag.
 - Administrator access requires a valid passkey-authenticated account session, an already authorized role and the existing fresh wallet step-up from an enrolled administrator wallet. The provisional wallet count and minimum remain governed by the existing requirements.
 - Loss of all admin wallets uses the Imperial HSIAN recovery authority with audited human/governed approval. NOVA cannot silently promote itself or an unverified claimant.
@@ -474,7 +474,9 @@ The owner accepted replacing email/password-first authentication with a public-k
 
 ### Repository changes and status
 
-- Added `development/account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md`.
-- Updated `USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md` with the superseding decision and links.
-- This audit update records design only. No passkey code, recovery-key code, database migration, new provider, production configuration, deployment or real-user account was created.
-- PR #141 remains draft, open, unmerged and undeployed. The legacy prototype remains the current test implementation until a separately verified replacement is delivered.
+- Added `development/account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md` and updated the canonical account requirements, prototype README and security-assurance page.
+- Implemented the local passkey RP boundary, credential/challenge persistence, registration/discoverable sign-in API, passkey-first account UI, one-time recovery-key generation/storage/display, restricted recovery challenge, replacement-passkey registration, previous-credential/session revocation, key rotation and audit event.
+- Added passkey/recovery API tests and extended the headless Chrome virtual-authenticator flow to exercise registration, discoverable sign-in and passkey recovery. The current CI workflow result must be recorded against its final exact head before claiming success.
+- Default local runtime does not load SMTP or use email/SMS for account access. Legacy password/email routes are disabled unless a test explicitly opts into legacy mode.
+- The optional account-level wallet backup remains unimplemented; administrator EVM/SIWE step-up remains separate. No Astro-Wallet, wallet custody, multichain refactor, paid provider or public deployment was added.
+- PR #141 remains draft, open, unmerged and undeployed.
