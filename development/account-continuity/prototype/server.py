@@ -2783,27 +2783,16 @@ def main(argv: list[str] | None = None) -> int:
         print("Unable to start the local account prototype. The port may already be in use.", file=sys.stderr)
         print(str(exc), file=sys.stderr)
         return 2
-    print("AstroCrown email-account prototype (development only)")
+    print("AstroCrown passkey-account prototype (development only)")
     print("Open exactly: http://localhost:" + str(args.port) + "/")
-    print("Bound to 127.0.0.1 only. No external account provider or wallet is used.")
+    print("Bound to 127.0.0.1 only. Passkey verification is performed locally by this application.")
     print("Local database: " + str(application.database_path))
-    if application.email_delivery_available:
-        provider = os.environ.get("ASTROCROWN_EMAIL_PROVIDER", "smtp").strip().lower()
-        usage = application.email_send_budget.usage()
-        print(
-            f"Account email delivery: {provider} SMTP transport configured "
-            "(connectivity and inbox delivery not yet verified)."
-        )
-        print(
-            "Local account-email quota: "
-            f"{usage['daily_count']}/{usage['daily_limit']} rolling 24h; "
-            f"{usage['monthly_count']}/{usage['monthly_limit']} rolling 30d."
-        )
-    else:
-        print(
-            "Account email delivery: not configured; verification and password-reset messages will not be sent."
-        )
-    print("Crypto-news newsletter delivery is not configured.")
+    print(
+        "WebAuthn passkey service: "
+        + ("available for local testing." if application.passkey_auth_service is not None else "UNAVAILABLE; account creation and sign-in are disabled.")
+    )
+    print("Email/SMS authentication and recovery: disabled. No email or SMS provider is loaded.")
+    print("Optional wallet backup: separate local EVM/SIWE verifier only; not required for ordinary account access.")
     print("Do not use real credentials, production accounts or wallet secrets.")
     print("Press Ctrl+C to stop.")
     try:
