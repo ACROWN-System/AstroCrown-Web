@@ -374,7 +374,7 @@
           '<input id="account-recovery-identifier" name="accountIdentifier" type="text" required maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-...">' +
         '</label>' +
         '<label class="account-field" for="account-recovery-secret">Offline recovery key' +
-          '<input id="account-recovery-secret" name="recoveryKey" type="password" required maxlength="64" autocomplete="off" spellcheck="false" placeholder="ACR1-...">' +
+          '<input id="account-recovery-secret" name="recoveryKey" type="text" inputmode="text" required maxlength="64" autocomplete="off" spellcheck="false" placeholder="ACR1-...">' +
         '</label>' +
         '<p class="account-provider-note">The key is accepted once. After successful recovery, all previous passkeys and sessions are revoked and a new recovery key is issued for you to save offline.</p>' +
         '<button class="account-primary" type="submit" ' + (browserPreviewMode ? 'disabled' : '') + '>Verify recovery key and replace passkey</button>' +
