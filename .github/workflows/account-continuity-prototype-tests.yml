@@ -59,6 +59,7 @@ jobs:
           from pathlib import Path
           html = Path("development/index.html").read_text(encoding="utf-8")
           server = Path("development/account-continuity/prototype/server.py").read_text(encoding="utf-8")
+          passkey = Path("development/account-continuity/prototype/passkey_auth.py").read_text(encoding="utf-8")
           ui = Path("development/account-continuity/prototype/account-ui.js").read_text(encoding="utf-8")
           css = Path("development/account-continuity/prototype/account-prototype.css").read_text(encoding="utf-8")
           terms = Path("development/account-continuity/prototype/terms-of-use.html").read_text(encoding="utf-8")
@@ -101,10 +102,17 @@ jobs:
           for item in (
               "data-account-mode", "Referral ID (Optional)", "Terms of Use", "Privacy Policy",
               "termsAccepted", "termsVersion", "No email, SMS or external identity provider",
-              "publicKey", "challengeId", "authenticatorSelection", "userVerification"
+              "publicKey", "challengeId", "userVerification", "account-recovery-form",
+              "account-one-time-recovery-key", "account-recovery-key-saved",
+              "/api/account/recovery/options", "/api/account/recovery/complete"
           ):
               if item not in ui and item not in server:
                   raise SystemExit(f"Expected passkey account UX/security boundary missing: {item}")
+          if "authenticatorSelection" not in passkey or "ResidentKeyRequirement.REQUIRED" not in passkey:
+              raise SystemExit("WebAuthn registration must require a discoverable credential.")
+          for item in ("generate_recovery_key", "account_recovery_keys", "account_recovery_challenges"):
+              if item not in server:
+                  raise SystemExit(f"Offline recovery-key backend control missing: {item}")
           for item in ('name="email"', 'type="password"', "/api/account/login", "/api/account/register"):
               if item in ui:
                   raise SystemExit(f"Legacy email/password account flow remains in the active UI: {item}")
