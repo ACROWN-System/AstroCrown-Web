@@ -307,3 +307,47 @@ The permissioned administrator appointment implementation and its test updates w
 The account workflow also completed Python and browser-JavaScript syntax validation. The first-wallet enrollment regression covers the target's own signature, cross-session rejection, replay rejection and the separate fresh administrator step-up. The appointment regression covers self-grant denial, a wallet-verified administrator without `admin.roles.grant`, non-delegable permission transfer, separate `admin.roles.revoke`, audit records and preservation of ordinary account access.
 
 This record is tied to the stated code/test head. Any later changes to application or test code require a new verification record; documentation-only changes do not retroactively alter the result above. PR #141 remains draft, open, unmerged and undeployed. No production homepage behavior was changed. Production identity/governance, owner bootstrap authentication, hosting/deployment, independent security review and Imperial HSIAN all-wallet-loss recovery remain outstanding.
+
+
+## 16. NOVA-native administrative operations smart account — owner-accepted architecture — 2026-11-02
+
+### Decision
+
+The owner confirmed that the programmable administrative smart account and its pre-execution transaction-validation mechanism are part of NOVA itself. The on-chain enforcement account/guard and the off-chain NOVA policy, monitoring, governance, audit and incident-response components form one NOVA-integrated security system. This is not a proposal to outsource administrative transaction security to an external wallet provider.
+
+The architecture separates three functions:
+
+1. **Administrator external identity/compensation wallet:** remains under the administrator's own control. It is used to prove wallet control for administrative authentication/step-up and may receive salary, service payments and bonuses through a separate payout process. It is not an AstroCrown organizational-funds wallet, does not own/control the NOVA operations account, and must never be used to hold NOVA operational funds. NOVA/AstroCrown must never obtain its private key or seed phrase.
+2. **NOVA administrative operations smart account:** a separate, individually identifiable programmable account assigned to each administrator. It is a NOVA component, holds only minimum operational assets, and must enforce approved operations before execution through mandatory on-chain validation as well as NOVA's off-chain policy checks. It cannot directly control the treasury or expose an administrator bypass.
+3. **AstroCrown treasury and protected recovery vault:** separate organizational custody. Recoverable operational assets are sent only to a predetermined protected recovery vault under pre-established constrained recovery authorization.
+
+### One-violation policy
+
+A deliberate prohibited operation submitted or approved by a currently authenticated, wallet-step-up-verified administrator is a qualifying violation even when the NOVA validator blocks the operation before execution. The same response applies as for a confirmed compromise:
+
+- reject the prohibited operation before execution;
+- suspend and unregister the NOVA operations smart account;
+- revoke the administrator role and associated permissions;
+- invalidate administrator sessions and outstanding delegated authorizations;
+- remove the external wallet's association as an administrator authenticator, without taking control of that wallet;
+- recover remaining supported operational assets through the account's pre-authorized constrained recovery path to the predetermined protected vault;
+- keep the ordinary User dashboard available, remove the Administrator access entry based on authoritative backend state, and show the standard incident notice; and
+- require formal security review and new authorization before reinstatement.
+
+Attribution is limited to an authenticated administrator action or valid authorization from that administrator's approved administrative context. A third-party unauthenticated probe, forged request, ordinary transport failure or benign UI/network error is not by itself proof that the administrator attempted a prohibited transaction; such events must still be logged and investigated. This prevents a malicious outsider from trivially triggering an administrator's revocation.
+
+Revocation does not confiscate the administrator's external wallet or earned compensation. That external address may remain a payout destination unless it is independently suspected compromised, in which case further payments are held pending separate verification. No claim is made that assets already transferred away or irreversibly consumed can always be recovered.
+
+### Repository changes made under this decision
+
+- Added [NOVA Administrative Smart-Account and Transaction-Enforcement Specification](../../account-continuity/NOVA-ADMINISTRATIVE-SMART-ACCOUNT-SECURITY-SPEC.md), Document ID NOVA-ACW-SEC-ADMIN-001.
+- Updated [User and Administrator Account Requirements](../../account-continuity/USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) to distinguish the external identity/compensation wallet, NOVA operations smart account and treasury/recovery vault.
+- The new specification defines pre-execution off-chain and on-chain validation, fail-closed behavior, monitoring and reconciliation, one-violation response, dashboard notice, recovery limitations, governance controls, tests and release gates.
+
+### Implementation status and preservation
+
+This is an accepted architecture and requirements record only. It does **not** mean the NOVA smart-account contract, validator/guard, on-chain transaction engine, chain monitoring, operational asset-management path, emergency recovery or automated incident lifecycle has been implemented. PR #141's current loopback prototype continues to provide ordinary account/session handling, permissioned role appointment/revocation and external-wallet proof-of-control only.
+
+Before real funds are deposited, later work must include offline model tests, test-chain/fork qualification, adversarial direct-call/module/upgrade/guard-bypass testing, replay and policy-drift testing, invariant/property tests, asset recovery/revocation tests, independent smart-contract review, chain/RPC failure drills and operational incident-response review.
+
+No production homepage, production account backend, real wallet, treasury, organizational asset, domain, external provider or deployed contract was changed. PR #141 remains draft, open, unmerged and undeployed. This documentation-only update does not change the earlier application-code verification record for commit `66c3d9fa4c2b5ecf8843bdf6798468c4a4a883ad`.
