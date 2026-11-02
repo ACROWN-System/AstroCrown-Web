@@ -410,8 +410,12 @@
         '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
         (needsRecoveryKeyAcknowledgement
           ? '<section class="account-recovery-key-panel">' +
-              '<h3>Save your offline recovery key now</h3>' +
-              '<p>This is shown once. AstroCrown does not store the readable key. Keep it offline and separate from your passkey device. Anyone who obtains it may be able to replace your passkey.</p>' +
+              '<h3>Save your account identifier and offline recovery key</h3>' +
+              '<p>Keep both items offline and separate from your passkey device. The account identifier is not a secret; the recovery key is a secret and can be used to replace your passkey.</p>' +
+              '<label class="account-field" for="account-one-time-account-identifier">Account identifier' +
+                '<input id="account-one-time-account-identifier" type="text" readonly spellcheck="false" autocomplete="off" value="' + escapeHtml(accountState.accountIdentifier || "") + '">' +
+              '</label>' +
+              '<button class="account-secondary" type="button" id="copy-account-identifier">Copy account identifier</button>' +
               '<label class="account-field" for="account-one-time-recovery-key">One-time recovery key' +
                 '<input id="account-one-time-recovery-key" type="text" readonly spellcheck="false" autocomplete="off" value="' + escapeHtml(recoveryKey) + '">' +
               '</label>' +
@@ -821,20 +825,27 @@
       if (recoveryIdentifier) recoveryIdentifier.focus();
       return;
     }
-    if (button.id === "copy-account-recovery-key") {
-      var keyField = document.getElementById("account-one-time-recovery-key");
+    if (button.id === "copy-account-identifier" || button.id === "copy-account-recovery-key") {
+      var isRecoveryKey = button.id === "copy-account-recovery-key";
+      var keyField = document.getElementById(
+        isRecoveryKey ? "account-one-time-recovery-key" : "account-one-time-account-identifier"
+      );
       if (!keyField) return;
       keyField.focus();
       keyField.select();
       if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
         try {
           await navigator.clipboard.writeText(keyField.value);
-          showFeedback("Recovery key copied. Store it offline and do not share it.", "success");
+          showFeedback(
+            isRecoveryKey ? "Recovery key copied. Store it offline and do not share it."
+              : "Account identifier copied. Keep it with your offline recovery record.",
+            "success"
+          );
         } catch (_error) {
-          showFeedback("The key is selected. Copy it manually and store it offline.", "info");
+          showFeedback("The value is selected. Copy it manually and keep it offline.", "info");
         }
       } else {
-        showFeedback("The key is selected. Copy it manually and store it offline.", "info");
+        showFeedback("The value is selected. Copy it manually and keep it offline.", "info");
       }
       return;
     }
