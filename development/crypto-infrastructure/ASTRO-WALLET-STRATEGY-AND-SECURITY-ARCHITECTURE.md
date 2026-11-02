@@ -92,6 +92,8 @@ The critical caveat is the random generator. A broken or reused random source ca
 
 An exact repeated BIP-39 mnemonic combined with the same BIP-39 passphrase and derivation scheme recreates the same deterministic key hierarchy. Different passphrases or derivation paths can produce different child accounts, so phrase comparison alone does not always establish that two displayed addresses are identical; it does mean that the root secret has been reused.
 
+Do not confuse this with normal multichain derivation: a single owner may intentionally use one BIP-39 root to derive different BTC, ETH and other chain-specific keys/addresses through different derivation paths. That is one person controlling multiple chain accounts from one recovery root. The security incident of concern is the same root secret being independently assigned to unrelated owners, or copied/reused without the affected owners understanding that their control is shared.
+
 ### 4.4 Quantum impact on mnemonic entropy versus blockchain signatures
 
 Quantum attacks must be assessed separately by cryptographic layer.
