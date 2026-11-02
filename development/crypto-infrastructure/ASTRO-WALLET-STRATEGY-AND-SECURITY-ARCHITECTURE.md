@@ -67,6 +67,61 @@ An optional BIP-39 passphrase (sometimes marketed as an additional or '25th' wor
 
 Reference: the BIP-39 specification explicitly says that mnemonic sentences are intended to transport computer-generated randomness and are not a method for turning user-created sentences into secure wallet seeds.
 
+### 4.3 Random collisions, weak entropy and quantum search are different threats
+
+Do not confuse three separate risks:
+
+1. **Accidental collision:** two independent wallets are assigned exactly the same randomly generated entropy by chance.
+2. **Entropy-generation failure or reuse:** two wallets receive repeated or predictable values because a random-number generator, platform state, initialization, virtual-machine snapshot, test fixture or implementation is defective or reused.
+3. **Cryptanalytic attack:** an attacker uses classical or future quantum algorithms to recover a target secret or signing key from available information.
+
+For a standard 12-word BIP-39 mnemonic, the valid mnemonic space represents 2^128 possible initial entropy values. For independently and uniformly generated entropy, the birthday approximation for at least one collision among n generated wallets is:
+
+`P(collision) ≈ n(n − 1) / (2 × 2^128)`
+
+| Number of independently generated 12-word wallets | Approximate probability of at least one exact entropy collision |
+|---:|---:|
+| 1 million | 1.47 × 10^-27 |
+| 1 billion | 1.47 × 10^-21 |
+| 10 billion | 1.47 × 10^-19 |
+| 100 billion | 1.47 × 10^-17 |
+
+These are mathematical illustrations, not claims about the number of wallets currently deployed. They assume independent, uniform, cryptographically secure generation. At realistic wallet-population scales, an accidental collision is not the principal risk under that assumption.
+
+The critical caveat is the random generator. A broken or reused random source can create many repeated keys and invalidate the probability calculation entirely. Astro-Wallet must therefore use only platform/OS cryptographic random APIs and well-reviewed cryptographic libraries; test initialization and entropy-source failure; consider cloned virtual-machine/device state and snapshot rollback; and fail closed if secure randomness is unavailable. Do not invent an entropy mixer from timestamps, device identifiers, user behavior or other predictable inputs. Do not use production code paths with published sample/test mnemonics. Never upload or centrally compare user mnemonics to check for duplicates: that would expose the master secrets and create a dangerous central collection.
+
+An exact repeated BIP-39 mnemonic combined with the same BIP-39 passphrase and derivation scheme recreates the same deterministic key hierarchy. Different passphrases or derivation paths can produce different child accounts, so phrase comparison alone does not always establish that two displayed addresses are identical; it does mean that the root secret has been reused.
+
+### 4.4 Quantum impact on mnemonic entropy versus blockchain signatures
+
+Quantum attacks must be assessed separately by cryptographic layer.
+
+**Generic search against random mnemonic entropy:** Grover's algorithm offers a theoretical quadratic speed-up for unstructured search. As a simplified idealized query-complexity illustration, a 128-bit search space has a square-root scale of about 2^64 quantum oracle queries; a 256-bit space has a corresponding scale of about 2^128. These are not estimates of wall-clock attack time, practical quantum hardware, or a guarantee that a particular mnemonic derivation pipeline can be attacked at that cost. A target-testing oracle for a wallet phrase has to include the BIP-39 passphrase derivation (including PBKDF2-HMAC-SHA512 with the specified iteration count), wallet derivation and a way to recognize the target. Grover operations are serial and practical cost depends on circuit depth, error correction, hardware and oracle construction. Still, 12-word/128-bit entropy does not provide 128-bit generic quantum-search security; 24-word/256-bit entropy provides a larger margin against this particular brute-force threat.
+
+**Quantum key recovery against public-key signatures:** Shor's algorithm attacks the discrete-logarithm mathematics underlying widely deployed elliptic-curve signature systems. A sufficiently capable cryptographically relevant quantum computer could derive a private signing key from its public key. Increasing BIP-39 from 12 to 24 words does not fix this: it is the public-key signature algorithm and the blockchain's accepted transaction rules that are at issue, not the number of mnemonic words. Public-key exposure and mitigation options differ by chain, address type, output type and transaction lifecycle, so Astro-Wallet must maintain a chain-by-chain quantum exposure and migration assessment.
+
+Grover-query figures must not be presented as evidence that a practical quantum attack is available today. NIST and IETF sources describe the quantum threat as a future cryptographic migration issue; the practical arrival of a cryptographically relevant quantum computer remains uncertain. Migration planning should nevertheless begin before a chain or wallet becomes impossible to update safely.
+
+**Post-quantum wallet/application cryptography:** NIST has standardized ML-KEM (FIPS 203) for key establishment and ML-DSA (FIPS 204) and SLH-DSA (FIPS 205) for digital signatures. Astro-Wallet may evaluate these for its own off-chain authentication, backup/key encapsulation and recovery-authority protocols. ML-KEM is not a signature algorithm. None of these standards automatically changes Bitcoin, Ethereum, Solana or any other blockchain's consensus transaction signature rules; a chain must adopt compatible protocol changes and wallets must implement them before on-chain assets gain that protection.
+
+**Bitcoin-specific proposal status:** BIP-360 / P2MR remains labelled a draft. Its proposal addresses certain long-exposure elliptic-curve public-key attacks through a new output type, but it does not introduce post-quantum signature schemes and does not claim full protection against short-exposure attacks. Astro-Wallet must not advertise BIP-360 as an already deployed quantum-safe Bitcoin solution.
+
+### 4.5 Astro-Wallet security policy derived from these distinctions
+
+- Do not promise that 12 or 24 words, a larger dictionary, themed words, a BIP-39 passphrase, or any single backup format makes a wallet quantum-resistant.
+- Retain BIP-39 only for interoperability where necessary, with uniformly random entropy generated by a reviewed CSPRNG. Prefer studying recovery systems that do not require one user-held master phrase.
+- Treat entropy generation, device compromise, key exposure, quantum search and quantum recovery of public-key signatures as separate threat-model categories with separate controls and tests.
+- Use chain-specific public-key exposure, signature algorithms and migration status to determine what can actually be protected. Do not claim that application-level post-quantum backup encryption protects a blockchain account whose consensus still accepts a vulnerable signature scheme.
+- Maintain crypto-agility and a documented migration plan for each supported chain. Do not deploy home-grown post-quantum schemes or use an unreviewed hybrid construction.
+
+References:
+- [BIP-39](https://bips.dev/39/) — entropy generation, mnemonic mapping and seed derivation.
+- [RFC 9958: Post-Quantum Cryptography for Engineers](https://www.rfc-editor.org/rfc/rfc9958) — distinguishes Grover's generic search speed-up from Shor's attacks on public-key cryptography.
+- [NIST FIPS 203 / ML-KEM](https://csrc.nist.gov/pubs/fips/203/final) — post-quantum key encapsulation, not signatures.
+- [NIST FIPS 204 / ML-DSA](https://csrc.nist.gov/pubs/fips/204/final) — post-quantum digital signatures.
+- [NIST FIPS 205 / SLH-DSA](https://csrc.nist.gov/pubs/fips/205/final) — stateless hash-based signatures.
+- [Bitcoin BIP-360 / P2MR](https://bips.dev/360/) — draft proposal and explicit limitations.
+
 ## 5. Candidate key protection and recovery mechanisms
 
 No single method is automatically superior for every user. Assess combinations and state the trade-offs explicitly.
