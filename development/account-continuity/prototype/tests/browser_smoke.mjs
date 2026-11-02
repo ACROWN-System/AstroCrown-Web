@@ -300,6 +300,12 @@ try {
   assert.equal(signedInStatus.passkeyCount, 1);
   assert.equal(signedInStatus.accountIdentifier, accountIdentifier);
 
+  await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("signed-in WebAuthn session is cleared before preview checks", () =>
+    evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
+  const clearedStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(clearedStatus.authenticated, false);
+
   // Hosted-preview mode is intentionally non-authenticating: no fake account state.
   await cdp("Page.navigate", { url: localUrl + "?account-preview-demo=1" });
   await waitFor("hosted-preview-mode homepage", pageReady);
