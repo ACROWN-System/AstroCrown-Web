@@ -262,20 +262,30 @@ All changes remain under `development/` in draft PR #141. No production homepage
 - Selecting the entry starts the wallet step-up/enrolment path. The newly appointed administrator proves control of their own wallet; a granting administrator cannot establish that proof merely by entering an address. A fresh signature from one of up to three enrolled wallets then authorizes the short-lived administrator session and opens the separate Administrator dashboard.
 - Wallet proof is not account creation, role assignment, a separate administrator account login, or a blockchain transaction. User account authentication remains the first step; wallet verification is the additional administrative-access step.
 
-### Current prototype limitation and next implementation boundary
+### Local prototype implementation and remaining boundary
 
-The local prototype still uses owner-operated `provision_admin.py` to grant the role and enroll a test wallet together. This is a local bootstrap/test adapter only. The `--actor` value is an audit label, not authenticated identity or proof of a permission. There is no in-product administrator-to-administrator role-grant endpoint, no `admin.roles.grant` permission enforcement, and no target-owned wallet-enrolment workflow yet. These must be implemented and negatively tested before claiming the requested appointment process is operational.
+The in-product workflow is now implemented in the loopback development prototype. The owner-operated `provision_admin.py` CLI remains an initial local bootstrap/test adapter; it is not routine appointment and its `--actor` value is an audit label, not authenticated identity.
 
-### Acceptance criteria
+- The server stores `admin.roles.grant` and `admin.roles.revoke` as distinct permissions. Appointment requires an existing authenticated administrator, active wallet step-up, the exact grant permission, an existing target `user` account and a reason. Self-grant and assignment of permissions not explicitly marked delegable to the grantor are rejected. Newly assigned permissions are non-delegable by default.
+- Grant and revocation write audit records with actor, target, exact permission changes, reason and timestamp.
+- Revocation requires its own permission; it disables the target's enrolled administrator wallets, deletes administrative permissions, changes the role back to `user` and clears privileged step-up sessions while preserving ordinary account sessions.
+- The target account enrols its own first wallet through a one-time server-issued signature challenge after role assignment. That signature is not reused for access; a second fresh signature is required for the short-lived administrator step-up.
+- The shared User dashboard displays the Administrator access entry only from server-confirmed role status. The separate Administrator dashboard exposes appointment/revocation controls only when the backend returns the corresponding permission.
+- API regression coverage now exercises successful appointment, denied self-grant, denied appointment by an administrator without the grant permission, denied non-delegable permission transfer, target-owned first-wallet enrolment, cross-session/replay rejection, separate wallet step-up, permissioned revocation and preservation of ordinary account access. Browser smoke coverage checks the permission-gated controls.
+- Current CI and security-analysis runs are being verified against the latest PR head; this audit update does not claim those runs have passed.
 
-- [ ] Regular registration always creates a `user`; no public admin registration exists.
-- [ ] Only another authenticated administrator with `admin.roles.grant` can grant the role to an existing account; an ordinary administrator without that permission is denied.
-- [ ] Self-grant and self-escalation are denied; the exact grantor, target, permissions, reason/evidence and timestamp are audited.
-- [ ] Role grant and wallet enrolment remain separate; the target proves control of their own wallet.
-- [ ] The User dashboard entry appears only after server-confirmed role assignment.
-- [ ] Clicking the entry verifies/enrols the target's wallet and opens the separate Administrator dashboard only after server-side step-up.
-- [ ] Revocation requires its own permission and invalidates privileged sessions.
+Production account identity, authenticated owner bootstrap, deployment, shared production storage, security/operational review and formal Imperial HSIAN all-wallet-loss recovery remain outstanding.
+
+### Acceptance criteria — local loopback prototype
+
+- [x] Regular registration always creates a `user`; no public admin registration exists.
+- [x] Only another authenticated administrator with `admin.roles.grant` can grant the role to an existing account; an administrator without that permission is denied.
+- [x] Self-grant and permission escalation are denied; grantor, target, permission changes, reason and timestamp are audited.
+- [x] Role grant and wallet enrolment are separate; the target proves control of their own wallet.
+- [x] The User dashboard entry appears only after server-confirmed role assignment.
+- [x] First-wallet enrolment and a separate fresh wallet step-up are required before opening the Administrator dashboard.
+- [x] Revocation requires its own permission, clears privileged access and preserves ordinary account access.
 
 ### Impact and preservation
 
-This keeps ordinary account continuity independent from appointment to administrative authority and prevents the wallet from becoming an alternative route to obtain the role. Keep all work under `development/`, retain PR #141 as draft/unmerged/undeployed, and do not describe local CLI bootstrap as a production or permissioned in-product workflow.
+This keeps ordinary account continuity independent from appointment to administrative authority and prevents a wallet from becoming an alternative route to obtain the role. Keep all work under `development/`, retain PR #141 as draft/unmerged/undeployed, and do not infer production readiness from local prototype behavior.
