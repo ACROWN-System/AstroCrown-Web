@@ -139,6 +139,8 @@ class AccountServerTests(unittest.TestCase):
         signature = Account.sign_message(
             encode_defunct(text=message), private_key=private_key
         ).signature.hex()
+        if not signature.startswith("0x"):
+            signature = "0x" + signature
         return self.request(
             "/api/admin/wallet-verify",
             {"message": message, "signature": signature},
@@ -1143,6 +1145,8 @@ class AccountServerTests(unittest.TestCase):
             encode_defunct(text=enrollment["message"]),
             private_key=TEST_WALLET_KEY_B,
         ).signature.hex()
+        if not enrollment_signature.startswith("0x"):
+            enrollment_signature = "0x" + enrollment_signature
 
         status, cross_session = self.request(
             "/api/admin/wallet-enrollment-verify",
