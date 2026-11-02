@@ -331,6 +331,13 @@ class AccountApplication:
                     created_at TEXT NOT NULL,
                     detail TEXT NOT NULL DEFAULT ''
                 );
+                CREATE TABLE IF NOT EXISTS account_admin_notice_acknowledgements (
+                    audit_id TEXT PRIMARY KEY REFERENCES account_admin_audit(audit_id) ON DELETE CASCADE,
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    acknowledged_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS account_admin_notice_ack_account_idx
+                    ON account_admin_notice_acknowledgements(account_id, acknowledged_at);
                 CREATE TABLE IF NOT EXISTS account_passkey_credentials (
                     credential_id TEXT PRIMARY KEY,
                     credential_id_bytes BLOB NOT NULL UNIQUE,
@@ -1225,6 +1232,36 @@ class AccountApplication:
             and wallet_is_enrolled
             and wallet_step_up_expires > int(time.time())
         )
+        administrator_revocation_notice = None
+        if not role_assigned:
+            with self.connect() as db:
+                latest_revocation = db.execute(
+                    """SELECT revocation.audit_id, revocation.reason, revocation.created_at
+                       FROM (
+                           SELECT audit_id, reason, created_at
+                           FROM account_admin_audit
+                           WHERE target_account_id = ?
+                             AND event_type IN ('admin_role_revoked_by_admin', 'admin_role_revoked')
+                           ORDER BY created_at DESC, rowid DESC
+                           LIMIT 1
+                       ) AS revocation
+                       LEFT JOIN account_admin_notice_acknowledgements AS acknowledgement
+                         ON acknowledgement.audit_id = revocation.audit_id
+                        AND acknowledgement.account_id = ?
+                       WHERE acknowledgement.audit_id IS NULL""",
+                    (account["account_id"], account["account_id"]),
+                ).fetchone()
+            if latest_revocation is not None:
+                administrator_revocation_notice = {
+                    "noticeId": latest_revocation["audit_id"],
+                    "reason": latest_revocation["reason"],
+                    "createdAt": latest_revocation["created_at"],
+                    "message": (
+                        "An authorized administrator removed your administrator role and "
+                        "registered administrator-wallet access. Your ordinary account and "
+                        "User dashboard remain active."
+                    ),
+                }
         return {
             "authenticated": True,
             "email": account["email"],
@@ -1256,6 +1293,7 @@ class AccountApplication:
             "admin": wallet_authenticated,
             "adminWalletAddress": wallet_address if wallet_authenticated else None,
             "adminSessionExpiresAt": utc_iso(wallet_step_up_expires) if wallet_authenticated else None,
+            "administratorRevocationNotice": administrator_revocation_notice,
         }
 
     @property
@@ -2446,6 +2484,40 @@ class AccountApplication:
         if path == "/api/cases/admin/recovery-action":
             account = self.require_case_admin_session(handler)
             return 200, self.case_store.admin_decide_recovery(payload, account["account_id"]), None
+
+        if path == "/api/account/administrator-notice/acknowledge":
+            if set(payload) != {"noticeId"}:
+                raise ApiError(400, "Provide only the administrator notice identifier.")
+            account, _expires, _token = self.require_account_session(handler)
+            notice_id = payload.get("noticeId")
+            if not isinstance(notice_id, str) or not notice_id or len(notice_id) > 64:
+                raise ApiError(400, "The administrator notice identifier is invalid.")
+            if account["role"] == "admin":
+                raise ApiError(409, "An administrator notice cannot be acknowledged while administrator authority is active.")
+            with self.connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                latest_notice = db.execute(
+                    """SELECT audit_id FROM account_admin_audit
+                       WHERE target_account_id = ?
+                         AND event_type IN ('admin_role_revoked_by_admin', 'admin_role_revoked')
+                       ORDER BY created_at DESC, rowid DESC
+                       LIMIT 1""",
+                    (account["account_id"],),
+                ).fetchone()
+                if latest_notice is None or latest_notice["audit_id"] != notice_id:
+                    raise ApiError(404, "This administrator notice is no longer current.")
+                db.execute(
+                    """INSERT OR IGNORE INTO account_admin_notice_acknowledgements(
+                           audit_id, account_id, acknowledged_at
+                       ) VALUES (?, ?, ?)""",
+                    (notice_id, account["account_id"], utc_iso()),
+                )
+            current, current_expires = self.account_for_session(self.get_cookie(handler))
+            if current is None:
+                raise ApiError(401, "The account session is no longer valid.")
+            result = self.account_summary(current, current_expires)
+            result["message"] = "The administrator-access notice was acknowledged."
+            return 200, result, None
 
         if path == "/api/account/avatar":
             account, expires = self.account_for_session(self.get_cookie(handler))
