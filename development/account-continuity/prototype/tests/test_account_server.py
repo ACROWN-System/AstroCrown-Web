@@ -1087,7 +1087,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(root_status["adminPermissions"], ["admin.roles.grant", "admin.roles.revoke"])
         self.assertEqual(root_status["adminDelegablePermissions"], ["admin.roles.grant"])
 
-        status, self_grant = self.request(
+        status, self_grant, _ = self.request(
             "/api/admin/roles/grant",
             {
                 "email": root_email,
@@ -1097,7 +1097,7 @@ class AccountServerTests(unittest.TestCase):
         )
         self.assertEqual(status, 400, self_grant)
 
-        status, granted = self.request(
+        status, granted, _ = self.request(
             "/api/admin/roles/grant",
             {
                 "email": target_email,
@@ -1122,7 +1122,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertFalse(target_before_wallet["adminSessionAuthorized"])
         self.assertEqual(target_before_wallet["adminPermissions"], ["admin.roles.grant"])
 
-        status, target_without_stepup = self.request(
+        status, target_without_stepup, _ = self.request(
             "/api/admin/roles/grant",
             {
                 "email": successor_email,
@@ -1133,7 +1133,7 @@ class AccountServerTests(unittest.TestCase):
         )
         self.assertEqual(status, 403, target_without_stepup)
 
-        status, enrollment = self.request(
+        status, enrollment, _ = self.request(
             "/api/admin/wallet-enrollment-challenge",
             {"address": TEST_WALLET_B.address, "chainId": 1},
             opener=target_opener,
@@ -1148,13 +1148,13 @@ class AccountServerTests(unittest.TestCase):
         if not enrollment_signature.startswith("0x"):
             enrollment_signature = "0x" + enrollment_signature
 
-        status, cross_session = self.request(
+        status, cross_session, _ = self.request(
             "/api/admin/wallet-enrollment-verify",
             {"message": enrollment["message"], "signature": enrollment_signature},
         )
         self.assertEqual(status, 401, cross_session)
 
-        status, enrolled = self.request(
+        status, enrolled, _ = self.request(
             "/api/admin/wallet-enrollment-verify",
             {"message": enrollment["message"], "signature": enrollment_signature},
             opener=target_opener,
@@ -1166,7 +1166,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertFalse(enrolled["adminSessionAuthorized"])
         self.assertTrue(enrolled["authenticated"])
 
-        status, replay = self.request(
+        status, replay, _ = self.request(
             "/api/admin/wallet-enrollment-verify",
             {"message": enrollment["message"], "signature": enrollment_signature},
             opener=target_opener,
@@ -1183,7 +1183,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200, admin_status)
         self.assertEqual(admin_status["adminWalletAddress"], TEST_WALLET_B.address)
 
-        status, escalation = self.request(
+        status, escalation, _ = self.request(
             "/api/admin/roles/grant",
             {
                 "email": successor_email,
@@ -1193,14 +1193,14 @@ class AccountServerTests(unittest.TestCase):
             opener=target_opener,
         )
         self.assertEqual(status, 403, escalation)
-        status, forbidden_revoke = self.request(
+        status, forbidden_revoke, _ = self.request(
             "/api/admin/roles/revoke",
             {"email": root_email, "reason": "Attempt without the separate revoke permission"},
             opener=target_opener,
         )
         self.assertEqual(status, 403, forbidden_revoke)
 
-        status, revoked = self.request(
+        status, revoked, _ = self.request(
             "/api/admin/roles/revoke",
             {"email": target_email, "reason": "Remove administrator access after review"},
         )
@@ -1218,7 +1218,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertFalse(target_after_revoke["adminRoleAssigned"])
         self.assertFalse(target_after_revoke["adminSessionAuthorized"])
         self.assertEqual(target_after_revoke["adminPermissions"], [])
-        status, denied_admin_status = self.request("/api/admin/status", opener=target_opener)
+        status, denied_admin_status, _ = self.request("/api/admin/status", opener=target_opener)
         self.assertEqual(status, 403, denied_admin_status)
 
         with self.app.connect() as db:
@@ -1262,7 +1262,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200, authorized)
         self.assertTrue(authorized["adminSessionAuthorized"])
         self.assertEqual(authorized["adminPermissions"], [])
-        status, denied = self.request(
+        status, denied, _ = self.request(
             "/api/admin/roles/grant",
             {"email": target_email, "reason": "Attempt by an admin without grant authority"},
             opener=actor_opener,
