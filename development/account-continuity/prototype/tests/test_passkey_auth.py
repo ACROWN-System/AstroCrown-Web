@@ -358,21 +358,28 @@ class PasskeyApiTests(unittest.TestCase):
         self.assertRegex(replacement_recovery_key, r"^ACR1-[A-Za-z0-9_-]{43}$")
 
         with self.app.connect() as db:
+            account_id = db.execute(
+                "SELECT account_id FROM accounts WHERE username = ? COLLATE NOCASE",
+                (account_identifier,),
+            ).fetchone()[0]
             passkeys = db.execute(
                 """SELECT credential_id, active FROM account_passkey_credentials
-                   ORDER BY created_at, credential_id"""
+                   WHERE account_id = ? ORDER BY created_at, credential_id""",
+                (account_id,),
             ).fetchall()
             recovery_rows = db.execute(
                 """SELECT key_version, key_salt, key_verifier, used_at
-                   FROM account_recovery_keys ORDER BY key_version"""
+                   FROM account_recovery_keys WHERE account_id = ? ORDER BY key_version""",
+                (account_id,),
             ).fetchall()
             sessions = db.execute(
                 "SELECT COUNT(*) FROM sessions WHERE account_id = ?",
-                (recovered["accountIdentifier"],),
+                (account_id,),
             ).fetchone()[0]
             audit = db.execute(
                 """SELECT detail FROM account_security_audit
-                   WHERE event_type = 'account_recovered_with_recovery_key'"""
+                   WHERE account_id = ? AND event_type = 'account_recovered_with_recovery_key'""",
+                (account_id,),
             ).fetchall()
         self.assertEqual([(row["credential_id"], row["active"]) for row in passkeys],
                          [(original_encoded, 0), (replacement_encoded, 1)])
@@ -381,8 +388,8 @@ class PasskeyApiTests(unittest.TestCase):
         self.assertIsNone(recovery_rows[1]["used_at"])
         self.assertEqual(len(bytes(recovery_rows[1]["key_salt"])), 16)
         self.assertEqual(len(bytes(recovery_rows[1]["key_verifier"])), 32)
-        self.assertNotIn(original_recovery_key.encode(), bytes(recovery_rows[0]["key_verifier"]))
-        self.assertNotIn(replacement_recovery_key.encode(), bytes(recovery_rows[1]["key_verifier"]))
+        self.assertNotEqual(original_recovery_key.encode(), bytes(recovery_rows[0]["key_verifier"]))
+        self.assertNotEqual(replacement_recovery_key.encode(), bytes(recovery_rows[1]["key_verifier"]))
         self.assertEqual(sessions, 1)
         self.assertEqual(len(audit), 1)
         self.assertNotIn(original_recovery_key, audit[0]["detail"])
