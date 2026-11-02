@@ -83,6 +83,47 @@ async function evaluate(expression) {
   return result.result?.value;
 }
 
+const adminWalletFixtureKey = "0x" + "11".repeat(32);
+function runAdminWalletFixturePython(code, args = []) {
+  return spawnSync(python, ["-c", code, ...args], { encoding: "utf8" });
+}
+const adminWalletAddressResult = runAdminWalletFixturePython(
+  "from eth_account import Account; import sys; print(Account.from_key(sys.argv[1]).address)",
+  [adminWalletFixtureKey]
+);
+if (adminWalletAddressResult.status !== 0) {
+  throw new Error("Unable to derive the deterministic admin-wallet browser-test address: " + adminWalletAddressResult.stderr);
+}
+const adminWalletFixtureAddress = adminWalletAddressResult.stdout.trim();
+
+function signAdminWalletMessage(message) {
+  const result = runAdminWalletFixturePython(
+    "from eth_account import Account; from eth_account.messages import encode_defunct; import sys; print(Account.sign_message(encode_defunct(text=sys.argv[1]), private_key=sys.argv[2]).signature.hex())",
+    [message, adminWalletFixtureKey]
+  );
+  if (result.status !== 0) {
+    throw new Error("Unable to create the deterministic admin-wallet browser-test signature: " + result.stderr);
+  }
+  const signature = result.stdout.trim();
+  if (!/^0x[0-9a-f]+$/i.test(signature)) {
+    throw new Error("The deterministic admin-wallet browser-test signer returned an invalid signature.");
+  }
+  return signature;
+}
+
+async function completePendingAdminWalletSignature() {
+  await waitFor("wallet signature request from the browser provider", () =>
+    evaluate("typeof window.__resolveAdminWalletSignature === 'function' && typeof window.__pendingAdminWalletMessage === 'string'"));
+  const messageHex = await evaluate("window.__pendingAdminWalletMessage");
+  assert.match(messageHex, /^0x(?:[0-9a-f]{2})+$/i);
+  const message = Buffer.from(messageHex.slice(2), "hex").toString("utf8");
+  const signature = signAdminWalletMessage(message);
+  await evaluate(
+    "window.__resolveAdminWalletSignature(" + JSON.stringify(signature) + ");" +
+    "window.__resolveAdminWalletSignature = null; window.__pendingAdminWalletMessage = null;"
+  );
+}
+
 async function pageReady() {
   return evaluate(
     "document.readyState === 'complete' && Boolean(document.getElementById('open-account-dialog'))"
@@ -375,6 +416,165 @@ try {
   const newRecoveryResult = await evaluate("fetch('/api/account/recovery/options', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accountIdentifier:" +
     JSON.stringify(accountIdentifier) + ",recoveryKey:" + JSON.stringify(replacementRecoveryKey) + "})}).then(async r => ({status:r.status,body:await r.json()}))");
   assert.equal(newRecoveryResult.status, 200, "the replacement recovery key must be active");
+
+
+  // Exercise the administrator access UX through the same Wallet control in
+  // the homepage header. The test-only role fixture is an ordinary passkey
+  // account promoted in the isolated temporary SQLite database; it starts
+  // with no registered administrator wallet.
+  const adminRoleFixture = runAdminWalletFixturePython(
+    "import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); cur=db.execute(\"UPDATE accounts SET role='admin' WHERE username=? AND role='user'\", (sys.argv[2],)); db.commit(); print(cur.rowcount)",
+    [databasePath, accountIdentifier]
+  );
+  assert.equal(adminRoleFixture.status, 0, adminRoleFixture.stderr || "Administrator role fixture could not be applied");
+  assert.equal(adminRoleFixture.stdout.trim(), "1", "the browser test must promote exactly the recovered test account");
+  await evaluate("window.location.hash = '#top'");
+  await waitFor("homepage before administrator access UX", () =>
+    evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('main-content').hidden"));
+  await evaluate("window.location.hash = '#account'");
+  await waitFor("server-confirmed administrator entry", () =>
+    evaluate("Boolean(document.querySelector('.account-admin-access-card'))"));
+  const adminRoleStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(adminRoleStatus.adminRoleAssigned, true);
+  assert.equal(adminRoleStatus.adminWalletCount, 0);
+  assert.equal(adminRoleStatus.adminSessionAuthorized, false);
+
+  const walletProviderSetup = await evaluate(
+    "window.__adminWalletCalls = [];" +
+    "window.__adminWalletAddress = " + JSON.stringify(adminWalletFixtureAddress) + ";" +
+    "window.__pendingAdminWalletMessage = null; window.__resolveAdminWalletSignature = null;" +
+    "window.ethereum = { request: async function (request) {" +
+      "window.__adminWalletCalls.push(request.method);" +
+      "if (request.method === 'eth_requestAccounts' || request.method === 'eth_accounts') return [window.__adminWalletAddress];" +
+      "if (request.method === 'eth_chainId') return '0x1';" +
+      "if (request.method === 'personal_sign') {" +
+        "window.__pendingAdminWalletMessage = request.params[0];" +
+        "return new Promise(function (resolve) { window.__resolveAdminWalletSignature = resolve; });" +
+      "}" +
+      "throw new Error('Unexpected wallet method in browser test: ' + request.method);" +
+    "}; true"
+  );
+  assert.equal(walletProviderSetup, true);
+
+  // Opening and cancelling the confirmation dialog must not invoke the wallet.
+  await evaluate("document.getElementById('account-admin-wallet-access').click()");
+  await waitFor("administrator confirmation dialog", () =>
+    evaluate("document.getElementById('admin-access-dialog').open"));
+  assert.equal(await evaluate("window.__adminWalletCalls.length"), 0);
+  await evaluate("document.getElementById('admin-access-cancel').click()");
+  await waitFor("administrator confirmation cancelled", () =>
+    evaluate("!document.getElementById('admin-access-dialog').open"));
+  assert.equal(await evaluate("window.__adminWalletCalls.length"), 0,
+    "cancelling the administrator confirmation must not request a wallet");
+
+  // Continuing starts a cancellable wait for the shared homepage Wallet button.
+  await evaluate("document.getElementById('account-admin-wallet-access').click()");
+  await waitFor("second administrator confirmation dialog", () =>
+    evaluate("document.getElementById('admin-access-dialog').open"));
+  await evaluate("document.getElementById('admin-access-continue').click()");
+  await waitFor("header-wallet connection notice", () =>
+    evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
+  assert.equal(await evaluate("document.documentElement.getAttribute('data-admin-wallet-connect-pending')"), "true");
+  assert.equal(await evaluate("window.__adminWalletCalls.length"), 0,
+    "the provider must not be prompted until the homepage header Wallet button is clicked");
+  await evaluate("document.getElementById('admin-wallet-connect-cancel').click()");
+  await waitFor("header-wallet request cancelled", () =>
+    evaluate("!document.getElementById('admin-wallet-connect-notice')"));
+  assert.equal(await evaluate("window.__adminWalletCalls.length"), 0,
+    "cancelling while waiting for the header Wallet button must not call the provider");
+
+  // A first-wallet signature can also be cancelled without enrolling anything.
+  await evaluate("document.getElementById('account-admin-wallet-access').click()");
+  await waitFor("administrator confirmation before first enrollment", () =>
+    evaluate("document.getElementById('admin-access-dialog').open"));
+  await evaluate("document.getElementById('admin-access-continue').click()");
+  await waitFor("first header-wallet request notice", () =>
+    evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
+  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+  await waitFor("first-wallet enrollment message review", () =>
+    evaluate("document.getElementById('admin-wallet-proof-dialog').open && /first AstroCrown administrator wallet/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
+  assert.equal(await evaluate("document.querySelector('#wallet-menu').closest('.menu-slot').classList.contains('is-open')"), false,
+    "the shared header Wallet control must start the pending administrator connection rather than opening its preview menu");
+  await evaluate("document.getElementById('admin-wallet-proof-cancel').click()");
+  await waitFor("first-wallet enrollment signature cancelled", () =>
+    evaluate("!document.getElementById('admin-wallet-proof-dialog').open"));
+  let cancelledEnrollmentStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(cancelledEnrollmentStatus.adminWalletCount, 0,
+    "cancelling the enrollment signature must leave the wallet registry unchanged");
+  assert.equal(cancelledEnrollmentStatus.adminSessionAuthorized, false);
+  assert.ok((await evaluate("window.__adminWalletCalls")).includes("eth_requestAccounts"));
+  assert.equal((await evaluate("window.__adminWalletCalls")).includes("eth_sendTransaction"), false);
+
+  // The first signature enrolls only. A second fresh signature is then shown
+  // for the administrator session; cancelling it must keep the console closed.
+  await evaluate("document.getElementById('account-admin-wallet-access').click()");
+  await waitFor("administrator confirmation for successful enrollment", () =>
+    evaluate("document.getElementById('admin-access-dialog').open"));
+  await evaluate("document.getElementById('admin-access-continue').click()");
+  await waitFor("header-wallet request for successful enrollment", () =>
+    evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
+  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+  await waitFor("first-wallet enrollment review for signing", () =>
+    evaluate("document.getElementById('admin-wallet-proof-dialog').open && /first AstroCrown administrator wallet/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
+  await evaluate("document.getElementById('admin-wallet-proof-sign').click()");
+  await completePendingAdminWalletSignature();
+  await waitFor("separate administrator step-up signature review", () =>
+    evaluate("document.getElementById('admin-wallet-proof-dialog').open && /Verify an already-authorized AstroCrown administrator session/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
+  const enrolledButNotAuthorized = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(enrolledButNotAuthorized.adminRoleAssigned, true);
+  assert.equal(enrolledButNotAuthorized.adminWalletCount, 1);
+  assert.equal(enrolledButNotAuthorized.adminWalletAuthenticated, false);
+  assert.equal(enrolledButNotAuthorized.adminSessionAuthorized, false);
+  assert.equal(enrolledButNotAuthorized.admin, false,
+    "the first wallet enrollment signature must not itself authorize administrator access");
+  await evaluate("document.getElementById('admin-wallet-proof-cancel').click()");
+  await waitFor("separate administrator signature cancelled", () =>
+    evaluate("!document.getElementById('admin-wallet-proof-dialog').open"));
+  const cancelledStepUpStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(cancelledStepUpStatus.authenticated, true);
+  assert.equal(cancelledStepUpStatus.adminRoleAssigned, true);
+  assert.equal(cancelledStepUpStatus.adminWalletCount, 1);
+  assert.equal(cancelledStepUpStatus.adminSessionAuthorized, false,
+    "cancelling the separate step-up signature must leave administrator access closed");
+
+  // A fresh administrator request reuses the header connection control but
+  // requires another one-time signature before the separate console opens.
+  await evaluate("document.getElementById('account-admin-wallet-access').click()");
+  await waitFor("administrator confirmation for final step-up", () =>
+    evaluate("document.getElementById('admin-access-dialog').open"));
+  await evaluate("document.getElementById('admin-access-continue').click()");
+  await waitFor("header-wallet request for final step-up", () =>
+    evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
+  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+  await waitFor("final administrator signature review", () =>
+    evaluate("document.getElementById('admin-wallet-proof-dialog').open && /Verify an already-authorized AstroCrown administrator session/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
+  await evaluate("document.getElementById('admin-wallet-proof-sign').click()");
+  await completePendingAdminWalletSignature();
+  await waitFor("administrator dashboard after separate wallet step-up", () =>
+    evaluate("!document.getElementById('admin-dashboard').hidden && document.getElementById('admin-dashboard').innerText.includes('Administrator access verified')"), 20000);
+  const fullyAuthorizedAdmin = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(fullyAuthorizedAdmin.adminRoleAssigned, true);
+  assert.equal(fullyAuthorizedAdmin.adminWalletCount, 1);
+  assert.equal(fullyAuthorizedAdmin.adminWalletAuthenticated, true);
+  assert.equal(fullyAuthorizedAdmin.adminSessionAuthorized, true);
+  assert.equal(fullyAuthorizedAdmin.admin, true);
+  assert.equal(fullyAuthorizedAdmin.adminWalletAddress.toLowerCase(), adminWalletFixtureAddress.toLowerCase());
+  const adminWalletMethods = await evaluate("window.__adminWalletCalls");
+  assert.equal(adminWalletMethods.includes("eth_sendTransaction"), false,
+    "administrator enrollment and step-up must never submit a blockchain transaction");
+  assert.equal(adminWalletMethods.includes("eth_signTransaction"), false);
+  assert.equal(adminWalletMethods.includes("eth_sendRawTransaction"), false);
+  assert.equal(adminWalletMethods.includes("eth_getBalance"), false,
+    "administrator authentication must not impose a wallet-balance requirement");
+
+  // Ending only the administrator step-up preserves the ordinary account session.
+  await evaluate("document.getElementById('admin-end-access').click()");
+  await waitFor("administrator step-up ended with User dashboard restored", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  const afterAdminStepUpLogout = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(afterAdminStepUpLogout.authenticated, true);
+  assert.equal(afterAdminStepUpLogout.adminRoleAssigned, true);
+  assert.equal(afterAdminStepUpLogout.adminSessionAuthorized, false);
 
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("recovered account session is cleared before preview checks", () =>
