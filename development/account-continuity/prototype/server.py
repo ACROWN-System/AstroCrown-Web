@@ -25,6 +25,13 @@ from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
 try:
+    from passkey_auth import PasskeyAuthService, PasskeyUnavailable, PasskeyVerificationError
+except ImportError:
+    PasskeyAuthService = None
+    PasskeyUnavailable = RuntimeError
+    PasskeyVerificationError = ValueError
+
+try:
     from .email_delivery import EmailDeliveryError, EmailSendBudget, SMTPEmailSender
 except ImportError:  # Direct script execution
     from email_delivery import EmailDeliveryError, EmailSendBudget, SMTPEmailSender
