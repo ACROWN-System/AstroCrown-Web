@@ -273,6 +273,172 @@ class PasskeyApiTests(unittest.TestCase):
         )
         self.assertEqual(status, 410, replay)
 
+    def test_recovery_key_is_hashed_single_use_and_replaces_passkeys_and_sessions(self):
+        status, options, _ = self.registration_options()
+        self.assertEqual(status, 200)
+        original_id = b"original-recovery-test-passkey"
+        original_encoded = b64url(original_id)
+        original_verified = SimpleNamespace(
+            credential_id=original_id,
+            credential_public_key=b"original-public-key",
+            sign_count=0,
+            credential_device_type=SimpleNamespace(value="multi_device"),
+            credential_backed_up=True,
+        )
+        self.app.passkey_auth_service.verify_registration = lambda **_kwargs: original_verified
+        status, created, _ = self.request(
+            "/api/passkeys/register/verify",
+            {
+                "challengeId": options["challengeId"],
+                "credential": {
+                    "id": original_encoded,
+                    "rawId": original_encoded,
+                    "type": "public-key",
+                    "response": {"transports": ["internal"]},
+                },
+            },
+        )
+        self.assertEqual(status, 201, created)
+        self.assertTrue(created["recoveryKeyAvailable"])
+        original_recovery_key = created["oneTimeRecoveryKey"]
+        self.assertRegex(original_recovery_key, r"^ACR1-[A-Za-z0-9_-]{43}$")
+        account_identifier = created["accountIdentifier"]
+
+        # Use a fresh client with no account session: the recovery key itself
+        # is the proof that permits this restricted credential-replacement flow.
+        recovery_client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor())
+        status, recovery_options, _ = self.request(
+            "/api/account/recovery/options",
+            {
+                "accountIdentifier": account_identifier,
+                "recoveryKey": original_recovery_key,
+            },
+            opener=recovery_client,
+        )
+        self.assertEqual(status, 200, recovery_options)
+        self.assertEqual(recovery_options["purpose"], "replace-lost-passkey-using-one-time-recovery-key")
+        self.assertEqual(
+            recovery_options["publicKey"]["authenticatorSelection"]["userVerification"],
+            "required",
+        )
+
+        replacement_id = b"replacement-recovery-test-passkey"
+        replacement_encoded = b64url(replacement_id)
+        replacement_verified = SimpleNamespace(
+            credential_id=replacement_id,
+            credential_public_key=b"replacement-public-key",
+            sign_count=0,
+            credential_device_type=SimpleNamespace(value="single_device"),
+            credential_backed_up=False,
+        )
+        self.app.passkey_auth_service.verify_registration = lambda **_kwargs: replacement_verified
+        status, recovered, headers = self.request(
+            "/api/account/recovery/complete",
+            {
+                "challengeId": recovery_options["challengeId"],
+                "credential": {
+                    "id": replacement_encoded,
+                    "rawId": replacement_encoded,
+                    "type": "public-key",
+                    "response": {"transports": ["internal"]},
+                },
+            },
+            opener=recovery_client,
+        )
+        self.assertEqual(status, 200, recovered)
+        self.assertTrue(recovered["authenticated"])
+        self.assertTrue(recovered["recovered"])
+        self.assertEqual(recovered["accountIdentifier"], account_identifier)
+        self.assertEqual(recovered["passkeyCount"], 1)
+        self.assertTrue(recovered["recoveryKeyAvailable"])
+        self.assertEqual(recovered["activeSessionCount"], 1)
+        self.assertTrue(headers.get("Set-Cookie"))
+        replacement_recovery_key = recovered["oneTimeRecoveryKey"]
+        self.assertNotEqual(replacement_recovery_key, original_recovery_key)
+        self.assertRegex(replacement_recovery_key, r"^ACR1-[A-Za-z0-9_-]{43}$")
+
+        with self.app.connect() as db:
+            passkeys = db.execute(
+                """SELECT credential_id, active FROM account_passkey_credentials
+                   ORDER BY created_at, credential_id"""
+            ).fetchall()
+            recovery_rows = db.execute(
+                """SELECT key_version, key_salt, key_verifier, used_at
+                   FROM account_recovery_keys ORDER BY key_version"""
+            ).fetchall()
+            sessions = db.execute(
+                "SELECT COUNT(*) FROM sessions WHERE account_id = ?",
+                (recovered["accountIdentifier"],),
+            ).fetchone()[0]
+            audit = db.execute(
+                """SELECT detail FROM account_security_audit
+                   WHERE event_type = 'account_recovered_with_recovery_key'"""
+            ).fetchall()
+        self.assertEqual([(row["credential_id"], row["active"]) for row in passkeys],
+                         [(original_encoded, 0), (replacement_encoded, 1)])
+        self.assertEqual([row["key_version"] for row in recovery_rows], [1, 2])
+        self.assertIsNotNone(recovery_rows[0]["used_at"])
+        self.assertIsNone(recovery_rows[1]["used_at"])
+        self.assertEqual(len(bytes(recovery_rows[1]["key_salt"])), 16)
+        self.assertEqual(len(bytes(recovery_rows[1]["key_verifier"])), 32)
+        self.assertNotIn(original_recovery_key.encode(), bytes(recovery_rows[0]["key_verifier"]))
+        self.assertNotIn(replacement_recovery_key.encode(), bytes(recovery_rows[1]["key_verifier"]))
+        self.assertEqual(sessions, 1)
+        self.assertEqual(len(audit), 1)
+        self.assertNotIn(original_recovery_key, audit[0]["detail"])
+        self.assertNotIn(replacement_recovery_key, audit[0]["detail"])
+
+        # The old key is consumed and cannot start another recovery.
+        status, old_key_result, _ = self.request(
+            "/api/account/recovery/options",
+            {
+                "accountIdentifier": account_identifier,
+                "recoveryKey": original_recovery_key,
+            },
+            opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor()),
+        )
+        self.assertEqual(status, 401, old_key_result)
+
+        # A recovery challenge is one-use, even when its old key has been rotated.
+        status, replay, _ = self.request(
+            "/api/account/recovery/complete",
+            {
+                "challengeId": recovery_options["challengeId"],
+                "credential": {
+                    "id": replacement_encoded,
+                    "rawId": replacement_encoded,
+                    "type": "public-key",
+                    "response": {"transports": ["internal"]},
+                },
+            },
+            opener=recovery_client,
+        )
+        self.assertEqual(status, 410, replay)
+
+        # The newly issued recovery key starts a fresh one-use ceremony.
+        status, next_options, _ = self.request(
+            "/api/account/recovery/options",
+            {
+                "accountIdentifier": account_identifier,
+                "recoveryKey": replacement_recovery_key,
+            },
+            opener=urllib.request.build_opener(urllib.request.HTTPCookieProcessor()),
+        )
+        self.assertEqual(status, 200, next_options)
+
+    def test_recovery_key_must_be_present_and_is_not_a_login_token(self):
+        status, missing, _ = self.request(
+            "/api/account/recovery/options",
+            {"accountIdentifier": "AC-0123456789", "recoveryKey": ""},
+        )
+        self.assertEqual(status, 401, missing)
+        self.assertIn("could not be started", missing["error"].lower())
+        status, legacy, _ = self.request(
+            "/api/account/login",
+            {"recoveryKey": "ACR1-" + "A" * 43},
+        )
+        self.assertEqual(status, 410, legacy)
+
     def test_user_handle_mismatch_rejects_passkey_login(self):
         status, options, _ = self.registration_options()
         raw_id = b"credential-with-wrong-handle"
