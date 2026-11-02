@@ -451,15 +451,11 @@
   function renderSuccess() {
     var created = successKind === "signup";
     title.textContent = created ? "Account created" : "Welcome back";
-    var heading = created ? "Your account is ready for this test" : "You're signed in";
+    var heading = created ? "Your passkey account is ready" : "You're signed in";
     var message = created
-      ? (accountState.emailVerificationEmailSent === true
-          ? "A development test account was created. A verification email was submitted to the configured mail transport; follow its single-use link to verify your address."
-          : "A development test account was created. Email ownership has not been verified and no verification or newsletter message was sent.")
-      : "You are signed in to the development test account. This does not grant production access or administrator privileges.";
-    var persistenceNote = browserPreviewMode
-      ? "You can close this window without signing out. This browser demo keeps the test state only in this page's memory and loses it on reload."
-      : "You can close this window without signing out. The local test session remains on the loopback server until it expires or you sign out.";
+      ? "Your AstroCrown account was created using a passkey. AstroCrown stores the public credential needed to verify your authenticator; your private key remains with it."
+      : "You are signed in to AstroCrown with your passkey. This local prototype does not grant production access or administrator privileges.";
+    var persistenceNote = "You can close this window without signing out. The local server keeps your session until it expires or you sign out.";
     content.innerHTML =
       '<div class="account-success-panel">' +
         '<div class="account-success-mark" aria-hidden="true">✓</div>' +
