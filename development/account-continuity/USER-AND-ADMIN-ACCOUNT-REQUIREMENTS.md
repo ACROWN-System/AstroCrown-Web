@@ -452,6 +452,23 @@ The data model should therefore distinguish (a) wallet application/provider and 
 
 MetaMask is an example and a candidate integration, not a selected or mandatory dependency. Review the exact current SDK/API, extension/mobile versions, supported platforms, RPC dependencies, provider terms, security behavior, privacy and $0 feasibility before adoption. Keep independent EVM and Solana adapters available so other multi-chain wallets and ecosystem-specific wallets can be supported too.
 
+### Wallet portfolio support is not the same as website authentication support
+
+The wallet market is fragmented: a wallet may be EVM-focused, Bitcoin-focused or multichain. Do not assume that every wallet supports both BTC and ETH, and do not require a user to replace a wallet that only supports one family. For example, Rabby describes its supported ecosystem as Ethereum and EVM chains; Trust Wallet and Exodus list both Bitcoin and Ethereum among their supported networks/assets. This demonstrates that combined BTC/ETH custody exists, but does not establish identical dApp connection or message-signing support across those products.
+
+MetaMask itself added Bitcoin support on 2025-12-15 and currently documents BTC alongside EVM and Solana assets. Its Bitcoin support is presently limited to the Native SegWit derivation path by default; imported Bitcoin accounts must also be Native SegWit for compatibility at this time. However, the currently published MetaMask Connect developer interface documents dApp connection for EVM and Solana, including a multichain session for those ecosystems; it does not document a Bitcoin dApp namespace or BIP-322 authentication method. Therefore, MetaMask's ability to hold/send BTC must not be treated as proof that AstroCrown can use its Bitcoin account for website sign-in or wallet enrolment.
+
+AstroCrown must qualify three independent capabilities for each wallet application/provider and platform: (1) asset custody/portfolio visibility, (2) transaction creation and signing for a chain, and (3) dApp connection plus off-chain authentication-message signing for that chain. A provider can support one or two without supporting all three. The website must detect the exact capabilities exposed by the selected extension/mobile version and enable only the corresponding actions.
+
+Do not infer that most wallets support or do not support a combination from a few examples; maintain a dated compatibility matrix based on official provider documentation and hands-on tests. Never reject a wallet merely because it lacks an unrelated chain: a BTC-only wallet should remain eligible for a Bitcoin-specific proof when its supported message protocol has passed verification, and an EVM-only wallet should remain eligible for EVM proof.
+
+Additional official references:
+- [MetaMask: Bitcoin support and limitations](https://support.metamask.io/configure/networks/bitcoin/) — BTC account derivation and current Native SegWit limitation.
+- [MetaMask Connect developer interface](https://docs.metamask.io/metamask-connect/) — published dApp interfaces for EVM and Solana.
+- [Trust Wallet supported networks](https://trustwallet.com/) — BTC, ETH and SOL among its stated multi-chain coverage.
+- [Exodus supported assets](https://www.exodus.com/support/en/articles/8598611-which-assets-does-exodus-support) — 50+ networks; current asset registry.
+- [Rabby supported chains](https://www.rabby.io/en/chains.html) — EVM-oriented network coverage.
+
 Official references:
 - [MetaMask: Navigate Solana in MetaMask](https://support.metamask.io/configure/networks/navigating-solana/) — SOL/SPL support alongside EVM and Solana address derived from the existing SRP.
 - [MetaMask Connect: Integration options](https://docs.metamask.io/metamask-connect/integration-options/) — multichain EVM and Solana connection in one session.
