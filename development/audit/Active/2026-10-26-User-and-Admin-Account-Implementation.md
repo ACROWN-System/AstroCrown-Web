@@ -485,7 +485,7 @@ The owner accepted replacing email/password-first authentication with a public-k
 
 ### Verified code state
 
-The current branch head is `8509b64086a09ac3cfc7eea82977c27e8e6a2fd8`. The loopback prototype includes WebAuthn discoverable registration and sign-in, server-side credential/challenge persistence and verification, a one-time 256-bit offline recovery key, salted one-way verifier storage, replacement-passkey recovery, old-key consumption, prior-passkey/session revocation, key rotation and security audit recording. Default passkey mode does not load an email sender and rejects legacy email/password, verification and password-reset routes. Legacy email tests remain only for explicit opt-in regression coverage.
+The implementation-code verification commit before the later documentation and branch-synchronization updates was `8509b64086a09ac3cfc7eea82977c27e8e6a2fd8`. At that point, the loopback prototype included WebAuthn discoverable registration and sign-in, server-side credential/challenge persistence and verification, a one-time 256-bit offline recovery key, salted one-way verifier storage, replacement-passkey recovery, old-key consumption, prior-passkey/session revocation, key rotation and security audit recording. Default passkey mode does not load an email sender and rejects legacy email/password, verification and password-reset routes. Legacy email tests remain only for explicit opt-in regression coverage.
 
 ### Exact-head workflow evidence
 
@@ -505,3 +505,29 @@ The optional wallet backup for ordinary accounts remains unimplemented. Existing
 
 PR #141 remains open, draft, unmerged and undeployed. No production homepage, production service, secret, wallet, transaction, domain or deployment was changed by this verification.
 
+
+
+## 22. Main-branch synchronization and current-head verification — 2026-11-03
+
+### Branch maintenance
+
+- Current `main` commit at synchronization: `522bfc084a4a24e057d1725a0c669887080ecac6`.
+- The account branch was synchronized using merge commit `48ad6aa1832b2d1035af62275e8ddd18dd0f6e66`, with `main` as first parent and the pre-sync account branch head `43cdb5896a56087ad29b2c4c0c91b6743b107645` as second parent.
+- A path-level comparison against the common merge base found 37 main-side changed paths and 50 account-side changed paths, with no overlapping paths. The merge tree retained the main tree and overlaid the account branch's 50 changed paths. No forced ref update was used.
+- The feature branch now compares as 0 commits behind `main`; the current compare reports 50 changed paths. PR #141 was refreshed against the current `main` SHA and GitHub reports the PR mergeable with a clean merge state. The PR itself remains draft and unmerged.
+
+### Exact-head automated verification
+
+All five tracked workflows passed against synchronized branch head `48ad6aa1832b2d1035af62275e8ddd18dd0f6e66`:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41533892148)
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41533892207)
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41533892196)
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41533892172)
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41533892171)
+
+The exact-head CodeQL check reported no new alerts in code changed by this pull request. The Local Account Continuity workflow completed Python syntax checks, browser JavaScript syntax checks, loopback HTTP/account-contract tests, static security-boundary checks and the headless Chrome virtual-authenticator account journey successfully. This remains automated prototype evidence only, not independent security review, production readiness, certification or manual owner acceptance.
+
+### Preservation and release boundary
+
+The synchronization was branch-only. It did not merge PR #141 into `main`, change the production homepage, deploy an account service, modify secrets or credentials, connect a wallet, send a transaction, alter domain/DNS settings or modify historical backup content. Keep PR #141 draft pending manual review and the remaining production/security gates.
