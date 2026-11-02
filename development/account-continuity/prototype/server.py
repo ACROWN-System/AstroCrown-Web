@@ -1626,7 +1626,7 @@ class AccountApplication:
         normalized = value.strip()
         if not normalized or len(normalized) > maximum:
             raise ApiError(400, f"The {label} must contain 1 to {maximum} characters.")
-        if any(ord(character) < 32 and character not in "\\n\\t" for character in normalized):
+        if any(ord(character) < 32 and character not in "\n\t" for character in normalized):
             raise ApiError(400, f"The {label} contains unsupported control characters.")
         return normalized
 
@@ -1699,6 +1699,19 @@ class AccountApplication:
                     WHERE communication_id = ? AND recipient_account_id = ? AND section = ?""",
                 (now, communication_id, account["account_id"], required_section),
             )
+            if cursor.rowcount == 1 and action == "acknowledge":
+                source = db.execute(
+                    """SELECT source_audit_id FROM account_communications
+                       WHERE communication_id = ? AND recipient_account_id = ?""",
+                    (communication_id, account["account_id"]),
+                ).fetchone()
+                if source is not None and source["source_audit_id"]:
+                    db.execute(
+                        """INSERT OR IGNORE INTO account_admin_notice_acknowledgements(
+                               audit_id, account_id, acknowledged_at
+                           ) VALUES (?, ?, ?)""",
+                        (source["source_audit_id"], account["account_id"], now),
+                    )
             if cursor.rowcount != 1:
                 exists = db.execute(
                     """SELECT section FROM account_communications
