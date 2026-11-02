@@ -538,3 +538,39 @@ Technical references:
 - [EIP-4361 / Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361) — off-chain authentication message and nonce/session requirements.
 - [BIP-322 / Generic Signed Message Format](https://bips.dev/322/) — Bitcoin message-proof specification; wallet/script compatibility still requires testing.
 - [ERC-4337 Paymasters](https://eips.ethereum.org/EIPS/eip-4337) — one EVM-specific option for later gas sponsorship, not a universal chain solution.
+## 18. Deferred Astro-Wallet and minimal future-integration boundary — 2026-11-02
+
+### Current implementation scope
+
+The active development priority remains the existing AstroCrown account journey: email/password sign-up and sign-in, account/session continuity, the common User dashboard, server-confirmed administrator access visibility, permissioned appointment/revocation and the existing wallet-verified administrator step-up. Do not delay or broaden that work into a general wallet platform.
+
+**Astro-Wallet (AW) is explicitly deferred.** No AW wallet application, key-management engine, wallet-connect SDK, multi-chain signer, asset portfolio, token registry, transaction builder, payment/swap/bridge integration, MPC/TSS, guardian recovery, passkey signing-key system or post-quantum cryptography is part of the current account implementation. Its separate strategy document is a future research record, not an active dependency, blocker or implementation specification for PR #141.
+
+The current local administrator wallet verifier remains an EVM externally-owned-account (EOA) EIP-4361/SIWE lab. It is not a generic wallet adapter. Do not imply BTC, Solana, EVM contract-wallet or other wallet-family authentication support until each is separately specified, implemented and tested. Continue the existing scope without adding new wallet connectors merely for future-proofing.
+
+### Preserve the account boundary so later integration is incremental
+
+Future compatibility should be protected through a few stable boundaries, not by implementing Astro-Wallet early:
+
+1. **AstroCrown account identity remains independent.** Stable account IDs, sessions, roles, permissions, recovery requests and dashboard access must never be derived from a blockchain address, mnemonic, wallet application or asset balance.
+2. **Wallet authentication remains an optional linked authenticator.** A wallet proof is attached to an existing account and a specific purpose. It must not become the account's primary database key or a substitute for normal account authentication.
+3. **Keep chain-specific signing inside the verifier boundary.** EIP-4361/SIWE parsing and EVM address validation must remain localized to the existing wallet-auth module/service and its explicit API boundary. Do not spread `0x` address parsing, EVM chain assumptions or SIWE message fields into account identity, session, role, dashboard or permission logic.
+4. **Keep the provider UI replaceable.** Account/dashboard code should depend on the server's challenge and verification result, not on a particular browser-extension global, wallet brand, provider object or wallet SDK. Provider-specific discovery and signing belong in the wallet interaction layer when another adapter is actually approved.
+5. **Do not assume one wallet application equals one chain credential.** A future multichain provider may expose several chain-specific addresses and signing protocols. Keep the conceptual relationship as account → one or more optional wallet credentials; each credential is qualified by its own network namespace, exact network, native account/address identifier and proof protocol. The provider/application is descriptive connection metadata, not the credential identity.
+6. **Keep migration narrow and explicit.** Before a production wallet-linking or multi-family implementation, design a versioned wallet-credential schema with chain namespace/network, canonical native identifier (and Bitcoin script/address type or other chain-native fields where needed), proof protocol/version, status and timestamps. Enforce uniqueness in the appropriate namespace/network/address scope, not by assuming every chain address shares one global string format. Preserve audit history and map existing EVM records during a reviewed migration.
+
+### Current local schema limitation — intentionally not changed now
+
+The disposable local SQLite prototype currently stores administrator wallets in an `admin_wallets` table with an EVM-style `address`, numeric `chain_id`, account association and active state. Its shared local verifier accepts Ethereum EOA-style `0x` addresses and SIWE; it has no Bitcoin, Solana or contract-wallet verifier. This is an explicitly narrow development implementation, not the future production multichain wallet-credential schema.
+
+Do not refactor this working prototype into a general multichain wallet system as part of the current sign-in/dashboard task. Before production persistence or adding another wallet family, complete a dedicated schema/version migration and adapter review with tests for migration, identity collisions, account linking, revocation, challenge binding, replay, mixed-family credentials and recovery. The stable account/session/role model should remain intact during that future change.
+
+### Scope and acceptance boundary
+
+- [ ] Current email/password account access and User dashboard continue without any crypto wallet.
+- [ ] Current administrator role and permission checks remain server-owned and independent of wallet-provider branding.
+- [ ] Existing EVM/SIWE local admin step-up remains isolated and explicitly labelled EVM-only.
+- [ ] No minimum balance, deposit, proof-of-funds or transaction-signing requirement is added to wallet authentication.
+- [ ] No Astro-Wallet code, SDK, key vault, recovery system or post-quantum dependency is introduced into PR #141.
+- [ ] Future adapter/schema work can be added without changing account IDs, session semantics, role/permission ownership or dashboard access rules.
+- [ ] Astro-Wallet remains a separate future project decision and cannot become a blocker to completion of the present account/dashboard foundation.
