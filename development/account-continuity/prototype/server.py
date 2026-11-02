@@ -2761,6 +2761,12 @@ class AccountApplication:
                        ) VALUES (?, ?, ?)""",
                     (notice_id, account["account_id"], utc_iso()),
                 )
+                db.execute(
+                    """UPDATE account_communications
+                       SET acknowledged_at = COALESCE(acknowledged_at, ?)
+                       WHERE source_audit_id = ? AND recipient_account_id = ? AND section = 'alerts'""",
+                    (utc_iso(), notice_id, account["account_id"]),
+                )
             current, current_expires = self.account_for_session(self.get_cookie(handler))
             if current is None:
                 raise ApiError(401, "The account session is no longer valid.")
