@@ -531,3 +531,37 @@ The exact-head CodeQL check reported no new alerts in code changed by this pull 
 ### Preservation and release boundary
 
 The synchronization was branch-only. It did not merge PR #141 into `main`, change the production homepage, deploy an account service, modify secrets or credentials, connect a wallet, send a transaction, alter domain/DNS settings or modify historical backup content. Keep PR #141 draft pending manual review and the remaining production/security gates.
+
+
+## 23. Shared homepage wallet control and browser-verified administrator access — 2026-11-03
+
+### Changes on the account branch
+
+- Connected administrator wallet proof-of-control to the existing homepage header Wallet control in development/index.html; the header button remains a preview-only menu for ordinary users and has no ordinary-user wallet prompt.
+- The administrator entry still requires an explicit confirmation. Only after the signed-in account's server-owned administrator role and ordinary session are rechecked does the page present a cancellable request to use the header Wallet control.
+- The provider's account-connection request is initiated from the actual header-button click. No wallet request is made merely by opening the administrator confirmation, selecting Continue, or waiting at the header prompt. The user may cancel before connection.
+- The first administrator wallet signature enrolls the wallet only. The server response is checked to confirm the wallet is registered while adminWalletAuthenticated, adminSessionAuthorized and admin remain false. A distinct, fresh message signature is then required to open the administrator dashboard.
+- The additional-wallet flow also uses the shared header control; it remains subject to the current administrator step-up, server verification and the three-wallet cap.
+- Added a deterministic, isolated headless-browser administrator journey covering: ordinary-user wallet non-prompt behavior; cancel before connecting; cancel while waiting for the header Wallet click; cancel first-wallet enrollment; successful first-wallet enrollment without administrator access; cancel the second step-up signature; then successful fresh step-up and opening of the separate dashboard; and ending administrator step-up while preserving the ordinary account session.
+- The browser test uses Chrome DevTools Protocol mouse input for the wallet header and signature-review clicks and checks that wallet connection/signature requests occur during trusted browser user activation. The wallet fixture key is a public deterministic test-only key, never a real user wallet or asset.
+- Added CI static checks for the shared-header event wiring, the single header-triggered eth_requestAccounts call and the absence of transaction/balance methods from the administrator wallet UI.
+
+### Exact-head verification
+
+All five tracked workflows passed against code head 1c5403d9453f3e0327ab40d510cd5f5888a7fc4b:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41537170641) — Python syntax, browser JavaScript syntax, loopback HTTP/API tests, static security-boundary checks and headless Chrome administrator UI journey all completed successfully.
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41537170899).
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41537170277) — its separate SIWE wallet prototype suite and browser smoke test passed.
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41537170220).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41537170170).
+
+These runs provide automated development-prototype evidence only. They are not independent security review, certification, production authentication or deployment approval.
+
+### Boundaries preserved
+
+- Wallet use remains optional for ordinary account sign-in and ordinary users; it is invoked only after the administrator role check, the user's explicit confirmation and the user's click on the existing header Wallet control.
+- Administrator authentication uses off-chain message signatures only. No blockchain transaction, balance lookup, deposit, stake, minimum balance or transfer is part of enrollment or step-up.
+- No wallet private key, seed phrase or recovery key is requested or stored. The browser test uses no real wallet, assets or user credentials.
+- No production homepage, public account service, secrets, domain/DNS, main branch, historical backups, wallet, transaction or deployment was changed.
+- PR #141 remains draft, open, unmerged and undeployed. Continue to treat the local SQLite/localhost implementation as a development prototype only.
