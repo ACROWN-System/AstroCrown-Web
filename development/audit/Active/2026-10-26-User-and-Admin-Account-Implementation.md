@@ -4,31 +4,31 @@
 **Status:** ACTIVE — Phase 1 implementation on the existing development-only draft branch  
 **Repository:** ACROWN-System/AstroCrown-Web  
 **Branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
-**Related draft:** [PR #141 — familiar email account entry and optional-wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
+**Related draft:** [PR #141 — passkey-first account foundation and optional-wallet backup](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
 **Requirements:** [User and Administrator Account Requirements](../../account-continuity/USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md)
 
 ## 1. Objective
 
-Continue the user-account and administrator foundation using the smallest safe implementation increments. Preserve ordinary email/password access as separate from optional wallet functions, create a modular user account hub, and establish server-enforced administrator access requirements without pretending that a prototype is production authentication.
+Continue the user-account and administrator foundation using the smallest safe implementation increments. Adopt WebAuthn passkeys as primary account authentication, a user-held offline one-time recovery key, and optional wallet backup while preserving stable account/session/role boundaries. Do not treat the legacy email/password prototype as the adopted direction or pretend that a prototype is production authentication.
 
 ## 2. Source-of-truth decisions
 
-- Ordinary users can sign up/log in without a crypto wallet or external identity provider.
-- The current test prototype uses invented data only; email ownership verification, password reset, marketing delivery and production authentication are not implemented.
-- The user account hub and administrator dashboard are separate. Admin role is a backend authority, never a client-side flag or consequence of a wallet simply connecting.
-- Admin access requires an already authorized account and a fresh signature from any one of up to three registered wallets. The minimum number of enrolled wallets before activation remains provisional; the prior decision recommends at least two.
+- Every account uses a WebAuthn passkey as its primary authenticator and can be created without a crypto wallet, email address, password, SMS number or paid/external identity provider.
+- The current local prototype still contains the previous email/password and email-token implementation; it is legacy development behavior. The new WebAuthn registration/sign-in and offline recovery-key flow are not yet implemented. No production authentication or live user account is qualified.
+- A user-selected wallet may be enrolled as an optional additional account authenticator/backup, with a fresh purpose-bound off-chain signature. Wallet connection never creates an account or grants an administrator role. The user account hub and administrator dashboard remain separate; admin role is a backend authority, never a client-side flag.
+- Administrator access requires a valid passkey-authenticated account session, an already authorized role and the existing fresh wallet step-up from an enrolled administrator wallet. The provisional wallet count and minimum remain governed by the existing requirements.
 - Loss of all admin wallets uses the Imperial HSIAN recovery authority with audited human/governed approval. NOVA cannot silently promote itself or an unverified claimant.
 - The account success popup, circular signed-in header control, standalone account hub route, and separate Security assurance link are Phase 1 UX requirements.
 - Security assurance must describe exact prototype evidence and missing controls; it must not claim certification, production readiness or general security.
 
 ## 3. Current state
 
-- PR #141 already contains a familiar Log In / Sign Up interface, optional Referral ID, independent crypto-news preference, required development Terms/Privacy acknowledgement, browser-memory preview, local loopback SQLite server, password hashing, session cookie handling and automated tests.
+- PR #141 currently contains the legacy email/password Log In / Sign Up interface, optional Referral ID, independent crypto-news preference, development Terms/Privacy acknowledgement, browser-memory preview, local loopback SQLite server, password hashing, session handling and automated tests. These are existing prototype facts, not the approved authentication target.
 - A separate `development/auth-prototype/` lab demonstrates local EIP-4361/SIWE wallet proof-of-control, but it is not connected to account roles and does not authorize admin access.
 - Phase 1 now has a separate prototype Security assurance page, success popup, modular user account hub and six built-in avatar choices. The local database has a server-owned role field; registration cannot assign `admin`.
 - The admin development increment reuses the shared SIWE verifier, adds a local owner-operated provisioning/revocation CLI (no HTTP provisioning endpoint), stores up to three registered public wallet addresses, and requires a fresh server-issued SIWE signature from one enrolled wallet on an existing authenticated account session. The step-up lasts at most ten minutes, is bound to the account/session and is rechecked by the backend. The separately gated admin console can enroll an additional wallet only after an existing admin step-up and a distinct new-wallet signature; enrollment clears existing step-up state. The console has no wallet-removal UI, publishing or other business-admin actions.
 - Python tests cover successful step-up, role assignment without step-up, replay, wrong signer, unregistered wallet, cross-session replay attempts, the three-wallet limit, global wallet uniqueness, revocation clearing privileged sessions, and audit events. The code/test revision `b1687845b00888ca4f5b3038138ba42f00c4f817` passed all five tracked automated workflows on 2026-10-26 local time; details are recorded in Section 6. Any later branch-head change still requires verification against that exact head.
-- Still not production: email delivery/verification/reset, production identity/session infrastructure, user-session management UI, wallet-removal UI, admin publishing/role-change/business operations, all-wallet-loss Imperial HSIAN recovery, independent security review and production deployment.
+- Still not production: WebAuthn registration/authentication, recovery-key ceremony, production identity/session infrastructure, user-session management UI, authenticator/wallet removal UI, admin publishing/role-change/business operations, all-authenticator-loss recovery, independent security review and production deployment. Email/SMS verification/reset is not a required account-authentication service.
 - Root/production website files remain unchanged. The authoritative public deployment route remains a separate prerequisite before production integration.
 
 ## 4. Phase 1 work in this block
@@ -59,7 +59,7 @@ Still blocked or not implemented:
 - In-app session management, wallet removal/replacement, exceptional all-wallet-loss recovery through Imperial HSIAN, production owner/recovery authority, and high-impact admin business actions remain unimplemented.
 - Local SQLite audit rows are useful test evidence but are not a tamper-resistant or immutable production audit service.
 - Negative tests cover the main server-side role and wallet boundaries, but do not by themselves establish resistance to every production attack vector.
-- Independent security review, production hosting/storage, verified email and reset delivery, legal/privacy approval, recovery operations and authoritative public publishing verification remain blocked.
+- Independent security review, production hosting/storage, WebAuthn and offline recovery implementation, legal/privacy approval, recovery operations and authoritative public publishing verification remain blocked. A mail provider is not an account-authentication prerequisite.
 
 Do not promote or deploy this prototype. Wallet signatures prove control of a registered address only; they do not create account identity or grant a role.
 
@@ -75,7 +75,7 @@ The code/test revision `b1687845b00888ca4f5b3038138ba42f00c4f817` completed all 
 
 The account test run initially exposed two mismatches: GET authorization errors escaped the HTTP handler rather than returning JSON, and tests expected a successful admin-status response without step-up. The handler now serializes expected `ApiError` responses; the tests assert 403 for unverified admin access, verify that ordinary account access remains active, re-authenticate before the one-time enrollment-challenge replay check, and ensure a rejected replay does not destroy an unrelated valid step-up. The updated exact-head suite passes.
 
-Manual/independent gates still open: review the complete current diff; visually inspect the updated development preview; confirm accessibility at high zoom and by keyboard/screen reader; review the detailed threat model and dependency supply-chain posture; and keep production/email/legal/recovery/publishing gates blocked. A green prototype CI run is not a security certification or production readiness claim.
+Manual/independent gates still open: review the complete current diff; visually inspect the updated development preview; confirm accessibility at high zoom and by keyboard/screen reader; review the WebAuthn threat model and dependency supply-chain posture; and keep production/hosting/legal/recovery/publishing gates blocked. A green prototype CI run is not a security certification or production readiness claim.
 
 ## 7. Phase exit criteria
 
@@ -200,7 +200,7 @@ These checks validate the local development account flow and owner CLI integrati
 
 ### Preservation
 
-Development-only under PR #141. Keep draft and unmerged. Do not create a public admin-registration endpoint, do not infer authority from email patterns or connected wallets, and do not use a memory-only browser preview as evidence that server-side role provisioning works. Production authority/bootstrap, account recovery and all-wallet-loss HSIAN recovery remain blocked for separate review.
+Development-only under PR #141. Keep draft and unmerged. Do not create a public admin-registration endpoint, do not infer authority from account labels or connected wallets, and do not use a memory-only browser preview as evidence that server-side role provisioning works. Production authority/bootstrap, WebAuthn, offline recovery-key lifecycle and all-authenticator-loss recovery remain blocked for separate review.
 
 
 ## 13. Shared User dashboard and separate Administrator dashboard — 2026-11-02
@@ -441,3 +441,40 @@ The current local SQLite `admin_wallets` table stores an EVM-style address and n
 ### Verification boundary
 
 Documentation-only. No application code, tests, local wallet schema, provider dependency, wallet connector, key management, AW compatibility, payment, chain operation or dashboard behavior was changed by this decision. The current account and administrator dashboard scope remains active; Astro-Wallet research remains deferred in its separate architecture study. No PR was merged or deployed.
+
+
+## 20. Adopt passkey-first account authentication and offline recovery — 2026-11-03
+
+### Owner decision
+
+The owner accepted replacing email/password-first authentication with a public-key model based on WebAuthn:
+
+- WebAuthn passkey is the mandatory primary authenticator for new AstroCrown accounts. The private key remains with the user's authenticator; AstroCrown registers and verifies public credential material.
+- A cryptocurrency wallet is optional. A user may separately enroll a wallet signature as a backup authenticator/recovery option. It does not grant roles and cannot replace the WebAuthn primary flow by implication.
+- Generate a 128-bit-or-stronger CSPRNG offline recovery key. Display it once, store only a one-way verifier, rate-limit attempts, consume it once, then invalidate and replace it. The 128-bit target is a project-selected margin; NIST SP 800-63B-4 requires at least 64 bits for saved recovery codes.
+- No email, password, SMS, paid identity provider or third-party authentication API is required for account registration, sign-in or recovery. The WebAuthn client still exchanges challenges with AstroCrown's own backend; this is first-party application traffic.
+- Synced passkeys may depend on the user's platform sync provider. Device-bound credentials or a user-owned FIDO2 hardware key are alternatives where supported. A physical security key may have a user purchase cost; it is not a project-mandated expense.
+- No staff/operator password reset, account impersonation or recovery-key override is permitted. Loss of all authenticators and the recovery key may result in permanent account loss.
+- This authentication decision does not itself encrypt stored account data from application/database operators. Client-side/end-to-end encryption is a separate security design.
+
+### Standards alignment and implementation conditions
+
+- W3C WebAuthn Level 3 is a Recommendation published 2026-08-25.
+- OWASP's Passkey Security Cheat Sheet requires maintained relying-party libraries and server-side ceremony verification, exact RP ID/origin controls, credential lifecycle protection and careful recovery.
+- NIST SP 800-63B-4 (July 2025) provides current authenticator lifecycle and saved recovery-code guidance, including multiple authenticators, offline storage, hashed code storage, throttling and invalidation after use.
+- These are engineering references, not certification or automatic conformance. Every requirement must be tied to implementation, tests and evidence.
+
+### $0-first and migration boundary
+
+- Use a maintained open-source WebAuthn relying-party library after license, maintenance, advisory, dependency and runtime review. Do not hand-roll CBOR/COSE parsing or cryptographic verification.
+- Local development and tests must work without an external identity service or outbound provider calls. The browser's WebAuthn ceremony is local to its authenticator; the signed result is returned to the AstroCrown backend for verification.
+- A public production deployment still requires HTTPS, durable backend storage, backups and operations. Free-tier availability and long-term $0 operation must be verified, not assumed.
+- The current email/password local prototype, Mailjet adapter and email-token tests are legacy artifacts until the replacement implementation and acceptance tests are complete. Do not configure Mailjet/SMS to enable account authentication or recovery.
+- Preserve the stable account IDs, roles, permissions, User dashboard, Administrator dashboard and separately scoped administrator wallet step-up. Keep the existing local EVM/SIWE verifier isolated; do not refactor the disposable wallet schema or implement Astro-Wallet as part of this change.
+
+### Repository changes and status
+
+- Added `development/account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md`.
+- Updated `USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md` with the superseding decision and links.
+- This audit update records design only. No passkey code, recovery-key code, database migration, new provider, production configuration, deployment or real-user account was created.
+- PR #141 remains draft, open, unmerged and undeployed. The legacy prototype remains the current test implementation until a separately verified replacement is delivered.
