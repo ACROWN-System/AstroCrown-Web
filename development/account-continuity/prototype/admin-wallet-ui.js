@@ -8,6 +8,103 @@
 
   var busy = false;
   var MAX_MESSAGE_CHARS = 8192;
+  var pendingHeaderWalletConnection = null;
+
+  function setHeaderWalletState(state) {
+    var root = document.documentElement;
+    if (state === "waiting") {
+      root.setAttribute("data-admin-wallet-connect-pending", "true");
+    } else {
+      root.removeAttribute("data-admin-wallet-connect-pending");
+    }
+    document.dispatchEvent(new CustomEvent("astrocrown:admin-wallet-connect-state", {
+      detail: { state: state }
+    }));
+  }
+
+  function updateHeaderWalletNotice(message) {
+    var status = document.getElementById("admin-wallet-connect-notice-status");
+    if (status) status.textContent = message;
+    feedback(message);
+  }
+
+  function requestHeaderWalletConnection() {
+    if (!window.ethereum || typeof window.ethereum.request !== "function") {
+      return Promise.reject(new Error("No compatible browser wallet is available. Your ordinary account remains usable without a wallet."));
+    }
+    if (pendingHeaderWalletConnection) {
+      return Promise.reject(new Error("A wallet connection request is already active."));
+    }
+
+    return new Promise(function (resolve) {
+      var notice = document.createElement("section");
+      notice.id = "admin-wallet-connect-notice";
+      notice.className = "admin-wallet-connect-notice";
+      notice.setAttribute("aria-label", "Administrator wallet connection");
+      notice.innerHTML =
+        '<strong>Connect an administrator wallet</strong>' +
+        '<p id="admin-wallet-connect-notice-status" role="status" aria-live="polite">Select the Wallet button in the homepage header to connect a wallet for this request. No transaction or balance is required.</p>' +
+        '<div class="admin-wallet-connect-notice-actions"><button type="button" id="admin-wallet-connect-cancel">Cancel wallet request</button></div>';
+      document.body.appendChild(notice);
+
+      var cancelButton = document.getElementById("admin-wallet-connect-cancel");
+      var settled = false;
+      function finish(result) {
+        if (settled) return;
+        settled = true;
+        if (pendingHeaderWalletConnection &&
+            pendingHeaderWalletConnection.notice === notice) {
+          pendingHeaderWalletConnection = null;
+        }
+        notice.remove();
+        setHeaderWalletState(result ? "connected" : "idle");
+        resolve(result);
+      }
+
+      pendingHeaderWalletConnection = {
+        notice: notice,
+        connecting: false,
+        finish: finish
+      };
+      cancelButton.addEventListener("click", function () {
+        finish(null);
+      });
+      setHeaderWalletState("waiting");
+      var headerButton = document.getElementById("wallet-connect-trigger");
+      if (headerButton && typeof headerButton.focus === "function") headerButton.focus();
+    });
+  }
+
+  document.addEventListener("astrocrown:header-wallet-connect", async function () {
+    var pending = pendingHeaderWalletConnection;
+    if (!pending || pending.connecting) return;
+    var provider = window.ethereum;
+    if (!provider || typeof provider.request !== "function") {
+      updateHeaderWalletNotice("No compatible browser wallet was detected. Install or unlock a supported wallet, then try the header button again, or cancel.");
+      return;
+    }
+
+    pending.connecting = true;
+    updateHeaderWalletNotice("Waiting for the wallet connection approval. No transaction will be submitted.");
+    try {
+      var accounts = await provider.request({ method: "eth_requestAccounts" });
+      if (!Array.isArray(accounts) || !accounts.length || accounts.some(function (item) {
+        return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item);
+      })) {
+        throw new Error("The wallet provider did not return a valid account list. Try again or cancel.");
+      }
+      if (pendingHeaderWalletConnection === pending) {
+        pending.finish({ provider: provider, accounts: accounts });
+      }
+    } catch (error) {
+      if (pendingHeaderWalletConnection === pending) {
+        pending.connecting = false;
+        updateHeaderWalletNotice(error && typeof error.message === "string"
+          ? error.message + " Select Wallet in the header to retry, or cancel."
+          : "The wallet connection was not completed. Select Wallet in the header to retry, or cancel.");
+      }
+    }
+  });
 
   function feedback(message) {
     var adminDashboard = document.getElementById("admin-dashboard");
@@ -239,15 +336,16 @@
     });
   }
 
-  async function requestInitialAdminWalletEnrollment(provider) {
-    feedback("No administrator wallet is enrolled yet. Connect a wallet you personally control to enrol the first wallet for this already-appointed account…");
-    var accounts = await provider.request({ method: "eth_requestAccounts" });
+  async function requestInitialAdminWalletEnrollment(provider, accounts, chainId) {
+    feedback("No administrator wallet is enrolled yet. Choose a wallet you personally control; the header connection is only for this already-appointed account…");
     if (!Array.isArray(accounts) || !accounts.length || accounts.some(function (item) {
       return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item);
     })) {
       throw new Error("The connected provider did not return a valid wallet account list.");
     }
-    var chainHex = await provider.request({ method: "eth_chainId" });
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Error("The connected wallet did not return a valid network identifier.");
+    }
     var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
       ? Number.parseInt(chainHex, 16)
       : NaN;
@@ -303,25 +401,19 @@
         window.location.hash = "admin";
         return;
       }
-      var provider = window.ethereum;
-      if (!provider || typeof provider.request !== "function") {
-        throw new Error("No compatible browser wallet is available. Wallet access is only needed here, not for ordinary account sign-in.");
-      }
-
       var walletOptions = await requestJson("/api/admin/wallet-options", {});
       if (!Array.isArray(walletOptions.wallets)) {
         throw new Error("The server returned an invalid administrator wallet registry.");
       }
-      if (walletOptions.wallets.length === 0) {
-        var initialWalletEnrolled = await requestInitialAdminWalletEnrollment(provider);
-        if (!initialWalletEnrolled) return;
-        walletOptions = await requestJson("/api/admin/wallet-options", {});
-        if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length !== 1) {
-          throw new Error("The first administrator wallet was not available for the separate access-verification step.");
-        }
+
+      feedback("Use the Wallet button in the homepage header to connect a wallet for this administrator request…");
+      var walletConnection = await requestHeaderWalletConnection();
+      if (!walletConnection) {
+        feedback("Wallet connection was cancelled. Your ordinary account remains signed in; no administrator access was granted.");
+        return;
       }
-      feedback("Requesting the wallet only because you explicitly selected administrator access…");
-      var accounts = await provider.request({ method: "eth_requestAccounts" });
+      var provider = walletConnection.provider;
+      var accounts = walletConnection.accounts;
       if (!Array.isArray(accounts) || !accounts.length || accounts.some(function (item) {
         return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item);
       })) {
@@ -333,6 +425,14 @@
         : NaN;
       if (!Number.isSafeInteger(chainId) || chainId <= 0) {
         throw new Error("The connected wallet did not return a valid network identifier.");
+      }
+      if (walletOptions.wallets.length === 0) {
+        var initialWalletEnrolled = await requestInitialAdminWalletEnrollment(provider, accounts, chainId);
+        if (!initialWalletEnrolled) return;
+        walletOptions = await requestJson("/api/admin/wallet-options", {});
+        if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length !== 1) {
+          throw new Error("The first administrator wallet was not available for the separate access-verification step.");
+        }
       }
       var matchingWallet = walletOptions.wallets.find(function (wallet) {
         return wallet && typeof wallet.address === "string" &&
@@ -379,6 +479,7 @@
         ? error.message
         : "Administrator wallet verification failed. No access was granted.");
     } finally {
+      setHeaderWalletState("idle");
       busy = false;
     }
   }
@@ -399,13 +500,14 @@
       if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length >= 3) {
         throw new Error("This account already has the maximum of three active wallets.");
       }
-      var provider = window.ethereum;
-      if (!provider || typeof provider.request !== "function") {
-        throw new Error("No compatible browser wallet is available. No wallet prompt was opened.");
+      feedback("Use the Wallet button in the homepage header to connect the new administrator wallet…");
+      var walletConnection = await requestHeaderWalletConnection();
+      if (!walletConnection) {
+        feedback("Wallet connection was cancelled. No new wallet was enrolled.");
+        return;
       }
-
-      feedback("Choose the wallet you want to register. The existing administrator wallet must already have verified this session.");
-      var accounts = await provider.request({ method: "eth_requestAccounts" });
+      var provider = walletConnection.provider;
+      var accounts = walletConnection.accounts;
       if (!Array.isArray(accounts) || !accounts.length || accounts.some(function (item) {
         return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item);
       })) {
@@ -466,6 +568,7 @@
         ? error.message
         : "The additional wallet could not be enrolled. No change was confirmed.");
     } finally {
+      setHeaderWalletState("idle");
       busy = false;
     }
   }
