@@ -239,6 +239,57 @@
     });
   }
 
+  async function requestInitialAdminWalletEnrollment(provider) {
+    feedback("No administrator wallet is enrolled yet. Connect a wallet you personally control to enrol the first wallet for this already-appointed account…");
+    var accounts = await provider.request({ method: "eth_requestAccounts" });
+    if (!Array.isArray(accounts) || !accounts.length || accounts.some(function (item) {
+      return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item);
+    })) {
+      throw new Error("The connected provider did not return a valid wallet account list.");
+    }
+    var chainHex = await provider.request({ method: "eth_chainId" });
+    var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
+      ? Number.parseInt(chainHex, 16)
+      : NaN;
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Error("The connected wallet did not return a valid network identifier.");
+    }
+    var address = accounts[0];
+    var challenge = await requestJson("/api/admin/wallet-enrollment-challenge", {
+      address: address,
+      chainId: chainId
+    });
+    if (challenge.transactionAuthorized !== false ||
+        challenge.purpose !== "administrator-wallet-enrollment" ||
+        challenge.enrollmentType !== "initial" ||
+        typeof challenge.message !== "string" ||
+        typeof challenge.address !== "string") {
+      throw new Error("The server did not return the expected first-wallet enrollment challenge.");
+    }
+    var signature = await reviewAndSign(
+      provider, challenge.address, challenge.chainId, challenge.message
+    );
+    if (!signature) {
+      feedback("First-wallet enrollment was cancelled. Your ordinary account remains signed in and no administrator access was granted.");
+      return false;
+    }
+    feedback("Verifying that you control the proposed first administrator wallet…");
+    var enrolled = await requestJson("/api/admin/wallet-enrollment-verify", {
+      message: challenge.message,
+      signature: signature
+    });
+    if (enrolled.adminRoleAssigned !== true ||
+        enrolled.adminWalletCount !== 1 ||
+        enrolled.walletEnrolledAddress.toLowerCase() !== challenge.address.toLowerCase() ||
+        enrolled.adminWalletAuthenticated !== false ||
+        enrolled.adminSessionAuthorized !== false ||
+        enrolled.admin !== false) {
+      throw new Error("The server did not confirm the expected first-wallet enrollment state. Administrator access remains closed.");
+    }
+    feedback("Your first wallet is enrolled. A second, fresh signature will now be requested specifically to authorize this administrator session.");
+    return true;
+  }
+
   async function requestAdminWalletAccess() {
     if (busy) return;
     busy = true;
@@ -258,8 +309,16 @@
       }
 
       var walletOptions = await requestJson("/api/admin/wallet-options", {});
-      if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length === 0) {
-        throw new Error("No administrator wallets are registered for this account. The authorized local owner must provision a wallet before admin access can be used.");
+      if (!Array.isArray(walletOptions.wallets)) {
+        throw new Error("The server returned an invalid administrator wallet registry.");
+      }
+      if (walletOptions.wallets.length === 0) {
+        var initialWalletEnrolled = await requestInitialAdminWalletEnrollment(provider);
+        if (!initialWalletEnrolled) return;
+        walletOptions = await requestJson("/api/admin/wallet-options", {});
+        if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length !== 1) {
+          throw new Error("The first administrator wallet was not available for the separate access-verification step.");
+        }
       }
       feedback("Requesting the wallet only because you explicitly selected administrator access…");
       var accounts = await provider.request({ method: "eth_requestAccounts" });
@@ -362,8 +421,7 @@
       var currentWallets = walletOptions.wallets;
       var candidate = accounts.find(function (address) {
         return !currentWallets.some(function (item) {
-          return item && item.chainId === chainId &&
-            typeof item.address === "string" &&
+          return item && typeof item.address === "string" &&
             item.address.toLowerCase() === address.toLowerCase();
         });
       });
