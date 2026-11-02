@@ -109,6 +109,22 @@ def normalize_email(value: object) -> str:
     return candidate
 
 
+def normalize_account_identifier(
+    value: object, *, allow_legacy_email: bool = False
+) -> str:
+    """Normalize the public account reference without treating it as an authenticator."""
+    if not isinstance(value, str):
+        raise ApiError(400, "Enter a valid AstroCrown account identifier.")
+    candidate = value.strip()
+    if re.fullmatch(r"AC-[A-Fa-f0-9]{10}", candidate):
+        return candidate.upper()
+    # Historical email-first rows used their email as the old username. Permit
+    # that value only in explicit legacy test mode while those rows are exercised.
+    if allow_legacy_email and len(candidate) <= 254 and EMAIL_RE.fullmatch(candidate):
+        return candidate.lower()
+    raise ApiError(400, "Enter the account identifier shown in the member's User dashboard.")
+
+
 def validate_password(value: object) -> str:
     if not isinstance(value, str):
         raise ApiError(400, "Enter your password.")
@@ -1600,14 +1616,18 @@ class AccountApplication:
     def grant_admin_role(
         self, payload: dict, handler: BaseHTTPRequestHandler
     ) -> tuple[int, dict, str | None]:
-        if set(payload) not in ({"email", "reason"}, {"email", "reason", "permissions"}):
-            raise ApiError(400, "Provide only the existing account email, reason and optional delegated permissions.")
+        if set(payload) not in (
+            {"accountIdentifier", "reason"},
+            {"accountIdentifier", "reason", "permissions"},
+        ):
+            raise ApiError(400, "Provide only the existing account identifier, reason and optional delegated permissions.")
         actor, _expires, token = self.require_admin_permission(handler, "admin.roles.grant")
-        email = normalize_email(payload.get("email"))
+        account_identifier = normalize_account_identifier(
+            payload.get("accountIdentifier"),
+            allow_legacy_email=self.enable_legacy_email_auth,
+        )
         reason = self.validate_admin_reason(payload.get("reason"))
         delegated = self.validate_permission_list(payload.get("permissions"))
-        if email == (actor["email"] or actor["username"]).lower():
-            raise ApiError(400, "An administrator cannot grant the administrator role to themselves.")
 
         now = int(time.time())
         created_at = utc_iso()
@@ -1628,11 +1648,11 @@ class AccountApplication:
             if not set(delegated).issubset(delegable):
                 raise ApiError(403, "You may assign only permissions that were explicitly delegated to you for further delegation.")
             target = db.execute(
-                "SELECT account_id, email, role FROM accounts WHERE email = ? COLLATE NOCASE",
-                (email,),
+                "SELECT account_id, username, role FROM accounts WHERE username = ? COLLATE NOCASE",
+                (account_identifier,),
             ).fetchone()
             if target is None:
-                raise ApiError(404, "No existing AstroCrown account was found for that email.")
+                raise ApiError(404, "No existing AstroCrown account was found for that account identifier.")
             if target["account_id"] == actor["account_id"]:
                 raise ApiError(400, "An administrator cannot grant the role to their own account.")
             if target["role"] != "user":
@@ -1661,7 +1681,7 @@ class AccountApplication:
             )
         return 200, {
             "granted": True,
-            "targetEmail": target["email"] or email,
+            "targetAccountIdentifier": target["username"],
             "role": "admin",
             "adminRoleAssigned": True,
             "adminPermissions": delegated,
@@ -1673,13 +1693,14 @@ class AccountApplication:
     def revoke_admin_role(
         self, payload: dict, handler: BaseHTTPRequestHandler
     ) -> tuple[int, dict, str | None]:
-        if set(payload) != {"email", "reason"}:
-            raise ApiError(400, "Provide only the existing administrator email and revocation reason.")
+        if set(payload) != {"accountIdentifier", "reason"}:
+            raise ApiError(400, "Provide only the existing administrator account identifier and revocation reason.")
         actor, _expires, token = self.require_admin_permission(handler, "admin.roles.revoke")
-        email = normalize_email(payload.get("email"))
+        account_identifier = normalize_account_identifier(
+            payload.get("accountIdentifier"),
+            allow_legacy_email=self.enable_legacy_email_auth,
+        )
         reason = self.validate_admin_reason(payload.get("reason"))
-        if email == (actor["email"] or actor["username"]).lower():
-            raise ApiError(400, "An administrator cannot revoke their own role through this workflow.")
         now = int(time.time())
         created_at = utc_iso()
         with self.connect() as db:
@@ -1691,11 +1712,11 @@ class AccountApplication:
             if holder is None:
                 raise ApiError(403, "The revoke permission or wallet-verified administrator session is no longer active.")
             target = db.execute(
-                "SELECT account_id, email, role FROM accounts WHERE email = ? COLLATE NOCASE",
-                (email,),
+                "SELECT account_id, username, role FROM accounts WHERE username = ? COLLATE NOCASE",
+                (account_identifier,),
             ).fetchone()
             if target is None:
-                raise ApiError(404, "No existing AstroCrown account was found for that email.")
+                raise ApiError(404, "No existing AstroCrown account was found for that account identifier.")
             if target["account_id"] == actor["account_id"]:
                 raise ApiError(400, "An administrator cannot revoke their own role through this workflow.")
             if target["role"] != "admin":
@@ -1729,7 +1750,7 @@ class AccountApplication:
             )
         return 200, {
             "revoked": True,
-            "targetEmail": target["email"] or email,
+            "targetAccountIdentifier": target["username"],
             "role": "user",
             "revokedWalletCount": wallet_count,
             "revokedPermissions": previous_permissions,
