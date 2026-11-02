@@ -11,6 +11,7 @@ import urllib.request
 import uuid
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import patch
 
 PROTOTYPE_DIR = Path(__file__).resolve().parents[1]
 import sys
@@ -77,8 +78,16 @@ class PasskeyApiTests(unittest.TestCase):
         )
 
     def test_service_requires_exact_secure_origin_and_builds_discoverable_options(self):
-        with self.assertRaises(ValueError):
-            PasskeyAuthService(rp_id="localhost", rp_name="AstroCrown", origin="http://example.test")
+        for invalid_origin in (
+            "http://example.test",
+            "http://localhost.evil.test",
+            "http://localhost/attacker-path",
+            "https://user@localhost",
+            "https://localhost/?unexpected=query",
+        ):
+            with self.subTest(origin=invalid_origin):
+                with self.assertRaises(ValueError):
+                    PasskeyAuthService(rp_id="localhost", rp_name="AstroCrown", origin=invalid_origin)
         service = self.app.passkey_auth_service
         self.assertIsNotNone(service)
         options = service.authentication_options(challenge=b"x" * 32)
@@ -96,6 +105,14 @@ class PasskeyApiTests(unittest.TestCase):
         self.assertEqual(selection["residentKey"], "required")
         self.assertEqual(selection["userVerification"], "required")
         self.assertEqual(registration["attestation"], "none")
+
+    def test_default_passkey_mode_never_loads_the_legacy_email_sender(self):
+        database = Path(self.temp.name) / "no-mail-provider.sqlite3"
+        with patch("server.SMTPEmailSender.from_environment", side_effect=AssertionError("email provider must not be loaded")) as loader:
+            app = AccountApplication(database)
+        loader.assert_not_called()
+        self.assertIsNone(app.email_sender)
+        self.assertFalse(app.email_delivery_available)
 
     def test_status_reports_passkey_available_and_legacy_password_routes_are_disabled(self):
         status, data, _ = self.request("/api/account/status")
