@@ -58,7 +58,7 @@ class FakeEmailSender:
 class AccountServerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
-        self.app = AccountApplication(Path(self.temp.name) / "accounts.sqlite3")
+        self.app = AccountApplication(Path(self.temp.name) / "accounts.sqlite3", enable_legacy_email_auth=True)
         self.server = create_server(self.app, 0)
         self.port = self.server.server_port
         self.origin = "http://localhost:" + str(self.port)
@@ -178,7 +178,7 @@ class AccountServerTests(unittest.TestCase):
 
         # A second application instance represents a server restart or a
         # replacement worker opening the same local account database.
-        restarted_app = AccountApplication(self.app.database_path)
+        restarted_app = AccountApplication(self.app.database_path, enable_legacy_email_auth=True)
         self.assertTrue(restarted_app.auth_rate_allowed("login", subject, limit=2, window=300))
         self.assertFalse(
             self.app.auth_rate_allowed("login", subject, limit=2, window=300),
