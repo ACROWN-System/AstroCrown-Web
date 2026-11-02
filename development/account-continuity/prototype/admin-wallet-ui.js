@@ -346,12 +346,6 @@
     if (!Number.isSafeInteger(chainId) || chainId <= 0) {
       throw new Error("The connected wallet did not return a valid network identifier.");
     }
-    var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
-      ? Number.parseInt(chainHex, 16)
-      : NaN;
-    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
-      throw new Error("The connected wallet did not return a valid network identifier.");
-    }
     var address = accounts[0];
     var challenge = await requestJson("/api/admin/wallet-enrollment-challenge", {
       address: address,
