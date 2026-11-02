@@ -636,7 +636,7 @@ No public service, production database, paid identity provider, email/SMS provid
 - [x] Sender-selected destination; Alert acknowledgement and Message read status are separate and persisted.
 - [x] Administrator role revocation creates an Alert linked to the authoritative administrator audit event.
 - [x] Recipient-only listing and state changes; the send operation requires the separate permission and wallet-verified session.
-- [ ] Exact-head automated tests and browser journey must pass before this implementation block is considered verified.
+- [x] Exact-head automated tests and browser journey passed on implementation/documentation head a44c532c38d7f79b5da668f216941080f8b43e3e; all five tracked PR workflows completed successfully.
 - [ ] Production retention/deletion, access logging, abuse reporting/moderation, availability, durable storage, accessibility and privacy/legal review remain release gates.
 
 This is a localhost/SQLite development-prototype capability only. It is not a production messaging service, does not make a general chat product available, and does not authorize email/SMS integration or paid providers. PR #141 remains draft, open, unmerged and undeployed.
