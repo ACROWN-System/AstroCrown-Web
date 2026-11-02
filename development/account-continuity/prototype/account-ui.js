@@ -878,54 +878,26 @@
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
     event.preventDefault();
-    if (busy) return;
+    if (busy || form.id !== "account-create-form") return;
 
-    if (form.id === "account-reset-request-form") {
-      setBusy(true);
-      try {
-        var resetRequest = await requestJson("/api/account/password-reset/request", {
-          email: formValue(form, "email")
-        });
-        showFeedback(resetRequest.message || "If an account exists for this address, it may receive a reset link.", "success");
-      } catch (error) {
-        showFeedback(error.message || "The reset request could not be processed.", "error");
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-
-    var endpoint;
-    var payload;
-    if (form.id === "account-signin-form") {
-      endpoint = "/api/account/login";
-      payload = { email: formValue(form, "email"), password: formValue(form, "password") };
-    } else if (form.id === "account-create-form") {
-      endpoint = "/api/account/register";
-      payload = {
-        email: formValue(form, "email"),
-        password: formValue(form, "password"),
-        referralId: formValue(form, "referralId"),
-        newsletterOptIn: Boolean(form.elements.namedItem("newsletterOptIn").checked),
-        termsAccepted: Boolean(form.elements.namedItem("termsAccepted").checked),
-        termsVersion: termsVersion
-      };
-    } else {
+    var termsInput = form.elements.namedItem("termsAccepted");
+    var termsAccepted = Boolean(termsInput && termsInput.checked);
+    if (!termsAccepted) {
+      showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
+      if (termsInput) termsInput.focus();
       return;
     }
 
     setBusy(true);
     try {
-      var result = await requestJson(endpoint, payload);
-      accountState = result;
-      successKind = form.id === "account-create-form" ? "signup" : "signin";
-      mode = "success";
-      syncAccountButton();
-      render();
-      var successAction = document.getElementById("open-account-hub");
-      if (successAction) successAction.focus();
+      var result = await registerWithPasskey({
+        referralId: formValue(form, "referralId"),
+        termsAccepted: true,
+        termsVersion: termsVersion
+      });
+      await finishPasskeyAuthentication(result, true);
     } catch (error) {
-      showFeedback(error.message, "error");
+      showFeedback(error.message || "Passkey account creation could not be completed.", "error");
     } finally {
       setBusy(false);
     }
@@ -940,6 +912,18 @@
     }
     if (button.dataset.accountMode) {
       setMode(button.dataset.accountMode);
+      return;
+    }
+    if (button.id === "account-passkey-signin") {
+      setBusy(true);
+      try {
+        var signInResult = await signInWithPasskey();
+        await finishPasskeyAuthentication(signInResult, false);
+      } catch (error) {
+        showFeedback(error.message || "Passkey sign-in could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "open-account-hub") {
