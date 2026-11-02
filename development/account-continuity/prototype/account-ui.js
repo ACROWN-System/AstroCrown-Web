@@ -95,6 +95,142 @@
     feedback.classList.toggle("is-visible", Boolean(message));
   }
 
+  function base64urlToArrayBuffer(value) {
+    if (typeof value !== "string" || !/^[A-Za-z0-9_-]+$/.test(value)) {
+      throw new Error("The passkey service returned an invalid challenge or credential identifier.");
+    }
+    var padded = value.replace(/-/g, "+").replace(/_/g, "/");
+    while (padded.length % 4) padded += "=";
+    var binary;
+    try { binary = atob(padded); }
+    catch (_error) { throw new Error("The passkey service returned invalid encoded data."); }
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  function arrayBufferToBase64url(buffer) {
+    var bytes = new Uint8Array(buffer);
+    var binary = "";
+    for (var i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  }
+
+  function webauthnOptionsFromJson(value) {
+    var publicKey = Object.assign({}, value);
+    publicKey.challenge = base64urlToArrayBuffer(publicKey.challenge);
+    if (publicKey.user && typeof publicKey.user.id === "string") {
+      publicKey.user = Object.assign({}, publicKey.user, {
+        id: base64urlToArrayBuffer(publicKey.user.id)
+      });
+    }
+    ["excludeCredentials", "allowCredentials"].forEach(function (name) {
+      if (Array.isArray(publicKey[name])) {
+        publicKey[name] = publicKey[name].map(function (item) {
+          return Object.assign({}, item, { id: base64urlToArrayBuffer(item.id) });
+        });
+      }
+    });
+    return publicKey;
+  }
+
+  function serializeWebAuthnCredential(credential, registration) {
+    if (!credential || !credential.response) {
+      throw new Error("The authenticator returned an incomplete passkey response.");
+    }
+    if (typeof credential.toJSON === "function") return credential.toJSON();
+    var response = credential.response;
+    var serialized = {
+      id: credential.id,
+      rawId: arrayBufferToBase64url(credential.rawId),
+      type: credential.type,
+      response: {
+        clientDataJSON: arrayBufferToBase64url(response.clientDataJSON)
+      },
+      clientExtensionResults: typeof credential.getClientExtensionResults === "function"
+        ? credential.getClientExtensionResults() : {}
+    };
+    if (credential.authenticatorAttachment) {
+      serialized.authenticatorAttachment = credential.authenticatorAttachment;
+    }
+    if (registration) {
+      serialized.response.attestationObject = arrayBufferToBase64url(response.attestationObject);
+      if (typeof response.getTransports === "function") {
+        serialized.response.transports = response.getTransports();
+      }
+    } else {
+      serialized.response.authenticatorData = arrayBufferToBase64url(response.authenticatorData);
+      serialized.response.signature = arrayBufferToBase64url(response.signature);
+      serialized.response.userHandle = response.userHandle
+        ? arrayBufferToBase64url(response.userHandle) : null;
+    }
+    return serialized;
+  }
+
+  function ensurePasskeyContext() {
+    if (browserPreviewMode) {
+      throw new Error("This hosted HTML preview cannot create real accounts or passkeys. Start the local AstroCrown account server and open http://localhost:8766/ to test authentication.");
+    }
+    if (!window.isSecureContext || !navigator.credentials ||
+        typeof navigator.credentials.create !== "function" ||
+        typeof navigator.credentials.get !== "function" ||
+        typeof PublicKeyCredential === "undefined") {
+      throw new Error("This browser does not expose WebAuthn in a supported secure context. Use a current browser on localhost or the approved HTTPS site.");
+    }
+  }
+
+  async function registerWithPasskey(payload) {
+    ensurePasskeyContext();
+    var options = await requestJson("/api/passkeys/register/options", payload);
+    var credential;
+    try {
+      credential = await navigator.credentials.create({
+        publicKey: webauthnOptionsFromJson(options.publicKey)
+      });
+    } catch (error) {
+      if (error && error.name === "NotAllowedError") {
+        throw new Error("Passkey creation was cancelled or not completed. No account was created.");
+      }
+      throw new Error("The browser could not create a passkey. No account was created.");
+    }
+    if (!credential) throw new Error("Passkey creation was cancelled. No account was created.");
+    return requestJson("/api/passkeys/register/verify", {
+      challengeId: options.challengeId,
+      credential: serializeWebAuthnCredential(credential, true)
+    });
+  }
+
+  async function signInWithPasskey() {
+    ensurePasskeyContext();
+    var options = await requestJson("/api/passkeys/authentication/options", {});
+    var credential;
+    try {
+      credential = await navigator.credentials.get({
+        publicKey: webauthnOptionsFromJson(options.publicKey)
+      });
+    } catch (error) {
+      if (error && error.name === "NotAllowedError") {
+        throw new Error("Passkey sign-in was cancelled or not completed.");
+      }
+      throw new Error("The browser could not complete passkey sign-in.");
+    }
+    if (!credential) throw new Error("Passkey sign-in was cancelled.");
+    return requestJson("/api/passkeys/authentication/verify", {
+      challengeId: options.challengeId,
+      credential: serializeWebAuthnCredential(credential, false)
+    });
+  }
+
+  async function finishPasskeyAuthentication(result, created) {
+    accountState = result;
+    successKind = created ? "signup" : "signin";
+    mode = "success";
+    syncAccountButton();
+    render();
+    var successAction = document.getElementById("open-account-hub");
+    if (successAction) successAction.focus();
+  }
+
   async function requestJson(path, payload) {
     if (browserPreviewMode) return browserPreviewRequest(path, payload || {});
     var response;
