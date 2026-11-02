@@ -224,7 +224,57 @@ Revoking administrator privileges does not automatically confiscate compensation
 - [ ] Deployment, upgrade, monitoring, RPC/provider failure and incident-response procedures are documented and tested.
 - [ ] Treasury, compensation and recovery-vault authorization are reviewed separately from administrator role governance.
 
-## 9. Current implementation boundary
+## 9. Provisional Solana-first target and Devnet qualification
+
+Solana is the **preferred provisional blockchain candidate** for AstroCrown. Solana Devnet is the **preferred first public integration network** for the NOVA administrative operations prototype. This is not yet a final production-chain commitment. Mainnet deployment and real-asset use remain blocked pending separate chain-selection approval, technical qualification, adversarial testing and independent security review.
+
+### Solana-native account model
+
+- The NOVA operations account must be designed around Solana programs, instructions, transactions, explicit state accounts, Program Derived Addresses (PDAs) and Cross-Program Invocations (CPIs), not an assumed Ethereum ERC-4337/EVM smart-account or generic EVM-module architecture.
+- The initial design candidate is a NOVA program with per-administrator policy/state accounts and PDA-controlled operational vault authorities where supported by the asset model. A PDA has no private key; only its deriving program can authorize it through the runtime's PDA-signing mechanism in a CPI.
+- Each administrator's external wallet is a narrowly scoped transaction signer/authenticator for NOVA instructions. It does not directly control the NOVA operations vault or organizational assets.
+- Supported operations must be routed through NOVA program instructions. The program validates signer, PDA/account relationships, program IDs, mint/token-account authority and delegate settings, policy version, destination, amount and exact operation scope before making a state change or CPI.
+- Solana program upgrade authority is a critical control. Its governance, key isolation, recovery, threshold and revocation policy must be specified before any deployment. SPL Token and Token-2022 support must be explicitly scoped, including relevant token extensions.
+- NOVA cannot intercept or prevent arbitrary personal transactions independently signed by the owner of an ordinary external wallet. NOVA enforces the assets in its own program-controlled vaults and operations routed through its program. The administrator retains control of their external self-custody wallet; it is used for identity/step-up and may receive compensation through a separate payout flow.
+
+### Solana transaction atomicity and incident recording
+
+Solana transactions are atomic: if an instruction fails, all state changes in that transaction are rolled back, while the fee is still charged. Accordingly, the NOVA program must not write a revocation or audit record and then return an error in the same transaction expecting that record to persist.
+
+The one-violation response requires a separate durable path: the off-chain NOVA gateway may record a prohibited authenticated request before submission; or an independent monitor may verify a confirmed failed NOVA instruction and submit a separate pre-authorized incident/revocation/recovery transaction; or the program may use a deliberately designed successful violation-report/lock instruction that commits incident state without executing the prohibited asset operation, followed by a separate constrained recovery instruction. Each alternative must be tested for direct submission, preflight/simulation rejection, transactions that never land, expiry, RPC/monitor outage, replay, race conditions and false attribution.
+
+A failed transaction alone is not proof of administrator misconduct. The response must remain limited to an attributable authenticated administrator action or valid authorization from that administrator's approved context. Recovery is not complete until confirmed on-chain.
+
+### Zero-cost-first test sequence
+
+1. **Offline policy model:** synthetic operations, policy decisions, incident state transitions, replay and false-attribution tests without RPC.
+2. **Local validator or lightweight Solana program harness:** repeatable account/PDA, vault, CPI, rejection, revocation and recovery tests with locally funded artificial balances.
+3. **Solana Devnet:** public integration, program deployment, disposable Devnet signers, faucet-funded test SOL, test mints and actual transaction inspection.
+4. **Mainnet decision:** separately approved only after adversarial and invariant tests, independent program review, monitoring and recovery drills.
+
+Official references:
+- [Solana clusters and public RPC endpoints](https://solana.com/docs/references/clusters)
+- [Solana Devnet faucet and airdrop guide](https://solana.com/developers/cookbook/development/airdrops-and-faucets)
+- [Solana CLI basics](https://solana.com/docs/intro/installation/solana-cli-basics)
+- [Solana programs, accounts, instructions and transactions](https://solana.com/docs/core)
+- [Program Derived Addresses](https://solana.com/docs/core/pda)
+- [Solana transaction atomicity](https://solana.com/docs/core/transactions)
+
+The official CLI currently documents a maximum of 5 SOL per Devnet airdrop request, subject to rate limits. The official web faucet currently shows two requests per eight hours; live limits and eligibility can change. Use explicit Devnet configuration and a disposable keypair; verify the effective cluster and signer before each write/deploy operation. Never reuse a Mainnet keypair or commit test key material. Public Devnet RPCs are shared and rate-limited; do not silently fall back to paid RPC, paid faucet or Mainnet.
+
+Devnet SOL is valueless test currency and may be lost on a ledger reset. Native SOL faucets do not automatically provide arbitrary SPL tokens; create controlled test mints or separately qualify any token faucet. Keep deterministic regression tests local so faucet allocation is reserved for tests that genuinely require the public cluster.
+
+### Additional acceptance criteria
+
+- [ ] Solana Devnet is the provisional first public-chain target; Mainnet selection remains a separate decision.
+- [ ] Local/offline testing precedes Devnet use and remains the default for regression/adversarial testing.
+- [ ] Program-controlled PDA/vault assets cannot be spent through an external-wallet bypass.
+- [ ] The program's upgrade authority, signer/authority relationships, token account controls and CPI routes are explicitly governed and tested.
+- [ ] Solana atomic rollback is addressed by a separately committed incident and recovery path.
+- [ ] Devnet signers are disposable; no Mainnet keys, real assets, compensation or production treasury are used.
+- [ ] Faucet/RPC limits do not trigger paid fallback, unbounded retry or accidental Mainnet operations.
+
+## 10. Current implementation boundary
 
 PR #141 currently contains a loopback account prototype with server-owned roles, permissioned administrator appointment/revocation, target-owned wallet enrollment and wallet-signature step-up. It does **not** implement the NOVA administrative operations smart account, an on-chain validation guard, operational asset custody, continuous on-chain monitoring, an emergency recovery vault or real transaction blocking/recovery.
 
