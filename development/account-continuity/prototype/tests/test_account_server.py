@@ -1233,6 +1233,13 @@ class AccountServerTests(unittest.TestCase):
                          "the revocation notice must be visible only to its target account")
 
         notice_id = target_after_revoke["administratorRevocationNotice"]["noticeId"]
+        status, other_account_acknowledgement, _ = self.request(
+            "/api/account/administrator-notice/acknowledge",
+            {"noticeId": notice_id},
+            opener=successor_opener,
+        )
+        self.assertEqual(status, 404, other_account_acknowledgement,
+                         "another signed-in account must not acknowledge or read this account's notice")
         status, acknowledged, _ = self.request(
             "/api/account/administrator-notice/acknowledge",
             {"noticeId": notice_id},
