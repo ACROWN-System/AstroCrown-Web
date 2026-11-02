@@ -808,6 +808,7 @@
       syncAccountButton();
       mainContent.hidden = true;
       dashboard.hidden = true;
+      if (communicationsPage) communicationsPage.hidden = true;
       adminDashboard.hidden = false;
       renderAdminDashboard(verified, walletOptions);
       var adminTitle = document.getElementById("admin-dashboard-title");
