@@ -1218,8 +1218,36 @@ class AccountServerTests(unittest.TestCase):
         self.assertFalse(target_after_revoke["adminRoleAssigned"])
         self.assertFalse(target_after_revoke["adminSessionAuthorized"])
         self.assertEqual(target_after_revoke["adminPermissions"], [])
+        self.assertIsNotNone(target_after_revoke["administratorRevocationNotice"])
+        self.assertEqual(
+            target_after_revoke["administratorRevocationNotice"]["reason"],
+            "Remove administrator access after review",
+        )
+        self.assertTrue(target_after_revoke["administratorRevocationNotice"]["noticeId"])
         status, denied_admin_status, _ = self.request("/api/admin/status", opener=target_opener)
         self.assertEqual(status, 403, denied_admin_status)
+
+        status, root_account_status, _ = self.request("/api/account/status")
+        self.assertEqual(status, 200, root_account_status)
+        self.assertIsNone(root_account_status["administratorRevocationNotice"],
+                         "the revocation notice must be visible only to its target account")
+
+        notice_id = target_after_revoke["administratorRevocationNotice"]["noticeId"]
+        status, acknowledged, _ = self.request(
+            "/api/account/administrator-notice/acknowledge",
+            {"noticeId": notice_id},
+            opener=target_opener,
+        )
+        self.assertEqual(status, 200, acknowledged)
+        self.assertTrue(acknowledged["authenticated"])
+        self.assertEqual(acknowledged["role"], "user")
+        self.assertIsNone(acknowledged["administratorRevocationNotice"])
+        status, acknowledged_status, _ = self.request(
+            "/api/account/status", opener=target_opener
+        )
+        self.assertEqual(status, 200, acknowledged_status)
+        self.assertIsNone(acknowledged_status["administratorRevocationNotice"],
+                          "acknowledgement must persist across subsequent status refreshes")
 
         with self.app.connect() as db:
             audit = db.execute(
