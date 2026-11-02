@@ -324,6 +324,33 @@ class AccountApplication:
                     created_at TEXT NOT NULL,
                     detail TEXT NOT NULL DEFAULT ''
                 );
+                CREATE TABLE IF NOT EXISTS account_passkey_credentials (
+                    credential_id TEXT PRIMARY KEY,
+                    credential_id_bytes BLOB NOT NULL UNIQUE,
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    public_key BLOB NOT NULL,
+                    sign_count INTEGER NOT NULL DEFAULT 0 CHECK(sign_count >= 0),
+                    transports_json TEXT NOT NULL DEFAULT '[]',
+                    device_type TEXT NOT NULL DEFAULT 'unknown',
+                    backed_up INTEGER NOT NULL DEFAULT 0 CHECK(backed_up IN (0, 1)),
+                    created_at TEXT NOT NULL,
+                    last_used_at TEXT,
+                    active INTEGER NOT NULL DEFAULT 1 CHECK(active IN (0, 1))
+                );
+                CREATE INDEX IF NOT EXISTS account_passkey_credentials_account_idx
+                    ON account_passkey_credentials(account_id, active);
+                CREATE TABLE IF NOT EXISTS account_passkey_challenges (
+                    challenge_id TEXT PRIMARY KEY,
+                    challenge BLOB NOT NULL,
+                    ceremony TEXT NOT NULL CHECK(ceremony IN ('registration', 'authentication')),
+                    account_id TEXT,
+                    payload_json TEXT NOT NULL DEFAULT '{}',
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    used_at INTEGER
+                );
+                CREATE INDEX IF NOT EXISTS account_passkey_challenges_expiry_idx
+                    ON account_passkey_challenges(expires_at, used_at);
                 """
             )
             # Upgrade an older local test database in place. The old username value
