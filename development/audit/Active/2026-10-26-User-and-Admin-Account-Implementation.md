@@ -565,3 +565,33 @@ These runs provide automated development-prototype evidence only. They are not i
 - No wallet private key, seed phrase or recovery key is requested or stored. The browser test uses no real wallet, assets or user credentials.
 - No production homepage, public account service, secrets, domain/DNS, main branch, historical backups, wallet, transaction or deployment was changed.
 - PR #141 remains draft, open, unmerged and undeployed. Continue to treat the local SQLite/localhost implementation as a development prototype only.
+
+
+## 24. Target-account administrator revocation notice and acknowledgement — 2026-11-03
+
+### Implementation
+
+- The local account backend already revoked an administrator's role, all delegated administrator permissions, every active administrator-wallet registration and all active administrator step-up state while preserving the target's ordinary account sessions. This block adds the previously missing target-facing explanation.
+- Added `account_admin_notice_acknowledgements`, keyed to the recorded administrator-revocation audit event and target account. The account-status response exposes only the latest unacknowledged role-revocation event for the affected account when its current role is `user`.
+- The ordinary User dashboard now displays that administrator privileges and registered administrator-wallet access were removed, gives the recorded revocation reason and timestamp, and confirms that the ordinary account remains active. The notice remains until the target acknowledges it.
+- The acknowledgement endpoint requires the target's own active account session and the current latest notice ID. A different account cannot acknowledge another user's notice. Acknowledgement is persisted and does not restore administrator role, wallets, permissions or privileged sessions.
+- Added API regression coverage for target-only notice visibility, preservation of the target's ordinary session, administrator API denial, cross-account acknowledgement rejection and persistent acknowledgement. Added a headless Chrome journey that simulates server-side role revocation, verifies forced return to the User dashboard, removal of the administrator entry, display of the recorded reason and successful dismissal/acknowledgement.
+
+### Exact-head verification
+
+All five tracked workflows passed against code head `15a4e6d8da48aa6abf5347e755cfbbe92705d931`:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41538787008) — Python syntax, JavaScript syntax, 70 loopback/account tests, static boundary checks and full headless Chrome flow passed.
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41538786910).
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41538786987).
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41538786865).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41538786891).
+
+These are automated development-prototype results. They are not an independent security review, production identity/revocation system, formal standards certification or production-release authorization.
+
+### Scope limitations retained
+
+- This notice is for an authorized administrator role revocation recorded by the local prototype. It does not claim that NOVA detected a compromise, monitored an external wallet's personal transactions or automatically determined misconduct.
+- The current revocation operation removes the whole administrator role and disables all active administrator wallets. There is not yet a separate self-service or delegated operation to revoke one wallet while retaining the role through another wallet.
+- The external administrator wallet remains user-controlled. NOVA cannot block or monitor arbitrary personal transactions from it through this prototype. The proposed NOVA administrative operations smart account, on-chain guard, chain monitoring, incident attribution, automatic one-violation response, external-wallet association disablement and recovery remain design-stage requirements only.
+- No production homepage/service, wallet, asset, secret, domain/DNS setting, deployment or historical backup was changed. PR #141 remains open, draft, unmerged and undeployed.
