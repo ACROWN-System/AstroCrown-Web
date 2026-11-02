@@ -675,6 +675,7 @@ class AccountApplication:
             "value",
             str(verified.credential_device_type),
         )
+        recovery_key, recovery_salt, recovery_verifier = self.generate_recovery_key()
         try:
             with self.connect() as db:
                 db.execute("BEGIN IMMEDIATE")
@@ -716,6 +717,12 @@ class AccountApplication:
                     ),
                 )
                 db.execute(
+                    """INSERT INTO account_recovery_keys(
+                           account_id, key_version, key_salt, key_verifier, created_at, used_at
+                       ) VALUES (?, 1, ?, ?, ?, NULL)""",
+                    (account_id, recovery_salt, recovery_verifier, created_at),
+                )
+                db.execute(
                     "UPDATE account_passkey_challenges SET used_at = ? WHERE challenge_id = ? AND used_at IS NULL",
                     (int(time.time()), challenge_id),
                 )
@@ -729,7 +736,9 @@ class AccountApplication:
             raise ApiError(500, "The passkey account session could not be initialized.")
         result = self.account_summary(account, expires)
         result["accountLabel"] = account_label
-        result["message"] = "Your AstroCrown passkey account has been created."
+        result["oneTimeRecoveryKey"] = recovery_key
+        result["recoveryKeyVersion"] = 1
+        result["message"] = "Your AstroCrown passkey account has been created. Save the offline recovery key now; it will not be shown again."
         return 201, result, self.cookie_header(token)
 
     def issue_passkey_authentication_options(
