@@ -423,3 +423,21 @@ The owner identified that Solana Testnet may also be useful and that AstroCrown/
 ### Verification and safety boundary
 
 Documentation-only. No Testnet wallet, faucet request, test mint, transaction or contract deployment was created/executed by this change. No real asset, paid provider, Mainnet key or production system was touched. Universal asset compatibility is not claimed. PR #141 remains draft, open, unmerged and undeployed; its current account prototype continues to provide only local identity, role and external-wallet step-up behavior.
+
+## 19. Defer Astro-Wallet while preserving a minimal account integration seam — 2026-11-02
+
+### Owner direction recorded
+
+- Keep present work focused on sign-up/sign-in, ordinary account/session continuity, the common User dashboard, server-confirmed Administrator access visibility, permissioned role appointment/revocation and the existing wallet-verified administrator step-up.
+- Defer Astro-Wallet as a separate future product/research workstream. Its concept and security study do not authorize an implementation, SDK, key vault, multichain asset portfolio, key recovery, MPC/TSS or post-quantum feature in the account prototype.
+- Do not add Astro-Wallet compatibility code now. The existing local wallet lab remains deliberately EVM EOA/SIWE-only; Bitcoin, Solana, EVM contract-wallet and other authenticator adapters remain future work.
+- Preserve only minimal architecture seams: stable AstroCrown account IDs/sessions/roles are independent of blockchain addresses; wallet proof is an optional authenticator linked to an existing account and a defined purpose; EVM-specific parsing remains localized behind the wallet verifier/API boundary; account/dashboard code must not depend on a wallet brand or browser-provider global.
+- Before future multi-family wallet support or production wallet persistence, review a versioned wallet-credential model with chain namespace/network, native canonical account identifier, proof protocol/version, lifecycle state and scoped uniqueness. A future multichain wallet application can expose multiple different chain credentials; one provider name must not collapse them into one address/identity.
+
+### Current local implementation fact and limit
+
+The current local SQLite `admin_wallets` table stores an EVM-style address and numeric chain ID. The local `wallet_auth_core.py` verifies Ethereum EOA-style addresses and EIP-4361/SIWE challenges only. These fields and implementation remain appropriate to the current loopback lab only; they are not a production/general multichain schema. No refactor is authorized now. A future production schema migration must preserve the existing account/session/role boundaries and audit history.
+
+### Verification boundary
+
+Documentation-only. No application code, tests, local wallet schema, provider dependency, wallet connector, key management, AW compatibility, payment, chain operation or dashboard behavior was changed by this decision. The current account and administrator dashboard scope remains active; Astro-Wallet research remains deferred in its separate architecture study. No PR was merged or deployed.
