@@ -109,6 +109,17 @@ The account layer should own a common challenge lifecycle (origin, audience, pur
 
 This is an architecture target, not implemented support. The account prototype currently uses EIP-4361/SIWE for its EVM wallet lab. Bitcoin and Solana authentication adapters remain future work and must not be implied by a generic multi-wallet button.
 
+One wallet application may expose multiple wallet families. For example, MetaMask currently supports Ethereum/EVM and Solana in the same application. MetaMask's support documentation states that a Solana address is derived per account from the existing Secret Recovery Phrase, and its developer documentation offers MetaMask Connect multichain for a single EVM-plus-Solana session. AstroCrown should therefore allow a single MetaMask connection to expose both the user's EVM address and Solana address; it must not require installing a second application solely to use Solana.
+
+The provider/application, connection session, account grouping and chain-specific public addresses are separate concepts. Even within one MetaMask account, the Ethereum address and Solana address are different credentials with different message formats and server-side verifiers. A signed EVM authentication message cannot authenticate the Solana address. Shared recovery material also means those credentials may share a compromise/recovery root.
+
+MetaMask is a candidate, not an architectural dependency selection. Before adoption, qualify the current MetaMask Connect API, extension/mobile behavior, supported platforms, provider/RPC dependency (including any Infura requirement), terms, privacy, security and $0 limits. Keep the chain-specific adapters provider-neutral so other multi-chain wallets and direct ecosystem wallets remain compatible.
+
+Official references:
+- [MetaMask: Navigate Solana in MetaMask](https://support.metamask.io/configure/networks/navigating-solana/)
+- [MetaMask Connect integration options](https://docs.metamask.io/metamask-connect/integration-options/)
+- [MetaMask Connect overview](https://docs.metamask.io/metamask-connect/)
+
 For each family, detect wallet capabilities before prompting the user. If an adapter cannot obtain a supported proof, stop that wallet-authentication attempt with a clear explanation. Do not silently downgrade to an unreviewed signature format or ask the user to sign a token-transfer, PSBT-spend, no-op or other blockchain transaction merely to authenticate.
 
 The common data model must preserve wallet family, CAIP namespace/network where defined, exact chain/network, canonical account/address, Bitcoin script/address type where applicable, signature standard/version, verification and revocation state. One AstroCrown account may enroll different families without merging their identities. An address on one chain does not become the same address on another chain just because the strings resemble each other.
