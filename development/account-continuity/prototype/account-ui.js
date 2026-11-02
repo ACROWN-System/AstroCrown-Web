@@ -504,6 +504,7 @@
           '<p>' + escapeHtml(revocationNotice.message || "Your administrator role and registered administrator wallets were revoked. Your ordinary account remains active.") + '</p>' +
           '<p><strong>Recorded reason:</strong> ' + escapeHtml(revocationNotice.reason || "No additional reason was recorded.") + '</p>' +
           '<p class="account-admin-revocation-date">Recorded: ' + escapeHtml(revocationNotice.createdAt || "Date unavailable") + '</p>' +
+          '<p id="admin-revocation-notice-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
           '<button class="account-secondary" type="button" id="acknowledge-admin-revocation" data-notice-id="' + escapeHtml(revocationNotice.noticeId) + '">Acknowledge notice</button>' +
         '</section>';
     }
@@ -933,7 +934,7 @@
         syncAccountButton();
         renderAccountDashboard();
       } catch (error) {
-        var noticeFeedback = document.getElementById("admin-revocation-notice-title");
+        var noticeFeedback = document.getElementById("admin-revocation-notice-feedback");
         if (noticeFeedback) noticeFeedback.textContent = error.message || "The administrator notice could not be acknowledged.";
       } finally {
         setBusy(false);
