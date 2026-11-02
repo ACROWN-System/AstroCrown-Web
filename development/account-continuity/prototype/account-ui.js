@@ -468,56 +468,12 @@
 
   function renderAccountDashboard() {
     if (!accountState || !accountState.authenticated) return;
-    var email = escapeHtml(accountState.email || "");
+    var identifier = escapeHtml(accountState.accountIdentifier || "AstroCrown member");
     var referral = accountState.referralId
-      ? escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(unverified test value; no reward is applied)</span>'
+      ? escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(unverified; no reward is applied)</span>'
       : 'Not supplied';
-    var verification = accountState.emailVerified
-      ? '<span class="account-dashboard-status">Email verified</span>'
-      : '<span class="account-dashboard-status">Email not verified</span>';
-    var verificationAction = !accountState.emailVerified
-      ? (accountState.emailVerificationDeliveryAvailable === true
-          ? '<button class="account-secondary" type="button" id="account-resend-verification">Resend verification email</button>'
-          : '<p class="account-muted-inline">Email delivery is not configured; no verification email has been sent.</p>')
-      : '<p class="account-session-count">Your email address is verified.</p>';
-    var newsletter = accountState.newsletterOptIn
-      ? "Opted in for this test. No newsletter is sent."
-      : "Not opted in.";
     var activeSessionCount = Math.max(1, Number(accountState.activeSessionCount || 1));
-    var sessionManagement = activeSessionCount > 1
-      ? '<details class="account-session-manager"><summary>Sign out other sessions (' +
-        String(activeSessionCount - 1) + ')</summary>' +
-        '<p>Enter your current password to sign out other devices. This browser session will remain active.</p>' +
-        '<label for="account-session-current-password">Current password</label>' +
-        '<div class="account-password-control">' +
-          '<input id="account-session-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
-          '<button class="account-password-toggle" type="button" data-password-toggle="account-session-current-password" data-password-label="current password" aria-controls="account-session-current-password" aria-pressed="false" aria-label="Show current password">Show</button>' +
-        '</div>' +
-        '<button class="account-secondary" type="button" id="account-revoke-other-sessions">Sign out other sessions</button>' +
-        '</details>'
-      : '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) +
-        '. Only this session is active.</p>';
-    var passwordManagement =
-      '<details class="account-session-manager account-password-manager">' +
-        '<summary>Change password</summary>' +
-        '<p>Confirm your current password and choose a new passphrase of at least 15 characters. Changing it signs out other sessions and renews this one.</p>' +
-        '<label for="account-current-password">Current password</label>' +
-        '<div class="account-password-control">' +
-          '<input id="account-current-password" type="password" maxlength="1024" autocomplete="current-password" required>' +
-          '<button class="account-password-toggle" type="button" data-password-toggle="account-current-password" data-password-label="current password" aria-controls="account-current-password" aria-pressed="false" aria-label="Show current password">Show</button>' +
-        '</div>' +
-        '<label for="account-new-password">New password</label>' +
-        '<div class="account-password-control">' +
-          '<input id="account-new-password" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
-          '<button class="account-password-toggle" type="button" data-password-toggle="account-new-password" data-password-label="new password" aria-controls="account-new-password" aria-pressed="false" aria-label="Show new password">Show</button>' +
-        '</div>' +
-        '<label for="account-new-password-confirmation">Confirm new password</label>' +
-        '<div class="account-password-control">' +
-          '<input id="account-new-password-confirmation" type="password" minlength="15" maxlength="1024" autocomplete="new-password" required>' +
-          '<button class="account-password-toggle" type="button" data-password-toggle="account-new-password-confirmation" data-password-label="new password confirmation" aria-controls="account-new-password-confirmation" aria-pressed="false" aria-label="Show new password confirmation">Show</button>' +
-        '</div>' +
-        '<button class="account-secondary" type="button" id="account-change-password">Update password</button>' +
-        '</details>';
+    var passkeyCount = Math.max(0, Number(accountState.passkeyCount || 0));
     var adminCard = '';
     if (accountState.adminRoleAssigned === true) {
       var walletCount = Number(accountState.adminWalletCount || 0);
@@ -532,50 +488,47 @@
         : walletCount > 0
           ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
             escapeHtml(String(walletCount)) +
-            " registered wallet(s), then review a one-time signature request. It is not a blockchain transaction."
-          : "This existing account has been granted the administrator role, but has not enrolled a wallet yet. Select Open administrator dashboard and connect a wallet you personally control. You will review and sign one message to enrol it, then a second fresh message to verify administrator access. Neither signature is a transaction, and a wallet cannot grant the role.";
-      var adminAccessAction = "Open administrator dashboard";
+            " registered administrator wallets, then review a one-time signature request. It is not a blockchain transaction."
+          : "This existing account has been granted the administrator role, but has not enrolled an administrator wallet yet. The user-selected backup wallet and administrator wallet remain separate purposes.";
       adminCard =
         '<section class="account-dashboard-card account-admin-access-card">' +
           '<h2>Administrator access</h2>' +
           '<span class="account-dashboard-status">' + escapeHtml(adminAccessStatus) + '</span>' +
           '<p>' + adminAccessDescription + '</p>' +
           '<div class="account-admin-access-actions">' +
-            '<button class="account-primary" type="button" id="account-admin-wallet-access">' + escapeHtml(adminAccessAction) + '</button>' +
+            '<button class="account-primary" type="button" id="account-admin-wallet-access">Open administrator dashboard</button>' +
             (adminSessionVerified ? '<button class="account-secondary" type="button" id="end-admin-access">End admin access</button>' : '') +
           '</div>' +
           '<p id="account-admin-access-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
         '</section>';
     }
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype currently tests account access and settings only. Transaction workflows and the wider service catalog are not enabled. Email delivery, production hosting, account recovery, profile editing and image uploads remain subject to the stated development limitations. Use invented details only in the browser demo.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype tests account access and settings only. Transactions and the wider service catalog are not enabled. The passkey and recovery-key implementation remains a development prototype, not production authentication.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
         '</div>' +
-        '<div class="account-dashboard-welcome-copy"><strong>' + email + '</strong><span>Signed in · local/browser test account · built-in avatar customization only</span></div>' +
+        '<div class="account-dashboard-welcome-copy"><strong>' + identifier + '</strong><span>Signed in with passkey · local development account</span></div>' +
       '</div>' +
       '<div class="account-dashboard-grid">' +
-        '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and transactions belong to this User dashboard and remain subject to the same member rules for every account.</p><p>Transaction workflows and other service modules are not enabled in this account prototype. They will be added here when their backend behavior, authorization and confirmations are implemented.</p></section>' +
+        '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and transactions belong to this User dashboard and remain subject to the same member rules for every account.</p><p>Transaction workflows and other service modules are not enabled in this account prototype.</p></section>' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' + verification +
-          verificationAction +
+        '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' +
+          '<span class="account-dashboard-status">WebAuthn passkey authentication</span>' +
+          '<p class="account-dashboard-value">Registered passkeys: ' + String(passkeyCount) + '</p>' +
+          '<p>The authenticator keeps your private key. AstroCrown verifies a fresh challenge using the registered public credential. No email, password, SMS or external identity provider is used for this account sign-in.</p>' +
           '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
-          sessionManagement +
-          passwordManagement +
+          '<p>Additional passkey enrollment, revocation and passkey-confirmed session management are being implemented separately. Do not rely on this prototype for real assets.</p>' +
           '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
-          (accountState.passwordResetAvailable === true
-            ? '<p>Password reset is available through a single-use email link.</p>'
-            : '<p>Email delivery is not configured. No password-reset email has been sent.</p>') +
           '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
-        '<section class="account-dashboard-card"><h2>Wallets</h2><p class="account-dashboard-value">No wallet connected</p><p>A crypto wallet is not required for ordinary account access. A wallet must be requested only by a feature that needs proof of wallet control.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Preferences</h2><p class="account-dashboard-value">Crypto-news email: ' + escapeHtml(newsletter) + '</p><p>The preference is only recorded for this test; no mailing list or email provider is connected.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Optional wallet backup</h2><p class="account-dashboard-value">Not required</p><p>A user-controlled wallet may be enrolled as an additional authenticator in a later implementation. Ordinary account access does not require a wallet, balance, deposit or blockchain transaction.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Account recovery</h2><p class="account-dashboard-value">Offline recovery key — implementation pending</p><p>The one-time recovery key must be generated and tested before real users are onboarded. Do not use real assets or treat this local prototype as production recovery.</p></section>' +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Account recovery</h2><p>Single-use email verification and password-reset links are available only when a secure email transport is configured. Passkeys, recovery alternatives and production account recovery are not implemented. Do not use this prototype for real assets.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Account data</h2><p>Email address and phone number are not collected for account authentication. Terms acceptance is recorded by the local test backend.</p></section>' +
         '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
         adminCard +
       '</div>' +
-      '<div class="account-dashboard-actions"><p>Public listing and wallet connection are not required for ordinary account access. Administrator functions are separately gated and are not part of ordinary account permissions.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
+      '<div class="account-dashboard-actions"><p>Administrator functions remain separately gated. Your account passkey does not itself grant administrator privileges.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
     if (pendingAdminWalletMessage) {
       var walletNotice = document.createElement("p");
       walletNotice.className = "account-dashboard-notice";
