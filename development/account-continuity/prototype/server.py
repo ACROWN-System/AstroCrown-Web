@@ -504,7 +504,7 @@ class AccountApplication:
             delegable_permissions = [
                 row["permission"] for row in permission_rows if bool(row["can_delegate"])
             ]
-        wallet_address = account["session_admin_wallet_address"
+        wallet_address = account["session_admin_wallet_address"]
         wallet_step_up_expires = int(account["session_admin_expires_at"] or 0)
         wallet_is_enrolled = bool(account["session_admin_wallet_active"])
         wallet_authenticated = bool(
