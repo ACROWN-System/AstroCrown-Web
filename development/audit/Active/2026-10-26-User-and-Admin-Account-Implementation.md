@@ -632,3 +632,40 @@ The results above are automated evidence for this local development prototype on
 - No email/SMS/authentication provider, paid service, external API, real passkey credential, real wallet, blockchain transaction, balance query, deposit, stake, asset, production secret, domain/DNS change or deployment was used or changed by this block. Wallet signatures in automated tests use deterministic test-only keys.
 - No historical backup or `main` branch content was changed. PR #141 remains open, draft, unmerged and undeployed; the localhost/SQLite implementation remains a development prototype only.
 
+
+
+## 26. Private Alerts and Messages inbox — 2026-11-03
+
+### Implementation
+
+- Added one private account_communications store with a sender-selected destination: alerts or messages. No message-text classifier or automatic destination inference is used. The destination determines the recipient action: Alerts are acknowledged; Messages are marked read.
+- Added a persistent header bell and pending-count badge, a Communications page with Alerts and Messages tabs, recipient-only inbox rendering, empty states, creation metadata, sender identity and per-recipient state. Message bodies are rendered as escaped text, with line breaks preserved.
+- Added GET /api/account/communications, POST /api/account/communications/state and POST /api/admin/communications/send. Listing and state changes require the recipient's own active account session. A cross-account lookup/change is denied, and a read action cannot be used to acknowledge an Alert or vice versa.
+- Added the separate admin.messages.send permission. It is not conferred by the Administrator role by itself. An authorized sender must have this explicit permission and a currently valid wallet-step-up-verified Administrator session; the permission may be delegated only if the grantor's permission is explicitly delegable. The backend rechecks authority inside the send transaction.
+- The current composer sends to one existing account at a time by Account Identifier. The send endpoint applies input/length validation and a limit of 20 sends per administrator per hour. No broadcast or group recipient mode exists.
+- Administrator-role revocation now creates a private Alert in the same transaction as its authoritative audit event. The communications record references that audit ID. Acknowledging the Alert also records acknowledgement in the legacy revocation-acknowledgement table so the account-status compatibility field is cleared. The User dashboard no longer duplicates the revocation notice as a second banner; the recipient finds it in Alerts.
+- Updated the owner-operated local provisioning CLI permission allow-list, the account API tests, the headless Chrome account journey, canonical User/Admin requirements and prototype README.
+
+### Exact-head automated verification
+
+All five tracked workflows completed successfully on implementation and requirements-documentation head a44c532c38d7f79b5da668f216941080f8b43e3e:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41545652302) — Python syntax, browser JavaScript syntax, loopback account/API tests, static security-boundary checks and headless Chrome account journey passed.
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41545652232).
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41545652247).
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41545652236).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41545652253).
+
+The later active-audit and checklist edits are documentation-only; the final branch head must still be checked for workflow completion before this block is closed. These tests are automated development-prototype evidence only. They do not constitute an independent security assessment, production readiness, formal standards conformance or release authorization.
+
+### Deliberate limitations
+
+- This block does not add general user-to-user messaging, chat, DM threads, replies, attachments, group/broadcast delivery, presence indicators, message editing/deletion or external email/SMS/push delivery.
+- The Messages tab and delivery path exist, but sending is currently limited to administrators explicitly granted admin.messages.send; ordinary members cannot initiate messages to other users.
+- The message is private and persistent, not a real-time chat transport. No outside service, paid provider or email sender is used.
+- Message/Alert content is informational. It does not grant authority, change account state, replace an audit event, or cause NOVA to infer compromise or misconduct.
+- Retention/deletion policy, abuse reporting/moderation, access logging, durable multi-instance storage, accessibility and production privacy/legal review remain open release requirements.
+
+### Preservation and release boundary
+
+No main branch or production homepage/service was changed. No production credentials, secrets, real passkeys, real wallets, blockchain transactions, balances, assets, paid providers, domain/DNS settings, deployments or historical backups were used or changed. PR #141 remains open, draft, unmerged and undeployed. This remains a localhost/SQLite development prototype.
