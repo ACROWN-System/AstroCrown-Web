@@ -855,8 +855,8 @@
         return;
       }
       delete accountState.oneTimeRecoveryKey;
-      recoveryKeyAcknowledged = false;
       closeDialog();
+      recoveryKeyAcknowledged = false;
       navigateToAccount();
       return;
     }
