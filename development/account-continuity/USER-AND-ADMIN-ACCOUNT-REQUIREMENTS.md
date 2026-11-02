@@ -301,3 +301,55 @@ The standard notice is:
 The current PR #141 prototype implements local account roles, permissioned appointment/revocation, external-wallet proof-of-control and short-lived administrator step-up. It does not implement the NOVA operations smart account, on-chain validator/guard, operational asset management, chain monitoring, emergency freeze/recovery or the incident lifecycle described here. This section and the linked security specification record requirements only. They do not establish that any contract has been written, deployed, audited or tested. No real assets or production systems are affected.
 
 Required later verification includes offline and test-chain model tests, adversarial tests for direct-call and module/upgrade/guard bypasses, replay and policy-drift tests, invariant/property testing, recovery and revocation tests, independent smart-contract review, chain/RPC failure procedures and operational incident drills. Real assets must not be deposited before these gates are completed.
+
+
+## 14. Solana-first development target and Devnet test funding — 2026-11-02
+
+### Provisional chain direction
+
+Solana is the preferred provisional blockchain candidate for AstroCrown. Solana Devnet is the preferred first public integration network for the NOVA administrative operations prototype. This is a development priority, not a final Mainnet selection or a production deployment authorization. The final chain decision remains subject to technical/security qualification, ecosystem and asset support, operational reliability, cost, monitoring, recovery and independent review.
+
+The implementation must use Solana-native primitives:
+- Solana programs and instructions;
+- explicit account data/state;
+- Program Derived Addresses (PDAs) and program-controlled vaults where suitable;
+- Cross-Program Invocations (CPIs) for authorized program-to-program asset operations; and
+- Solana-native transaction/signature and token-account authority validation.
+
+Do not assume an Ethereum ERC-4337/EVM smart account, EVM modules, fallback handlers or EVM transaction hooks. A PDA has no private key; only its deriving program can authorize it using the runtime's PDA-signing mechanism in a CPI. The NOVA program must own the mandatory path for assets in NOVA-controlled operations vaults.
+
+### External-wallet limitation
+
+The administrator's external wallet is a user-controlled authentication wallet and may also be a registered compensation destination. It is not the NOVA operations vault or treasury. Because the owner controls an ordinary external self-custody wallet, AstroCrown cannot technically prevent that person from making arbitrary personal transactions directly from that wallet. NOVA's enforceable no-personal-operations policy applies to NOVA-controlled operational assets and operations routed through the NOVA program. If the project ever requires restricting the external wallet's own spending, that would require a different custody/program-controlled wallet model and a separate explicit decision; it must not be implied by the current external-wallet design.
+
+The external wallet's authentication association can be revoked when the administrator loses privileges, without confiscating the wallet or already-earned compensation. Compensation remains a separate payout workflow.
+
+### Solana transaction atomicity
+
+Solana transactions are atomic: if an instruction fails, all state changes in that transaction are reverted, although the transaction fee is still charged. Therefore, a NOVA instruction cannot both write a persistent revocation record and return an error in the same failed transaction. The one-violation incident process needs a separate durable path, such as off-chain NOVA recording before submission, an independent monitor that verifies a confirmed failed program instruction and submits a separate authorized response, or a successful violation-report/lock instruction followed by a separate constrained recovery instruction. This must be specifically tested against preflight-only requests, transactions that never land, RPC/monitor failure, replay and attribution ambiguity.
+
+### $0-first test sequence
+
+1. Offline deterministic policy and incident-state tests with synthetic accounts.
+2. Local Solana validator or lightweight program-test harness with artificial/local balances.
+3. Devnet integration using disposable test-only keypairs and free test SOL from the official faucet or CLI airdrop.
+4. Controlled test mints for SPL Token/Token-2022 tests where required.
+5. Separate Mainnet chain-selection and production authorization after independent security review.
+
+The Solana CLI currently documents up to 5 SOL per Devnet airdrop request, subject to rate limits. The public web faucet currently displays two requests per eight hours; these are changing service limits, not guaranteed capacity. Devnet SOL has no monetary value and Devnet may reset its ledger. The public Devnet RPC is shared and rate-limited. Local/offline tests must be preferred so faucet allocation is reserved for tests that genuinely require the public network. Do not silently use a paid RPC/faucet or Mainnet when Devnet is rate-limited.
+
+Keep all Devnet keypairs and signing secrets outside GitHub, CI logs, PR comments, screenshots and chat. Never reuse a Mainnet or compensation wallet for this testing. Verify the configured cluster and signer before any transaction or program deployment.
+
+Official references:
+- [Solana clusters and public RPC endpoints](https://solana.com/docs/references/clusters)
+- [Solana Devnet SOL and faucet guide](https://solana.com/developers/cookbook/development/airdrops-and-faucets)
+- [Solana CLI basics](https://solana.com/docs/intro/installation/solana-cli-basics)
+- [Solana core concepts](https://solana.com/docs/core)
+- [Solana Program Derived Addresses](https://solana.com/docs/core/pda)
+- [Solana transaction atomicity](https://solana.com/docs/core/transactions)
+
+The related canonical NOVA planning document is [Solana Devnet Qualification and Test-Asset Policy](https://github.com/ACROWN-System/NOVA/blob/docs/nova-admin-smart-account-security-2026-11-02/NOVA/SOLANA-DEVNET-QUALIFICATION-AND-TEST-ASSET-POLICY.md). The associated NOVA architecture remains a draft proposal under [NOVA PR #175](https://github.com/ACROWN-System/NOVA/pull/175).
+
+### Implementation boundary
+
+These decisions update the development target and test plan only. No Solana program, PDA vault, transaction guard, monitoring service, recovery path or Devnet wallet has yet been created or deployed by this update. The existing account prototype continues to implement only its local identity, role and external-wallet step-up flows.
