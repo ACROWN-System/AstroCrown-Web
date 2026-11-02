@@ -328,6 +328,15 @@ try {
     evaluate("document.getElementById('admin-dashboard').hidden && window.location.hash === '#account'"));
   assert.equal(await evaluate("window.__walletPromptCount"), 0);
 
+  // The ordinary homepage Wallet control remains a preview menu for normal
+  // users; it must not prompt a wallet before an admin-only request is active.
+  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+  await waitFor("ordinary-user wallet preview menu", () =>
+    evaluate("document.querySelector('#wallet-menu').closest('.menu-slot').classList.contains('is-open')"));
+  assert.equal(await evaluate("window.__walletPromptCount"), 0,
+    "ordinary users must not be prompted for a wallet by the homepage Wallet button");
+  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+
   // Sign out, then authenticate with the discoverable credential without an account label.
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("home after passkey sign-out", () =>
