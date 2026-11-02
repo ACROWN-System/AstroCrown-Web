@@ -1222,7 +1222,7 @@ class AccountServerTests(unittest.TestCase):
                 """SELECT event_type, actor, target_account_id, reason, detail
                    FROM account_admin_audit
                    WHERE event_type IN ('admin_role_granted', 'admin_role_revoked_by_admin')
-                   ORDER BY created_at"""
+                   ORDER BY rowid"""
             ).fetchall()
         self.assertEqual([row["event_type"] for row in audit], [
             "admin_role_granted", "admin_role_revoked_by_admin"
