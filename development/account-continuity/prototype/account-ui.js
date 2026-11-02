@@ -22,13 +22,6 @@
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var forceBrowserDemo = new URLSearchParams(window.location.search).get("account-preview-demo") === "1";
   var browserPreviewMode = forceBrowserDemo || loopbackHosts.indexOf(window.location.hostname) === -1;
-  var browserPreviewState = {
-    accounts: Object.create(null),
-    activeEmail: null,
-    sessionExpiresAt: 0,
-    failedLogins: Object.create(null)
-  };
-
   // Built-in glyphs only: no user-uploaded image, remote URL or third-party asset.
   // The server independently validates the selected identifier.
   var avatarOptions = {
@@ -340,7 +333,7 @@
           '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
           '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
         '</label>' +
-        '<p class="account-provider-note">Passkey registration requires a compatible authenticator and a supported browser. Your passkey is associated with this site's verified origin.</p>' +
+        '<p class="account-provider-note">Passkey registration requires a compatible authenticator and a supported browser. The passkey is tied to the verified AstroCrown site origin.</p>' +
         '<button class="account-primary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create account with passkey</button>' +
       '</form>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>';
