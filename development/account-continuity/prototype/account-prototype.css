@@ -447,3 +447,61 @@
 .account-admin-wallet-warning { color:#9ba9bd!important;font-size:10px!important; }
 .account-admin-wallets-card #admin-add-wallet { margin:4px 0 8px;min-height:41px; }
 #admin-wallet-enrollment-feedback:empty { display:none; }
+
+/* Permission-gated role management in the development Administrator dashboard. */
+.account-admin-role-management { display:grid; gap:10px; }
+.account-admin-role-field {
+  display:grid;
+  gap:6px;
+  color:#c7d4e5;
+  font-size:10px;
+  font-weight:720;
+}
+.account-admin-role-field input {
+  width:100%;
+  min-width:0;
+  min-height:39px;
+  padding:9px 11px;
+  border:1px solid rgba(153,178,213,.24);
+  border-radius:8px;
+  background:rgba(3,9,17,.48);
+  color:#f2f5fb;
+  font:inherit;
+  font-size:12px;
+}
+.account-admin-role-field input:focus {
+  outline:2px solid rgba(255,215,0,.58);
+  outline-offset:2px;
+}
+.account-admin-role-hint,
+.account-admin-permission-list > p {
+  margin:0;
+  color:#9aa9be;
+  font-size:10px;
+  line-height:1.55;
+}
+.account-admin-permission-list {
+  display:grid;
+  gap:8px;
+  padding:10px;
+  border:1px solid rgba(153,178,213,.16);
+  border-radius:9px;
+  background:rgba(255,255,255,.02);
+}
+.account-admin-permission-option {
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  color:#d9e3f2;
+  font-size:10px;
+  line-height:1.45;
+}
+.account-admin-permission-option input {
+  flex:0 0 14px;
+  width:14px;
+  height:14px;
+  margin:1px 0 0;
+  accent-color:#ffd700;
+}
+.account-admin-role-management > button { justify-self:start; }
+.account-admin-role-management .account-avatar-feedback { margin:0; }
