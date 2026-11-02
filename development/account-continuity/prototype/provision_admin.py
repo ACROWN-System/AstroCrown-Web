@@ -23,7 +23,7 @@ from server import AccountApplication, DEFAULT_DATABASE, normalize_account_ident
 
 ADDRESS_SHAPE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 MAX_ADMIN_WALLETS = 3
-ADMIN_PERMISSION_NAMES = frozenset({"admin.roles.grant", "admin.roles.revoke"})
+ADMIN_PERMISSION_NAMES = frozenset({"admin.roles.grant", "admin.roles.revoke", "admin.messages.send"})
 GRANT_CONFIRMATION = "GRANT LOCAL ADMIN"
 REVOKE_CONFIRMATION = "REVOKE LOCAL ADMIN"
 
