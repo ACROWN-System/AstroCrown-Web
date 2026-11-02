@@ -1687,7 +1687,7 @@ class AccountApplication:
         action = payload.get("action")
         if not isinstance(communication_id, str) or not communication_id or len(communication_id) > 64:
             raise ApiError(400, "The communication identifier is invalid.")
-        if action not in {"read", "acknowledge"}:
+        if not isinstance(action, str) or action not in {"read", "acknowledge"}:
             raise ApiError(400, "Choose either read or acknowledge.")
         state_column = "read_at" if action == "read" else "acknowledged_at"
         required_section = "messages" if action == "read" else "alerts"
@@ -1736,7 +1736,7 @@ class AccountApplication:
             allow_legacy_email=self.enable_legacy_email_auth,
         )
         section = payload.get("section")
-        if section not in {"alerts", "messages"}:
+        if not isinstance(section, str) or section not in {"alerts", "messages"}:
             raise ApiError(400, "Choose either Alerts or Messages as the destination.")
         subject = self.validate_communication_text(payload.get("subject"), label="subject", maximum=120)
         body = self.validate_communication_text(payload.get("body"), label="message", maximum=4000)
