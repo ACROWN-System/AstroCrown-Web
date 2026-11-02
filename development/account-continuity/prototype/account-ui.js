@@ -14,6 +14,7 @@
   var mainContent = document.getElementById("main-content");
   var mode = "signin";
   var successKind = "signup";
+  var recoveryKeyAcknowledged = false;
   var accountState = { authenticated: false };
   var focusBeforeOpen = null;
   var busy = false;
@@ -214,9 +215,33 @@
     });
   }
 
-  async function finishPasskeyAuthentication(result, created) {
+  async function recoverWithPasskey(payload) {
+    ensurePasskeyContext();
+    var options = await requestJson("/api/account/recovery/options", payload);
+    var credential;
+    try {
+      credential = await navigator.credentials.create({
+        publicKey: webauthnOptionsFromJson(options.publicKey)
+      });
+    } catch (error) {
+      if (error && error.name === "NotAllowedError") {
+        throw new Error("Passkey replacement was cancelled. The recovery key has not been consumed.");
+      }
+      throw new Error("The browser could not create the replacement passkey. The recovery key has not been consumed.");
+    }
+    if (!credential) {
+      throw new Error("Passkey replacement was cancelled. The recovery key has not been consumed.");
+    }
+    return requestJson("/api/account/recovery/complete", {
+      challengeId: options.challengeId,
+      credential: serializeWebAuthnCredential(credential, true)
+    });
+  }
+
+  async function finishPasskeyAuthentication(result, kind) {
     accountState = result;
-    successKind = created ? "signup" : "signin";
+    successKind = kind;
+    recoveryKeyAcknowledged = false;
     mode = "success";
     syncAccountButton();
     render();
@@ -318,7 +343,8 @@
       '</div>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-provider-note">A crypto wallet is optional and is not required for ordinary account access. Your offline recovery key is separate from your passkey.</p>';
+      '<p class="account-provider-note">A crypto wallet is optional and is not required for ordinary account access. Your offline recovery key is separate from your passkey.</p>' +
+      '<p class="account-security-assurance"><button class="account-text-button" type="button" id="account-recovery-start">Recover account with offline key</button></p>';
   }
 
   function renderCreate() {
@@ -339,20 +365,60 @@
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>';
   }
 
+  function renderRecover() {
+    title.textContent = "Recover AstroCrown account";
+    content.innerHTML = renderDevelopmentNotice() +
+      '<p class="account-dialog-description">Use the account identifier and your unused offline recovery key to replace lost passkey access. This does not use email, SMS or support approval.</p>' +
+      '<form id="account-recovery-form" class="account-form" autocomplete="off">' +
+        '<label class="account-field" for="account-recovery-identifier">Account identifier' +
+          '<input id="account-recovery-identifier" name="accountIdentifier" type="text" required maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-...">' +
+        '</label>' +
+        '<label class="account-field" for="account-recovery-secret">Offline recovery key' +
+          '<input id="account-recovery-secret" name="recoveryKey" type="password" required maxlength="64" autocomplete="off" spellcheck="false" placeholder="ACR1-...">' +
+        '</label>' +
+        '<p class="account-provider-note">The key is accepted once. After successful recovery, all previous passkeys and sessions are revoked and a new recovery key is issued for you to save offline.</p>' +
+        '<button class="account-primary" type="submit" ' + (browserPreviewMode ? 'disabled' : '') + '>Verify recovery key and replace passkey</button>' +
+        '<button class="account-text-button" type="button" data-account-mode="signin">Back to sign in</button>' +
+      '</form>';
+  }
+
   function renderSuccess() {
     var created = successKind === "signup";
-    title.textContent = created ? "Account created" : "Welcome back";
-    var heading = created ? "Your passkey account is ready" : "You're signed in";
+    var recovered = successKind === "recovery";
+    var needsRecoveryKeyAcknowledgement = created || recovered;
+    var heading = created ? "Your passkey account is ready"
+      : recovered ? "Your account has been recovered"
+      : "You're signed in";
     var message = created
-      ? "Your AstroCrown account was created using a passkey. AstroCrown stores the public credential needed to verify your authenticator; your private key remains with it."
-      : "You are signed in to AstroCrown with your passkey. This local prototype does not grant production access or administrator privileges.";
+      ? "Your AstroCrown account was created using a passkey. Your authenticator keeps the private key; AstroCrown stores the public credential needed for verification."
+      : recovered
+        ? "Recovery succeeded. Your previous passkeys and active sessions were revoked. The old recovery key has been consumed."
+        : "You are signed in to AstroCrown with your passkey. This local prototype does not grant production access or administrator privileges.";
     var persistenceNote = "You can close this window without signing out. The local server keeps your session until it expires or you sign out.";
+    var recoveryKey = accountState && typeof accountState.oneTimeRecoveryKey === "string"
+      ? accountState.oneTimeRecoveryKey : "";
     content.innerHTML =
       '<div class="account-success-panel">' +
         '<div class="account-success-mark" aria-hidden="true">✓</div>' +
         '<h3 class="account-success-heading">' + escapeHtml(heading) + '</h3>' +
         '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
-        '<button class="account-primary" type="button" id="open-account-hub">Open your dashboard</button>' +
+        (needsRecoveryKeyAcknowledgement
+          ? '<section class="account-recovery-key-panel">' +
+              '<h3>Save your offline recovery key now</h3>' +
+              '<p>This is shown once. AstroCrown does not store the readable key. Keep it offline and separate from your passkey device. Anyone who obtains it may be able to replace your passkey.</p>' +
+              '<label class="account-field" for="account-one-time-recovery-key">One-time recovery key' +
+                '<input id="account-one-time-recovery-key" type="text" readonly spellcheck="false" autocomplete="off" value="' + escapeHtml(recoveryKey) + '">' +
+              '</label>' +
+              '<button class="account-secondary" type="button" id="copy-account-recovery-key">Copy recovery key</button>' +
+              '<label class="account-consent account-recovery-key-ack" for="account-recovery-key-saved">' +
+                '<input id="account-recovery-key-saved" type="checkbox">' +
+                '<span>I have saved this recovery key somewhere secure and offline.</span>' +
+              '</label>' +
+              '<p class="account-provider-note">Do not share this key with AstroCrown staff, administrators, NOVA or anyone else. It will not be shown again.</p>' +
+            '</section>'
+          : '') +
+        '<button class="account-primary" type="button" id="open-account-hub"' +
+          (needsRecoveryKeyAcknowledgement ? ' disabled' : '') + '>Open your dashboard</button>' +
         '<p class="account-success-small">' + escapeHtml(persistenceNote) + '</p>' +
       '</div>';
   }
@@ -643,6 +709,10 @@
   }
 
   function closeDialog() {
+    if (mode === "success" && successKind !== "signin" && !recoveryKeyAcknowledged) {
+      showFeedback("Save the one-time offline recovery key and confirm before closing this screen.", "error");
+      return;
+    }
     if (typeof dialog.close === "function" && dialog.open) dialog.close();
     else dialog.removeAttribute("open");
   }
@@ -661,28 +731,59 @@
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
     event.preventDefault();
-    if (busy || form.id !== "account-create-form") return;
+    if (busy) return;
 
-    var termsInput = form.elements.namedItem("termsAccepted");
-    var termsAccepted = Boolean(termsInput && termsInput.checked);
-    if (!termsAccepted) {
-      showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
-      if (termsInput) termsInput.focus();
+    if (form.id === "account-create-form") {
+      var termsInput = form.elements.namedItem("termsAccepted");
+      var termsAccepted = Boolean(termsInput && termsInput.checked);
+      if (!termsAccepted) {
+        showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
+        if (termsInput) termsInput.focus();
+        return;
+      }
+      setBusy(true);
+      try {
+        var result = await registerWithPasskey({
+          referralId: formValue(form, "referralId"),
+          termsAccepted: true,
+          termsVersion: termsVersion
+        });
+        await finishPasskeyAuthentication(result, "signup");
+      } catch (error) {
+        showFeedback(error.message || "Passkey account creation could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
       return;
     }
 
-    setBusy(true);
-    try {
-      var result = await registerWithPasskey({
-        referralId: formValue(form, "referralId"),
-        termsAccepted: true,
-        termsVersion: termsVersion
-      });
-      await finishPasskeyAuthentication(result, true);
-    } catch (error) {
-      showFeedback(error.message || "Passkey account creation could not be completed.", "error");
-    } finally {
-      setBusy(false);
+    if (form.id === "account-recovery-form") {
+      var accountIdentifier = formValue(form, "accountIdentifier").trim();
+      var recoveryKey = formValue(form, "recoveryKey").trim();
+      if (!accountIdentifier || !recoveryKey) {
+        showFeedback("Enter both your account identifier and offline recovery key.", "error");
+        return;
+      }
+      setBusy(true);
+      try {
+        var recovered = await recoverWithPasskey({
+          accountIdentifier: accountIdentifier,
+          recoveryKey: recoveryKey
+        });
+        await finishPasskeyAuthentication(recovered, "recovery");
+      } catch (error) {
+        showFeedback(error.message || "Account recovery could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+  });
+
+  content.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "account-recovery-key-saved") {
+      recoveryKeyAcknowledged = event.target.checked === true;
+      var openButton = document.getElementById("open-account-hub");
+      if (openButton) openButton.disabled = !recoveryKeyAcknowledged;
     }
   });
 
@@ -697,7 +798,7 @@
       setBusy(true);
       try {
         var signInResult = await signInWithPasskey();
-        await finishPasskeyAuthentication(signInResult, false);
+        await finishPasskeyAuthentication(signInResult, "signin");
       } catch (error) {
         showFeedback(error.message || "Passkey sign-in could not be completed.", "error");
       } finally {
@@ -705,7 +806,36 @@
       }
       return;
     }
+    if (button.id === "account-recovery-start") {
+      setMode("recover");
+      var recoveryIdentifier = document.getElementById("account-recovery-identifier");
+      if (recoveryIdentifier) recoveryIdentifier.focus();
+      return;
+    }
+    if (button.id === "copy-account-recovery-key") {
+      var keyField = document.getElementById("account-one-time-recovery-key");
+      if (!keyField) return;
+      keyField.focus();
+      keyField.select();
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        try {
+          await navigator.clipboard.writeText(keyField.value);
+          showFeedback("Recovery key copied. Store it offline and do not share it.", "success");
+        } catch (_error) {
+          showFeedback("The key is selected. Copy it manually and store it offline.", "info");
+        }
+      } else {
+        showFeedback("The key is selected. Copy it manually and store it offline.", "info");
+      }
+      return;
+    }
     if (button.id === "open-account-hub") {
+      if ((successKind === "signup" || successKind === "recovery") && !recoveryKeyAcknowledged) {
+        showFeedback("Confirm that you saved the offline recovery key before continuing.", "error");
+        return;
+      }
+      delete accountState.oneTimeRecoveryKey;
+      recoveryKeyAcknowledged = false;
       closeDialog();
       navigateToAccount();
       return;
