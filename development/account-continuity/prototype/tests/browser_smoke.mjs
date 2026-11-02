@@ -255,12 +255,18 @@ try {
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
   await waitFor("account-created success popup", () => evaluate("Boolean(document.getElementById('open-account-hub'))"));
   assert.equal(await evaluate("document.getElementById('open-account-dialog').classList.contains('is-authenticated')"), true);
+  assert.equal(await evaluate("document.getElementById('open-account-hub').textContent.trim()"), "Open your dashboard");
   assert.equal(await evaluate("document.getElementById('open-account-dialog').querySelectorAll('span').length"), 0,
     "signed-in header control must become a circular icon without the Account text");
   assert.match(await evaluate("document.body.innerText"), /no verification or newsletter message was sent/i);
   await evaluate("document.getElementById('open-account-hub').click()");
-  await waitFor("user account dashboard after signup", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  await waitFor("user dashboard after signup", () => evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  assert.equal(await evaluate("document.getElementById('account-dashboard-title').textContent.trim()"), "User dashboard");
   assert.equal(await evaluate("document.querySelector('.account-dashboard-welcome-copy strong').textContent"), email.toLowerCase());
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-user-services-card'))"), true,
+    "the common User dashboard must include the member-services module area");
+  assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"), /regular users and administrators/i);
+  assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"), /transactions.*not enabled/i);
   assert.match(await evaluate("document.body.innerText"), /Email not verified/i);
   assert.match(await evaluate("document.body.innerText"), /Password reset|password reset/);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
@@ -338,11 +344,15 @@ try {
   await waitFor("administrator entry confirmation reopens", () => evaluate("Boolean(document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open)"));
   await evaluate("document.getElementById('admin-access-continue').click()");
   await waitFor("same entry opens the separate administrator dashboard", () => evaluate("window.location.hash === '#admin' && document.getElementById('account-dashboard').hidden && !document.getElementById('admin-dashboard').hidden && document.getElementById('admin-dashboard-title').textContent.trim() === 'Administrator dashboard'"));
-  assert.equal(await evaluate("document.getElementById('admin-return-account').textContent.trim()"), "Return to your account");
+  assert.match(await evaluate("document.getElementById('admin-dashboard-content').innerText"), /Personal user-facing services and transactions remain in the User dashboard/i);
+  assert.equal(await evaluate("document.getElementById('admin-return-account').textContent.trim()"), "Return to user dashboard");
   assert.equal(await evaluate("window.__walletPromptCount"), 0,
     "the verified-step-up fixture must not request a second wallet connection");
   await evaluate("document.getElementById('admin-return-account').click()");
-  await waitFor("administrator returns to the separate regular account dashboard", () => evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden"));
+  await waitFor("administrator returns to the shared User dashboard", () => evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden"));
+  assert.equal(await evaluate("document.getElementById('account-dashboard-title').textContent.trim()"), "User dashboard");
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-user-services-card'))"), true,
+    "returning from administrator work must preserve access to the common member-services dashboard");
   assert.equal(await evaluate("document.getElementById('account-admin-wallet-access').textContent.trim()"), "Open administrator dashboard");
 
   await evaluate("window.fetch = window.__nativeFetchForStepUpTest; delete window.__nativeFetchForStepUpTest; delete window.__pretendAdminAuthorized;");
