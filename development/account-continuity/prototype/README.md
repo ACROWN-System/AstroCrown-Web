@@ -96,3 +96,19 @@ The in-product local prototype now supports the separate workflow: an already-au
 Astro-Wallet (AW) is a separate future product/research concept documented in [Astro-Wallet Strategy and Security Architecture](../../crypto-infrastructure/ASTRO-WALLET-STRATEGY-AND-SECURITY-ARCHITECTURE.md). It is **not** a dependency or scope item for the current account sign-in, User dashboard or Administrator dashboard work. The local wallet authentication lab remains EVM EOA/SIWE-only. No AW SDK, multichain wallet adapter, key-management/recovery system, asset portfolio or post-quantum feature is implemented.
 
 The current EVM-specific wallet table and verifier are loopback prototype details, not a production multichain schema. To avoid a future account-system rebuild without prematurely implementing AW, keep stable AstroCrown account IDs, sessions and permissions independent of wallet addresses; keep EVM/SIWE logic inside the wallet-auth boundary; and require a separately reviewed, versioned wallet-credential migration before production persistence or support for additional wallet families. Do not change the current implementation to achieve this future seam now.
+
+
+## Private communications (local prototype only)
+
+The signed-in member can use the header bell to open the private **Alerts** and **Messages** inbox. The destination is selected explicitly by the sender; the system does not classify message text. Alerts remain pending until acknowledged. Messages use read/unread state. An administrator-role revocation creates a recipient-only Alert tied to its source audit record.
+
+An administrator can send a one-recipient in-app communication only when the account has the separate **admin.messages.send** permission and the current administrator session has passed wallet step-up. That permission is not implied by the Administrator role. The current sending form lets the authorized administrator choose Alerts or Messages, then enter the member's AC- Account Identifier, subject and text. This local implementation uses no email, SMS, push service or external provider and is subject to server-side limits.
+
+This is not a user-to-user chat/DM service. Threaded conversations, replies, group/broadcast messaging, attachments, external delivery and user-to-user sends are not implemented. Communication records are explanatory content and cannot grant authority or override backend role/session/audit state.
+
+Relevant local API routes:
+- GET /api/account/communications — list only the authenticated recipient's communications.
+- POST /api/account/communications/state — mark a Message read or acknowledge an Alert for the authenticated recipient only.
+- POST /api/admin/communications/send — send one Alert or Message to an existing account, requiring the distinct administrator permission and wallet-verified session.
+
+See User and Administrator Account Requirements, section 21, for the governing boundary and production-release requirements.
