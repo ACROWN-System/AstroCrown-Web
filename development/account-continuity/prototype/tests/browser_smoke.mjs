@@ -222,12 +222,18 @@ try {
 
   await evaluate("document.getElementById('account-terms-accepted').checked = true");
   await evaluate("document.getElementById('account-create-form').requestSubmit()");
-  await waitFor("real WebAuthn passkey registration to complete", () =>
-    evaluate("Boolean(document.getElementById('open-account-hub'))"), 30000);
+  await waitFor("real WebAuthn passkey registration and one-time recovery-key display", () =>
+    evaluate("Boolean(document.getElementById('account-one-time-recovery-key'))"), 30000);
   assert.equal(await evaluate("document.getElementById('open-account-dialog').classList.contains('is-authenticated')"), true);
   assert.equal(await evaluate("document.getElementById('open-account-hub').textContent.trim()"), "Open your dashboard");
-  assert.match(await evaluate("document.body.innerText"), /created using a passkey/i);
+  assert.equal(await evaluate("document.getElementById('open-account-hub').disabled"), true,
+    "the dashboard action stays blocked until the user acknowledges saving the recovery key");
+  const initialRecoveryKey = await evaluate("document.getElementById('account-one-time-recovery-key').value");
+  assert.match(initialRecoveryKey, /^ACR1-[A-Za-z0-9_-]{43}$/);
+  assert.match(await evaluate("document.body.innerText"), /save your offline recovery key now/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /verification email|password reset/i);
+  await evaluate("document.getElementById('account-recovery-key-saved').checked = true; document.getElementById('account-recovery-key-saved').dispatchEvent(new Event('change', {bubbles:true}));");
+  assert.equal(await evaluate("document.getElementById('open-account-hub').disabled"), false);
 
   const registeredCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(registeredCredentials.credentials.length, 1,
@@ -301,10 +307,66 @@ try {
   assert.equal(signedInStatus.accountIdentifier, accountIdentifier);
 
   await evaluate("document.getElementById('account-signout').click()");
-  await waitFor("signed-in WebAuthn session is cleared before preview checks", () =>
+  await waitFor("signed-in WebAuthn session is cleared before recovery", () =>
     evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
   const clearedStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(clearedStatus.authenticated, false);
+
+  // Recover with the one-time offline key. The old passkey is disabled, all
+  // previous sessions are revoked, and the replacement key is displayed once.
+  await evaluate("document.getElementById('open-account-dialog').click()");
+  await waitFor("passkey sign-in view before recovery", () =>
+    evaluate("Boolean(document.getElementById('account-recovery-start'))"));
+  await evaluate("document.getElementById('account-recovery-start').click()");
+  await waitFor("offline recovery form", () =>
+    evaluate("Boolean(document.getElementById('account-recovery-form'))"));
+  await evaluate("document.getElementById('account-recovery-identifier').value = " +
+    JSON.stringify(accountIdentifier) + "; document.getElementById('account-recovery-secret').value = " +
+    JSON.stringify(initialRecoveryKey) + "; document.getElementById('account-recovery-form').requestSubmit();");
+  await waitFor("recovery passkey replacement and rotated key", () =>
+    evaluate("Boolean(document.getElementById('account-one-time-recovery-key'))"), 30000);
+  assert.match(await evaluate("document.body.innerText"), /your account has been recovered/i);
+  const replacementRecoveryKey = await evaluate("document.getElementById('account-one-time-recovery-key').value");
+  assert.match(replacementRecoveryKey, /^ACR1-[A-Za-z0-9_-]{43}$/);
+  assert.notEqual(replacementRecoveryKey, initialRecoveryKey);
+  assert.equal(await evaluate("document.getElementById('open-account-hub').disabled"), true);
+  await evaluate("document.getElementById('account-recovery-key-saved').checked = true; document.getElementById('account-recovery-key-saved').dispatchEvent(new Event('change', {bubbles:true}));");
+  await evaluate("document.getElementById('open-account-hub').click()");
+  await waitFor("User dashboard after recovery", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  const recoveredStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
+  assert.equal(recoveredStatus.authenticated, true);
+  assert.equal(recoveredStatus.accountIdentifier, accountIdentifier);
+  assert.equal(recoveredStatus.passkeyCount, 1);
+  assert.equal(recoveredStatus.recoveryKeyAvailable, true);
+  assert.equal(recoveredStatus.activeSessionCount, 1);
+
+  const recoveryDatabaseCheck = spawnSync(python, [
+    "-c",
+    "import json,sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.row_factory=sqlite3.Row; p=[dict(x) for x in c.execute('SELECT credential_id,active FROM account_passkey_credentials ORDER BY credential_id')]; r=[dict(x) for x in c.execute('SELECT key_version,used_at FROM account_recovery_keys ORDER BY key_version')]; print(json.dumps({'passkeys':p,'recoveryKeys':r,'sessions':c.execute('SELECT COUNT(*) FROM sessions').fetchone()[0]}))",
+    databasePath
+  ], { encoding: "utf8" });
+  assert.equal(recoveryDatabaseCheck.status, 0, recoveryDatabaseCheck.stderr || "SQLite recovery verification failed");
+  const recoveredStored = JSON.parse(recoveryDatabaseCheck.stdout);
+  assert.equal(recoveredStored.passkeys.length, 2);
+  assert.equal(recoveredStored.passkeys.filter(item => item.active === 1).length, 1);
+  assert.equal(recoveredStored.passkeys.filter(item => item.active === 0).length, 1);
+  assert.deepEqual(recoveredStored.recoveryKeys.map(item => item.key_version), [1, 2]);
+  assert.ok(recoveredStored.recoveryKeys[0].used_at);
+  assert.equal(recoveredStored.recoveryKeys[1].used_at, null);
+  assert.equal(recoveredStored.sessions, 1);
+
+  const oldRecoveryResult = await evaluate("fetch('/api/account/recovery/options', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accountIdentifier:" +
+    JSON.stringify(accountIdentifier) + ",recoveryKey:" + JSON.stringify(initialRecoveryKey) + "})}).then(async r => ({status:r.status,body:await r.json()}))");
+  assert.equal(oldRecoveryResult.status, 401, "the previous recovery key must be single-use");
+  const newRecoveryResult = await evaluate("fetch('/api/account/recovery/options', {method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'}, body:JSON.stringify({accountIdentifier:" +
+    JSON.stringify(accountIdentifier) + ",recoveryKey:" + JSON.stringify(replacementRecoveryKey) + "})}).then(async r => ({status:r.status,body:await r.json()}))");
+  assert.equal(newRecoveryResult.status, 200, "the replacement recovery key must be active");
+
+  await evaluate("document.getElementById('account-signout').click()");
+  await waitFor("recovered account session is cleared before preview checks", () =>
+    evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('open-account-dialog').classList.contains('is-authenticated')"));
+  assert.equal((await evaluate("fetch('/api/account/status').then(r => r.json())")).authenticated, false);
 
   // Hosted-preview mode is intentionally non-authenticating: no fake account state.
   await cdp("Page.navigate", { url: localUrl + "?account-preview-demo=1" });
