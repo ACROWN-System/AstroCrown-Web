@@ -128,6 +128,23 @@ class AccountServerTests(unittest.TestCase):
         payload.update(overrides)
         return self.request("/api/account/register", payload, opener=opener)
 
+    def sign_admin_wallet(self, opener, address, private_key):
+        status, challenge, _ = self.request(
+            "/api/admin/wallet-challenge",
+            {"address": address, "chainId": 1},
+            opener=opener,
+        )
+        self.assertEqual(status, 200, challenge)
+        message = challenge["message"]
+        signature = Account.sign_message(
+            encode_defunct(text=message), private_key=private_key
+        ).signature.hex()
+        return self.request(
+            "/api/admin/wallet-verify",
+            {"message": message, "signature": signature},
+            opener=opener,
+        )
+
     def test_homepage_assets_and_policy_drafts_are_served_locally(self):
         status, _, headers = self.request("/")
         self.assertEqual(status, 200)
@@ -1034,6 +1051,223 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 200)
         status, _, _ = self.request("/api/account/avatar", {"avatarId": "moon"})
         self.assertEqual(status, 401, "a signed-out session must not change account preferences")
+
+    def test_permissioned_admin_appointment_initial_wallet_enrollment_and_revocation(self):
+        root_email = "permission-root@example.test"
+        target_email = "permission-target@example.test"
+        successor_email = "permission-successor@example.test"
+        target_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        successor_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+
+        status, created, _ = self.create_account(email=root_email)
+        self.assertEqual(status, 201, created)
+        grant_admin(
+            self.app,
+            email=root_email,
+            wallet_address=TEST_WALLET_A.address,
+            chain_id=1,
+            reason="Bootstrap role manager for the local permission test",
+            permissions=["admin.roles.grant", "admin.roles.revoke"],
+            delegable_permissions=["admin.roles.grant"],
+        )
+        status, created, _ = self.create_account(email=target_email, opener=target_opener)
+        self.assertEqual(status, 201, created)
+        status, created, _ = self.create_account(email=successor_email, opener=successor_opener)
+        self.assertEqual(status, 201, created)
+
+        status, root_status = self.sign_admin_wallet(self.opener, TEST_WALLET_A.address, TEST_WALLET_KEY_A)
+        self.assertEqual(status, 200, root_status)
+        self.assertTrue(root_status["adminSessionAuthorized"])
+        self.assertEqual(root_status["adminPermissions"], ["admin.roles.grant", "admin.roles.revoke"])
+        self.assertEqual(root_status["adminDelegablePermissions"], ["admin.roles.grant"])
+
+        status, self_grant = self.request(
+            "/api/admin/roles/grant",
+            {
+                "email": root_email,
+                "reason": "Attempted self-promotion must not change permissions",
+                "permissions": [],
+            },
+        )
+        self.assertEqual(status, 400, self_grant)
+
+        status, granted = self.request(
+            "/api/admin/roles/grant",
+            {
+                "email": target_email,
+                "reason": "Appoint existing member after review",
+                "permissions": ["admin.roles.grant"],
+            },
+        )
+        self.assertEqual(status, 200, granted)
+        self.assertTrue(granted["adminRoleAssigned"])
+        self.assertEqual(granted["role"], "admin")
+        self.assertEqual(granted["adminPermissions"], ["admin.roles.grant"])
+        self.assertEqual(granted["adminWalletCount"], 0)
+        self.assertFalse(granted["walletEnrolled"])
+
+        status, target_before_wallet, _ = self.request(
+            "/api/account/status", opener=target_opener
+        )
+        self.assertEqual(status, 200, target_before_wallet)
+        self.assertTrue(target_before_wallet["authenticated"])
+        self.assertTrue(target_before_wallet["adminRoleAssigned"])
+        self.assertEqual(target_before_wallet["adminWalletCount"], 0)
+        self.assertFalse(target_before_wallet["adminSessionAuthorized"])
+        self.assertEqual(target_before_wallet["adminPermissions"], ["admin.roles.grant"])
+
+        status, target_without_stepup = self.request(
+            "/api/admin/roles/grant",
+            {
+                "email": successor_email,
+                "reason": "Attempt without the required wallet step-up",
+                "permissions": [],
+            },
+            opener=target_opener,
+        )
+        self.assertEqual(status, 403, target_without_stepup)
+
+        status, enrollment = self.request(
+            "/api/admin/wallet-enrollment-challenge",
+            {"address": TEST_WALLET_B.address, "chainId": 1},
+            opener=target_opener,
+        )
+        self.assertEqual(status, 200, enrollment)
+        self.assertEqual(enrollment["enrollmentType"], "initial")
+        self.assertFalse(enrollment["transactionAuthorized"])
+        enrollment_signature = Account.sign_message(
+            encode_defunct(text=enrollment["message"]),
+            private_key=TEST_WALLET_KEY_B,
+        ).signature.hex()
+
+        status, cross_session = self.request(
+            "/api/admin/wallet-enrollment-verify",
+            {"message": enrollment["message"], "signature": enrollment_signature},
+        )
+        self.assertEqual(status, 401, cross_session)
+
+        status, enrolled = self.request(
+            "/api/admin/wallet-enrollment-verify",
+            {"message": enrollment["message"], "signature": enrollment_signature},
+            opener=target_opener,
+        )
+        self.assertEqual(status, 200, enrolled)
+        self.assertEqual(enrolled["adminWalletCount"], 1)
+        self.assertEqual(enrolled["walletEnrolledAddress"], TEST_WALLET_B.address)
+        self.assertFalse(enrolled["adminWalletAuthenticated"])
+        self.assertFalse(enrolled["adminSessionAuthorized"])
+        self.assertTrue(enrolled["authenticated"])
+
+        status, replay = self.request(
+            "/api/admin/wallet-enrollment-verify",
+            {"message": enrollment["message"], "signature": enrollment_signature},
+            opener=target_opener,
+        )
+        self.assertEqual(status, 401, replay)
+
+        status, target_authorized = self.sign_admin_wallet(
+            target_opener, TEST_WALLET_B.address, TEST_WALLET_KEY_B
+        )
+        self.assertEqual(status, 200, target_authorized)
+        self.assertTrue(target_authorized["adminSessionAuthorized"])
+        self.assertTrue(target_authorized["admin"])
+        status, admin_status, _ = self.request("/api/admin/status", opener=target_opener)
+        self.assertEqual(status, 200, admin_status)
+        self.assertEqual(admin_status["adminWalletAddress"], TEST_WALLET_B.address)
+
+        status, escalation = self.request(
+            "/api/admin/roles/grant",
+            {
+                "email": successor_email,
+                "reason": "Attempt to pass on a non-delegable permission",
+                "permissions": ["admin.roles.grant"],
+            },
+            opener=target_opener,
+        )
+        self.assertEqual(status, 403, escalation)
+        status, forbidden_revoke = self.request(
+            "/api/admin/roles/revoke",
+            {"email": root_email, "reason": "Attempt without the separate revoke permission"},
+            opener=target_opener,
+        )
+        self.assertEqual(status, 403, forbidden_revoke)
+
+        status, revoked = self.request(
+            "/api/admin/roles/revoke",
+            {"email": target_email, "reason": "Remove administrator access after review"},
+        )
+        self.assertEqual(status, 200, revoked)
+        self.assertEqual(revoked["role"], "user")
+        self.assertEqual(revoked["revokedWalletCount"], 1)
+        self.assertEqual(revoked["revokedPermissions"], ["admin.roles.grant"])
+
+        status, target_after_revoke, _ = self.request(
+            "/api/account/status", opener=target_opener
+        )
+        self.assertEqual(status, 200, target_after_revoke)
+        self.assertTrue(target_after_revoke["authenticated"])
+        self.assertEqual(target_after_revoke["role"], "user")
+        self.assertFalse(target_after_revoke["adminRoleAssigned"])
+        self.assertFalse(target_after_revoke["adminSessionAuthorized"])
+        self.assertEqual(target_after_revoke["adminPermissions"], [])
+        status, denied_admin_status = self.request("/api/admin/status", opener=target_opener)
+        self.assertEqual(status, 403, denied_admin_status)
+
+        with self.app.connect() as db:
+            audit = db.execute(
+                """SELECT event_type, actor, target_account_id, reason, detail
+                   FROM account_admin_audit
+                   WHERE event_type IN ('admin_role_granted', 'admin_role_revoked_by_admin')
+                   ORDER BY created_at"""
+            ).fetchall()
+        self.assertEqual([row["event_type"] for row in audit], [
+            "admin_role_granted", "admin_role_revoked_by_admin"
+        ])
+        self.assertTrue(all(row["actor"] and row["target_account_id"] and row["reason"] for row in audit))
+        self.assertIn('"admin.roles.grant"', audit[0]["detail"])
+        self.assertIn('"admin.roles.grant"', audit[1]["detail"])
+
+    def test_admin_without_role_grant_permission_cannot_appoint_another_account(self):
+        actor_email = "ordinary-admin@example.test"
+        target_email = "ordinary-target@example.test"
+        actor_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        target_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        status, created, _ = self.create_account(email=actor_email, opener=actor_opener)
+        self.assertEqual(status, 201, created)
+        grant_admin(
+            self.app,
+            email=actor_email,
+            wallet_address=TEST_WALLET_C.address,
+            chain_id=1,
+            reason="Bootstrap administrator without appointment authority",
+            permissions=[],
+        )
+        status, created, _ = self.create_account(email=target_email, opener=target_opener)
+        self.assertEqual(status, 201, created)
+        status, authorized = self.sign_admin_wallet(
+            actor_opener, TEST_WALLET_C.address, TEST_WALLET_KEY_C
+        )
+        self.assertEqual(status, 200, authorized)
+        self.assertTrue(authorized["adminSessionAuthorized"])
+        self.assertEqual(authorized["adminPermissions"], [])
+        status, denied = self.request(
+            "/api/admin/roles/grant",
+            {"email": target_email, "reason": "Attempt by an admin without grant authority"},
+            opener=actor_opener,
+        )
+        self.assertEqual(status, 403, denied)
+        status, target_status, _ = self.request("/api/account/status", opener=target_opener)
+        self.assertEqual(status, 200, target_status)
+        self.assertEqual(target_status["role"], "user")
+        self.assertFalse(target_status["adminRoleAssigned"])
 
     def test_admin_role_and_wallet_are_separate_and_wallet_step_up_authorizes_only_its_account_session(self):
         email = "admin-step-up@example.test"
