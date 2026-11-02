@@ -647,7 +647,6 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-revocation-notice'))"), false,
     "revocation details must no longer be duplicated in the User dashboard");
   const revokedTargetStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
-  const revokedTargetStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(revokedTargetStatus.authenticated, true);
   assert.equal(revokedTargetStatus.role, "user");
   assert.equal(revokedTargetStatus.adminRoleAssigned, false);
