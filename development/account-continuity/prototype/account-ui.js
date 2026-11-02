@@ -12,6 +12,12 @@
   var adminDashboard = document.getElementById("admin-dashboard");
   var adminDashboardContent = document.getElementById("admin-dashboard-content");
   var mainContent = document.getElementById("main-content");
+  var communicationsButton = document.getElementById("open-communications");
+  var communicationsBadge = document.getElementById("communications-unread-count");
+  var communicationsPage = document.getElementById("communications-page");
+  var communicationsContent = document.getElementById("communications-content");
+  var communicationsState = { items: [], unreadCounts: { alerts: 0, messages: 0 } };
+  var activeCommunicationsSection = "alerts";
   var mode = "signin";
   var successKind = "signup";
   var recoveryKeyAcknowledged = false;
@@ -308,7 +314,7 @@
 
   function setBusy(value) {
     busy = value;
-    [content, dashboardContent].forEach(function (container) {
+    [content, dashboardContent, adminDashboardContent, communicationsContent].filter(Boolean).forEach(function (container) {
       Array.prototype.forEach.call(container.querySelectorAll("button, input"), function (element) {
         if (element.dataset.keepEnabled === "true") return;
         var recoveryAcknowledgementPending =
@@ -325,6 +331,19 @@
   function syncAccountButton() {
     if (!openButton) return;
     var authenticated = Boolean(accountState && accountState.authenticated === true);
+    var counts = accountState && accountState.communicationsUnreadCounts || {};
+    var unread = Math.max(0, Number(counts.alerts || 0)) + Math.max(0, Number(counts.messages || 0));
+    if (communicationsBadge) {
+      communicationsBadge.textContent = unread > 9 ? "9+" : String(unread);
+      communicationsBadge.hidden = unread === 0;
+    }
+    if (communicationsButton) {
+      communicationsButton.setAttribute(
+        "aria-label",
+        unread ? "Open Alerts and Messages, " + unread + " unread or unacknowledged" : "Open Alerts and Messages"
+      );
+      communicationsButton.setAttribute("title", unread ? unread + " pending communication(s)" : "Alerts and Messages");
+    }
     if (authenticated) {
       var avatarId = normalizeAvatarId(accountState.avatarId);
       openButton.classList.add("is-authenticated");
@@ -467,6 +486,9 @@
       : 'Not supplied';
     var activeSessionCount = Math.max(1, Number(accountState.activeSessionCount || 1));
     var passkeyCount = Math.max(0, Number(accountState.passkeyCount || 0));
+    var communicationCounts = accountState.communicationsUnreadCounts || {};
+    var unreadCommunicationCount = Math.max(0, Number(communicationCounts.alerts || 0)) +
+      Math.max(0, Number(communicationCounts.messages || 0));
     var adminCard = '';
     if (accountState.adminRoleAssigned === true) {
       var walletCount = Number(accountState.adminWalletCount || 0);
@@ -509,7 +531,6 @@
         '</section>';
     }
     dashboardContent.innerHTML =
-      administratorRevocationNotice +
       '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype tests account access and settings only. Transactions and the wider service catalog are not enabled. The passkey and recovery-key implementation remains a development prototype, not production authentication.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
@@ -518,6 +539,7 @@
         '<div class="account-dashboard-welcome-copy"><strong>' + identifier + '</strong><span>Signed in with passkey · local development account</span></div>' +
       '</div>' +
       '<div class="account-dashboard-grid">' +
+        '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">' + String(unreadCommunicationCount) + ' pending</p><p>Important account alerts and private in-app messages are kept in one place, with separate sections and acknowledgement/read status.</p><button class="account-primary" type="button" id="open-account-communications">Open communications</button></section>' +
         '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and transactions belong to this User dashboard and remain subject to the same member rules for every account.</p><p>Transaction workflows and other service modules are not enabled in this account prototype.</p></section>' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
         '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' +
@@ -552,6 +574,7 @@
   function showHomepage() {
     dashboard.hidden = true;
     if (adminDashboard) adminDashboard.hidden = true;
+    if (communicationsPage) communicationsPage.hidden = true;
     mainContent.hidden = false;
   }
 
@@ -575,6 +598,7 @@
     }
     mainContent.hidden = true;
     if (adminDashboard) adminDashboard.hidden = true;
+    if (communicationsPage) communicationsPage.hidden = true;
     dashboard.hidden = false;
     renderAccountDashboard();
     var dashboardTitle = document.getElementById("account-dashboard-title");
@@ -587,6 +611,72 @@
     } else {
       window.location.hash = "account";
     }
+  }
+
+
+  function renderCommunicationsPage() {
+    if (!communicationsContent) return;
+    var items = Array.isArray(communicationsState.items) ? communicationsState.items : [];
+    var counts = communicationsState.unreadCounts || {};
+    var sectionItems = items.filter(function (item) {
+      return item.section === activeCommunicationsSection;
+    });
+    var isAlerts = activeCommunicationsSection === "alerts";
+    var tabHtml =
+      '<div class="communications-tabs" role="tablist" aria-label="Communication destination">' +
+        '<button class="communications-tab" type="button" role="tab" data-communication-section="alerts" aria-selected="' + (isAlerts ? "true" : "false") + '">Alerts <span>' + String(Number(counts.alerts || 0)) + '</span></button>' +
+        '<button class="communications-tab" type="button" role="tab" data-communication-section="messages" aria-selected="' + (!isAlerts ? "true" : "false") + '">Messages <span>' + String(Number(counts.messages || 0)) + '</span></button>' +
+      '</div>';
+    var itemsHtml = sectionItems.length ? sectionItems.map(function (item) {
+      var body = escapeHtml(item.body || "").replace(/\n/g, "<br>");
+      var status = isAlerts
+        ? (item.acknowledgedAt ? "Acknowledged" : "Acknowledgement required")
+        : (item.readAt ? "Read" : "Unread");
+      var action = isAlerts
+        ? (item.acknowledgedAt ? '<span class="communication-state is-complete">Acknowledged</span>' :
+          '<button class="account-primary" type="button" data-communication-action="acknowledge" data-communication-id="' + escapeHtml(item.communicationId) + '">Acknowledge alert</button>')
+        : (item.readAt ? '<span class="communication-state is-complete">Read</span>' :
+          '<button class="account-secondary" type="button" data-communication-action="read" data-communication-id="' + escapeHtml(item.communicationId) + '">Mark as read</button>');
+      return '<article class="communication-item ' + (isAlerts ? 'is-alert' : 'is-message') + (status === "Unread" || status === "Acknowledgement required" ? ' is-unread' : '') + '">' +
+        '<div class="communication-item-header"><div><span class="communication-type">' + (isAlerts ? 'Alert' : 'Message') + '</span><h2>' + escapeHtml(item.subject || "Untitled communication") + '</h2></div><span class="communication-state-label">' + status + '</span></div>' +
+        '<div class="communication-body">' + body + '</div>' +
+        '<div class="communication-meta"><span>From: ' + escapeHtml(item.senderAccountIdentifier || "AstroCrown") + '</span><time>' + escapeHtml(item.createdAt || "") + '</time></div>' +
+        '<div class="communication-actions">' + action + '</div>' +
+      '</article>';
+    }).join("") : '<div class="communication-empty"><strong>No ' + (isAlerts ? 'alerts' : 'messages') + ' yet.</strong><p>' + (isAlerts ? 'Important account and service notices will appear here.' : 'Private in-app messages sent to this account will appear here.') + '</p></div>';
+    communicationsContent.innerHTML =
+      tabHtml +
+      '<div class="communications-list" aria-live="polite">' + itemsHtml + '</div>' +
+      '<p id="communications-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>';
+  }
+
+  async function showCommunicationsPage() {
+    var status = await refreshStatus();
+    if (!status.authenticated) {
+      clearAccountRoute();
+      mode = "signin";
+      render();
+      if (typeof dialog.showModal === "function" && !dialog.open) dialog.showModal();
+      else dialog.setAttribute("open", "open");
+      var first = content.querySelector("input, button");
+      if (first) first.focus();
+      return;
+    }
+    mainContent.hidden = true;
+    dashboard.hidden = true;
+    if (adminDashboard) adminDashboard.hidden = true;
+    if (communicationsPage) communicationsPage.hidden = false;
+    activeCommunicationsSection = "alerts";
+    try {
+      communicationsState = await requestJson("/api/account/communications");
+      renderCommunicationsPage();
+    } catch (error) {
+      communicationsContent.innerHTML =
+        '<div class="communication-empty"><strong>Communications could not be loaded.</strong><p>' +
+        escapeHtml(error.message || "Refresh the page and try again.") + '</p></div>';
+    }
+    var communicationsTitle = document.getElementById("communications-title");
+    if (communicationsTitle) communicationsTitle.focus();
   }
 
   function replaceRouteHash(route) {
@@ -603,10 +693,12 @@
     var delegablePermissions = Array.isArray(status.adminDelegablePermissions)
       ? status.adminDelegablePermissions : [];
     var roleManagementCard = "";
+    var communicationComposer = "";
     if (adminPermissions.indexOf("admin.roles.grant") >= 0) {
       var permissionLabels = {
         "admin.roles.grant": "May appoint other administrators",
-        "admin.roles.revoke": "May revoke administrator roles"
+        "admin.roles.revoke": "May revoke administrator roles",
+        "admin.messages.send": "May send private Messages and Alerts"
       };
       var permissionChoices = delegablePermissions.filter(function (permission) {
         return Object.prototype.hasOwnProperty.call(permissionLabels, permission);
@@ -638,6 +730,19 @@
           '<p id="admin-role-revoke-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
         '</section>';
     }
+    if (adminPermissions.indexOf("admin.messages.send") >= 0) {
+      communicationComposer =
+        '<section class="account-dashboard-card admin-communication-composer">' +
+          '<h2>Send a private communication</h2>' +
+          '<p>Choose the destination yourself. Alerts are important notices that require acknowledgement; Messages are ordinary private correspondence marked as read. Each send has one recipient and stays inside AstroCrown.</p>' +
+          '<label class="account-admin-role-field" for="admin-communication-recipient">Recipient Account Identifier<input id="admin-communication-recipient" type="text" maxlength="13" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-…" required></label>' +
+          '<label class="account-admin-role-field" for="admin-communication-section">Destination<select id="admin-communication-section"><option value="messages">Messages</option><option value="alerts">Alerts</option></select></label>' +
+          '<label class="account-admin-role-field" for="admin-communication-subject">Subject<input id="admin-communication-subject" type="text" maxlength="120" required></label>' +
+          '<label class="account-admin-role-field" for="admin-communication-body">Message<textarea id="admin-communication-body" rows="5" maxlength="4000" required></textarea></label>' +
+          '<button class="account-primary" type="button" id="admin-communication-send">Send communication</button>' +
+          '<p id="admin-communication-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+        '</section>';
+    }
     var walletRows = registeredWallets.map(function (item) {
       return '<li class="account-admin-wallet-row"><span class="account-wallet-address">' +
         escapeHtml(item.address || "") + '</span><span class="account-admin-wallet-chain">Chain ID ' +
@@ -647,7 +752,7 @@
       ? '<button class="account-primary" type="button" id="admin-add-wallet">Add another wallet</button>'
       : '<p class="account-admin-wallet-limit">Three active wallets are registered. The prototype does not permit a fourth wallet.</p>';
     adminDashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development-only Administrator dashboard.</strong> This workspace is for administrative duties only and is separate from the shared User dashboard. Personal user-facing services and transactions remain in the User dashboard under the same ordinary member rules. The backend verified the assigned role and a wallet signature for a short-lived session. The only administrative operation in this prototype is registering another wallet with a separate signature; publishing, account administration, payments and recovery remain disabled.</div>' +
+      '<div class="account-dashboard-notice"><strong>Development-only Administrator dashboard.</strong> This workspace is separate from the shared User dashboard. The backend verified the assigned role and a wallet signature for a short-lived session. Wallet registration and any explicitly granted account-communication permission are limited prototype operations; publishing, payments and recovery remain disabled.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-shield" aria-hidden="true">' + avatarSvg("shield", "account-dashboard-avatar-svg") + '</div>' +
         '<div class="account-dashboard-welcome-copy"><strong>Administrator access verified</strong><span>Backend-authorized · development prototype · no production privileges</span></div>' +
@@ -663,6 +768,7 @@
           '<p id="admin-wallet-enrollment-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p></section>' +
         '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, account-wide management, payments and all-wallet-loss recovery are not available in this console. Administrator appointment and revocation are shown separately only when the server confirms their corresponding permissions.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         roleManagementCard +
+        communicationComposer +
       '</div>' +
       '<div class="account-dashboard-actions"><p>End administrator access to clear wallet step-up while keeping your ordinary account session active.</p><button class="account-secondary" type="button" id="admin-end-access">End administrator access</button></div>';
   }
@@ -717,6 +823,8 @@
   async function handleRouteChange() {
     if (window.location.hash === "#account") {
       await showAccountDashboard();
+    } else if (window.location.hash === "#communications") {
+      await showCommunicationsPage();
     } else if (window.location.hash === "#admin") {
       await showAdminDashboard();
     } else {
@@ -920,6 +1028,10 @@
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.id === "open-account-communications") {
+      window.location.hash = "communications";
+      return;
+    }
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
       return;
@@ -998,9 +1110,74 @@
     }
   });
 
+
+  communicationsContent.addEventListener("click", async function (event) {
+    var button = event.target.closest("button");
+    if (!button || busy) return;
+    if (button.dataset.communicationSection) {
+      activeCommunicationsSection = button.dataset.communicationSection === "messages" ? "messages" : "alerts";
+      renderCommunicationsPage();
+      return;
+    }
+    if (!button.dataset.communicationAction || !button.dataset.communicationId) return;
+    setBusy(true);
+    try {
+      communicationsState = await requestJson("/api/account/communications/state", {
+        communicationId: button.dataset.communicationId,
+        action: button.dataset.communicationAction
+      });
+      accountState.communicationsUnreadCounts = communicationsState.unreadCounts;
+      syncAccountButton();
+      renderCommunicationsPage();
+    } catch (error) {
+      var communicationFeedback = document.getElementById("communications-feedback");
+      if (communicationFeedback) communicationFeedback.textContent =
+        error.message || "The communication state could not be updated.";
+    } finally {
+      setBusy(false);
+    }
+  });
+
   adminDashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.id === "admin-communication-send") {
+      var recipientInput = document.getElementById("admin-communication-recipient");
+      var sectionInput = document.getElementById("admin-communication-section");
+      var subjectInput = document.getElementById("admin-communication-subject");
+      var bodyInput = document.getElementById("admin-communication-body");
+      var communicationFeedback = document.getElementById("admin-communication-feedback");
+      var recipientIdentifier = recipientInput ? recipientInput.value.trim().toUpperCase() : "";
+      var section = sectionInput ? sectionInput.value : "";
+      var subject = subjectInput ? subjectInput.value.trim() : "";
+      var messageBody = bodyInput ? bodyInput.value.trim() : "";
+      if (!/^AC-[A-F0-9]{10}$/.test(recipientIdentifier) || !["alerts", "messages"].includes(section) ||
+          !subject || subject.length > 120 || !messageBody || messageBody.length > 4000) {
+        if (communicationFeedback) communicationFeedback.textContent =
+          "Enter a valid AC- recipient identifier, choose Alerts or Messages, and provide a subject and message within the stated limits.";
+        return;
+      }
+      setBusy(true);
+      try {
+        var sent = await requestJson("/api/admin/communications/send", {
+          accountIdentifier: recipientIdentifier,
+          section: section,
+          subject: subject,
+          body: messageBody
+        });
+        if (recipientInput) recipientInput.value = "";
+        if (subjectInput) subjectInput.value = "";
+        if (bodyInput) bodyInput.value = "";
+        if (communicationFeedback) communicationFeedback.textContent =
+          "Delivered to " + sent.recipientAccountIdentifier + " in " + (section === "alerts" ? "Alerts" : "Messages") + ".";
+      } catch (error) {
+        if (communicationFeedback) communicationFeedback.textContent =
+          error.message || "The communication could not be sent.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (button.id === "admin-role-grant") {
       var grantIdentifierInput = document.getElementById("admin-role-grant-account-identifier");
       var grantReasonInput = document.getElementById("admin-role-grant-reason");
@@ -1091,6 +1268,11 @@
   });
 
   openButton.addEventListener("click", openAccountDialog);
+  if (communicationsButton) {
+    communicationsButton.addEventListener("click", function () {
+      window.location.hash = "communications";
+    });
+  }
   closeButton.addEventListener("click", closeDialog);
   dialog.addEventListener("cancel", function (event) {
     if (mode === "success" && successKind !== "signin" && !recoveryKeyAcknowledged) {
@@ -1113,6 +1295,9 @@
   refreshStatus().then(function (status) {
     if (window.location.hash === "#account") {
       if (status.authenticated) showAccountDashboard();
+      else clearAccountRoute();
+    } else if (window.location.hash === "#communications") {
+      if (status.authenticated) showCommunicationsPage();
       else clearAccountRoute();
     }
   });
