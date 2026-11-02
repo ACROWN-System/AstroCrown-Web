@@ -202,3 +202,51 @@ These checks validate the local development account flow and owner CLI integrati
 
 Development-only under PR #141. Keep draft and unmerged. Do not create a public admin-registration endpoint, do not infer authority from email patterns or connected wallets, and do not use a memory-only browser preview as evidence that server-side role provisioning works. Production authority/bootstrap, account recovery and all-wallet-loss HSIAN recovery remain blocked for separate review.
 
+
+## 13. Shared User dashboard and separate Administrator dashboard — 2026-11-02
+
+### Owner clarification and accepted direction
+
+An administrator remains an ordinary AstroCrown member for all user-facing purposes. Administrator status is an additional authority capability; it must not replace, restrict or silently elevate the account's ordinary member capabilities.
+
+There are exactly two authenticated dashboards/workspaces:
+
+1. **User dashboard** (`#account` in the current prototype): the common member workspace available to every authenticated user, including administrators. It is the location for AstroCrown user-facing services, personal activity and the member's own transaction workflows as those services are implemented. Account profile, security, preferences and account-level controls remain part of this common workspace.
+2. **Administrator dashboard** (`#admin`): a separate workspace for explicitly authorized administrative duties. It is available only after ordinary account authentication, a server-assigned administrator role and the required wallet step-up. It is not a substitute for the User dashboard and must not be used for an administrator's personal member transactions.
+
+The sign-in/sign-up dialog is an account-entry mechanism, not a third dashboard. Preserve `#account` as the User dashboard route so the current account flow is not needlessly broken; update its visible name and purpose instead of introducing a third authenticated workspace.
+
+### Permission and transaction boundaries
+
+- A regular user and an administrator acting as a member must receive the same User dashboard features, eligibility rules, prices/fees, limits, transaction confirmations, risk controls and personal activity records.
+- Personal transactions are initiated in the User dashboard and remain bound to the signed-in account's own user context. An administrator role does not grant a personal transaction bypass or authority to act as another member.
+- The Administrator dashboard is reserved for administrative operations. Every administrative endpoint/action must independently enforce the server-owned role and required step-up; visibility of a UI control is not authority.
+- No implicit impersonation or on-behalf-of-member action is allowed. A future support intervention would need its own narrowly scoped, visible, explicitly authorized and audited workflow.
+- Moving between dashboards does not sign the account out. **Return to user dashboard** returns to the common member workspace; it does not itself revoke the short-lived administrator step-up.
+- Do not add transaction buttons, balances, transaction history or service controls as decorative placeholders. The current account prototype has no real AstroCrown transaction subsystem or complete service catalog. Add those modules only with their actual backend operations, authorization, confirmations, records and tests.
+
+### Development changes
+
+- The `#account` page is now labelled **User dashboard** and its introduction explicitly identifies it as shared by regular users and administrators.
+- A non-interactive **AstroCrown services** information card clarifies that future member services and transactions belong in this shared workspace, and that those transaction workflows are not implemented in this account prototype.
+- The `#admin` page's navigation label is **Return to user dashboard**. Its notice explicitly distinguishes administrative duties from personal member activity/transactions.
+- The ordinary User dashboard retains the role-gated **Open administrator dashboard** entry; regular accounts still do not see it.
+- The browser test now asserts the User dashboard is available after registration, that its shared member-services area remains present after entering and returning from the Administrator dashboard, and that the two workspaces have distinct purposes. Existing server tests continue to cover role, session and wallet authorization.
+- This is a local development and requirements clarification. No transaction service, payment, asset operation, production administrator function, public endpoint, or paid dependency is added.
+
+### Acceptance criteria for later feature development
+
+- [ ] Every user-facing service is surfaced in the User dashboard for ordinary and administrator accounts, unless a feature's independently approved eligibility rule says otherwise.
+- [ ] Member transaction authorization does not treat the administrator role as a substitute for normal user-level confirmation or authorization.
+- [ ] Administrative screens and endpoints remain separate and require explicit administrator authorization.
+- [ ] A regression account with the administrator role can navigate to both dashboards and retain the same member-service access as a regular user.
+- [ ] A regular user cannot discover or access the Administrator dashboard by direct route or endpoint manipulation.
+- [ ] An administrator cannot silently perform a transaction as another member or bypass normal transaction limits and controls.
+
+### Impact and preservation
+
+**If retained:** administrators can participate in AstroCrown as ordinary members while performing administrative duties in a distinct, more strongly authorized workspace. The same account identity supports both capabilities without conflating their permissions.
+
+**If omitted:** an administrator could be treated as an administrative operator only, losing access to ordinary member services, or user and admin features could become mixed in a way that weakens authorization and transaction boundaries.
+
+All changes remain under `development/` in draft PR #141. No production homepage, live transaction system, account database, domain/DNS, backups, real wallet or external provider is changed.
