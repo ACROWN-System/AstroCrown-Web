@@ -108,7 +108,7 @@ jobs:
           ):
               if item not in ui and item not in server:
                   raise SystemExit(f"Expected passkey account UX/security boundary missing: {item}")
-          if "authenticatorSelection" not in passkey or "ResidentKeyRequirement.REQUIRED" not in passkey:
+          if "authenticator_selection=" not in passkey or "ResidentKeyRequirement.REQUIRED" not in passkey:
               raise SystemExit("WebAuthn registration must require a discoverable credential.")
           for item in ("generate_recovery_key", "account_recovery_keys", "account_recovery_challenges"):
               if item not in server:
