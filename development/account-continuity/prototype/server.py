@@ -7,6 +7,7 @@ Uses Python standard library, SQLite, PBKDF2 and HTTP cookies.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import hmac
 import json
@@ -351,6 +352,30 @@ class AccountApplication:
                 );
                 CREATE INDEX IF NOT EXISTS account_passkey_challenges_expiry_idx
                     ON account_passkey_challenges(expires_at, used_at);
+                CREATE TABLE IF NOT EXISTS account_recovery_keys (
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    key_version INTEGER NOT NULL CHECK(key_version > 0),
+                    key_salt BLOB NOT NULL CHECK(length(key_salt) = 16),
+                    key_verifier BLOB NOT NULL CHECK(length(key_verifier) = 32),
+                    created_at TEXT NOT NULL,
+                    used_at TEXT,
+                    PRIMARY KEY(account_id, key_version)
+                );
+                CREATE INDEX IF NOT EXISTS account_recovery_keys_active_idx
+                    ON account_recovery_keys(account_id, used_at, key_version);
+                CREATE TABLE IF NOT EXISTS account_recovery_challenges (
+                    challenge_id TEXT PRIMARY KEY,
+                    challenge BLOB NOT NULL CHECK(length(challenge) = 32),
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    key_version INTEGER NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    used_at INTEGER,
+                    FOREIGN KEY(account_id, key_version)
+                        REFERENCES account_recovery_keys(account_id, key_version)
+                );
+                CREATE INDEX IF NOT EXISTS account_recovery_challenges_expiry_idx
+                    ON account_recovery_challenges(expires_at, used_at);
                 """
             )
             # Upgrade an older local test database in place. The old username value
