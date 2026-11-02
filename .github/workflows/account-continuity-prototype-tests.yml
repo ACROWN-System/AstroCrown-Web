@@ -46,6 +46,7 @@ jobs:
       - name: Validate browser JavaScript syntax
         run: |
           node --check development/account-continuity/prototype/account-ui.js
+          node --check development/account-continuity/prototype/admin-wallet-ui.js
           node --check development/account-continuity/prototype/email-action.js
           node --check development/account-continuity/prototype/cases-ui.js
           node --check development/account-continuity/prototype/tests/browser_smoke.mjs
@@ -61,6 +62,7 @@ jobs:
           server = Path("development/account-continuity/prototype/server.py").read_text(encoding="utf-8")
           passkey = Path("development/account-continuity/prototype/passkey_auth.py").read_text(encoding="utf-8")
           ui = Path("development/account-continuity/prototype/account-ui.js").read_text(encoding="utf-8")
+          admin_wallet_ui = Path("development/account-continuity/prototype/admin-wallet-ui.js").read_text(encoding="utf-8")
           css = Path("development/account-continuity/prototype/account-prototype.css").read_text(encoding="utf-8")
           terms = Path("development/account-continuity/prototype/terms-of-use.html").read_text(encoding="utf-8")
           privacy = Path("development/account-continuity/prototype/privacy-policy.html").read_text(encoding="utf-8")
@@ -142,6 +144,19 @@ jobs:
               raise SystemExit("Preview account flow must not persist credentials or account state in browser storage.")
           if "window.ethereum" in ui or "eth_requestAccounts" in ui:
               raise SystemExit("Ordinary account prototype must not load or prompt a wallet.")
+          for item in (
+              'id="wallet-connect-trigger"', "astrocrown:header-wallet-connect",
+              "data-admin-wallet-connect-pending", "astrocrown:admin-wallet-connect-state"
+          ):
+              if item not in html:
+                  raise SystemExit(f"Shared homepage wallet connection control is missing: {item}")
+          if "astrocrown:header-wallet-connect" not in admin_wallet_ui:
+              raise SystemExit("Administrator wallet authentication must use the shared homepage Wallet control.")
+          if admin_wallet_ui.count('method: "eth_requestAccounts"') != 1:
+              raise SystemExit("Wallet connection requests must be initiated only by the shared homepage Wallet control.")
+          for method in ("eth_sendTransaction", "eth_signTransaction", "eth_sendRawTransaction", "eth_getBalance"):
+              if method in admin_wallet_ui:
+                  raise SystemExit(f"Administrator wallet authentication must not use {method}.")
           PY
 
       - name: Run account flow in headless Chrome
