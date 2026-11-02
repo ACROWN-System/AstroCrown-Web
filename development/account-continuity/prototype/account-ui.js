@@ -311,7 +311,13 @@
     [content, dashboardContent].forEach(function (container) {
       Array.prototype.forEach.call(container.querySelectorAll("button, input"), function (element) {
         if (element.dataset.keepEnabled === "true") return;
-        element.disabled = value || element.dataset.originalDisabled === "true";
+        var recoveryAcknowledgementPending =
+          element.id === "open-account-hub" &&
+          (successKind === "signup" || successKind === "recovery") &&
+          !recoveryKeyAcknowledged;
+        element.disabled = value ||
+          element.dataset.originalDisabled === "true" ||
+          recoveryAcknowledgementPending;
       });
     });
   }
