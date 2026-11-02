@@ -916,6 +916,19 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 201, created)
         self.assertEqual(created["role"], "user")
         self.assertFalse(created["adminRoleAssigned"])
+        account_identifier = "AC-ABCDEF1234"
+        with self.app.connect() as db:
+            account_row = db.execute(
+                "SELECT account_id FROM accounts WHERE email = ? COLLATE NOCASE",
+                (email,),
+            ).fetchone()
+            self.assertIsNotNone(account_row)
+            db.execute(
+                """UPDATE accounts
+                   SET username = ?, email = NULL, auth_method = 'webauthn'
+                   WHERE account_id = ?""",
+                (account_identifier, account_row["account_id"]),
+            )
 
         # Run the actual script from outside the repository root. This checks
         # that the shipped CLI resolves its verifier module and targets the same
@@ -926,7 +939,7 @@ class AccountServerTests(unittest.TestCase):
             "--db", str(self.app.database_path),
             "--actor", "local-test-owner",
             "grant",
-            "--email", email,
+            "--account-identifier", account_identifier,
             "--wallet", TEST_WALLET_A.address,
             "--chain-id", "1",
             "--reason", "Owner-approved local CLI provisioning test",
@@ -960,8 +973,8 @@ class AccountServerTests(unittest.TestCase):
 
         with self.app.connect() as db:
             account_row = db.execute(
-                "SELECT account_id FROM accounts WHERE email = ? COLLATE NOCASE",
-                (email,),
+                "SELECT account_id FROM accounts WHERE username = ? COLLATE NOCASE",
+                (account_identifier,),
             ).fetchone()
             self.assertIsNotNone(account_row)
             wallet = db.execute(
