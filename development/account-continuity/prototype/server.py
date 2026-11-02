@@ -45,6 +45,7 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REFERRAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 AVATAR_IDS = frozenset({"person", "crown", "star", "moon", "orbit", "shield"})
 ADMIN_WALLET_SESSION_SECONDS = 10 * 60
+ADMIN_PERMISSION_NAMES = frozenset({"admin.roles.grant", "admin.roles.revoke"})
 AUTH_PROTOTYPE_DIR = DEVELOPMENT_DIR / "auth-prototype"
 
 # Keep ordinary email account UX available in a stdlib-only local environment.
@@ -275,6 +276,17 @@ class AccountApplication:
                 );
                 CREATE INDEX IF NOT EXISTS admin_wallets_account_idx
                     ON admin_wallets(account_id, active);
+                CREATE TABLE IF NOT EXISTS account_admin_permissions (
+                    account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    permission TEXT NOT NULL CHECK(permission IN ('admin.roles.grant', 'admin.roles.revoke')),
+                    can_delegate INTEGER NOT NULL DEFAULT 0 CHECK(can_delegate IN (0, 1)),
+                    granted_by_account_id TEXT REFERENCES accounts(account_id),
+                    reason TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY(account_id, permission)
+                );
+                CREATE INDEX IF NOT EXISTS account_admin_permissions_account_idx
+                    ON account_admin_permissions(account_id, permission);
                 CREATE TABLE IF NOT EXISTS account_admin_audit (
                     audit_id TEXT PRIMARY KEY,
                     event_type TEXT NOT NULL,
@@ -282,7 +294,8 @@ class AccountApplication:
                     target_account_id TEXT,
                     target_wallet_address TEXT,
                     reason TEXT NOT NULL,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    detail TEXT NOT NULL DEFAULT ''
                 );
                 """
             )
@@ -316,6 +329,11 @@ class AccountApplication:
             for name, definition in session_migrations.items():
                 if name not in session_columns:
                     db.execute(f"ALTER TABLE sessions ADD COLUMN {name} {definition}")
+            audit_columns = {
+                row["name"] for row in db.execute("PRAGMA table_info(account_admin_audit)").fetchall()
+            }
+            if "detail" not in audit_columns:
+                db.execute("ALTER TABLE account_admin_audit ADD COLUMN detail TEXT NOT NULL DEFAULT ''")
         try:
             os.chmod(self.database_path, 0o600)
         except OSError:
@@ -473,7 +491,20 @@ class AccountApplication:
 
     def account_summary(self, account: sqlite3.Row, expires_at: int | None) -> dict:
         role_assigned = account["role"] == "admin"
-        wallet_address = account["session_admin_wallet_address"]
+        admin_permissions: list[str] = []
+        delegable_permissions: list[str] = []
+        if role_assigned:
+            with self.connect() as db:
+                permission_rows = db.execute(
+                    """SELECT permission, can_delegate FROM account_admin_permissions
+                       WHERE account_id = ? ORDER BY permission""",
+                    (account["account_id"],),
+                ).fetchall()
+            admin_permissions = [row["permission"] for row in permission_rows]
+            delegable_permissions = [
+                row["permission"] for row in permission_rows if bool(row["can_delegate"])
+            ]
+        wallet_address = account["session_admin_wallet_address"
         wallet_step_up_expires = int(account["session_admin_expires_at"] or 0)
         wallet_is_enrolled = bool(account["session_admin_wallet_active"])
         wallet_authenticated = bool(
@@ -501,6 +532,8 @@ class AccountApplication:
             "scope": "local-test-account-only",
             "role": account["role"],
             "adminRoleAssigned": role_assigned,
+            "adminPermissions": admin_permissions,
+            "adminDelegablePermissions": delegable_permissions,
             "adminWalletCount": int(account["admin_wallet_count"] or 0) if role_assigned else 0,
             "adminWalletAuthenticated": wallet_authenticated,
             "adminSessionAuthorized": wallet_authenticated,
@@ -748,6 +781,207 @@ class AccountApplication:
     def wallet_message_digest(message: str) -> str:
         return hashlib.sha256(message.encode("utf-8")).hexdigest()
 
+    @staticmethod
+    def validate_admin_reason(reason: object) -> str:
+        if not isinstance(reason, str):
+            raise ApiError(400, "A clear administrative reason is required.")
+        value = " ".join(reason.split())
+        if len(value) < 12 or len(value) > 500:
+            raise ApiError(400, "Provide an administrative reason between 12 and 500 characters.")
+        return value
+
+    @staticmethod
+    def validate_permission_list(value: object) -> list[str]:
+        if value is None:
+            return []
+        if not isinstance(value, list) or len(value) > len(ADMIN_PERMISSION_NAMES):
+            raise ApiError(400, "The delegated permissions must be a list of recognized permission names.")
+        if any(not isinstance(item, str) or item not in ADMIN_PERMISSION_NAMES for item in value):
+            raise ApiError(400, "One or more requested permissions are not recognized.")
+        if len(set(value)) != len(value):
+            raise ApiError(400, "A permission may appear only once in the request.")
+        return sorted(value)
+
+    def require_admin_permission(
+        self, handler: BaseHTTPRequestHandler, permission: str
+    ) -> tuple[sqlite3.Row, int, str]:
+        account, expires, token = self.require_account_session(handler)
+        if account["role"] != "admin":
+            raise ApiError(403, "Administrator authority is not assigned to this account.")
+        summary = self.account_summary(account, expires)
+        if summary["adminSessionAuthorized"] is not True:
+            raise ApiError(403, "A fresh signature from an enrolled administrator wallet is required.")
+        if permission not in ADMIN_PERMISSION_NAMES or permission not in summary["adminPermissions"]:
+            raise ApiError(403, "This administrator account does not hold the required permission.")
+        return account, expires, token
+
+    @staticmethod
+    def _permission_holder_in_transaction(
+        db: sqlite3.Connection,
+        *,
+        account_id: str,
+        token: str,
+        permission: str,
+        now: int,
+    ) -> sqlite3.Row | None:
+        return db.execute(
+            """SELECT p.permission, p.can_delegate
+               FROM account_admin_permissions p
+               JOIN accounts a ON a.account_id = p.account_id
+               JOIN sessions s ON s.account_id = a.account_id
+               WHERE p.account_id = ? AND p.permission = ?
+                 AND a.role = 'admin'
+                 AND s.token_hash = ? AND s.expires_at > ?
+                 AND s.admin_expires_at > ?
+                 AND EXISTS (
+                     SELECT 1 FROM admin_wallets aw
+                     WHERE aw.account_id = a.account_id
+                       AND aw.address = s.admin_wallet_address COLLATE NOCASE
+                       AND aw.active = 1
+                 )
+               LIMIT 1""",
+            (account_id, permission, hash_session_token(token), now, now),
+        ).fetchone()
+
+    def grant_admin_role(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        if set(payload) not in ({"email", "reason"}, {"email", "reason", "permissions"}):
+            raise ApiError(400, "Provide only the existing account email, reason and optional delegated permissions.")
+        actor, _expires, token = self.require_admin_permission(handler, "admin.roles.grant")
+        email = normalize_email(payload.get("email"))
+        reason = self.validate_admin_reason(payload.get("reason"))
+        delegated = self.validate_permission_list(payload.get("permissions"))
+        if email == (actor["email"] or actor["username"]).lower():
+            raise ApiError(400, "An administrator cannot grant the administrator role to themselves.")
+
+        now = int(time.time())
+        created_at = utc_iso()
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            holder = self._permission_holder_in_transaction(
+                db, account_id=actor["account_id"], token=token,
+                permission="admin.roles.grant", now=now,
+            )
+            if holder is None:
+                raise ApiError(403, "The grant permission or wallet-verified administrator session is no longer active.")
+            delegable_rows = db.execute(
+                """SELECT permission FROM account_admin_permissions
+                   WHERE account_id = ? AND can_delegate = 1""",
+                (actor["account_id"],),
+            ).fetchall()
+            delegable = {row["permission"] for row in delegable_rows}
+            if not set(delegated).issubset(delegable):
+                raise ApiError(403, "You may assign only permissions that were explicitly delegated to you for further delegation.")
+            target = db.execute(
+                "SELECT account_id, email, role FROM accounts WHERE email = ? COLLATE NOCASE",
+                (email,),
+            ).fetchone()
+            if target is None:
+                raise ApiError(404, "No existing AstroCrown account was found for that email.")
+            if target["account_id"] == actor["account_id"]:
+                raise ApiError(400, "An administrator cannot grant the role to their own account.")
+            if target["role"] != "user":
+                raise ApiError(409, "The target account is already an administrator or is not eligible for this grant.")
+            db.execute("UPDATE accounts SET role = 'admin' WHERE account_id = ? AND role = 'user'", (target["account_id"],))
+            for permission in delegated:
+                db.execute(
+                    """INSERT INTO account_admin_permissions(
+                           account_id, permission, can_delegate, granted_by_account_id, reason, created_at
+                       ) VALUES (?, ?, 0, ?, ?, ?)""",
+                    (target["account_id"], permission, actor["account_id"], reason, created_at),
+                )
+            db.execute(
+                """UPDATE sessions SET admin_wallet_address = NULL,
+                       admin_authenticated_at = NULL, admin_expires_at = NULL
+                   WHERE account_id = ?""",
+                (target["account_id"],),
+            )
+            detail = json.dumps({"permissions_assigned": delegated, "delegation_allowed": []}, sort_keys=True, separators=(",", ":"))
+            db.execute(
+                """INSERT INTO account_admin_audit(
+                       audit_id, event_type, actor, target_account_id,
+                       target_wallet_address, reason, created_at, detail
+                   ) VALUES (?, 'admin_role_granted', ?, ?, NULL, ?, ?, ?)""",
+                (str(uuid.uuid4()), actor["account_id"], target["account_id"], reason, created_at, detail),
+            )
+        return 200, {
+            "granted": True,
+            "targetEmail": target["email"] or email,
+            "role": "admin",
+            "adminRoleAssigned": True,
+            "adminPermissions": delegated,
+            "adminWalletCount": 0,
+            "walletEnrolled": False,
+            "message": "The existing account has been granted the administrator role. The account holder must enrol and verify their own wallet separately before administrator access is available.",
+        }, None
+
+    def revoke_admin_role(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        if set(payload) != {"email", "reason"}:
+            raise ApiError(400, "Provide only the existing administrator email and revocation reason.")
+        actor, _expires, token = self.require_admin_permission(handler, "admin.roles.revoke")
+        email = normalize_email(payload.get("email"))
+        reason = self.validate_admin_reason(payload.get("reason"))
+        if email == (actor["email"] or actor["username"]).lower():
+            raise ApiError(400, "An administrator cannot revoke their own role through this workflow.")
+        now = int(time.time())
+        created_at = utc_iso()
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            holder = self._permission_holder_in_transaction(
+                db, account_id=actor["account_id"], token=token,
+                permission="admin.roles.revoke", now=now,
+            )
+            if holder is None:
+                raise ApiError(403, "The revoke permission or wallet-verified administrator session is no longer active.")
+            target = db.execute(
+                "SELECT account_id, email, role FROM accounts WHERE email = ? COLLATE NOCASE",
+                (email,),
+            ).fetchone()
+            if target is None:
+                raise ApiError(404, "No existing AstroCrown account was found for that email.")
+            if target["account_id"] == actor["account_id"]:
+                raise ApiError(400, "An administrator cannot revoke their own role through this workflow.")
+            if target["role"] != "admin":
+                raise ApiError(409, "The target account does not currently hold the administrator role.")
+            previous_permissions = [
+                row["permission"] for row in db.execute(
+                    "SELECT permission FROM account_admin_permissions WHERE account_id = ? ORDER BY permission",
+                    (target["account_id"],),
+                ).fetchall()
+            ]
+            wallet_count = int(db.execute(
+                "SELECT COUNT(*) FROM admin_wallets WHERE account_id = ? AND active = 1",
+                (target["account_id"],),
+            ).fetchone()[0])
+            db.execute("UPDATE admin_wallets SET active = 0 WHERE account_id = ? AND active = 1", (target["account_id"],))
+            db.execute("DELETE FROM account_admin_permissions WHERE account_id = ?", (target["account_id"],))
+            db.execute("UPDATE accounts SET role = 'user' WHERE account_id = ?", (target["account_id"],))
+            db.execute(
+                """UPDATE sessions SET admin_wallet_address = NULL,
+                       admin_authenticated_at = NULL, admin_expires_at = NULL
+                   WHERE account_id = ?""",
+                (target["account_id"],),
+            )
+            detail = json.dumps({"permissions_revoked": previous_permissions, "wallets_disabled": wallet_count}, sort_keys=True, separators=(",", ":"))
+            db.execute(
+                """INSERT INTO account_admin_audit(
+                       audit_id, event_type, actor, target_account_id,
+                       target_wallet_address, reason, created_at, detail
+                   ) VALUES (?, 'admin_role_revoked_by_admin', ?, ?, NULL, ?, ?, ?)""",
+                (str(uuid.uuid4()), actor["account_id"], target["account_id"], reason, created_at, detail),
+            )
+        return 200, {
+            "revoked": True,
+            "targetEmail": target["email"] or email,
+            "role": "user",
+            "revokedWalletCount": wallet_count,
+            "revokedPermissions": previous_permissions,
+            "message": "Administrator authority, delegated permissions and enrolled administrator wallets have been revoked. The target's ordinary account sessions remain active.",
+        }, None
+
     def issue_admin_wallet_challenge(
         self, payload: dict, handler: BaseHTTPRequestHandler
     ) -> tuple[int, dict, str | None]:
@@ -905,6 +1139,236 @@ class AccountApplication:
 
 
     def issue_admin_wallet_enrollment_challenge(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        if set(payload) != {"address", "chainId"}:
+            raise ApiError(400, "Only a new wallet address and chain ID are accepted.")
+        account, _expires, token = self.require_account_session(handler)
+        if account["role"] != "admin":
+            raise ApiError(403, "Administrator authority is not assigned to this account.")
+        if self.wallet_auth_service is None or WalletAuthService is None:
+            raise ApiError(503, "Local wallet verification dependencies are not installed; wallet enrollment is disabled.")
+        if not self.auth_rate_allowed("admin-wallet-enrollment-challenge", account["account_id"], limit=3, window=60):
+            raise ApiError(429, "Too many wallet-enrollment attempts. Wait before trying again.")
+        try:
+            address = parse_wallet_address(payload["address"])
+            chain_id = parse_wallet_chain_id(payload["chainId"])
+        except (WalletAuthenticationError, TypeError) as error:
+            raise ApiError(400, str(error) or "Wallet enrollment fields are invalid.") from None
+
+        current_summary = self.account_summary(account, account["expires_at"])
+        with self.connect() as db:
+            active_count = int(db.execute(
+                "SELECT COUNT(*) FROM admin_wallets WHERE account_id = ? AND active = 1",
+                (account["account_id"],),
+            ).fetchone()[0])
+            existing = db.execute(
+                "SELECT account_id, active FROM admin_wallets WHERE address = ? COLLATE NOCASE",
+                (address,),
+            ).fetchone()
+        initial_enrollment = active_count == 0
+        if initial_enrollment:
+            if current_summary["adminSessionAuthorized"] is True:
+                raise ApiError(409, "The wallet registry changed; refresh account status before beginning initial enrollment.")
+        elif current_summary["adminSessionAuthorized"] is not True:
+            raise ApiError(403, "Re-verify an enrolled administrator wallet before adding another wallet.")
+        if active_count >= 3:
+            raise ApiError(409, "This account already has three active administrator wallets.")
+        if existing is not None:
+            if existing["account_id"] == account["account_id"]:
+                if existing["active"]:
+                    raise ApiError(409, "That wallet is already enrolled for this account.")
+                raise ApiError(409, "That wallet was previously revoked and cannot be reactivated by this UI.")
+            raise ApiError(409, "That wallet is already assigned to another account.")
+
+        statement = (
+            "Register this wallet as the first AstroCrown administrator wallet. "
+            "This signature does not authorize a transaction."
+            if initial_enrollment else
+            "Register this wallet as an additional AstroCrown administrator wallet. "
+            "This signature does not authorize a transaction."
+        )
+        challenge = self.wallet_auth_service.issue_challenge(address, chain_id, statement=statement)
+        message = challenge["message"]
+        try:
+            challenge_expiry = int(datetime.fromisoformat(challenge["expiresAt"].replace("Z", "+00:00")).timestamp())
+        except (KeyError, TypeError, ValueError):
+            raise ApiError(503, "The local wallet verifier returned an invalid challenge expiry.") from None
+
+        message_key = self.wallet_message_digest(message)
+        now = int(time.time())
+        token_hash = hash_session_token(token)
+        with self.admin_challenge_lock:
+            for existing_key, binding in list(self.admin_challenge_bindings.items()):
+                if int(binding.get("expires_at", 0)) <= now:
+                    self.admin_challenge_bindings.pop(existing_key, None)
+            if len(self.admin_challenge_bindings) >= 2000:
+                self.admin_challenge_bindings.clear()
+            self.admin_challenge_bindings[message_key] = {
+                "purpose": "admin-initial-wallet-enrollment" if initial_enrollment else "admin-wallet-enrollment",
+                "account_id": account["account_id"],
+                "session_token_hash": token_hash,
+                "address": address,
+                "chain_id": chain_id,
+                "actor_wallet_address": current_summary["adminWalletAddress"] if not initial_enrollment else None,
+                "expires_at": challenge_expiry,
+            }
+
+        return 200, {
+            "message": message,
+            "expiresAt": challenge["expiresAt"],
+            "address": address,
+            "chainId": chain_id,
+            "purpose": "administrator-wallet-enrollment",
+            "enrollmentType": "initial" if initial_enrollment else "additional",
+            "transactionAuthorized": False,
+        }, None
+
+    def verify_admin_wallet_enrollment(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        if set(payload) != {"message", "signature"}:
+            raise ApiError(400, "Only the issued enrollment message and its wallet signature are accepted.")
+        account, session_expires, token = self.require_account_session(handler)
+        if account["role"] != "admin":
+            raise ApiError(403, "Administrator authority is not assigned to this account.")
+        if self.wallet_auth_service is None:
+            raise ApiError(503, "Local wallet verification dependencies are not installed; wallet enrollment is disabled.")
+
+        message = payload["message"]
+        signature = payload["signature"]
+        if not isinstance(message, str) or not message or len(message) > 8192:
+            raise ApiError(400, "The wallet-enrollment message is invalid.")
+        message_key = self.wallet_message_digest(message)
+        now = int(time.time())
+        session_token_hash = hash_session_token(token)
+        with self.admin_challenge_lock:
+            binding = self.admin_challenge_bindings.get(message_key)
+            if binding is None:
+                raise ApiError(401, "This administrator challenge is missing, expired or already used.")
+            if (
+                binding.get("purpose") not in {"admin-initial-wallet-enrollment", "admin-wallet-enrollment"}
+                or binding.get("account_id") != account["account_id"]
+                or binding.get("session_token_hash") != session_token_hash
+            ):
+                raise ApiError(401, "This wallet-enrollment challenge belongs to a different purpose or account session.")
+            self.admin_challenge_bindings.pop(message_key, None)
+        if now >= int(binding.get("expires_at", 0)):
+            raise ApiError(401, "This wallet-enrollment challenge has expired.")
+
+        initial_enrollment = binding.get("purpose") == "admin-initial-wallet-enrollment"
+        current_summary = self.account_summary(account, session_expires)
+        if initial_enrollment:
+            if current_summary["adminWalletCount"] != 0 or current_summary["adminSessionAuthorized"] is True:
+                raise ApiError(409, "Initial wallet enrollment is no longer available for this account.")
+            if binding.get("actor_wallet_address") is not None:
+                raise ApiError(401, "The initial enrollment challenge has an invalid actor binding.")
+        else:
+            if current_summary["adminSessionAuthorized"] is not True:
+                raise ApiError(403, "An active, wallet-verified administrator session is required to add another wallet.")
+            if str(current_summary["adminWalletAddress"]).lower() != str(binding.get("actor_wallet_address", "")).lower():
+                raise ApiError(401, "The existing administrator wallet session changed; begin enrollment again.")
+
+        with self.connect() as db:
+            actor_still_active = None
+            if not initial_enrollment:
+                actor_still_active = db.execute(
+                    """SELECT 1 FROM admin_wallets
+                       WHERE account_id = ? AND address = ? COLLATE NOCASE AND active = 1""",
+                    (account["account_id"], binding["actor_wallet_address"]),
+                ).fetchone()
+            active_count = int(db.execute(
+                "SELECT COUNT(*) FROM admin_wallets WHERE account_id = ? AND active = 1",
+                (account["account_id"],),
+            ).fetchone()[0])
+            existing = db.execute(
+                "SELECT account_id, active FROM admin_wallets WHERE address = ? COLLATE NOCASE",
+                (binding["address"],),
+            ).fetchone()
+        if not initial_enrollment and actor_still_active is None:
+            raise ApiError(403, "The previously verified administrator wallet is no longer active.")
+        if initial_enrollment and active_count != 0:
+            raise ApiError(409, "Another wallet was enrolled first. Refresh account status.")
+        if active_count >= 3:
+            raise ApiError(409, "This account already has three active administrator wallets.")
+        if existing is not None:
+            raise ApiError(409, "The requested wallet has already been registered or revoked; use a different wallet.")
+
+        try:
+            wallet_token, verified_address = self.wallet_auth_service.verify_signature(message, signature)
+        except (WalletAuthenticationError, TypeError) as error:
+            raise ApiError(401, str(error) or "The wallet-enrollment signature was rejected.") from None
+        finally:
+            if "wallet_token" in locals():
+                self.wallet_auth_service.revoke_session(wallet_token)
+
+        if str(verified_address).lower() != str(binding["address"]).lower():
+            raise ApiError(401, "The signature was not produced by the proposed wallet.")
+
+        created_at = utc_iso()
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            current_account = db.execute(
+                """SELECT a.role, s.expires_at FROM accounts a
+                   JOIN sessions s ON s.account_id = a.account_id
+                   WHERE a.account_id = ? AND s.token_hash = ? AND s.expires_at > ?""",
+                (account["account_id"], session_token_hash, int(time.time())),
+            ).fetchone()
+            if current_account is None or current_account["role"] != "admin":
+                raise ApiError(401, "The ordinary account session or administrator role is no longer active.")
+            count_now = int(db.execute(
+                "SELECT COUNT(*) FROM admin_wallets WHERE account_id = ? AND active = 1",
+                (account["account_id"],),
+            ).fetchone()[0])
+            existing = db.execute("SELECT 1 FROM admin_wallets WHERE address = ? COLLATE NOCASE", (binding["address"],)).fetchone()
+            if initial_enrollment and count_now != 0:
+                raise ApiError(409, "Another wallet was enrolled first. Refresh account status.")
+            if not initial_enrollment and count_now == 0:
+                raise ApiError(409, "The previously enrolled administrator wallet is no longer active.")
+            if existing is not None:
+                raise ApiError(409, "The proposed wallet was registered during verification; restart enrollment.")
+            if count_now >= 3:
+                raise ApiError(409, "This account already has three active administrator wallets.")
+            db.execute(
+                """INSERT INTO admin_wallets(
+                       wallet_id, account_id, address, chain_id, created_at, active, provisioning_source
+                   ) VALUES (?, ?, ?, ?, ?, 1, ?)""",
+                (str(uuid.uuid4()), account["account_id"], binding["address"],
+                 int(binding["chain_id"]), created_at,
+                 "admin-initial-wallet-enrollment" if initial_enrollment else "admin-wallet-enrollment"),
+            )
+            db.execute(
+                """INSERT INTO account_admin_audit(
+                       audit_id, event_type, actor, target_account_id, target_wallet_address, reason, created_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (str(uuid.uuid4()),
+                 "admin_initial_wallet_enrolled" if initial_enrollment else "admin_wallet_enrolled",
+                 account["account_id"] if initial_enrollment else str(binding["actor_wallet_address"]),
+                 account["account_id"], binding["address"],
+                 "The account holder proved control of the first administrator wallet by a fresh SIWE signature."
+                 if initial_enrollment else
+                 "Additional wallet proved by a fresh SIWE signature in the local prototype.",
+                 created_at),
+            )
+            db.execute(
+                """UPDATE sessions SET admin_wallet_address = NULL,
+                       admin_authenticated_at = NULL, admin_expires_at = NULL
+                   WHERE account_id = ?""",
+                (account["account_id"],),
+            )
+
+        updated_account, updated_expires = self.account_for_session(token)
+        if updated_account is None:
+            raise ApiError(401, "The ordinary account session expired after wallet enrollment.")
+        result = self.account_summary(updated_account, updated_expires)
+        result["message"] = (
+            "The first administrator wallet was enrolled. A separate fresh signature from that wallet is required to open the administrator dashboard."
+            if initial_enrollment else
+            "The additional wallet was enrolled. Re-verify a registered wallet before returning to the administrator console."
+        )
+        result["walletEnrolledAddress"] = binding["address"]
+        return 200, result, None
+
         self, payload: dict, handler: BaseHTTPRequestHandler
     ) -> tuple[int, dict, str | None]:
         if set(payload) != {"address", "chainId"}:
@@ -1456,6 +1920,12 @@ class AccountApplication:
             result = self.account_summary(account, expires)
             result["message"] = "The avatar was updated for this local test account."
             return 200, result, None
+
+        if path == "/api/admin/roles/grant":
+            return self.grant_admin_role(payload, handler)
+
+        if path == "/api/admin/roles/revoke":
+            return self.revoke_admin_role(payload, handler)
 
         if path == "/api/admin/wallet-options":
             if payload:
