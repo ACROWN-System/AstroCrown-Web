@@ -408,118 +408,44 @@
   }
 
   function renderDevelopmentNotice() {
-    var mailNotice = !browserPreviewMode && accountState &&
-      accountState.emailVerificationDeliveryAvailable === true
-      ? " The optional secure SMTP transport is configured for account-action messages; submission does not guarantee inbox delivery. Newsletter email is not enabled."
-      : " No verification, password-reset or newsletter email is sent by this environment.";
     return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' +
-      (browserPreviewMode ? "browser-preview-demo" : "local-server-test") + '">' +
+      (browserPreviewMode ? "hosted-preview-no-authentication" : "local-passkey-test") + '">' +
       (browserPreviewMode
-        ? "BROWSER PREVIEW DEMO ONLY — account details exist only in this page’s memory and disappear on reload. Use invented details only. No account API or email transport is used."
-        : "LOCAL DEVELOPMENT TEST ONLY — test account details are stored in this computer’s local SQLite database." + mailNotice + " This is not production authentication.") +
+        ? "HOSTED PREVIEW — this page demonstrates the account interface only. It cannot create accounts or authenticate users. Use the documented local server for passkey testing."
+        : "LOCAL PASSKEY TEST — WebAuthn is verified by this computer's local AstroCrown server. No email, SMS or external identity provider is used. Not production authentication.") +
       '</p>';
-  }
-
-  function renderProviderSlots() {
-    return '<section class="account-provider-options" aria-label="Reserved space for future external sign-in options">' +
-      '<p class="account-provider-heading">External account sign-in <span>PLANNED</span></p>' +
-      '<div class="account-provider-placeholders" aria-hidden="true">' +
-        '<span class="account-provider-placeholder"></span>' +
-        '<span class="account-provider-placeholder"></span>' +
-        '<span class="account-provider-placeholder"></span>' +
-      '</div>' +
-      '<p class="account-provider-caption">Optional provider logos can be placed here later. These circles are visual placeholders only; no external sign-in is enabled.</p>' +
-      '</section>';
-  }
-
-  function renderOrDivider() {
-    return '<div class="account-or-divider" aria-label="Or — use email and password">' +
-      '<div class="account-or-divider-line-row" aria-hidden="true">' +
-        '<span class="account-or-divider-line"></span>' +
-        '<span class="account-or-divider-label">Or</span>' +
-        '<span class="account-or-divider-line"></span>' +
-      '</div>' +
-      '<span class="account-or-divider-arrow" aria-hidden="true"></span>' +
-    '</div>';
   }
 
   function renderSignIn() {
     title.textContent = "AstroCrown account";
-    content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() + renderProviderSlots() + renderOrDivider() +
-      '<p class="account-dialog-description">Welcome back. Log in to your AstroCrown account with your email and password.</p>' +
-      '<form id="account-signin-form" class="account-form" autocomplete="on">' +
-        '<label class="account-field" for="account-email">Email' +
-          '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
-        '</label>' +
-        '<div class="account-field">' +
-          '<label class="account-field-label" for="account-password">Password</label>' +
-          '<div class="account-password-control">' +
-            '<input id="account-password" name="password" type="password" autocomplete="current-password" required maxlength="1024" placeholder="Enter your password...">' +
-            '<button class="account-password-toggle" type="button" data-password-toggle="account-password" data-password-label="password" aria-controls="account-password" aria-pressed="false" aria-label="Show password">Show</button>' +
-          '</div>' +
-        '</div>' +
-        '<div class="account-form-actions"><button class="account-primary" type="submit">Log In</button>' +
-          '<button class="account-text-button" type="button" data-account-mode="recover">Forgot password?</button></div>' +
-      '</form>' +
+    content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
+      '<p class="account-dialog-description">Sign in to AstroCrown using a passkey saved in your device or security key. No email address or password is required.</p>' +
+      '<div class="account-form">' +
+        '<button class="account-primary" type="button" id="account-passkey-signin"' +
+          (browserPreviewMode ? ' disabled' : '') + '>Sign in with passkey</button>' +
+        '<p class="account-provider-note">Your authenticator keeps the private key. AstroCrown verifies a fresh signature and does not receive your biometric, device PIN or private key.</p>' +
+      '</div>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-provider-note">A crypto wallet is not required for ordinary account access. Email verification and password reset use single-use links only when secure SMTP delivery is explicitly configured; no provider is selected or enabled by default.</p>';
+      '<p class="account-provider-note">A crypto wallet is optional and is not required for ordinary account access. Your offline recovery key is separate from your passkey.</p>';
   }
 
   function renderCreate() {
-    title.textContent = "AstroCrown account";
-    content.innerHTML = renderTabs("create") + renderDevelopmentNotice() + renderProviderSlots() + renderOrDivider() +
-      '<p class="account-dialog-description">Create your AstroCrown account using your email address.</p>' +
-      '<form id="account-create-form" class="account-form" autocomplete="on">' +
-        '<label class="account-field" for="account-email">Email' +
-          '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
-        '</label>' +
-        '<div class="account-field">' +
-          '<label class="account-field-label" for="account-password">Password</label>' +
-          '<div class="account-password-control">' +
-            '<input id="account-password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="1024" required placeholder="Enter your password...">' +
-            '<button class="account-password-toggle" type="button" data-password-toggle="account-password" data-password-label="password" aria-controls="account-password" aria-pressed="false" aria-label="Show password">Show</button>' +
-          '</div>' +
-          '<small>For this test, use an invented passphrase at least 15 characters long. Do not reuse a real password.</small>' +
-        '</div>' +
+    title.textContent = "Create AstroCrown account";
+    content.innerHTML = renderTabs("create") + renderDevelopmentNotice() +
+      '<p class="account-dialog-description">Create your account by registering a passkey. The private key stays with your authenticator.</p>' +
+      '<form id="account-create-form" class="account-form" autocomplete="off">' +
         '<label class="account-field" for="account-referral-id">Referral ID (Optional)' +
           '<input id="account-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
-        '<label class="account-consent account-newsletter-consent" for="account-newsletter-opt-in">' +
-          '<input id="account-newsletter-opt-in" name="newsletterOptIn" type="checkbox">' +
-          '<span>Please keep me updated by email with the latest crypto news, and more information from the Crypto universe of AstroCrown.</span>' +
-        '</label>' +
         '<label class="account-consent account-terms-consent" for="account-terms-accepted">' +
           '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
-          '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>. <small>Both policy pages are marked development drafts and are not approved for production.</small></span>' +
+          '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
         '</label>' +
-        '<button class="account-primary account-create-submit" type="submit">Create an account</button>' +
+        '<p class="account-provider-note">Passkey registration requires a compatible authenticator and a supported browser. Your passkey is associated with this site's verified origin.</p>' +
+        '<button class="account-primary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create account with passkey</button>' +
       '</form>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-provider-note">This prototype stores test information only. An email-verification message is submitted only when secure SMTP delivery is configured; crypto-news newsletter delivery is not enabled.</p>';
-  }
-
-  function syncAccountButton() {
-    var avatarId = normalizeAvatarId(accountState && accountState.avatarId);
-    var icon = avatarSvg(avatarId, "account-header-avatar-svg");
-    if (accountState && accountState.authenticated) {
-      openButton.classList.add("is-authenticated");
-      openButton.setAttribute("aria-label", "Open your account, avatar: " + avatarOptions[avatarId].label);
-      openButton.setAttribute("title", "Open your account · " + avatarOptions[avatarId].label);
-      openButton.setAttribute("data-avatar-id", avatarId);
-      openButton.removeAttribute("aria-haspopup");
-      openButton.setAttribute("aria-controls", "account-dashboard");
-      openButton.innerHTML = icon;
-    } else {
-      openButton.classList.remove("is-authenticated");
-      openButton.setAttribute("aria-label", "Account");
-      openButton.setAttribute("title", "Account");
-      openButton.setAttribute("data-avatar-id", "person");
-      openButton.setAttribute("aria-haspopup", "dialog");
-      openButton.setAttribute("aria-controls", "account-dialog");
-      openButton.innerHTML = avatarSvg("person", "account-header-avatar-svg") + '<span>Account</span>';
-    }
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>';
   }
 
   function renderSuccess() {
