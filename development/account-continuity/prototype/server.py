@@ -549,6 +549,23 @@ class AccountApplication:
             raise ApiError(400, "The passkey challenge reference is invalid.")
         return value
 
+    @staticmethod
+    def generate_recovery_key() -> tuple[str, bytes, bytes]:
+        """Generate a one-time 256-bit user-held recovery key and salted verifier."""
+        raw_key = "ACR1-" + secrets.token_urlsafe(32)
+        salt = secrets.token_bytes(16)
+        verifier = hashlib.sha256(salt + raw_key.encode("ascii")).digest()
+        return raw_key, salt, verifier
+
+    @staticmethod
+    def normalize_recovery_key(value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("Invalid recovery key.")
+        candidate = value.strip()
+        if not re.fullmatch(r"ACR1-[A-Za-z0-9_-]{43}", candidate):
+            raise ValueError("Invalid recovery key.")
+        return candidate
+
     def issue_passkey_registration_options(
         self, payload: dict, handler: BaseHTTPRequestHandler
     ) -> tuple[int, dict, str | None]:
