@@ -250,3 +250,32 @@ The sign-in/sign-up dialog is an account-entry mechanism, not a third dashboard.
 **If omitted:** an administrator could be treated as an administrative operator only, losing access to ordinary member services, or user and admin features could become mixed in a way that weakens authorization and transaction boundaries.
 
 All changes remain under `development/` in draft PR #141. No production homepage, live transaction system, account database, domain/DNS, backups, real wallet or external provider is changed.
+
+## 14. Permissioned administrator appointment and wallet-gated entry — 2026-11-02
+
+### Confirmed account lifecycle
+
+- Every person first creates and signs in to an ordinary AstroCrown account and uses the shared User dashboard.
+- Administrator status is an additional server-owned role granted only after the account exists. The intended grantor is another already-authorized administrator who holds the explicit `admin.roles.grant` permission; an administrator without that permission cannot appoint another administrator.
+- The grantor cannot grant the role to themselves or use the operation to expand their own permissions. Revocation is separately permissioned with `admin.roles.revoke`. The initial owner/administrator is bootstrapped by the owner/Imperial HSIAN authority because no administrator yet exists to perform the first appointment.
+- After the backend confirms the role grant, the Administrator access entry becomes visible in that same User dashboard. Ordinary users never see it.
+- Selecting the entry starts the wallet step-up/enrolment path. The newly appointed administrator proves control of their own wallet; a granting administrator cannot establish that proof merely by entering an address. A fresh signature from one of up to three enrolled wallets then authorizes the short-lived administrator session and opens the separate Administrator dashboard.
+- Wallet proof is not account creation, role assignment, a separate administrator account login, or a blockchain transaction. User account authentication remains the first step; wallet verification is the additional administrative-access step.
+
+### Current prototype limitation and next implementation boundary
+
+The local prototype still uses owner-operated `provision_admin.py` to grant the role and enroll a test wallet together. This is a local bootstrap/test adapter only. The `--actor` value is an audit label, not authenticated identity or proof of a permission. There is no in-product administrator-to-administrator role-grant endpoint, no `admin.roles.grant` permission enforcement, and no target-owned wallet-enrolment workflow yet. These must be implemented and negatively tested before claiming the requested appointment process is operational.
+
+### Acceptance criteria
+
+- [ ] Regular registration always creates a `user`; no public admin registration exists.
+- [ ] Only another authenticated administrator with `admin.roles.grant` can grant the role to an existing account; an ordinary administrator without that permission is denied.
+- [ ] Self-grant and self-escalation are denied; the exact grantor, target, permissions, reason/evidence and timestamp are audited.
+- [ ] Role grant and wallet enrolment remain separate; the target proves control of their own wallet.
+- [ ] The User dashboard entry appears only after server-confirmed role assignment.
+- [ ] Clicking the entry verifies/enrols the target's wallet and opens the separate Administrator dashboard only after server-side step-up.
+- [ ] Revocation requires its own permission and invalidates privileged sessions.
+
+### Impact and preservation
+
+This keeps ordinary account continuity independent from appointment to administrative authority and prevents the wallet from becoming an alternative route to obtain the role. Keep all work under `development/`, retain PR #141 as draft/unmerged/undeployed, and do not describe local CLI bootstrap as a production or permissioned in-product workflow.
