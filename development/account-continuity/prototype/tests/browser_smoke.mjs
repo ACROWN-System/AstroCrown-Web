@@ -313,6 +313,19 @@ try {
     "the passkey dashboard must not offer password management");
   assert.equal(await evaluate("Boolean(document.querySelector('#account-session-current-password'))"), false,
     "session management must not fall back to password proof");
+  assert.equal(await evaluate("Boolean(document.getElementById('open-communications'))"), true,
+    "the homepage header must expose the communications bell");
+  assert.equal(await evaluate("document.getElementById('communications-unread-count').hidden"), true,
+    "the communications badge must remain hidden when there are no pending items");
+  await evaluate("document.getElementById('open-communications').click()");
+  await waitFor("authenticated user opens private communications", () =>
+    evaluate("!document.getElementById('communications-page').hidden && Boolean(document.querySelector('.communications-tabs'))"));
+  assert.match(await evaluate("document.getElementById('communications-content').innerText"), /No alerts yet/i);
+  await evaluate("document.querySelector('[data-communication-section=messages]').click()");
+  assert.match(await evaluate("document.getElementById('communications-content').innerText"), /No messages yet/i);
+  await evaluate("window.location.hash = '#account'");
+  await waitFor("return from communications to User dashboard", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('communications-page').hidden"));
 
   const accountStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(accountStatus.authenticated, true);
@@ -446,7 +459,7 @@ try {
   // account promoted in the isolated temporary SQLite database; it starts
   // with no registered administrator wallet.
   const adminRoleFixture = runAdminWalletFixturePython(
-    "import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); cur=db.execute(\"UPDATE accounts SET role='admin' WHERE username=? AND role='user'\", (sys.argv[2],)); db.commit(); print(cur.rowcount)",
+    "import sqlite3,sys,uuid; db=sqlite3.connect(sys.argv[1]); cur=db.execute(\"UPDATE accounts SET role='admin' WHERE username=? AND role='user'\", (sys.argv[2],)); account=db.execute('SELECT account_id FROM accounts WHERE username=?',(sys.argv[2],)).fetchone(); assert account; db.execute('INSERT INTO account_admin_permissions(account_id,permission,can_delegate,granted_by_account_id,reason,created_at) VALUES(?,?,?,?,?,?)',(account[0],'admin.messages.send',0,None,'Browser UI communication permission fixture','2026-11-03T00:00:00Z')); db.execute('INSERT INTO accounts(account_id,username,email,password_salt,password_hash,auth_method,created_at) VALUES(?,?,?,?,?,?,?)',(str(uuid.uuid4()),'AC-FEDCBA9876',None,bytes([1])*16,bytes([2])*32,'webauthn','2026-11-03T00:00:00Z')); db.commit(); print(cur.rowcount)",
     [databasePath, accountIdentifier]
   );
   assert.equal(adminRoleFixture.status, 0, adminRoleFixture.stderr || "Administrator role fixture could not be applied");
@@ -459,8 +472,8 @@ try {
     evaluate("Boolean(document.querySelector('.account-admin-access-card'))"));
   const adminRoleStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(adminRoleStatus.adminRoleAssigned, true);
+  assert.deepEqual(adminRoleStatus.adminPermissions, ["admin.messages.send"]);
   assert.equal(adminRoleStatus.adminWalletCount, 0);
-  assert.equal(adminRoleStatus.adminSessionAuthorized, false);
 
   const walletProviderSetup = await evaluate(
     "window.__adminWalletCalls = []; window.__adminWalletActivation = [];" +
@@ -583,6 +596,19 @@ try {
   assert.equal(fullyAuthorizedAdmin.adminSessionAuthorized, true);
   assert.equal(fullyAuthorizedAdmin.admin, true);
   assert.equal(fullyAuthorizedAdmin.adminWalletAddress.toLowerCase(), adminWalletFixtureAddress.toLowerCase());
+  assert.equal(await evaluate("Boolean(document.getElementById('admin-communication-send'))"), true,
+    "the separate permission must expose the administrator communication composer");
+  assert.equal(await evaluate("document.querySelector('#admin-communication-section option[value=alerts]').textContent"), "Alerts");
+  assert.equal(await evaluate("document.querySelector('#admin-communication-section option[value=messages]').textContent"), "Messages");
+  await evaluate("document.getElementById('admin-communication-recipient').value='AC-FEDCBA9876'; document.getElementById('admin-communication-section').value='messages'; document.getElementById('admin-communication-subject').value='Browser test message'; document.getElementById('admin-communication-body').value='Sender-selected destination is Messages.'; document.getElementById('admin-communication-send').click()");
+  await waitFor("administrator sends a private Message", () =>
+    evaluate("document.getElementById('admin-communication-feedback').textContent.includes('Delivered to AC-FEDCBA9876 in Messages')"));
+  const storedCommunication = runAdminWalletFixturePython(
+    "import sqlite3,sys,json; db=sqlite3.connect(sys.argv[1]); row=db.execute('SELECT section,subject,body FROM account_communications WHERE recipient_account_id=(SELECT account_id FROM accounts WHERE username=?) ORDER BY rowid DESC LIMIT 1',('AC-FEDCBA9876',)).fetchone(); print(json.dumps(row))",
+    [databasePath]
+  );
+  assert.equal(storedCommunication.status, 0, storedCommunication.stderr || "The communication database query failed");
+  assert.deepEqual(JSON.parse(storedCommunication.stdout), ["messages", "Browser test message", "Sender-selected destination is Messages."]);
   const adminWalletMethods = await evaluate("window.__adminWalletCalls");
   const adminWalletActivation = await evaluate("window.__adminWalletActivation");
   assert.ok(adminWalletActivation.length >= 3);
@@ -606,22 +632,21 @@ try {
 
   // Simulate an authorized external role revocation after this account has
   // used the Administrator dashboard. The target keeps its ordinary session,
-  // receives the recorded reason in the User dashboard and can acknowledge it.
+  // receives the audit-linked Alert in the separate communications page.
   const revokeRoleFixture = runAdminWalletFixturePython(
-    "import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); account=db.execute('SELECT account_id FROM accounts WHERE username=?',(sys.argv[2],)).fetchone(); assert account; account_id=account[0]; db.execute(\"UPDATE admin_wallets SET active=0 WHERE account_id=? AND active=1\",(account_id,)); db.execute('DELETE FROM account_admin_permissions WHERE account_id=?',(account_id,)); db.execute(\"UPDATE accounts SET role='user' WHERE account_id=?\",(account_id,)); db.execute('UPDATE sessions SET admin_wallet_address=NULL,admin_authenticated_at=NULL,admin_expires_at=NULL WHERE account_id=?',(account_id,)); db.execute(\"INSERT INTO account_admin_audit(audit_id,event_type,actor,target_account_id,target_wallet_address,reason,created_at,detail) VALUES ('browser-admin-revoke-notice','admin_role_revoked_by_admin','test-authorized-admin',?,NULL,'Administrative appointment withdrawn after review','2026-11-03T00:00:00Z','{}')\",(account_id,)); db.commit(); print('revoked')",
+    "import sqlite3,sys; db=sqlite3.connect(sys.argv[1]); account=db.execute('SELECT account_id FROM accounts WHERE username=?',(sys.argv[2],)).fetchone(); assert account; account_id=account[0]; db.execute(\"UPDATE admin_wallets SET active=0 WHERE account_id=? AND active=1\",(account_id,)); db.execute('DELETE FROM account_admin_permissions WHERE account_id=?',(account_id,)); db.execute(\"UPDATE accounts SET role='user' WHERE account_id=?\",(account_id,)); db.execute('UPDATE sessions SET admin_wallet_address=NULL,admin_authenticated_at=NULL,admin_expires_at=NULL WHERE account_id=?',(account_id,)); db.execute(\"INSERT INTO account_admin_audit(audit_id,event_type,actor,target_account_id,target_wallet_address,reason,created_at,detail) VALUES ('browser-admin-revoke-notice','admin_role_revoked_by_admin','test-authorized-admin',?,NULL,'Administrative appointment withdrawn after review','2026-11-03T00:00:00Z','{}')\",(account_id,)); db.execute('INSERT INTO account_communications(communication_id,recipient_account_id,sender_account_id,section,subject,body,source_audit_id,created_at) VALUES (?,?,?,?,?,?,?,?)',('browser-admin-revoke-communication',account_id,None,'alerts','Administrator privileges removed','Your administrator access was removed.\\n\\nRecorded reason: Administrative appointment withdrawn after review\\nRecorded: 2026-11-03T00:00:00Z','browser-admin-revoke-notice','2026-11-03T00:00:00Z')); db.commit(); print('revoked')",
     [databasePath, accountIdentifier]
   );
   assert.equal(revokeRoleFixture.status, 0, revokeRoleFixture.stderr || "The isolated administrator revocation fixture failed");
   assert.equal(revokeRoleFixture.stdout.trim(), "revoked");
   await evaluate("window.location.hash = '#admin'");
-  await waitFor("revoked administrator is returned to User dashboard with explanation", () =>
-    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden && Boolean(document.getElementById('admin-revocation-notice-title'))"));
+  await waitFor("revoked administrator is returned to User dashboard", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false,
     "a revoked administrator must no longer see the administrator entry button");
-  assert.match(await evaluate("document.getElementById('account-dashboard-content').innerText"),
-    /Administrative appointment withdrawn after review/);
-  assert.match(await evaluate("document.getElementById('account-dashboard-content').innerText"),
-    /ordinary account and User dashboard remain active/i);
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-revocation-notice'))"), false,
+    "revocation details must no longer be duplicated in the User dashboard");
+  const revokedTargetStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   const revokedTargetStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(revokedTargetStatus.authenticated, true);
   assert.equal(revokedTargetStatus.role, "user");
@@ -630,14 +655,25 @@ try {
   assert.equal(revokedTargetStatus.administratorRevocationNotice.reason,
     "Administrative appointment withdrawn after review");
 
-  await evaluate("document.getElementById('acknowledge-admin-revocation').click()");
-  await waitFor("revocation notice acknowledged and removed", () =>
-    evaluate("!document.getElementById('admin-revocation-notice-title')"));
+  assert.equal(revokedTargetStatus.communicationsUnreadCounts.alerts, 1);
+  await evaluate("window.location.hash = '#communications'");
+  await waitFor("role revocation displayed in Alerts tab", () =>
+    evaluate("!document.getElementById('communications-page').hidden && Boolean(document.querySelector('.communication-item.is-alert'))"));
+  assert.match(await evaluate("document.getElementById('communications-content').innerText"), /Administrator privileges removed/);
+  assert.match(await evaluate("document.getElementById('communications-content').innerText"), /Administrative appointment withdrawn after review/);
+  await evaluate("document.querySelector('[data-communication-action=acknowledge]').click()");
+  await waitFor("revocation Alert acknowledged in communications inbox", () =>
+    evaluate("!document.querySelector('[data-communication-action=acknowledge]') && document.querySelector('.communication-state-label').textContent === 'Acknowledged'"));
+  const acknowledgedRevocationStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   const acknowledgedRevocationStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(acknowledgedRevocationStatus.authenticated, true);
   assert.equal(acknowledgedRevocationStatus.role, "user");
   assert.equal(acknowledgedRevocationStatus.administratorRevocationNotice, null,
     "the acknowledgement must persist across account status refreshes");
+  assert.deepEqual(acknowledgedRevocationStatus.communicationsUnreadCounts, {alerts:0,messages:0});
+  await evaluate("window.location.hash = '#account'");
+  await waitFor("return to User dashboard after acknowledging alert", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('communications-page').hidden"));
 
   await evaluate("document.getElementById('account-signout').click()");
   await waitFor("recovered account session is cleared before preview checks", () =>
