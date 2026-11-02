@@ -1761,13 +1761,32 @@ class AccountApplication:
                 raise ApiError(404, "No existing AstroCrown account was found for that account identifier.")
             if recipient["account_id"] == actor["account_id"]:
                 raise ApiError(400, "An administrator cannot send an account communication to themselves.")
+            audit_id = str(uuid.uuid4())
+            audit_reason = "Sent a private in-app " + ("Alert" if section == "alerts" else "Message")
+            audit_detail = json.dumps(
+                {
+                    "communication_id": communication_id,
+                    "section": section,
+                    "subject_characters": len(subject),
+                    "body_characters": len(body),
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            db.execute(
+                """INSERT INTO account_admin_audit(
+                       audit_id, event_type, actor, target_account_id,
+                       target_wallet_address, reason, created_at, detail
+                   ) VALUES (?, 'admin_communication_sent', ?, ?, NULL, ?, ?, ?)""",
+                (audit_id, actor["account_id"], recipient["account_id"], audit_reason, created_at, audit_detail),
+            )
             db.execute(
                 """INSERT INTO account_communications(
                        communication_id, recipient_account_id, sender_account_id,
                        section, subject, body, source_audit_id, created_at
-                   ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)""",
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (communication_id, recipient["account_id"], actor["account_id"],
-                 section, subject, body, created_at),
+                 section, subject, body, audit_id, created_at),
             )
         return 201, {
             "sent": True,
