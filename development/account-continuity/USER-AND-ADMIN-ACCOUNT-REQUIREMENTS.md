@@ -505,3 +505,36 @@ The current local account/wallet lab remains EVM-oriented and uses EIP-4361/SIWE
 - [BIP-322 / Generic Signed Message Format](https://bitcoin.org/bip/322/)
 - [Solana: Sign Messages and Authenticate Users](https://solana.com/docs/frontend/messages-and-auth)
 - [Wallet and asset extensibility architecture](../crypto-infrastructure/ASSET-PAYMENTS-AND-WALLET-INTERACTIONS-ARCHITECTURE.md)
+## 17. No minimum wallet balance for account access or authentication — 2026-11-02
+
+AstroCrown must not require a user to hold, deposit, retain or periodically restore a minimum cryptocurrency balance merely to connect a wallet, link an address, prove wallet control, sign in through a separately approved wallet-authentication method, use the ordinary User dashboard, or complete an administrator wallet step-up. Empty/new wallets must be eligible for these actions when the selected wallet can produce the supported proof.
+
+Authentication must use an off-chain signed message, not an on-chain transaction, token transfer, fee payment, proof-of-funds check, balance threshold or minimum-stake check. The server must not query or use wallet balance as a condition for authentication or administrator access. An address's balance is not proof of identity, ownership authority, trustworthiness or role eligibility.
+
+Use the chain-specific proof protocol: EIP-4361/SIWE for qualified EVM wallets, BIP-322 for a Bitcoin wallet/script variant that has passed compatibility testing, and SIWS/off-chain message signing for qualified Solana wallets. Solana's official guide explicitly states that off-chain message signing requires no transaction, fee or network call. These are proofs of control of a signing key/account, not proofs that the wallet holds funds.
+
+Do not silently fall back to a no-op transaction when message signing is unavailable. Stop and explain the unsupported wallet capability; allow the user to continue ordinary email/password sign-in or choose another compatible wallet. Never ask for funds to be deposited to enable authentication.
+
+### Transaction fees are different from a minimum-balance rule
+
+A user-initiated blockchain transaction may still require the exact asset being spent and a network fee at execution time. That is a property of the requested transaction and chain, not a standing balance requirement for the user's AstroCrown account or connected wallet. Do not impose an arbitrary retained balance, dormant-wallet threshold or minimum balance after a transaction. Show the exact amount and fee before asking the user to sign.
+
+Where commercially and technically viable, later transaction services may sponsor network fees or abstract gas through a chain-specific mechanism. Sponsorship is not automatic or universal, and its cost must be budgeted and disclosed; it must never be represented as implemented before qualification. A Bitcoin transaction still needs suitable spendable UTXOs for the payment and its miner fee unless a separately designed third-party service funds that transaction.
+
+These rules apply to ordinary users and administrators. The external administrator identity/compensation wallet does not need a balance to authenticate. The separate NOVA operations smart account, organizational treasury and any protocol-required operational funding are not user wallet minimum-balance requirements and remain governed separately.
+
+### Acceptance tests
+
+- [ ] Connect and link an empty EVM wallet and complete an EIP-4361 challenge without an on-chain transaction or balance lookup.
+- [ ] Connect and link a Bitcoin address with no UTXOs and complete a supported BIP-322 message proof without spending funds or checking a minimum balance.
+- [ ] Connect and link an empty Solana wallet and complete a supported SIWS/OCMS message proof without an RPC transaction or fee.
+- [ ] Complete administrator wallet step-up from an empty enrolled wallet when its message proof is valid.
+- [ ] Verify that zero, low, unknown or unavailable balance data never blocks sign-in, wallet linking or dashboard access.
+- [ ] Verify that an unsupported message-signing capability is reported honestly and never triggers a transaction-signing fallback.
+- [ ] Separate any exact transaction funding/fee insufficiency from authentication status and do not create a retained-balance policy.
+
+Technical references:
+- [Solana: Sign Messages & Authenticate Users](https://solana.com/docs/frontend/messages-and-auth) — explicitly distinguishes off-chain proof from transaction signing, RPC calls and fees.
+- [EIP-4361 / Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361) — off-chain authentication message and nonce/session requirements.
+- [BIP-322 / Generic Signed Message Format](https://bips.dev/322/) — Bitcoin message-proof specification; wallet/script compatibility still requires testing.
+- [ERC-4337 Paymasters](https://eips.ethereum.org/EIPS/eip-4337) — one EVM-specific option for later gas sponsorship, not a universal chain solution.
