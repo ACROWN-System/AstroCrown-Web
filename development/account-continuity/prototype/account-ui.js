@@ -479,7 +479,10 @@
           '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
           '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         '<section class="account-dashboard-card"><h2>Optional wallet backup</h2><p class="account-dashboard-value">Not required</p><p>A user-controlled wallet may be enrolled as an additional authenticator in a later implementation. Ordinary account access does not require a wallet, balance, deposit or blockchain transaction.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Account recovery</h2><p class="account-dashboard-value">Offline recovery key — implementation pending</p><p>The one-time recovery key must be generated and tested before real users are onboarded. Do not use real assets or treat this local prototype as production recovery.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Account recovery</h2>' +
+          '<p class="account-dashboard-value">' + (accountState.recoveryKeyAvailable === true ? 'One-time offline recovery key is active' : 'No active recovery key is registered') + '</p>' +
+          '<p>Your recovery key is displayed only when first issued or replaced after recovery. AstroCrown stores only a salted one-way verifier. Keep the key and account identifier offline; loss of all passkeys and the key can mean permanent account loss.</p>' +
+          '</section>' +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
         '<section class="account-dashboard-card"><h2>Account data</h2><p>Email address and phone number are not collected for account authentication. Terms acceptance is recorded by the local test backend.</p></section>' +
         '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
@@ -1015,6 +1018,12 @@
 
   openButton.addEventListener("click", openAccountDialog);
   closeButton.addEventListener("click", closeDialog);
+  dialog.addEventListener("cancel", function (event) {
+    if (mode === "success" && successKind !== "signin" && !recoveryKeyAcknowledged) {
+      event.preventDefault();
+      showFeedback("Save the one-time offline recovery key and confirm before closing this screen.", "error");
+    }
+  });
   dialog.addEventListener("close", function () {
     showFeedback("", "");
     if (focusBeforeOpen && typeof focusBeforeOpen.focus === "function") focusBeforeOpen.focus();
