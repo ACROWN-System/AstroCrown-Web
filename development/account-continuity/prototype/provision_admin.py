@@ -8,6 +8,7 @@ explicit confirmation string, and a reason recorded in the audit table.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 import uuid
@@ -169,11 +170,24 @@ def grant_admin(
                WHERE account_id = ?""",
             (account_id,),
         )
+        bootstrap_detail = json.dumps(
+            {
+                "role_assigned": account["role"] != "admin",
+                "permissions_assigned": supplied_permissions,
+                "delegable_permissions_assigned": supplied_delegable,
+                "permissions_preserved": supplied_permissions is None and account["role"] == "admin",
+                "wallet_provisioned": address,
+                "chain_id": validated_chain,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
         db.execute(
             """INSERT INTO account_admin_audit(
-                   audit_id, event_type, actor, target_account_id, target_wallet_address, reason, created_at
-               ) VALUES (?, 'admin_wallet_provisioned', ?, ?, ?, ?, ?)""",
-            (str(uuid.uuid4()), actor, account_id, address, audit_reason, now),
+                   audit_id, event_type, actor, target_account_id,
+                   target_wallet_address, reason, created_at, detail
+               ) VALUES (?, 'admin_wallet_provisioned', ?, ?, ?, ?, ?, ?)""",
+            (str(uuid.uuid4()), actor, account_id, address, audit_reason, now, bootstrap_detail),
         )
     return {
         "account_id": account_id,
@@ -212,6 +226,13 @@ def revoke_admin(
             "SELECT COUNT(*) FROM admin_wallets WHERE account_id = ? AND active = 1",
             (account_id,),
         ).fetchone()[0])
+        previous_permissions = [
+            row["permission"] for row in db.execute(
+                "SELECT permission FROM account_admin_permissions WHERE account_id = ? ORDER BY permission",
+                (account_id,),
+            ).fetchall()
+        ]
+        previous_role = account["role"]
         now = utc_iso()
         db.execute(
             "UPDATE admin_wallets SET active = 0 WHERE account_id = ? AND active = 1",
@@ -228,11 +249,22 @@ def revoke_admin(
                WHERE account_id = ?""",
             (account_id,),
         )
+        revoke_detail = json.dumps(
+            {
+                "role_before": previous_role,
+                "role_after": "user",
+                "permissions_revoked": previous_permissions,
+                "wallets_disabled": active_count,
+            },
+            sort_keys=True,
+            separators=(",", ":"),
+        )
         db.execute(
             """INSERT INTO account_admin_audit(
-                   audit_id, event_type, actor, target_account_id, target_wallet_address, reason, created_at
-               ) VALUES (?, 'admin_role_revoked', ?, ?, NULL, ?, ?)""",
-            (str(uuid.uuid4()), actor, account_id, audit_reason, now),
+                   audit_id, event_type, actor, target_account_id,
+                   target_wallet_address, reason, created_at, detail
+               ) VALUES (?, 'admin_role_revoked', ?, ?, NULL, ?, ?, ?)""",
+            (str(uuid.uuid4()), actor, account_id, audit_reason, now, revoke_detail),
         )
     return {
         "account_id": account_id,
