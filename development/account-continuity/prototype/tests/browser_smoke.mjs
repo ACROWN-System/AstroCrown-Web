@@ -266,7 +266,7 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('.account-user-services-card'))"), true,
     "the common User dashboard must include the member-services module area");
   assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"), /regular users and administrators/i);
-  assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"), /transactions.*not enabled/i);
+  assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"), /transaction workflows.*not enabled/i);
   assert.match(await evaluate("document.body.innerText"), /Email not verified/i);
   assert.match(await evaluate("document.body.innerText"), /Password reset|password reset/);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
