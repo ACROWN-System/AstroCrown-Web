@@ -78,9 +78,13 @@ jobs:
               raise SystemExit("Remove the redundant AstroCrown account-access kicker above the dialog title.")
           if 'ThreadingHTTPServer(("127.0.0.1", port)' not in server:
               raise SystemExit("The local account prototype must bind only to loopback.")
-          for item in ('id="account-demo-notice"', "renderProviderSlots", "renderOrDivider"):
+          for item in (
+              'id="account-demo-notice"', "function registerWithPasskey", "function signInWithPasskey",
+              "navigator.credentials.create", "navigator.credentials.get",
+              "account-passkey-signin", "hosted-preview-no-authentication"
+          ):
               if item not in ui:
-                  raise SystemExit(f"Expected dynamically rendered account element missing: {item}")
+                  raise SystemExit(f"Expected passkey account UX/security control missing: {item}")
           if "account-other-options" in ui:
               raise SystemExit("The Or divider must not be a clickable/toggle control.")
           for item in (
@@ -95,14 +99,20 @@ jobs:
           if "repeating-linear-gradient" in css:
               raise SystemExit("The Or divider side segments must be solid continuous lines, not dotted or dashed.")
           for item in (
-              "newsletterOptIn", "data-account-mode", "Forgot password?", "A crypto wallet is not required",
-              "Referral ID (Optional)", "Terms of Use", "Privacy Policy", "No email was sent",
-              "browserPreviewRequest", "browser-preview-memory-only", "600000", "termsAccepted"
+              "data-account-mode", "Referral ID (Optional)", "Terms of Use", "Privacy Policy",
+              "termsAccepted", "termsVersion", "No email, SMS or external identity provider",
+              "publicKey", "challengeId", "authenticatorSelection", "userVerification"
           ):
-              if item not in ui:
-                  raise SystemExit(f"Expected account UX/security boundary missing: {item}")
-          if "recoveryCodes" in ui or "account-recover-form" in ui:
-              raise SystemExit("One-time recovery codes must not be the default forgot-password journey.")
+              if item not in ui and item not in server:
+                  raise SystemExit(f"Expected passkey account UX/security boundary missing: {item}")
+          for item in ('name="email"', 'type="password"', "/api/account/login", "/api/account/register"):
+              if item in ui:
+                  raise SystemExit(f"Legacy email/password account flow remains in the active UI: {item}")
+          for item in ("/api/passkeys/register/options", "/api/passkeys/register/verify", "/api/passkeys/authentication/options", "/api/passkeys/authentication/verify"):
+              if item not in server:
+                  raise SystemExit(f"Passkey API route missing: {item}")
+          if "browser-preview-memory-only" in ui:
+              raise SystemExit("The hosted preview must not claim to simulate authenticated accounts.")
           if "DRAFT ONLY" not in terms or "DRAFT ONLY" not in privacy:
               raise SystemExit("Policy links must point to explicitly marked development drafts.")
           for item in ("case-create-form", "case-lookup-form", "case-recovery-form", "administrator-case-panel"):
