@@ -469,14 +469,39 @@ The owner accepted replacing email/password-first authentication with a public-k
 - Use a maintained open-source WebAuthn relying-party library after license, maintenance, advisory, dependency and runtime review. Do not hand-roll CBOR/COSE parsing or cryptographic verification.
 - Local development and tests must work without an external identity service or outbound provider calls. The browser's WebAuthn ceremony is local to its authenticator; the signed result is returned to the AstroCrown backend for verification.
 - A public production deployment still requires HTTPS, durable backend storage, backups and operations. Free-tier availability and long-term $0 operation must be verified, not assumed.
-- The current email/password local prototype, Mailjet adapter and email-token tests are legacy artifacts until the replacement implementation and acceptance tests are complete. Do not configure Mailjet/SMS to enable account authentication or recovery.
+- The email/password local prototype, Mailjet adapter and email-token tests are legacy artifacts retained only for explicit opt-in regression coverage. The default passkey-first runtime rejects the legacy authentication, verification and reset routes and does not load an email sender. The replacement passkey implementation and acceptance tests are now present; do not configure Mailjet/SMS to enable account authentication or recovery.
 - Preserve the stable account IDs, roles, permissions, User dashboard, Administrator dashboard and separately scoped administrator wallet step-up. Keep the existing local EVM/SIWE verifier isolated; do not refactor the disposable wallet schema or implement Astro-Wallet as part of this change.
 
 ### Repository changes and status
 
 - Added `development/account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md` and updated the canonical account requirements, prototype README and security-assurance page.
 - Implemented the local passkey RP boundary, credential/challenge persistence, registration/discoverable sign-in API, passkey-first account UI, one-time recovery-key generation/storage/display, restricted recovery challenge, replacement-passkey registration, previous-credential/session revocation, key rotation and audit event.
-- Added passkey/recovery API tests and extended the headless Chrome virtual-authenticator flow to exercise registration, discoverable sign-in and passkey recovery. The current CI workflow result must be recorded against its final exact head before claiming success.
+- Added passkey/recovery API tests and extended the headless Chrome virtual-authenticator flow to exercise registration, discoverable sign-in and passkey recovery. All five tracked workflows have now passed on exact branch head `8509b64086a09ac3cfc7eea82977c27e8e6a2fd8`; see Section 21 for the run evidence.
 - Default local runtime does not load SMTP or use email/SMS for account access. Legacy password/email routes are disabled unless a test explicitly opts into legacy mode.
 - The optional account-level wallet backup remains unimplemented; administrator EVM/SIWE step-up remains separate. No Astro-Wallet, wallet custody, multichain refactor, paid provider or public deployment was added.
 - PR #141 remains draft, open, unmerged and undeployed.
+
+## 21. Exact-head implementation and CI verification — 2026-11-03
+
+### Verified code state
+
+The current branch head is `8509b64086a09ac3cfc7eea82977c27e8e6a2fd8`. The loopback prototype includes WebAuthn discoverable registration and sign-in, server-side credential/challenge persistence and verification, a one-time 256-bit offline recovery key, salted one-way verifier storage, replacement-passkey recovery, old-key consumption, prior-passkey/session revocation, key rotation and security audit recording. Default passkey mode does not load an email sender and rejects legacy email/password, verification and password-reset routes. Legacy email tests remain only for explicit opt-in regression coverage.
+
+### Exact-head workflow evidence
+
+All five tracked pull-request workflows completed successfully against this exact SHA:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360712)
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360765)
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360796)
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360753)
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360846)
+
+The CodeQL check reported no new alerts in code changed by this pull request. The exact-head workflow runs were created on 2026-11-02 UTC (2026-11-03 in India). These are automated development-prototype results; they do not establish independent security review, formal standards conformance, production readiness or manual browser acceptance.
+
+### Remaining boundaries
+
+The optional wallet backup for ordinary accounts remains unimplemented. Existing EVM/SIWE is a separate administrator-wallet enrollment and step-up path. Production HTTPS/RP configuration, durable shared storage and backup/restore, multiple-passkey lifecycle/session-management UI, formal all-authenticator-loss and Imperial HSIAN recovery, production authority/governance, approved legal/privacy documents, independent security review and authoritative publishing verification remain outstanding. NOVA's administrative smart-account enforcement and chain-monitoring architecture remains a separate design-stage workstream; it is not delivered by this account prototype.
+
+PR #141 remains open, draft, unmerged and undeployed. No production homepage, production service, secret, wallet, transaction, domain or deployment was changed by this verification.
+
