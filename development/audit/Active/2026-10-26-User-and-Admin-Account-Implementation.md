@@ -595,3 +595,40 @@ These are automated development-prototype results. They are not an independent s
 - The current revocation operation removes the whole administrator role and disables all active administrator wallets. There is not yet a separate self-service or delegated operation to revoke one wallet while retaining the role through another wallet.
 - The external administrator wallet remains user-controlled. NOVA cannot block or monitor arbitrary personal transactions from it through this prototype. The proposed NOVA administrative operations smart account, on-chain guard, chain monitoring, incident attribution, automatic one-violation response, external-wallet association disablement and recovery remain design-stage requirements only.
 - No production homepage/service, wallet, asset, secret, domain/DNS setting, deployment or historical backup was changed. PR #141 remains open, draft, unmerged and undeployed.
+
+## 25. Passkey-first administrator role targeting by account identifier — 2026-11-03
+
+### Implemented changes
+
+- Replaced email-based target selection for the in-product `/api/admin/roles/grant` and `/api/admin/roles/revoke` operations with the member-facing AstroCrown Account Identifier (`AC-` followed by ten hexadecimal characters). The server resolves the identifier against the existing account's unique username/account-label column; it does not query or require an email address for the passkey-first role-management path.
+- Both role-management request contracts now require `accountIdentifier` and `reason`; grant may additionally include the already-authorized delegated-permission list. Responses identify the target with `targetAccountIdentifier` and no longer return a target email.
+- Updated the Administrator dashboard forms to request the existing member's Account Identifier. The UI validates the exact `AC-` identifier shape and makes clear that the identifier is only a record reference: it is not a passkey, wallet, authenticator, recovery key, password or grant of authority. No email, wallet address, passkey credential ID, password or private key is requested for appointment/revocation.
+- Updated the owner-operated local provisioning/revocation CLI to use `--account-identifier` and resolve the account by its stable identifier. Its default runtime rejects email-shaped identifiers. Email-shaped legacy usernames are accepted only when the application is explicitly started with `enable_legacy_email_auth=True` for historical regression tests; that does not enable email authentication in the default passkey-first runtime.
+- Updated the passkey-first requirements, canonical User/Admin requirements and local security-assurance page so they no longer describe email as the administrator role target key.
+- Existing authorization boundaries remain intact: grant and revoke have separate server-enforced permissions; active wallet-verified administrator step-up is required; self-grant/self-revoke are blocked; a grantor may delegate only permissions explicitly marked delegable; the target independently enrols their own wallet and completes a separate fresh signature before privileged access.
+
+### Targeted test coverage
+
+- Extended the role appointment/enrollment/revocation integration test by converting the target member record to a WebAuthn/passkey-style account with `email = NULL`, `auth_method = 'webauthn'` and a valid `AC-` account identifier. The role was granted by that identifier, the target's ordinary account session and dashboard status remained valid, wallet enrollment remained independent, a distinct fresh wallet signature authorized the administrator session, and role revocation removed the target's administrator permissions and active wallet while preserving the ordinary session and revocation notice.
+- Extended the owner-bootstrap CLI test using an email-free WebAuthn-style account. It executes the real CLI from outside the repository root with `--account-identifier`, then verifies the role, wallet registration and audit record in the shared local SQLite database.
+- Updated the historical email-first regression fixtures to exercise the renamed CLI/helper API using `account_identifier`; legacy email-shaped fixture usernames are only valid in the explicit legacy-test application mode.
+- The first CI attempt exposed one stale test command still passing `--email` to the updated CLI. The implementation was not weakened or made backward-compatible in default mode; the test was corrected to use an email-free account and the new `--account-identifier` option.
+
+### Exact-head automated verification
+
+All five tracked workflows completed successfully against implementation/test head `f89a51c5fea3971b7ba52617ef92273c59cf656f`:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41540748408) — Python syntax, browser JavaScript syntax, 70 loopback/account-contract tests, static security-boundary checks and the headless Chrome account journey passed.
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41540748517).
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41540748633).
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41540748472).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41540748469).
+
+The results above are automated evidence for this local development prototype only. They are not independent security review, formal standards conformance, production readiness or release authorization.
+
+### Boundaries preserved
+
+- The Account Identifier is an account-reference value, not an authentication or recovery factor. The normal WebAuthn sign-in and offline recovery-key requirements are unchanged. Passkey proof or wallet proof alone cannot grant administrator authority.
+- No email/SMS/authentication provider, paid service, external API, real passkey credential, real wallet, blockchain transaction, balance query, deposit, stake, asset, production secret, domain/DNS change or deployment was used or changed by this block. Wallet signatures in automated tests use deterministic test-only keys.
+- No historical backup or `main` branch content was changed. PR #141 remains open, draft, unmerged and undeployed; the localhost/SQLite implementation remains a development prototype only.
+
