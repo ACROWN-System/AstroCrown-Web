@@ -56,7 +56,7 @@
           <li>Session tokens are random; SQLite stores their hashes. Local cookies are HttpOnly and SameSite=Strict. These HTTP localhost cookie settings are not a production HTTPS configuration.</li>
           <li>The server binds only to loopback and checks the canonical localhost Host/Origin. Request bodies are bounded. Responses are no-store and use basic security headers and a Content Security Policy.</li>
           <li>Account registration/sign-in/recovery does not invoke an email or SMS provider, a paid identity provider, a third-party authentication API or a blockchain transaction.</li>
-          <li>Administrator role/permission checks and the EVM/SIWE administrator step-up remain separate from ordinary passkey authentication. Wallet connection alone never creates a user account or administrator role.</li>
+          <li>Administrator role/permission checks and the EVM/SIWE administrator step-up remain separate from ordinary passkey authentication. Role appointment and revocation target an existing member by the public AC- account identifier shown in the User dashboard; the identifier is not an authenticator. Email is not required. Wallet connection alone never creates a user account or administrator role.</li>
         </ul>
       </section>
 
