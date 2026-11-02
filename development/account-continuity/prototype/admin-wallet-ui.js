@@ -1,7 +1,8 @@
 /* Development-only administrator wallet step-up UI.
  * This module does not execute on ordinary sign-in. A wallet prompt is made
- * only after an authorized user explicitly clicks "Verify administrator wallet".
- * No transaction method is used and no wallet/provider result creates a role.
+ * only after an authorized user confirms administrator access and clicks the
+ * shared Wallet control in the homepage header. No transaction method is used.
+ * No wallet/provider result creates an account role or permission.
  */
 (function () {
   "use strict";
