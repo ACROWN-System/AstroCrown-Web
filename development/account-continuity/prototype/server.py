@@ -1194,6 +1194,11 @@ class AccountApplication:
             if row is None:
                 db.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_session_token(token),))
                 return None, None
+            if not self.enable_legacy_email_auth and row["auth_method"] != "webauthn":
+                # A pre-passkey local database may contain legacy email/password
+                # sessions. Do not allow those cookies to cross the new auth boundary.
+                db.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_session_token(token),))
+                return None, None
             return row, int(row["expires_at"])
 
     def account_summary(self, account: sqlite3.Row, expires_at: int | None) -> dict:
