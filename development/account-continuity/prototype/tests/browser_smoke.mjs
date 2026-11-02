@@ -112,6 +112,19 @@ function signAdminWalletMessage(message) {
   return signature;
 }
 
+async function trustedClick(selector) {
+  const point = await evaluate(
+    "(() => { const element = document.querySelector(" + JSON.stringify(selector) + ");" +
+    " if (!element) throw new Error('Missing click target: ' + " + JSON.stringify(selector) + ");" +
+    " element.scrollIntoView({block:'center',inline:'center'});" +
+    " const rect = element.getBoundingClientRect();" +
+    " return {x:rect.left + rect.width / 2, y:rect.top + rect.height / 2}; })()"
+  );
+  await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
+  await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", clickCount: 1 });
+  await cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", clickCount: 1 });
+}
+
 async function completePendingAdminWalletSignature() {
   await waitFor("wallet signature request from the browser provider", () =>
     evaluate("typeof window.__resolveAdminWalletSignature === 'function' && typeof window.__pendingAdminWalletMessage === 'string'"));
@@ -450,11 +463,12 @@ try {
   assert.equal(adminRoleStatus.adminSessionAuthorized, false);
 
   const walletProviderSetup = await evaluate(
-    "window.__adminWalletCalls = [];" +
+    "window.__adminWalletCalls = []; window.__adminWalletActivation = [];" +
     "window.__adminWalletAddress = " + JSON.stringify(adminWalletFixtureAddress) + ";" +
     "window.__pendingAdminWalletMessage = null; window.__resolveAdminWalletSignature = null;" +
     "window.ethereum = { request: async function (request) {" +
       "window.__adminWalletCalls.push(request.method);" +
+      "if (request.method === 'eth_requestAccounts' || request.method === 'personal_sign') window.__adminWalletActivation.push({method:request.method,active:Boolean(navigator.userActivation && navigator.userActivation.isActive)});" +
       "if (request.method === 'eth_requestAccounts' || request.method === 'eth_accounts') return [window.__adminWalletAddress];" +
       "if (request.method === 'eth_chainId') return '0x1';" +
       "if (request.method === 'personal_sign') {" +
@@ -500,7 +514,7 @@ try {
   await evaluate("document.getElementById('admin-access-continue').click()");
   await waitFor("first header-wallet request notice", () =>
     evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
-  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+  await trustedClick("#wallet-connect-trigger");
   await waitFor("first-wallet enrollment message review", () =>
     evaluate("document.getElementById('admin-wallet-proof-dialog').open && /first AstroCrown administrator wallet/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
   assert.equal(await evaluate("document.querySelector('#wallet-menu').closest('.menu-slot').classList.contains('is-open')"), false,
@@ -523,10 +537,10 @@ try {
   await evaluate("document.getElementById('admin-access-continue').click()");
   await waitFor("header-wallet request for successful enrollment", () =>
     evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
-  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+  await trustedClick("#wallet-connect-trigger");
   await waitFor("first-wallet enrollment review for signing", () =>
     evaluate("document.getElementById('admin-wallet-proof-dialog').open && /first AstroCrown administrator wallet/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
-  await evaluate("document.getElementById('admin-wallet-proof-sign').click()");
+  await trustedClick("#admin-wallet-proof-sign");
   await completePendingAdminWalletSignature();
   await waitFor("separate administrator step-up signature review", () =>
     evaluate("document.getElementById('admin-wallet-proof-dialog').open && /Verify an already-authorized AstroCrown administrator session/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
@@ -555,10 +569,10 @@ try {
   await evaluate("document.getElementById('admin-access-continue').click()");
   await waitFor("header-wallet request for final step-up", () =>
     evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
-  await evaluate("document.getElementById('wallet-connect-trigger').click()");
+  await trustedClick("#wallet-connect-trigger");
   await waitFor("final administrator signature review", () =>
     evaluate("document.getElementById('admin-wallet-proof-dialog').open && /Verify an already-authorized AstroCrown administrator session/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
-  await evaluate("document.getElementById('admin-wallet-proof-sign').click()");
+  await trustedClick("#admin-wallet-proof-sign");
   await completePendingAdminWalletSignature();
   await waitFor("administrator dashboard after separate wallet step-up", () =>
     evaluate("!document.getElementById('admin-dashboard').hidden && document.getElementById('admin-dashboard').innerText.includes('Administrator access verified')"), 20000);
@@ -570,6 +584,10 @@ try {
   assert.equal(fullyAuthorizedAdmin.admin, true);
   assert.equal(fullyAuthorizedAdmin.adminWalletAddress.toLowerCase(), adminWalletFixtureAddress.toLowerCase());
   const adminWalletMethods = await evaluate("window.__adminWalletCalls");
+  const adminWalletActivation = await evaluate("window.__adminWalletActivation");
+  assert.ok(adminWalletActivation.length >= 3);
+  assert.ok(adminWalletActivation.every(item => item.active === true),
+    "wallet connection and message signing must be triggered from trusted user clicks");
   assert.equal(adminWalletMethods.includes("eth_sendTransaction"), false,
     "administrator enrollment and step-up must never submit a blockchain transaction");
   assert.equal(adminWalletMethods.includes("eth_signTransaction"), false);
