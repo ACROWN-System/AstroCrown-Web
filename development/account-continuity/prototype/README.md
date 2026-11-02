@@ -9,11 +9,13 @@ This prototype provides a familiar **Log In / Sign Up** account dialog in the de
 - Open the homepage header's **Account** button.
 - Switch between **Log In** and **Sign Up**.
 - Create a test account using an invented email address and passphrase.
-- See the success popup, close it without signing out, or choose **Open your account**.
+- See the success popup, close it without signing out, or choose **Open your dashboard**.
 - Verify that a signed-in header control becomes a circular icon with no visible “Account” label.
-- Open the modular account hub, review the current test account/preferences, return to the homepage, and sign out.
+- Open the **User dashboard** (`#account`), the shared member workspace for both regular users and administrators. It contains the currently implemented account/security/preferences modules and is the intended home for all member-facing services and personal transactions as those services are developed.
+- The current account prototype does not yet implement financial transactions or the full AstroCrown service catalog. It must not display fake transactions or nonfunctional controls; future service modules belong in the same User dashboard for both roles.
+- Return to the homepage and sign out.
 - The **Administrator access** section and single **Open administrator dashboard** button appear only when the server says the signed-in account already has the administrator role. Ordinary users do not see the section or button.
-- The button opens a confirmation dialog before any wallet request. Cancel does not request a wallet; Continue rechecks the server role/session, reuses a valid short-lived step-up when one exists, or proceeds to registered-wallet and signature-review steps. The separate `#admin` dashboard has a **Return to your account** link. This local administrator path must be tested on the loopback server, not the hosted memory-only preview.
+- The button opens a confirmation dialog before any wallet request. Cancel does not request a wallet; Continue rechecks the server role/session, reuses a valid short-lived step-up when one exists, or proceeds to registered-wallet and signature-review steps. The separate `#admin` Administrator dashboard has a **Return to user dashboard** link. It is an additional workspace for administrative duties, not a replacement for the regular member workspace. This local administrator path must be tested on the loopback server, not the hosted memory-only preview.
 - Enter or omit an optional Referral ID.
 - Opt in or leave unchecked the independent crypto-news email preference.
 - Accept or reject the required Terms of Use / Privacy Policy checkbox.
@@ -89,8 +91,8 @@ There is no separate public **Sign Up as Administrator** form. The administrator
 
    Use a **public address only**. Never enter a seed phrase, private key, password or recovery secret. Use a disposable test wallet and the matching development/test network for testing. The chain ID must match the network the wallet will use during the step-up. The `--actor` option is an audit label, not an independent proof of operator identity; the prototype relies on authorized access to the local computer and database.
 4. If you started the server with a custom database using `--db`, pass that exact same `--db "PATH"` argument to `provision_admin.py`, before the `grant` subcommand. Otherwise, both scripts use the default database under your user profile. **Do not provision a different database from the one the server is using.**
-5. Refresh the browser page (or sign out and sign back in), then open **Account** and your account hub. The server-reported admin role should make **Open administrator dashboard** appear. This only identifies the account as an administrator; it does not yet authorize the administrator dashboard.
-6. Click the button and choose **Continue**. The server rechecks the account role and session. Unless a valid admin step-up already exists, connect one of the registered wallets and review/sign the one-time message. The fresh wallet proof is required before opening the dashboard; it is not a blockchain transaction.
+5. Refresh the browser page (or sign out and sign back in), then open **Account** and the shared User dashboard. The server-reported admin role should make **Open administrator dashboard** appear in a separate Administrator access section. This is an additional entry; the administrator retains the same User dashboard and member-facing features as an ordinary user. The role does not yet authorize the Administrator dashboard.
+6. Click the administrator entry and choose **Continue**. The server rechecks the account role and session. Unless a valid admin step-up already exists, connect one of the registered wallets and review/sign the one-time message. The fresh wallet proof is required before opening the separate Administrator dashboard; it is not a blockchain transaction. **Return to user dashboard** takes the administrator back to the normal member workspace without signing out or removing member access.
 7. The same command can register another distinct, controlled public wallet for the account using the same email and a new audit reason. A maximum of three wallets is permitted. A fourth wallet, a duplicate wallet, or a previously revoked wallet is rejected.
 
 To revoke the local administrator role and disable its enrolled wallets, use the same local database and a clear audit reason:
@@ -99,7 +101,7 @@ To revoke the local administrator role and disable its enrolled wallets, use the
 
 Revocation returns that account to the ordinary `user` role, clears its administrator step-up sessions and leaves the ordinary account credentials intact. Refresh the account view; the administrator button should disappear.
 
-This is only the owner-operated local-development process. It has no public admin-role endpoint and must not be treated as production identity verification, production owner authentication or the final Imperial HSIAN all-wallet-loss recovery process. The hosted HTML preview cannot persist this role or test the actual CLI; use the loopback server and its same SQLite database.
+This is only the owner-operated local-development process. It has no public admin-role endpoint and must not be treated as production identity verification, production owner authentication or the final Imperial HSIAN all-wallet-loss recovery process. Administrator status adds a separately authorized administrative workspace; it must never remove ordinary member services or silently grant extra personal transaction authority. The hosted HTML preview cannot persist this role or test the actual CLI; use the loopback server and its same SQLite database.
 
 Stop the local server with **Ctrl+C**. The SQLite database is stored under your user profile unless you set `--db`; the clean-database command above uses a temporary Windows path.
 
