@@ -304,8 +304,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "grant":
         print("Wallet: " + result["wallet_address"] + " (chain ID " + str(result["chain_id"]) + ")")
         print("Active wallets: " + str(result["active_wallet_count"]) + "/3")
-        print("Granted permissions: " + ", ".join(supplied_permissions or []) if supplied_permissions is not None else "Granted permissions: preserved")
-        print("Delegable permissions: " + ", ".join(supplied_delegable or []) if supplied_delegable is not None else "Delegable permissions: unchanged")
+        print("Granted permissions: " + (", ".join(args.permission or []) if args.permission is not None else "preserved"))
+        print("Delegable permissions: " + (", ".join(args.delegable_permission or []) if args.delegable_permission is not None else "unchanged"))
         print("A fresh signature from this registered wallet is still required for admin access.")
     else:
         print("Disabled admin wallets: " + str(result["revoked_wallet_count"]))
