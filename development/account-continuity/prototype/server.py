@@ -1742,6 +1742,31 @@ class AccountApplication:
 
     def handle(self, path: str, payload: dict, handler: BaseHTTPRequestHandler) -> tuple[int, dict, str | None]:
         """Return (status, JSON, optional Set-Cookie header)."""
+        legacy_email_routes = {
+            "/api/account/password/change",
+            "/api/account/sessions/revoke-others",
+            "/api/account/register",
+            "/api/account/login",
+            "/api/account/verification/resend",
+            "/api/account/email/verify",
+            "/api/account/password/reset/complete",
+            "/api/account/password-reset/request",
+        }
+        if not self.enable_legacy_email_auth and path in legacy_email_routes:
+            raise ApiError(410, "Email/password authentication is retired. Use a registered passkey.")
+
+        if path == "/api/passkeys/register/options":
+            return self.issue_passkey_registration_options(payload, handler)
+
+        if path == "/api/passkeys/register/verify":
+            return self.verify_passkey_registration(payload, handler)
+
+        if path == "/api/passkeys/authentication/options":
+            return self.issue_passkey_authentication_options(payload, handler)
+
+        if path == "/api/passkeys/authentication/verify":
+            return self.verify_passkey_authentication(payload, handler)
+
         if path == "/api/cases/mine":
             account, _expires, _token = self.require_account_session(handler)
             return 200, self.case_store.list_for_account(account["account_id"]), None
@@ -1764,8 +1789,9 @@ class AccountApplication:
                     "admin": False,
                     "adminWalletAddress": None,
                     "adminSessionExpiresAt": None,
-                    "emailVerificationDeliveryAvailable": self.email_delivery_available,
-                    "passwordResetAvailable": self.email_delivery_available,
+                    "passkeyAvailable": self.passkey_auth_service is not None,
+                    "emailVerificationDeliveryAvailable": False,
+                    "passwordResetAvailable": False,
                     "activeSessionCount": 0,
                 }, None
             return 200, self.account_summary(account, expires), None
@@ -2393,6 +2419,7 @@ def create_server(application: AccountApplication, port: int = 8766) -> Threadin
     if application.email_sender is not None and not application.email_public_base_url:
         application.email_public_base_url = f"http://localhost:{server.server_port}"
     application.configure_wallet_auth(server.server_port)
+    application.configure_passkey_auth(server.server_port)
     return server
 
 
