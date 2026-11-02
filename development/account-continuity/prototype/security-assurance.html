@@ -7,16 +7,17 @@
   <meta name="referrer" content="no-referrer">
   <title>Security assurance · AstroCrown account prototype</title>
   <style>
-    :root { color-scheme: dark; --gold:#ffd700; --ink:#f2f5fb; --muted:#aab8cb; --line:rgba(153,178,213,.22); }
+    :root { color-scheme:dark; --gold:#ffd700; --ink:#f2f5fb; --muted:#aab8cb; --line:rgba(153,178,213,.22); }
     * { box-sizing:border-box; }
     body { margin:0; min-height:100vh; background:radial-gradient(ellipse at 15% 0%,rgba(22,52,90,.35),transparent 32rem),linear-gradient(145deg,#071322,#030811 70%); color:var(--ink); font:14px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-    main { width:min(920px,calc(100% - 28px)); margin:40px auto 70px; }
+    main { width:min(940px,calc(100% - 28px)); margin:40px auto 70px; }
     .topline { height:3px; border-radius:9px; background:linear-gradient(90deg,transparent,var(--gold) 18%,#7b6a21 62%,transparent); margin-bottom:24px; }
     .eyebrow { color:#d7c46a; font-size:11px; letter-spacing:.12em; font-weight:800; text-transform:uppercase; }
     h1 { margin:8px 0 10px; font-size:clamp(27px,5vw,42px); line-height:1.12; letter-spacing:-.04em; }
     h2 { margin:0 0 9px; font-size:17px; }
     p { color:var(--muted); margin:8px 0 12px; }
     .status { border:1px solid rgba(255,210,74,.38); background:rgba(255,210,74,.065); border-radius:12px; padding:14px 16px; margin:22px 0; color:#ecdca5; }
+    .status p { margin:5px 0 0; }
     .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:18px; }
     section { border:1px solid var(--line); border-radius:13px; padding:18px; background:linear-gradient(145deg,rgba(15,31,52,.9),rgba(5,12,23,.94)); }
     ul { color:var(--muted); padding-left:20px; margin:8px 0 0; }
@@ -33,67 +34,69 @@
     <div class="topline"></div>
     <div class="eyebrow">AstroCrown · Account access</div>
     <h1>Security assurance</h1>
-    <p>This page explains the current evidence and limitations of the <strong>development-only account prototype</strong>. It is separate from the Terms of Use and Privacy Policy.</p>
+    <p>This page describes the current local passkey-first account prototype, the specific tests that exercise it, and the controls that remain absent. It is separate from the Terms of Use and Privacy Policy.</p>
 
     <div class="status">
-      <strong>Status: Development prototype only.</strong>
-      <p>The prototype is not production authentication, has not received an independent security audit or certification, and must not be used with real credentials, personal email accounts, crypto wallets or valuable assets.</p>
+      <strong>Status: local development prototype only.</strong>
+      <p>WebAuthn passkey registration/sign-in and one-time offline recovery are implemented for loopback testing. This is not production authentication, an independent security audit, a certification or a guarantee of account recovery. Do not use real credentials, personal recovery material, real wallets or valuable assets.</p>
     </div>
 
     <div class="grid">
       <section>
         <h2>Controls present in the local prototype</h2>
         <ul>
-          <li>Password verifiers use PBKDF2-HMAC-SHA256 with a random salt and 600,000 iterations; raw passwords are not stored.</li>
-          <li>A signed-in user can change their password after confirming the current password and matching the new passphrase twice. The server creates a new random salt, rotates the current session, revokes every prior session and clears administrator step-up state.</li>
-          <li>Active sessions are counted server-side. A user can revoke other sessions after confirming the current password; the current session remains active. Password changes and session revocations create minimal audit events without storing passwords or session tokens.</li>
-          <li>Email verification and password reset use separate single-use random tokens. The database stores only SHA-256 token hashes; verification links expire after 24 hours and password-reset links after 30 minutes.</li>
-          <li>Password-reset completion changes the credential, marks the mailbox verified, revokes all account sessions and clears administrator step-up state. The request endpoint returns the same status and response body for known and unknown email addresses; the local SMTP submission is synchronous, so response timing is not guaranteed to be indistinguishable.</li>
-          <li>An optional provider-independent SMTP transport is available only when explicitly configured. TLS is mandatory; no sender is configured by default, and no email is sent when delivery is unavailable. An accepted SMTP submission is not proof of inbox delivery.</li>
-          <li>Session tokens are generated randomly; the SQLite session store keeps a token hash.</li>
-          <li>The test server binds to loopback and checks the expected localhost Host/Origin.</li>
-          <li>Request bodies are bounded. Account registration, sign-in, password changes, session revocation and administrator wallet challenges use atomic SQLite-backed rate limits that survive application restarts; rate-limit subjects are stored as SHA-256 digests rather than raw email addresses or account IDs. Case-portal throttles remain in-process in this prototype.</li>
-          <li>Local cookies are HttpOnly and SameSite=Strict. This HTTP-only localhost setting is not a production cookie configuration.</li>
-          <li>Basic response headers, a Content Security Policy, and no-store responses are set by the local server.</li>
-          <li>The hosted browser preview uses a disposable in-memory demonstration and makes no account API request.</li>
+          <li>WebAuthn passkey registration uses discoverable credentials (resident keys), required user verification and attestation preference "none".</li>
+          <li>Discoverable passkey sign-in does not require an email address, password or account identifier to be submitted to the login endpoint.</li>
+          <li>The maintained WebAuthn relying-party library validates client data, challenge, RP ID hash, origin, user presence, user verification and the authenticator signature. The application stores the credential ID, public key, signature counter and lifecycle metadata; no passkey private key is sent to or stored by AstroCrown.</li>
+          <li>Registration and authentication challenges are generated randomly, bound to one ceremony, stored server-side, expire and are atomically marked used. Replay and stale concurrent credential updates are rejected.</li>
+          <li>Account IDs are independent of email and wallet addresses. New passkey accounts use a local random account identifier and default to the ordinary user role; a passkey cannot grant administrator authority.</li>
+          <li>Initial registration generates a 256-bit random one-time recovery key. The readable key is returned once; the database stores a 16-byte salt and 32-byte SHA-256 verifier only. The key is not written to application logs or the audit detail.</li>
+          <li>Recovery verifies the account identifier and unused recovery key, requires a new WebAuthn registration ceremony, consumes the old key, disables all previously registered passkeys, revokes all existing sessions, issues a replacement key and records a security audit event.</li>
+          <li>Recovery attempts and account-creation/sign-in attempts use persistent SQLite-backed rate limits. Invalid/expired/reused challenges and failed recovery proofs are rejected.</li>
+          <li>Session tokens are random; SQLite stores their hashes. Local cookies are HttpOnly and SameSite=Strict. These HTTP localhost cookie settings are not a production HTTPS configuration.</li>
+          <li>The server binds only to loopback and checks the canonical localhost Host/Origin. Request bodies are bounded. Responses are no-store and use basic security headers and a Content Security Policy.</li>
+          <li>Account registration/sign-in/recovery does not invoke an email or SMS provider, a paid identity provider, a third-party authentication API or a blockchain transaction.</li>
+          <li>Administrator role/permission checks and the EVM/SIWE administrator step-up remain separate from ordinary passkey authentication. Wallet connection alone never creates a user account or administrator role.</li>
         </ul>
       </section>
 
       <section>
-        <h2>Not implemented</h2>
+        <h2>Not implemented or not production-qualified</h2>
         <ul>
-          <li>Production deployment and operational qualification of email verification/password-reset delivery; an asynchronous mail queue with response-timing controls; sender-domain authentication (SPF/DKIM/DMARC); bounce/suppression handling; abuse monitoring; and verified mail-provider selection.</li>
-          <li>Production HTTPS hosting, production session/CSRF configuration, persistent production storage and backup/restore.</li>
-          <li>Development-only administrator controls include a local owner-operated provisioning/revocation CLI, a registry of up to three wallets, server-issued SIWE challenge/signature verification, a ten-minute wallet step-up on the existing account session, and a gated admin console. From that console, a currently wallet-verified administrator can enroll an additional wallet with a separate signature from the proposed wallet; successful enrollment invalidates the previous admin step-up. Ordinary registration cannot assign a role and role assignment alone never authorizes admin access. There is no public provisioning endpoint, wallet-removal UI, production role administration, publishing or other privileged business operation, or all-wallet-loss recovery. Additional-wallet enrollment is a development-only, separately signed operation; it clears the previous admin step-up.</li>
-          <li>The shared SIWE verifier checks EOA/EIP-191 signatures only in this local prototype. Contract-wallet/ERC-1271 verification, remote RPC fallback, production origin/domain configuration, and wallet removal through the UI are not implemented. The additional-wallet enrollment route is not production-reviewed.</li>
-          <li>Imperial HSIAN recovery for loss of every administrator wallet.</li>
-          <li>Real passkeys and recovery-code flows; production session/device history, trusted-device recognition, production session revocation and production reauthentication controls. The local session controls do not identify individual devices.</li>
-          <li>Production profile/avatar synchronization or image uploads. Six built-in avatar glyphs can be selected in the local account prototype only; no external image is uploaded or fetched.</li>
-          <li>Newsletter delivery, a verified referral/reward system, approved production Terms/Privacy, or user account deletion/export.</li>
-          <li>Independent penetration testing, external certification, production incident response and a complete ASVS verification.</li>
+          <li>Production HTTPS hosting, RP ID/origin configuration for the public site, durable shared database, secret management, backup/restore, deployment monitoring and operational incident response.</li>
+          <li>User-facing enrollment/revocation of multiple passkeys, device/session management and passkey-confirmed reauthentication for every sensitive action.</li>
+          <li>The optional wallet authenticator as a backup for ordinary account recovery. The currently implemented EVM/SIWE wallet path is limited to administrator wallet enrollment and administrator step-up. Bitcoin, Solana and contract-wallet authenticators are not supported here.</li>
+          <li>Recovery after all passkeys and the offline recovery key are lost. No staff, administrator, email or SMS override is provided; the account may be permanently unrecoverable.</li>
+          <li>Client-side/end-to-end encryption that prevents application/database operators from reading plaintext account data. WebAuthn authentication alone does not provide this data-confidentiality property.</li>
+          <li>Production owner/admin governance, production role management, external security operations, all-admin-wallet-loss Imperial HSIAN recovery, and production account support.</li>
+          <li>Independent penetration testing, independent security review, formal ASVS verification, external certification, approved production Terms/Privacy, and production privacy/data retention/export/deletion procedures.</li>
+          <li>Synced passkeys may use the user's platform credential-sync provider. Device-bound credentials or a compatible FIDO2 hardware key are alternatives where supported; hardware key purchase is not required by this local prototype.</li>
+          <li>Ordinary account-level wallet-backup enrollment, multi-chain wallet credential schema and Astro-Wallet integration remain separate future work.</li>
         </ul>
       </section>
 
       <section>
-        <h2>What the tests mean</h2>
-        <p>Automated tests can demonstrate the specific local prototype behaviors that they exercise, such as password verification, request validation, session invalidation and the browser demo journey. A passing test suite does not establish that every security control is present or that future production deployment is secure.</p>
-        <p>The account UI and wallet-signature lab are separate development components. Connecting a wallet is not ordinary account login and must not create administrator privileges.</p>
+        <h2>What the automated tests mean</h2>
+        <p>The local Python suite exercises WebAuthn option generation, RP/origin requirements, registration and authentication challenge handling, replay rejection, credential persistence, user-handle matching, recovery-key storage and rotation, one-time consumption, passkey replacement, session revocation, and ordinary/admin separation. Some server endpoint tests deliberately mock the cryptographic library verdict so they can isolate database and lifecycle behavior; they do not simulate forged real-world signatures as accepted proofs.</p>
+        <p>The headless Chrome test uses a browser virtual authenticator to exercise real WebAuthn registration, discoverable sign-in and the recovery/replacement ceremony in the local environment. A virtual-authenticator CI pass is evidence for that tested browser path, not proof of universal device/browser compatibility.</p>
+        <p>A passing test suite does not prove that every control is present, does not replace an independent review and does not make a local loopback prototype production-ready.</p>
       </section>
 
       <section>
-        <h2>References used for design</h2>
+        <h2>Standards and design references</h2>
         <ul>
-          <li><a href="https://csrc.nist.gov/pubs/sp/800/63/B/4/final" target="_blank" rel="noopener noreferrer">NIST SP 800-63B-4</a> — authenticator and password guidance.</li>
-          <li><a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener noreferrer">OWASP ASVS 5.0.0</a> — application security verification requirements.</li>
-          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Password Storage Cheat Sheet</a>.</li>
-          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Session Management Cheat Sheet</a>.</li>
+          <li><a href="https://www.w3.org/TR/2026/REC-webauthn-3-20260825/" target="_blank" rel="noopener noreferrer">W3C WebAuthn Level 3</a> — public-key browser authentication API.</li>
+          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Passkey_Security_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Passkey Security Cheat Sheet</a> — relying-party implementation, origins, credential lifecycle and recovery.</li>
+          <li><a href="https://csrc.nist.gov/pubs/sp/800/63/B/4/final" target="_blank" rel="noopener noreferrer">NIST SP 800-63B-4</a> — authenticator management and recovery guidance. AstroCrown's 128-bit minimum recovery-key target is a project-selected margin; NIST's saved recovery-code minimum is 64 bits.</li>
+          <li><a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener noreferrer">OWASP ASVS 5.0.0</a> — broader application security verification baseline.</li>
         </ul>
+        <p>These are engineering references. Their use is not certification, automatic conformance or independent security review.</p>
       </section>
     </div>
 
     <div class="footer">
       <a href="../../index.html">Return to the development homepage</a>
-      <span>Evidence scope: local account prototype · Not a certification or security guarantee</span>
+      <span>Evidence scope: local passkey/recovery prototype · Not a certification or security guarantee</span>
     </div>
   </main>
 </body>
