@@ -209,6 +209,22 @@ class AccountApplication:
         )
         return True
 
+    def configure_passkey_auth(self, port: int) -> bool:
+        """Bind local WebAuthn verification to the exact localhost origin."""
+        self.passkey_auth_service = None
+        if PasskeyAuthService is None:
+            return False
+        host = f"localhost:{port}"
+        try:
+            self.passkey_auth_service = PasskeyAuthService(
+                rp_id="localhost",
+                rp_name="AstroCrown",
+                origin=f"http://{host}",
+            )
+        except (PasskeyUnavailable, ValueError):
+            return False
+        return True
+
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(str(self.database_path), timeout=10)
         connection.row_factory = sqlite3.Row
