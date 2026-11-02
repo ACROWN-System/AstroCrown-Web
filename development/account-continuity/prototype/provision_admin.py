@@ -19,7 +19,7 @@ PROTOTYPE_DIR = Path(__file__).resolve().parent
 if str(PROTOTYPE_DIR) not in sys.path:
     sys.path.insert(0, str(PROTOTYPE_DIR))
 
-from server import AccountApplication, DEFAULT_DATABASE, normalize_email, utc_iso  # noqa: E402
+from server import AccountApplication, DEFAULT_DATABASE, normalize_account_identifier, utc_iso  # noqa: E402
 
 ADDRESS_SHAPE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 MAX_ADMIN_WALLETS = 3
@@ -73,7 +73,7 @@ def _validated_permissions(value: object, label: str) -> list[str]:
 def grant_admin(
     application: AccountApplication,
     *,
-    email: str,
+    account_identifier: str,
     wallet_address: str,
     chain_id: int,
     reason: str,
@@ -87,7 +87,10 @@ def grant_admin(
     an allowlisted candidate for the step-up flow; it receives no access until
     it proves control through a fresh server-issued SIWE challenge.
     """
-    normalized_email = normalize_email(email)
+    normalized_identifier = normalize_account_identifier(
+        account_identifier,
+        allow_legacy_email=application.enable_legacy_email_auth,
+    )
     address, validated_chain = _validated_wallet(wallet_address, chain_id)
     audit_reason = _validated_reason(reason)
     supplied_permissions = None if permissions is None else _validated_permissions(permissions, "Permissions")
@@ -104,11 +107,11 @@ def grant_admin(
 
     with application.connect() as db:
         account = db.execute(
-            "SELECT account_id, role FROM accounts WHERE email = ? COLLATE NOCASE",
-            (normalized_email,),
+            "SELECT account_id, username, role FROM accounts WHERE username = ? COLLATE NOCASE",
+            (normalized_identifier,),
         ).fetchone()
         if account is None:
-            raise ValueError("No local test account exists for that email.")
+            raise ValueError("No local account exists for that account identifier.")
         account_id = account["account_id"]
 
         duplicate = db.execute(
@@ -191,7 +194,7 @@ def grant_admin(
         )
     return {
         "account_id": account_id,
-        "email": normalized_email,
+        "account_identifier": account["username"],
         "role": "admin",
         "wallet_address": address,
         "chain_id": validated_chain,
@@ -203,12 +206,15 @@ def grant_admin(
 def revoke_admin(
     application: AccountApplication,
     *,
-    email: str,
+    account_identifier: str,
     reason: str,
     actor: str = "local-owner-cli",
 ) -> dict[str, Any]:
     """Revoke the local prototype admin role, wallets and all admin step-up states."""
-    normalized_email = normalize_email(email)
+    normalized_identifier = normalize_account_identifier(
+        account_identifier,
+        allow_legacy_email=application.enable_legacy_email_auth,
+    )
     audit_reason = _validated_reason(reason)
     if not isinstance(actor, str) or not actor.strip() or len(actor) > 120:
         raise ValueError("Actor must be a non-empty label of at most 120 characters.")
@@ -216,11 +222,11 @@ def revoke_admin(
 
     with application.connect() as db:
         account = db.execute(
-            "SELECT account_id, role FROM accounts WHERE email = ? COLLATE NOCASE",
-            (normalized_email,),
+            "SELECT account_id, username, role FROM accounts WHERE username = ? COLLATE NOCASE",
+            (normalized_identifier,),
         ).fetchone()
         if account is None:
-            raise ValueError("No local test account exists for that email.")
+            raise ValueError("No local account exists for that account identifier.")
         account_id = account["account_id"]
         active_count = int(db.execute(
             "SELECT COUNT(*) FROM admin_wallets WHERE account_id = ? AND active = 1",
@@ -268,7 +274,7 @@ def revoke_admin(
         )
     return {
         "account_id": account_id,
-        "email": normalized_email,
+        "account_identifier": account["username"],
         "role": "user",
         "revoked_wallet_count": active_count,
         "audit_reason": audit_reason,
@@ -294,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     grant = subparsers.add_parser("grant", help="Grant local admin role and provision one wallet.")
-    grant.add_argument("--email", required=True)
+    grant.add_argument("--account-identifier", required=True, help="Existing member's AC- account identifier.")
     grant.add_argument("--wallet", required=True, help="Public wallet address only; never a seed/private key.")
     grant.add_argument("--chain-id", required=True, type=int)
     grant.add_argument("--reason", required=True)
@@ -309,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
     grant.add_argument("--confirm", default=None)
 
     revoke = subparsers.add_parser("revoke", help="Revoke local admin role and disable all enrolled wallets.")
-    revoke.add_argument("--email", required=True)
+    revoke.add_argument("--account-identifier", required=True, help="Existing member's AC- account identifier.")
     revoke.add_argument("--reason", required=True)
     revoke.add_argument("--confirm", default=None)
 
@@ -319,19 +325,19 @@ def main(argv: list[str] | None = None) -> int:
         application = AccountApplication(args.db)
         if args.command == "grant":
             result = grant_admin(
-                application, email=args.email, wallet_address=args.wallet,
+                application, account_identifier=args.account_identifier, wallet_address=args.wallet,
                 chain_id=args.chain_id, reason=args.reason, actor=args.actor,
                 permissions=args.permission, delegable_permissions=args.delegable_permission,
             )
         else:
             result = revoke_admin(
-                application, email=args.email, reason=args.reason, actor=args.actor
+                application, account_identifier=args.account_identifier, reason=args.reason, actor=args.actor
             )
     except (ValueError, OSError) as error:
         print("No admin change was completed: " + str(error), file=sys.stderr)
         return 2
     print("Development-only administrator provisioning completed.")
-    print("Account: " + result["email"])
+    print("Account identifier: " + result["account_identifier"])
     print("Role: " + result["role"])
     if args.command == "grant":
         print("Wallet: " + result["wallet_address"] + " (chain ID " + str(result["chain_id"]) + ")")
