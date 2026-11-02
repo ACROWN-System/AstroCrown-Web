@@ -289,3 +289,21 @@ Production account identity, authenticated owner bootstrap, deployment, shared p
 ### Impact and preservation
 
 This keeps ordinary account continuity independent from appointment to administrative authority and prevents a wallet from becoming an alternative route to obtain the role. Keep all work under `development/`, retain PR #141 as draft/unmerged/undeployed, and do not infer production readiness from local prototype behavior.
+
+## 15. Verification record — 2026-11-02
+
+The permissioned administrator appointment implementation and its test updates were verified on code/test head `66c3d9fa4c2b5ecf8843bdf6798468c4a4a883ad`.
+
+| Workflow / evidence | Result |
+|---|---|
+| Local Account Continuity Prototype Tests | PASS — 60 tests completed |
+| Account entry-point and security-boundary checks | PASS |
+| Headless Chrome account-flow smoke test | PASS — includes permission-gated administrator grant/revoke controls |
+| Local Wallet Authentication Prototype Tests | PASS |
+| NOVA RSI Engine CI | PASS |
+| NOVA RSI CodeQL Security Analysis | PASS |
+| External Review Pipeline CI | PASS |
+
+The account workflow also completed Python and browser-JavaScript syntax validation. The first-wallet enrollment regression covers the target's own signature, cross-session rejection, replay rejection and the separate fresh administrator step-up. The appointment regression covers self-grant denial, a wallet-verified administrator without `admin.roles.grant`, non-delegable permission transfer, separate `admin.roles.revoke`, audit records and preservation of ordinary account access.
+
+This record is tied to the stated code/test head. Any later changes to application or test code require a new verification record; documentation-only changes do not retroactively alter the result above. PR #141 remains draft, open, unmerged and undeployed. No production homepage behavior was changed. Production identity/governance, owner bootstrap authentication, hosting/deployment, independent security review and Imperial HSIAN all-wallet-loss recovery remain outstanding.
