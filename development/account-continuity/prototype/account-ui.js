@@ -617,8 +617,8 @@
       roleManagementCard +=
         '<section class="account-dashboard-card account-admin-role-management">' +
           '<h2>Appoint an administrator</h2>' +
-          '<p>Grant the role to an existing AstroCrown user account. The target keeps the same User dashboard and must enrol a wallet they personally control. No wallet address, password or private key is entered here.</p>' +
-          '<label class="account-admin-role-field" for="admin-role-grant-email">Existing user account email<input id="admin-role-grant-email" type="email" maxlength="254" autocomplete="off" required></label>' +
+          '<p>Grant the role to an existing AstroCrown user account. The target keeps the same User dashboard and must enrol a wallet they personally control. Use the account identifier shown in that member\'s User dashboard; it is a reference only, not an authenticator. No email, wallet address, passkey credential ID, password or private key is requested.</p>' +
+          '<label class="account-admin-role-field" for="admin-role-grant-account-identifier">Existing member account identifier<input id="admin-role-grant-account-identifier" type="text" maxlength="13" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-…" required></label>' +
           '<label class="account-admin-role-field" for="admin-role-grant-reason">Reason for appointment<input id="admin-role-grant-reason" type="text" maxlength="500" minlength="12" required></label>' +
           (permissionChoices
             ? '<div class="account-admin-permission-list"><p>Optional permissions you are explicitly allowed to delegate:</p>' + permissionChoices + '</div>'
@@ -631,8 +631,8 @@
       roleManagementCard +=
         '<section class="account-dashboard-card account-admin-role-management">' +
           '<h2>Revoke administrator access</h2>' +
-          '<p>Revocation removes the administrator role, delegated permissions and enrolled administrator wallets. The person keeps their ordinary AstroCrown account and User dashboard.</p>' +
-          '<label class="account-admin-role-field" for="admin-role-revoke-email">Administrator account email<input id="admin-role-revoke-email" type="email" maxlength="254" autocomplete="off" required></label>' +
+          '<p>Revocation removes the administrator role, delegated permissions and enrolled administrator wallets. The person keeps their ordinary AstroCrown account and User dashboard. Enter the account identifier shown in that member\'s User dashboard.</p>' +
+          '<label class="account-admin-role-field" for="admin-role-revoke-account-identifier">Administrator account identifier<input id="admin-role-revoke-account-identifier" type="text" maxlength="13" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-…" required></label>' +
           '<label class="account-admin-role-field" for="admin-role-revoke-reason">Reason for revocation<input id="admin-role-revoke-reason" type="text" maxlength="500" minlength="12" required></label>' +
           '<button class="account-secondary" type="button" id="admin-role-revoke">Revoke administrator role</button>' +
           '<p id="admin-role-revoke-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
@@ -1002,27 +1002,27 @@
     var button = event.target.closest("button");
     if (!button || busy) return;
     if (button.id === "admin-role-grant") {
-      var grantEmailInput = document.getElementById("admin-role-grant-email");
+      var grantIdentifierInput = document.getElementById("admin-role-grant-account-identifier");
       var grantReasonInput = document.getElementById("admin-role-grant-reason");
       var grantFeedback = document.getElementById("admin-role-grant-feedback");
-      var grantEmail = grantEmailInput ? grantEmailInput.value.trim() : "";
+      var grantAccountIdentifier = grantIdentifierInput ? grantIdentifierInput.value.trim().toUpperCase() : "";
       var grantReason = grantReasonInput ? grantReasonInput.value.trim() : "";
       var delegatedPermissions = Array.prototype.map.call(
         adminDashboardContent.querySelectorAll('input[name="admin-role-permission"]:checked'),
         function (input) { return input.value; }
       );
-      if (!grantEmail || !grantReason || grantReason.length < 12) {
-        if (grantFeedback) grantFeedback.textContent = "Enter the existing account email and a clear reason of at least 12 characters.";
+      if (!/^AC-[A-F0-9]{10}$/.test(grantAccountIdentifier) || !grantReason || grantReason.length < 12) {
+        if (grantFeedback) grantFeedback.textContent = "Enter the member's AC- account identifier and a clear reason of at least 12 characters.";
         return;
       }
       setBusy(true);
       try {
         var grantResult = await requestJson("/api/admin/roles/grant", {
-          email: grantEmail,
+          accountIdentifier: grantAccountIdentifier,
           reason: grantReason,
           permissions: delegatedPermissions
         });
-        if (grantEmailInput) grantEmailInput.value = "";
+        if (grantIdentifierInput) grantIdentifierInput.value = "";
         if (grantReasonInput) grantReasonInput.value = "";
         adminDashboardContent.querySelectorAll('input[name="admin-role-permission"]').forEach(function (input) {
           input.checked = false;
@@ -1036,22 +1036,22 @@
       return;
     }
     if (button.id === "admin-role-revoke") {
-      var revokeEmailInput = document.getElementById("admin-role-revoke-email");
+      var revokeIdentifierInput = document.getElementById("admin-role-revoke-account-identifier");
       var revokeReasonInput = document.getElementById("admin-role-revoke-reason");
       var revokeFeedback = document.getElementById("admin-role-revoke-feedback");
-      var revokeEmail = revokeEmailInput ? revokeEmailInput.value.trim() : "";
+      var revokeAccountIdentifier = revokeIdentifierInput ? revokeIdentifierInput.value.trim().toUpperCase() : "";
       var revokeReason = revokeReasonInput ? revokeReasonInput.value.trim() : "";
-      if (!revokeEmail || !revokeReason || revokeReason.length < 12) {
-        if (revokeFeedback) revokeFeedback.textContent = "Enter the administrator account email and a clear reason of at least 12 characters.";
+      if (!/^AC-[A-F0-9]{10}$/.test(revokeAccountIdentifier) || !revokeReason || revokeReason.length < 12) {
+        if (revokeFeedback) revokeFeedback.textContent = "Enter the administrator's AC- account identifier and a clear reason of at least 12 characters.";
         return;
       }
       setBusy(true);
       try {
         var revokeResult = await requestJson("/api/admin/roles/revoke", {
-          email: revokeEmail,
+          accountIdentifier: revokeAccountIdentifier,
           reason: revokeReason
         });
-        if (revokeEmailInput) revokeEmailInput.value = "";
+        if (revokeIdentifierInput) revokeIdentifierInput.value = "";
         if (revokeReasonInput) revokeReasonInput.value = "";
         if (revokeFeedback) revokeFeedback.textContent = revokeResult.message || "Administrator access was revoked.";
       } catch (error) {
