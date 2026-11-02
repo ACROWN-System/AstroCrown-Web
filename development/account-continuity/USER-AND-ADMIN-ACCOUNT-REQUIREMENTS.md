@@ -353,3 +353,58 @@ The related canonical NOVA planning document is [Solana Devnet Qualification and
 ### Implementation boundary
 
 These decisions update the development target and test plan only. No Solana program, PDA vault, transaction guard, monitoring service, recovery path or Devnet wallet has yet been created or deployed by this update. The existing account prototype continues to implement only its local identity, role and external-wallet step-up flows.
+
+
+## 15. Supplemental Solana Testnet and multi-asset compatibility — 2026-11-02
+
+### Network roles
+
+Use three non-production Solana environments with distinct responsibilities:
+
+| Environment | Purpose in AstroCrown/NOVA qualification |
+|---|---|
+| Local validator / Localnet | Main repeatable development, deterministic regression, policy, adversarial and recovery testing |
+| Devnet | Primary public application/program integration and wallet/transaction testing |
+| Testnet | Supplemental network-release, validator, runtime/version, stability and targeted stress/compatibility testing |
+
+Solana's official guidance directs application developers to Devnet; Testnet is primarily used by core contributors to stress-test releases, network upgrades, performance, stability and validator behavior. Testnet may run a newer software release branch than Devnet and Mainnet. Do not substitute Testnet for Devnet or assume that passing Testnet proves Mainnet compatibility. Its faucet exists, but availability, limits and eligibility must be checked when it is actually used.
+
+### Asset compatibility must be tested by program and configuration
+
+Do not rely on discovering or collecting arbitrary faucet tokens as the asset compatibility strategy. A native SOL airdrop does not provide arbitrary SPL tokens. Create controlled test mints and token accounts on each cluster where they are needed. A Devnet mint does not automatically exist on Testnet because each cluster has a separate ledger.
+
+The test matrix should be driven by the asset standards AstroCrown intends to support. Candidate categories include:
+
+- Native SOL.
+- Classic SPL Token fungible assets.
+- Token-2022 base mints.
+- Token-2022 transfer-fee assets.
+- Token-2022 transfer-hook assets, including required extra account and hook-program validation.
+- Token-2022 permanent-delegate assets.
+- Token-2022 default-account-state and pausable assets.
+- Token-2022 metadata/metadata-pointer configurations.
+- Confidential-transfer assets only after a separate privacy, monitoring and authorization design.
+- NFT and other standards only when explicitly selected, such as Metaplex Token Metadata, programmable NFTs, compressed NFTs or Metaplex Core.
+
+Token-2022 extensions may be incompatible with one another, and extension choices often have to be made at mint/account initialization. NOVA must not assume every combination is valid or that extensions can be added after mint creation. Each asset type needs an explicit support profile. Unknown token program IDs, mints, extensions, transfer hooks and asset standards must fail closed.
+
+For every controlled fixture mint, record the cluster, mint address, owning token program, decimals, extension set, authorities, test purpose and program build. The token's ticker, displayed name, logo or metadata URI does not prove its identity. Asset checks must use the cluster, owning program and mint/asset address, plus its configuration and authorities.
+
+### Suggested testing responsibilities
+
+- Run all combinations that can be tested deterministically on the local validator first.
+- On Devnet, test the primary public integration cases and controlled token fixtures.
+- On Testnet, repeat selected critical asset and transaction flows to detect differences in the live cluster/runtime/release environment and conduct controlled stress tests where suitable.
+- Never assume a test mint, faucet token, balance or account is shared between clusters.
+- Record unsupported or untested configurations explicitly; do not advertise universal asset compatibility.
+
+### Official references
+
+- [Solana clusters and public RPC endpoints](https://solana.com/docs/references/clusters)
+- [Solana tokens and token programs](https://solana.com/docs/tokens)
+- [Solana Token Extensions](https://solana.com/docs/tokens/extensions)
+- [Solana Devnet faucet and airdrop guide](https://solana.com/developers/cookbook/development/airdrops-and-faucets)
+
+### Status boundary
+
+This is an extension of the $0-first testing plan only. No Testnet wallet, test mint, faucet request, program deployment or transaction was created by this documentation change. No universal asset support is claimed.
