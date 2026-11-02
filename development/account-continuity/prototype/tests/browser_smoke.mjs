@@ -268,7 +268,7 @@ try {
   assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"), /regular users and administrators/i);
   assert.match(await evaluate("document.querySelector('.account-user-services-card').innerText"), /transaction workflows.*not enabled/i);
   assert.match(await evaluate("document.body.innerText"), /Email not verified/i);
-  assert.match(await evaluate("document.body.innerText"), /Password reset|password reset/);
+  assert.match(await evaluate("document.body.innerText"), /password[- ]reset/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /recovery codes/i);
   assert.ok(await evaluate("Boolean(document.querySelector('.account-dashboard-card a[href*=' + JSON.stringify('security-assurance.html') + ']'))"),
     "dashboard must link to the separate security assurance page");
