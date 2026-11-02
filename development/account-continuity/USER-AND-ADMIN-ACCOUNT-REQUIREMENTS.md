@@ -610,3 +610,33 @@ Decision summary:
 Automated API tests exercise the server-side credential and recovery lifecycle; some tests deliberately mock the cryptographic verification verdict to isolate API/database state transitions. The headless Chrome test uses a virtual authenticator to exercise actual browser WebAuthn registration, discoverable sign-in and passkey replacement. A successful run is still limited to this CI browser environment. As of this record the latest CI jobs are running; record their final conclusions and commit SHA in the active audit before describing this exact head as passing.
 
 No public service, production database, paid identity provider, email/SMS provider, live wallet, blockchain transaction, production RP ID or deployment was configured. PR #141 remains draft, open, unmerged and undeployed.
+
+
+## 21. Private in-app communications: Alerts and Messages — 2026-11-03
+
+### One inbox, explicit destination
+
+- The signed-in account has one private Communications page opened from a persistent header bell. The page contains two distinct destinations: **Alerts** and **Messages**.
+- The sender explicitly chooses the destination when creating a communication. AstroCrown does not infer, classify, or guess the destination from message text. The same storage and account-session boundary serves both destinations; the destination controls presentation and acknowledgement behavior.
+- **Alerts** are important account, security, governance or service notices. A pending Alert remains visible until the recipient acknowledges it. System-generated alerts are tied to the source event/audit record where one exists. The administrator-role revocation notice belongs here, not as a second copy on the User dashboard.
+- **Messages** are ordinary private in-app correspondence. They are marked read by the recipient and do not require a formal acknowledgement. The current prototype's sending surface is limited to one recipient per send by an administrator who has the separate communication permission.
+- A read or acknowledgement state is scoped to the recipient's own account session. Another account cannot list or change the recipient's communication state. The recipient's account identifier is a routing reference; it is not an authenticator.
+
+### Authority and current implementation boundary
+
+- Sending either an Alert or a Message requires the independent **admin.messages.send** permission and an active, wallet-step-up-verified Administrator session. The permission is not automatically granted with the Administrator role. It may only be delegated where the grantor's permission record explicitly allows delegation.
+- The server rechecks the permission and privileged session within the send transaction. Sends are limited to one existing account per request and rate-limited to 20 per administrator per hour. Subject and body lengths are bounded; client rendering escapes message content as text.
+- The current prototype supports persistent in-app delivery, a sender identity, destination, subject/body, creation time, per-recipient read/acknowledgement timestamps and an optional source-audit link. It does not send email, SMS, push notifications or external provider requests.
+- **Not included:** user-to-user messaging, public posts, group/broadcast delivery, multi-person threads, replies, attachments, external delivery channels, message editing or deletion, typing/presence indicators, or a general-purpose real-time chat/DM experience. Those require a separate product and abuse/security design rather than being assumed by this inbox.
+- Messages and Alerts do not grant permissions, change roles, authorize payments or replace the authoritative audit/security events. A communication is explanatory content; account and security state continues to be determined by the backend's role, session, permission and audit records.
+
+### Acceptance and release boundaries
+
+- [x] Header bell, unread/pending badge, private Communications page and Alerts/Messages tabs in the local prototype.
+- [x] Sender-selected destination; Alert acknowledgement and Message read status are separate and persisted.
+- [x] Administrator role revocation creates an Alert linked to the authoritative administrator audit event.
+- [x] Recipient-only listing and state changes; the send operation requires the separate permission and wallet-verified session.
+- [ ] Exact-head automated tests and browser journey must pass before this implementation block is considered verified.
+- [ ] Production retention/deletion, access logging, abuse reporting/moderation, availability, durable storage, accessibility and privacy/legal review remain release gates.
+
+This is a localhost/SQLite development-prototype capability only. It is not a production messaging service, does not make a general chat product available, and does not authorize email/SMS integration or paid providers. PR #141 remains draft, open, unmerged and undeployed.
