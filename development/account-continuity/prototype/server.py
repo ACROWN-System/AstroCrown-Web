@@ -1173,6 +1173,9 @@ class AccountApplication:
                           (SELECT COUNT(*) FROM account_passkey_credentials pc_count
                               WHERE pc_count.account_id = a.account_id AND pc_count.active = 1
                           ) AS passkey_count,
+                          (SELECT COUNT(*) FROM account_recovery_keys rk_count
+                              WHERE rk_count.account_id = a.account_id AND rk_count.used_at IS NULL
+                          ) AS recovery_key_count,
                           (SELECT COUNT(*) FROM sessions active_sessions
                               WHERE active_sessions.account_id = a.account_id
                                 AND active_sessions.expires_at > ?
@@ -1217,6 +1220,7 @@ class AccountApplication:
             "accountIdentifier": account["username"],
             "authMethod": account["auth_method"],
             "passkeyCount": int(account["passkey_count"] or 0),
+            "recoveryKeyAvailable": int(account["recovery_key_count"] or 0) > 0,
             "createdAt": account["created_at"],
             "avatarId": account["avatar_id"],
             "referralId": account["referral_id"] or "",
@@ -2096,6 +2100,12 @@ class AccountApplication:
 
         if path == "/api/passkeys/authentication/verify":
             return self.verify_passkey_authentication(payload, handler)
+
+        if path == "/api/account/recovery/options":
+            return self.issue_account_recovery_options(payload, handler)
+
+        if path == "/api/account/recovery/complete":
+            return self.complete_account_recovery(payload, handler)
 
         if path == "/api/cases/mine":
             account, _expires, _token = self.require_account_session(handler)
