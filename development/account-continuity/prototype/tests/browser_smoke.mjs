@@ -232,7 +232,7 @@ try {
   assert.match(successAccountIdentifier, /^AC-[A-F0-9]{10}$/);
   const initialRecoveryKey = await evaluate("document.getElementById('account-one-time-recovery-key').value");
   assert.match(initialRecoveryKey, /^ACR1-[A-Za-z0-9_-]{43}$/);
-  assert.match(await evaluate("document.body.innerText"), /save your offline recovery key now/i);
+  assert.match(await evaluate("document.body.innerText"), /save your account identifier and offline recovery key/i);
   assert.doesNotMatch(await evaluate("document.body.innerText"), /verification email|password reset/i);
   await evaluate("document.getElementById('account-recovery-key-saved').checked = true; document.getElementById('account-recovery-key-saved').dispatchEvent(new Event('change', {bubbles:true}));");
   assert.equal(await evaluate("document.getElementById('open-account-hub').disabled"), false);
