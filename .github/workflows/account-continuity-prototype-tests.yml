@@ -39,9 +39,12 @@ jobs:
       - name: Install pinned SIWE verifier dependencies for admin step-up tests
         run: python -m pip install --disable-pip-version-check -r development/auth-prototype/requirements.txt -r development/account-continuity/prototype/requirements.txt
 
-      - name: Validate Python and browser JavaScript syntax
+      - name: Validate Python syntax
         run: |
           python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/passkey_auth.py development/account-continuity/prototype/case_management.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py development/account-continuity/prototype/tests/test_passkey_auth.py development/account-continuity/prototype/tests/test_case_management.py development/account-continuity/prototype/tests/test_email_delivery.py
+
+      - name: Validate browser JavaScript syntax
+        run: |
           node --check development/account-continuity/prototype/account-ui.js
           node --check development/account-continuity/prototype/email-action.js
           node --check development/account-continuity/prototype/cases-ui.js
