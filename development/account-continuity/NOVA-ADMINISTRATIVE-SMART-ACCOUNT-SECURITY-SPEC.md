@@ -281,3 +281,31 @@ PR #141 currently contains a loopback account prototype with server-owned roles,
 This specification records the accepted architecture and requirements only. It does not claim that smart-account contracts have been written, deployed, audited or tested. No real wallet, organizational funds, treasury or external provider is changed by this documentation update.
 
 The account prototype must continue to keep its existing role, session and wallet-authentication boundaries. The programmable operations account is a later NOVA subsystem and must be implemented behind a separate review and test gate. PR #141 remains a draft and must not be merged or deployed solely because these requirements have been recorded.
+
+## 11. Supplemental Solana Testnet and asset compatibility
+
+Solana Testnet is added as a supplemental qualification environment, not as a replacement for Devnet. Devnet remains the primary public application-development/integration cluster. Testnet is primarily used for Solana release, network-upgrade, validator-performance, stability and stress testing, and may run a newer software release branch. Use it selectively for runtime/version compatibility and controlled end-to-end tests; a Testnet pass does not prove Mainnet equivalence.
+
+Asset compatibility must be tested by token program, mint configuration and asset standard—not by collecting random faucet tokens. The compatibility matrix should include only standards AstroCrown elects to support and should cover:
+- native SOL;
+- classic SPL Token;
+- Token-2022 base mints;
+- Token-2022 transfer fees, transfer hooks, permanent delegates, default account state/pausable and metadata extensions;
+- confidential transfers only after a separate confidentiality-aware support/security design; and
+- only selected NFT/asset standards (for example Metaplex Token Metadata, programmable NFTs, compressed NFTs or Metaplex Core).
+
+Create controlled fixture mints and token accounts separately on Localnet, Devnet and Testnet where needed. A mint created on Devnet is not automatically available on Testnet; these are separate ledgers. Record the cluster, mint address, token program, decimals, extension set, authorities and test scenario for every fixture. Names, tickers, logos and metadata URIs are not asset identity.
+
+Token-2022 extensions are optional and some combinations are incompatible; extension selection may need to be made at mint/account initialization. NOVA must explicitly allowlist tested token programs, mints, extensions and hooks. Unknown programs, mints, extensions, hook programs and asset standards must fail closed. Review the [official Token Extensions documentation](https://solana.com/docs/tokens/extensions) and [Token Programs guide](https://solana.com/docs/tokens).
+
+Testnet has valueless test tokens and a faucet, but its current availability, limits and eligibility must be confirmed at the time of use. Do not assume its faucet provisions every token type. Use controlled test mints for SPL/Token-2022 scenarios rather than depending on third-party faucet inventories. The local validator remains the default for deterministic regression and adversarial tests; Devnet remains the primary public application integration cluster; Testnet is used selectively for cluster/runtime compatibility.
+
+Official reference: [Solana clusters and public RPC endpoints](https://solana.com/docs/references/clusters).
+
+### Additional acceptance criteria
+- [ ] Localnet, Devnet and selected Testnet tests use separate cluster-specific test mints and fixture manifests.
+- [ ] Testnet is used for its network/runtime/release-qualification purpose, not as a substitute for Devnet application integration.
+- [ ] Every supported token program, mint configuration, Token-2022 extension, hook and adopted NFT/asset standard has a tested compatibility profile.
+- [ ] Unknown asset programs, mints, extension combinations and hook programs are rejected by default.
+- [ ] Testnet faucet/RPC availability is checked live; test plans do not assume a persistent quota or third-party token inventory.
+
