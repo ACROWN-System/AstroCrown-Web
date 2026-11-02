@@ -120,6 +120,31 @@ Official references:
 - [MetaMask Connect integration options](https://docs.metamask.io/metamask-connect/integration-options/)
 - [MetaMask Connect overview](https://docs.metamask.io/metamask-connect/)
 
+### Wallet asset support is not the same as dApp authentication support
+
+Do not assume that every wallet application supports both Bitcoin and Ethereum. Wallets range from EVM-focused providers to multichain applications. More importantly, a wallet's ability to display, receive or send a chain asset is not proof that it exposes a website dApp connection or an off-chain message-signing method for that chain.
+
+Example compatibility distinction as of this document date:
+
+| Wallet/provider | BTC and ETH asset support | Website/dApp authentication implication |
+|---|---|---|
+| MetaMask | Officially supports BTC, ETH/EVM and SOL in the wallet application; Bitcoin account support is currently Native SegWit-focused | Published MetaMask Connect dApp documentation supports EVM and Solana sessions, including both at once. Bitcoin dApp connection/BIP-322 signing is not documented there, so do not assume AstroCrown can authenticate a BTC address through MetaMask Connect. |
+| Trust Wallet | Officially lists Bitcoin, Ethereum and Solana among 100+ supported chains | Must separately verify the current browser/mobile dApp connector and whether it can sign the exact authentication message required for each chain. Asset support alone is insufficient. |
+| Exodus | Officially lists 50+ networks and assets including BTC and ETH | Do not infer general dApp connection or BIP-322 message-signing compatibility from its portfolio/send/receive support. Verify by platform and API. |
+| Rabby | Focuses on Ethereum and EVM-compatible networks | Treat as EVM-family wallet support; do not expect native Bitcoin account authentication. |
+
+This is a small illustrative compatibility sample, not a statistical claim about what a majority of wallets support. Keep a dated provider matrix that separately records: app/platform/version; supported chains/assets; custody/address derivation; transaction-signing capability; dApp connection standard; off-chain message-signing standard (including BIP-322 variant, when relevant); smart-account support; RPC/provider dependencies; limitations; source and last-tested date.
+
+MetaMask added Bitcoin support in December 2025, but its help documentation currently limits its Bitcoin account derivation/import compatibility to Native SegWit. MetaMask Connect's published dApp API currently describes EVM and Solana connection, not Bitcoin dApp message authentication. Re-check this before implementation because provider capabilities can change. BIP-322 itself is a complete Bitcoin message-proof specification; that does not guarantee that a particular wallet implements it.
+
+Official provider references:
+- [MetaMask Bitcoin support](https://support.metamask.io/configure/networks/bitcoin/)
+- [MetaMask Connect dApp API](https://docs.metamask.io/metamask-connect/)
+- [Trust Wallet network coverage](https://trustwallet.com/)
+- [Exodus supported assets](https://www.exodus.com/support/en/articles/8598611-which-assets-does-exodus-support)
+- [Rabby supported chains](https://www.rabby.io/en/chains.html)
+- [BIP-322 signed-message specification](https://bitcoin.org/bip/322/)
+
 For each family, detect wallet capabilities before prompting the user. If an adapter cannot obtain a supported proof, stop that wallet-authentication attempt with a clear explanation. Do not silently downgrade to an unreviewed signature format or ask the user to sign a token-transfer, PSBT-spend, no-op or other blockchain transaction merely to authenticate.
 
 The common data model must preserve wallet family, CAIP namespace/network where defined, exact chain/network, canonical account/address, Bitcoin script/address type where applicable, signature standard/version, verification and revocation state. One AstroCrown account may enroll different families without merging their identities. An address on one chain does not become the same address on another chain just because the strings resemble each other.
