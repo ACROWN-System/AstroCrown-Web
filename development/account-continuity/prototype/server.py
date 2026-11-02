@@ -53,7 +53,7 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 REFERRAL_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 AVATAR_IDS = frozenset({"person", "crown", "star", "moon", "orbit", "shield"})
 ADMIN_WALLET_SESSION_SECONDS = 10 * 60
-ADMIN_PERMISSION_NAMES = frozenset({"admin.roles.grant", "admin.roles.revoke"})
+ADMIN_PERMISSION_NAMES = frozenset({"admin.roles.grant", "admin.roles.revoke", "admin.messages.send"})
 AUTH_PROTOTYPE_DIR = DEVELOPMENT_DIR / "auth-prototype"
 
 # Keep ordinary email account UX available in a stdlib-only local environment.
@@ -328,7 +328,7 @@ class AccountApplication:
                     ON admin_wallets(account_id, active);
                 CREATE TABLE IF NOT EXISTS account_admin_permissions (
                     account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
-                    permission TEXT NOT NULL CHECK(permission IN ('admin.roles.grant', 'admin.roles.revoke')),
+                    permission TEXT NOT NULL CHECK(permission IN ('admin.roles.grant', 'admin.roles.revoke', 'admin.messages.send')),
                     can_delegate INTEGER NOT NULL DEFAULT 0 CHECK(can_delegate IN (0, 1)),
                     granted_by_account_id TEXT REFERENCES accounts(account_id),
                     reason TEXT NOT NULL,
@@ -354,6 +354,20 @@ class AccountApplication:
                 );
                 CREATE INDEX IF NOT EXISTS account_admin_notice_ack_account_idx
                     ON account_admin_notice_acknowledgements(account_id, acknowledged_at);
+                CREATE TABLE IF NOT EXISTS account_communications (
+                    communication_id TEXT PRIMARY KEY,
+                    recipient_account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                    sender_account_id TEXT REFERENCES accounts(account_id) ON DELETE SET NULL,
+                    section TEXT NOT NULL CHECK(section IN ('alerts', 'messages')),
+                    subject TEXT NOT NULL CHECK(length(subject) BETWEEN 1 AND 120),
+                    body TEXT NOT NULL CHECK(length(body) BETWEEN 1 AND 4000),
+                    source_audit_id TEXT UNIQUE REFERENCES account_admin_audit(audit_id) ON DELETE SET NULL,
+                    created_at TEXT NOT NULL,
+                    read_at TEXT,
+                    acknowledged_at TEXT
+                );
+                CREATE INDEX IF NOT EXISTS account_communications_recipient_idx
+                    ON account_communications(recipient_account_id, section, created_at);
                 CREATE TABLE IF NOT EXISTS account_passkey_credentials (
                     credential_id TEXT PRIMARY KEY,
                     credential_id_bytes BLOB NOT NULL UNIQUE,
@@ -407,6 +421,38 @@ class AccountApplication:
                     ON account_recovery_challenges(expires_at, used_at);
                 """
             )
+            # Expand the permission allow-list without discarding existing local grants.
+            # No table references account_admin_permissions, so this focused rebuild is safe.
+            permission_schema = db.execute(
+                "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'account_admin_permissions'"
+            ).fetchone()
+            if permission_schema is not None and "admin.messages.send" not in permission_schema["sql"]:
+                db.execute("ALTER TABLE account_admin_permissions RENAME TO account_admin_permissions_legacy")
+                db.execute(
+                    """CREATE TABLE account_admin_permissions (
+                           account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
+                           permission TEXT NOT NULL CHECK(permission IN (
+                               'admin.roles.grant', 'admin.roles.revoke', 'admin.messages.send'
+                           )),
+                           can_delegate INTEGER NOT NULL DEFAULT 0 CHECK(can_delegate IN (0, 1)),
+                           granted_by_account_id TEXT REFERENCES accounts(account_id),
+                           reason TEXT NOT NULL,
+                           created_at TEXT NOT NULL,
+                           PRIMARY KEY(account_id, permission)
+                       )"""
+                )
+                db.execute(
+                    """INSERT INTO account_admin_permissions(
+                           account_id, permission, can_delegate, granted_by_account_id, reason, created_at
+                       )
+                       SELECT account_id, permission, can_delegate, granted_by_account_id, reason, created_at
+                       FROM account_admin_permissions_legacy"""
+                )
+                db.execute("DROP TABLE account_admin_permissions_legacy")
+                db.execute(
+                    """CREATE INDEX IF NOT EXISTS account_admin_permissions_account_idx
+                       ON account_admin_permissions(account_id, permission)"""
+                )
             # Upgrade an older local test database in place. The old username value
             # is retained as a legacy value; real users/data must never use this prototype.
             columns = {row["name"] for row in db.execute("PRAGMA table_info(accounts)").fetchall()}
@@ -1278,6 +1324,15 @@ class AccountApplication:
                         "User dashboard remain active."
                     ),
                 }
+        with self.connect() as db:
+            communication_counts = db.execute(
+                """SELECT
+                       SUM(CASE WHEN section = 'alerts' AND acknowledged_at IS NULL THEN 1 ELSE 0 END) AS alerts,
+                       SUM(CASE WHEN section = 'messages' AND read_at IS NULL THEN 1 ELSE 0 END) AS messages
+                   FROM account_communications
+                   WHERE recipient_account_id = ?""",
+                (account["account_id"],),
+            ).fetchone()
         return {
             "authenticated": True,
             "email": account["email"],
@@ -1310,6 +1365,10 @@ class AccountApplication:
             "adminWalletAddress": wallet_address if wallet_authenticated else None,
             "adminSessionExpiresAt": utc_iso(wallet_step_up_expires) if wallet_authenticated else None,
             "administratorRevocationNotice": administrator_revocation_notice,
+            "communicationsUnreadCounts": {
+                "alerts": int(communication_counts["alerts"] or 0),
+                "messages": int(communication_counts["messages"] or 0),
+            },
         }
 
     @property
@@ -1561,6 +1620,152 @@ class AccountApplication:
         return value
 
     @staticmethod
+    def validate_communication_text(value: object, *, label: str, maximum: int) -> str:
+        if not isinstance(value, str):
+            raise ApiError(400, f"Provide a {label}.")
+        normalized = value.strip()
+        if not normalized or len(normalized) > maximum:
+            raise ApiError(400, f"The {label} must contain 1 to {maximum} characters.")
+        if any(ord(character) < 32 and character not in "\\n\\t" for character in normalized):
+            raise ApiError(400, f"The {label} contains unsupported control characters.")
+        return normalized
+
+    def account_communications_for(self, account_id: str) -> dict:
+        with self.connect() as db:
+            rows = db.execute(
+                """SELECT c.communication_id, c.section, c.subject, c.body,
+                          c.created_at, c.read_at, c.acknowledged_at,
+                          sender.username AS sender_identifier
+                   FROM account_communications c
+                   LEFT JOIN accounts sender ON sender.account_id = c.sender_account_id
+                   WHERE c.recipient_account_id = ?
+                   ORDER BY c.created_at DESC, c.rowid DESC
+                   LIMIT 100""",
+                (account_id,),
+            ).fetchall()
+            counts = db.execute(
+                """SELECT
+                       SUM(CASE WHEN section = 'alerts' AND acknowledged_at IS NULL THEN 1 ELSE 0 END) AS alerts,
+                       SUM(CASE WHEN section = 'messages' AND read_at IS NULL THEN 1 ELSE 0 END) AS messages
+                   FROM account_communications WHERE recipient_account_id = ?""",
+                (account_id,),
+            ).fetchone()
+        return {
+            "items": [
+                {
+                    "communicationId": row["communication_id"],
+                    "section": row["section"],
+                    "subject": row["subject"],
+                    "body": row["body"],
+                    "senderAccountIdentifier": row["sender_identifier"] or "AstroCrown",
+                    "createdAt": row["created_at"],
+                    "readAt": row["read_at"],
+                    "acknowledgedAt": row["acknowledged_at"],
+                    "requiresAcknowledgement": row["section"] == "alerts",
+                }
+                for row in rows
+            ],
+            "unreadCounts": {
+                "alerts": int(counts["alerts"] or 0),
+                "messages": int(counts["messages"] or 0),
+            },
+        }
+
+    def list_account_communications(
+        self, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        account, _expires, _token = self.require_account_session(handler)
+        return 200, self.account_communications_for(account["account_id"]), None
+
+    def update_account_communication_state(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        if set(payload) != {"communicationId", "action"}:
+            raise ApiError(400, "Provide only the communication identifier and state action.")
+        account, _expires, _token = self.require_account_session(handler)
+        communication_id = payload.get("communicationId")
+        action = payload.get("action")
+        if not isinstance(communication_id, str) or not communication_id or len(communication_id) > 64:
+            raise ApiError(400, "The communication identifier is invalid.")
+        if action not in {"read", "acknowledge"}:
+            raise ApiError(400, "Choose either read or acknowledge.")
+        state_column = "read_at" if action == "read" else "acknowledged_at"
+        required_section = "messages" if action == "read" else "alerts"
+        now = utc_iso()
+        with self.connect() as db:
+            cursor = db.execute(
+                f"""UPDATE account_communications
+                    SET {state_column} = COALESCE({state_column}, ?)
+                    WHERE communication_id = ? AND recipient_account_id = ? AND section = ?""",
+                (now, communication_id, account["account_id"], required_section),
+            )
+            if cursor.rowcount != 1:
+                exists = db.execute(
+                    """SELECT section FROM account_communications
+                       WHERE communication_id = ? AND recipient_account_id = ?""",
+                    (communication_id, account["account_id"]),
+                ).fetchone()
+                if exists is None:
+                    raise ApiError(404, "This communication does not exist in your account.")
+                raise ApiError(409, "Use the state action that matches this communication's destination.")
+        result = self.account_communications_for(account["account_id"])
+        result["message"] = "The communication state was updated."
+        return 200, result, None
+
+    def send_account_communication(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        if set(payload) != {"accountIdentifier", "section", "subject", "body"}:
+            raise ApiError(400, "Provide only the recipient account identifier, destination, subject and message.")
+        actor, _expires, token = self.require_admin_permission(handler, "admin.messages.send")
+        account_identifier = normalize_account_identifier(
+            payload.get("accountIdentifier"),
+            allow_legacy_email=self.enable_legacy_email_auth,
+        )
+        section = payload.get("section")
+        if section not in {"alerts", "messages"}:
+            raise ApiError(400, "Choose either Alerts or Messages as the destination.")
+        subject = self.validate_communication_text(payload.get("subject"), label="subject", maximum=120)
+        body = self.validate_communication_text(payload.get("body"), label="message", maximum=4000)
+        if not self.auth_rate_allowed("admin-communication-send", actor["account_id"], limit=20, window=3600):
+            raise ApiError(429, "This administrator has reached the hourly in-app communication limit.")
+        now_epoch = int(time.time())
+        created_at = utc_iso()
+        communication_id = str(uuid.uuid4())
+        with self.connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            holder = self._permission_holder_in_transaction(
+                db, account_id=actor["account_id"], token=token,
+                permission="admin.messages.send", now=now_epoch,
+            )
+            if holder is None:
+                raise ApiError(403, "The communication permission or wallet-verified administrator session is no longer active.")
+            recipient = db.execute(
+                "SELECT account_id, username FROM accounts WHERE username = ? COLLATE NOCASE",
+                (account_identifier,),
+            ).fetchone()
+            if recipient is None:
+                raise ApiError(404, "No existing AstroCrown account was found for that account identifier.")
+            if recipient["account_id"] == actor["account_id"]:
+                raise ApiError(400, "An administrator cannot send an account communication to themselves.")
+            db.execute(
+                """INSERT INTO account_communications(
+                       communication_id, recipient_account_id, sender_account_id,
+                       section, subject, body, source_audit_id, created_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)""",
+                (communication_id, recipient["account_id"], actor["account_id"],
+                 section, subject, body, created_at),
+            )
+        return 201, {
+            "sent": True,
+            "communicationId": communication_id,
+            "recipientAccountIdentifier": recipient["username"],
+            "section": section,
+            "createdAt": created_at,
+            "message": "The in-app communication was delivered to the recipient's account.",
+        }, None
+
+    @staticmethod
     def validate_permission_list(value: object) -> list[str]:
         if value is None:
             return []
@@ -1741,12 +1946,26 @@ class AccountApplication:
                 (target["account_id"],),
             )
             detail = json.dumps({"permissions_revoked": previous_permissions, "wallets_disabled": wallet_count}, sort_keys=True, separators=(",", ":"))
+            revocation_audit_id = str(uuid.uuid4())
             db.execute(
                 """INSERT INTO account_admin_audit(
                        audit_id, event_type, actor, target_account_id,
                        target_wallet_address, reason, created_at, detail
                    ) VALUES (?, 'admin_role_revoked_by_admin', ?, ?, NULL, ?, ?, ?)""",
-                (str(uuid.uuid4()), actor["account_id"], target["account_id"], reason, created_at, detail),
+                (revocation_audit_id, actor["account_id"], target["account_id"], reason, created_at, detail),
+            )
+            db.execute(
+                """INSERT INTO account_communications(
+                       communication_id, recipient_account_id, sender_account_id,
+                       section, subject, body, source_audit_id, created_at
+                   ) VALUES (?, ?, NULL, 'alerts', ?, ?, ?, ?)""",
+                (
+                    str(uuid.uuid4()), target["account_id"], "Administrator privileges removed",
+                    "An authorized administrator removed your administrator role and registered administrator-wallet access. "
+                    "Your ordinary account and User dashboard remain active.\n\n"
+                    f"Recorded reason: {reason}\nRecorded: {created_at}",
+                    revocation_audit_id, created_at,
+                ),
             )
         return 200, {
             "revoked": True,
@@ -2176,6 +2395,15 @@ class AccountApplication:
 
         if path == "/api/account/recovery/complete":
             return self.complete_account_recovery(payload, handler)
+
+        if path == "/api/account/communications":
+            return self.list_account_communications(handler)
+
+        if path == "/api/account/communications/state":
+            return self.update_account_communication_state(payload, handler)
+
+        if path == "/api/admin/communications/send":
+            return self.send_account_communication(payload, handler)
 
         if path == "/api/cases/mine":
             account, _expires, _token = self.require_account_session(handler)
@@ -2785,7 +3013,7 @@ def make_handler(application: AccountApplication):
                 return
             path = urlsplit(self.path).path
             if path in {
-                "/api/account/status", "/api/admin/status",
+                "/api/account/status", "/api/account/communications", "/api/admin/status",
                 "/api/cases/mine", "/api/cases/admin/list",
             }:
                 try:
