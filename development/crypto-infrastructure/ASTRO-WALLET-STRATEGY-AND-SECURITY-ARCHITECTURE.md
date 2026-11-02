@@ -46,6 +46,27 @@ Astro-Wallet should not simply replace a 12-word phrase with a longer phrase and
 
 Reference: [BIP-39 — Mnemonic code for generating deterministic keys](https://bips.dev/39/).
 
+### 4.1 Never use human-selected or predictable mnemonic phrases
+
+Astro-Wallet must never ask users to invent, choose or arrange their own recovery words. It must never create mnemonics by selecting from semantic themes such as food (for example, bacon, burger, omelet or hotdog), hobbies, family names, quotations, popular phrases, dates or any other memorable pattern. Such a scheme sharply reduces the effective search space when an attacker knows or guesses the selection rule. It is a brainwallet-style design and is not an acceptable substitute for cryptographically generated entropy.
+
+If a mnemonic backup format is retained for interoperability, generate it only from a cryptographically secure random number generator (CSPRNG), with the standard word list and checksum rules. Do not bias, filter, theme, repeat, sort or reorder the generated words for memorability. A truly random mnemonic may happen to contain words from one semantic category; that coincidence does not make it weak. The vulnerability arises when the generator or user imposes a predictable selection constraint.
+
+Wallet creation must not depend on a sentence, phrase, date, user profile, device name, timestamp, mouse movement or other predictable user/application data as its entropy source. Entropy generation, CSPRNG seeding and platform random-source failure handling must be independently reviewed and tested. If secure entropy is unavailable, wallet creation must stop rather than silently use a fallback.
+
+An optional BIP-39 passphrase (sometimes marketed as an additional or '25th' word) is not a replacement for strong mnemonic entropy. BIP-39 derives a valid seed for every passphrase; there is no cryptographic 'wrong passphrase' error to tell the user they entered the intended one. A short or themed passphrase such as a food word may therefore be guessed independently. If Astro-Wallet ever offers this feature, it must explain that the passphrase is a separate high-entropy secret, provide a safe recovery/backup process, and warn users that losing it can make the intended wallet inaccessible.
+
+### 4.2 Security requirements if mnemonic interoperability is retained
+
+- Generate at least 128 bits of entropy for a 12-word BIP-39 mnemonic; consider 256 bits where compatible and justified, but do not claim that word count alone prevents theft or phishing.
+- Use a verified CSPRNG and the exact standard mnemonic/checksum algorithm. Never use user-chosen or themed words.
+- Test randomness-source failure, entropy-generation failures, duplicate wallet-generation events, platform differences and backup export/import using official test vectors.
+- Never log, transmit, analyze, screenshot or send a mnemonic or passphrase to AstroCrown servers, analytics, support, CI or chat.
+- If users can import legacy mnemonics, process the secret locally in a carefully isolated wallet environment; do not upload it to a server for validation or migration.
+- Keep mnemonic import as an interoperability path, not the default recovery design assumption; continue to investigate multi-device and threshold recovery that does not expose a single master phrase.
+
+Reference: the BIP-39 specification explicitly says that mnemonic sentences are intended to transport computer-generated randomness and are not a method for turning user-created sentences into secure wallet seeds.
+
 ## 5. Candidate key protection and recovery mechanisms
 
 No single method is automatically superior for every user. Assess combinations and state the trade-offs explicitly.
