@@ -265,108 +265,6 @@
     });
   }
 
-  function previewRandomBytes(size) {
-    if (!window.crypto || !window.crypto.getRandomValues || !window.crypto.subtle) {
-      throw new Error("This browser does not provide Web Crypto. Open the HTTPS preview in a current browser.");
-    }
-    var output = new Uint8Array(size);
-    window.crypto.getRandomValues(output);
-    return output;
-  }
-
-  function previewHex(bytes) {
-    return Array.prototype.map.call(new Uint8Array(bytes), function (value) {
-      return value.toString(16).padStart(2, "0");
-    }).join("");
-  }
-
-  function previewBytes(hex) {
-    var pairs = String(hex).match(/[0-9a-f]{2}/gi) || [];
-    return new Uint8Array(pairs.map(function (pair) { return parseInt(pair, 16); }));
-  }
-
-  async function previewPasswordHash(password, saltHex) {
-    var key = await window.crypto.subtle.importKey(
-      "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]
-    );
-    var result = await window.crypto.subtle.deriveBits({
-      name: "PBKDF2", salt: previewBytes(saltHex), iterations: 600000, hash: "SHA-256"
-    }, key, 256);
-    return previewHex(result);
-  }
-
-  function normalizeEmail(value) {
-    if (typeof value !== "string") throw new Error("Enter a valid email address.");
-    var email = value.trim().toLowerCase();
-    if (email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      throw new Error("Enter a valid email address.");
-    }
-    return email;
-  }
-
-  function validatePassword(value) {
-    if (typeof value !== "string" || value.length < 15 || value.length > 1024) {
-      throw new Error("Use a passphrase between 15 and 1024 characters.");
-    }
-    return value;
-  }
-
-  function validateReferralId(value) {
-    if (value === undefined || value === null || String(value).trim() === "") return "";
-    var referralId = String(value).trim();
-    if (referralId.length > 64 || !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(referralId)) {
-      throw new Error("Enter a valid Referral ID or leave the field blank.");
-    }
-    return referralId;
-  }
-
-  function previewCurrentAccount() {
-    if (!browserPreviewState.activeEmail || Date.now() >= browserPreviewState.sessionExpiresAt) {
-      browserPreviewState.activeEmail = null;
-      browserPreviewState.sessionExpiresAt = 0;
-      return null;
-    }
-    return browserPreviewState.accounts[browserPreviewState.activeEmail] || null;
-  }
-
-  function previewSummary(account) {
-    var current = Boolean(account && previewCurrentAccount() === account);
-    return {
-      authenticated: current,
-      email: current ? account.email : account.email,
-      createdAt: account ? account.createdAt : undefined,
-      avatarId: normalizeAvatarId(account && account.avatarId),
-      referralId: account ? account.referralId : "",
-      newsletterOptIn: Boolean(account && account.newsletterOptIn),
-      newsletterConsentAt: account && account.newsletterConsentAt ? account.newsletterConsentAt : null,
-      termsAccepted: Boolean(account && account.termsAccepted),
-      termsVersion: account ? account.termsVersion : termsVersion,
-      termsAcceptedAt: account ? account.termsAcceptedAt : null,
-      emailVerified: Boolean(account && account.emailVerified),
-      emailVerificationDeliveryAvailable: false,
-      passwordResetAvailable: false,
-      sessionExpiresAt: current ? new Date(browserPreviewState.sessionExpiresAt).toISOString() : null,
-      activeSessionCount: current ? 1 : 0,
-      scope: "browser-preview-memory-only",
-      role: "user",
-      adminRoleAssigned: false,
-      adminWalletAuthenticated: false,
-      adminSessionAuthorized: false,
-      admin: false
-    };
-  }
-
-  async function previewVerifyPassword(account, password) {
-    if (!account || typeof password !== "string" || password.length > 1024) return false;
-    var candidate = await previewPasswordHash(password, account.passwordSalt);
-    return candidate === account.passwordHash;
-  }
-
-  function previewStartSession(email) {
-    browserPreviewState.activeEmail = email;
-    browserPreviewState.sessionExpiresAt = Date.now() + 30 * 60 * 1000;
-  }
-
   async function browserPreviewRequest(path, payload) {
     if (path === "/api/account/status") {
       return {
@@ -714,49 +612,6 @@
     }
   }
 
-  function renderAccount() {
-    title.textContent = "Your AstroCrown user dashboard";
-    var email = escapeHtml(accountState.email || "");
-    var referral = accountState.referralId
-      ? '<p class="account-status-copy"><strong>Referral ID:</strong> ' + escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(recorded as an unverified test value; no reward is applied)</span></p>'
-      : '<p class="account-status-copy"><strong>Referral ID:</strong> Not supplied</p>';
-    var newsletter = accountState.newsletterOptIn
-      ? "You opted in to crypto-news email updates in this test. No newsletter has been sent."
-      : "You did not opt in to crypto-news email updates.";
-    content.innerHTML =
-      '<div class="account-account-card"><p class="account-account-status">Signed in · development test account</p>' +
-        '<p class="account-account-name">' + email + '</p>' +
-        '<p class="account-status-copy">' + (accountState.emailVerified ? 'Email address verified.' : 'Email address not verified. This account has no production privileges or real asset access.') + '</p></div>' +
-      referral +
-      '<div class="account-recovery-warning"><strong>Account recovery</strong><br>' +
-        (accountState.passwordResetAvailable === true
-          ? 'Password reset is available through a single-use email link.'
-          : 'Email delivery is not configured. No password-reset email was sent.') +
-        '</div>' +
-      '<div class="account-recovery-ok"><strong>Crypto-news preference</strong><br>' + escapeHtml(newsletter) + '</div>' +
-      '<div class="account-actions-stack"><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>' +
-      '<p class="account-provider-note">This is a development-only interaction test, not production authentication.</p>';
-  }
-
-  function renderRecover() {
-    title.textContent = "Account recovery";
-    content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Enter the email address associated with your account. When secure email delivery is configured, a single-use password-reset link will be sent if an account matches.</p>' +
-      (accountState && accountState.passwordResetAvailable === true
-        ? '<div class="account-recovery-ok"><strong>Reset links expire after 30 minutes and can be used once.</strong><br>For privacy, the response will not reveal whether an account exists. A mail-transport submission does not confirm inbox delivery.</div>'
-        : '<div class="account-recovery-warning"><strong>Email delivery is not configured.</strong><br>No password-reset email will be sent by this development environment.</div>') +
-      '<form id="account-reset-request-form" class="account-form" autocomplete="on">' +
-        '<label class="account-field" for="account-email">Email' +
-          '<input id="account-email" name="email" type="email" autocomplete="email" maxlength="254" required autocapitalize="none" spellcheck="false" placeholder="Enter your email address...">' +
-        '</label>' +
-        '<button class="account-primary" type="submit">Request password reset</button>' +
-      '</form>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<div class="account-form-actions"><button class="account-text-button" type="button" data-account-mode="signin">Back to Log In</button>' +
-        '<button class="account-text-button" type="button" data-account-mode="create">Create an account instead</button></div>';
-  }
-
   function render() {
     showFeedback("", "");
     if (mode === "signin") renderSignIn();
@@ -809,20 +664,6 @@
     return item ? item.value : "";
   }
 
-  function togglePasswordVisibility(button) {
-    var inputId = button.getAttribute("data-password-toggle");
-    var input = inputId ? document.getElementById(inputId) : null;
-    if (!input) return;
-    var reveal = input.type === "password";
-    input.type = reveal ? "text" : "password";
-    button.textContent = reveal ? "Hide" : "Show";
-    button.setAttribute("aria-pressed", reveal ? "true" : "false");
-    button.setAttribute(
-      "aria-label",
-      (reveal ? "Hide " : "Show ") + (button.getAttribute("data-password-label") || "password")
-    );
-  }
-
   content.addEventListener("submit", async function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
@@ -855,10 +696,6 @@
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (button.dataset.passwordToggle) {
-      togglePasswordVisibility(button);
-      return;
-    }
     if (button.dataset.accountMode) {
       setMode(button.dataset.accountMode);
       return;
@@ -900,88 +737,8 @@
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (button.dataset.passwordToggle) {
-      togglePasswordVisibility(button);
-      return;
-    }
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
-      return;
-    }
-    if (button.id === "account-resend-verification") {
-      setBusy(true);
-      try {
-        var verificationResult = await requestJson("/api/account/verification/resend", {});
-        accountState = await requestJson("/api/account/status");
-        renderAccountDashboard();
-        var feedback = document.getElementById("account-session-feedback");
-        if (feedback) feedback.textContent = verificationResult.message || "Verification status updated.";
-      } catch (error) {
-        var verificationFeedback = document.getElementById("account-session-feedback");
-        if (verificationFeedback) verificationFeedback.textContent = error.message || "The verification email could not be requested.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-change-password") {
-      var currentPasswordInput = document.getElementById("account-current-password");
-      var newPasswordInput = document.getElementById("account-new-password");
-      var newPasswordConfirmationInput = document.getElementById("account-new-password-confirmation");
-      var passwordFeedback = document.getElementById("account-session-feedback");
-      var currentPassword = currentPasswordInput ? currentPasswordInput.value : "";
-      var newPassword = newPasswordInput ? newPasswordInput.value : "";
-      var newPasswordConfirmation = newPasswordConfirmationInput ? newPasswordConfirmationInput.value : "";
-      if (!currentPassword || !newPassword || !newPasswordConfirmation) {
-        if (passwordFeedback) passwordFeedback.textContent = "Complete all password fields before continuing.";
-        return;
-      }
-      if (newPassword !== newPasswordConfirmation) {
-        if (passwordFeedback) passwordFeedback.textContent = "The new password confirmation does not match.";
-        if (newPasswordConfirmationInput) newPasswordConfirmationInput.focus();
-        return;
-      }
-      setBusy(true);
-      try {
-        accountState = await requestJson("/api/account/password/change", {
-          currentPassword: currentPassword,
-          newPassword: newPassword,
-          newPasswordConfirmation: newPasswordConfirmation
-        });
-        syncAccountButton();
-        renderAccountDashboard();
-        var passwordFeedbackAfter = document.getElementById("account-session-feedback");
-        if (passwordFeedbackAfter) passwordFeedbackAfter.textContent = accountState.message || "Password updated.";
-      } catch (error) {
-        var passwordFeedbackOnError = document.getElementById("account-session-feedback");
-        if (passwordFeedbackOnError) passwordFeedbackOnError.textContent = error.message || "The password could not be changed.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-revoke-other-sessions") {
-      var sessionPasswordInput = document.getElementById("account-session-current-password");
-      var sessionFeedback = document.getElementById("account-session-feedback");
-      var sessionPassword = sessionPasswordInput ? sessionPasswordInput.value : "";
-      if (!sessionPassword) {
-        if (sessionFeedback) sessionFeedback.textContent = "Enter your current password to continue.";
-        if (sessionPasswordInput) sessionPasswordInput.focus();
-        return;
-      }
-      setBusy(true);
-      try {
-        accountState = await requestJson("/api/account/sessions/revoke-others", { password: sessionPassword });
-        syncAccountButton();
-        renderAccountDashboard();
-        var sessionFeedbackAfter = document.getElementById("account-session-feedback");
-        if (sessionFeedbackAfter) sessionFeedbackAfter.textContent = accountState.message || "Other sessions have been signed out.";
-      } catch (error) {
-        var sessionFeedbackOnError = document.getElementById("account-session-feedback");
-        if (sessionFeedbackOnError) sessionFeedbackOnError.textContent = error.message || "Other sessions could not be signed out.";
-      } finally {
-        setBusy(false);
-      }
       return;
     }
     if (button.id === "end-admin-access") {
