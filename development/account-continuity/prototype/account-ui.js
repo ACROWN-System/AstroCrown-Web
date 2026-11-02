@@ -369,8 +369,7 @@
 
   async function browserPreviewRequest(path, payload) {
     if (path === "/api/account/status") {
-      var current = previewCurrentAccount();
-      return current ? previewSummary(current) : {
+      return {
         authenticated: false,
         avatarId: "person",
         role: "user",
@@ -378,116 +377,17 @@
         adminWalletAuthenticated: false,
         adminSessionAuthorized: false,
         admin: false,
+        passkeyAvailable: false,
         activeSessionCount: 0,
-        scope: "browser-preview-memory-only"
+        scope: "hosted-preview-no-authentication"
       };
     }
-
-    if (path === "/api/account/register") {
-      var email = normalizeEmail(payload.email);
-      var password = validatePassword(payload.password);
-      var referralId = validateReferralId(payload.referralId);
-      if (payload.termsAccepted !== true) throw new Error("Accept the Terms of Use and Privacy Policy to create an account.");
-      if (typeof payload.newsletterOptIn !== "boolean") throw new Error("Choose whether you want AstroCrown crypto-news emails.");
-      if (browserPreviewState.accounts[email]) throw new Error("An account with this email already exists. Try Log In.");
-      var salt = previewHex(previewRandomBytes(16));
-      var now = new Date().toISOString();
-      var account = {
-        email: email,
-        passwordSalt: salt,
-        passwordHash: await previewPasswordHash(password, salt),
-        createdAt: now,
-        avatarId: "person",
-        referralId: referralId,
-        newsletterOptIn: payload.newsletterOptIn,
-        newsletterConsentAt: payload.newsletterOptIn ? now : null,
-        termsAccepted: true,
-        termsVersion: termsVersion,
-        termsAcceptedAt: now
-      };
-      browserPreviewState.accounts[email] = account;
-      previewStartSession(email);
-      return Object.assign(previewSummary(account), {
-        authenticated: true,
-        emailVerificationEmailSent: false,
-        message: "Development test account created. Your email is not verified, and no verification or newsletter emails have been sent."
-      });
-    }
-
-    if (path === "/api/account/login") {
-      var loginEmail = normalizeEmail(payload.email);
-      if (typeof payload.password !== "string" || payload.password.length > 1024) {
-        throw new Error("Enter your email address and password.");
-      }
-      var attempt = browserPreviewState.failedLogins[loginEmail] || { count: 0, startedAt: Date.now() };
-      if (Date.now() - attempt.startedAt > 60000) attempt = { count: 0, startedAt: Date.now() };
-      if (attempt.count >= 10) throw new Error("Too many sign-in attempts. Wait a minute before trying again.");
-      var loginAccount = browserPreviewState.accounts[loginEmail];
-      if (!loginAccount || !(await previewVerifyPassword(loginAccount, payload.password))) {
-        attempt.count += 1;
-        browserPreviewState.failedLogins[loginEmail] = attempt;
-        throw new Error("Email address or password did not match.");
-      }
-      delete browserPreviewState.failedLogins[loginEmail];
-      previewStartSession(loginEmail);
-      return previewSummary(loginAccount);
-    }
-
-    if (path === "/api/account/verification/resend") {
-      if (!previewCurrentAccount()) throw new Error("Sign in before requesting email verification.");
-      return {
-        emailVerified: false,
-        emailSent: false,
-        message: "Email delivery is not configured in this browser preview. No verification email was sent."
-      };
-    }
-
-    if (path === "/api/account/password-reset/request") {
-      return {
-        requestAccepted: true,
-        message: "Email delivery is not configured in this browser preview. No password-reset email was sent."
-      };
-    }
-
-    if (path === "/api/account/password/change") {
-      var passwordAccount = previewCurrentAccount();
-      if (!passwordAccount) throw new Error("Sign in before changing your password.");
-      if (!(await previewVerifyPassword(passwordAccount, payload.currentPassword))) {
-        throw new Error("Your current password did not match. Your password was not changed.");
-      }
-      var newPreviewPassword = validatePassword(payload.newPassword);
-      if (newPreviewPassword !== payload.newPasswordConfirmation) {
-        throw new Error("The new password confirmation does not match.");
-      }
-      if (newPreviewPassword === payload.currentPassword) {
-        throw new Error("Choose a new password that is different from your current password.");
-      }
-      var newPreviewSalt = previewHex(previewRandomBytes(16));
-      passwordAccount.passwordSalt = newPreviewSalt;
-      passwordAccount.passwordHash = await previewPasswordHash(newPreviewPassword, newPreviewSalt);
-      previewStartSession(passwordAccount.email);
-      return Object.assign(previewSummary(passwordAccount), {
-        message: "Password updated for this browser-preview demo. This session was renewed."
-      });
-    }
-
-    if (path === "/api/account/avatar") {
-      var avatarAccount = previewCurrentAccount();
-      if (!avatarAccount) throw new Error("Sign in before changing your test avatar.");
-      if (typeof payload.avatarId !== "string" || !Object.prototype.hasOwnProperty.call(avatarOptions, payload.avatarId)) {
-        throw new Error("Choose one of the provided account avatars.");
-      }
-      avatarAccount.avatarId = payload.avatarId;
-      return previewSummary(avatarAccount);
-    }
-
     if (path === "/api/account/logout") {
-      browserPreviewState.activeEmail = null;
-      browserPreviewState.sessionExpiresAt = 0;
-      return { authenticated: false, message: "Signed out of this browser-preview demo." };
+      return { authenticated: false, message: "No account session exists in this hosted preview." };
     }
-
-    throw new Error("Email-based password reset and external sign-in methods are not enabled in this development prototype. No email was sent.");
+    throw new Error(
+      "The hosted HTML preview is a read-only interface demonstration. It cannot create accounts, store credentials or perform passkey authentication. Use the local loopback server for real WebAuthn tests."
+    );
   }
 
   function setBusy(value) {
