@@ -495,7 +495,20 @@
           '<p id="account-admin-access-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
         '</section>';
     }
+    var administratorRevocationNotice = '';
+    var revocationNotice = accountState.administratorRevocationNotice;
+    if (revocationNotice && typeof revocationNotice.noticeId === "string") {
+      administratorRevocationNotice =
+        '<section class="account-dashboard-notice account-admin-revocation-notice" role="status" aria-labelledby="admin-revocation-notice-title">' +
+          '<strong id="admin-revocation-notice-title">Administrator privileges removed</strong>' +
+          '<p>' + escapeHtml(revocationNotice.message || "Your administrator role and registered administrator wallets were revoked. Your ordinary account remains active.") + '</p>' +
+          '<p><strong>Recorded reason:</strong> ' + escapeHtml(revocationNotice.reason || "No additional reason was recorded.") + '</p>' +
+          '<p class="account-admin-revocation-date">Recorded: ' + escapeHtml(revocationNotice.createdAt || "Date unavailable") + '</p>' +
+          '<button class="account-secondary" type="button" id="acknowledge-admin-revocation" data-notice-id="' + escapeHtml(revocationNotice.noticeId) + '">Acknowledge notice</button>' +
+        '</section>';
+    }
     dashboardContent.innerHTML =
+      administratorRevocationNotice +
       '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype tests account access and settings only. Transactions and the wider service catalog are not enabled. The passkey and recovery-key implementation remains a development prototype, not production authentication.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
@@ -908,6 +921,23 @@
     if (!button || busy) return;
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
+      return;
+    }
+    if (button.id === "acknowledge-admin-revocation") {
+      var noticeId = button.getAttribute("data-notice-id");
+      setBusy(true);
+      try {
+        accountState = await requestJson("/api/account/administrator-notice/acknowledge", {
+          noticeId: noticeId
+        });
+        syncAccountButton();
+        renderAccountDashboard();
+      } catch (error) {
+        var noticeFeedback = document.getElementById("admin-revocation-notice-title");
+        if (noticeFeedback) noticeFeedback.textContent = error.message || "The administrator notice could not be acknowledged.";
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "end-admin-access") {
