@@ -575,7 +575,7 @@
           ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
             escapeHtml(String(walletCount)) +
             " registered wallet(s), then review a one-time signature request. It is not a blockchain transaction."
-          : "The system has assigned the administrator role, but no wallet is enrolled for step-up verification. Open administrator access to review the required next step; the backend will keep the dashboard closed until an authorized owner provisions a wallet.";
+          : "This existing account has been granted the administrator role, but has not enrolled a wallet yet. Select Open administrator dashboard and connect a wallet you personally control. You will review and sign one message to enrol it, then a second fresh message to verify administrator access. Neither signature is a transaction, and a wallet cannot grant the role.";
       var adminAccessAction = "Open administrator dashboard";
       adminCard =
         '<section class="account-dashboard-card account-admin-access-card">' +
@@ -678,6 +678,45 @@
     var expires = escapeHtml(status.adminSessionExpiresAt || "");
     var registeredWallets = Array.isArray(walletOptions && walletOptions.wallets)
       ? walletOptions.wallets : [];
+    var adminPermissions = Array.isArray(status.adminPermissions) ? status.adminPermissions : [];
+    var delegablePermissions = Array.isArray(status.adminDelegablePermissions)
+      ? status.adminDelegablePermissions : [];
+    var roleManagementCard = "";
+    if (adminPermissions.indexOf("admin.roles.grant") >= 0) {
+      var permissionLabels = {
+        "admin.roles.grant": "May appoint other administrators",
+        "admin.roles.revoke": "May revoke administrator roles"
+      };
+      var permissionChoices = delegablePermissions.filter(function (permission) {
+        return Object.prototype.hasOwnProperty.call(permissionLabels, permission);
+      }).map(function (permission) {
+        return '<label class="account-admin-permission-option"><input type="checkbox" name="admin-role-permission" value="' +
+          permission + '"><span>' + permissionLabels[permission] + '</span></label>';
+      }).join("");
+      roleManagementCard +=
+        '<section class="account-dashboard-card account-admin-role-management">' +
+          '<h2>Appoint an administrator</h2>' +
+          '<p>Grant the role to an existing AstroCrown user account. The target keeps the same User dashboard and must enrol a wallet they personally control. No wallet address, password or private key is entered here.</p>' +
+          '<label class="account-admin-role-field" for="admin-role-grant-email">Existing user account email<input id="admin-role-grant-email" type="email" maxlength="254" autocomplete="off" required></label>' +
+          '<label class="account-admin-role-field" for="admin-role-grant-reason">Reason for appointment<input id="admin-role-grant-reason" type="text" maxlength="500" minlength="12" required></label>' +
+          (permissionChoices
+            ? '<div class="account-admin-permission-list"><p>Optional permissions you are explicitly allowed to delegate:</p>' + permissionChoices + '</div>'
+            : '<p class="account-admin-role-hint">You may grant the Administrator role, but no additional permissions are marked as delegable to you.</p>') +
+          '<button class="account-primary" type="button" id="admin-role-grant">Grant administrator role</button>' +
+          '<p id="admin-role-grant-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+        '</section>';
+    }
+    if (adminPermissions.indexOf("admin.roles.revoke") >= 0) {
+      roleManagementCard +=
+        '<section class="account-dashboard-card account-admin-role-management">' +
+          '<h2>Revoke administrator access</h2>' +
+          '<p>Revocation removes the administrator role, delegated permissions and enrolled administrator wallets. The person keeps their ordinary AstroCrown account and User dashboard.</p>' +
+          '<label class="account-admin-role-field" for="admin-role-revoke-email">Administrator account email<input id="admin-role-revoke-email" type="email" maxlength="254" autocomplete="off" required></label>' +
+          '<label class="account-admin-role-field" for="admin-role-revoke-reason">Reason for revocation<input id="admin-role-revoke-reason" type="text" maxlength="500" minlength="12" required></label>' +
+          '<button class="account-secondary" type="button" id="admin-role-revoke">Revoke administrator role</button>' +
+          '<p id="admin-role-revoke-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+        '</section>';
+    }
     var walletRows = registeredWallets.map(function (item) {
       return '<li class="account-admin-wallet-row"><span class="account-wallet-address">' +
         escapeHtml(item.address || "") + '</span><span class="account-admin-wallet-chain">Chain ID ' +
@@ -701,7 +740,8 @@
           enrollmentControl +
           '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this dashboard. A lost-wallet recovery workflow is not implemented.</p>' +
           '<p id="admin-wallet-enrollment-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p></section>' +
-        '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, role changes, wallet removal, account management, payments and all-wallet-loss recovery are not available in this console.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, account-wide management, payments and all-wallet-loss recovery are not available in this console. Administrator appointment and revocation are shown separately only when the server confirms their corresponding permissions.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        roleManagementCard +
       '</div>' +
       '<div class="account-dashboard-actions"><p>End administrator access to clear wallet step-up while keeping your ordinary account session active.</p><button class="account-secondary" type="button" id="admin-end-access">End administrator access</button></div>';
   }
@@ -1109,6 +1149,66 @@
   adminDashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.id === "admin-role-grant") {
+      var grantEmailInput = document.getElementById("admin-role-grant-email");
+      var grantReasonInput = document.getElementById("admin-role-grant-reason");
+      var grantFeedback = document.getElementById("admin-role-grant-feedback");
+      var grantEmail = grantEmailInput ? grantEmailInput.value.trim() : "";
+      var grantReason = grantReasonInput ? grantReasonInput.value.trim() : "";
+      var delegatedPermissions = Array.prototype.map.call(
+        adminDashboardContent.querySelectorAll('input[name="admin-role-permission"]:checked'),
+        function (input) { return input.value; }
+      );
+      if (!grantEmail || !grantReason || grantReason.length < 12) {
+        if (grantFeedback) grantFeedback.textContent = "Enter the existing account email and a clear reason of at least 12 characters.";
+        return;
+      }
+      setBusy(true);
+      try {
+        var grantResult = await requestJson("/api/admin/roles/grant", {
+          email: grantEmail,
+          reason: grantReason,
+          permissions: delegatedPermissions
+        });
+        if (grantEmailInput) grantEmailInput.value = "";
+        if (grantReasonInput) grantReasonInput.value = "";
+        adminDashboardContent.querySelectorAll('input[name="admin-role-permission"]').forEach(function (input) {
+          input.checked = false;
+        });
+        if (grantFeedback) grantFeedback.textContent = grantResult.message || "The existing account was granted the administrator role.";
+      } catch (error) {
+        if (grantFeedback) grantFeedback.textContent = error.message || "The administrator role could not be granted.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "admin-role-revoke") {
+      var revokeEmailInput = document.getElementById("admin-role-revoke-email");
+      var revokeReasonInput = document.getElementById("admin-role-revoke-reason");
+      var revokeFeedback = document.getElementById("admin-role-revoke-feedback");
+      var revokeEmail = revokeEmailInput ? revokeEmailInput.value.trim() : "";
+      var revokeReason = revokeReasonInput ? revokeReasonInput.value.trim() : "";
+      if (!revokeEmail || !revokeReason || revokeReason.length < 12) {
+        if (revokeFeedback) revokeFeedback.textContent = "Enter the administrator account email and a clear reason of at least 12 characters.";
+        return;
+      }
+      setBusy(true);
+      try {
+        var revokeResult = await requestJson("/api/admin/roles/revoke", {
+          email: revokeEmail,
+          reason: revokeReason
+        });
+        if (revokeEmailInput) revokeEmailInput.value = "";
+        if (revokeReasonInput) revokeReasonInput.value = "";
+        if (revokeFeedback) revokeFeedback.textContent = revokeResult.message || "Administrator access was revoked.";
+      } catch (error) {
+        if (revokeFeedback) revokeFeedback.textContent = error.message || "Administrator access could not be revoked.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (button.id === "admin-return-account") {
       window.location.hash = "account";
       return;
