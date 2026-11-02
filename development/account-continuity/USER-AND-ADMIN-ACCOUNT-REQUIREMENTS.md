@@ -26,7 +26,7 @@ Define one understandable account foundation for ordinary users and administrato
 8. **External administrator identity and compensation wallet:** up to three external administrator wallet addresses may be registered as alternative authenticators under the existing provisional model; the final minimum/recovery arrangement remains subject to governance approval. A fresh proof from one enrolled wallet can satisfy the wallet step-up for an already-authorized administrator. This is **one-of-N authentication**, not a 2-of-3 multisignature transaction. The external wallet is also an optional registered destination for that administrator's salary, service payments and bonuses through a separate payout workflow. It is user-controlled, is not an AstroCrown organizational-funds wallet, does not hold or control NOVA operational assets, and never grants a role or permission by itself. NOVA/AstroCrown must never obtain its private key or seed phrase. Authentication-wallet registration and compensation-destination registration are distinct data purposes, even when the same address is used for both.
 9. **NOVA administrative operations smart account:** each administrator receives a separately identifiable programmable smart account as a native NOVA component. NOVA's on-chain transaction-validation and enforcement mechanism is part of NOVA itself and must reject prohibited, unknown or unverifiable operations before execution. The account holds only the minimum operational assets required for assigned duties; it is not the administrator's external wallet, payout address or AstroCrown treasury. It must be subject to NOVA's off-chain policy checks and mandatory on-chain enforcement, with no administrator bypass. The treasury and predetermined protected recovery vault remain separate.
 10. Loss of all external administrator authenticators requires a formal recovery request to the Imperial HSIAN authority (the owner and/or a specifically authorized NOVA-governed process). Recovery of the NOVA operations smart account is a distinct, pre-authorized smart-account recovery path. NOVA may collect evidence and execute only actions permitted by those previously established controls; it must not independently promote itself or an unverified claimant.
-11. The browser preview is memory-only and disposable; the local SQLite server is loopback-only. Neither is production authentication. New accounts default to the server-owned `user` role and registration ignores role/admin flags. The current local prototype uses an owner-operated CLI as a test/bootstrap adapter; its `--actor` value is only an audit label, not authenticated proof of an administrator's identity or permission. That CLI is not the intended production appointment workflow. In the intended product flow, a current administrator with the explicit `admin.roles.grant` permission grants the role to an existing user account. The role grant is separate from wallet enrolment: the newly appointed administrator must prove control of their own wallet when enrolling it, then use a fresh SIWE signature from one of up to three enrolled wallets to obtain a maximum ten-minute step-up on the already-authenticated account session. The backend rechecks the account role, required permission and wallet registration, binds the challenge to the account/session, rejects replay and cross-session use, and withholds privileged access until step-up succeeds. The User dashboard shows the Administrator access entry only after the server confirms the role grant; the entry starts wallet enrolment/verification as needed and then opens the separate Administrator dashboard. The browser preview remains memory-only. There is no production role-management endpoint, no production admin governance or all-wallet-loss recovery. Root/production website files remain unchanged.
+11. The browser preview is memory-only and disposable; the local SQLite server is loopback-only. Neither is production authentication. New accounts default to the server-owned `user` role and registration ignores role/admin flags. The current local prototype uses an owner-operated CLI as a test/bootstrap adapter; its `--actor` value is only an audit label, not authenticated proof of an administrator's identity or permission. That CLI is not the intended production appointment workflow. In the intended product flow, a current administrator with the explicit `admin.roles.grant` permission grants the role to an existing user account. The role grant is separate from wallet enrolment: the newly appointed administrator must prove control of their own wallet when enrolling it, then use a fresh wallet-family-specific, chain-bound message signature from one of up to three enrolled wallets (the current local prototype implements EIP-4361/SIWE for EVM accounts only) to obtain a maximum ten-minute step-up on the already-authenticated account session. The backend rechecks the account role, required permission and wallet registration, binds the challenge to the account/session, rejects replay and cross-session use, and withholds privileged access until step-up succeeds. The User dashboard shows the Administrator access entry only after the server confirms the role grant; the entry starts wallet enrolment/verification as needed and then opens the separate Administrator dashboard. The browser preview remains memory-only. There is no production role-management endpoint, no production admin governance or all-wallet-loss recovery. Root/production website files remain unchanged.
 
 ## 3. Account concepts and permission boundary
 
@@ -56,7 +56,7 @@ The current prototype supports a maximum of three externally controlled administ
 
 Each wallet enrollment must require:
 1. existing authentication and a server-confirmed admin role;
-2. explicit user-initiated challenge/signature using a reviewed SIWE/EIP-4361 flow or another verified wallet protocol;
+2. explicit user-initiated challenge/signature using the approved adapter and message-proof protocol for that wallet family (EIP-4361/SIWE for EVM; an approved BIP-322 proof for Bitcoin; SIWS/off-chain message proof for Solana, if those adapters are later qualified);
 3. server-side validation of domain/origin, nonce, expiration, address, chain/message constraints and signature;
 4. a record of enrollment/revocation that does not contain a private key or recovery phrase;
 5. a notice and an audit event; and
@@ -142,7 +142,7 @@ The sign-in form's Security assurance link must open a separate page containing 
 - external review/certification status (currently none for this prototype); and
 - production blockers.
 
-It must not claim “secure”, “fully protected”, certified, production-ready, or complete. The page must distinguish: (a) local prototype email-verification/reset token flows from an externally configured and inbox-tested delivery service; (b) local SQLite accounts/sessions and owner-operated role provisioning from production identity infrastructure; (c) the local SIWE administrator-wallet step-up from production administrator governance and recovery; and (d) automated tests from independent security review. Production HTTPS hosting, durable shared storage, qualified email delivery and operations, formal all-admin-wallet-loss recovery, approved legal policies and independent security review remain outstanding. Keep the page separate from Terms of Use and Privacy Policy.
+It must not claim “secure”, “fully protected”, certified, production-ready, or complete. The page must distinguish: (a) local prototype email-verification/reset token flows from an externally configured and inbox-tested delivery service; (b) local SQLite accounts/sessions and owner-operated role provisioning from production identity infrastructure; (c) the local EIP-4361/SIWE EVM administrator-wallet step-up from any future Bitcoin, Solana or other wallet-family adapter, and from production administrator governance and recovery; and (d) automated tests from independent security review. Production HTTPS hosting, durable shared storage, qualified email delivery and operations, formal all-admin-wallet-loss recovery, approved legal policies and independent security review remain outstanding. Keep the page separate from Terms of Use and Privacy Policy.
 
 ## 7. Threat model
 
@@ -408,3 +408,66 @@ For every controlled fixture mint, record the cluster, mint address, owning toke
 ### Status boundary
 
 This is an extension of the $0-first testing plan only. No Testnet wallet, test mint, faucet request, program deployment or transaction was created by this documentation change. No universal asset support is claimed.
+
+## 16. Wallet-family-compatible sign-in proof and administrator step-up — 2026-11-02
+
+### Scope and current UX boundary
+
+The current account-development scope remains the ordinary sign-in/sign-up experience, User dashboard, role-gated Administrator dashboard entry and the wallet proof required for administrator step-up. This requirement prepares that account foundation for different wallet families; it does not expand the current coding scope into payments, swaps, bridges or general blockchain execution.
+
+Ordinary AstroCrown account creation and normal User dashboard access continue to work without a crypto wallet. A wallet is requested only when the user deliberately enters a feature that requires proof of wallet control. The existing Administrator dashboard flow is one such feature: the server first confirms the account administrator role, then a registered wallet proves control for a short-lived step-up. A wallet connection, address, balance or signature never creates an AstroCrown account, assigns an administrator role or grants permissions.
+
+Wallet-based primary sign-in for ordinary members is not authorized by this section. It may be considered later as an additional login method, but it must link to an existing account under a separately approved account-recovery and privacy design. Do not silently create duplicate accounts for the same person or treat one chain address as the universal account identity.
+
+### Connection is not authentication
+
+- **Connect/discover:** the user explicitly chooses a wallet; the connector reports the wallet capabilities, selected account(s), address format and network/chain context. This alone proves no identity or authority.
+- **Prove control:** AstroCrown issues a single-purpose, short-lived challenge and the wallet signs the exact human-readable authentication message using a supported off-chain message protocol. The server verifies the signature and challenge before recording or using the wallet as an authenticator.
+- **Authorize a blockchain transaction:** a separate transaction preview and explicit transaction-signing flow that is not part of account sign-in, wallet linking or administrator step-up.
+
+A login, wallet-link or administrator-step-up challenge must not request a token transfer, contract call, PSBT spend or no-op transaction. It must not expose arbitrary transaction permissions. Do not ask for a seed phrase or private key.
+
+### Wallet-family authentication adapters
+
+Use one common challenge lifecycle with independent serializers, signing-capability detection and server-side verifiers for each supported wallet family. Do not pass a Bitcoin signature into an Ethereum/SIWE verifier or assume that a common wallet modal makes the underlying proof formats interchangeable.
+
+| Wallet family | Account and signature model | Candidate proof-of-control protocol | Required treatment |
+|---|---|---|---|
+| EVM / Ethereum | Account/address model; an address can be used on multiple EVM chains, but the chain context still matters | Sign-In with Ethereum (EIP-4361 / SIWE); ERC-1271 validation for qualifying contract accounts | Verify domain/origin, exact address, EIP-155 chain ID, URI, nonce, issue/expiry times and exact message. Do not assume every smart-contract wallet uses an ordinary EOA signature. |
+| Bitcoin | UTXO-based ownership and script/address types; not an EVM account or 0x address | BIP-322 generic signed-message proof, using only explicitly supported variants and script types | Verify the proof against the exact Bitcoin address/script and selected network. Wallet support varies; detect it before offering this method. Do not treat an ordinary payment transaction or PSBT spending authorization as a login proof. |
+| Solana | Public-key/account model with Solana-native message features | Sign In With Solana (SIWS) and the Solana off-chain message signing format (OCMS); raw message signing only when explicitly reviewed | Prefer the message format that cannot be mistaken for a transaction where the wallet supports it. Verify exact signed bytes, signer public key, challenge and cluster/context. Do not make transaction signing the default authentication fallback. |
+| Other families | Chain-specific account, key, script, object or signing models | A protocol-specific adapter only after research and qualification | Add only when an actual product need exists and the message format, wallet support, verifier, replay controls and recovery behavior have been reviewed. |
+
+The table defines future adapter targets; it does not claim that Bitcoin or Solana login adapters are implemented.
+
+### Common challenge envelope and stored authenticator
+
+Each adapter must consume a server-issued challenge with common security semantics, even where the signed message encoding differs. Bind the challenge to the exact website origin/domain and intended URI/audience; a cryptographically random, single-use nonce; issue time and short expiry; intended purpose (wallet_link, admin_step_up, or a separately approved login purpose); authenticated AstroCrown account ID and exact server session for linking and administrator step-up; exact wallet family, namespace, chain/network and selected address/account/script; exact protocol/version and expected message bytes; and a statement explaining that the action is authentication only and does not authorize a transaction.
+
+Consume the nonce only once and reject expired, reused, cross-account, cross-session, wrong-origin, wrong-network, wrong-address, malformed or modified messages. Do not let the client select or alter the purpose or security-critical message fields after the challenge is issued.
+
+Store only the public authenticator record and evidence needed for verification and lifecycle management. At minimum record family/namespace, network context, canonical account/address identifier, applicable script/address type or contract-account type, proof protocol/version, enrolment time, verification state, last-use/revocation state and audit reference. Never store private keys, seed phrases or reusable signing secrets. Do not automatically link addresses from every account exposed by the wallet; the user selects the account/address to enrol.
+
+### Multiple wallet families and administrator policy
+
+The provisional maximum of three administrator authentication wallets applies across all supported families combined, not three per chain. The unresolved minimum before administrator activation remains unresolved; do not silently decide it. The existing one-of-N rule means one enrolled authenticator can prove control for a fresh step-up. It is not a multisignature authorization for a blockchain transaction and does not override NOVA separate smart-account policy.
+
+Mixed enrollment is intended to be representable, for example one EVM authenticator and one Bitcoin authenticator on the same AstroCrown administrator account, once each adapter has passed review. It does not make the EVM and Bitcoin accounts the same asset address or one common on-chain identity. The separate NOVA administrative operations smart account remains Solana-native under its current provisional development direction; an external wallet-family proof only authenticates the administrator to AstroCrown and does not itself sign or authorize NOVA program instructions.
+
+### Compatibility and acceptance gates
+
+Before an adapter may be used for wallet linking or administrator step-up, test message serialization and canonical byte equality; wrong website origin/domain, URI, network/chain or selected address; nonce entropy, expiry, single use, replay and cross-account/session rejection; signature tampering, malformed and truncated proofs; wallet account/network changes and disconnects between challenge and verification; supported EVM EOA and contract-account verification paths where claimed; Bitcoin address/script variants and BIP-322 proof variants actually supported by the selected wallets; Solana signer identity and off-chain-message version/capability negotiation where that adapter is implemented; unsupported wallet capability, unavailable RPC/verifier data and provider outage; and explicit user cancellation and fallback to ordinary account sign-in without granting privileged access.
+
+A wallet that cannot produce a supported message proof must not be silently downgraded to a weak signature format or a transaction-signing request. The user may use another enrolled authenticator or the ordinary account access route, subject to role and recovery policy.
+
+### Current implementation boundary
+
+The current local account/wallet lab remains EVM-oriented and uses EIP-4361/SIWE for administrator-wallet proof. The account UX and role checks remain local prototype behavior. Bitcoin BIP-322 verification, Bitcoin wallet connector support, Solana SIWS/OCMS authentication adapters, mixed-family enrollment and production wallet linking are not implemented by this requirements update. No BTC or ETH wallet has been connected, no wallet address has been enrolled, and no transaction or production authentication capability has been activated.
+
+### Technical references
+
+- [EIP-4361 / Sign-In with Ethereum](https://eips.ethereum.org/EIPS/eip-4361)
+- [ERC-1271 / Standard Signature Validation Method for Contracts](https://eips.ethereum.org/EIPS/eip-1271)
+- [BIP-322 / Generic Signed Message Format](https://bitcoin.org/bip/322/)
+- [Solana: Sign Messages and Authenticate Users](https://solana.com/docs/frontend/messages-and-auth)
+- [Wallet and asset extensibility architecture](../crypto-infrastructure/ASSET-PAYMENTS-AND-WALLET-INTERACTIONS-ARCHITECTURE.md)
