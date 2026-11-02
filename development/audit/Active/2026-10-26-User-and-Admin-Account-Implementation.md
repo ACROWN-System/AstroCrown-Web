@@ -294,15 +294,15 @@ This keeps ordinary account continuity independent from appointment to administr
 
 The permissioned administrator appointment implementation and its test updates were verified on code/test head `66c3d9fa4c2b5ecf8843bdf6798468c4a4a883ad`.
 
-| Workflow / evidence | Result |
-|---|---|
-| Local Account Continuity Prototype Tests | PASS — 60 tests completed |
-| Account entry-point and security-boundary checks | PASS |
-| Headless Chrome account-flow smoke test | PASS — includes permission-gated administrator grant/revoke controls |
-| Local Wallet Authentication Prototype Tests | PASS |
-| NOVA RSI Engine CI | PASS |
-| NOVA RSI CodeQL Security Analysis | PASS |
-| External Review Pipeline CI | PASS |
+| Workflow / evidence | Run ID | Result |
+|---|---:|---|
+| Local Account Continuity Prototype Tests | 41376648534 | PASS — 60 tests completed |
+| Account entry-point and security-boundary checks | 41376648534 | PASS |
+| Headless Chrome account-flow smoke test | 41376648534 | PASS — includes permission-gated administrator grant/revoke controls |
+| Local Wallet Authentication Prototype Tests | 41376648528 | PASS |
+| NOVA RSI Engine CI | 41376648543 | PASS |
+| NOVA RSI CodeQL Security Analysis | 41376648588 | PASS |
+| External Review Pipeline CI | 41376648561 | PASS |
 
 The account workflow also completed Python and browser-JavaScript syntax validation. The first-wallet enrollment regression covers the target's own signature, cross-session rejection, replay rejection and the separate fresh administrator step-up. The appointment regression covers self-grant denial, a wallet-verified administrator without `admin.roles.grant`, non-delegable permission transfer, separate `admin.roles.revoke`, audit records and preservation of ordinary account access.
 
