@@ -11,6 +11,10 @@ AstroCrown-Web is establishing a controlled brand-language and terminology proce
 
 These documents are internal governance guidance in draft. The project does not claim ISO 704:2022 certification or completed clause-level conformity; the current aim is evidence-based internal alignment and audit readiness.
 
+## Crypto infrastructure and asset interactions
+
+- [Asset, Payment and Wallet-Interaction Architecture](development/crypto-infrastructure/ASSET-PAYMENTS-AND-WALLET-INTERACTIONS-ARCHITECTURE.md) — proposed multi-chain asset model, wallet adapters, payment acceptance, swaps, bridges, future interaction modules, security gates and $0-first integration stages. It is an architecture proposal, not a claim of implemented support.
+
 ## License
 
 The original software, source code, scripts, workflows, and accompanying technical documentation are available under the MIT License; see [LICENSE](LICENSE). Separate file-specific licenses or notices continue to apply. The MIT License does not relicense third-party assets or materials that the maintainers are not authorized to license.
