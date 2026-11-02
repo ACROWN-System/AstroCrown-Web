@@ -871,6 +871,285 @@ class AccountApplication:
         result["message"] = "You are signed in to AstroCrown with your passkey."
         return 200, result, self.cookie_header(token)
 
+    def issue_account_recovery_options(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        """Verify the offline recovery key and begin a restricted passkey replacement."""
+        service = self._passkey_service()
+        if set(payload) != {"accountIdentifier", "recoveryKey"}:
+            raise ApiError(400, "Enter your account identifier and offline recovery key.")
+        account_identifier = payload.get("accountIdentifier")
+        if not isinstance(account_identifier, str):
+            raise ApiError(400, "Enter your account identifier and offline recovery key.")
+        account_identifier = account_identifier.strip().upper()
+        if not re.fullmatch(r"AC-[A-F0-9]{10}", account_identifier):
+            raise ApiError(401, "Account recovery could not be started. Check the account identifier and recovery key.")
+
+        try:
+            recovery_key = self.normalize_recovery_key(payload.get("recoveryKey"))
+        except ValueError:
+            recovery_key = ""
+
+        ip_subject = self.case_rate_subject(handler)
+        if not self.auth_rate_allowed("account-recovery-ip", ip_subject, limit=10, window=3600):
+            raise ApiError(429, "Too many recovery attempts from this connection. Please try again later.")
+        if not self.auth_rate_allowed(
+            "account-recovery-account", account_identifier, limit=5, window=3600
+        ):
+            raise ApiError(429, "Too many recovery attempts for this account identifier. Please try again later.")
+
+        with self.connect() as db:
+            account = db.execute(
+                """SELECT account_id, username, auth_method
+                   FROM accounts
+                   WHERE username = ? COLLATE NOCASE AND auth_method = 'webauthn'""",
+                (account_identifier,),
+            ).fetchone()
+            recovery_row = None
+            if account is not None and recovery_key:
+                recovery_row = db.execute(
+                    """SELECT key_version, key_salt, key_verifier
+                       FROM account_recovery_keys
+                       WHERE account_id = ? AND used_at IS NULL
+                       ORDER BY key_version DESC LIMIT 1""",
+                    (account["account_id"],),
+                ).fetchone()
+
+            verified_key = False
+            if recovery_row is not None:
+                candidate = hashlib.sha256(
+                    bytes(recovery_row["key_salt"]) + recovery_key.encode("ascii")
+                ).digest()
+                verified_key = hmac.compare_digest(
+                    candidate, bytes(recovery_row["key_verifier"])
+                )
+
+            if not verified_key:
+                # Do a fixed-size comparison on the same failure path when no
+                # account/key exists. The recovery response never reveals which
+                # part of the supplied proof failed.
+                hmac.compare_digest(hashlib.sha256(b"invalid-recovery-key").digest(), bytes(32))
+                raise ApiError(
+                    401,
+                    "Account recovery could not be started. Check the account identifier and recovery key.",
+                )
+
+            credential_rows = db.execute(
+                """SELECT credential_id_bytes FROM account_passkey_credentials
+                   WHERE account_id = ?""",
+                (account["account_id"],),
+            ).fetchall()
+
+        challenge_id = secrets.token_urlsafe(24)
+        challenge = secrets.token_bytes(service.CHALLENGE_BYTES)
+        try:
+            options = service.registration_options(
+                user_id=uuid.UUID(account["account_id"]).bytes,
+                user_name=account["username"],
+                user_display_name="AstroCrown member",
+                challenge=challenge,
+                exclude_credential_ids=[bytes(row["credential_id_bytes"]) for row in credential_rows],
+            )
+        except (ValueError, PasskeyVerificationError):
+            raise ApiError(503, "The passkey recovery service could not prepare a replacement credential.") from None
+
+        now = int(time.time())
+        with self.connect() as db:
+            db.execute(
+                """DELETE FROM account_recovery_challenges
+                   WHERE expires_at <= ? OR (used_at IS NOT NULL AND used_at <= ?)""",
+                (now, now - 86400),
+            )
+            db.execute(
+                """INSERT INTO account_recovery_challenges(
+                       challenge_id, challenge, account_id, key_version,
+                       created_at, expires_at, used_at
+                   ) VALUES (?, ?, ?, ?, ?, ?, NULL)""",
+                (
+                    challenge_id, challenge, account["account_id"],
+                    int(recovery_row["key_version"]), now, now + 300,
+                ),
+            )
+
+        return 200, {
+            "challengeId": challenge_id,
+            "publicKey": options,
+            "expiresIn": 300,
+            "purpose": "replace-lost-passkey-using-one-time-recovery-key",
+        }, None
+
+    def complete_account_recovery(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        """Consume one recovery key, replace passkeys, revoke sessions and rotate recovery."""
+        service = self._passkey_service()
+        if set(payload) != {"challengeId", "credential"}:
+            raise ApiError(400, "The passkey recovery response is incomplete.")
+        challenge_id = self._passkey_challenge_id(payload.get("challengeId"))
+        credential = payload.get("credential")
+        if not isinstance(credential, dict):
+            raise ApiError(400, "A valid replacement passkey response is required.")
+
+        subject = self.case_rate_subject(handler)
+        if not self.auth_rate_allowed("account-recovery-complete", subject, limit=5, window=3600):
+            raise ApiError(429, "Too many passkey recovery completions. Please try again later.")
+
+        now = int(time.time())
+        with self.connect() as db:
+            challenge_row = db.execute(
+                """SELECT * FROM account_recovery_challenges
+                   WHERE challenge_id = ? AND used_at IS NULL AND expires_at > ?""",
+                (challenge_id, now),
+            ).fetchone()
+            if challenge_row is None:
+                raise ApiError(410, "This account recovery request has expired or was already used. Start again.")
+            active_key = db.execute(
+                """SELECT key_version FROM account_recovery_keys
+                   WHERE account_id = ? AND key_version = ? AND used_at IS NULL""",
+                (challenge_row["account_id"], challenge_row["key_version"]),
+            ).fetchone()
+            account = db.execute(
+                "SELECT account_id, username, auth_method FROM accounts WHERE account_id = ?",
+                (challenge_row["account_id"],),
+            ).fetchone()
+        if active_key is None or account is None or account["auth_method"] != "webauthn":
+            raise ApiError(410, "This account recovery request is no longer valid. Start again.")
+
+        try:
+            verified = service.verify_registration(
+                credential=credential,
+                challenge=bytes(challenge_row["challenge"]),
+            )
+            credential_id, credential_id_bytes = service.credential_id_from_response(credential)
+        except PasskeyVerificationError:
+            raise ApiError(401, "The replacement passkey proof was not accepted. Start recovery again.") from None
+        if not hmac.compare_digest(bytes(verified.credential_id), credential_id_bytes):
+            raise ApiError(401, "The replacement passkey proof was not accepted. Start recovery again.")
+
+        response_data = credential.get("response", {})
+        transports = response_data.get("transports", []) if isinstance(response_data, dict) else []
+        allowed_transports = {"usb", "nfc", "ble", "internal", "hybrid", "smart-card"}
+        if not isinstance(transports, list) or any(
+            not isinstance(item, str) or item not in allowed_transports for item in transports
+        ):
+            transports = []
+        device_type = getattr(
+            verified.credential_device_type,
+            "value",
+            str(verified.credential_device_type),
+        )
+        created_at = utc_iso(now)
+        new_recovery_key, new_recovery_salt, new_recovery_verifier = self.generate_recovery_key()
+        session_token = secrets.token_urlsafe(32)
+        session_expires = now + SESSION_LIFETIME_SECONDS
+        account_id = str(account["account_id"])
+        previous_key_version = int(challenge_row["key_version"])
+        replaced_passkeys = 0
+        revoked_sessions = 0
+        next_key_version = 0
+
+        try:
+            with self.connect() as db:
+                db.execute("BEGIN IMMEDIATE")
+                live_challenge = db.execute(
+                    """SELECT 1 FROM account_recovery_challenges
+                       WHERE challenge_id = ? AND account_id = ? AND key_version = ?
+                         AND used_at IS NULL AND expires_at > ?""",
+                    (challenge_id, account_id, previous_key_version, int(time.time())),
+                ).fetchone()
+                live_key = db.execute(
+                    """SELECT 1 FROM account_recovery_keys
+                       WHERE account_id = ? AND key_version = ? AND used_at IS NULL""",
+                    (account_id, previous_key_version),
+                ).fetchone()
+                if live_challenge is None or live_key is None:
+                    raise ApiError(410, "This account recovery request has expired or was already used. Start again.")
+                if db.execute(
+                    "SELECT 1 FROM account_passkey_credentials WHERE credential_id = ? OR credential_id_bytes = ?",
+                    (credential_id, credential_id_bytes),
+                ).fetchone():
+                    raise ApiError(409, "This passkey is already registered. Use a different authenticator.")
+                replaced_passkeys = int(db.execute(
+                    "SELECT COUNT(*) FROM account_passkey_credentials WHERE account_id = ? AND active = 1",
+                    (account_id,),
+                ).fetchone()[0])
+                revoked_sessions = int(db.execute(
+                    "SELECT COUNT(*) FROM sessions WHERE account_id = ? AND expires_at > ?",
+                    (account_id, int(time.time())),
+                ).fetchone()[0])
+
+                # Recovery is a credential replacement ceremony. All previous
+                # passkeys are disabled; wallet credentials and the assigned
+                # account role remain separate and are not silently changed.
+                db.execute(
+                    "UPDATE account_passkey_credentials SET active = 0 WHERE account_id = ? AND active = 1",
+                    (account_id,),
+                )
+                db.execute(
+                    """INSERT INTO account_passkey_credentials(
+                           credential_id, credential_id_bytes, account_id, public_key,
+                           sign_count, transports_json, device_type, backed_up,
+                           created_at, last_used_at, active
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1)""",
+                    (
+                        credential_id, credential_id_bytes, account_id,
+                        bytes(verified.credential_public_key), int(verified.sign_count),
+                        json.dumps(transports, separators=(",", ":")), device_type,
+                        int(bool(verified.credential_backed_up)), created_at,
+                    ),
+                )
+                db.execute(
+                    """UPDATE account_recovery_keys SET used_at = ?
+                       WHERE account_id = ? AND used_at IS NULL""",
+                    (created_at, account_id),
+                )
+                next_key_version = int(db.execute(
+                    "SELECT COALESCE(MAX(key_version), 0) + 1 FROM account_recovery_keys WHERE account_id = ?",
+                    (account_id,),
+                ).fetchone()[0])
+                db.execute(
+                    """INSERT INTO account_recovery_keys(
+                           account_id, key_version, key_salt, key_verifier, created_at, used_at
+                       ) VALUES (?, ?, ?, ?, ?, NULL)""",
+                    (
+                        account_id, next_key_version, new_recovery_salt,
+                        new_recovery_verifier, created_at,
+                    ),
+                )
+                db.execute(
+                    """UPDATE account_recovery_challenges SET used_at = ?
+                       WHERE account_id = ? AND key_version = ? AND used_at IS NULL""",
+                    (int(time.time()), account_id, previous_key_version),
+                )
+                db.execute("DELETE FROM sessions WHERE account_id = ?", (account_id,))
+                db.execute(
+                    """INSERT INTO sessions(token_hash, account_id, created_at, expires_at)
+                       VALUES (?, ?, ?, ?)""",
+                    (hash_session_token(session_token), account_id, now, session_expires),
+                )
+                db.execute(
+                    """INSERT INTO account_security_audit(
+                           audit_id, account_id, event_type, created_at, detail
+                       ) VALUES (?, ?, 'account_recovered_with_recovery_key', ?, ?)""",
+                    (
+                        str(uuid.uuid4()), account_id, created_at,
+                        f"replaced_passkeys={replaced_passkeys};revoked_sessions={revoked_sessions};recovery_key_version={previous_key_version}->{next_key_version}",
+                    ),
+                )
+        except sqlite3.IntegrityError:
+            raise ApiError(409, "The replacement passkey or recovery operation could not be completed. Start again.") from None
+
+        self.clear_auth_rate_limit("account-recovery-account", account["username"])
+        recovered_account, expires = self.account_for_session(session_token)
+        if recovered_account is None:
+            raise ApiError(500, "The recovered account session could not be initialized.")
+        result = self.account_summary(recovered_account, expires)
+        result["oneTimeRecoveryKey"] = new_recovery_key
+        result["recoveryKeyVersion"] = next_key_version
+        result["recovered"] = True
+        result["message"] = "Account recovery completed. All previous passkeys and sessions were revoked. Save your new offline recovery key now; the previous key has been consumed."
+        return 200, result, self.cookie_header(session_token)
+
     def account_for_session(self, token: str | None) -> tuple[sqlite3.Row | None, int | None]:
         if not token:
             return None, None
