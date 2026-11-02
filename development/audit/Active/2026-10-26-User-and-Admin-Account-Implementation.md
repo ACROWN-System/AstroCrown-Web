@@ -669,3 +669,26 @@ The later active-audit and checklist edits are documentation-only; the final bra
 ### Preservation and release boundary
 
 No main branch or production homepage/service was changed. No production credentials, secrets, real passkeys, real wallets, blockchain transactions, balances, assets, paid providers, domain/DNS settings, deployments or historical backups were used or changed. PR #141 remains open, draft, unmerged and undeployed. This remains a localhost/SQLite development prototype.
+
+
+## 27. Governance audit linkage for administrator-sent communications — 2026-11-03
+
+### Hardening
+
+- Each successful administrator communication send now generates one admin_communication_sent event in account_admin_audit and one account_communications row in the same BEGIN IMMEDIATE database transaction. If either insert fails, neither operation is committed.
+- The communication's source_audit_id references the audit event. The audit event identifies the sending account, recipient account, Alert/Message destination and communication ID. It records subject/body character counts for bounded-content verification.
+- The audit deliberately excludes both the private subject and the private message body. The full text remains in the recipient-scoped communication record; the governance audit preserves accountability without creating a second copy of private correspondence.
+- Extended the private-communications API test to verify both Alert and Message records reference exactly one corresponding audit event, that actor/recipient/destination metadata match, and that the private text is absent from the audit detail.
+- The communication send permission and wallet-step-up checks remain revalidated inside the write transaction. Recipient-only list/state checks and the separate Alert acknowledgement / Message read lifecycle remain unchanged.
+
+### Exact implementation and test verification
+
+All five tracked workflows passed against implementation/test head ff5be040917501cfbc65e010d7ee4beedf799984:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41548300681) — syntax, loopback account/API tests, security-boundary checks and headless Chrome journey passed.
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41548300727).
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41548300688).
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41548300716).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41548300739).
+
+These automated results verify the localhost/SQLite development prototype only. They are not an independent security assessment, formal standards certification, production readiness or release approval. PR #141 remains open, draft, unmerged and undeployed. No main, production service, secret, real wallet, transaction, paid provider, domain/DNS setting, deployment or historical backup was changed.
