@@ -1,10 +1,18 @@
-# AstroCrown email-account entry prototype
+# AstroCrown account continuity prototype — legacy email flow pending replacement
 
-**Status: development test only — not production authentication.**
+**Status: development test only — not production authentication. The current UI/backend are a legacy email/password prototype; the adopted target is passkey-first and is not implemented yet.**
 
-This prototype provides a familiar **Log In / Sign Up** account dialog in the development homepage. It uses the owner's requested email/password fields, optional Referral ID, separate optional crypto-news email preference, and required Terms of Use / Privacy Policy acceptance. It remains isolated under `development/`; the production/root homepage is unchanged.
+This prototype currently demonstrates the earlier **Log In / Sign Up** flow using email/password, optional Referral ID, separate optional crypto-news preference, and required Terms/Privacy acceptance. That email/password design has been superseded by the 2026-11-03 passkey-first decision. The current code and test instructions below document the legacy local prototype only; do not use real credentials or configure mail delivery for account access. The prototype remains isolated under `development/`; the production/root homepage is unchanged.
 
-## What you can test
+## Adopted authentication target (2026-11-03)
+
+The owner has approved WebAuthn public-key authentication as the primary account authenticator, an optional separately controlled wallet backup, and a one-time offline recovery key. No email, password, SMS or third-party identity provider is required for registration, sign-in or recovery. See [Passkey-First Account Authentication and Recovery Requirements](../PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md) for the complete security and acceptance requirements.
+
+WebAuthn uses the browser's authenticator and first-party challenge/verification requests to AstroCrown's own backend; it does not require a paid authentication API. Synced passkeys may use the user's platform sync provider. Device-bound credentials or a user-owned FIDO2 hardware key are alternatives where supported; a physical key may have a user purchase cost. The current prototype has not implemented WebAuthn or the recovery-key flow.
+
+**Important:** the current email/password walkthrough below is retained to document and test the existing legacy code while the replacement is developed. It is not the approved account-authentication experience and must not be exposed to real users.
+
+## Legacy prototype behavior currently available to test
 
 - Open the homepage header's **Account** button.
 - Switch between **Log In** and **Sign Up**.
@@ -127,7 +135,9 @@ The portal supports:
 
 Use the case portal and tests with invented details only. The current implementation is local SQLite development software, not a production complaint service. Production requires a deployed and hardened data service, protected administrator operations, independently tested recovery verification and delivery, retention/deletion rules, privacy/legal review and a published working contact route.
 
-## Mailjet Free-tier transactional email
+## LEGACY ONLY — Mailjet transactional email (do not configure for account authentication)
+
+**Superseded:** Mailjet was evaluated for the old email/password verification/reset flow. The adopted passkey-first design does not use email or SMS for account registration, sign-in or recovery. The following configuration notes are historical implementation records only; do not create a provider account, add credentials or enable sending for account authentication.
 
 **Repository status:** the Mailjet provider configuration and local quota guard are implemented. The external Mailjet account, sender/domain verification, credentials and successful delivery remain **NOT CONFIGURED / NOT QUALIFIED**. No real email has been sent by CI. No provider account or paid plan was created.
 
@@ -189,23 +199,23 @@ Mailjet's free account can also begin in temporary test mode (10 messages/hour) 
 ## Data and security boundaries
 
 - Local test data stays in the SQLite database on the computer running this server. The prototype uses Python standard-library components only and makes no external authentication or newsletter calls unless the optional SMTP transport is explicitly configured.
-- Passwords are stored as PBKDF2-HMAC-SHA256 hashes with random salts; raw passwords are not stored.
+- Legacy prototype only: email/password credentials are stored using PBKDF2-HMAC-SHA256 hashes with random salts. This is not part of the adopted passkey-first account design.
 - Session tokens are stored as hashes. Local sessions use an HttpOnly, SameSite=Strict cookie. The local HTTP cookie configuration is **not** a production HTTPS configuration.
-- Email is the account identifier. The local prototype can verify ownership with an expiring, single-use token and reset passwords with a separate expiring, single-use token. Tokens are stored as SHA-256 hashes; raw tokens are sent only through the explicitly configured mail transport and are not written to the database or application logs. Email ownership remains unverified until the verification link is used. Password-reset completion revokes all sessions and administrator step-up state. Known and unknown password-reset requests receive the same status/body, but local SMTP submission is synchronous and response timing is not guaranteed to be indistinguishable.
+- Legacy prototype only: email is the account identifier; local verification/reset tokens are single-use, expiry-bound and hashed. This email-based account model is superseded. The adopted target uses a stable internal account ID, WebAuthn public credential(s), optional wallet backup and one-time offline recovery key. Email is not a login or recovery factor.
 - Terms acceptance and newsletter consent have timestamps/version metadata for prototype testing. No newsletter message is sent and the preference is not sent to an external service.
 - A Referral ID is optional and unverified. No reward, association, or benefit is promised or applied.
 - Requests are limited to the exact localhost Host/Origin, with a JSON size limit. Account registration, sign-in, password changes, session revocation and administrator wallet challenges use atomic SQLite-backed rate limits that survive application restarts; rate-limit subject identifiers are stored as SHA-256 digests, not raw email addresses or account IDs. Case-portal throttles remain in-process for this local prototype. The server binds only to `127.0.0.1`.
-- Active local sessions are counted server-side. Signing out other sessions requires the current password, applies a bounded attempt limit, preserves the current session, and invalidates the other server-side session records.
-- Password changes require the current password and matching confirmation, use a new random salt, rotate the current session, revoke every previous session and clear administrator step-up state. A minimal security audit event records the action and count of other sessions invalidated; it does not record passwords, tokens, IP addresses or device fingerprints.
+- Legacy prototype only: signing out other sessions requires the current password. The replacement must use fresh WebAuthn user verification, preserve the current session and revoke other server-side sessions.
+- Legacy prototype only: password changes rotate/revoke sessions. The passkey-first replacement must implement credential addition/removal/replacement, recovery-key rotation, session rotation and revocation using fresh WebAuthn proof; no password-reset route remains in the target.
 - The prototype does not collect device fingerprints, IP history or user-agent labels.
 - The local database stores a server-owned role defaulting to `user`; registration cannot self-assign `admin`. The owner-operated CLI remains a development bootstrap/test adapter. In-product local role grants require an authenticated, wallet-step-up-verified administrator with `admin.roles.grant`; delegated permissions are limited to those explicitly assignable by that grantor. Role revocation separately requires `admin.roles.revoke`. Both operations record actor, target, permissions, reason and timestamp; self-grants and unauthorized permission delegation are rejected. A newly appointed account enrols its own first public wallet by signing a one-time message, then uses a separate fresh signature for the maximum ten-minute admin step-up. Up to three wallets are supported; adding an additional wallet still requires an existing wallet-verified admin session and another separate signature, and adding a wallet clears previous step-up states. Revocation disables the target's admin wallets and permissions while preserving ordinary account sessions. These are local prototype endpoints and not production identity, authority governance or all-wallet-loss recovery. There is no production hosting, production-qualified email delivery, newsletter delivery or real passkey. Six built-in avatar glyphs remain available for the local test account; uploads and remote images are unsupported. See [User and Administrator Account Requirements](../USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) for the long-term role and recovery model.
-- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. The email-action routes are local prototype behavior; production still requires an approved HTTPS deployment, a provisioned and tested Mailjet account, domain authentication (SPF/DKIM/DMARC), abuse monitoring, delivery/bounce handling, proxy/access-log redaction for email-action query tokens, privacy review and operational recovery procedures.
+- This is a test harness, not a claim of full ASVS/NIST conformance, production-ready authentication, a formal security audit, or guaranteed recovery. The email-action routes are legacy prototype behavior. The adopted WebAuthn/recovery-key flow is not yet implemented. Production requires an approved HTTPS deployment, exact RP ID/origin controls, maintained WebAuthn verification library, durable storage, authenticator lifecycle and recovery operations, privacy review and independent security testing. Email delivery is not an account-authentication prerequisite.
 
-## Production blockers
+## Production blockers for the adopted passkey-first model
 
-Before using an email/password account for real user assets, AstroCrown must implement and verify: production identity/account storage and secure hosting; production integration and qualification of the email transport for verification and password-reset links; an asynchronous mail queue and response-timing controls for account recovery; domain authentication and mail-delivery/bounce operations; production session review and revocation with appropriate reauthentication and device context; secure recovery alternatives and user notifications; newsletter consent history, unsubscribe, suppression and delivery operations; referral validation/abuse controls if referrals are activated; approved Terms of Use and Privacy Policy; retention/export/deletion and incident procedures; threat modelling, security testing, accessibility tests, and the project’s authoritative website/publishing verification.
+Before real-user onboarding, AstroCrown must implement and verify: WebAuthn registration/authentication with a maintained library; exact RP ID/origin validation, challenge freshness/replay protection and user verification; multiple authenticator management; offline recovery-key generation, hashed storage, throttling, single-use invalidation and reissue; secure first-party sessions and revocation; production HTTPS/backend/storage/backups; approved Terms of Use and Privacy Policy; retention/export/deletion and incident procedures; threat modelling, supply-chain/browser/accessibility testing and independent security review; and authoritative website/publishing verification. Email/SMS delivery is not required for account authentication or recovery.
 
-Mailjet is the selected zero-cost provider candidate and its repository adapter is implemented, but the external account, sending domain, credentials and live delivery are not yet qualified. Newsletter sending remains disabled. Do not merge/deploy or describe the account subsystem as production-ready merely because prototype CI passes.
+Mailjet and the SMTP quota adapter are legacy artifacts for the superseded email/password flow. Do not configure or rely on them for account authentication/recovery. No passkey/recovery implementation or production deployment is qualified. Do not merge/deploy or describe the account subsystem as production-ready merely because prototype CI passes.
 
 
 ### Important distinction: local CLI versus intended administrator appointment
