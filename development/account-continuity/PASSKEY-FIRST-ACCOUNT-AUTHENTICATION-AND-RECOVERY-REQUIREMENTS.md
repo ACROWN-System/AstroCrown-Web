@@ -104,7 +104,7 @@ Similarly, authentication does not eliminate the need for secure backend authori
 
 - The same passkey-first account identity is used for the ordinary User dashboard and, when separately authorized, the Administrator dashboard.
 - The User dashboard remains available to administrators with the same member-facing capabilities as ordinary users.
-- Administrator appointment and revocation remain server-enforced, separately permissioned operations. No passkey or wallet alone grants an administrator role.
+- Administrator appointment and revocation remain server-enforced, separately permissioned operations addressed by the existing member's stable public AstroCrown Account Identifier (`AC-` plus 10 hexadecimal characters). The identifier is only a reference to an existing account record; it is not an authenticator, credential, recovery secret or authority. Email is not required and must not be the role-management key. No passkey or wallet alone grants an administrator role.
 - Privileged access requires a valid ordinary account session and the existing separately defined administrator step-up. Wallet signatures are purpose-bound and cannot replace the WebAuthn account-authentication flow unless a future, explicit policy decision defines that use.
 - The owner/bootstrap and exceptional recovery authorities cannot silently impersonate users, mint credentials or override a user's recovery key.
 - Account deletion, termination, member transactions and administrative operations remain separate from authenticator lifecycle and must be handled by their own explicit policies.
