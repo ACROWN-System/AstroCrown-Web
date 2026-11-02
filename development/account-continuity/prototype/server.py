@@ -241,6 +241,7 @@ class AccountApplication:
                     email TEXT,
                     password_salt BLOB NOT NULL,
                     password_hash BLOB NOT NULL,
+                    auth_method TEXT NOT NULL DEFAULT 'legacy_password' CHECK(auth_method IN ('legacy_password', 'webauthn')),
                     created_at TEXT NOT NULL,
                     recovery_enabled INTEGER NOT NULL DEFAULT 0,
                     referral_id TEXT NOT NULL DEFAULT '',
