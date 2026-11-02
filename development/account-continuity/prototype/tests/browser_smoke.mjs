@@ -664,7 +664,6 @@ try {
   await waitFor("revocation Alert acknowledged in communications inbox", () =>
     evaluate("!document.querySelector('[data-communication-action=acknowledge]') && document.querySelector('.communication-state-label').textContent === 'Acknowledged'"));
   const acknowledgedRevocationStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
-  const acknowledgedRevocationStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(acknowledgedRevocationStatus.authenticated, true);
   assert.equal(acknowledgedRevocationStatus.role, "user");
   assert.equal(acknowledgedRevocationStatus.administratorRevocationNotice, null,
