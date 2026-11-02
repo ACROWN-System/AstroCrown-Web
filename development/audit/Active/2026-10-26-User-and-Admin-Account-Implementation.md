@@ -389,3 +389,37 @@ The development sequence is offline deterministic policy tests → local Solana 
 ### Current implementation boundary
 
 Documentation and development planning only. No Solana program, PDA, Devnet wallet/keypair, faucet request, on-chain transaction, contract deployment, monitoring process or recovery execution was performed by this change. The existing local account implementation and its prior test evidence remain unchanged. PR #141 remains draft, open, unmerged and undeployed. The NOVA architecture PR remains a separate draft and requires its own review.
+
+
+## 18. Supplemental Solana Testnet and multi-asset compatibility — 2026-11-02
+
+### Owner suggestion and accepted development refinement
+
+The owner identified that Solana Testnet may also be useful and that AstroCrown/NOVA must qualify compatibility with different asset types, not just faucet SOL. Accepted as a supplemental testing stage and a controlled multi-asset compatibility matrix.
+
+### Correct distinction between Solana clusters
+
+- Local validator/Localnet remains the primary environment for repeatable, deterministic and adversarial regression tests.
+- Devnet remains the primary public application/program integration environment.
+- Testnet is added for selected network-release, runtime/version, validator, stability and controlled stress/compatibility tests. Official Solana documentation describes Testnet primarily as a place for release and validator stress testing, whereas application developers are directed to Devnet.
+- Testnet is not a replacement for Devnet and a Testnet pass does not prove Mainnet equivalence. Testnet faucet availability, limits and eligibility must be checked live.
+
+### Asset compatibility approach
+
+- Asset compatibility is tested by token program, mint configuration and asset standard, not by collecting arbitrary faucet tokens.
+- Use controlled test mints/account fixtures separately on Localnet, Devnet and Testnet; a mint on one cluster is not automatically present on another.
+- Candidate asset matrix includes native SOL, classic SPL Token, Token-2022 base mints, transfer-fee, transfer-hook, permanent-delegate, default-account-state/pausable, metadata and (after separate design) confidential-transfer configurations. NFT/asset standards are tested only when AstroCrown explicitly adopts them (potential examples: Metaplex Token Metadata, programmable NFTs, compressed NFTs and Metaplex Core).
+- Record cluster, mint address, token program, decimals, extensions, authorities, purpose and build for each fixture. Do not identify assets by name, ticker, logo or URI alone.
+- Token-2022 extension combinations can be incompatible and require creation-time planning. Unknown token programs, mints, extensions, hooks and asset standards fail closed.
+- Local tests remain default; Devnet tests primary public app integration; Testnet repeats selected critical paths and network/runtime compatibility checks. Do not make every test dependent on public faucet supply.
+
+### Repository changes
+
+- Added Testnet and multi-asset compatibility requirements to the canonical NOVA administrative smart-account specification in AstroCrown-Web.
+- Added section 15 to the User and Administrator Account Requirements.
+- Added this audit section 18.
+- Updated the related NOVA Test-Asset Policy and NOVA administrative architecture under draft PR #175.
+
+### Verification and safety boundary
+
+Documentation-only. No Testnet wallet, faucet request, test mint, transaction or contract deployment was created/executed by this change. No real asset, paid provider, Mainnet key or production system was touched. Universal asset compatibility is not claimed. PR #141 remains draft, open, unmerged and undeployed; its current account prototype continues to provide only local identity, role and external-wallet step-up behavior.
