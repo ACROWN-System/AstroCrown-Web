@@ -440,6 +440,23 @@ Use one common challenge lifecycle with independent serializers, signing-capabil
 
 The table defines future adapter targets; it does not claim that Bitcoin or Solana login adapters are implemented.
 
+### One wallet application can expose several wallet families
+
+Do not confuse a wallet application/provider with the chain-specific account/address and proof protocol it exposes. A single multichain wallet application can connect to more than one ecosystem, so AstroCrown must not force a user to install a separate wallet application for every chain.
+
+MetaMask is a current example for the EVM/Ethereum and Solana combination: MetaMask's official help guidance says it supports SOL and SPL assets alongside EVM assets and derives a Solana address per account from the existing Secret Recovery Phrase. Its developer documentation provides a MetaMask Connect multichain option that can request EVM and Solana access in one session. Therefore one MetaMask application/connection can provide both an Ethereum address and a distinct Solana address to AstroCrown; the user does not need separate MetaMask and Solana-wallet applications for this combination.
+
+These remain distinct chain-specific address and proof records. The Ethereum address is verified with the approved EVM protocol; the Solana public key/address is verified with the approved Solana protocol. A successful EVM signature does not prove control of the Solana key, and vice versa. A shared wallet recovery phrase also means the two addresses may share one underlying security/recovery root; they must not be described as independent recovery factors.
+
+The data model should therefore distinguish (a) wallet application/provider and connection session, (b) user-selected wallet account or recovery-root grouping where the provider exposes it, and (c) each chain-specific address/authentication credential. The same wallet application may populate multiple chain-specific credential records. Do not count installed applications as authenticators, do not merge the distinct addresses, and do not silently expand the existing provisional maximum of three enrolled administrator wallet-address credentials. Preserve the cap at the credential/address level unless a separate governance decision changes it.
+
+MetaMask is an example and a candidate integration, not a selected or mandatory dependency. Review the exact current SDK/API, extension/mobile versions, supported platforms, RPC dependencies, provider terms, security behavior, privacy and $0 feasibility before adoption. Keep independent EVM and Solana adapters available so other multi-chain wallets and ecosystem-specific wallets can be supported too.
+
+Official references:
+- [MetaMask: Navigate Solana in MetaMask](https://support.metamask.io/configure/networks/navigating-solana/) — SOL/SPL support alongside EVM and Solana address derived from the existing SRP.
+- [MetaMask Connect: Integration options](https://docs.metamask.io/metamask-connect/integration-options/) — multichain EVM and Solana connection in one session.
+- [MetaMask Connect overview](https://docs.metamask.io/metamask-connect/) — extension/mobile connection and EVM/Solana support.
+
 ### Common challenge envelope and stored authenticator
 
 Each adapter must consume a server-issued challenge with common security semantics, even where the signed message encoding differs. Bind the challenge to the exact website origin/domain and intended URI/audience; a cryptographically random, single-use nonce; issue time and short expiry; intended purpose (wallet_link, admin_step_up, or a separately approved login purpose); authenticated AstroCrown account ID and exact server session for linking and administrator step-up; exact wallet family, namespace, chain/network and selected address/account/script; exact protocol/version and expected message bytes; and a statement explaining that the action is authentication only and does not authorize a transaction.
