@@ -312,6 +312,19 @@ try {
   const clearedStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(clearedStatus.authenticated, false);
 
+  // Simulate the user's lost authenticator: remove the stored credential from
+  // Chrome's virtual device while leaving the server's old public credential
+  // active until the recovery ceremony replaces it. This ensures the second
+  // makeCredential request is not rejected as an excluded credential already
+  // present on the same virtual authenticator.
+  await cdp("WebAuthn.removeCredential", {
+    authenticatorId,
+    credentialId: registeredCredentials.credentials[0].credentialId
+  });
+  const lostDeviceCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
+  assert.equal(lostDeviceCredentials.credentials.length, 0,
+    "the test authenticator must no longer contain the simulated lost passkey");
+
   // Recover with the one-time offline key. The old passkey is disabled, all
   // previous sessions are revoked, and the replacement key is displayed once.
   await evaluate("document.getElementById('open-account-dialog').click()");
