@@ -104,7 +104,8 @@ function signAdminWalletMessage(message) {
   if (result.status !== 0) {
     throw new Error("Unable to create the deterministic admin-wallet browser-test signature: " + result.stderr);
   }
-  const signature = result.stdout.trim();
+  let signature = result.stdout.trim();
+  if (!signature.startsWith("0x")) signature = "0x" + signature;
   if (!/^0x[0-9a-f]+$/i.test(signature)) {
     throw new Error("The deterministic admin-wallet browser-test signer returned an invalid signature.");
   }
