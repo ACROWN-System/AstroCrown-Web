@@ -165,6 +165,7 @@ class AccountApplication:
             pass
         self.rate_events: dict[tuple[str, str], list[float]] = {}
         self.wallet_auth_service = None
+        self.passkey_auth_service = None
         self.admin_challenge_bindings: dict[str, dict[str, object]] = {}
         self.admin_challenge_lock = threading.RLock()
         self.dummy_salt = b"acrown-local-prototype"
