@@ -95,6 +95,26 @@ Candidate wallet interface families include:
 
 A multichain SDK such as Reown AppKit may be evaluated as a connector/UI candidate, but it must not become a mandatory architectural dependency until supported chains, wallet coverage, current terms, license, maintenance, security, API limits, privacy, reliability and $0-development feasibility have been verified. A common modal does not eliminate chain-specific adapters or protocol-specific transaction validation.
 
+### 4.1 Wallet-based sign-in proof is chain-specific
+
+Wallet connection is not the same as authentication. A connector may expose accounts and network context, but only a verified proof-of-control can establish that the user controls a selected wallet. A signed authentication message is not a transaction and must never grant permission to move assets.
+
+The account layer should own a common challenge lifecycle (origin, audience, purpose, account/session binding, random single-use nonce, issue time and expiry). Each wallet-family adapter must then create and verify its own canonical message format. For the current account scope, the first explicit families to plan for are:
+
+| Family | Authentication proof | Why it needs its own adapter |
+|---|---|---|
+| EVM / Ethereum | EIP-4361 (Sign-In with Ethereum); ERC-1271 verification where applicable to contract accounts | SIWE binds an Ethereum-style address and EIP-155 chain ID and has specific EVM message semantics. Contract wallets may require contract-based signature validation rather than ordinary EOA recovery. |
+| Bitcoin | BIP-322 generic signed-message proof, restricted to qualified wallet/script variants | Bitcoin uses UTXOs and script/address types, not EVM account addresses. Wallet support for message signing and BIP-322 variants must be detected; never use a payment or spending PSBT as a login substitute. |
+| Solana | Sign In With Solana (SIWS) and Solana off-chain message signing (OCMS) | Solana has its own message envelope, signer/public-key rules and wallet feature negotiation. Prefer a proof format that cannot be mistaken for a transaction. |
+
+This is an architecture target, not implemented support. The account prototype currently uses EIP-4361/SIWE for its EVM wallet lab. Bitcoin and Solana authentication adapters remain future work and must not be implied by a generic multi-wallet button.
+
+For each family, detect wallet capabilities before prompting the user. If an adapter cannot obtain a supported proof, stop that wallet-authentication attempt with a clear explanation. Do not silently downgrade to an unreviewed signature format or ask the user to sign a token-transfer, PSBT-spend, no-op or other blockchain transaction merely to authenticate.
+
+The common data model must preserve wallet family, CAIP namespace/network where defined, exact chain/network, canonical account/address, Bitcoin script/address type where applicable, signature standard/version, verification and revocation state. One AstroCrown account may enroll different families without merging their identities. An address on one chain does not become the same address on another chain just because the strings resemble each other.
+
+Administrator step-up remains separate from ordinary account sign-in: verify the ordinary AstroCrown session and server-owned admin role first, then require a fresh proof from an enrolled wallet. The provisional maximum of three enrolled wallets is across all families combined; the minimum remains unresolved. One-of-N means alternative authenticators, not an on-chain multisig. An external Bitcoin or Ethereum proof may authenticate the administrator to the website, but it does not change NOVA current Solana-native operations-account or transaction-enforcement model.
+
 Requirements:
 
 - Users choose which wallet/network to connect; connection is optional and scoped to the feature that needs it.
