@@ -358,6 +358,7 @@ class AccountApplication:
             columns = {row["name"] for row in db.execute("PRAGMA table_info(accounts)").fetchall()}
             migrations = {
                 "email": "TEXT",
+                "auth_method": "TEXT NOT NULL DEFAULT 'legacy_password' CHECK(auth_method IN ('legacy_password', 'webauthn'))",
                 "referral_id": "TEXT NOT NULL DEFAULT ''",
                 "newsletter_opt_in": "INTEGER NOT NULL DEFAULT 0",
                 "newsletter_consent_at": "TEXT",
@@ -370,7 +371,7 @@ class AccountApplication:
             for name, definition in migrations.items():
                 if name not in columns:
                     db.execute(f"ALTER TABLE accounts ADD COLUMN {name} {definition}")
-            db.execute("UPDATE accounts SET email = username WHERE email IS NULL OR email = ''")
+            db.execute("UPDATE accounts SET email = username WHERE auth_method = 'legacy_password' AND (email IS NULL OR email = '')")
             db.execute("CREATE UNIQUE INDEX IF NOT EXISTS accounts_email_ci_idx ON accounts(email COLLATE NOCASE)")
             session_columns = {
                 row["name"] for row in db.execute("PRAGMA table_info(sessions)").fetchall()
