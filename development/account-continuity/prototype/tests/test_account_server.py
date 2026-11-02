@@ -828,7 +828,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 201, created)
         grant_admin(
             self.app,
-            email=email,
+            account_identifier=email,
             wallet_address=TEST_WALLET_A.address,
             chain_id=1,
             reason="Owner-approved local admin password-change regression setup",
@@ -1069,7 +1069,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 201, created)
         grant_admin(
             self.app,
-            email=root_email,
+            account_identifier=root_email,
             wallet_address=TEST_WALLET_A.address,
             chain_id=1,
             reason="Bootstrap role manager for the local permission test",
@@ -1078,6 +1078,19 @@ class AccountServerTests(unittest.TestCase):
         )
         status, created, _ = self.create_account(email=target_email, opener=target_opener)
         self.assertEqual(status, 201, created)
+        target_account_identifier = "AC-1234567890"
+        with self.app.connect() as db:
+            target_row = db.execute(
+                "SELECT account_id FROM accounts WHERE email = ? COLLATE NOCASE",
+                (target_email,),
+            ).fetchone()
+            self.assertIsNotNone(target_row)
+            db.execute(
+                """UPDATE accounts
+                   SET username = ?, email = NULL, auth_method = 'webauthn'
+                   WHERE account_id = ?""",
+                (target_account_identifier, target_row["account_id"]),
+            )
         status, created, _ = self.create_account(email=successor_email, opener=successor_opener)
         self.assertEqual(status, 201, created)
 
@@ -1090,7 +1103,7 @@ class AccountServerTests(unittest.TestCase):
         status, self_grant, _ = self.request(
             "/api/admin/roles/grant",
             {
-                "email": root_email,
+                "accountIdentifier": root_email,
                 "reason": "Attempted self-promotion must not change permissions",
                 "permissions": [],
             },
@@ -1100,13 +1113,15 @@ class AccountServerTests(unittest.TestCase):
         status, granted, _ = self.request(
             "/api/admin/roles/grant",
             {
-                "email": target_email,
+                "accountIdentifier": target_account_identifier,
                 "reason": "Appoint existing member after review",
                 "permissions": ["admin.roles.grant"],
             },
         )
         self.assertEqual(status, 200, granted)
         self.assertTrue(granted["adminRoleAssigned"])
+        self.assertEqual(granted["targetAccountIdentifier"], target_account_identifier)
+        self.assertNotIn("targetEmail", granted)
         self.assertEqual(granted["role"], "admin")
         self.assertEqual(granted["adminPermissions"], ["admin.roles.grant"])
         self.assertEqual(granted["adminWalletCount"], 0)
@@ -1117,6 +1132,8 @@ class AccountServerTests(unittest.TestCase):
         )
         self.assertEqual(status, 200, target_before_wallet)
         self.assertTrue(target_before_wallet["authenticated"])
+        self.assertEqual(target_before_wallet["accountIdentifier"], target_account_identifier)
+        self.assertIsNone(target_before_wallet["email"])
         self.assertTrue(target_before_wallet["adminRoleAssigned"])
         self.assertEqual(target_before_wallet["adminWalletCount"], 0)
         self.assertFalse(target_before_wallet["adminSessionAuthorized"])
@@ -1125,7 +1142,7 @@ class AccountServerTests(unittest.TestCase):
         status, target_without_stepup, _ = self.request(
             "/api/admin/roles/grant",
             {
-                "email": successor_email,
+                "accountIdentifier": successor_email,
                 "reason": "Attempt without the required wallet step-up",
                 "permissions": [],
             },
@@ -1186,7 +1203,7 @@ class AccountServerTests(unittest.TestCase):
         status, escalation, _ = self.request(
             "/api/admin/roles/grant",
             {
-                "email": successor_email,
+                "accountIdentifier": successor_email,
                 "reason": "Attempt to pass on a non-delegable permission",
                 "permissions": ["admin.roles.grant"],
             },
@@ -1195,14 +1212,14 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 403, escalation)
         status, forbidden_revoke, _ = self.request(
             "/api/admin/roles/revoke",
-            {"email": root_email, "reason": "Attempt without the separate revoke permission"},
+            {"accountIdentifier": root_email, "reason": "Attempt without the separate revoke permission"},
             opener=target_opener,
         )
         self.assertEqual(status, 403, forbidden_revoke)
 
         status, revoked, _ = self.request(
             "/api/admin/roles/revoke",
-            {"email": target_email, "reason": "Remove administrator access after review"},
+            {"accountIdentifier": target_account_identifier, "reason": "Remove administrator access after review"},
         )
         self.assertEqual(status, 200, revoked)
         self.assertEqual(revoked["role"], "user")
@@ -1286,7 +1303,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(status, 201, created)
         grant_admin(
             self.app,
-            email=actor_email,
+            account_identifier=actor_email,
             wallet_address=TEST_WALLET_C.address,
             chain_id=1,
             reason="Bootstrap administrator without appointment authority",
@@ -1302,7 +1319,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertEqual(authorized["adminPermissions"], [])
         status, denied, _ = self.request(
             "/api/admin/roles/grant",
-            {"email": target_email, "reason": "Attempt by an admin without grant authority"},
+            {"accountIdentifier": target_email, "reason": "Attempt by an admin without grant authority"},
             opener=actor_opener,
         )
         self.assertEqual(status, 403, denied)
@@ -1318,7 +1335,7 @@ class AccountServerTests(unittest.TestCase):
 
         provisioned = grant_admin(
             self.app,
-            email=email,
+            account_identifier=email,
             wallet_address=TEST_WALLET_A.address,
             chain_id=1,
             reason="Owner-approved deterministic local test provisioning",
@@ -1398,7 +1415,7 @@ class AccountServerTests(unittest.TestCase):
         second_email = "admin-binding-second@example.test"
         status, _, _ = self.create_account(email=first_email)
         grant_admin(
-            self.app, email=first_email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+            self.app, account_identifier=first_email, wallet_address=TEST_WALLET_A.address, chain_id=1,
             reason="Owner-approved first account test",
         )
         status, challenge, _ = self.request(
@@ -1456,7 +1473,7 @@ class AccountServerTests(unittest.TestCase):
         )
         self.assertEqual(status, 201, second_created)
         grant_admin(
-            self.app, email=second_email, wallet_address=TEST_WALLET_B.address, chain_id=1,
+            self.app, account_identifier=second_email, wallet_address=TEST_WALLET_B.address, chain_id=1,
             reason="Owner-approved second account test",
         )
         status, cross_session, _ = self.request(
@@ -1476,7 +1493,7 @@ class AccountServerTests(unittest.TestCase):
         email = "admin-wallet-enrollment@example.test"
         status, _, _ = self.create_account(email=email)
         grant_admin(
-            self.app, email=email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+            self.app, account_identifier=email, wallet_address=TEST_WALLET_A.address, chain_id=1,
             reason="Owner-approved wallet enrollment test setup",
         )
 
@@ -1598,20 +1615,20 @@ class AccountServerTests(unittest.TestCase):
         email = "admin-wallet-count@example.test"
         status, _, _ = self.create_account(email=email)
         grant_admin(
-            self.app, email=email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+            self.app, account_identifier=email, wallet_address=TEST_WALLET_A.address, chain_id=1,
             reason="Owner-approved first wallet for local cap test",
         )
         grant_admin(
-            self.app, email=email, wallet_address=TEST_WALLET_B.address, chain_id=1,
+            self.app, account_identifier=email, wallet_address=TEST_WALLET_B.address, chain_id=1,
             reason="Owner-approved second wallet for local cap test",
         )
         grant_admin(
-            self.app, email=email, wallet_address=TEST_WALLET_C.address, chain_id=1,
+            self.app, account_identifier=email, wallet_address=TEST_WALLET_C.address, chain_id=1,
             reason="Owner-approved third wallet for local cap test",
         )
         with self.assertRaisesRegex(ValueError, "no more than three"):
             grant_admin(
-                self.app, email=email, wallet_address=TEST_WALLET_D.address, chain_id=1,
+                self.app, account_identifier=email, wallet_address=TEST_WALLET_D.address, chain_id=1,
                 reason="Attempted fourth wallet must be rejected",
             )
         with self.assertRaisesRegex(ValueError, "different local admin account"):
@@ -1623,7 +1640,7 @@ class AccountServerTests(unittest.TestCase):
             status, _, _ = self.create_account(email=other_email, opener=collision_opener)
             self.assertEqual(status, 201)
             grant_admin(
-                self.app, email=other_email, wallet_address=TEST_WALLET_A.address, chain_id=1,
+                self.app, account_identifier=other_email, wallet_address=TEST_WALLET_A.address, chain_id=1,
                 reason="Attempted cross-account wallet reuse must fail",
             )
 
@@ -1645,7 +1662,7 @@ class AccountServerTests(unittest.TestCase):
         self.assertTrue(authorized["admin"])
 
         revoked = revoke_admin(
-            self.app, email=email, reason="Owner-approved local administrator revocation"
+            self.app, account_identifier=email, reason="Owner-approved local administrator revocation"
         )
         self.assertEqual(revoked["role"], "user")
         self.assertEqual(revoked["revoked_wallet_count"], 3)
