@@ -145,6 +145,19 @@
     .wallet-trigger:active { transform:scale(.97); }
     .wallet-trigger svg { width:13px; height:13px; }
     .right-controls .control-panel { left:auto; right:0; width:255px; }
+    .admin-wallet-connect-notice {
+      position:fixed; z-index:10040; right:18px; bottom:20px; width:min(380px,calc(100vw - 36px));
+      padding:15px 16px; border:1px solid rgba(255,215,0,.38); border-radius:13px;
+      background:rgba(8,20,38,.98); color:#e8edf6; box-shadow:0 18px 55px rgba(0,0,0,.48);
+    }
+    .admin-wallet-connect-notice strong { display:block; margin-bottom:7px; color:#ffe58a; font-size:13px; }
+    .admin-wallet-connect-notice p { margin:0 0 12px; color:#b9c7d9; font-size:11px; line-height:1.55; }
+    .admin-wallet-connect-notice-actions { display:flex; justify-content:flex-end; }
+    .admin-wallet-connect-notice button {
+      min-height:37px; padding:0 13px; border:1px solid rgba(190,205,225,.3); border-radius:8px;
+      background:rgba(255,255,255,.06); color:#edf2fa; font:inherit; font-size:11px; font-weight:700; cursor:pointer;
+    }
+    .admin-wallet-connect-notice button:focus-visible { outline:2px solid #ffd700; outline-offset:3px; }
     .menu-status { color:var(--warning); font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
     .mobile-more { display:none; }
 
@@ -557,13 +570,13 @@
         </button>
       </div>
       <div class="menu-slot">
-        <button class="wallet-trigger" type="button" data-menu="wallet-menu" aria-expanded="false" aria-controls="wallet-menu">
+        <button class="wallet-trigger" id="wallet-connect-trigger" type="button" data-menu="wallet-menu" aria-expanded="false" aria-controls="wallet-menu" aria-label="Wallet connection options">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 9h18M16 14h2"/></svg>
           Wallet <span class="chevron" aria-hidden="true"></span>
         </button>
         <div class="control-panel" id="wallet-menu">
           <div class="panel-label">Wallet connection</div>
-          <div style="padding:4px 9px 9px;"><span class="menu-status">Disconnected</span><p style="margin:6px 0 0;color:#c2cede;font-size:11px;">This preview cannot connect a wallet, sign messages, submit orders, or move assets.</p></div>
+          <div style="padding:4px 9px 9px;"><span class="menu-status" id="wallet-menu-status">Available on request</span><p id="wallet-menu-note" style="margin:6px 0 0;color:#c2cede;font-size:11px;">General wallet features are not connected in this preview. The same Wallet button is enabled for administrator proof-of-control only after an authorized user selects Continue. No transaction or minimum balance is required.</p></div>
           <a href="#explore">Explore wallet concepts <span>↗</span></a>
         </div>
       </div>
@@ -1091,9 +1104,36 @@
 
       renderRows();
 
+      document.addEventListener("astrocrown:admin-wallet-connect-state", function (event) {
+        var status = document.getElementById("wallet-menu-status");
+        var note = document.getElementById("wallet-menu-note");
+        var trigger = document.getElementById("wallet-connect-trigger");
+        var state = event && event.detail ? event.detail.state : "idle";
+        if (!status || !note || !trigger) return;
+        if (state === "waiting") {
+          status.textContent = "Administrator verification requested";
+          note.textContent = "Select the Wallet button in this header to connect the wallet for this administrator request. You can cancel the request at any time. No transaction or balance is required.";
+          trigger.setAttribute("aria-label", "Connect wallet for administrator verification");
+        } else if (state === "connected") {
+          status.textContent = "Connected for administrator verification";
+          note.textContent = "The wallet is being used only to prove control for this administrator request. Review each exact message before signing. No transaction will be submitted.";
+          trigger.setAttribute("aria-label", "Wallet connected for administrator verification");
+        } else {
+          status.textContent = "Available on request";
+          note.textContent = "General wallet features are not connected in this preview. The same Wallet button is enabled for administrator proof-of-control only after an authorized user selects Continue. No transaction or minimum balance is required.";
+          trigger.setAttribute("aria-label", "Wallet connection options");
+        }
+      });
+
       document.addEventListener("click", function (event) {
         var menuButton = event.target.closest("[data-menu]");
         if (menuButton) {
+          if (menuButton.id === "wallet-connect-trigger" &&
+              document.documentElement.getAttribute("data-admin-wallet-connect-pending") === "true") {
+            event.preventDefault();
+            document.dispatchEvent(new CustomEvent("astrocrown:header-wallet-connect"));
+            return;
+          }
           var slot = menuButton.closest(".menu-slot");
           var willOpen = !slot.classList.contains("is-open");
           closeAllMenus(slot);
