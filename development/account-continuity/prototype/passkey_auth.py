@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import urlsplit
 
 try:
     from webauthn import (
@@ -61,13 +62,32 @@ class PasskeyAuthService:
             )
         if not isinstance(rp_id, str) or not rp_id or len(rp_id) > 253:
             raise ValueError("A valid WebAuthn RP ID is required.")
-        if not isinstance(origin, str) or not origin.startswith(("https://", "http://localhost")):
+        if not isinstance(origin, str) or not origin or len(origin) > 512:
             raise ValueError("A secure WebAuthn origin is required.")
+        try:
+            origin_parts = urlsplit(origin)
+            origin_host = origin_parts.hostname
+            origin_port = origin_parts.port  # Forces validation of malformed/out-of-range ports.
+        except ValueError:
+            raise ValueError("A secure WebAuthn origin is required.") from None
+        if (
+            origin_parts.scheme not in {"https", "http"}
+            or not origin_host
+            or origin_parts.username is not None
+            or origin_parts.password is not None
+            or origin_parts.path not in {"", "/"}
+            or origin_parts.query
+            or origin_parts.fragment
+            or (origin_parts.scheme == "http" and origin_host != "localhost")
+            or not (origin_host == rp_id or origin_host.endswith("." + rp_id))
+        ):
+            raise ValueError("The WebAuthn origin must be a secure exact RP host (localhost is allowed for development).")
         if not isinstance(rp_name, str) or not rp_name.strip():
             raise ValueError("A WebAuthn RP display name is required.")
         self.rp_id = rp_id
         self.rp_name = rp_name.strip()
-        self.origin = origin
+        # Store a canonical origin: browser WebAuthn origins do not contain a path.
+        self.origin = f"{origin_parts.scheme}://{origin_parts.netloc}"
 
     @staticmethod
     def _options_dict(options: Any) -> dict[str, Any]:
