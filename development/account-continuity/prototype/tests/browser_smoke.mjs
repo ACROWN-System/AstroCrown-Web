@@ -399,7 +399,11 @@ try {
   assert.equal(await evaluate("Boolean(document.getElementById('account-password'))"), false);
   const previewStatus = await evaluate("fetch('/api/account/status').then(r => r.json())");
   assert.equal(previewStatus.authenticated, false);
-  assert.equal(previewStatus.passkeyAvailable, false);
+  // The query-parameter preview disables passkey UI actions; it does not
+  // disable the separate loopback backend. Direct same-origin status requests
+  // correctly report that the local verifier is available, while the UI's own
+  // browserPreviewRequest never calls those authentication endpoints.
+  assert.equal(previewStatus.passkeyAvailable, true);
 
   await cdp("Page.navigate", { url: localUrl });
   await waitFor("local homepage before case-portal check", pageReady);
