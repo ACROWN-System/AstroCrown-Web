@@ -144,7 +144,9 @@ class AccountApplication:
         *,
         email_sender: object = _AUTO_EMAIL_SENDER,
         public_base_url: str | None = None,
+        enable_legacy_email_auth: bool = False,
     ):
+        self.enable_legacy_email_auth = bool(enable_legacy_email_auth)
         self.database_path = Path(database_path).expanduser().resolve()
         if email_sender is _AUTO_EMAIL_SENDER:
             self.email_sender, configured_base_url = SMTPEmailSender.from_environment()
