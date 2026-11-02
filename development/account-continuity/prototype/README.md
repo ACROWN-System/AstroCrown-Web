@@ -1,200 +1,67 @@
-# AstroCrown account continuity prototype — legacy email flow pending replacement
+# AstroCrown passkey-first account prototype
 
-**Status: development test only — not production authentication. The current UI/backend are a legacy email/password prototype; the adopted target is passkey-first and is not implemented yet.**
+**Status: local development test only — not production authentication, security certification or a production account service.**
 
-This prototype currently demonstrates the earlier **Log In / Sign Up** flow using email/password, optional Referral ID, separate optional crypto-news preference, and required Terms/Privacy acceptance. That email/password design has been superseded by the 2026-11-03 passkey-first decision. The current code and test instructions below document the legacy local prototype only; do not use real credentials or configure mail delivery for account access. The prototype remains isolated under `development/`; the production/root homepage is unchanged.
+The active local prototype now supports:
+- WebAuthn passkey registration with discoverable credentials and required local user verification.
+- Discoverable passkey sign-in without an email address, username prompt, password, SMS or external identity provider.
+- A high-entropy, one-time offline recovery key, displayed once at initial registration and after successful recovery. Only a salted one-way verifier is stored.
+- Recovery-key verification followed by replacement passkey registration. Successful recovery revokes all previous passkeys and account sessions, consumes the old recovery key and issues a replacement.
+- Existing stable account IDs, local sessions, User dashboard, server-owned roles, separate Administrator dashboard and EVM/SIWE administrator step-up.
 
-## Adopted authentication target (2026-11-03)
+The current implementation is a local loopback prototype. It is not approved for real credentials, personal recovery material, real assets or public user onboarding. It does not provide production storage, hosting, backup/restore, independent security review or formal recovery operations.
 
-The owner has approved WebAuthn public-key authentication as the primary account authenticator, an optional separately controlled wallet backup, and a one-time offline recovery key. No email, password, SMS or third-party identity provider is required for registration, sign-in or recovery. See [Passkey-First Account Authentication and Recovery Requirements](../PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md) for the complete security and acceptance requirements.
+See [Passkey-First Account Authentication and Recovery Requirements](../PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md) for the complete adopted design and acceptance requirements.
 
-WebAuthn uses the browser's authenticator and first-party challenge/verification requests to AstroCrown's own backend; it does not require a paid authentication API. Synced passkeys may use the user's platform sync provider. Device-bound credentials or a user-owned FIDO2 hardware key are alternatives where supported; a physical key may have a user purchase cost. The current prototype has not implemented WebAuthn or the recovery-key flow.
+## What you can test
 
-**Important:** the current email/password walkthrough below is retained to document and test the existing legacy code while the replacement is developed. It is not the approved account-authentication experience and must not be exposed to real users.
+- Create a new account with a WebAuthn passkey, without entering email, password or phone details.
+- Save the generated account identifier and offline recovery key when the success screen displays them. The page blocks continuing until the user confirms that the key was saved.
+- Sign out and sign in again through the authenticator's discoverable passkey prompt; no account identifier is submitted to the sign-in endpoint.
+- Open the common **User dashboard**, inspect passkey and recovery-key status, update the supported built-in avatar and sign out.
+- Recover an account from the sign-in page using the account identifier and the unused offline recovery key. Register a replacement passkey, save the newly issued recovery key, and verify that the prior passkey and sessions were revoked.
+- Confirm that the old recovery key cannot start another recovery and that the new one can.
+- Confirm that ordinary account sign-in and recovery do not request a wallet, balance, blockchain transaction, email, SMS or external identity service.
+- Confirm that the optional wallet backup for ordinary account recovery is **not yet implemented**. The separate EVM/SIWE wallet path currently serves only administrator enrollment and step-up.
+- Confirm that administrator role visibility, permissioned appointment/revocation, and the separate administrator-wallet step-up remain server-enforced and cannot be granted by passkey registration.
+- Open the hosted HTML preview to inspect layout only. It is explicitly non-authenticating and cannot create credentials.
 
-## Legacy prototype behavior currently available to test
+## Install and run locally — Windows PowerShell
 
-- Open the homepage header's **Account** button.
-- Switch between **Log In** and **Sign Up**.
-- Create a test account using an invented email address and passphrase.
-- See the success popup, close it without signing out, or choose **Open your dashboard**.
-- Verify that a signed-in header control becomes a circular icon with no visible “Account” label.
-- Open the **User dashboard** (`#account`), the shared member workspace for both regular users and administrators. It contains the currently implemented account/security/preferences modules and is the intended home for all member-facing services and personal transactions as those services are developed.
-- The current account prototype does not yet implement financial transactions or the full AstroCrown service catalog. It must not display fake transactions or nonfunctional controls; future service modules belong in the same User dashboard for both roles.
-- Return to the homepage and sign out.
-- The **Administrator access** section and entry appear only when the server confirms that the signed-in account has the administrator role. Ordinary users do not see the section or button. A newly appointed administrator first enrols a wallet they personally control, then signs a separate fresh challenge to open the Administrator dashboard. Neither signature creates the account or grants the role.
-- The button opens a confirmation dialog before any wallet request. Cancel does not request a wallet; Continue rechecks the server role/session, reuses a valid short-lived step-up when one exists, or proceeds to registered-wallet and signature-review steps. The separate `#admin` Administrator dashboard has a **Return to user dashboard** link. It is an additional workspace for administrative duties, not a replacement for the regular member workspace. This local administrator path must be tested on the loopback server, not the hosted memory-only preview.
-- Enter or omit an optional Referral ID.
-- Opt in or leave unchecked the independent crypto-news email preference.
-- Accept or reject the required Terms of Use / Privacy Policy checkbox.
-- Sign out and log back in with email and password.
-- Open **Forgot password?**. With no mail transport configured, the form reports that no email was sent; with a configured secure SMTP transport, it submits a request without revealing whether an account exists.
-- Open the separate [Security assurance page](security-assurance.html) to review controls, evidence and explicit production gaps.
-- See the number of active local sign-in sessions. When more than one session exists, enter the current password to sign out the other sessions while keeping the current session active.
-- Change the account password after confirming the current password and matching the new passphrase twice. The local server rotates the current session, signs out the other sessions and removes any administrator step-up.
-- See which test preferences were recorded in local SQLite or the disposable browser-demo state.
+Use Python 3.12 and a current Chrome/Edge browser. From the repository root:
 
-The flow does **not** ask users to memorise one-time recovery codes at sign-up. The local prototype implements expiring, single-use email-verification and password-reset links. Tokens are stored only as hashes; verification links expire after 24 hours and reset links after 30 minutes. Completing a password reset invalidates every existing account session and administrator step-up. A Mailjet-specific SMTP configuration path and a persistent free-tier email budget are now implemented, but no Mailjet account, sending domain, credentials or live delivery has yet been qualified. Delivery remains disabled until an owner deliberately configures the provider. Newsletter delivery is still not implemented. Do not use real credentials or rely on this prototype for an account containing real assets.
+    py -3.12 -m pip install -r .\development\account-continuity\prototype\requirements.txt -r .\development\auth-prototype\requirements.txt
+    py -3.12 .\development\account-continuity\prototype\server.py --port 8766 --db "$env:TEMP\acrown-passkey-demo.sqlite3"
 
-The email-news checkbox is independent and unchecked by default. In this prototype, it records only a test preference; it does not subscribe anyone to a mailing list or send an email. Referral IDs are optional, stored as unverified test values, and do not trigger rewards or tracking.
+Open exactly **http://localhost:8766/**. Do not open the HTML file directly or use 127.0.0.1, a LAN address, tunnel, forwarded port or public hostname. WebAuthn is bound to the exact local localhost RP ID and origin. The server binds only to 127.0.0.1.
 
-The linked Terms of Use and Privacy Policy are **development drafts**, not approved production policies or legal advice. Their acceptance state is recorded only to test the UI/API contract. Production must replace these drafts after appropriate product, privacy and legal review.
+The Python requirements include the pinned open-source WebAuthn relying-party library and the separately pinned EVM/SIWE library used by administrator tests. Installation retrieves packages from the configured Python package index; runtime authentication does not call a paid identity provider or external authentication API. The hosted HTML preview remains read-only.
 
-Ordinary account access does not request a crypto wallet or a social sign-in provider. No fake Google/Apple/X/Facebook/LinkedIn/GitHub sign-in buttons are displayed.
+## First account creation and recovery-key custody
 
-## Direct browser preview (no installation)
+1. Click **Account**, then **Sign Up**.
+2. Accept the displayed development Terms/Privacy acknowledgement. Referral ID is optional.
+3. Select **Create account with passkey** and complete the browser/device authenticator prompt. The local server verifies the response before creating the account.
+4. The success screen displays a randomly generated account identifier and one-time recovery key. Save both securely and offline before continuing. The key is not available again after leaving that screen.
+5. Do not email, message, photograph into shared cloud albums, paste into support requests or share the recovery key. Do not use a personal/main wallet's recovery phrase as this recovery key.
+6. Sign out and use **Sign in with passkey**. The browser should offer the discoverable credential without requiring an email or account identifier.
+7. To recover after losing the passkey, select **Recover account with offline key**, enter the account identifier and unused recovery key, then register a replacement passkey. Recovery consumes the old key, deactivates every previous passkey, revokes all existing sessions and issues a replacement recovery key. Save the new key before continuing.
+8. Loss of all passkeys and the recovery key can mean permanent account loss. There is no staff, administrator, email or SMS override.
 
-Open the [AstroCrown development homepage in HTML Preview](https://html-preview.github.io/?url=https%3A%2F%2Fgithub.com%2FACROWN-System%2FAstroCrown-Web%2Fblob%2Fdocs%2Fprovider-independent-wallet-auth-plan-2026-10-20%2Fdevelopment%2Findex.html). Click **Account**, then **Sign Up**. This requires no Git checkout, Python runtime or server.
+## Administrator dashboard (local prototype only)
 
-On the hosted preview origin, account interactions run in a browser-only demonstration adapter. It makes no account API requests and keeps the account, password hash, referral field and test consent values in page memory only. All of them disappear when the page reloads or when another tab is opened. This is an interaction harness, not real authentication.
+Administrator functionality remains separate from ordinary sign-in. A passkey establishes the ordinary account session; it does not grant an administrator role. Existing owner-operated local bootstrap and permissioned appointment/revocation remain in place. Administrator entry additionally requires the existing registered EVM wallet to sign a fresh SIWE step-up challenge. No transaction or minimum balance is required.
 
-The preview uses a third-party HTML proxy. Use invented email/passphrase/referral values only. Never enter a real password, personal email address, wallet secret, valuable recovery material or real marketing preference. Do not let your password manager save the test credentials.
+The optional wallet authenticator for ordinary account recovery is not yet connected to the account-level passkey/recovery flow. Do not treat the administrator wallet step-up as an ordinary user's backup authenticator.
 
-The HTML Preview URL follows the active development branch so it reflects the latest account UI changes. The hosted preview is memory-only and simulates ordinary users only; it does not exercise the local SQLite account API, SMTP delivery, one-time email-action endpoints or server-enforced administrator wallet step-up. Its ordinary account must not show an administrator entry. Use the local loopback server for backend/admin regression testing and continue to use invented data.
+## Retained legacy implementation
 
-## Windows PowerShell: run locally
+The earlier email/password, verification-token, password-reset and Mailjet prototype code is retained only for historical regression tests. The default local server disables those routes and does not load an email sender. Test modules which explicitly enable the legacy email-authentication test flag exercise that retired implementation; it is not the current UX or an approved account recovery channel. Do not configure Mailjet or SMTP for account sign-in/recovery. Newsletter sending remains disabled.
 
-Use Python 3.12 from a terminal:
+The hosted HTML Preview is a third-party interface proxy. It cannot create passkeys or exercise the local SQLite backend. It must never be used for real authentication, recovery material or wallet secrets.
 
-    git clone --branch docs/provider-independent-wallet-auth-plan-2026-10-20 --single-branch https://github.com/ACROWN-System/AstroCrown-Web.git AstroCrown-Account-Test
-    cd .\AstroCrown-Account-Test
-    py -3.12 .\development\account-continuity\prototype\server.py --port 8766
+The linked Terms of Use and Privacy Policy remain **development drafts**, not approved production policies or legal advice.
 
-Open exactly **http://localhost:8766/** and click **Account**. Do not open the HTML file directly, and do not use `127.0.0.1`, a LAN address, tunnel, forwarded port or public hostname. The server accepts only the canonical localhost origin and binds to `127.0.0.1`.
-
-If you already have a checkout, switch to the branch above and pull its latest changes, then run the command from the repository root.
-
-For a clean dataset without old username-based test records, use a separate database file:
-
-    py -3.12 .\development\account-continuity\prototype\server.py --port 8766 --db "$env:TEMP\acrown-account-email-demo.sqlite3"
-
-Existing local SQLite records belong to earlier development prototypes; do not assume they have verified email addresses or usable recovery.
-
-## Create a test account
-
-1. Click **Account**, then choose **Sign Up**.
-2. Enter an invented email address (for example, `test@example.test`) and a passphrase of at least 15 characters.
-3. Optionally enter a Referral ID. The prototype only validates and records the value; it does not provide a referral reward.
-4. Leave the crypto-news preference unchecked unless you are specifically testing the opt-in state. Newsletter messages are not sent. Verification email is sent only when the optional SMTP transport is explicitly configured.
-5. Check the Terms of Use / Privacy Policy box. The pages are marked development drafts only.
-6. Create the test account, sign out, and sign in again.
-7. Test **Forgot password?**. Without an SMTP transport, the UI must clearly state that no reset email was sent. With a fake mail sender in automated tests, verify that the one-time link works without contacting an external provider.
-
-## Register and appoint administrators (local prototype only)
-
-There is no public **Sign Up as Administrator** form. Everyone first creates an ordinary User account. The local prototype now implements the permissioned administrator appointment and separate target-owned wallet enrolment sequence. This is still a loopback development implementation, not production account governance or owner authentication.
-
-1. Create the first owner-operated administrator account through the regular **Sign Up** flow above. Use invented test details only.
-2. Keep the local server running. Open a **second PowerShell terminal** in the repository root. Install the pinned wallet-verification dependencies once, if they are not already available:
-
-       py -3.12 -m pip install -r .\development\auth-prototype\requirements.txt
-
-   This installs open-source packages for the local verification prototype; it does not call a paid AI/API provider or consume provider quota.
-3. Bootstrap the initial local administrator. The owner-operated CLI is reserved for this first local bootstrap (and explicit local test revocation); it sets the initial role, one test wallet and the selected permissions together:
-
-       $AdminEmail = "admin@example.test"
-       $AdminWallet = Read-Host "Initial administrator public wallet address (never a secret)"
-       $AdminChainId = [int](Read-Host "Matching development/test network chain ID")
-       py -3.12 .\development\account-continuity\prototype\provision_admin.py --actor "local-authorized-owner" grant --email $AdminEmail --wallet $AdminWallet --chain-id $AdminChainId --reason "Owner-approved initial local administrator bootstrap" --permission admin.roles.grant --permission admin.roles.revoke --delegable-permission admin.roles.grant --confirm "GRANT LOCAL ADMIN"
-
-   This example gives the initial administrator the ability to appoint and revoke administrators, but permits only the **grant** permission to be assigned to another administrator. The CLI's `--actor` value is an audit label, not proof of operator identity; the prototype relies on authorized access to the local computer and database. Use a **public address only**. Never enter a seed phrase, private key, password or recovery secret. Use a disposable test wallet and matching development/test chain.
-4. If you started the server with a custom database using `--db`, pass that exact same `--db "PATH"` argument to `provision_admin.py`, before the `grant` subcommand. Otherwise, both scripts use the default database under your user profile. **Do not provision a different database from the one the server is using.**
-5. Sign in to the initial administrator account, open **Account**, then select **Open administrator dashboard**. A wallet already provisioned for the initial bootstrap must still sign a fresh wallet-step-up message before the dashboard opens.
-6. Create any additional administrator as an ordinary user through **Sign Up**. The initial administrator then opens the Administrator dashboard. The **Appoint an administrator** panel is visible only when the backend confirms the current session has the explicit `admin.roles.grant` permission and a valid wallet step-up. Enter the target's existing account email and a reason. Optional permission checkboxes appear only for permissions that the grantor is explicitly allowed to assign. Permissions granted to the new administrator are not automatically delegable onward. The endpoint rejects self-grants, unrecognized permissions, unauthorized delegation and duplicate/already-admin targets; it records the actor, target, permissions, reason and time.
-7. The newly appointed person signs in to their same ordinary account and refreshes the User dashboard. The server-confirmed role makes the **Administrator access** entry appear; normal users do not see it. Selecting it and choosing **Continue** asks the target to connect a wallet they personally control and review/sign a first-wallet enrolment message. After enrolment, the system asks for a **second, fresh signature** from that wallet for administrator session step-up. The enrolment signature is not reused as the access signature. Neither signature authorizes a blockchain transaction.
-8. The Administrator dashboard shows role-management controls only when the backend confirms the matching permission. **Revoke administrator access** appears only for an account holding `admin.roles.revoke`; revocation disables the target's admin wallets, clears delegated permissions and privileged sessions, and preserves the ordinary account and User dashboard. Adding second or third wallets still requires an active wallet-verified administrator session and a separate signature from the proposed wallet. A fourth, duplicate or previously revoked wallet is rejected.
-
-For local owner/bootstrap testing only, the CLI also retains an explicit revoke command:
-
-    py -3.12 .\development\account-continuity\prototype\provision_admin.py --actor "local-authorized-owner" revoke --email "admin@example.test" --reason "Owner-approved local administrator bootstrap revocation" --confirm "REVOKE LOCAL ADMIN"
-
-The CLI is not a substitute for the permission-checked in-product grant/revoke endpoints. The local `--actor` text is not authenticated identity, and the prototype is not production owner authentication or the final Imperial HSIAN all-wallet-loss recovery process. The hosted HTML preview cannot persist roles, permissions or wallet state; use the loopback server and its same SQLite database.
-
-Stop the local server with **Ctrl+C**. The SQLite database is stored under your user profile unless you set `--db`; the clean-database command above uses a temporary Windows path.
-
-## Feedback, grievances and independent case access
-
-Open the local portal at:
-
-    http://localhost:8766/account-continuity/prototype/cases.html
-
-The portal supports:
-- Submitting a grievance or suggestion with deterministic local intake classification, priority routing, a receipt, an ACR-XXXX-XXXX case reference and a separate high-entropy private access key.
-- Opening an existing case with the reference and key, reading the submitter-visible timeline, downloading a copy of that public case history and adding information without an active account session.
-- Viewing cases linked to the currently signed-in account as a convenience, without making that account session the only way to access them.
-- Requesting recovery when the case key, reference, or both have been lost. The request has its own ACRR-XXXX-XXXX reference and private status key. A request can be made without an account login.
-- A restricted administrator queue, public replies, internal notes, status changes, escalation, and case-access recovery review. The case administrator workspace appears only after the backend confirms both the server-assigned administrator role and a valid wallet step-up.
-
-**Account separation:** Case rows store an optional account identifier as a non-foreign-key reference. Account deletion or termination does not cascade-delete a grievance. Each case access key is stored only as a SHA-256 hash. A case reference alone cannot disclose case contents. The independent credentials should be saved outside AstroCrown by the submitter.
-
-**Lost reference and key:** The recovery request can be submitted with a case title/description, approximate date, contact route and explanation even when the original case reference is unknown. An authorized administrator must independently verify the claimant and match the request to a case. Approval rotates the case access key and returns the replacement key once to the administrator for delivery through a separately verified channel. The prototype does not send email/SMS, does not verify contact details automatically and does not guarantee recovery. Do not enter real personal or contact information.
-
-**Independent review:** A grievance marked as concerning an administrator requires the administrator handling it to attest that they are not personally implicated. The same safeguard applies to replacement-key approval for such a case. The attestation is an auditable declaration, not machine proof that the reviewer is independent.
-
-**Automation and timing:** Receipt generation, timestamps and first-pass triage are deterministic and local. Higher-priority grievances currently receive an indicative first substantive update target of 2 working days; other cases and suggestions receive 5 working days. These are development targets, not guaranteed resolution times. No AI provider receives the submission, no AI decides the merits, and no substantive grievance is automatically accepted or rejected. No external message notifications or file attachments are enabled.
-
-Use the case portal and tests with invented details only. The current implementation is local SQLite development software, not a production complaint service. Production requires a deployed and hardened data service, protected administrator operations, independently tested recovery verification and delivery, retention/deletion rules, privacy/legal review and a published working contact route.
-
-## LEGACY ONLY — Mailjet transactional email (do not configure for account authentication)
-
-**Superseded:** Mailjet was evaluated for the old email/password verification/reset flow. The adopted passkey-first design does not use email or SMS for account registration, sign-in or recovery. The following configuration notes are historical implementation records only; do not create a provider account, add credentials or enable sending for account authentication.
-
-**Repository status:** the Mailjet provider configuration and local quota guard are implemented. The external Mailjet account, sender/domain verification, credentials and successful delivery remain **NOT CONFIGURED / NOT QUALIFIED**. No real email has been sent by CI. No provider account or paid plan was created.
-
-### Free-tier limits and AstroCrown's own safety ceiling
-
-Mailjet currently advertises its Free plan at $0/month with no credit card required, a maximum of 6,000 emails per month and 200 emails per day. The Free plan also lists 1,000 stored contacts. Mailjet's daily and monthly limits are separate and both apply. New accounts may initially be placed in a 10-emails-per-hour test mode until Mailjet verifies account information.
-
-AstroCrown deliberately uses less than half of the published send allowance for account verification and password-reset messages:
-
-| Window | Mailjet Free allowance | AstroCrown account-mail ceiling | Reserved outside account email |
-|---|---:|---:|---:|
-| Rolling 24 hours | 200 | 100 | At least 100 |
-| Rolling 31 days | 6,000/month | 3,000 | At least 3,000 |
-
-The application enforces both ceilings atomically in SQLite before SMTP submission. The reservation ledger survives process restarts and stores only a random reservation ID and timestamp—no recipient address, email body, token or credential. A submission attempt consumes one reservation even if the relay returns an ambiguous failure: the relay might have accepted the message before a connection timeout, so refunding could allow a duplicate attempt to exceed the budget. At either ceiling, the application fails closed and does not submit another message. There is no paid fallback, automatic upgrade, or overage request.
-
-The daily guard is a rolling 24-hour window; the monthly guard is a rolling 31-day window. Mailjet describes its daily ceiling as a calendar-day limit and publishes a separate monthly limit, but its public Free-plan limit page does not define the monthly reset boundary. The application therefore uses the more conservative rolling windows instead of assuming a provider reset date. This caps AstroCrown account mail at no more than 3,000 in any 31-day span, including a full 31-day calendar month, while retaining at least half of the published plan allocation for other project email workloads. These counters only include messages submitted through this local account-email code. Sending from the Mailjet dashboard, another API key, another application or another integration is not included in this local ledger. Keep the Mailjet account dedicated to controlled AstroCrown email workloads and monitor the provider's aggregate dashboard; this guard cannot stop independent senders using the same Mailjet account.
-
-### One-time Mailjet account setup
-
-1. Create **one** Mailjet account and select the **Free** plan. Confirm the account shows $0/month and no payment method is required. Do not start a paid trial, choose a paid plan, add a card or enable an upgrade. Mailjet's free policy does not permit creating multiple free accounts for the same company/use case.
-2. In **Account Settings → Senders & Domains**, add the sending domain you control. Complete Mailjet's domain ownership check using the exact DNS verification record it displays. If you cannot edit that domain's DNS, do not claim domain authentication is complete.
-3. Set up the SPF and DKIM records shown by Mailjet. Merge Mailjet's SPF include into the existing SPF TXT record if one exists—do not publish multiple SPF records for the same domain. Publish the exact DKIM record/value supplied in the Mailjet dashboard. Add and validate a DMARC policy for the sending domain before production use.
-4. In **Account Settings → SMTP and SEND API settings**, copy the Mailjet **API Key** and **Secret Key**. The API Key is the SMTP username; the Secret Key is the SMTP password. These are not the credentials used to sign in to the Mailjet website. Mailjet may show the secret only once; store it in a secure password manager.
-5. Select a From address on the verified domain and enter that exact sender in the local environment. Mailjet requires ownership verification for a sender address or domain; successful account setup does not prove inbox placement.
-
-Mailjet's documented SMTP endpoint is `in-v3.mailjet.com`, port `587`, using STARTTLS. The repository locks the Mailjet provider to those settings so a typo cannot silently switch it to an unencrypted or unrelated relay.
-
-### Local PowerShell configuration
-
-This enables sending only from the loopback-only prototype on the same computer. It does not make the GitHub Pages preview or public website a working account service. Open PowerShell in the repository root and set the variables there before starting the server:
-
-    $env:ASTROCROWN_EMAIL_PROVIDER = "mailjet"
-    $env:ASTROCROWN_MAILJET_API_KEY = Read-Host "Mailjet API Key"
-    $secret = Read-Host "Mailjet Secret Key" -AsSecureString
-    $env:ASTROCROWN_MAILJET_SECRET_KEY = [System.Net.NetworkCredential]::new("", $secret).Password
-    $env:ASTROCROWN_MAILJET_FROM = "AstroCrown <no-reply@YOUR-VERIFIED-DOMAIN>"
-    $env:ASTROCROWN_PUBLIC_BASE_URL = "http://localhost:8766"
-
-Replace the placeholder From address with the exact sender you verified in Mailjet. Do not commit, paste into GitHub issues/PRs, screenshot, or print either key. These environment variables exist only in that PowerShell process environment. Start the local server:
-
-    py -3.12 .\development\account-continuity\prototype\server.py --port 8766
-
-Open exactly `http://localhost:8766/`. Email action links point back to localhost and can only be completed on that same computer while the server is running. Use an inbox you control for a deliberate live test; do not send to a stranger or an invented address that could belong to someone else. Check Mailjet's delivery events as well as the recipient inbox. A successful SMTP submission means the relay accepted the message, not that the recipient's provider placed it in the inbox.
-
-To disable delivery in that PowerShell window:
-
-    Remove-Item Env:ASTROCROWN_EMAIL_PROVIDER, Env:ASTROCROWN_MAILJET_API_KEY, Env:ASTROCROWN_MAILJET_SECRET_KEY, Env:ASTROCROWN_MAILJET_FROM, Env:ASTROCROWN_PUBLIC_BASE_URL -ErrorAction SilentlyContinue
-    Remove-Variable secret -ErrorAction SilentlyContinue
-
-The generic SMTP path remains available only when `ASTROCROWN_EMAIL_PROVIDER=smtp` is selected explicitly and its required `ASTROCROWN_SMTP_*` fields are configured. A provider is never inferred from an SMTP hostname. Do not set Mailjet and generic SMTP settings at the same time.
-
-### What this does not activate
-
-The account server still binds only to `127.0.0.1`, checks for the canonical localhost Host/Origin, and stores test accounts in a local SQLite file. The hosted HTML Preview uses disposable browser memory and makes no requests to this server. The current AstroCrown public website does not host this backend, the email-action page/API, or an account database. A public HTTPS application backend, durable shared database, protected secrets, reverse-proxy token-log redaction, asynchronous mail queue, monitoring, bounce/suppression handling and operational recovery must be built and qualified before external users can register or recover accounts.
-
-Mailjet's free account can also begin in temporary test mode (10 messages/hour) until the provider completes its account review. Do not assume the advertised 200/day limit is immediately available. No code can bypass provider review, domain ownership verification, DNS propagation or provider-side restrictions.
 
 ## Data and security boundaries
 
