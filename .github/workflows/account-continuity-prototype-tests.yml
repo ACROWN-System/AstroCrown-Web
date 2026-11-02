@@ -102,13 +102,14 @@ jobs:
           for item in (
               "data-account-mode", "Referral ID (Optional)", "Terms of Use", "Privacy Policy",
               "termsAccepted", "termsVersion", "No email, SMS or external identity provider",
-              "publicKey", "challengeId", "userVerification", "account-recovery-form",
-              "account-one-time-recovery-key", "account-recovery-key-saved",
+              "publicKey", "challengeId", "account-recovery-form",
+              "account-one-time-account-identifier", "account-one-time-recovery-key",
+              "account-recovery-key-saved",
               "/api/account/recovery/options", "/api/account/recovery/complete"
           ):
               if item not in ui and item not in server:
                   raise SystemExit(f"Expected passkey account UX/security boundary missing: {item}")
-          if "authenticator_selection=" not in passkey or "ResidentKeyRequirement.REQUIRED" not in passkey:
+          if ("authenticator_selection=" not in passkey or "ResidentKeyRequirement.REQUIRED" not in passkey or "user_verification=UserVerificationRequirement.REQUIRED" not in passkey):
               raise SystemExit("WebAuthn registration must require a discoverable credential.")
           for item in ("generate_recovery_key", "account_recovery_keys", "account_recovery_challenges"):
               if item not in server:
