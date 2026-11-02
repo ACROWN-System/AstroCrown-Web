@@ -22,6 +22,7 @@ from server import AccountApplication, DEFAULT_DATABASE, normalize_email, utc_is
 
 ADDRESS_SHAPE = re.compile(r"^0x[0-9a-fA-F]{40}$")
 MAX_ADMIN_WALLETS = 3
+ADMIN_PERMISSION_NAMES = frozenset({"admin.roles.grant", "admin.roles.revoke"})
 GRANT_CONFIRMATION = "GRANT LOCAL ADMIN"
 REVOKE_CONFIRMATION = "REVOKE LOCAL ADMIN"
 
@@ -53,6 +54,21 @@ def _validated_reason(reason: object) -> str:
     return value
 
 
+def _validated_permissions(value: object, label: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, (list, tuple)):
+        raise ValueError(label + " must be a list of recognized permissions.")
+    items = list(value)
+    if len(items) > len(ADMIN_PERMISSION_NAMES):
+        raise ValueError(label + " contains too many permissions.")
+    if any(not isinstance(item, str) or item not in ADMIN_PERMISSION_NAMES for item in items):
+        raise ValueError(label + " contains an unknown permission.")
+    if len(set(items)) != len(items):
+        raise ValueError(label + " must not contain duplicates.")
+    return sorted(items)
+
+
 def grant_admin(
     application: AccountApplication,
     *,
@@ -61,6 +77,8 @@ def grant_admin(
     chain_id: int,
     reason: str,
     actor: str = "local-owner-cli",
+    permissions: list[str] | tuple[str, ...] | None = None,
+    delegable_permissions: list[str] | tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
     """Assign the role and provision one wallet through local operator authority.
 
@@ -71,6 +89,14 @@ def grant_admin(
     normalized_email = normalize_email(email)
     address, validated_chain = _validated_wallet(wallet_address, chain_id)
     audit_reason = _validated_reason(reason)
+    supplied_permissions = None if permissions is None else _validated_permissions(permissions, "Permissions")
+    supplied_delegable = None if delegable_permissions is None else _validated_permissions(
+        delegable_permissions, "Delegable permissions"
+    )
+    if supplied_delegable is not None and supplied_permissions is None:
+        raise ValueError("Specify the permission list when marking permissions as delegable.")
+    if supplied_permissions is not None and supplied_delegable is not None and not set(supplied_delegable).issubset(supplied_permissions):
+        raise ValueError("A permission cannot be marked delegable unless it is also granted.")
     if not isinstance(actor, str) or not actor.strip() or len(actor) > 120:
         raise ValueError("Actor must be a non-empty label of at most 120 characters.")
     actor = actor.strip()
@@ -113,6 +139,22 @@ def grant_admin(
             "UPDATE accounts SET role = 'admin' WHERE account_id = ?",
             (account_id,),
         )
+        # Supplying permissions explicitly replaces the local bootstrap permission
+        # set. Omitting them preserves an existing administrator's permission set
+        # when this CLI is used only to add a second or third test wallet.
+        if supplied_permissions is not None or account["role"] != "admin":
+            db.execute("DELETE FROM account_admin_permissions WHERE account_id = ?", (account_id,))
+            for permission in supplied_permissions or []:
+                db.execute(
+                    """INSERT INTO account_admin_permissions(
+                           account_id, permission, can_delegate, granted_by_account_id, reason, created_at
+                       ) VALUES (?, ?, ?, NULL, ?, ?)""",
+                    (
+                        account_id, permission,
+                        int(permission in (supplied_delegable or [])),
+                        audit_reason, now,
+                    ),
+                )
         db.execute(
             """INSERT INTO admin_wallets(
                    wallet_id, account_id, address, chain_id, created_at, active, provisioning_source
@@ -179,6 +221,7 @@ def revoke_admin(
             "UPDATE accounts SET role = 'user' WHERE account_id = ?",
             (account_id,),
         )
+        db.execute("DELETE FROM account_admin_permissions WHERE account_id = ?", (account_id,))
         db.execute(
             """UPDATE sessions SET admin_wallet_address = NULL,
                    admin_authenticated_at = NULL, admin_expires_at = NULL
@@ -223,6 +266,14 @@ def main(argv: list[str] | None = None) -> int:
     grant.add_argument("--wallet", required=True, help="Public wallet address only; never a seed/private key.")
     grant.add_argument("--chain-id", required=True, type=int)
     grant.add_argument("--reason", required=True)
+    grant.add_argument(
+        "--permission", action="append", choices=sorted(ADMIN_PERMISSION_NAMES), default=None,
+        help="Explicitly grant this permission to the bootstrapped administrator; repeat as needed.",
+    )
+    grant.add_argument(
+        "--delegable-permission", action="append", choices=sorted(ADMIN_PERMISSION_NAMES), default=None,
+        help="Allow this bootstrap permission to be delegated onward; repeat as needed.",
+    )
     grant.add_argument("--confirm", default=None)
 
     revoke = subparsers.add_parser("revoke", help="Revoke local admin role and disable all enrolled wallets.")
@@ -238,6 +289,7 @@ def main(argv: list[str] | None = None) -> int:
             result = grant_admin(
                 application, email=args.email, wallet_address=args.wallet,
                 chain_id=args.chain_id, reason=args.reason, actor=args.actor,
+                permissions=args.permission, delegable_permissions=args.delegable_permission,
             )
         else:
             result = revoke_admin(
@@ -252,6 +304,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "grant":
         print("Wallet: " + result["wallet_address"] + " (chain ID " + str(result["chain_id"]) + ")")
         print("Active wallets: " + str(result["active_wallet_count"]) + "/3")
+        print("Granted permissions: " + ", ".join(supplied_permissions or []) if supplied_permissions is not None else "Granted permissions: preserved")
+        print("Delegable permissions: " + ", ".join(supplied_delegable or []) if supplied_delegable is not None else "Delegable permissions: unchanged")
         print("A fresh signature from this registered wallet is still required for admin access.")
     else:
         print("Disabled admin wallets: " + str(result["revoked_wallet_count"]))
