@@ -1254,6 +1254,17 @@ class AccountServerTests(unittest.TestCase):
             "Remove administrator access after review",
         )
         self.assertTrue(target_after_revoke["administratorRevocationNotice"]["noticeId"])
+        self.assertEqual(target_after_revoke["communicationsUnreadCounts"]["alerts"], 1)
+        status, target_inbox, _ = self.request("/api/account/communications", opener=target_opener)
+        self.assertEqual(status, 200, target_inbox)
+        target_alerts = [item for item in target_inbox["items"] if item["section"] == "alerts"]
+        self.assertEqual(len(target_alerts), 1)
+        self.assertEqual(target_alerts[0]["subject"], "Administrator privileges removed")
+        self.assertIn("Remove administrator access after review", target_alerts[0]["body"])
+        self.assertTrue(target_alerts[0]["requiresAcknowledgement"])
+        status, root_inbox, _ = self.request("/api/account/communications")
+        self.assertEqual(status, 200, root_inbox)
+        self.assertEqual(root_inbox["items"], [], "revocation alerts must not leak to another account")
         status, denied_admin_status, _ = self.request("/api/admin/status", opener=target_opener)
         self.assertEqual(status, 403, denied_admin_status)
 
@@ -1795,6 +1806,180 @@ class AccountServerTests(unittest.TestCase):
             self.fail("oversized request should have failed")
         except urllib.error.HTTPError as error:
             self.assertEqual(error.code, 413)
+
+
+
+
+    def test_private_communications_use_sender_selected_sections_and_recipient_scoped_state(self):
+        sender_email = "communications-admin@example.test"
+        recipient_email = "communications-target@example.test"
+        ordinary_admin_email = "communications-admin-without-send@example.test"
+        outsider_email = "communications-outsider@example.test"
+        sender_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        recipient_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        ordinary_admin_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        outsider_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+
+        for address, opener in (
+            (sender_email, sender_opener),
+            (recipient_email, recipient_opener),
+            (ordinary_admin_email, ordinary_admin_opener),
+            (outsider_email, outsider_opener),
+        ):
+            status, created, _ = self.create_account(email=address, opener=opener)
+            self.assertEqual(status, 201, created)
+
+        grant_admin(
+            self.app,
+            account_identifier=sender_email,
+            wallet_address=TEST_WALLET_C.address,
+            chain_id=1,
+            reason="Provision administrator communication authority",
+            permissions=["admin.messages.send"],
+        )
+        grant_admin(
+            self.app,
+            account_identifier=ordinary_admin_email,
+            wallet_address=TEST_WALLET_D.address,
+            chain_id=1,
+            reason="Provision administrator without communication authority",
+            permissions=[],
+        )
+        status, sender_status, _ = self.sign_admin_wallet(
+            sender_opener, TEST_WALLET_C.address, TEST_WALLET_KEY_C
+        )
+        self.assertEqual(status, 200, sender_status)
+        status, ordinary_admin_status, _ = self.sign_admin_wallet(
+            ordinary_admin_opener, TEST_WALLET_D.address, TEST_WALLET_KEY_D
+        )
+        self.assertEqual(status, 200, ordinary_admin_status)
+
+        message_body = "<script>not executable in the inbox</script>\nA private account message."
+        status, sent_message, _ = self.request(
+            "/api/admin/communications/send",
+            {
+                "accountIdentifier": recipient_email,
+                "section": "messages",
+                "subject": "Account information",
+                "body": message_body,
+            },
+            opener=sender_opener,
+        )
+        self.assertEqual(status, 201, sent_message)
+        self.assertEqual(sent_message["section"], "messages")
+        message_id = sent_message["communicationId"]
+
+        status, sent_alert, _ = self.request(
+            "/api/admin/communications/send",
+            {
+                "accountIdentifier": recipient_email,
+                "section": "alerts",
+                "subject": "Action required",
+                "body": "Please review this account alert.",
+            },
+            opener=sender_opener,
+        )
+        self.assertEqual(status, 201, sent_alert)
+        self.assertEqual(sent_alert["section"], "alerts")
+        alert_id = sent_alert["communicationId"]
+
+        status, inbox, _ = self.request(
+            "/api/account/communications", opener=recipient_opener
+        )
+        self.assertEqual(status, 200, inbox)
+        self.assertEqual(len(inbox["items"]), 2)
+        by_section = {item["section"]: item for item in inbox["items"]}
+        self.assertEqual(by_section["messages"]["communicationId"], message_id)
+        self.assertEqual(by_section["alerts"]["communicationId"], alert_id)
+        self.assertEqual(by_section["messages"]["senderAccountIdentifier"], sender_email)
+        self.assertEqual(by_section["messages"]["body"], message_body)
+        self.assertFalse(by_section["messages"]["requiresAcknowledgement"])
+        self.assertTrue(by_section["alerts"]["requiresAcknowledgement"])
+        self.assertEqual(inbox["unreadCounts"], {"alerts": 1, "messages": 1})
+
+        status, outsider_inbox, _ = self.request(
+            "/api/account/communications", opener=outsider_opener
+        )
+        self.assertEqual(status, 200, outsider_inbox)
+        self.assertEqual(outsider_inbox["items"], [])
+
+        status, forbidden_send, _ = self.request(
+            "/api/admin/communications/send",
+            {
+                "accountIdentifier": recipient_email,
+                "section": "messages",
+                "subject": "Unauthorized",
+                "body": "An administrator without the separate permission must be blocked.",
+            },
+            opener=ordinary_admin_opener,
+        )
+        self.assertEqual(status, 403, forbidden_send)
+        status, non_admin_send, _ = self.request(
+            "/api/admin/communications/send",
+            {
+                "accountIdentifier": recipient_email,
+                "section": "messages",
+                "subject": "Unauthorized",
+                "body": "An ordinary account cannot send an administrator communication.",
+            },
+            opener=outsider_opener,
+        )
+        self.assertEqual(status, 403, non_admin_send)
+
+        status, cross_account_read, _ = self.request(
+            "/api/account/communications/state",
+            {"communicationId": message_id, "action": "read"},
+            opener=outsider_opener,
+        )
+        self.assertEqual(status, 404, cross_account_read)
+        status, wrong_alert_state, _ = self.request(
+            "/api/account/communications/state",
+            {"communicationId": alert_id, "action": "read"},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 409, wrong_alert_state)
+
+        status, read_message, _ = self.request(
+            "/api/account/communications/state",
+            {"communicationId": message_id, "action": "read"},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 200, read_message)
+        self.assertEqual(read_message["unreadCounts"], {"alerts": 1, "messages": 0})
+        status, acknowledged_alert, _ = self.request(
+            "/api/account/communications/state",
+            {"communicationId": alert_id, "action": "acknowledge"},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 200, acknowledged_alert)
+        self.assertEqual(acknowledged_alert["unreadCounts"], {"alerts": 0, "messages": 0})
+
+        status, summary, _ = self.request(
+            "/api/account/status", opener=recipient_opener
+        )
+        self.assertEqual(status, 200, summary)
+        self.assertEqual(summary["communicationsUnreadCounts"], {"alerts": 0, "messages": 0})
+
+        with self.app.connect() as db:
+            records = db.execute(
+                """SELECT section, sender_account_id, recipient_account_id, read_at,
+                          acknowledged_at, source_audit_id
+                   FROM account_communications ORDER BY rowid"""
+            ).fetchall()
+        self.assertEqual(len(records), 2)
+        self.assertEqual({row["section"] for row in records}, {"alerts", "messages"})
+        self.assertTrue(all(row["sender_account_id"] is not None for row in records))
+        self.assertTrue(all(row["read_at"] is None or row["section"] == "messages" for row in records))
+        self.assertTrue(all(row["acknowledged_at"] is None or row["section"] == "alerts" for row in records))
+        self.assertTrue(all(row["source_audit_id"] is None for row in records))
 
 
 if __name__ == "__main__":
