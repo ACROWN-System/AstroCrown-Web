@@ -1970,16 +1970,38 @@ class AccountServerTests(unittest.TestCase):
 
         with self.app.connect() as db:
             records = db.execute(
-                """SELECT section, sender_account_id, recipient_account_id, read_at,
-                          acknowledged_at, source_audit_id
+                """SELECT communication_id, section, sender_account_id, recipient_account_id,
+                          read_at, acknowledged_at, source_audit_id
                    FROM account_communications ORDER BY rowid"""
+            ).fetchall()
+            send_audits = db.execute(
+                """SELECT audit_id, actor, target_account_id, reason, detail
+                   FROM account_admin_audit
+                   WHERE event_type = 'admin_communication_sent'
+                   ORDER BY rowid"""
             ).fetchall()
         self.assertEqual(len(records), 2)
         self.assertEqual({row["section"] for row in records}, {"alerts", "messages"})
         self.assertTrue(all(row["sender_account_id"] is not None for row in records))
         self.assertTrue(all(row["read_at"] is None or row["section"] == "messages" for row in records))
         self.assertTrue(all(row["acknowledged_at"] is None or row["section"] == "alerts" for row in records))
-        self.assertTrue(all(row["source_audit_id"] is None for row in records))
+        self.assertTrue(all(row["source_audit_id"] is not None for row in records))
+        self.assertEqual(len(send_audits), 2)
+        audits_by_id = {row["audit_id"]: row for row in send_audits}
+        self.assertEqual(set(audits_by_id), {row["source_audit_id"] for row in records})
+        for record in records:
+            audit = audits_by_id[record["source_audit_id"]]
+            detail = json.loads(audit["detail"])
+            self.assertEqual(audit["actor"], record["sender_account_id"])
+            self.assertEqual(audit["target_account_id"], record["recipient_account_id"])
+            self.assertEqual(detail["communication_id"], record["communication_id"])
+            self.assertEqual(detail["section"], record["section"])
+            self.assertIn(audit["reason"], {"Sent a private in-app Alert", "Sent a private in-app Message"})
+            self.assertGreaterEqual(detail["subject_characters"], 1)
+            self.assertGreaterEqual(detail["body_characters"], 1)
+            self.assertNotIn(message_body, audit["detail"], "message content must not be duplicated into the audit log")
+            self.assertNotIn("Account information", audit["detail"])
+            self.assertNotIn("Action required", audit["detail"])
 
 
 if __name__ == "__main__":
