@@ -530,6 +530,9 @@ class AccountApplication:
                           (SELECT COUNT(*) FROM admin_wallets aw_count
                               WHERE aw_count.account_id = a.account_id AND aw_count.active = 1
                           ) AS admin_wallet_count,
+                          (SELECT COUNT(*) FROM account_passkey_credentials pc_count
+                              WHERE pc_count.account_id = a.account_id AND pc_count.active = 1
+                          ) AS passkey_count,
                           (SELECT COUNT(*) FROM sessions active_sessions
                               WHERE active_sessions.account_id = a.account_id
                                 AND active_sessions.expires_at > ?
