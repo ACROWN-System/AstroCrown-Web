@@ -1,0 +1,85 @@
+name: Python Dependency Vulnerability, License Metadata and SBOM Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/auth-prototype/requirements.txt"
+      - "development/account-continuity/prototype/requirements.txt"
+      - "development/dependencies/**"
+      - ".github/workflows/python-dependency-audit.yml"
+  schedule:
+    # Weekly scan; no paid scanner or external credentials.
+    - cron: "17 3 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-dependency-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit the complete Python CI dependency lock
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify source requirements and committed locks
+        run: python development/dependencies/verify_ci_dependency_locks.py account
+
+      - name: Verify committed SPDX inventory against exact package hashes
+        run: python development/dependencies/generate_spdx_sbom.py --check
+
+      - name: Install the pinned audit toolchain
+        run: python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock
+
+      - name: Audit locked packages and generate CycloneDX SBOM
+        id: audit
+        shell: bash
+        run: |
+          mkdir -p build/dependency-evidence
+          set +e
+          python -m pip_audit --no-deps --require-hashes --strict \
+            --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --format json --output build/dependency-evidence/pip-audit-report.json
+          audit_status=$?
+
+          python -m pip_audit --no-deps --require-hashes --strict \
+            --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --format cyclonedx-json --output build/dependency-evidence/python-ci-sbom.cdx.json
+          sbom_status=$?
+
+          python development/dependencies/report_pypi_license_metadata.py \
+            --lock development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --output build/dependency-evidence/pypi-license-metadata.json
+          license_metadata_status=$?
+          set -e
+
+          echo "pip_audit_status=$audit_status"
+          echo "cyclonedx_sbom_status=$sbom_status"
+          echo "pypi_license_metadata_status=$license_metadata_status"
+          if [ "$audit_status" -ne 0 ] || [ "$sbom_status" -ne 0 ] || [ "$license_metadata_status" -ne 0 ]; then
+            echo "::error::Dependency audit, SBOM generation, or PyPI metadata collection failed. Review uploaded evidence before changing any dependency."
+            exit 1
+          fi
+
+      - name: Upload vulnerability report, SBOM and license metadata
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-dependency-evidence-${{ github.sha }}
+          path: build/dependency-evidence/
+          if-no-files-found: warn
+          retention-days: 30
