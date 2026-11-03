@@ -376,11 +376,9 @@
   }
 
   function renderDevelopmentNotice() {
-    return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' +
-      (browserPreviewMode ? "hosted-preview-no-authentication" : "local-passkey-test") + '">' +
-      (browserPreviewMode
-        ? "HOSTED PREVIEW — this page demonstrates the account interface only. It cannot create accounts or authenticate users. Use the documented local server for passkey testing."
-        : "LOCAL PASSKEY TEST — WebAuthn is verified by this computer's local AstroCrown server. No email, SMS or external identity provider is used. Not production authentication.") +
+    if (browserPreviewMode) return "";
+    return '<p class="account-demo-notice" id="account-demo-notice" data-mode="local-passkey-test">' +
+      "LOCAL PASSKEY TEST — WebAuthn is verified by this computer's local AstroCrown server. No email, SMS or external identity provider is used. Not production authentication." +
       '</p>';
   }
 
