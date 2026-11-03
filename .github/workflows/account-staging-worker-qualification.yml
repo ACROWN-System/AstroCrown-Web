@@ -1,0 +1,57 @@
+name: Account Staging Worker Qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/account-continuity/worker/**"
+      - "development/account-continuity/prototype/account-ui.js"
+      - ".github/workflows/account-staging-worker-qualification.yml"
+  push:
+    branches: [main]
+    paths:
+      - "development/account-continuity/worker/**"
+      - "development/account-continuity/prototype/account-ui.js"
+      - ".github/workflows/account-staging-worker-qualification.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: development/account-continuity/worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v6.1.0
+        with:
+          node-version: "22"
+      - name: Install exact direct package pins
+        run: npm install --no-audit --no-fund
+      - name: Run Worker invariant tests
+        run: npm test
+      - name: Build the restricted website asset set
+        run: npm run build:site
+      - name: Validate browser code and Worker bundle without deploying
+        run: |
+          node --check src/index.js
+          node --check scripts/build-staging-site.mjs
+          node --check public/account-continuity/prototype/account-ui.js
+          npm run check:worker
+      - name: Verify remote environment is still fail-closed
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from "node:fs";
+          const config = JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"));
+          const stage = config.env.staging;
+          if (stage.vars.RP_ID !== "SET_BEFORE_DEPLOY") throw new Error("Staging RP sentinel missing.");
+          if (stage.vars.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") throw new Error("Staging origin sentinel missing.");
+          if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") throw new Error("Staging D1 sentinel missing.");
+          NODE
