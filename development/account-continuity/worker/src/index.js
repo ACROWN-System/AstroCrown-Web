@@ -251,10 +251,11 @@ async function verifiedPasskey(response, challenge, config, excluded = []) {
     });
   } catch (error) {
     if (config.localDiagnostics) {
-      console.warn("LOCAL_TEST_WEBAUTHN_REGISTRATION_REJECTED " + JSON.stringify({
-        name: String(error?.name || "Error"),
-        message: String(error?.message || "No diagnostic message"),
-      }));
+      const safeName = String(error?.name || "Error").slice(0, 80);
+      const safeMessage = String(error?.message || "No diagnostic message")
+        .replace(/[\\r\\n]+/g, " ")
+        .slice(0, 300);
+      throw fail(401, "LOCAL_TEST_WEBAUTHN_REJECTION [" + safeName + "]: " + safeMessage);
     }
     throw fail(401, "The passkey registration proof was not accepted. Start again.");
   }
