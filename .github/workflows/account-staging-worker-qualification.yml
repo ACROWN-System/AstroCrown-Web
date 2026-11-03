@@ -94,7 +94,7 @@ jobs:
           if (advertised !== (mldsa44.verify === true)) throw new Error("SimpleWebAuthn's ML-DSA-44 advertisement does not match runtime verification support.");
           if (runtime.mlDsa44RegistrationPreferred !== advertised) throw new Error("The ML-DSA-44 registration preference diagnostic is inconsistent.");
           console.log("Local Worker ML-DSA-44 capability: " + JSON.stringify({sign:mldsa44.sign,verify:mldsa44.verify,registrationAlgorithmAdvertised:advertised}));
-          if (!advertised) console.log("LOCAL PQC STATUS: BLOCKED in this runtime; do not claim ML-DSA credential support from this qualification run.");
+          if (!mldsa44.sign || !mldsa44.verify || !advertised) throw new Error("BLOCKED: this runtime cannot qualify ML-DSA-44 sign/verify and first-preference registration.");
           NODE
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
           grep -q "STAGING ENVIRONMENT" "$RUNNER_TEMP/home.html"
