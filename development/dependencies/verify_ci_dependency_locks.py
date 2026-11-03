@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Verify that CI hash-lock package/version pins exactly match source pins.
+"""Verify source pins, wheel-lock hashes and the scanner's direct source pin.
 
-The SHA-256 artifact checks themselves are enforced by pip's --require-hashes.
-This standard-library-only check prevents the human-maintained version lists and
-platform-specific hash locks from drifting apart.
+The SHA-256 artifact checks are enforced by pip --require-hashes at install.
+This standard-library verifier prevents package/version lists and locks from
+drifting apart. The scanner lock intentionally contains a transitive closure,
+so only its direct pip-audit pin is compared with the source requirements file.
 """
 from __future__ import annotations
 
@@ -14,8 +15,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 AUTH_REQUIREMENTS = ROOT / "development/auth-prototype/requirements.txt"
 ACCOUNT_REQUIREMENTS = ROOT / "development/account-continuity/prototype/requirements.txt"
+AUDIT_REQUIREMENTS = ROOT / "development/dependencies/requirements-pip-audit.txt"
 WALLET_LOCK = ROOT / "development/dependencies/requirements-wallet-auth-py312-ubuntu24-x86_64.lock"
 ACCOUNT_LOCK = ROOT / "development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock"
+AUDIT_LOCK = ROOT / "development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock"
 
 SOURCE_PATTERN = re.compile(r"^([A-Za-z0-9._-]+)==([^<>=!~;\s]+)$")
 LOCK_PATTERN = re.compile(r"^([A-Za-z0-9._-]+)==([^\s]+) --hash=sha256:([0-9a-f]{64})$")
@@ -67,10 +70,12 @@ def parse_lock(path: Path) -> dict[str, str]:
         if key in pins:
             raise SystemExit(f"{path}:{line_number}: duplicate lock entry for {key}")
         pins[key] = version
+    if not pins:
+        raise SystemExit(f"{path}: no package hashes found")
     return pins
 
 
-def verify(label: str, source_paths: tuple[Path, ...], lock_path: Path) -> None:
+def verify_exact_set(label: str, source_paths: tuple[Path, ...], lock_path: Path) -> None:
     source = parse_source(source_paths)
     locked = parse_lock(lock_path)
     if source != locked:
@@ -87,14 +92,33 @@ def verify(label: str, source_paths: tuple[Path, ...], lock_path: Path) -> None:
     print(f"{label}: {len(locked)} exact package pins match; every package has a SHA-256 hash.")
 
 
+def verify_direct_pin(label: str, source_path: Path, lock_path: Path) -> None:
+    source = parse_source((source_path,))
+    locked = parse_lock(lock_path)
+    missing = sorted(set(source) - set(locked))
+    mismatched = sorted(
+        f"{name}: source={source[name]} lock={locked[name]}"
+        for name in set(source) & set(locked)
+        if source[name] != locked[name]
+    )
+    if missing or mismatched:
+        raise SystemExit(f"{label} direct pin mismatch: missing={missing}; versions={mismatched}")
+    print(
+        f"{label}: {len(source)} direct source pin(s) match the "
+        f"{len(locked)}-package hashed dependency closure."
+    )
+
+
 def main() -> int:
     target = sys.argv[1] if len(sys.argv) > 1 else "all"
-    if target not in {"wallet", "account", "all"} or len(sys.argv) > 2:
-        raise SystemExit("Usage: verify_ci_dependency_locks.py [wallet|account|all]")
+    if target not in {"wallet", "account", "audit", "all"} or len(sys.argv) > 2:
+        raise SystemExit("Usage: verify_ci_dependency_locks.py [wallet|account|audit|all]")
     if target in {"wallet", "all"}:
-        verify("wallet-auth", (AUTH_REQUIREMENTS,), WALLET_LOCK)
+        verify_exact_set("wallet-auth", (AUTH_REQUIREMENTS,), WALLET_LOCK)
     if target in {"account", "all"}:
-        verify("account-continuity", (AUTH_REQUIREMENTS, ACCOUNT_REQUIREMENTS), ACCOUNT_LOCK)
+        verify_exact_set("account-continuity", (AUTH_REQUIREMENTS, ACCOUNT_REQUIREMENTS), ACCOUNT_LOCK)
+    if target in {"audit", "all"}:
+        verify_direct_pin("pip-audit toolchain", AUDIT_REQUIREMENTS, AUDIT_LOCK)
     return 0
 
 
