@@ -5,12 +5,14 @@ on:
     branches: [main]
     paths:
       - "development/auth-prototype/**"
+      - "development/dependencies/**"
       - "development/audit/Active/2026-10-20-Local-Only-Wallet-Authentication-Prototype.md"
       - ".github/workflows/wallet-auth-prototype-tests.yml"
   push:
     branches: [main]
     paths:
       - "development/auth-prototype/**"
+      - "development/dependencies/**"
       - ".github/workflows/wallet-auth-prototype-tests.yml"
 
 permissions:
@@ -18,7 +20,7 @@ permissions:
 
 jobs:
   offline-and-loopback-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -31,9 +33,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install pinned SIWE candidate
+      - name: Verify hash-lock package pins
+        run: python development/dependencies/verify_ci_dependency_locks.py wallet
+
+      - name: Install hash-verified Python dependencies
         run: |
-          python -m pip install --disable-pip-version-check -r development/auth-prototype/requirements.txt
+          python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-wallet-auth-py312-ubuntu24-x86_64.lock
           python -m pip freeze
 
       - name: Compile prototype
