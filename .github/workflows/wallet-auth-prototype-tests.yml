@@ -34,9 +34,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Temporary fresh verification of all three wheel locks
-        run: python development/dependencies/generate_ci_dependency_locks.py --check
-
       - name: Verify hash-lock package pins
         run: python development/dependencies/verify_ci_dependency_locks.py wallet
 
