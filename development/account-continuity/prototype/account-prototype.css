@@ -55,11 +55,11 @@
 .account-dialog-astro { color:#f2f5fb; }
 .account-dialog-crown { color:var(--gold, #ffd700); }
 .account-dialog-context {
-  color:#9aa9be;
-  font-size:9px;
+  color:var(--gold, #ffd700);
+  font-size:clamp(16px, 2.5vw, 18px);
   line-height:1;
-  font-weight:800;
-  letter-spacing:.15em;
+  font-weight:750;
+  letter-spacing:0;
 }
 .account-dialog-close {
   display:grid; place-items:center; flex:0 0 36px; width:36px; height:36px;
