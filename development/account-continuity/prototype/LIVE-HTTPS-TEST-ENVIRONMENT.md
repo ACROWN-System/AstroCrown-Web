@@ -1,4 +1,6 @@
-# Temporary HTTPS live-test environment
+# Temporary HTTPS diagnostic — not the production-parity staging website
+
+> **Status clarification (2026-11-04):** This Quick Tunnel procedure is retained only as an optional, short-lived diagnostic for testing the current loopback backend. It is not the approved staging architecture and must not become the public account deployment design. The preferred next environment is specified in [Production-Parity Staging and Three-Pass Cleanup Requirements](../PRODUCTION-PARITY-STAGING-AND-THREE-PASS-CLEANUP-REQUIREMENTS.md).
 
 **Purpose:** test the passkey-first prototype in a real browser using synthetic details and disposable credentials.  
 **Not:** production hosting, public account launch, production data storage, formal security certification or permission to use real account/recovery/wallet information.
