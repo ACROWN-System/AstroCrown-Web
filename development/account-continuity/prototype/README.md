@@ -5,6 +5,7 @@
 The active local prototype now supports:
 - Experimental ML-DSA-first WebAuthn registration negotiation (ML-DSA-65, -44 and -87), followed by EdDSA, ES256 and RS256 compatibility fallbacks. The server verifier accepts the same allow-list and records the actual credential COSE algorithm for each new/replacement passkey.
 - The User dashboard reports active credentials actually recorded with an ML-DSA algorithm; advertising an algorithm is not treated as evidence that a browser/authenticator used it.
+- A dedicated automated regression test now generates ephemeral ML-DSA-44/65/87 keys and verifies genuine signatures through the server's WebAuthn authentication verifier, including rejection of wrong challenges and modified signatures. This qualifies backend verification only; it does not establish real browser or authenticator interoperability.
 - WebAuthn passkey registration with discoverable credentials and required local user verification.
 - Discoverable passkey sign-in without an email address, username prompt, password, SMS or external identity provider.
 - A high-entropy, one-time offline recovery key, displayed once at initial registration and after successful recovery. Only a salted one-way verifier is stored.
