@@ -253,7 +253,7 @@ class PasskeyApiTests(unittest.TestCase):
                 "SELECT account_id, email, auth_method, role FROM accounts"
             ).fetchone()
             credential_row = db.execute(
-                "SELECT credential_id, sign_count, active, backed_up FROM account_passkey_credentials"
+                "SELECT credential_id, credential_alg, sign_count, active, backed_up FROM account_passkey_credentials"
             ).fetchone()
             challenge_row = db.execute(
                 "SELECT used_at FROM account_passkey_challenges WHERE challenge_id = ?",
@@ -393,6 +393,7 @@ class PasskeyApiTests(unittest.TestCase):
         self.assertTrue(recovered["recovered"])
         self.assertEqual(recovered["accountIdentifier"], account_identifier)
         self.assertEqual(recovered["passkeyCount"], 1)
+        self.assertEqual(recovered["postQuantumPasskeyCount"], 1)
         self.assertTrue(recovered["recoveryKeyAvailable"])
         self.assertEqual(recovered["activeSessionCount"], 1)
         self.assertTrue(headers.get("Set-Cookie"))

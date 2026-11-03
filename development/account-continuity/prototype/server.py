@@ -736,7 +736,6 @@ class AccountApplication:
             )
             credential_id, credential_id_bytes = service.credential_id_from_response(credential)
             credential_alg = service.credential_algorithm_id(bytes(verified.credential_public_key))
-            credential_alg = service.credential_algorithm_id(bytes(verified.credential_public_key))
         except PasskeyVerificationError:
             raise ApiError(401, "The passkey registration proof was not accepted. Start again.") from None
         if not hmac.compare_digest(bytes(verified.credential_id), credential_id_bytes):
@@ -1109,6 +1108,7 @@ class AccountApplication:
                 challenge=bytes(challenge_row["challenge"]),
             )
             credential_id, credential_id_bytes = service.credential_id_from_response(credential)
+            credential_alg = service.credential_algorithm_id(bytes(verified.credential_public_key))
         except PasskeyVerificationError:
             raise ApiError(401, "The replacement passkey proof was not accepted. Start recovery again.") from None
         if not hmac.compare_digest(bytes(verified.credential_id), credential_id_bytes):
