@@ -1,7 +1,7 @@
 # Passkey-First Account Implementation Status and Release Boundary
 
 **Review date:** 2026-11-04  
-**Status:** ACCOUNT IMPLEMENTATION LOOPBACK-ONLY / PRODUCTION-PARITY STAGING DIRECTION ACCEPTED / HOSTING RUNTIME NOT YET QUALIFIED / NOT PRODUCTION  
+**Status:** LOCAL WORKER + D1 ACCOUNT QUALIFICATION PASSED / ML-DSA-44 BROWSER VIRTUAL-AUTHENTICATOR E2E PASSED / REMOTE HOSTING AND $0 ACCOUNT ELIGIBILITY NOT YET QUALIFIED / NOT PRODUCTION  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Pull request:** [#141 — Passkey-first account foundation; optional wallet backup](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)
 
@@ -50,6 +50,25 @@ The next shared browser-test website is to be built as a **production-shaped sta
 The staging environment must be independently deletable and must never read from, write to, or share credentials/secrets with production. Passkeys and recovery keys created for staging are disposable and cannot be migrated to the production RP ID. The same source/build is promoted through an auditable pipeline; environment-specific settings must be explicit, not inferred or silently defaulted.
 
 ### Platform qualification boundary
+
+### Local Worker/D1 qualification result — 2026-11-04
+
+The isolated JavaScript/TypeScript Worker qualification project is now present under `development/account-continuity/worker/`. It is a local qualification adapter only; it is not a remote Cloudflare deployment and does not replace the Python reference prototype.
+
+Evidence recorded on PR #141 exact head `fbfdacf69cba539dc49352bec88b59b4af323cdb`:
+
+- Pinned `@simplewebauthn/server@14.0.3` and Wrangler package install/Worker bundle dry-run completed in GitHub Actions.
+- The allowlisted site build serves the existing AstroCrown homepage and intended passkey-first account interface with a visible staging banner. Repository documentation, audit records, backups, and source-only development assets are excluded from the built static asset set.
+- The local D1 schema applied successfully. The local Worker returned account status and runtime diagnostics; the homepage served; a deliberately wrong Origin was rejected with HTTP 403.
+- Chrome headless with a disposable virtual CTAP2 authenticator completed passkey registration, discoverable sign-in, sign-out, simulated loss of the old passkey, recovery with the single-use offline key, rejection of the consumed old recovery key, recovery-key rotation, and subsequent sign-in using the replacement passkey.
+- The same run proved local Workerd ML-DSA-44 `SubtleCrypto` sign and verify support, SimpleWebAuthn's first-preference COSE algorithm `-48`, persistence of the actual credential algorithm, and a later valid assertion with the registered ML-DSA-44 virtual credential. The account response recorded `passkeyAlgorithmIds: [-48]` and one active post-quantum credential.
+- Worker invariant tests, restricted asset build, JS syntax checks, Wrangler dry-run, local D1 migration, HTTP smoke checks, browser end-to-end test and remote-placeholder fail-closed checks all passed in the Worker Qualification CI run. The relevant standard PR checks (External Review, NOVA RSI Engine, and Local Wallet Authentication Prototype Tests) also passed on that tested head.
+
+**Evidence boundary:** this is a real browser WebAuthn API exercise using Chrome's virtual authenticator and the local Wrangler/Workerd runtime. It is not evidence of interoperability with a physical security key, OS platform authenticator, synced passkey provider, every browser, or the remote Cloudflare-hosted Workers runtime. It also does not qualify ML-DSA-65 or ML-DSA-87. The verified credential type is specifically ML-DSA-44 COSE algorithm `-48`.
+
+**Still unqualified:** the real Cloudflare account's Workers Free/D1 Free entitlement, card/payment-method requirements, account-specific quotas, creation of a remote staging database, a real remote HTTPS staging hostname/RP ID, remote Worker deployment, remote D1 persistence, and real-device/browser testing. Cloudflare remains a candidate, not an adopted provider. No account credential, service, database, secret, plan, DNS record or deployment was created or changed remotely.
+
+The Worker staging qualification deliberately disables communications and feedback/case portal controls, leaves administrator role provisioning and SIWE administrator-wallet enrollment/step-up outside this initial port, and does not provide multi-passkey management or session-list/revoke-others. The staging homepage must not present these disabled features as working services. The Python reference implementation retains broader role, wallet, communication and case workflows until each is ported and independently qualified.
 
 Cloudflare Workers Free + static assets + D1 is a **candidate**, not an approved provider decision. Published free limits currently include 100,000 Worker requests/day and 10 ms CPU time per invocation; D1 Free currently permits 10 databases per account, 500 MB per database, 5 GB aggregate account storage, 5 million rows read/day, 100,000 rows written/day and 7 days of Time Travel retention. Exceeding free D1 daily quotas causes queries to fail rather than automatically upgrading the plan. These are current published limits, not guarantees of future availability or account eligibility.
 
