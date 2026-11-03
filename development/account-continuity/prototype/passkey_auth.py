@@ -19,6 +19,8 @@ try:
         verify_authentication_response,
         verify_registration_response,
     )
+    from webauthn.helpers import decode_credential_public_key
+    from webauthn.helpers.cose import COSEAlgorithmIdentifier
     from webauthn.helpers.structs import (
         AttestationConveyancePreference,
         AuthenticatorSelectionCriteria,
@@ -37,6 +39,8 @@ except ImportError as error:  # Fail closed when the reviewed dependency is abse
     AuthenticatorSelectionCriteria = None
     ResidentKeyRequirement = None
     UserVerificationRequirement = None
+    decode_credential_public_key = None
+    COSEAlgorithmIdentifier = None
 else:
     WEBAUTHN_IMPORT_ERROR = None
 
@@ -54,6 +58,21 @@ class PasskeyAuthService:
 
     CHALLENGE_BYTES = 32
     BROWSER_TIMEOUT_MS = 60_000
+
+    # Experimental profile based on the active IETF ML-DSA/WebAuthn draft.
+    # ML-DSA is offered first; existing algorithms remain fallbacks for
+    # authenticators and credential managers that do not implement the draft.
+    if COSEAlgorithmIdentifier is None:
+        SUPPORTED_PUB_KEY_ALGS = []
+    else:
+        SUPPORTED_PUB_KEY_ALGS = [
+            COSEAlgorithmIdentifier.ML_DSA_65,
+            COSEAlgorithmIdentifier.ML_DSA_44,
+            COSEAlgorithmIdentifier.ML_DSA_87,
+            COSEAlgorithmIdentifier.EDDSA,
+            COSEAlgorithmIdentifier.ECDSA_SHA_256,
+            COSEAlgorithmIdentifier.RSASSA_PKCS1_v1_5_SHA_256,
+        ]
 
     def __init__(self, *, rp_id: str, rp_name: str, origin: str):
         if WEBAUTHN_IMPORT_ERROR is not None:
@@ -130,6 +149,7 @@ class PasskeyAuthService:
                 user_verification=UserVerificationRequirement.REQUIRED,
             ),
             exclude_credentials=excluded,
+            supported_pub_key_algs=self.SUPPORTED_PUB_KEY_ALGS,
         )
         return self._options_dict(options)
 
@@ -160,9 +180,24 @@ class PasskeyAuthService:
                 expected_origin=self.origin,
                 require_user_presence=True,
                 require_user_verification=True,
+                supported_pub_key_algs=self.SUPPORTED_PUB_KEY_ALGS,
             )
         except Exception as error:
             raise PasskeyVerificationError("The passkey registration proof was not accepted.") from error
+
+    @classmethod
+    def credential_algorithm_id(cls, credential_public_key: bytes) -> int:
+        """Return the COSE algorithm actually encoded in a verified credential."""
+        if not isinstance(credential_public_key, bytes) or not credential_public_key:
+            raise PasskeyVerificationError("The credential public key is missing.")
+        try:
+            decoded = decode_credential_public_key(credential_public_key)
+            algorithm = COSEAlgorithmIdentifier(decoded.alg)
+        except Exception as error:
+            raise PasskeyVerificationError("The credential public-key algorithm is unsupported.") from error
+        if algorithm not in cls.SUPPORTED_PUB_KEY_ALGS:
+            raise PasskeyVerificationError("The credential public-key algorithm is outside the approved allow-list.")
+        return int(algorithm)
 
     def verify_authentication(
         self,

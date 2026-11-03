@@ -373,6 +373,7 @@ class AccountApplication:
                     credential_id_bytes BLOB NOT NULL UNIQUE,
                     account_id TEXT NOT NULL REFERENCES accounts(account_id) ON DELETE CASCADE,
                     public_key BLOB NOT NULL,
+                    credential_alg INTEGER,
                     sign_count INTEGER NOT NULL DEFAULT 0 CHECK(sign_count >= 0),
                     transports_json TEXT NOT NULL DEFAULT '[]',
                     device_type TEXT NOT NULL DEFAULT 'unknown',
@@ -421,6 +422,16 @@ class AccountApplication:
                     ON account_recovery_challenges(expires_at, used_at);
                 """
             )
+            passkey_columns = {
+                row["name"] for row in db.execute(
+                    "PRAGMA table_info(account_passkey_credentials)"
+                ).fetchall()
+            }
+            if "credential_alg" not in passkey_columns:
+                db.execute(
+                    "ALTER TABLE account_passkey_credentials ADD COLUMN credential_alg INTEGER"
+                )
+
             # Expand the permission allow-list without discarding existing local grants.
             # No table references account_admin_permissions, so this focused rebuild is safe.
             permission_schema = db.execute(
@@ -724,6 +735,8 @@ class AccountApplication:
                 challenge=bytes(challenge_row["challenge"]),
             )
             credential_id, credential_id_bytes = service.credential_id_from_response(credential)
+            credential_alg = service.credential_algorithm_id(bytes(verified.credential_public_key))
+            credential_alg = service.credential_algorithm_id(bytes(verified.credential_public_key))
         except PasskeyVerificationError:
             raise ApiError(401, "The passkey registration proof was not accepted. Start again.") from None
         if not hmac.compare_digest(bytes(verified.credential_id), credential_id_bytes):
@@ -782,11 +795,11 @@ class AccountApplication:
                 db.execute(
                     """INSERT INTO account_passkey_credentials(
                            credential_id, credential_id_bytes, account_id, public_key,
-                           sign_count, transports_json, device_type, backed_up, created_at
-                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                           credential_alg, sign_count, transports_json, device_type, backed_up, created_at
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
                         credential_id, credential_id_bytes, account_id,
-                        bytes(verified.credential_public_key), int(verified.sign_count),
+                        bytes(verified.credential_public_key), credential_alg, int(verified.sign_count),
                         json.dumps(transports, separators=(",", ":")), device_type,
                         int(bool(verified.credential_backed_up)), created_at,
                     ),
@@ -1163,12 +1176,12 @@ class AccountApplication:
                 db.execute(
                     """INSERT INTO account_passkey_credentials(
                            credential_id, credential_id_bytes, account_id, public_key,
-                           sign_count, transports_json, device_type, backed_up,
+                           credential_alg, sign_count, transports_json, device_type, backed_up,
                            created_at, last_used_at, active
-                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1)""",
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1)""",
                     (
                         credential_id, credential_id_bytes, account_id,
-                        bytes(verified.credential_public_key), int(verified.sign_count),
+                        bytes(verified.credential_public_key), credential_alg, int(verified.sign_count),
                         json.dumps(transports, separators=(",", ":")), device_type,
                         int(bool(verified.credential_backed_up)), created_at,
                     ),
@@ -1248,6 +1261,11 @@ class AccountApplication:
                           (SELECT COUNT(*) FROM account_passkey_credentials pc_count
                               WHERE pc_count.account_id = a.account_id AND pc_count.active = 1
                           ) AS passkey_count,
+                          (SELECT COUNT(*) FROM account_passkey_credentials pc_pqc
+                              WHERE pc_pqc.account_id = a.account_id
+                                AND pc_pqc.active = 1
+                                AND pc_pqc.credential_alg IN (-48, -49, -50)
+                          ) AS post_quantum_passkey_count,
                           (SELECT COUNT(*) FROM account_recovery_keys rk_count
                               WHERE rk_count.account_id = a.account_id AND rk_count.used_at IS NULL
                           ) AS recovery_key_count,
@@ -1339,6 +1357,7 @@ class AccountApplication:
             "accountIdentifier": account["username"],
             "authMethod": account["auth_method"],
             "passkeyCount": int(account["passkey_count"] or 0),
+            "postQuantumPasskeyCount": int(account["post_quantum_passkey_count"] or 0),
             "recoveryKeyAvailable": int(account["recovery_key_count"] or 0) > 0,
             "createdAt": account["created_at"],
             "avatarId": account["avatar_id"],

@@ -7,6 +7,7 @@ import threading
 import time
 import unittest
 import urllib.error
+import cbor2
 import urllib.request
 import uuid
 from pathlib import Path
@@ -23,6 +24,15 @@ from server import AccountApplication, TERMS_VERSION, create_server
 
 def b64url(value: bytes) -> str:
     return base64.urlsafe_b64encode(value).rstrip(b"=").decode("ascii")
+
+
+def cose_public_key(algorithm_id: int = -7) -> bytes:
+    if algorithm_id in {-48, -49, -50}:
+        return cbor2.dumps({1: 7, 3: algorithm_id, -1: b"\\x11" * 2592})
+    return cbor2.dumps({
+        1: 2, 3: algorithm_id, -1: 1,
+        -2: b"\\x01" * 32, -3: b"\\x02" * 32,
+    })
 
 
 class PasskeyApiTests(unittest.TestCase):
@@ -105,6 +115,20 @@ class PasskeyApiTests(unittest.TestCase):
         self.assertEqual(selection["residentKey"], "required")
         self.assertEqual(selection["userVerification"], "required")
         self.assertEqual(registration["attestation"], "none")
+        advertised_algorithms = [item["alg"] for item in registration["pubKeyCredParams"]]
+        self.assertEqual(advertised_algorithms[:3], [-49, -48, -50])
+        self.assertIn(-8, advertised_algorithms)
+        self.assertIn(-7, advertised_algorithms)
+        self.assertIn(-257, advertised_algorithms)
+
+    def test_ml_dsa_credential_algorithm_is_recorded_without_guessing(self):
+        service = self.app.passkey_auth_service
+        for algorithm_id in (-48, -49, -50):
+            self.assertEqual(service.credential_algorithm_id(cose_public_key(algorithm_id)), algorithm_id)
+        with self.assertRaises(PasskeyVerificationError):
+            service.credential_algorithm_id(cose_public_key(-999))
+        with self.assertRaises(PasskeyVerificationError):
+            service.credential_algorithm_id(b"not-a-COSE-public-key")
 
     def test_default_passkey_mode_never_loads_the_legacy_email_sender(self):
         database = Path(self.temp.name) / "no-mail-provider.sqlite3"
@@ -197,7 +221,7 @@ class PasskeyApiTests(unittest.TestCase):
         encoded_id = b64url(raw_id)
         fake_registration = SimpleNamespace(
             credential_id=raw_id,
-            credential_public_key=b"test-only-public-key-blob",
+            credential_public_key=cose_public_key(-49),
             sign_count=0,
             credential_device_type=SimpleNamespace(value="multi_device"),
             credential_backed_up=True,
@@ -219,6 +243,7 @@ class PasskeyApiTests(unittest.TestCase):
         self.assertTrue(created["authenticated"])
         self.assertEqual(created["authMethod"], "webauthn")
         self.assertEqual(created["passkeyCount"], 1)
+        self.assertEqual(created["postQuantumPasskeyCount"], 1)
         self.assertIsNone(created["email"])
         self.assertFalse(created["emailVerified"])
         cookie = headers.get("Set-Cookie")
@@ -238,6 +263,7 @@ class PasskeyApiTests(unittest.TestCase):
         self.assertEqual(account["auth_method"], "webauthn")
         self.assertEqual(account["role"], "user")
         self.assertEqual(credential_row["credential_id"], encoded_id)
+        self.assertEqual(credential_row["credential_alg"], -49)
         self.assertEqual(credential_row["sign_count"], 0)
         self.assertEqual(credential_row["active"], 1)
         self.assertEqual(credential_row["backed_up"], 1)
@@ -297,7 +323,7 @@ class PasskeyApiTests(unittest.TestCase):
         original_encoded = b64url(original_id)
         original_verified = SimpleNamespace(
             credential_id=original_id,
-            credential_public_key=b"original-public-key",
+            credential_public_key=cose_public_key(-7),
             sign_count=0,
             credential_device_type=SimpleNamespace(value="multi_device"),
             credential_backed_up=True,
@@ -343,7 +369,7 @@ class PasskeyApiTests(unittest.TestCase):
         replacement_encoded = b64url(replacement_id)
         replacement_verified = SimpleNamespace(
             credential_id=replacement_id,
-            credential_public_key=b"replacement-public-key",
+            credential_public_key=cose_public_key(-49),
             sign_count=0,
             credential_device_type=SimpleNamespace(value="single_device"),
             credential_backed_up=False,
@@ -469,7 +495,7 @@ class PasskeyApiTests(unittest.TestCase):
         encoded_id = b64url(raw_id)
         fake_registration = SimpleNamespace(
             credential_id=raw_id,
-            credential_public_key=b"public-key",
+            credential_public_key=cose_public_key(-7),
             sign_count=0,
             credential_device_type=SimpleNamespace(value="single_device"),
             credential_backed_up=False,

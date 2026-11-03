@@ -113,6 +113,14 @@ jobs:
                   raise SystemExit(f"Expected passkey account UX/security boundary missing: {item}")
           if ("authenticator_selection=" not in passkey or "ResidentKeyRequirement.REQUIRED" not in passkey or "user_verification=UserVerificationRequirement.REQUIRED" not in passkey):
               raise SystemExit("WebAuthn registration must require a discoverable credential.")
+          for item in ("ML_DSA_65", "ML_DSA_44", "ML_DSA_87", "supported_pub_key_algs=self.SUPPORTED_PUB_KEY_ALGS", "credential_algorithm_id"):
+              if item not in passkey:
+                  raise SystemExit(f"Post-quantum passkey policy missing: {item}")
+          for item in ("credential_alg INTEGER", "credential_alg IN (-48, -49, -50)", '"postQuantumPasskeyCount"'):
+              if item not in server:
+                  raise SystemExit(f"Actual credential algorithm tracking missing: {item}")
+          if "postQuantumPasskeyCount" not in ui:
+              raise SystemExit("The User dashboard must distinguish an actual ML-DSA credential from a capability offer.")
           for item in ("generate_recovery_key", "account_recovery_keys", "account_recovery_challenges"):
               if item not in server:
                   raise SystemExit(f"Offline recovery-key backend control missing: {item}")

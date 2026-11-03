@@ -479,6 +479,7 @@
       : 'Not supplied';
     var activeSessionCount = Math.max(1, Number(accountState.activeSessionCount || 1));
     var passkeyCount = Math.max(0, Number(accountState.passkeyCount || 0));
+    var postQuantumPasskeyCount = Math.max(0, Number(accountState.postQuantumPasskeyCount || 0));
     var communicationCounts = accountState.communicationsUnreadCounts || {};
     var unreadCommunicationCount = Math.max(0, Number(communicationCounts.alerts || 0)) +
       Math.max(0, Number(communicationCounts.messages || 0));
@@ -538,6 +539,10 @@
         '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' +
           '<span class="account-dashboard-status">WebAuthn passkey authentication</span>' +
           '<p class="account-dashboard-value">Registered passkeys: ' + String(passkeyCount) + '</p>' +
+          '<p class="account-dashboard-value">Post-quantum ML-DSA passkeys: ' + String(postQuantumPasskeyCount) + '</p>' +
+          '<p>' + (postQuantumPasskeyCount > 0
+            ? 'At least one active credential is recorded with an ML-DSA public-key algorithm. This confirms the credential type stored by this local prototype; it is not FIDO certification or a complete post-quantum security claim.'
+            : 'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.') + '</p>' +
           '<p>The authenticator keeps your private key. AstroCrown verifies a fresh challenge using the registered public credential. No email, password, SMS or external identity provider is used for this account sign-in.</p>' +
           '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
           '<p>Additional passkey enrollment, revocation and passkey-confirmed session management are being implemented separately. Do not rely on this prototype for real assets.</p>' +
