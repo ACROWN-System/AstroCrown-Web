@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import threading
 import time
+import uuid
 import unittest
 import urllib.error
 import urllib.request
@@ -2002,6 +2003,123 @@ class AccountServerTests(unittest.TestCase):
             self.assertNotIn(message_body, audit["detail"], "message content must not be duplicated into the audit log")
             self.assertNotIn("Account information", audit["detail"])
             self.assertNotIn("Action required", audit["detail"])
+
+
+    def test_account_communications_cursor_pagination_preserves_older_items_and_recipient_scope(self):
+        recipient_email = "communications-pagination-recipient@example.test"
+        outsider_email = "communications-pagination-outsider@example.test"
+        recipient_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        outsider_opener = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        status, recipient, _ = self.create_account(
+            email=recipient_email, opener=recipient_opener
+        )
+        self.assertEqual(status, 201, recipient)
+        status, outsider, _ = self.create_account(
+            email=outsider_email, opener=outsider_opener
+        )
+        self.assertEqual(status, 201, outsider)
+
+        with self.app.connect() as db:
+            recipient_row = db.execute(
+                "SELECT account_id FROM accounts WHERE email = ?",
+                (recipient_email,),
+            ).fetchone()
+            self.assertIsNotNone(recipient_row)
+            recipient_id = recipient_row["account_id"]
+            # Equal timestamps deliberately exercise the cursor's stable
+            # communication-ID tie breaker rather than a row-offset fallback.
+            for section in ("alerts", "messages"):
+                for index in range(55):
+                    db.execute(
+                        """INSERT INTO account_communications(
+                               communication_id, recipient_account_id, sender_account_id,
+                               section, subject, body, created_at
+                           ) VALUES (?, ?, NULL, ?, ?, ?, ?)""",
+                        (
+                            str(uuid.uuid4()),
+                            recipient_id,
+                            section,
+                            f"{section} {index}",
+                            "Older item pagination fixture",
+                            "2026-11-01T00:00:00Z",
+                        ),
+                    )
+
+        status, first_alert_page, _ = self.request(
+            "/api/account/communications/page",
+            {"section": "alerts", "cursor": None},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 200, first_alert_page)
+        self.assertEqual(len(first_alert_page["items"]), 50)
+        self.assertTrue(first_alert_page["nextCursor"])
+        self.assertTrue(all(item["section"] == "alerts" for item in first_alert_page["items"]))
+        self.assertEqual(first_alert_page["unreadCounts"], {"alerts": 55, "messages": 55})
+
+        status, second_alert_page, _ = self.request(
+            "/api/account/communications/page",
+            {"section": "alerts", "cursor": first_alert_page["nextCursor"]},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 200, second_alert_page)
+        self.assertEqual(len(second_alert_page["items"]), 5)
+        self.assertIsNone(second_alert_page["nextCursor"])
+        self.assertTrue(all(item["section"] == "alerts" for item in second_alert_page["items"]))
+        first_ids = {item["communicationId"] for item in first_alert_page["items"]}
+        second_ids = {item["communicationId"] for item in second_alert_page["items"]}
+        self.assertFalse(first_ids.intersection(second_ids))
+        self.assertEqual(len(first_ids.union(second_ids)), 55)
+
+        oldest_alert_id = second_alert_page["items"][-1]["communicationId"]
+        status, acknowledged, _ = self.request(
+            "/api/account/communications/state",
+            {"communicationId": oldest_alert_id, "action": "acknowledge"},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 200, acknowledged)
+        self.assertEqual(acknowledged["unreadCounts"], {"alerts": 54, "messages": 55})
+
+        status, first_message_page, _ = self.request(
+            "/api/account/communications/page",
+            {"section": "messages", "cursor": None},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 200, first_message_page)
+        self.assertEqual(len(first_message_page["items"]), 50)
+        self.assertTrue(all(item["section"] == "messages" for item in first_message_page["items"]))
+        self.assertEqual(first_message_page["unreadCounts"], {"alerts": 54, "messages": 55})
+
+        status, outsider_page, _ = self.request(
+            "/api/account/communications/page",
+            {"section": "alerts", "cursor": first_alert_page["nextCursor"]},
+            opener=outsider_opener,
+        )
+        self.assertEqual(status, 200, outsider_page)
+        self.assertEqual(outsider_page["items"], [])
+        self.assertEqual(outsider_page["unreadCounts"], {"alerts": 0, "messages": 0})
+
+        status, invalid_section, _ = self.request(
+            "/api/account/communications/page",
+            {"section": "system", "cursor": None},
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 400, invalid_section)
+        status, invalid_cursor, _ = self.request(
+            "/api/account/communications/page",
+            {
+                "section": "alerts",
+                "cursor": {
+                    "createdAt": "not-a-timestamp",
+                    "communicationId": str(uuid.uuid4()),
+                },
+            },
+            opener=recipient_opener,
+        )
+        self.assertEqual(status, 400, invalid_cursor)
 
 
 if __name__ == "__main__":
