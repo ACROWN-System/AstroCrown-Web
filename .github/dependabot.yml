@@ -44,3 +44,21 @@ updates:
           - "*"
         update-types:
           - major
+
+  - package-ecosystem: pip
+    directory: /development/dependencies
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      python-audit-tool-compatible:
+        patterns:
+          - "pip-audit"
+        update-types:
+          - minor
+          - patch
+      python-audit-tool-major:
+        patterns:
+          - "pip-audit"
+        update-types:
+          - major
