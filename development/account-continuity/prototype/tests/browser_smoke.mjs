@@ -659,8 +659,9 @@ try {
   assert.equal(revokeRoleFixture.status, 0, revokeRoleFixture.stderr || "The isolated administrator revocation fixture failed");
   assert.equal(revokeRoleFixture.stdout.trim(), "revoked");
   await evaluate("window.location.hash = '#admin'");
-  await waitFor("revoked administrator is returned to User dashboard", () =>
-    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  await waitFor("revoked administrator is returned to User dashboard without admin entry", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('admin-dashboard').hidden && " +
+      "Boolean(document.getElementById('account-signout')) && !document.querySelector('.account-admin-access-card')"));
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false,
     "a revoked administrator must no longer see the administrator entry button");
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-revocation-notice'))"), false,
