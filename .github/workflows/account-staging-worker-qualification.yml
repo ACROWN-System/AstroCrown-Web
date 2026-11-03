@@ -87,7 +87,14 @@ jobs:
           const runtime = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (runtime.runtime !== "cloudflare-workers") throw new Error("Unexpected Worker runtime.");
           if (!Array.isArray(runtime.simpleWebAuthnSupportedRegistrationAlgorithms)) throw new Error("Registration algorithm diagnostics missing.");
-          if (!runtime.webCryptoMlDsaSignSupport || typeof runtime.webCryptoMlDsaSignSupport !== "object") throw new Error("ML-DSA capability diagnostics missing.");
+          const algorithms = runtime.simpleWebAuthnSupportedRegistrationAlgorithms;
+          const mldsa44 = runtime.webCryptoMlDsaSupport?.["ML-DSA-44"];
+          if (!mldsa44 || typeof mldsa44.sign !== "boolean" || typeof mldsa44.verify !== "boolean") throw new Error("ML-DSA-44 sign/verify capability diagnostics missing.");
+          const advertised = algorithms.includes(-48);
+          if (advertised !== (mldsa44.verify === true)) throw new Error("SimpleWebAuthn's ML-DSA-44 advertisement does not match runtime verification support.");
+          if (runtime.mlDsa44RegistrationPreferred !== advertised) throw new Error("The ML-DSA-44 registration preference diagnostic is inconsistent.");
+          console.log("Local Worker ML-DSA-44 capability: " + JSON.stringify({sign:mldsa44.sign,verify:mldsa44.verify,registrationAlgorithmAdvertised:advertised}));
+          if (!advertised) console.log("LOCAL PQC STATUS: BLOCKED in this runtime; do not claim ML-DSA credential support from this qualification run.");
           NODE
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
           grep -q "STAGING ENVIRONMENT" "$RUNNER_TEMP/home.html"
