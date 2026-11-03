@@ -48,7 +48,7 @@ jobs:
           node --check public/account-continuity/prototype/account-ui.js
           npm run check:worker
       - name: Apply local D1 schema
-        run: npx wrangler d1 migrations apply acrown-account-staging --local --yes
+        run: printf 'y\n' | npx wrangler d1 migrations apply acrown-account-staging --local
       - name: Smoke-test the local Worker HTTP API and homepage
         shell: bash
         run: |
