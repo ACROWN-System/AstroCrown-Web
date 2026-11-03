@@ -256,6 +256,11 @@ try {
 
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("passkey sign-in dialog", () => evaluate("document.getElementById('account-dialog').open"));
+  const brandedAccountTitle = await evaluate("(() => { const heading = document.getElementById('account-dialog-title'); const astro = heading.querySelector('.account-dialog-astro'); const crown = heading.querySelector('.account-dialog-crown'); const context = heading.querySelector('.account-dialog-context'); return {label:heading.getAttribute('aria-label'), astro:astro && astro.textContent, crown:crown && crown.textContent, context:context && context.textContent, astroColor:astro && getComputedStyle(astro).color, crownColor:crown && getComputedStyle(crown).color, logoCount:heading.querySelectorAll('svg,img').length}; })()");
+  assert.deepEqual(brandedAccountTitle, {
+    label:"AstroCrown account", astro:"ASTRO", crown:"CROWN", context:"ACCOUNT",
+    astroColor:"rgb(242, 245, 251)", crownColor:"rgb(255, 215, 0)", logoCount:0
+  }, "the account dialog must use the accessible split-color AstroCrown wordmark without a repeated logo");
   assert.equal(await evaluate("Boolean(document.getElementById('account-email'))"), false,
     "the active sign-in view must not request an email address");
   assert.equal(await evaluate("Boolean(document.getElementById('account-password'))"), false,
@@ -283,6 +288,8 @@ try {
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("passkey registration form", () =>
     evaluate("Boolean(document.getElementById('account-create-form'))"));
+  assert.equal(await evaluate("document.getElementById('account-dialog-title').getAttribute('aria-label')"),
+    "AstroCrown account", "the same branded heading must remain on Sign Up");
   assert.equal(await evaluate("Boolean(document.getElementById('account-email'))"), false);
   assert.equal(await evaluate("Boolean(document.getElementById('account-password'))"), false);
   assert.equal(await evaluate("document.getElementById('account-terms-accepted').required"), true);
@@ -443,6 +450,8 @@ try {
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("passkey sign-in view before recovery", () =>
     evaluate("Boolean(document.getElementById('account-recovery-start'))"));
+  assert.equal(await evaluate("document.getElementById('account-dialog-title').getAttribute('aria-label')"),
+    "AstroCrown account", "the same branded heading must remain on recovery");
   assert.equal(await evaluate("document.getElementById('account-recovery-start').textContent.trim()"),
     "Lost your passkey? Use a recovery key");
   assert.doesNotMatch(await evaluate("document.querySelector('#account-dialog').innerText"),
