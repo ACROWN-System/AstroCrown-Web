@@ -217,6 +217,71 @@
   outline-offset:3px;
 }
 
+/* Passkey sign-in hierarchy: clear divider and generous pointer targets. */
+.account-signin-help {
+  margin:-4px 0 0;
+  text-align:center;
+  font-size:11px;
+  line-height:1.4;
+}
+.account-signin-help a,
+.account-signin-feedback a {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:25px;
+  min-height:25px;
+  padding:4px 6px;
+  color:#ffe58a;
+  text-decoration:underline;
+  text-underline-offset:3px;
+}
+.account-signin-help a:hover,
+.account-signin-feedback a:hover { color:#fff4c2; }
+.account-signin-help a:focus-visible,
+.account-signin-feedback a:focus-visible,
+.account-signin-recovery button:focus-visible {
+  outline:2px solid #ffd700;
+  outline-offset:3px;
+}
+.account-signin-divider {
+  width:calc(100% - 36px);
+  height:2px;
+  margin:14px auto 8px;
+  border-radius:99px;
+  background:linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255,215,0,.58) 9%,
+    rgba(255,215,0,.9) 28%,
+    #ffd700 50%,
+    rgba(255,215,0,.9) 72%,
+    rgba(255,215,0,.58) 91%,
+    transparent 100%
+  );
+  clip-path:polygon(0 50%, 5% 0, 95% 0, 100% 50%, 95% 100%, 5% 100%);
+}
+.account-signin-recovery {
+  margin:7px 0 0;
+  text-align:center;
+  font-size:12px;
+  line-height:1.4;
+}
+.account-signin-recovery .account-text-button {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:25px;
+  min-height:32px;
+  padding:5px 8px;
+}
+.account-signin-feedback {
+  margin:7px 0 0;
+  text-align:right;
+  font-size:10px;
+  line-height:1.35;
+}
+
 .account-success-panel {
   margin-top:16px;
   padding:20px;
