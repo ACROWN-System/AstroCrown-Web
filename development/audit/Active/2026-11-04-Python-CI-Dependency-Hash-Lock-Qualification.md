@@ -112,3 +112,23 @@ No file in `backup/`, `Backup/` or any case variant was changed, moved or delete
 **Positive impact:** the two targeted CI install paths no longer rely on version pins alone. They request hash verification for every package, refuse source distributions, and fail closed when the committed source list and lock disagree.
 
 **Remaining action:** obtain the next official Scorecard result when the change is eventually promoted through the normal owner-approved process. Retain this record and all earlier evidence; do not rewrite historical findings as though they never existed.
+
+
+## 9. Final permanent-workflow verification update — 2026-11-04
+
+**Final inspected code/workflow head:** `478fbd79db8950a3972575792470424955d7ed33`.
+
+The permanent Local Wallet Authentication workflow passed on this head:
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41706091456) — run #534.
+- The exact permanent install command used the 41-package SHA-256 lock with `--require-hashes --only-binary=:all:`.
+- The source/lock consistency step passed.
+- Python compilation and JavaScript syntax checks passed.
+- All 17 unit/HTTP tests passed.
+- The headless-browser wallet smoke test passed.
+- The static no-transaction/no-relay guard passed.
+
+On this head, External Review Pipeline CI (run [41706091313](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41706091313)) and NOVA RSI Engine CI (run [41706091595](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41706091595)) also passed. NOVA RSI CodeQL run [41706091527](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41706091527) was still in progress at the time of this update; do not count it as a pass until the run concludes.
+
+The account-continuity 49-package lock's pip installation was independently exercised by the successful temporary force-reinstall in wallet workflow run #531 (run [41705620853](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41705620853)). That temporary check was removed after success. The permanent Account Continuity workflow now uses the account lock directly, and its source/lock consistency was independently checked. Do not represent run #531 as an exact-head account-suite run.
+
+The last inspected review-thread state still shows the Account Continuity Scorecard finding unresolved and the Wallet Authentication finding outdated. This is expected until the configured default-branch Scorecard workflow performs a fresh scan after an owner-approved promotion. No manual thread resolution was applied.
