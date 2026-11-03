@@ -92,4 +92,11 @@ GitHub Dependency Review, when enabled, is available for public repositories. It
 
 ## 6. Evidence links
 
-See [Python CI Dependency Hash-Lock Qualification](../audit/Active/2026-11-04-Python-CI-Dependency-Hash-Lock-Qualification.md) and the dated dependency vulnerability/SBOM governance audit under `development/audit/Active/`.
+See [Python CI Dependency Hash-Lock Qualification](../audit/Active/2026-11-04-Python-CI-Dependency-Hash-Lock-Qualification.md) and the [2026-11-04 Dependency Vulnerability, License, SBOM and Supply-Chain Review](../audit/Active/2026-11-04-Dependency-Vulnerability-License-SBOM-Supply-Chain-Review.md).
+
+
+## Initial scan outcome — 2026-11-04
+
+The first live full-inventory scan found no known vulnerabilities in either locked inventory: 49 application/account-continuity packages and 29 audit-tool packages. PyPI release metadata matched 49/49 and 29/29 locked wheel hashes. This is a point-in-time advisory result, not a guarantee that the packages are vulnerability-free.
+
+The license reporter now emits explicit review flags for composite SPDX expressions, classifier-only license signals, non-canonical or mixed free-text declarations, and `Other/Proprietary` classifier conflicts. Publisher metadata is never treated as legal approval. The dated audit record identifies the SIWE metadata/provenance exception and composite-license handling.
