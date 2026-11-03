@@ -68,6 +68,22 @@ for (const relativePath of allowlist) {
     js = js.replace(oldSigninCase, newSigninCase).replace(oldDashboardCase, newDashboardCase);
     js = js.replaceAll("local development account", "staging test account");
     js = js.replace(
+      "This local prototype does not grant production access or administrator privileges.",
+      "This staging test account does not grant production access or administrator privileges."
+    );
+    js = js.replace(
+      "The local server keeps your session until it expires or you sign out.",
+      "The staging service keeps your session until it expires or you sign out."
+    );
+    js = js.replace(
+      "<strong>Development User dashboard.</strong>",
+      "<strong>Staging User dashboard.</strong>"
+    );
+    js = js.replace(
+      "This local prototype tests account access and settings only.",
+      "This staging qualification tests account access and settings only."
+    );
+    js = js.replace(
       'throw new Error(liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command.");',
       'throw new Error(workerStagingMode ? "The AstroCrown staging account service is not responding. The test account has not been changed." : (liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command."));'
     );
