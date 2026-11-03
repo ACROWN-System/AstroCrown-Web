@@ -10,6 +10,7 @@ on:
       - ".github/workflows/python-dependency-audit.yml"
       - ".github/workflows/python-ci-lock-refresh.yml"
       - ".github/dependabot.yml"
+      - "development/dependencies/README.md"
   schedule:
     # Weekly scan; no paid scanner or external credentials.
     - cron: "17 3 * * 6"
@@ -50,8 +51,11 @@ jobs:
         run: |
           python -m py_compile development/dependencies/verify_ci_dependency_locks.py development/dependencies/generate_spdx_sbom.py development/dependencies/report_pypi_license_metadata.py development/dependencies/generate_ci_dependency_locks.py
 
-      - name: Install the pinned audit toolchain
-        run: python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock
+      - name: Create isolated audit tool environment
+        run: python -m venv .venv-audit
+
+      - name: Install the hash-pinned audit toolchain into its isolated environment
+        run: .venv-audit/bin/python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock
 
       - name: Audit application dependencies and audit-tool dependencies
         shell: bash
@@ -59,12 +63,12 @@ jobs:
           mkdir -p build/dependency-evidence
           set +e
 
-          python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
             --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
             --format json --output build/dependency-evidence/application-vulnerability-report.json
           app_audit_status=$?
 
-          python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
             --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
             --format cyclonedx-json --output build/dependency-evidence/application-sbom.cdx.json
           app_sbom_status=$?
@@ -74,12 +78,12 @@ jobs:
             --output build/dependency-evidence/application-pypi-license-metadata.json
           app_license_status=$?
 
-          python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
             --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
             --format json --output build/dependency-evidence/audit-toolchain-vulnerability-report.json
           tool_audit_status=$?
 
-          python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
             --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
             --format cyclonedx-json --output build/dependency-evidence/audit-toolchain-sbom.cdx.json
           tool_sbom_status=$?
