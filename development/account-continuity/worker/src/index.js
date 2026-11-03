@@ -192,6 +192,10 @@ async function summary(db, account) {
     "(SELECT COUNT(*) FROM auth_recovery_keys WHERE account_id = ? AND used_at IS NULL) AS recovery_count, " +
     "(SELECT COUNT(*) FROM auth_sessions WHERE account_id = ? AND expires_at > ?) AS session_count"
   ).bind(account.account_id, account.account_id, account.account_id, account.account_id, now).first();
+  const algorithmRows = await db.prepare(
+    "SELECT credential_alg FROM auth_passkeys WHERE account_id = ? AND active = 1 ORDER BY created_at, credential_id"
+  ).bind(account.account_id).all();
+  const passkeyAlgorithmIds = (algorithmRows.results || []).map((row) => Number(row.credential_alg));
   return {
     authenticated: true,
     email: null,
@@ -199,6 +203,7 @@ async function summary(db, account) {
     authMethod: "webauthn",
     passkeyCount: Number(counts.passkey_count || 0),
     postQuantumPasskeyCount: Number(counts.pq_count || 0),
+    passkeyAlgorithmIds,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
     recoveryKeyAvailable: Number(counts.recovery_count || 0) > 0,
     createdAt: account.created_at,
