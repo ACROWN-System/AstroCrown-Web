@@ -12,7 +12,7 @@ The active local prototype now supports:
 - Recovery-key verification followed by replacement passkey registration. Successful recovery revokes all previous passkeys and account sessions, consumes the old recovery key and issues a replacement.
 - Existing stable account IDs, local sessions, User dashboard, server-owned roles, separate Administrator dashboard and EVM/SIWE administrator step-up.
 
-The current implementation is a local loopback prototype. It is not approved for real credentials, personal recovery material, real assets or public user onboarding. It does not provide production storage, hosting, backup/restore, independent security review or formal recovery operations.
+The default account server remains a local loopback prototype. A separate temporary HTTPS runner is provided for browser testing with synthetic details and a disposable account database. Neither mode is production authentication, public account hosting or approval to use personal credentials, recovery material or real assets. Durable storage, backup/restore, independent security review and formal recovery operations remain production blockers.
 
 See [Passkey-First Account Authentication and Recovery Requirements](../PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md) for the complete adopted design and acceptance requirements.
 
@@ -27,7 +27,13 @@ See [Passkey-First Account Authentication and Recovery Requirements](../PASSKEY-
 - Confirm that ordinary account sign-in and recovery do not request a wallet, balance, blockchain transaction, email, SMS or external identity service.
 - Confirm that the optional wallet backup for ordinary account recovery is **not yet implemented**. The separate EVM/SIWE wallet path currently serves only administrator enrollment and step-up.
 - Confirm that administrator role visibility, permissioned appointment/revocation, and the separate administrator-wallet step-up remain server-enforced and cannot be granted by passkey registration.
-- Open the hosted HTML preview to inspect layout only. It is explicitly non-authenticating and cannot create credentials.
+- Open the hosted HTML preview for layout inspection only. For real browser passkey registration, sign-in and recovery, use the separate [Temporary HTTPS live-test procedure](LIVE-HTTPS-TEST-ENVIRONMENT.md).
+
+## Temporary HTTPS live test — Windows PowerShell
+
+For actual browser WebAuthn ceremonies over HTTPS, use [LIVE-HTTPS-TEST-ENVIRONMENT.md](LIVE-HTTPS-TEST-ENVIRONMENT.md). The runner starts the same passkey backend on loopback, exposes it through a temporary Cloudflare Quick Tunnel, validates one exact HTTPS origin/RP ID, requires a random 256-bit Basic Authentication access code, sets Secure cookies and creates a fresh temporary SQLite database. It stops after four hours or Ctrl+C; normal shutdown removes the temporary database directory.
+
+Use only invented test details and a brand-new passkey created for that temporary hostname. Do not enter production account data, personal recovery keys, wallet secrets or real assets. Cloudflare processes traffic at its public edge. The random URL is public at the network layer and the access code is a temporary test gate, not a production access system. No Cloudflare account, custom domain, API token or paid service is required.
 
 ## Install and run locally — Windows PowerShell
 
@@ -36,7 +42,7 @@ Use Python 3.12 and a current Chrome/Edge browser. From the repository root:
     py -3.12 -m pip install -r .\development\account-continuity\prototype\requirements.txt -r .\development\auth-prototype\requirements.txt
     py -3.12 .\development\account-continuity\prototype\server.py --port 8766 --db "$env:TEMP\acrown-passkey-demo.sqlite3"
 
-Open exactly **http://localhost:8766/**. Do not open the HTML file directly or use 127.0.0.1, a LAN address, tunnel, forwarded port or public hostname. WebAuthn is bound to the exact local localhost RP ID and origin. The server binds only to 127.0.0.1.
+Open exactly **http://localhost:8766/** for the local-only option. Do not expose this local-only command through a tunnel; use the separate guarded HTTPS runner instead. WebAuthn is bound to the localhost RP ID and the server binds only to 127.0.0.1.
 
 The Python requirements include the pinned open-source WebAuthn relying-party library and the separately pinned EVM/SIWE library used by administrator tests. Installation retrieves packages from the configured Python package index; runtime authentication does not call a paid identity provider or external authentication API. The hosted HTML preview remains read-only.
 
