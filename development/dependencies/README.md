@@ -56,15 +56,15 @@ The generator uses only the Python standard library. It does not guess transitiv
 
 ## 3. Vulnerability and license-metadata audit
 
-`.github/workflows/python-dependency-audit.yml` runs on dependency-related PR changes, weekly, and by manual dispatch. It:
+`.github/workflows/python-ci-lock-refresh.yml` is the single dependency-governance workflow. It runs on dependency-related PR changes, weekly (Saturday 03:17 UTC), and by manual dispatch. It separates lock refresh/parity from the full audit job so ordinary account/wallet regression runs remain lightweight. It:
 - Installs the audit toolchain from its own SHA-256 lock.
 - Audits the full application lock with pip-audit `--no-deps --require-hashes --strict`.
 - Separately audits the toolchain lock, including pip-audit itself.
 - Emits JSON vulnerability reports and CycloneDX JSON SBOMs.
 - Queries public PyPI release metadata for each exact package version, confirms the lock digest matches a file in that release, and captures the publisher-declared license expression/text and license classifiers.
-- Uploads evidence as a 30-day GitHub Actions artifact, including reports when an audit step fails.
+- Uploads evidence as a 14-day GitHub Actions artifact, including reports when an audit step fails.
 
-No API key, PAT, paid scanner, private index, paid provider or new runtime dependency is required. PyPI metadata requests are unauthenticated.
+No API key, PAT, paid scanner, private index, paid provider or new application-runtime dependency is required. PyPI metadata requests are unauthenticated. GitHub's standard hosted runners are free for public repositories; this design deliberately avoids larger runners and third-party hosted services.
 
 The license report is not a legal review. PyPI fields and classifiers are publisher-supplied data, may be absent or inaccurate, and do not establish the licence of all bundled/transitive material. `NOASSERTION` and `NOT ASSESSED` are retained when evidence is missing. Before public redistribution, commercial use, certification or a licence compliance claim, review the exact upstream LICENSE/COPYING texts and applicable notices for every package, including transitive dependencies.
 
@@ -92,4 +92,4 @@ GitHub Dependency Review, when enabled, is available for public repositories. It
 
 ## 6. Evidence links
 
-See [Python CI Dependency Hash-Lock Qualification](../audit/Active/2026-11-04-Python-CI-Dependency-Hash-Lock-Qualification.md) and the next dated dependency vulnerability/SBOM governance audit under `development/audit/Active/`.
+See [Python CI Dependency Hash-Lock Qualification](../audit/Active/2026-11-04-Python-CI-Dependency-Hash-Lock-Qualification.md) and the dated dependency vulnerability/SBOM governance audit under `development/audit/Active/`.
