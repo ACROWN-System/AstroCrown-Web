@@ -5,3 +5,32 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+
+  # Source requirements remain the reviewed version pins. CI will reject a
+  # Dependabot update until the corresponding platform wheel hashes are
+  # regenerated with generate_ci_dependency_locks.py and included in that PR.
+  - package-ecosystem: pip
+    directory: /development/auth-prototype
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      python-wallet-auth:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: pip
+    directory: /development/account-continuity/prototype
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      python-account-continuity:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
