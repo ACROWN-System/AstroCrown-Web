@@ -393,7 +393,6 @@
       '</div>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-provider-note">A crypto wallet is optional and is not required for ordinary account access. Your offline recovery key is separate from your passkey.</p>' +
       '<p class="account-security-assurance"><button class="account-text-button" type="button" id="account-recovery-start">Recover account with offline key</button></p>';
   }
 
@@ -418,7 +417,7 @@
   function renderRecover() {
     title.textContent = "Recover AstroCrown account";
     content.innerHTML = renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Use the account identifier and your unused offline recovery key to replace lost passkey access. This does not use email, SMS or support approval.</p>' +
+      '<p class="account-dialog-description">Your offline recovery key is a one-time backup for regaining access if you lose your passkey. Enter your account identifier and the currently valid unused key you saved to register a replacement passkey.</p>' +
       '<form id="account-recovery-form" class="account-form" autocomplete="off">' +
         '<label class="account-field" for="account-recovery-identifier">Account identifier' +
           '<input id="account-recovery-identifier" name="accountIdentifier" type="text" required maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-...">' +
