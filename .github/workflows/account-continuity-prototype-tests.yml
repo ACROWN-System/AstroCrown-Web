@@ -39,6 +39,36 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Generate temporary pip-audit tool lock candidate
+        run: |
+          python - <<'PY'
+          import hashlib, subprocess, sys, tempfile
+          from pathlib import Path
+          from pip._vendor.packaging.utils import canonicalize_name, parse_wheel_filename
+
+          with tempfile.TemporaryDirectory(prefix="astrocrown-pip-audit-") as temp:
+              folder = Path(temp)
+              subprocess.run([
+                  sys.executable, "-m", "pip", "download", "--no-cache-dir",
+                  "--disable-pip-version-check", "--only-binary=:all:",
+                  "--dest", str(folder), "pip-audit==2.10.1",
+              ], check=True)
+              packages = {}
+              for wheel in folder.glob("*.whl"):
+                  name, version, _build, _tags = parse_wheel_filename(wheel.name)
+                  key = canonicalize_name(name)
+                  if key in packages:
+                      raise SystemExit(f"Multiple wheels downloaded for {key}")
+                  packages[key] = (str(version), hashlib.sha256(wheel.read_bytes()).hexdigest())
+              print("===== PIP AUDIT TOOL LOCK =====", flush=True)
+              print("# pip-audit 2.10.1 and its full resolved dependency closure.", flush=True)
+              print("# Generated on CPython 3.12 / Ubuntu 24.04 x86_64; wheels only.", flush=True)
+              for name in sorted(packages):
+                  version, digest = packages[name]
+                  print(f"{name}=={version} --hash=sha256:{digest}", flush=True)
+              print(f"===== END PIP AUDIT TOOL LOCK ({len(packages)} packages) =====", flush=True)
+          PY
+
       - name: Verify hash-lock package pins
         run: python development/dependencies/verify_ci_dependency_locks.py account
 
