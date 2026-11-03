@@ -1,5 +1,7 @@
 # Account Continuity and Privacy-Preserving Access Roadmap
 
+> **Authentication authority (2026-11-04):** this document is broad ecosystem context, not an account sign-in specification. The sole governing account-authentication and recovery design is [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). Earlier password/email/provider experiments are not current implementation directions.
+
 **Status:** DEVELOPMENT-ONLY ARCHITECTURE PROPOSAL — NOT IMPLEMENTED  
 **Last updated:** 2026-10-16  
 **Primary location:** AstroCrown-Web `development/account-continuity/`  
@@ -634,10 +636,10 @@ Create a **Requirements and Threat Model Register** before coding account creati
 Only after that register is reviewed should implementation work start. Each implementation should have its own dated plan, branch, exact source-of-truth contract, test plan, evidence, impact analysis, review and explicit promotion decision.
 
 
-## 18. Follow-up prototype record — 2026-10-21
+## Current account-authentication status — 2026-11-04
 
-The development homepage's Account button now has a separate local-only account-creation/sign-in test prototype under development/account-continuity/prototype/. It is intended to test the ordinary-user first-run/sign-in/recovery interaction before selection of production identity providers or passkey technology. It uses a local SQLite database, username/password prototype credentials and one-time recovery codes. It makes no provider or wallet calls and grants no admin role.
+This roadmap remains broad ecosystem context, not the active account-authentication specification. The current local account prototype uses WebAuthn passkeys for registration and discoverable sign-in, plus a user-held one-time offline recovery key. Account identity, sessions and roles remain independent of wallet addresses. The separate EVM/SIWE capability is reserved for administrator wallet enrollment and step-up; optional ordinary-account wallet backup is not yet implemented.
 
-This does not change the overall status above: the account-continuity subsystem remains a development proposal, and the new local prototype is not production account authentication. It does not implement person eligibility, benefit claims, passkeys, provider SSO, account recovery outside its test-code flow, admin wallet registration, Imperial HSIAN restoration, or cloud persistence. See the active test plan at development/audit/Active/2026-10-21-Local-Account-Creation-and-Sign-In-Prototype.md and local instructions at development/account-continuity/prototype/README.md.
+The account flow does not request an email address, password or phone number. Email verification, email password-reset and external email delivery are not account capabilities or recovery dependencies.
 
-Before promotion, continue to verify accessibility, password and session controls, loss-of-device/recovery usability, external-provider qualification, privacy/retention, $0/no-card eligibility, account export/deletion, and the actual public publishing domain/source. Production integration remains blocked.
+This is a loopback-only local prototype, not a production account service. Public onboarding remains blocked pending a verified HTTPS relying-party origin, durable production storage, backup/restore, complete authenticator/session lifecycle controls, privacy/legal approval, independent security review and operational recovery. See the [current implementation status](../audit/Active/2026-11-04-Passkey-First-Account-Implementation-Status.md) and the governing [passkey-first requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md).
