@@ -1,7 +1,7 @@
 # Passkey-First Account Implementation Status and Release Boundary
 
 **Review date:** 2026-11-04  
-**Status:** CURRENT DEVELOPMENT IMPLEMENTATION / LOOPBACK-ONLY / NOT PRODUCTION  
+**Status:** ACCOUNT IMPLEMENTATION LOOPBACK-ONLY / PRODUCTION-PARITY STAGING DIRECTION ACCEPTED / HOSTING RUNTIME NOT YET QUALIFIED / NOT PRODUCTION  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Pull request:** [#141 — Passkey-first account foundation; optional wallet backup](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)
 
