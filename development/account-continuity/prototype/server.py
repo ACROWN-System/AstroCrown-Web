@@ -1677,6 +1677,102 @@ class AccountApplication:
         account, _expires, _token = self.require_account_session(handler)
         return 200, self.account_communications_for(account["account_id"]), None
 
+    def list_account_communications_page(
+        self, payload: dict, handler: BaseHTTPRequestHandler
+    ) -> tuple[int, dict, str | None]:
+        if set(payload) != {"section", "cursor"}:
+            raise ApiError(400, "Provide only the communication destination and optional page cursor.")
+        account, _expires, _token = self.require_account_session(handler)
+        section = payload.get("section")
+        if not isinstance(section, str) or section not in {"alerts", "messages"}:
+            raise ApiError(400, "Choose either Alerts or Messages as the destination.")
+
+        cursor = payload.get("cursor")
+        cursor_created_at = None
+        cursor_communication_id = None
+        if cursor is not None:
+            if not isinstance(cursor, dict) or set(cursor) != {"createdAt", "communicationId"}:
+                raise ApiError(400, "The communication page cursor is invalid.")
+            cursor_created_at = cursor.get("createdAt")
+            cursor_communication_id = cursor.get("communicationId")
+            if not isinstance(cursor_created_at, str) or not 1 <= len(cursor_created_at) <= 40:
+                raise ApiError(400, "The communication page cursor is invalid.")
+            try:
+                parsed_created_at = datetime.fromisoformat(cursor_created_at.replace("Z", "+00:00"))
+                cursor_communication_id = str(uuid.UUID(cursor_communication_id))
+            except (ValueError, TypeError, AttributeError):
+                raise ApiError(400, "The communication page cursor is invalid.")
+            if parsed_created_at.tzinfo is None:
+                raise ApiError(400, "The communication page cursor is invalid.")
+
+        # A stable keyset cursor keeps older records reachable without the
+        # offset-shift problem when a new communication arrives between pages.
+        cursor_clause = ""
+        parameters: list[object] = [account["account_id"], section]
+        if cursor is not None:
+            cursor_clause = """AND (
+                c.created_at < ? OR
+                (c.created_at = ? AND c.communication_id < ?)
+            )"""
+            parameters.extend([
+                cursor_created_at,
+                cursor_created_at,
+                cursor_communication_id,
+            ])
+        parameters.append(51)
+
+        with self.connect() as db:
+            rows = db.execute(
+                """SELECT c.communication_id, c.section, c.subject, c.body,
+                          c.created_at, c.read_at, c.acknowledged_at,
+                          sender.username AS sender_identifier
+                   FROM account_communications c
+                   LEFT JOIN accounts sender ON sender.account_id = c.sender_account_id
+                   WHERE c.recipient_account_id = ? AND c.section = ?
+                   """ + cursor_clause + """
+                   ORDER BY c.created_at DESC, c.communication_id DESC
+                   LIMIT ?""",
+                parameters,
+            ).fetchall()
+            counts = db.execute(
+                """SELECT
+                       SUM(CASE WHEN section = 'alerts' AND acknowledged_at IS NULL THEN 1 ELSE 0 END) AS alerts,
+                       SUM(CASE WHEN section = 'messages' AND read_at IS NULL THEN 1 ELSE 0 END) AS messages
+                   FROM account_communications WHERE recipient_account_id = ?""",
+                (account["account_id"],),
+            ).fetchone()
+
+        has_more = len(rows) > 50
+        page_rows = rows[:50]
+        next_cursor = None
+        if has_more and page_rows:
+            last = page_rows[-1]
+            next_cursor = {
+                "createdAt": last["created_at"],
+                "communicationId": last["communication_id"],
+            }
+        return 200, {
+            "items": [
+                {
+                    "communicationId": row["communication_id"],
+                    "section": row["section"],
+                    "subject": row["subject"],
+                    "body": row["body"],
+                    "senderAccountIdentifier": row["sender_identifier"] or "AstroCrown",
+                    "createdAt": row["created_at"],
+                    "readAt": row["read_at"],
+                    "acknowledgedAt": row["acknowledged_at"],
+                    "requiresAcknowledgement": section == "alerts",
+                }
+                for row in page_rows
+            ],
+            "unreadCounts": {
+                "alerts": int(counts["alerts"] or 0),
+                "messages": int(counts["messages"] or 0),
+            },
+            "nextCursor": next_cursor,
+        }, None
+
     def update_account_communication_state(
         self, payload: dict, handler: BaseHTTPRequestHandler
     ) -> tuple[int, dict, str | None]:
@@ -2430,6 +2526,9 @@ class AccountApplication:
 
         if path == "/api/account/communications":
             return self.list_account_communications(handler)
+
+        if path == "/api/account/communications/page":
+            return self.list_account_communications_page(payload, handler)
 
         if path == "/api/account/communications/state":
             return self.update_account_communication_state(payload, handler)
