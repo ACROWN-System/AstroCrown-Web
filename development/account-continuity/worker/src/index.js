@@ -300,7 +300,7 @@ async function issueRegistration(db, env, request, payload, config) {
   });
   const now = Math.floor(Date.now() / 1000);
   await createChallenge(db, {
-    id: challengeId, challenge, ceremony: "registration", accountId: identifier,
+    id: challengeId, challenge: publicKey.challenge, ceremony: "registration", accountId: identifier,
     accountIdentifier: identifier, userHandle, payload: { referralId: referral, termsVersion: TERMS_VERSION }, now,
   });
   return json(200, { challengeId, publicKey });
@@ -366,7 +366,7 @@ async function issueAuthentication(db, env, request, config) {
     rpID: config.rpId, challenge, timeout: 60000, userVerification: "required",
   });
   const now = Math.floor(Date.now() / 1000);
-  await createChallenge(db, { id: challengeId, challenge, ceremony: "authentication", now });
+  await createChallenge(db, { id: challengeId, challenge: publicKey.challenge, ceremony: "authentication", now });
   return json(200, { challengeId, publicKey });
 }
 async function verifyAuthentication(db, env, request, payload, config) {
@@ -472,7 +472,7 @@ async function issueRecovery(db, env, request, payload, config) {
   });
   const now = Math.floor(Date.now() / 1000);
   await createChallenge(db, {
-    id, challenge, ceremony: "recovery", accountId: account.account_id,
+    id, challenge: publicKey.challenge, ceremony: "recovery", accountId: account.account_id,
     accountIdentifier: identifier, userHandle: account.user_handle,
     payload: { keyVersion: Number(activeKey.key_version) }, now,
   });
