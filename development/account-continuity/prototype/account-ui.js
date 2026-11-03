@@ -4,7 +4,6 @@
   var dialog = document.getElementById("account-dialog");
   var content = document.getElementById("account-content");
   var feedback = document.getElementById("account-feedback");
-  var title = document.getElementById("account-dialog-title");
   var openButton = document.getElementById("open-account-dialog");
   var closeButton = document.getElementById("account-dialog-close");
   var dashboard = document.getElementById("account-dashboard");
@@ -383,7 +382,6 @@
   }
 
   function renderSignIn() {
-    title.textContent = "AstroCrown account";
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
       '<div class="account-form">' +
         '<button class="account-primary" type="button" id="account-passkey-signin"' +
@@ -396,7 +394,6 @@
   }
 
   function renderCreate() {
-    title.textContent = "Create AstroCrown account";
     content.innerHTML = renderTabs("create") + renderDevelopmentNotice() +
       '<p class="account-dialog-description">Create your account by registering a passkey. The private key stays with your authenticator.</p>' +
       '<form id="account-create-form" class="account-form" autocomplete="off">' +
@@ -414,7 +411,6 @@
   }
 
   function renderRecover() {
-    title.textContent = "Recover AstroCrown account";
     content.innerHTML = renderDevelopmentNotice() +
       '<p class="account-dialog-description">Your offline recovery key is a one-time backup for regaining access if you lose your passkey. Enter your account identifier and the currently valid unused key you saved to register a replacement passkey.</p>' +
       '<form id="account-recovery-form" class="account-form" autocomplete="off">' +
