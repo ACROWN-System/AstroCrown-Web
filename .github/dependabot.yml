@@ -15,12 +15,17 @@ updates:
       interval: weekly
     open-pull-requests-limit: 2
     groups:
-      python-wallet-auth:
+      python-wallet-auth-compatible:
         patterns:
           - "*"
         update-types:
           - minor
           - patch
+      python-wallet-auth-major:
+        patterns:
+          - "*"
+        update-types:
+          - major
 
   - package-ecosystem: pip
     directory: /development/account-continuity/prototype
@@ -28,9 +33,14 @@ updates:
       interval: weekly
     open-pull-requests-limit: 2
     groups:
-      python-account-continuity:
+      python-account-continuity-compatible:
         patterns:
           - "*"
         update-types:
           - minor
           - patch
+      python-account-continuity-major:
+        patterns:
+          - "*"
+        update-types:
+          - major
