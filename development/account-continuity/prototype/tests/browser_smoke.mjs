@@ -426,9 +426,15 @@ try {
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("passkey sign-in view before recovery", () =>
     evaluate("Boolean(document.getElementById('account-recovery-start'))"));
+  assert.doesNotMatch(await evaluate("document.querySelector('#account-dialog').innerText"),
+    /A crypto wallet is optional and is not required for ordinary account access/i,
+    "wallet guidance must not appear beside the offline recovery link");
   await evaluate("document.getElementById('account-recovery-start').click()");
   await waitFor("offline recovery form", () =>
     evaluate("Boolean(document.getElementById('account-recovery-form'))"));
+  assert.match(await evaluate("document.querySelector('#account-dialog').innerText"),
+    /Your offline recovery key is a one-time backup for regaining access if you lose your passkey/i,
+    "the recovery view must explain the offline key's purpose");
   await evaluate("document.getElementById('account-recovery-identifier').value = " +
     JSON.stringify(accountIdentifier) + "; document.getElementById('account-recovery-secret').value = " +
     JSON.stringify(initialRecoveryKey) + "; document.getElementById('account-recovery-form').requestSubmit();");
