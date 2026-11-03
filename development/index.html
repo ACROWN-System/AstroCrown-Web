@@ -58,12 +58,72 @@
       transform: translateY(-150%); font-weight: 750;
     }
     .skip-link:focus { transform: translateY(0); }
-    .preview-ribbon {
-      min-height: 25px; padding: 4px 14px; display: flex; justify-content: center; align-items: center;
-      gap: 9px; color: #d9e1ef; background: #060d18; border-bottom: 1px solid rgba(255,255,255,.045);
-      text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .105em; text-transform: uppercase;
+
+    .development-notice-dialog {
+      width:min(680px,calc(100vw - 28px)); max-width:680px;
+      max-height:min(90vh,860px); padding:0; overflow:auto;
+      border:1px solid rgba(255,215,0,.34); border-radius:20px;
+      color:var(--ink); background:
+        radial-gradient(ellipse at 8% 0%,rgba(255,215,0,.10),transparent 24rem),
+        linear-gradient(155deg,rgba(15,31,52,.995),rgba(5,12,23,.995));
+      box-shadow:0 32px 110px rgba(0,0,0,.78),0 0 0 1px rgba(255,215,0,.06);
     }
-    .preview-ribbon .ribbon-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 9px rgba(255,210,74,.35); }
+    .development-notice-dialog::backdrop { background:rgba(1,5,12,.88); backdrop-filter:blur(9px); }
+    .development-notice-topline { height:5px; background:linear-gradient(90deg,#b88620,#ffd700,#fff0a5,#b88620); }
+    .development-notice-content { padding:clamp(22px,4.5vw,38px); }
+    .development-notice-kicker {
+      display:flex; align-items:center; gap:9px; margin:0 0 15px;
+      color:#ffe18a; font-size:11px; font-weight:850; letter-spacing:.13em; text-transform:uppercase;
+    }
+    .development-notice-icon {
+      width:34px; height:34px; display:grid; place-items:center; flex:0 0 34px;
+      border:1px solid rgba(255,210,74,.37); border-radius:10px;
+      color:#ffe18a; background:rgba(255,210,74,.10); font-size:19px;
+    }
+    .development-notice-title {
+      margin:0; color:#fff; font-size:clamp(25px,4.5vw,35px);
+      line-height:1.12; letter-spacing:-.04em;
+    }
+    .development-notice-intro {
+      max-width:590px; margin:13px 0 23px; color:#c5d1e2;
+      font-size:14px; line-height:1.7;
+    }
+    .development-notice-warning {
+      margin:0 0 13px; padding:16px 17px;
+      border:1px solid rgba(229,72,77,.38); border-radius:13px;
+      background:linear-gradient(135deg,rgba(229,72,77,.14),rgba(229,72,77,.055));
+    }
+    .development-notice-warning strong {
+      display:block; margin:0 0 7px; color:#ffb2ad;
+      font-size:13px; font-weight:850; letter-spacing:.035em; text-transform:uppercase;
+    }
+    .development-notice-warning p { margin:0; color:#f1d5d4; font-size:13px; line-height:1.65; }
+    .development-notice-terms { margin:17px 0 0; color:#aebbd0; font-size:11px; line-height:1.65; }
+    .development-notice-ack {
+      display:flex; align-items:flex-start; gap:11px; margin:22px 0 15px;
+      padding:14px 15px; border:1px solid rgba(153,178,213,.23);
+      border-radius:11px; background:rgba(255,255,255,.035);
+      color:#e2e9f3; font-size:12px; line-height:1.55; cursor:pointer;
+    }
+    .development-notice-ack input {
+      width:17px; height:17px; flex:0 0 17px; margin:1px 0 0;
+      accent-color:#ffd700; cursor:pointer;
+    }
+    .development-notice-continue {
+      width:100%; min-height:48px; padding:12px 18px;
+      border:1px solid rgba(255,236,161,.56); border-radius:11px;
+      color:#17130a; background:linear-gradient(180deg,#ffe58a,#ffd700);
+      font-size:13px; font-weight:850; cursor:pointer;
+      transition:filter .15s ease,transform .15s ease;
+    }
+    .development-notice-continue:not(:disabled):hover { filter:brightness(1.06); transform:translateY(-1px); }
+    .development-notice-continue:disabled { opacity:.42; cursor:not-allowed; }
+    @media (max-width:560px) {
+      .development-notice-dialog { width:calc(100vw - 20px); max-height:92vh; border-radius:15px; }
+      .development-notice-content { padding:21px 17px 19px; }
+      .development-notice-intro { font-size:13px; }
+      .development-notice-warning { padding:13px 14px; }
+    }
     .site-header {
       position: sticky; top: 0; z-index: 30; width: 100%; min-height: 62px;
       display: flex; align-items: center; gap: clamp(9px, 1.3vw, 22px);
@@ -108,7 +168,6 @@
       background: transparent; color: #dce5f3; font-size: 12px; cursor: pointer;
     }
     .nav-panel a:hover, .control-panel a:hover, .panel-action:hover { background: rgba(255,255,255,.06); color: #fff; }
-    .panel-note { margin: 7px 8px 5px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1 1 175px; min-width: 95px; max-width: 255px; }
     .search-field {
       width: 100%; height: 36px; padding: 0 34px 0 34px; border-radius: 10px; border: 1px solid var(--line);
@@ -341,13 +400,6 @@
     .discovery-card:nth-child(3n+3) { --tile-color:#9be6c4; --tile-bg:rgba(32,200,120,.07); --tile-border:rgba(32,200,120,.22); --tile-glow:rgba(32,200,120,.24); }
     .discovery-card:nth-child(4n) { --tile-color:#d1b0ff; --tile-bg:rgba(154,113,230,.08); --tile-border:rgba(154,113,230,.22); --tile-glow:rgba(154,113,230,.22); }
 
-    .preview-note {
-      display:flex; align-items:flex-start; gap:12px; margin-top:27px; padding:15px 16px;
-      border:1px solid rgba(255,210,74,.19); border-radius:12px; background:rgba(255,210,74,.035);
-    }
-    .preview-note-icon { display:grid; place-items:center; width:27px; height:27px; flex:0 0 27px; border-radius:8px; color:var(--warning); background:rgba(255,210,74,.09); font-weight:900; }
-    .preview-note h2 { margin:0; color:#eddea7; font-size:11px; font-weight:800; }
-    .preview-note p { margin:4px 0 0; color:#9eacc0; font-size:10px; line-height:1.6; }
     .site-footer { margin-top:27px; padding:24px 0 5px; border-top:1px solid var(--line); }
     .footer-main { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
     .footer-brand { display:flex; align-items:center; gap:10px; }
@@ -417,7 +469,6 @@
       .discovery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
     @media (max-width: 560px) {
-      .preview-ribbon { font-size:8px; letter-spacing:.06em; }
       .site-header { gap:7px; }
       .brand-word { font-size:13px; }
       .brand-mark-link { width:36px; }
@@ -477,7 +528,6 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>Visual review build&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;no live services connected</div>
 
   <header class="site-header">
     <div class="brand-group" aria-label="AstroCrown brand">
@@ -502,7 +552,6 @@
           <a href="#market-context">Market overview <span>↗</span></a>
           <a href="#market-directory">Asset directory <span>↗</span></a>
           <a href="#sentiment-card">Sentiment preview <span>↗</span></a>
-          <p class="panel-note">Sample figures only. Live market feeds are not connected.</p>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -511,7 +560,6 @@
           <div class="panel-label">Exchange concepts</div>
           <a href="#explore">Swap discovery <span>↗</span></a>
           <a href="#explore">Execution comparison <span>↗</span></a>
-          <p class="panel-note">No orders, wallets, or transactions can be initiated from this preview.</p>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -520,7 +568,6 @@
           <div class="panel-label">Tracking concepts</div>
           <a href="#explore">Watchlists <span>↗</span></a>
           <a href="#explore">On-chain activity <span>↗</span></a>
-          <p class="panel-note">Wallet tracking is not connected. Do not enter wallet or account details.</p>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -529,7 +576,6 @@
           <div class="panel-label">Creation studio</div>
           <a href="#explore">Token design <span>↗</span></a>
           <a href="#explore">Logo generator concept <span>↗</span></a>
-          <p class="panel-note">Creation tools are not connected in this visual draft.</p>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -537,8 +583,7 @@
         <div class="nav-panel" id="nova-menu">
           <div class="panel-label">Coordination systems</div>
           <a href="#explore">NOVA systems <span>↗</span></a>
-          <a href="#preview-notes">Prototype boundaries <span>↗</span></a>
-          <p class="panel-note">NOVA is an evolving operational ecosystem; these links are concept previews.</p>
+          <a href="#development-notice">Development notice <span>↗</span></a>
         </div>
       </div>
       <div class="menu-slot nav-slot mobile-more">
@@ -549,7 +594,7 @@
           <a href="#explore">Wallet Tracker concepts <span>↗</span></a>
           <a href="#explore">Token Studio concepts <span>↗</span></a>
           <a href="#explore">NOVA systems <span>↗</span></a>
-          <a href="#preview-notes">About this preview <span>↗</span></a>
+          <a href="#development-notice">Development notice <span>↗</span></a>
         </div>
       </div>
     </nav>
@@ -601,7 +646,7 @@
         </div>
         <div class="info-message">
           <p><strong>Build the signal, verify the source.</strong> <span>— This homepage is using sample content until data contracts are validated.</span></p>
-          <a class="learn-link" href="#preview-notes">Learn more</a>
+          <a class="learn-link" href="#development-notice">Development notice</a>
         </div>
       </div>
     </section>
@@ -833,19 +878,11 @@
       </div>
     </section>
 
-    <div class="preview-note" id="preview-notes">
-      <div class="preview-note-icon" aria-hidden="true">i</div>
-      <div>
-        <h2>Prototype boundaries — please read before evaluating the numbers</h2>
-        <p>This is a visual and interaction prototype. Market figures, price changes, rankings, sentiment scores and influence weights are illustrative sample values, not live data or financial advice. Search, filters, sorting, pagination and preview dialogs operate only on the local sample set. Account creation and sign-in can be tested in a disposable browser-preview demo or through the local loopback development server; neither is production authentication. Preview accounts are erased on reload. Wallet, trading, token creation, external market data and separate destination pages are not connected.</p>
-      </div>
-    </div>
-
     <footer class="site-footer">
       <div class="footer-main">
         <div class="footer-brand">
           <svg class="footer-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,215,0,.25)"/><path d="M24 6 28 19 42 14 33 24 42 34 28 29 24 42 20 29 6 34 15 24 6 14 20 19Z" fill="#ffd700"/><circle cx="24" cy="24" r="4" fill="#081426"/></svg>
-          <span><strong>ASTROCROWN</strong><small>Market discovery · visual prototype</small></span>
+          <span><strong>ASTROCROWN</strong><small>Market discovery</small></span>
         </div>
         <nav class="footer-nav" aria-label="Footer navigation">
           <a href="#market-context">Market context</a>
@@ -857,7 +894,7 @@
       </div>
       <div class="footer-bottom">
         <span>© AstroCrown project · Brand and product concepts remain subject to review.</span>
-        <span><a href="#preview-notes">Prototype scope and data limitations</a></span>
+        <span><a href="#development-notice" id="reopen-development-notice">Development notice</a></span>
       </div>
     </footer>
   </main>
@@ -904,6 +941,25 @@
     </div>
   </section>
 
+  <dialog id="development-notice" class="development-notice-dialog" aria-labelledby="development-notice-title" aria-describedby="development-notice-description">
+    <div class="development-notice-topline" aria-hidden="true"></div>
+    <div class="development-notice-content">
+      <p class="development-notice-kicker"><span class="development-notice-icon" aria-hidden="true">!</span> Important development notice</p>
+      <h1 class="development-notice-title" id="development-notice-title">AstroCrown is under development</h1>
+      <p class="development-notice-intro" id="development-notice-description">You are viewing an unfinished development preview, not a live or operational financial service. Features, account flows, market information and integrations may be incomplete, simulated, unavailable or changed without notice. This preview is provided for visual review only.</p>
+      <div class="development-notice-warning">
+        <strong>Do not use real assets or make transactions</strong>
+        <p>Do not connect a wallet containing real assets, reveal a recovery phrase or private key, sign transaction requests, approve contracts, transfer or deposit funds, swap, stake, or otherwise use real digital assets with this development version. Any assets sent or approvals granted in connection with this preview could be permanently lost and may be impossible to recover.</p>
+      </div>
+      <p class="development-notice-terms">You proceed at your own risk. To the fullest extent permitted by applicable law, AstroCrown and its contributors disclaim responsibility for loss or damage arising from the use of this development preview. Nothing in this notice excludes any right or liability that cannot lawfully be excluded.</p>
+      <label class="development-notice-ack" for="development-notice-acknowledged">
+        <input id="development-notice-acknowledged" type="checkbox">
+        <span>I have read and understood this notice. I will not use this development preview with real assets, real-money wallets or transactions.</span>
+      </label>
+      <button class="development-notice-continue" id="development-notice-continue" type="button" disabled>Continue to development preview</button>
+    </div>
+  </dialog>
+
   <dialog id="preview-dialog" aria-labelledby="dialog-title">
     <div class="dialog-topline"></div>
     <div class="dialog-content">
@@ -911,7 +967,7 @@
       <h2 class="dialog-title" id="dialog-title">Preview</h2>
       <p class="dialog-copy" id="dialog-copy"></p>
       <div class="dialog-note" id="dialog-note"></div>
-      <div class="dialog-actions"><button class="dialog-close" type="button" id="dialog-close">Close preview</button><a class="dialog-link" href="#preview-notes" id="dialog-notes-link">Read prototype notes</a></div>
+      <div class="dialog-actions"><button class="dialog-close" type="button" id="dialog-close">Close preview</button><a class="dialog-link" href="#development-notice" id="dialog-notes-link">Development notice</a></div>
     </div>
   </dialog>
 
@@ -1308,6 +1364,52 @@
           else dialog.removeAttribute("open");
         }
       });
+    }());
+  </script>
+
+  <script>
+    (function () {
+      "use strict";
+      var notice = document.getElementById("development-notice");
+      var acknowledgement = document.getElementById("development-notice-acknowledged");
+      var continueButton = document.getElementById("development-notice-continue");
+      if (!notice || !acknowledgement || !continueButton) return;
+
+      function openNotice() {
+        if (typeof notice.showModal === "function") {
+          if (!notice.open) notice.showModal();
+        } else {
+          notice.setAttribute("open", "");
+          notice.setAttribute("aria-modal", "true");
+        }
+        acknowledgement.focus();
+      }
+
+      acknowledgement.addEventListener("change", function () {
+        continueButton.disabled = !acknowledgement.checked;
+      });
+
+      continueButton.addEventListener("click", function () {
+        if (!acknowledgement.checked) return;
+        if (typeof notice.close === "function") notice.close();
+        else notice.removeAttribute("open");
+      });
+
+      notice.addEventListener("cancel", function (event) {
+        event.preventDefault();
+      });
+
+      document.addEventListener("click", function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('a[href="#development-notice"]') : null;
+        if (!link) return;
+        event.preventDefault();
+        acknowledgement.checked = false;
+        continueButton.disabled = true;
+        openNotice();
+      });
+
+      // The warning is intentionally shown on every fresh homepage load.
+      openNotice();
     }());
   </script>
 </body>
