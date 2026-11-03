@@ -103,7 +103,7 @@ def build_lock(name: str, source_files: list[Path], wheel_dir: Path) -> str:
     lines = [
         "# Exact artifact hashes generated from the target CI runner.",
         "# Target: CPython 3.12, Ubuntu 24.04, x86_64; wheels only.",
-        "# CI-only lock. Re-generate and review hashes before changing platform or Python ABI.",
+        "# This is a CI-only lock. Re-generate and review hashes before changing platform or Python ABI.",
     ]
     for package in sorted(expected):
         version, digest = wheels[package]
