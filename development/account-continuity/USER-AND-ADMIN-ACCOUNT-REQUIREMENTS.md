@@ -621,6 +621,7 @@ No public service, production database, paid identity provider, email/SMS provid
 - **Alerts** are important account, security, governance or service notices. A pending Alert remains visible until the recipient acknowledges it. System-generated alerts are tied to the source event/audit record where one exists. The administrator-role revocation notice belongs here, not as a second copy on the User dashboard.
 - **Messages** are ordinary private in-app correspondence. They are marked read by the recipient and do not require a formal acknowledgement. The current prototype's sending surface is limited to one recipient per send by an administrator who has the separate communication permission.
 - A read or acknowledgement state is scoped to the recipient's own account session. Another account cannot list or change the recipient's communication state. The recipient's account identifier is a routing reference; it is not an authenticator.
+- Each destination is paged independently in batches of 50 using a stable keyset cursor over creation time and communication ID. The cursor cannot change the recipient scope, and the unread badge counts the full inbox rather than only the currently loaded page.
 
 ### Authority and current implementation boundary
 
@@ -637,6 +638,7 @@ No public service, production database, paid identity provider, email/SMS provid
 - [x] Sender-selected destination; Alert acknowledgement and Message read status are separate and persisted.
 - [x] Administrator role revocation creates an Alert linked to the authoritative administrator audit event.
 - [x] Recipient-only listing and state changes; the send operation requires the separate permission and wallet-verified session.
+- [x] Section-specific cursor pagination; older unread communications remain retrievable beyond the first 50 records, with recipient-scoped cursors and full-inbox unread counts.
 - [x] Exact-head automated tests and browser journey passed on implementation/documentation head a44c532c38d7f79b5da668f216941080f8b43e3e; all five tracked PR workflows completed successfully.
 - [ ] Production retention/deletion, access logging, abuse reporting/moderation, availability, durable storage, accessibility and privacy/legal review remain release gates.
 
