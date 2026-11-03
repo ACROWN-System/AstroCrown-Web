@@ -703,11 +703,9 @@ try {
   await waitFor("hosted-preview-mode homepage", pageReady);
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("read-only preview sign-in dialog", () => evaluate("document.getElementById('account-dialog').open"));
-  assert.equal(await evaluate("document.getElementById('account-demo-notice').dataset.mode"),
-    "hosted-preview-no-authentication");
+  assert.equal(await evaluate("document.getElementById('account-demo-notice')"), null,
+    "the hosted-preview disclaimer is intentionally omitted from the account dialog");
   assert.equal(await evaluate("document.getElementById('account-passkey-signin').disabled"), true);
-  assert.match(await evaluate("document.getElementById('account-demo-notice').textContent"),
-    /cannot create accounts or authenticate users/i);
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("read-only preview registration view", () =>
     evaluate("Boolean(document.getElementById('account-create-form'))"));
