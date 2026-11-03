@@ -261,6 +261,15 @@ try {
   assert.equal(await evaluate("Boolean(document.getElementById('account-password'))"), false,
     "the active sign-in view must not request a password");
   assert.equal(await evaluate("Boolean(document.getElementById('account-passkey-signin'))"), true);
+  assert.equal(await evaluate("document.querySelector('#account-passkey-signin + p.account-security-assurance a').textContent.trim()"),
+    "What is a passkey?", "the explainer link must sit immediately below the passkey sign-in button");
+  assert.equal(await evaluate("document.querySelector('#account-passkey-signin + p.account-security-assurance a').getAttribute('href')"),
+    "./account-continuity/prototype/security-assurance.html");
+  assert.equal(await evaluate("document.querySelectorAll('a[href=\"./account-continuity/prototype/security-assurance.html\"]').length"), 1,
+    "the sign-in view must expose one passkey/security explainer link");
+  assert.doesNotMatch(await evaluate("document.getElementById('account-content').innerText"),
+    /Your authenticator keeps the private key|does not receive your biometric/i,
+    "the removed technical paragraph must not reappear in the sign-in view");
   assert.match(await evaluate("document.body.innerText"), /No email address or password is required/i);
 
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
