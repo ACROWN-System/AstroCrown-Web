@@ -203,6 +203,12 @@ try {
   assert.equal(account.accountIdentifier, identifier);
   assert.equal(account.authMethod, "webauthn");
   assert.equal(account.passkeyCount, 1);
+  assert.equal(account.mlDsaRegistrationAvailable, true, "the qualified Worker runtime must offer ML-DSA-44 first.");
+  assert.equal(account.passkeyAlgorithmIds.length, 1, "the account must expose the actual active credential algorithm identifier.");
+  assert.equal(account.postQuantumPasskeyCount, account.passkeyAlgorithmIds.filter(id => [-48, -49, -50].includes(id)).length);
+  console.log("Authenticator credential COSE algorithm: " + account.passkeyAlgorithmIds[0] +
+    "; ML-DSA-44 advertised: " + account.mlDsaRegistrationAvailable +
+    "; actual active ML-DSA credentials: " + account.postQuantumPasskeyCount);
   assert.equal(account.email, null);
   assert.equal(account.role, "user");
   assert.equal(account.recoveryKeyAvailable, true);
