@@ -14,7 +14,8 @@ The source package/version lists are:
 The platform-specific, wheel-only hash locks are:
 - `requirements-wallet-auth-py312-ubuntu24-x86_64.lock` — 41 exact package versions and SHA-256 wheel hashes.
 - `requirements-account-continuity-py312-ubuntu24-x86_64.lock` — 49 exact package versions and SHA-256 wheel hashes.
-- `requirements-pip-audit-py312-ubuntu24-x86_64.lock` — pip-audit 2.10.1 plus its 28-package dependency closure; 29 exact package versions and SHA-256 wheel hashes.
+- `requirements-pip-audit.txt` — direct source pin `pip-audit==2.10.1`.
+- `requirements-pip-audit-py312-ubuntu24-x86_64.lock` — pip-audit 2.10.1 plus its complete 28-package dependency closure; 29 exact package versions and SHA-256 wheel hashes.
 
 The app locks are scoped to CPython 3.12 / Ubuntu 24.04 / x86_64. Do not copy them to Windows, macOS, ARM or a different Python ABI. CI installs use pip `--require-hashes` and `--only-binary=:all:`; this rejects missing hashes and source-distribution fallback.
 
@@ -22,7 +23,7 @@ The app locks are scoped to CPython 3.12 / Ubuntu 24.04 / x86_64. Do not copy th
 
 Weekly Dependabot updates are enabled for the wallet, account-continuity and isolated audit-tool requirement directories, plus GitHub Actions. Dependency update PRs do not automatically bypass hash-lock controls:
 1. Review the proposed exact version changes and upstream release/security information.
-2. In that same PR, regenerate all three platform locks using `python development/dependencies/generate_ci_dependency_locks.py` on CPython 3.12 / Ubuntu 24.04 / x86_64.
+2. In that same PR, regenerate all three platform locks, including the scanner's resolved transitive closure, using `python development/dependencies/generate_ci_dependency_locks.py` on CPython 3.12 / Ubuntu 24.04 / x86_64.
 3. Or run **Actions → Python CI Wheel-Lock Refresh** on the branch with mode `regenerate`, then apply the uploaded candidate lock files to the PR.
 4. Run `python development/dependencies/verify_ci_dependency_locks.py all` (including the audit tool's direct source pin).
 5. Run the account/wallet tests and dependency audit. Do not merge a version update while source pins and hash locks disagree.
@@ -59,7 +60,7 @@ The generator uses only the Python standard library. It does not guess transitiv
 
 `.github/workflows/python-ci-lock-refresh.yml` is the single dependency-governance workflow. It runs on dependency-related PR changes, weekly (Saturday 03:17 UTC), and by manual dispatch. It separates lock refresh/parity from the full audit job so ordinary account/wallet regression runs remain lightweight. It:
 - Installs the audit toolchain from its own SHA-256 lock.
-- Audits the full application lock with pip-audit `--no-deps --require-hashes --strict`.
+- Audits the full application lock with pip-audit `--disable-pip --require-hashes --strict`.
 - Separately audits the toolchain lock, including pip-audit itself.
 - Emits JSON vulnerability reports and CycloneDX JSON SBOMs.
 - Queries public PyPI release metadata for each exact package version, confirms the lock digest matches a file in that release, and captures the publisher-declared license expression/text and license classifiers.
