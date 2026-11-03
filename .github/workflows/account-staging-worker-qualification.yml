@@ -33,8 +33,10 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v6.1.0
         with:
           node-version: "22"
-      - name: Install exact direct package pins
-        run: npm install --no-audit --no-fund
+      - name: Generate the reproducible dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
       - name: Run Worker invariant tests
         run: npm test
       - name: Build the restricted website asset set
@@ -45,6 +47,51 @@ jobs:
           node --check scripts/build-staging-site.mjs
           node --check public/account-continuity/prototype/account-ui.js
           npm run check:worker
+      - name: Apply local D1 schema
+        run: npx wrangler d1 migrations apply acrown-account-staging --local --yes
+      - name: Smoke-test the local Worker HTTP API and homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > "$RUNNER_TEMP/acrown-worker.log" 2>&1 &
+          worker_pid=$!
+          cleanup() {
+            kill "$worker_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          base="http://localhost:8787"
+          ready=false
+          for attempt in $(seq 1 40); do
+            if curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/account/status" -o "$RUNNER_TEMP/account-status.json"; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            cat "$RUNNER_TEMP/acrown-worker.log"
+            echo "::error::Local Worker did not become ready."
+            exit 1
+          fi
+          node --input-type=module - "$RUNNER_TEMP/account-status.json" <<'NODE'
+          import fs from "node:fs";
+          const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (status.authenticated !== false) throw new Error("A fresh local request must be unauthenticated.");
+          if (status.scope !== "staging-test-account-only") throw new Error("The account scope marker is missing.");
+          if (status.passkeyAvailable !== true) throw new Error("The Worker did not report its passkey service.");
+          NODE
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/diagnostics/runtime" -o "$RUNNER_TEMP/runtime.json"
+          node --input-type=module - "$RUNNER_TEMP/runtime.json" <<'NODE'
+          import fs from "node:fs";
+          const runtime = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (runtime.runtime !== "cloudflare-workers") throw new Error("Unexpected Worker runtime.");
+          if (!Array.isArray(runtime.simpleWebAuthnSupportedRegistrationAlgorithms)) throw new Error("Registration algorithm diagnostics missing.");
+          if (!runtime.webCryptoMlDsaSignSupport || typeof runtime.webCryptoMlDsaSignSupport !== "object") throw new Error("ML-DSA capability diagnostics missing.");
+          NODE
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
+          grep -q "STAGING ENVIRONMENT" "$RUNNER_TEMP/home.html"
+          code=$(curl --resolve localhost:8787:127.0.0.1 -sS -o "$RUNNER_TEMP/wrong-origin.json" -w "%{http_code}" -X POST "$base/api/passkeys/authentication/options" -H "Origin: https://untrusted.invalid" -H "Content-Type: application/json" --data "{}")
+          test "$code" = "403"
       - name: Verify remote environment is still fail-closed
         run: |
           node --input-type=module - <<'NODE'
