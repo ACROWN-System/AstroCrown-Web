@@ -8,7 +8,7 @@ on:
       - "development/account-continuity/prototype/account-ui.js"
       - ".github/workflows/account-staging-worker-qualification.yml"
   push:
-    branches: [main]
+    branches: [docs/provider-independent-wallet-auth-plan-2026-10-20]
     paths:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
