@@ -68,10 +68,7 @@ for (const relativePath of allowlist) {
     js = js.replace(oldSigninCase, newSigninCase).replace(oldDashboardCase, newDashboardCase);
     js = js.replaceAll("local development account", "staging test account");
     const oldMlDsaStatus = "'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.'";
-    const newMlDsaStatus = "'ML-DSA-44 ' + (accountState.mlDsaRegistrationAvailable" +
-      " ? 'is supported for verification by this runtime and is offered first during registration. '" +
-      " : 'is not supported for verification by this runtime and cannot be offered here. ') +" +
-      " 'The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.'";
+    const newMlDsaStatus = "'ML-DSA-44 ' + (accountState.mlDsaRegistrationAvailable ? 'is supported for verification by this runtime and is offered first during registration. ' : 'is not supported for verification by this runtime and cannot be offered here. ') + 'The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.'";
     if (!js.includes(oldMlDsaStatus)) throw new Error("The ML-DSA status copy changed; refusing to publish an unqualified security statement.");
     js = js.replace(oldMlDsaStatus, newMlDsaStatus);
     js = js.replace(
