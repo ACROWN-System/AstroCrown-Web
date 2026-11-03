@@ -35,7 +35,7 @@
 .account-dialog::backdrop { background: rgba(1,5,12,.79); backdrop-filter: blur(7px); }
 .account-dialog-shell { padding: clamp(18px, 4vw, 26px); }
 .account-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
-.account-dialog-title { margin:0; color:#f2f5fb; font-size:clamp(21px, 4vw, 26px); line-height:1.18; letter-spacing:-.035em; }
+.account-dialog-title { margin:0; color:var(--gold, #ffd700); font-size:clamp(21px, 4vw, 26px); line-height:1.18; letter-spacing:-.035em; }
 .account-dialog-close {
   display:grid; place-items:center; flex:0 0 36px; width:36px; height:36px;
   border:1px solid rgba(153,178,213,.23); border-radius:9px; background:rgba(255,255,255,.035);
