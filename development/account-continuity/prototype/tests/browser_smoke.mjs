@@ -320,7 +320,7 @@ try {
 
   const communicationSeed = spawnSync(python, [
     "-c",
-    "import sqlite3,sys,uuid; c=sqlite3.connect(sys.argv[1]); a=c.execute('SELECT account_id FROM accounts').fetchone()[0]; c.executemany('INSERT INTO account_communications(communication_id,recipient_account_id,sender_account_id,section,subject,body,created_at) VALUES (?,?,NULL,?,?,?,?)', [(str(uuid.uuid4()),a,'messages','Message '+str(i),'Body '+str(i),'2026-11-01T00:00:00Z') for i in range(55)]); c.commit()",
+    "import sqlite3,sys,uuid; c=sqlite3.connect(sys.argv[1]); a=c.execute('SELECT account_id FROM accounts').fetchone()[0]; c.executemany('INSERT INTO account_communications(communication_id,recipient_account_id,sender_account_id,section,subject,body,created_at,read_at) VALUES (?,?,NULL,?,?,?,?,?)', [(str(uuid.uuid4()),a,'messages','Message '+str(i),'Body '+str(i),'2026-11-01T00:00:00Z','2026-11-01T00:00:00Z') for i in range(55)]); c.commit()",
     databasePath
   ], { encoding: "utf8" });
   assert.equal(communicationSeed.status, 0,
