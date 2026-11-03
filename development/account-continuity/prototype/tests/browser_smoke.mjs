@@ -144,6 +144,34 @@ async function pageReady() {
   );
 }
 
+async function waitForAdminWalletEnrollmentReview(description) {
+  await waitFor(description, async () => {
+    const state = await evaluate(
+      "(() => {" +
+        "const dialog = document.getElementById('admin-wallet-proof-dialog');" +
+        "const message = document.getElementById('admin-wallet-proof-message');" +
+        "const notice = document.getElementById('admin-wallet-connect-notice-status');" +
+        "const feedback = document.getElementById('account-admin-access-feedback');" +
+        "return {" +
+          "ready: Boolean(dialog && dialog.open && message && /first AstroCrown administrator wallet/i.test(message.textContent))," +
+          "proofDialogExists: Boolean(dialog)," +
+          "proofDialogOpen: Boolean(dialog && dialog.open)," +
+          "proofMessage: message ? message.textContent : null," +
+          "walletConnectNotice: notice ? notice.textContent : null," +
+          "adminFeedback: feedback ? feedback.textContent : null," +
+          "connectPending: document.documentElement.getAttribute('data-admin-wallet-connect-pending')," +
+          "walletCalls: window.__adminWalletCalls || []," +
+          "adminApi: window.__adminWalletApi || []," +
+          "browserErrors: window.__adminWalletBrowserErrors || []," +
+          "hash: window.location.hash" +
+        "};" +
+      "})()"
+    );
+    if (state.ready) return state;
+    throw new Error(JSON.stringify(state));
+  });
+}
+
 try {
   const env = { ...process.env, PYTHONDONTWRITEBYTECODE: "1" };
   server = spawn(python, [
@@ -530,7 +558,11 @@ try {
   assert.equal(adminRoleStatus.adminWalletCount, 0);
 
   const walletProviderSetup = await evaluate(
-    "window.__adminWalletCalls = []; window.__adminWalletActivation = [];" +
+    "window.__adminWalletCalls = []; window.__adminWalletActivation = []; window.__adminWalletApi = []; window.__adminWalletBrowserErrors = [];" +
+    "window.addEventListener('error', function (e) { window.__adminWalletBrowserErrors.push(String(e.message || e.error || 'window error')); });" +
+    "window.addEventListener('unhandledrejection', function (e) { window.__adminWalletBrowserErrors.push('unhandled rejection: ' + String(e.reason && e.reason.message || e.reason)); });" +
+    "const __originalAdminWalletFetch = window.fetch.bind(window);" +
+    "window.fetch = async function () { const response = await __originalAdminWalletFetch.apply(this, arguments); const url = String(arguments[0] || ''); if (url.indexOf('/api/admin/') >= 0) { const body = await response.clone().text(); window.__adminWalletApi.push({url:url,status:response.status,body:body.slice(0,1000)}); } return response; };" +
     "window.__adminWalletAddress = " + JSON.stringify(adminWalletFixtureAddress) + ";" +
     "window.__pendingAdminWalletMessage = null; window.__resolveAdminWalletSignature = null;" +
     "window.ethereum = { request: async function (request) {" +
@@ -582,8 +614,7 @@ try {
   await waitFor("first header-wallet request notice", () =>
     evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
   await trustedClick("#wallet-connect-trigger");
-  await waitFor("first-wallet enrollment message review", () =>
-    evaluate("document.getElementById('admin-wallet-proof-dialog').open && /first AstroCrown administrator wallet/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
+  await waitForAdminWalletEnrollmentReview("first-wallet enrollment message review");
   assert.equal(await evaluate("document.querySelector('#wallet-menu').closest('.menu-slot').classList.contains('is-open')"), false,
     "the shared header Wallet control must start the pending administrator connection rather than opening its preview menu");
   await evaluate("document.getElementById('admin-wallet-proof-cancel').click()");
@@ -605,8 +636,7 @@ try {
   await waitFor("header-wallet request for successful enrollment", () =>
     evaluate("Boolean(document.getElementById('admin-wallet-connect-notice'))"));
   await trustedClick("#wallet-connect-trigger");
-  await waitFor("first-wallet enrollment review for signing", () =>
-    evaluate("document.getElementById('admin-wallet-proof-dialog').open && /first AstroCrown administrator wallet/i.test(document.getElementById('admin-wallet-proof-message').textContent)"));
+  await waitForAdminWalletEnrollmentReview("first-wallet enrollment review for signing");
   await trustedClick("#admin-wallet-proof-sign");
   await completePendingAdminWalletSignature();
   await waitFor("separate administrator step-up signature review", () =>

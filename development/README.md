@@ -25,3 +25,11 @@ Homepage-specific requirements and reusable system infrastructure remain separat
 Terminology note: within this repository, **Public Relations** should be written in full or as `public-relations`. Use **GitHub pull request** for Git workflow; avoid using “PR” by itself for Public Relations.
 
 Do not create additional subdirectories until there is an actual artifact that requires them.
+
+## Account authentication assurance and external recognition
+
+- [Authentication Assurance Benchmark](account-continuity/AUTHENTICATION-ASSURANCE-BENCHMARK.md) — scoped authentication/recovery benchmark, hard gates, maturity labels and evidence reporting.
+- [Certification and Recognition Roadmap](account-continuity/CERTIFICATION-AND-RECOGNITION-ROADMAP.md) — FIDO membership tiers and fees, Board eligibility, mark-use distinctions, certification route and $0 readiness activities.
+- [Passkey-First Authentication and Recovery Requirements](account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md) — adopted local passkey direction and the experimental ML-DSA passkey profile.
+
+All are development records. Membership, certification, FIDO mark use, production readiness and ML-DSA authenticator interoperability are not implied by the presence of these documents.

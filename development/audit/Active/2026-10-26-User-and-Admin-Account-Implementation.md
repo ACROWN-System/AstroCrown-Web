@@ -739,3 +739,12 @@ All five tracked workflows passed on implementation/test head `9ea9654d45860f5d4
 - [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41552328120).
 
 These are automated results for the localhost/SQLite development prototype. They are not an independent security assessment, production-readiness determination, formal certification or release authorization. The exact latest documentation-updated head still requires its own CI result. PR #141 remains open, draft, unmerged and undeployed. No main content, production service, secret, real wallet, transaction, paid provider, deployment, domain/DNS setting or historical backup was changed.
+
+
+## 31. Browser diagnostics and ML-DSA fixture quality — 2026-11-03
+
+- The ML-DSA/COSE test fixtures now use byte arrays with the algorithm's published public-key sizes rather than escaped text sequences. They remain metadata/parser fixtures; no mock is represented as a genuine ML-DSA cryptographic signature.
+- The headless Chrome test now captures window errors, unhandled promise rejections and administrator API responses around the first-wallet enrollment flow. A failed signature-popup wait reports dialog state, exact message, wallet-provider calls, relevant API status/body, inline feedback and pending-connection state instead of throwing an unhelpful null-element exception.
+- The instrumentation is test-only and does not alter production page behavior or create an external wallet call.
+
+The exact-head CI rerun is pending after this diagnostic/test-fixture update. Keep the account-continuity workflow blocked from a pass claim until its full headless browser journey succeeds on the exact latest branch head.

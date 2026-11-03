@@ -28,10 +28,13 @@ def b64url(value: bytes) -> str:
 
 def cose_public_key(algorithm_id: int = -7) -> bytes:
     if algorithm_id in {-48, -49, -50}:
-        return cbor2.dumps({1: 7, 3: algorithm_id, -1: b"\\x11" * 2592})
+        public_key_sizes = {-48: 1312, -49: 1952, -50: 2592}
+        return cbor2.dumps({
+            1: 7, 3: algorithm_id, -1: bytes([0x11]) * public_key_sizes[algorithm_id]
+        })
     return cbor2.dumps({
         1: 2, 3: algorithm_id, -1: 1,
-        -2: b"\\x01" * 32, -3: b"\\x02" * 32,
+        -2: bytes([0x01]) * 32, -3: bytes([0x02]) * 32,
     })
 
 
