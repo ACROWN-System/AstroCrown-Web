@@ -163,6 +163,9 @@ async function waitForAdminWalletEnrollmentReview(description) {
           "walletCalls: window.__adminWalletCalls || []," +
           "adminApi: window.__adminWalletApi || []," +
           "browserErrors: window.__adminWalletBrowserErrors || []," +
+          "walletHeaderClickEvents: window.__walletHeaderClickEvents || []," +
+          "walletHeaderCustomEvents: window.__walletHeaderCustomEvents || []," +
+          "headerButton: (() => { const b = document.getElementById('wallet-connect-trigger'); if (!b) return null; const r = b.getBoundingClientRect(); const x = r.left + r.width/2; const y = r.top + r.height/2; const top = document.elementFromPoint(x,y); return {rect:{left:r.left,top:r.top,width:r.width,height:r.height},viewport:{width:innerWidth,height:innerHeight},topmost:top ? {tag:top.tagName,id:top.id,classes:top.className} : null,ariaExpanded:b.getAttribute('aria-expanded'),disabled:b.disabled}; })()," +
           "hash: window.location.hash" +
         "};" +
       "})()"
@@ -558,9 +561,11 @@ try {
   assert.equal(adminRoleStatus.adminWalletCount, 0);
 
   const walletProviderSetup = await evaluate(
-    "window.__adminWalletCalls = []; window.__adminWalletActivation = []; window.__adminWalletApi = []; window.__adminWalletBrowserErrors = [];" +
+    "window.__adminWalletCalls = []; window.__adminWalletActivation = []; window.__adminWalletApi = []; window.__adminWalletBrowserErrors = []; window.__walletHeaderClickEvents = []; window.__walletHeaderCustomEvents = [];" +
+    "document.addEventListener('click', function (e) { const t = e.target instanceof Element ? e.target : null; const b = t && t.closest('#wallet-connect-trigger'); if (b) { const r = b.getBoundingClientRect(); window.__walletHeaderClickEvents.push({trusted:e.isTrusted,defaultPrevented:e.defaultPrevented,target:t.id || t.tagName,x:e.clientX,y:e.clientY,rect:{left:r.left,top:r.top,width:r.width,height:r.height},pending:document.documentElement.getAttribute('data-admin-wallet-connect-pending'),accountDialogOpen:document.getElementById('account-dialog') && document.getElementById('account-dialog').open,adminDialogOpen:document.getElementById('admin-access-dialog') && document.getElementById('admin-access-dialog').open}); } }, true);" +
+    "document.addEventListener('astrocrown:header-wallet-connect', function (e) { window.__walletHeaderCustomEvents.push({trusted:e.isTrusted,pending:document.documentElement.getAttribute('data-admin-wallet-connect-pending')}); }, true);" +
     "window.addEventListener('error', function (e) { window.__adminWalletBrowserErrors.push(String(e.message || e.error || 'window error')); });" +
-    "window.addEventListener('unhandledrejection', function (e) { window.__adminWalletBrowserErrors.push('unhandled rejection: ' + String(e.reason && e.reason.message || e.reason)); });" +
+    "window.addEventListener('unhandledrejection', function (e) { window.__adminWalletBrowserErrors.push('unhandled rejection: ' + String(e.reason && e.reason.message || e.reason)); });"
     "const __originalAdminWalletFetch = window.fetch.bind(window);" +
     "window.fetch = async function () { const response = await __originalAdminWalletFetch.apply(this, arguments); const url = String(arguments[0] || ''); if (url.indexOf('/api/admin/') >= 0) { const body = await response.clone().text(); window.__adminWalletApi.push({url:url,status:response.status,body:body.slice(0,1000)}); } return response; };" +
     "window.__adminWalletAddress = " + JSON.stringify(adminWalletFixtureAddress) + ";" +
