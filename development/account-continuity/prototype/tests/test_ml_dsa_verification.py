@@ -18,6 +18,12 @@ from cryptography.hazmat.primitives.asymmetric.mldsa import (
     MLDSA87PrivateKey,
 )
 
+from pathlib import Path
+import sys
+
+PROTOTYPE_DIR = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROTOTYPE_DIR))
+
 from passkey_auth import PasskeyAuthService, PasskeyVerificationError
 
 
