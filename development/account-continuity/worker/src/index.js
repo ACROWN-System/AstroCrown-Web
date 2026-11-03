@@ -225,7 +225,7 @@ async function summary(db, account) {
     adminWalletAddress: null,
     adminSessionExpiresAt: null,
     administratorRevocationNotice: null,
-    communicationCounts: { alerts: 0, messages: 0 },
+    communicationsUnreadCounts: { alerts: 0, messages: 0 },
   };
 }
 async function newRecoveryKey() {
