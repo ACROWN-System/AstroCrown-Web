@@ -426,6 +426,8 @@ try {
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("passkey sign-in view before recovery", () =>
     evaluate("Boolean(document.getElementById('account-recovery-start'))"));
+  assert.equal(await evaluate("document.getElementById('account-recovery-start').textContent.trim()"),
+    "Lost your passkey? Use a recovery key");
   assert.doesNotMatch(await evaluate("document.querySelector('#account-dialog').innerText"),
     /A crypto wallet is optional and is not required for ordinary account access/i,
     "wallet guidance must not appear beside the offline recovery link");
