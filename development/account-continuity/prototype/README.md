@@ -100,14 +100,15 @@ The current EVM-specific wallet table and verifier are loopback prototype detail
 
 ## Private communications (local prototype only)
 
-The signed-in member can use the header bell to open the private **Alerts** and **Messages** inbox. The destination is selected explicitly by the sender; the system does not classify message text. Alerts remain pending until acknowledged. Messages use read/unread state. An administrator-role revocation creates a recipient-only Alert tied to its source audit record.
+The signed-in member can use the header bell to open the private **Alerts** and **Messages** inbox. The destination is selected explicitly by the sender; the system does not classify message text. Alerts remain pending until acknowledged. Messages use read/unread state. An administrator-role revocation creates a recipient-only Alert tied to its source audit record. Each destination is loaded independently in pages of 50, with a stable cursor to reach older records; unread counts cover the recipient's full inbox, not only the currently loaded page.
 
 An administrator can send a one-recipient in-app communication only when the account has the separate **admin.messages.send** permission and the current administrator session has passed wallet step-up. That permission is not implied by the Administrator role. The current sending form lets the authorized administrator choose Alerts or Messages, then enter the member's AC- Account Identifier, subject and text. This local implementation uses no email, SMS, push service or external provider and is subject to server-side limits. Every administrator send is linked to a same-transaction governance audit event; the audit stores sender, recipient, destination and length metadata, not the private subject or body.
 
 This is not a user-to-user chat/DM service. Threaded conversations, replies, group/broadcast messaging, attachments, external delivery and user-to-user sends are not implemented. Communication records are explanatory content and cannot grant authority or override backend role/session/audit state.
 
 Relevant local API routes:
-- GET /api/account/communications — list only the authenticated recipient's communications.
+- GET /api/account/communications — compatibility list of the authenticated recipient's latest communications.
+- POST /api/account/communications/page — load one Alerts or Messages page (50 records) using an optional stable cursor; both records and cursor are scoped to the authenticated recipient.
 - POST /api/account/communications/state — mark a Message read or acknowledge an Alert for the authenticated recipient only.
 - POST /api/admin/communications/send — send one Alert or Message to an existing account, requiring the distinct administrator permission and wallet-verified session.
 
