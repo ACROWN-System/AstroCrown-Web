@@ -256,11 +256,12 @@ try {
 
   await evaluate("document.getElementById('open-account-dialog').click()");
   await waitFor("passkey sign-in dialog", () => evaluate("document.getElementById('account-dialog').open"));
-  const brandedAccountTitle = await evaluate("(() => { const heading = document.getElementById('account-dialog-title'); const astro = heading.querySelector('.account-dialog-astro'); const crown = heading.querySelector('.account-dialog-crown'); const context = heading.querySelector('.account-dialog-context'); return {label:heading.getAttribute('aria-label'), astro:astro && astro.textContent, crown:crown && crown.textContent, context:context && context.textContent, astroColor:astro && getComputedStyle(astro).color, crownColor:crown && getComputedStyle(crown).color, logoCount:heading.querySelectorAll('svg,img').length}; })()");
+  const brandedAccountTitle = await evaluate("(() => { const heading = document.getElementById('account-dialog-title'); const astro = heading.querySelector('.account-dialog-astro'); const crown = heading.querySelector('.account-dialog-crown'); const context = heading.querySelector('.account-dialog-context'); return {label:heading.getAttribute('aria-label'), astro:astro && astro.textContent, crown:crown && crown.textContent, context:context && context.textContent, astroColor:astro && getComputedStyle(astro).color, crownColor:crown && getComputedStyle(crown).color, contextColor:context && getComputedStyle(context).color, contextFontSize:context && parseFloat(getComputedStyle(context).fontSize), logoCount:heading.querySelectorAll('svg,img').length}; })()");
   assert.deepEqual(brandedAccountTitle, {
-    label:"AstroCrown account", astro:"ASTRO", crown:"CROWN", context:"ACCOUNT",
-    astroColor:"rgb(242, 245, 251)", crownColor:"rgb(255, 215, 0)", logoCount:0
-  }, "the account dialog must use the accessible split-color AstroCrown wordmark without a repeated logo");
+    label:"AstroCrown account", astro:"ASTRO", crown:"CROWN", context:"Account",
+    astroColor:"rgb(242, 245, 251)", crownColor:"rgb(255, 215, 0)",
+    contextColor:"rgb(255, 215, 0)", contextFontSize:18, logoCount:0
+  }, "the account dialog must use the accessible split-color AstroCrown wordmark and larger gold Account descriptor without a repeated logo");
   assert.equal(await evaluate("Boolean(document.getElementById('account-email'))"), false,
     "the active sign-in view must not request an email address");
   assert.equal(await evaluate("Boolean(document.getElementById('account-password'))"), false,
