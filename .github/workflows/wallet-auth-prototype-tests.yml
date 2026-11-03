@@ -22,7 +22,7 @@ jobs:
   offline-and-loopback-tests:
     runs-on: ubuntu-24.04
     # Matches the committed CPython 3.12 Ubuntu 24.04 x86_64 hash-locked wheel set.
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,6 +48,63 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-wallet-auth-py312-ubuntu24-x86_64.lock
           python -m pip freeze
+
+      - name: Temporary full dependency-audit qualification
+        shell: bash
+        run: |
+          python -m venv .venv-audit
+          .venv-audit/bin/python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock
+          mkdir -p build/dependency-evidence
+          set +e
+
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
+            -r development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --format json --output build/dependency-evidence/application-vulnerability-report.json
+          app_audit_status=$?
+
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
+            -r development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --format cyclonedx-json --output build/dependency-evidence/application-sbom.cdx.json
+          app_sbom_status=$?
+
+          python development/dependencies/report_pypi_license_metadata.py \
+            --lock development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --output build/dependency-evidence/application-pypi-license-metadata.json
+          app_license_status=$?
+
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
+            -r development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --format json --output build/dependency-evidence/audit-toolchain-vulnerability-report.json
+          tool_audit_status=$?
+
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
+            -r development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --format cyclonedx-json --output build/dependency-evidence/audit-toolchain-sbom.cdx.json
+          tool_sbom_status=$?
+
+          python development/dependencies/report_pypi_license_metadata.py \
+            --lock development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --output build/dependency-evidence/audit-toolchain-pypi-license-metadata.json
+          tool_license_status=$?
+
+          set -e
+          echo "application audit=$app_audit_status sbom=$app_sbom_status license-metadata=$app_license_status"
+          echo "audit-toolchain audit=$tool_audit_status sbom=$tool_sbom_status license-metadata=$tool_license_status"
+          if [ "$app_audit_status" -ne 0 ] || [ "$app_sbom_status" -ne 0 ] || \
+             [ "$app_license_status" -ne 0 ] || [ "$tool_audit_status" -ne 0 ] || \
+             [ "$tool_sbom_status" -ne 0 ] || [ "$tool_license_status" -ne 0 ]; then
+            echo "::error::At least one audit or evidence-generation operation failed. Review the reports before changing dependencies."
+            exit 1
+          fi
+
+      - name: Upload temporary full dependency-audit evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: temporary-python-dependency-evidence-${{ github.sha }}
+          path: build/dependency-evidence/
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Compile prototype
         run: python -m py_compile development/auth-prototype/wallet_auth_core.py development/auth-prototype/server.py development/auth-prototype/tests/test_auth.py
