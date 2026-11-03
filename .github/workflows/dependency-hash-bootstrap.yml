@@ -1,0 +1,82 @@
+name: Temporary Python Dependency Hash Bootstrap
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/dependency-hash-bootstrap.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-platform-wheel-hashes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Generate fresh wheel hashes without pip cache
+        run: |
+          python - <<'PY'
+          import hashlib, subprocess, sys, tempfile
+          from pathlib import Path
+          from pip._vendor.packaging.requirements import Requirement
+          from pip._vendor.packaging.utils import canonicalize_name, parse_wheel_filename
+
+          root = Path.cwd()
+          targets = {
+              "wallet-auth": [root / "development/auth-prototype/requirements.txt"],
+              "account-continuity": [
+                  root / "development/auth-prototype/requirements.txt",
+                  root / "development/account-continuity/prototype/requirements.txt",
+              ],
+          }
+          with tempfile.TemporaryDirectory(prefix="astrocrown-fresh-hashes-") as temp_dir:
+              base = Path(temp_dir)
+              for label, requirements in targets.items():
+                  dest = base / label
+                  dest.mkdir()
+                  command = [
+                      sys.executable, "-m", "pip", "download", "--no-cache-dir",
+                      "--disable-pip-version-check", "--no-deps", "--only-binary=:all:",
+                      "--dest", str(dest),
+                  ]
+                  for file in requirements:
+                      command.extend(["-r", str(file)])
+                  subprocess.run(command, check=True)
+                  pins = {}
+                  for file in requirements:
+                      for raw in file.read_text(encoding="utf-8").splitlines():
+                          line = raw.split("#", 1)[0].strip()
+                          if not line:
+                              continue
+                          req = Requirement(line)
+                          spec = str(req.specifier)
+                          if not spec.startswith("==") or "," in spec or req.marker:
+                              raise SystemExit("Non-exact pin: " + line)
+                          pins[canonicalize_name(req.name)] = spec[2:]
+                  hashes = {}
+                  for wheel in dest.glob("*.whl"):
+                      name, version, _build, _tags = parse_wheel_filename(wheel.name)
+                      hashes[canonicalize_name(name)] = (
+                          str(version), hashlib.sha256(wheel.read_bytes()).hexdigest()
+                      )
+                  if set(pins) != set(hashes):
+                      raise SystemExit(f"{label}: fresh wheel set differs from source pins")
+                  print(f"===== FRESH HASHES {label} =====", flush=True)
+                  for name in sorted(pins):
+                      version, digest = hashes[name]
+                      if version != pins[name]:
+                          raise SystemExit(f"{label}: version mismatch for {name}")
+                      print(f"{name}=={version} --hash=sha256:{digest}", flush=True)
+                  print(f"===== END FRESH HASHES {label} =====", flush=True)
+          PY
