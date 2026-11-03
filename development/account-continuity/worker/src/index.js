@@ -123,7 +123,7 @@ function configuration(env, request) {
     (env.ENVIRONMENT === "local" && parsed.protocol === "http:" && !["localhost", "127.0.0.1"].includes(rpId))
   ) throw fail(503, "The WebAuthn RP ID and origin do not match an approved exact host.");
   if (new URL(request.url).origin !== origin) throw fail(403, "The request host is not the configured account origin.");
-  return { rpId, origin, rpName: String(env.RP_NAME || "AstroCrown") };
+  return { rpId, origin, rpName: String(env.RP_NAME || "AstroCrown"), localDiagnostics: env.ENVIRONMENT === "local" };
 }
 function gate(request, env) {
   if (env.ENVIRONMENT !== "staging") return null;
@@ -249,7 +249,13 @@ async function verifiedPasskey(response, challenge, config, excluded = []) {
       requireUserVerification: true,
       supportedAlgorithmIDs: getDefaultSupportedAlgorithmIDs(),
     });
-  } catch {
+  } catch (error) {
+    if (config.localDiagnostics) {
+      console.warn("LOCAL TEST ONLY — SimpleWebAuthn registration verifier rejected a credential:", {
+        name: String(error?.name || "Error"),
+        message: String(error?.message || "No diagnostic message"),
+      });
+    }
     throw fail(401, "The passkey registration proof was not accepted. Start again.");
   }
   if (!result.verified || !result.registrationInfo?.credential) throw fail(401, "The passkey registration proof was not accepted. Start again.");
