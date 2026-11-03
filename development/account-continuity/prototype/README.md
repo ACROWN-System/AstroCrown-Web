@@ -127,3 +127,10 @@ The local relying party offers ML-DSA-65, ML-DSA-44 and ML-DSA-87 first, retaini
 ML-DSA keys and signatures are larger than classical passkeys. Cross-browser, hardware-key, transport and synced-credential interoperability remain unproven. This work adds no paid identity provider, external runtime API or paid AI/provider call.
 
 References: [NIST FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) · [IETF ML-DSA for Web Authentication draft 05](https://datatracker.ietf.org/doc/html/draft-vitap-ml-dsa-webauthn-05) · [py_webauthn v3.0.1](https://github.com/duo-labs/py_webauthn/releases/tag/v3.0.1) · [Authentication Assurance Benchmark](../AUTHENTICATION-ASSURANCE-BENCHMARK.md) · [Certification and Recognition Roadmap](../CERTIFICATION-AND-RECOGNITION-ROADMAP.md)
+
+
+## CI dependency integrity
+
+The two prototype test workflows install Python dependencies from committed SHA-256 wheel locks under `development/dependencies/`. Before installation, the standard-library verifier compares each lock's exact package/version set with its source requirements file(s). Installation uses pip hash-checking mode (`--require-hashes`) and rejects source distributions (`--only-binary=:all:`).
+
+These locks are intentionally scoped to CPython 3.12 on Ubuntu 24.04 x86_64, matching the pinned GitHub Actions runners. They are not universal Windows, macOS, ARM or alternate-Python lockfiles. Re-generate and review the selected wheel hashes before changing the runner OS, architecture or Python ABI. Production dependency approval remains a separate review and is not implied by CI hash verification.
