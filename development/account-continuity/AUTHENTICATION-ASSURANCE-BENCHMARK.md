@@ -107,10 +107,14 @@ Never include recovery material, assertions, private keys, session cookies, user
 - Passkey-first localhost registration/sign-in and one-time offline recovery: implemented in the development prototype.
 - Experimental ML-DSA registration negotiation, matching server verification allow-list, algorithm persistence and dashboard counter: implemented in the draft branch; real client interoperability not established.
 - Unit tests for algorithm order and algorithm metadata: added; they do not create a genuine ML-DSA credential or test a real ML-DSA signature.
-- A virtual-authenticator browser journey exists in CI; exact current workflow results must be checked by commit.
+- A virtual-authenticator browser journey exists in CI. At the 2026-11-04 snapshot, the five exact-head workflow runs and limitations are recorded in the [OWASP ASVS 5.0.0 Account Assurance Mapping](../audit/Active/2026-11-03-OWASP-ASVS-5.0.0-Account-Assurance-Mapping.md).
 - Multi-passkey lifecycle/device management UI, production HTTPS/storage/recovery, operational controls and independent review: not qualified.
 - FIDO membership/certification: not obtained.
 - This specification awards no maturity level by itself.
+
+## Standards mapping
+
+The preliminary, selected-family [OWASP ASVS 5.0.0 Account Assurance Mapping](../audit/Active/2026-11-03-OWASP-ASVS-5.0.0-Account-Assurance-Mapping.md) records version-qualified V6 authentication and V7 session references, related API/authorization/data-protection boundaries, the exact branch commit and automated evidence. It intentionally makes no ASVS verification-level or conformance claim. The mapping is an engineering prioritization aid and must not be represented as an external assessment.
 
 ## Findings governance
 

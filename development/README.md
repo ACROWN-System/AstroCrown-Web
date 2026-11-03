@@ -28,6 +28,7 @@ Do not create additional subdirectories until there is an actual artifact that r
 
 ## Account authentication assurance and external recognition
 
+- [OWASP ASVS 5.0.0 Account Assurance Mapping](audit/Active/2026-11-03-OWASP-ASVS-5.0.0-Account-Assurance-Mapping.md) — preliminary, selected-family evidence map; no ASVS level or conformance claim.
 - [Authentication Assurance Benchmark](account-continuity/AUTHENTICATION-ASSURANCE-BENCHMARK.md) — scoped authentication/recovery benchmark, hard gates, maturity labels and evidence reporting.
 - [Certification and Recognition Roadmap](account-continuity/CERTIFICATION-AND-RECOGNITION-ROADMAP.md) — FIDO membership tiers and fees, Board eligibility, mark-use distinctions, certification route and $0 readiness activities.
 - [Passkey-First Authentication and Recovery Requirements](account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md) — adopted local passkey direction and the experimental ML-DSA passkey profile.

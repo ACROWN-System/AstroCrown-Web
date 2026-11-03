@@ -757,3 +757,33 @@ A SHA-pinned official Scorecard Action workflow has been added at `.github/workf
 The first experiment attempted to execute the official Action on the open development feature branch. The Action completed checkout but rejected the analysis with **“only default branch is supported.”** This is an upstream tool limitation, not a security finding or a successful score. The workflow was corrected to the official supported configuration: pushes to the default `main` branch and a weekly scheduled run. The scorecard action workflow will therefore run after an owner-approved merge; it is deliberately not run from this unmerged feature branch.
 
 No Scorecard score, rating, badge or endorsement is claimed. The public project viewer is https://scorecard.dev/viewer/?uri=github.com/ACROWN-System/AstroCrown-Web. Review its report and remediate its evidence-based findings before considering a public badge or turning on `publish_results: true`.
+
+
+
+## 33. OWASP ASVS 5.0.0 account mapping and exact-head evidence refresh — 2026-11-04
+
+### Scope and mapping correction
+
+- Updated the existing active record at `development/audit/Active/2026-11-03-OWASP-ASVS-5.0.0-Account-Assurance-Mapping.md`; no duplicate mapping was created.
+- The mapping now uses the stable OWASP ASVS 5.0.0 release and version-qualified requirement identifiers. It is explicitly a selected-family preliminary evidence map, not requirement-by-requirement verification and not an ASVS Level 1, Level 2 or Level 3 claim.
+- V6 authentication references distinguish passkey login, recovery-key lifecycle and the separate administrator SIWE step-up. The mapping does not treat required WebAuthn user verification as automatic proof of ASVS MFA or attested hardware.
+- V7 records the measured implementation accurately: dynamically generated 256-bit session tokens, SHA-256 token-hash storage, backend session validation and a 30-minute absolute expiry are present. **No inactivity timeout is implemented.** Re-authentication token rotation/old-token termination, account-disable/delete termination, per-session user management and administrator session termination remain partial, unimplemented or not demonstrated as detailed in the mapping.
+- API, authorization, cryptography, TLS, configuration, data-protection and security-logging families are recorded as boundary areas, not blanket passes. The local HTTP cookie intentionally lacks `Secure`; production HTTPS/Secure-cookie and shared-storage behavior remain blocked.
+- ML-DSA remains experimental. Algorithm negotiation, COSE parsing and metadata fixtures do not prove real authenticator-generated ML-DSA registration or signature interoperability.
+- The user-facing Security assurance page now links to the map and replaces its older exact-head test reference with the currently verified snapshot. The development README and Authentication Assurance Benchmark link to the same active record.
+
+### Exact-head workflow verification
+
+All five tracked workflows completed successfully against branch evidence commit `3bdf9040ee966229578585c442383c4a6fa58ba5`:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686773935).
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686773913).
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686772813).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686773811).
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686772991).
+
+The corresponding job records were inspected; each job was completed with a success conclusion and no failed or cancelled steps. These results apply to the development branch commit only and are not independent assessment, formal certification, production readiness, release approval or ASVS conformance.
+
+### Preservation and release boundary
+
+The prior dated audit sections remain intact. The older exact-head statements in those sections are historical snapshots and are superseded for current status by this section. Git history preserves the previous ASVS mapping version. No main-branch content, production service, secret, real credential, real wallet, transaction, paid provider, deployment, domain/DNS setting or historical backup was changed. PR #141 remains open, draft, unmerged and undeployed.
