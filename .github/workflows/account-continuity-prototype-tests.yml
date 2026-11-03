@@ -12,7 +12,7 @@ on:
       - "development/audit/Active/2026-10-21-CMC-Style-Email-Account-Flow.md"
       - ".github/workflows/account-continuity-prototype-tests.yml"
   push:
-    branches: [main]
+    branches: [main, docs/provider-independent-wallet-auth-plan-2026-10-20]
     paths:
       - "development/index.html"
       - "development/dependencies/**"
