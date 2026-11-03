@@ -748,3 +748,12 @@ These are automated results for the localhost/SQLite development prototype. They
 - The instrumentation is test-only and does not alter production page behavior or create an external wallet call.
 
 The exact-head CI rerun is pending after this diagnostic/test-fixture update. Keep the account-continuity workflow blocked from a pass claim until its full headless browser journey succeeds on the exact latest branch head.
+
+
+## 32. OpenSSF Scorecard workflow qualification — 2026-11-03
+
+A SHA-pinned official Scorecard Action workflow has been added at `.github/workflows/scorecard-analysis.yml`. It uses the built-in GitHub token only, has least-privilege read/code-scanning permissions, produces a five-day SARIF artifact and uploads SARIF to GitHub Code Scanning. It adds no PAT, secret, paid provider, or Scorecard API publication (`publish_results: false`).
+
+The first experiment attempted to execute the official Action on the open development feature branch. The Action completed checkout but rejected the analysis with **“only default branch is supported.”** This is an upstream tool limitation, not a security finding or a successful score. The workflow was corrected to the official supported configuration: pushes to the default `main` branch and a weekly scheduled run. The scorecard action workflow will therefore run after an owner-approved merge; it is deliberately not run from this unmerged feature branch.
+
+No Scorecard score, rating, badge or endorsement is claimed. The public project viewer is https://scorecard.dev/viewer/?uri=github.com/ACROWN-System/AstroCrown-Web. Review its report and remediate its evidence-based findings before considering a public badge or turning on `publish_results: true`.
