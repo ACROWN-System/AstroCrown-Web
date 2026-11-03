@@ -34,7 +34,19 @@
     <div class="topline"></div>
     <div class="eyebrow">AstroCrown · Account access</div>
     <h1>Security assurance</h1>
-    <p>This page describes the current local passkey-first account prototype, the specific tests that exercise it, and the controls that remain absent. It is separate from the Terms of Use and Privacy Policy.</p>
+    <p>This page explains why AstroCrown uses passkeys, what the local prototype verifies, which evidence exists, and where the security and certification boundaries remain. It is separate from the Terms of Use and Privacy Policy.</p>
+
+    <section>
+      <h2>Why passkeys?</h2>
+      <p><strong>Sign in without a password.</strong> Your device or security key creates a public/private key pair for AstroCrown. The private key stays with your authenticator. When you sign in, AstroCrown sends a fresh challenge and verifies the signed response with the public key registered to your account.</p>
+      <ul>
+        <li>Your authenticator performs local user verification, such as a device PIN or biometric unlock. AstroCrown does not receive your biometric sample or device PIN.</li>
+        <li>The credential is scoped to the AstroCrown relying-party domain, helping protect against a look-alike site asking for the same passkey.</li>
+        <li>Account sign-in does not require an email address, password, SMS provider, wallet connection, balance check or blockchain transaction.</li>
+        <li>Passkeys may be synced by a platform provider or stored in a device-bound authenticator. These choices have different trust, availability and recovery implications.</li>
+      </ul>
+      <p>Passkeys reduce password-related phishing and reuse risks; they do not make an account impossible to compromise. Protect your devices, credential-sync account and one-time offline recovery key.</p>
+    </section>
 
     <div class="status">
       <strong>Status: Development prototype only — local passkey/recovery development test.</strong>
@@ -56,6 +68,8 @@
           <li>Session tokens are random; SQLite stores their hashes. Local cookies are HttpOnly and SameSite=Strict. These HTTP localhost cookie settings are not a production HTTPS configuration.</li>
           <li>The server binds only to loopback and checks the canonical localhost Host/Origin. Request bodies are bounded. Responses are no-store and use basic security headers and a Content Security Policy.</li>
           <li>Account registration/sign-in/recovery does not invoke an email or SMS provider, a paid identity provider, a third-party authentication API or a blockchain transaction.</li>
+          <li>The server offers experimental ML-DSA-65, ML-DSA-44 and ML-DSA-87 registration algorithms before classical fallbacks. It passes the same allow-list to its registration verifier and records the algorithm actually encoded in each new credential.</li>
+          <li>The User dashboard counts only active credentials whose stored algorithm is recorded as ML-DSA. An advertised option or a classical fallback is not counted as a post-quantum passkey.</li>
           <li>Administrator role/permission checks and the EVM/SIWE administrator step-up remain separate from ordinary passkey authentication. Role appointment and revocation target an existing member by the public AC- account identifier shown in the User dashboard; the identifier is not an authenticator. Email is not required. Wallet connection alone never creates a user account or administrator role.</li>
         </ul>
       </section>
@@ -71,8 +85,19 @@
           <li>Production owner/admin governance, production role management, external security operations, all-admin-wallet-loss Imperial HSIAN recovery, and production account support.</li>
           <li>Independent penetration testing, independent security review, formal ASVS verification, external certification, approved production Terms/Privacy, and production privacy/data retention/export/deletion procedures.</li>
           <li>Synced passkeys may use the user's platform credential-sync provider. Device-bound credentials or a compatible FIDO2 hardware key are alternatives where supported; hardware key purchase is not required by this local prototype.</li>
+          <li>The ML-DSA WebAuthn/CTAP mapping is an active IETF Internet-Draft. Its requested COSE identifiers are marked TBD in that draft. This local profile is experimental; cross-browser, platform-authenticator, credential-sync, roaming-key and FIDO-certified interoperability have not been demonstrated. Classical fallback remains enabled.</li>
           <li>Ordinary account-level wallet-backup enrollment, multi-chain wallet credential schema and Astro-Wallet integration remain separate future work.</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>Assurance and certification preparation</h2>
+        <p>AstroCrown now preserves a scoped benchmark specification and a roadmap for future membership, testing, certification and permitted logo use. These are preparation records, not third-party endorsement, certification or a paid application.</p>
+        <ul>
+          <li><a href="../AUTHENTICATION-ASSURANCE-BENCHMARK.md">Authentication Assurance Benchmark</a> — test domains, hard gates, maturity levels and evidence template.</li>
+          <li><a href="../CERTIFICATION-AND-RECOGNITION-ROADMAP.md">Certification and Recognition Roadmap</a> — FIDO membership tiers, fee snapshot, trademark rules, $0 preparation and future readiness gates.</li>
+        </ul>
+        <p>No FIDO membership, FIDO Certified product, independent audit, OpenSSF badge, NIST AAL designation or third-party approval is currently claimed.</p>
       </section>
 
       <section>
@@ -90,6 +115,9 @@
           <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Passkey_Security_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Passkey Security Cheat Sheet</a> — relying-party implementation, origins, credential lifecycle and recovery.</li>
           <li><a href="https://csrc.nist.gov/pubs/sp/800/63/B/4/final" target="_blank" rel="noopener noreferrer">NIST SP 800-63B-4</a> — authenticator management and recovery guidance. AstroCrown's 128-bit minimum recovery-key target is a project-selected margin; NIST's saved recovery-code minimum is 64 bits.</li>
           <li><a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener noreferrer">OWASP ASVS 5.0.0</a> — broader application security verification baseline.</li>
+          <li><a href="https://csrc.nist.gov/pubs/fips/204/final" target="_blank" rel="noopener noreferrer">NIST FIPS 204</a> — finalized ML-DSA signature standard.</li>
+          <li><a href="https://datatracker.ietf.org/doc/html/draft-vitap-ml-dsa-webauthn-05" target="_blank" rel="noopener noreferrer">IETF ML-DSA for Web Authentication draft 05</a> — active experimental WebAuthn mapping; not a final standard.</li>
+          <li><a href="https://github.com/duo-labs/py_webauthn/releases/tag/v3.0.1" target="_blank" rel="noopener noreferrer">py_webauthn v3.0.1 release</a> — relying-party implementation reference.</li>
         </ul>
         <p>These are engineering references. Their use is not certification, automatic conformance or independent security review.</p>
       </section>

@@ -1,7 +1,7 @@
 # Passkey-First Account Authentication and Recovery Requirements
 
 **Decision date:** 2026-11-03  
-**Status:** OWNER-ACCEPTED DESIGN DIRECTION / IMPLEMENTATION NOT YET STARTED  
+**Status:** OWNER-ACCEPTED DESIGN DIRECTION / PARTIALLY IMPLEMENTED IN LOCAL LOOPBACK PROTOTYPE / NOT PRODUCTION  
 **Scope:** AstroCrown ordinary-user and administrator account authentication  
 **Parent:** [PR #141 — account foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
 **Related requirements:** [User and Administrator Account Requirements](USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md)
@@ -146,4 +146,38 @@ These references are design inputs. Their use does not establish certification, 
 
 ## 10. Explicit exclusions
 
-This decision does not authorize Astro-Wallet, a new wallet application, custody, seed-phrase collection, MPC/TSS, guardian recovery, asset portfolio, transaction/payment/swap/bridge systems, post-quantum cryptography, passkey-based transaction signing, or multi-chain wallet-schema refactoring. Those remain separate future decisions.
+This decision does not authorize Astro-Wallet, a new wallet application, custody, seed-phrase collection, MPC/TSS, guardian recovery, asset portfolio, transaction/payment/swap/bridge systems, passkey-based transaction signing, or multi-chain wallet-schema refactoring. Those remain separate future decisions. Experimental ML-DSA negotiation for WebAuthn passkeys is tracked separately below; it does not authorize post-quantum transaction signing, wallet signatures or changes to the ordinary wallet model.
+
+
+## 11. Experimental post-quantum passkey profile — 2026-11-03
+
+### 11.1 Adopted local engineering direction
+
+The local relying-party prototype requests registration algorithms in this order: ML-DSA-65, ML-DSA-44, ML-DSA-87, then EdDSA, ES256 and RS256. Classical algorithms remain available so a device that does not implement the experimental mapping can still register and authenticate.
+
+The same allow-list is passed to registration-option generation and server-side registration verification. Newly registered and recovery-replacement credentials store the actual COSE algorithm decoded from the verified credential public key. An additive nullable `credential_alg` column is used for existing local databases; the algorithm for a legacy credential without metadata is not guessed. The User dashboard reports only active credentials recorded as ML-DSA.
+
+### 11.2 Standards and identifier status
+
+- [NIST FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) is the finalized ML-DSA signature standard, published on 13 August 2024.
+- [IETF draft-vitap-ml-dsa-webauthn-05](https://datatracker.ietf.org/doc/html/draft-vitap-ml-dsa-webauthn-05), published 15 September 2026 and expiring 19 March 2027, describes a WebAuthn/CTAP mapping. It is an individual Internet-Draft, not a final RFC, final IETF standard or FIDO certification profile.
+- The draft shows requested COSE identifiers -48 (ML-DSA-44), -49 (ML-DSA-65) and -50 (ML-DSA-87) as **TBD/requested assignments**. The prototype uses corresponding constants from its pinned library as an experimental profile; do not describe them as finalized IANA/COSE assignments.
+- `py_webauthn==3.0.1` and the pinned `cryptography` package provide server-side parsing and verification support. This does not prove browser, OS, platform authenticator, credential-sync manager or hardware-key interoperability.
+
+### 11.3 Evidence required before stating that a user uses ML-DSA
+
+Registration options containing ML-DSA entries are not enough. The claim is allowed only when a real browser/authenticator completes registration, the authenticator returns an ML-DSA public key, AstroCrown verifies the registration proof against the expected RP ID/origin/challenge/user-verification and algorithm policy, the actual ML-DSA algorithm is stored, and a later authentication assertion is verified with that stored key.
+
+Tests that mock the cryptographic verdict can test database lifecycle and algorithm metadata; they do not prove a genuine ML-DSA signature or client interoperability. A virtual authenticator that falls back to ES256/EdDSA remains a classical passkey and is counted as such.
+
+### 11.4 Compatibility and release policy
+
+The draft discusses larger public-key/signature payloads and client, platform and CTAP transport support. Measure size, latency, error rate and compatibility for each real platform. Test platform authenticators, synced credentials and USB/NFC/BLE security keys only where an actual implementation is available. Do not treat the draft's recommendations that platforms SHOULD implement ML-DSA as proof that they already do.
+
+This is a local-development experimental profile. It is not a production interoperability guarantee, does not disable classical fallbacks and does not establish that all of AstroCrown is quantum-resistant. Backend authorization, TLS, recovery, storage, dependencies and administrator wallet logic have separate security properties.
+
+### 11.5 $0 budget treatment
+
+The work uses the already-pinned open-source local dependencies and makes no paid identity-provider call, paid AI/provider call, remote authentication request, wallet transaction or blockchain transaction. It does not require users to buy a hardware key. Real-device ML-DSA testing is limited by available authenticator support; any device purchase or external test lab requires separate approval.
+
+References: [NIST FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) · [IETF ML-DSA WebAuthn draft 05](https://datatracker.ietf.org/doc/html/draft-vitap-ml-dsa-webauthn-05) · [py_webauthn v3.0.1](https://github.com/duo-labs/py_webauthn/releases/tag/v3.0.1) · [Authentication Assurance Benchmark](AUTHENTICATION-ASSURANCE-BENCHMARK.md) · [Certification and Recognition Roadmap](CERTIFICATION-AND-RECOGNITION-ROADMAP.md)

@@ -3,6 +3,8 @@
 **Status: local development test only — not production authentication, security certification or a production account service.**
 
 The active local prototype now supports:
+- Experimental ML-DSA-first WebAuthn registration negotiation (ML-DSA-65, -44 and -87), followed by EdDSA, ES256 and RS256 compatibility fallbacks. The server verifier accepts the same allow-list and records the actual credential COSE algorithm for each new/replacement passkey.
+- The User dashboard reports active credentials actually recorded with an ML-DSA algorithm; advertising an algorithm is not treated as evidence that a browser/authenticator used it.
 - WebAuthn passkey registration with discoverable credentials and required local user verification.
 - Discoverable passkey sign-in without an email address, username prompt, password, SMS or external identity provider.
 - A high-entropy, one-time offline recovery key, displayed once at initial registration and after successful recovery. Only a salted one-way verifier is stored.
@@ -93,7 +95,7 @@ The in-product local prototype now supports the separate workflow: an already-au
 
 ## Deferred future wallet strategy — no current implementation
 
-Astro-Wallet (AW) is a separate future product/research concept documented in [Astro-Wallet Strategy and Security Architecture](../../crypto-infrastructure/ASTRO-WALLET-STRATEGY-AND-SECURITY-ARCHITECTURE.md). It is **not** a dependency or scope item for the current account sign-in, User dashboard or Administrator dashboard work. The local wallet authentication lab remains EVM EOA/SIWE-only. No AW SDK, multichain wallet adapter, key-management/recovery system, asset portfolio or post-quantum feature is implemented.
+Astro-Wallet (AW) is a separate future product/research concept documented in [Astro-Wallet Strategy and Security Architecture](../../crypto-infrastructure/ASTRO-WALLET-STRATEGY-AND-SECURITY-ARCHITECTURE.md). It is **not** a dependency or scope item for the current account sign-in, User dashboard or Administrator dashboard work. The local wallet authentication lab remains EVM EOA/SIWE-only. No AW SDK, multichain wallet adapter, key-management/recovery system or asset portfolio is implemented. The separate local passkey prototype now has experimental server-side ML-DSA negotiation and algorithm recording; that is not an Astro-Wallet feature and does not prove current browser/authenticator support or formal interoperability.
 
 The current EVM-specific wallet table and verifier are loopback prototype details, not a production multichain schema. To avoid a future account-system rebuild without prematurely implementing AW, keep stable AstroCrown account IDs, sessions and permissions independent of wallet addresses; keep EVM/SIWE logic inside the wallet-auth boundary; and require a separately reviewed, versioned wallet-credential migration before production persistence or support for additional wallet families. Do not change the current implementation to achieve this future seam now.
 
@@ -113,3 +115,14 @@ Relevant local API routes:
 - POST /api/admin/communications/send — send one Alert or Message to an existing account, requiring the distinct administrator permission and wallet-verified session.
 
 See User and Administrator Account Requirements, section 21, for the governing boundary and production-release requirements.
+
+
+## Experimental ML-DSA passkey profile — $0 local preparation
+
+The local relying party offers ML-DSA-65, ML-DSA-44 and ML-DSA-87 first, retaining EdDSA, ES256 and RS256 as fallbacks. The server passes the same allow-list to registration verification, records the algorithm encoded in each newly verified credential, and counts only credentials actually recorded as ML-DSA in the User dashboard.
+
+**Standards boundary:** NIST FIPS 204 is the finalized ML-DSA signature standard. The WebAuthn/CTAP mapping in `draft-vitap-ml-dsa-webauthn-05` is an active IETF Internet-Draft, not a final standard. Its requested COSE identifiers (-48, -49 and -50) are shown as TBD. AstroCrown treats these as an experimental local profile. Server-library support does not demonstrate browser, OS, platform authenticator, synced-passkey provider or physical FIDO2 key support. An authenticator may select a classical fallback. Never claim a user has a post-quantum passkey unless the stored credential algorithm is actually ML-DSA and real registration and authentication proofs have been verified.
+
+ML-DSA keys and signatures are larger than classical passkeys. Cross-browser, hardware-key, transport and synced-credential interoperability remain unproven. This work adds no paid identity provider, external runtime API or paid AI/provider call.
+
+References: [NIST FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) · [IETF ML-DSA for Web Authentication draft 05](https://datatracker.ietf.org/doc/html/draft-vitap-ml-dsa-webauthn-05) · [py_webauthn v3.0.1](https://github.com/duo-labs/py_webauthn/releases/tag/v3.0.1) · [Authentication Assurance Benchmark](../AUTHENTICATION-ASSURANCE-BENCHMARK.md) · [Certification and Recognition Roadmap](../CERTIFICATION-AND-RECOGNITION-ROADMAP.md)
