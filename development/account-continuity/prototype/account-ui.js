@@ -393,7 +393,7 @@
       '</div>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-security-assurance"><button class="account-text-button" type="button" id="account-recovery-start">Recover account with offline key</button></p>';
+      '<p class="account-security-assurance"><button class="account-text-button" type="button" id="account-recovery-start">Lost your passkey? Use a recovery key</button></p>';
   }
 
   function renderCreate() {
