@@ -1,6 +1,7 @@
 # Hash-locked pip-audit tool and complete resolved dependency closure.
 # Target: CPython 3.12, Ubuntu 24.04, x86_64; wheels only.
-# Scanner: pip-audit 2.10.1. Re-generate after any tool update or platform change.
+# Scanner: pip-audit 2.10.1 and its resolved dependency closure.
+# Re-generate and review hashes before changing platform or Python ABI.
 boolean-py==5.0 --hash=sha256:ef28a70bd43115208441b53a045d1549e2f0ec6e3d08a9d142cbc41c1938e8d9
 cachecontrol==0.14.4 --hash=sha256:b7ac014ff72ee199b5f8af1de29d60239954f223e948196fa3d84adaffc71d2b
 certifi==2026.10.23 --hash=sha256:e9b54de76e530bb6cf0ccd036787103acb58fd42ba930ea8bf948ddbaa2f61d1
