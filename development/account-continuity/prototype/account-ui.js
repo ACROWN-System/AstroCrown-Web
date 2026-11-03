@@ -389,10 +389,11 @@
       '<div class="account-form">' +
         '<button class="account-primary" type="button" id="account-passkey-signin"' +
           (browserPreviewMode ? ' disabled' : '') + '>Sign in with passkey</button>' +
-        '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">What is a passkey?</a></p>' +
+        '<p class="account-signin-help"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why Passkeys?</a></p>' +
       '</div>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
-      '<p class="account-security-assurance"><button class="account-text-button" type="button" id="account-recovery-start">Lost your passkey? Use a recovery key</button></p>';
+      '<div class="account-signin-divider" aria-hidden="true"></div>' +
+      '<p class="account-signin-recovery"><button class="account-text-button" type="button" id="account-recovery-start">Lost your passkey? Use a recovery key</button></p>' +
+      '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
   }
 
   function renderCreate() {
