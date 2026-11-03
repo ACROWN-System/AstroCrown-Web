@@ -94,7 +94,7 @@ jobs:
 
       - name: Compile dependency governance scripts
         run: |
-          python -m py_compile development/dependencies/verify_ci_dependency_locks.py development/dependencies/generate_spdx_sbom.py development/dependencies/report_pypi_license_metadata.py development/dependencies/generate_ci_dependency_locks.py
+          python -m py_compile development/dependencies/verify_ci_dependency_locks.py development/dependencies/verify_dependency_audit_evidence.py development/dependencies/generate_spdx_sbom.py development/dependencies/report_pypi_license_metadata.py development/dependencies/generate_ci_dependency_locks.py
 
       - name: Create isolated audit-tool environment
         run: python -m venv .venv-audit
@@ -108,12 +108,12 @@ jobs:
           mkdir -p build/dependency-evidence
           set +e
 
-          .venv-audit/bin/python -m pip_audit --require-hashes \
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
             --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
             --format json --output build/dependency-evidence/application-vulnerability-report.json
           app_audit_status=$?
 
-          .venv-audit/bin/python -m pip_audit --require-hashes \
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
             --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
             --format cyclonedx-json --output build/dependency-evidence/application-sbom.cdx.json
           app_sbom_status=$?
@@ -123,12 +123,12 @@ jobs:
             --output build/dependency-evidence/application-pypi-license-metadata.json
           app_license_status=$?
 
-          .venv-audit/bin/python -m pip_audit --require-hashes \
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
             --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
             --format json --output build/dependency-evidence/audit-toolchain-vulnerability-report.json
           tool_audit_status=$?
 
-          .venv-audit/bin/python -m pip_audit --require-hashes \
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
             --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
             --format cyclonedx-json --output build/dependency-evidence/audit-toolchain-sbom.cdx.json
           tool_sbom_status=$?
@@ -138,13 +138,26 @@ jobs:
             --output build/dependency-evidence/audit-toolchain-pypi-license-metadata.json
           tool_license_status=$?
 
+          python development/dependencies/verify_dependency_audit_evidence.py \
+            --lock development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --vulnerability-report build/dependency-evidence/application-vulnerability-report.json \
+            --cyclonedx-report build/dependency-evidence/application-sbom.cdx.json
+          app_report_coverage_status=$?
+
+          python development/dependencies/verify_dependency_audit_evidence.py \
+            --lock development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --vulnerability-report build/dependency-evidence/audit-toolchain-vulnerability-report.json \
+            --cyclonedx-report build/dependency-evidence/audit-toolchain-sbom.cdx.json
+          tool_report_coverage_status=$?
+
           set -e
-          echo "application audit=$app_audit_status sbom=$app_sbom_status license-metadata=$app_license_status"
-          echo "audit-toolchain audit=$tool_audit_status sbom=$tool_sbom_status license-metadata=$tool_license_status"
+          echo "application audit=$app_audit_status sbom=$app_sbom_status license-metadata=$app_license_status coverage=$app_report_coverage_status"
+          echo "audit-toolchain audit=$tool_audit_status sbom=$tool_sbom_status license-metadata=$tool_license_status coverage=$tool_report_coverage_status"
 
           if [ "$app_audit_status" -ne 0 ] || [ "$app_sbom_status" -ne 0 ] || \
              [ "$app_license_status" -ne 0 ] || [ "$tool_audit_status" -ne 0 ] || \
-             [ "$tool_sbom_status" -ne 0 ] || [ "$tool_license_status" -ne 0 ]; then
+             [ "$tool_sbom_status" -ne 0 ] || [ "$tool_license_status" -ne 0 ] || \
+             [ "$app_report_coverage_status" -ne 0 ] || [ "$tool_report_coverage_status" -ne 0 ]; then
             echo "::error::A vulnerability audit or evidence-generation step failed. Review uploaded reports before changing or promoting dependencies."
             exit 1
           fi
