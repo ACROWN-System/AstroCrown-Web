@@ -2,8 +2,8 @@
 """Regenerate the platform-specific CI wheel locks using only pip + stdlib.
 
 Run only on CPython 3.12 / Ubuntu 24.04 / x86_64. Downloads wheels but does
-not install or execute them. Default mode writes both locks; --check verifies
-that fresh PyPI-compatible wheel hashes still match committed locks.
+not install or execute them. App test locks are closed package lists; the
+scanner lock resolves the complete dependency closure from its direct source pin.
 """
 from __future__ import annotations
 
@@ -16,20 +16,32 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from pip._vendor.packaging.utils import canonicalize_name, parse_wheel_filename
 
 ROOT = Path(__file__).resolve().parents[2]
 AUTH_SOURCE = ROOT / "development/auth-prototype/requirements.txt"
 ACCOUNT_SOURCE = ROOT / "development/account-continuity/prototype/requirements.txt"
+AUDIT_TOOL_SOURCE = ROOT / "development/dependencies/requirements-pip-audit.txt"
 LOCK_DIR = ROOT / "development/dependencies"
 TARGETS = {
-    "requirements-wallet-auth-py312-ubuntu24-x86_64.lock": [AUTH_SOURCE],
-    "requirements-account-continuity-py312-ubuntu24-x86_64.lock": [AUTH_SOURCE, ACCOUNT_SOURCE],
+    "requirements-wallet-auth-py312-ubuntu24-x86_64.lock": {
+        "sources": [AUTH_SOURCE],
+        "include_dependencies": False,
+    },
+    "requirements-account-continuity-py312-ubuntu24-x86_64.lock": {
+        "sources": [AUTH_SOURCE, ACCOUNT_SOURCE],
+        "include_dependencies": False,
+    },
+    "requirements-pip-audit-py312-ubuntu24-x86_64.lock": {
+        "sources": [AUDIT_TOOL_SOURCE],
+        "include_dependencies": True,
+    },
 }
-SOURCE_LINE = re.compile(r"^([A-Za-z0-9._-]+)==([^<>=!~;\s]+)$")
+SOURCE_LINE = re.compile(r"^([A-Za-z0-9._-]+)==([^<>=!~;\\s]+)$")
 
 
 def canonicalize(name: str) -> str:
-    return re.sub(r"[-_.]+", "-", name).lower()
+    return canonicalize_name(name)
 
 
 def require_supported_target() -> None:
@@ -68,51 +80,55 @@ def read_source_pins(files: list[Path]) -> dict[str, str]:
     return pins
 
 
-def build_lock(name: str, source_files: list[Path], wheel_dir: Path) -> str:
+def build_lock(name: str, source_files: list[Path], wheel_dir: Path, include_dependencies: bool) -> str:
     expected = read_source_pins(source_files)
     command = [
         sys.executable, "-m", "pip", "download",
         "--no-cache-dir", "--disable-pip-version-check",
-        "--no-deps", "--only-binary=:all:",
+        "--only-binary=:all:",
         "--dest", str(wheel_dir),
     ]
+    if not include_dependencies:
+        command.append("--no-deps")
     for source in source_files:
         command.extend(["-r", str(source)])
     subprocess.run(command, check=True)
 
     wheels: dict[str, tuple[str, str]] = {}
     for wheel in sorted(wheel_dir.glob("*.whl")):
-        # Parse the standard wheel filename: distribution-version-build-python-abi-platform.whl
-        parts = wheel.name[:-4].split("-")
-        if len(parts) < 5:
-            raise SystemExit(f"Unexpected wheel filename: {wheel.name}")
-        package_name, package_version = parts[0], parts[1]
+        package_name, package_version, _build, _tags = parse_wheel_filename(wheel.name)
         key = canonicalize(package_name)
         if key in wheels:
             raise SystemExit(f"More than one target wheel downloaded for {key}")
         wheels[key] = (
-            package_version,
+            str(package_version),
             hashlib.sha256(wheel.read_bytes()).hexdigest(),
         )
-    if set(wheels) != set(expected):
+
+    missing_direct = sorted(set(expected) - set(wheels))
+    if missing_direct:
+        raise SystemExit(f"{name}: required direct package wheels missing: {missing_direct}")
+    if not include_dependencies and set(wheels) != set(expected):
         raise SystemExit(
-            f"{name}: wheel/source package mismatch; missing={sorted(set(expected)-set(wheels))}; "
+            f"{name}: wheel/source package mismatch; missing={missing_direct}; "
             f"extra={sorted(set(wheels)-set(expected))}"
         )
+    for package, source_version in expected.items():
+        wheel_version, _digest = wheels[package]
+        if wheel_version != source_version:
+            raise SystemExit(
+                f"{name}: version mismatch for {package}: source={source_version}, wheel={wheel_version}"
+            )
 
     lines = [
         "# Exact artifact hashes generated from the target CI runner.",
         "# Target: CPython 3.12, Ubuntu 24.04, x86_64; wheels only.",
         "# This is a CI-only lock. Re-generate and review hashes before changing platform or Python ABI.",
     ]
-    for package in sorted(expected):
+    for package in sorted(wheels):
         version, digest = wheels[package]
-        if version != expected[package]:
-            raise SystemExit(
-                f"{name}: version mismatch for {package}: source={expected[package]}, wheel={version}"
-            )
         lines.append(f"{package}=={version} --hash=sha256:{digest}")
-    return "\n".join(lines) + "\n"
+    return "\\n".join(lines) + "\\n"
 
 
 def main() -> int:
@@ -121,9 +137,14 @@ def main() -> int:
     args = parser.parse_args()
     require_supported_target()
 
-    for filename, source_files in TARGETS.items():
+    for filename, target in TARGETS.items():
         with tempfile.TemporaryDirectory(prefix="astrocrown-lock-") as temp:
-            output = build_lock(filename, source_files, Path(temp))
+            output = build_lock(
+                filename,
+                target["sources"],
+                Path(temp),
+                target["include_dependencies"],
+            )
         lock_path = LOCK_DIR / filename
         if args.check:
             existing = lock_path.read_text(encoding="utf-8")
