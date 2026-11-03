@@ -42,11 +42,6 @@ jobs:
           python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-wallet-auth-py312-ubuntu24-x86_64.lock
           python -m pip freeze
 
-      - name: Temporarily verify the combined account hash lock
-        run: |
-          python development/dependencies/verify_ci_dependency_locks.py account
-          python -m pip install --disable-pip-version-check --force-reinstall --require-hashes --only-binary=:all: -r development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock
-
       - name: Compile prototype
         run: python -m py_compile development/auth-prototype/wallet_auth_core.py development/auth-prototype/server.py development/auth-prototype/tests/test_auth.py
 
