@@ -107,7 +107,7 @@ An administrator can send a one-recipient in-app communication only when the acc
 This is not a user-to-user chat/DM service. Threaded conversations, replies, group/broadcast messaging, attachments, external delivery and user-to-user sends are not implemented. Communication records are explanatory content and cannot grant authority or override backend role/session/audit state.
 
 Relevant local API routes:
-- GET /api/account/communications — compatibility list of the authenticated recipient's latest communications.
+- GET /api/account/communications — compatibility list of the authenticated recipient's latest 100 communications.
 - POST /api/account/communications/page — load one Alerts or Messages page (50 records) using an optional stable cursor; both records and cursor are scoped to the authenticated recipient.
 - POST /api/account/communications/state — mark a Message read or acknowledge an Alert for the authenticated recipient only.
 - POST /api/admin/communications/send — send one Alert or Message to an existing account, requiring the distinct administrator permission and wallet-verified session.
