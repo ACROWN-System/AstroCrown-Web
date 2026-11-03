@@ -760,7 +760,7 @@
 
       <div class="directory-caption">
         <span id="directory-result-summary">Showing <strong>1–12 of 24</strong> assets</span>
-        <span>Reference currency: <strong>USD</strong> · values are not live</span>
+        <span>Reference currency: <strong>USD</strong></span>
       </div>
       <div class="directory-shell">
         <div class="table-viewport">
@@ -1050,7 +1050,7 @@
       function trendMarkup(trend) {
         var color = trend < 0 ? "#e5484d" : "#20c878";
         var points = trend < 0 ? "1,5 8,10 15,8 22,15 29,13 36,19 43,18 50,22 57,20 64,25 72,24" : "1,23 8,18 15,20 22,12 29,15 36,8 43,10 50,4 57,8 64,2 72,3";
-        return '<svg class="sparkline" viewBox="0 0 74 28" role="img" aria-label="Illustrative seven-day trend"><polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        return '<svg class="sparkline" viewBox="0 0 74 28" role="img" aria-label="Seven-day trend"><polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       }
       function cellChange(value) {
         if (value === null || value === undefined) return '<span class="neutral">—</span>';
