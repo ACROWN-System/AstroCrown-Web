@@ -121,6 +121,32 @@ Repeat secret scanning independently against the release artifact and deployed s
 
 The three passes must each independently show zero across the surfaces we control. They are not three repetitions of the same narrow repository scan. Provider-held logs, backups and point-in-time recovery copies remain subject to documented retention; do not claim immediate erasure where the platform does not provide evidence. The safest invariant is that only synthetic, non-identifying test data and test-only secrets ever enter staging.
 
+### Mandatory post-cleanup retention quarantine
+
+**Owner decision — 2026-11-04:** For a platform with a documented seven-day recovery/undelete window, public production promotion must be separated from final staging closure by at least **eight complete 24-hour periods**. This is an intentional release gate, not an estimate of development duration.
+
+For the current Cloudflare D1 Free candidate, the official documentation currently states:
+- D1 Time Travel on Workers Free can restore a database to a point within the previous seven days.
+- A deleted D1 database can be undeleted for up to seven days after deletion.
+- D1 Free's published Time Travel duration is seven days.
+
+References (recheck at qualification and release time because provider terms can change):
+- https://developers.cloudflare.com/d1/reference/time-travel/
+- https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/undelete/
+- https://developers.cloudflare.com/d1/platform/limits/
+
+The eight-day clock starts only after **both** of these events have occurred, using the later verified UTC timestamp as T0:
+1. The final staging data/credential/session write or mutation has completed and staging writes are disabled.
+2. The staging database/resource has been deleted successfully, with provider confirmation and a recorded deletion timestamp.
+
+No staging restore, undelete, re-creation using the same retained data, or other operation that reintroduces the test dataset is permitted during the quarantine. Any such event invalidates the interval; cleanup must be repeated and a new T0 recorded. Development may continue on a separate working branch and isolated development resources, but the frozen release candidate and quarantined staging environment must not be changed.
+
+The final independent cleanup pass must occur **after** the full eight-day interval. It must verify that the documented seven-day restore and undelete windows have expired, recheck all project-controlled source/build/runtime surfaces, and inspect provider deletion/retention evidence. The release record must include T0, the end timestamp, provider/account/resource identifiers in appropriately redacted form, evidence of deletion, and the independent verification result.
+
+This interval proves only that the provider's documented seven-day recovery/undelete operations have passed their published availability window. It does **not** prove physical erasure of every provider-held storage replica, internal log, abuse/security record, or other retained copy. Those surfaces must be assessed separately against current provider documentation and available account-level evidence. Any retention that is longer, unclear, inaccessible or unverifiable remains UNVERIFIABLE/BLOCKED and prevents a zero-residual claim and production promotion. Never infer erasure solely from elapsed time.
+
+If a different host or database is ultimately selected, calculate the quarantine against that platform's longest documented recovery, undelete, backup and relevant log-retention period, with an additional full 24-hour safety margin. Unknown or uninspectable retention is a blocker, not a reason to assume that eight days is sufficient.
+
 ### Immutable backup and Git-history boundary
 
 Do not modify, delete, rewrite, rename, relocate or compact immutable historical NOVA/AstroCrown backup snapshots to satisfy cleanup. If a test-only secret ever appears in an immutable backup or old Git object, preserve the backup/history as governed but revoke/rotate that secret and record the residual as retained historical material; never misreport it as erased.
