@@ -277,7 +277,8 @@ try {
   assert.doesNotMatch(await evaluate("document.getElementById('account-content').innerText"),
     /Your authenticator keeps the private key|does not receive your biometric/i,
     "the removed technical paragraph must not reappear in the sign-in view");
-  assert.match(await evaluate("document.body.innerText"), /No email address or password is required/i);
+  assert.equal(await evaluate("Boolean(document.querySelector('#account-content .account-dialog-description'))"), false,
+    "the redundant sign-in explanation must not appear above the passkey button");
 
   await evaluate("document.querySelector('[data-account-mode=create]').click()");
   await waitFor("passkey registration form", () =>
