@@ -24,6 +24,7 @@ let authenticatorId = null;
 let nextCommandId = 0;
 let browserOutput = "";
 const pending = new Map();
+const apiEvents = [];
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function waitFor(description, predicate, timeout = 30000) {
@@ -115,7 +116,17 @@ try {
   socket.addEventListener("message", event => {
     let message;
     try { message = JSON.parse(String(event.data)); } catch { return; }
-    if (!message.id) return;
+    if (!message.id) {
+      if (message.method === "Network.responseReceived") {
+        const response = message.params.response;
+        if (response?.url?.includes("/api/")) apiEvents.push({url:response.url,status:response.status,requestId:message.params.requestId});
+      } else if (message.method === "Network.loadingFailed") {
+        if (message.params?.type === "XHR" || message.params?.type === "Fetch") apiEvents.push({loadingFailed:true,errorText:message.params.errorText,requestId:message.params.requestId});
+      } else if (message.method === "Runtime.exceptionThrown") {
+        apiEvents.push({browserException:message.params.exceptionDetails?.text || "uncaught browser exception"});
+      }
+      return;
+    }
     const item = pending.get(message.id);
     if (!item) return;
     clearTimeout(item.timer);
@@ -126,6 +137,7 @@ try {
 
   await cdp("Page.enable");
   await cdp("Runtime.enable");
+  await cdp("Network.enable");
   await cdp("WebAuthn.enable", { enableUI: false });
   const virtual = await cdp("WebAuthn.addVirtualAuthenticator", {
     options: {
@@ -169,8 +181,18 @@ try {
   await waitFor("passkey registration form", () => evaluate("Boolean(document.getElementById('account-create-form'))"));
   await trustedClick("#account-terms-accepted");
   await trustedClick("#account-create-form button[type=submit]");
-  await waitFor("passkey creation and one-time recovery key", () =>
-    evaluate("Boolean(document.getElementById('account-one-time-recovery-key'))"), 45000);
+  const registrationOutcome = await waitFor("passkey registration result", async () => {
+    const state = await evaluate(
+      "({recoveryKey:Boolean(document.getElementById('account-one-time-recovery-key'))," +
+      "feedback:(document.getElementById('account-feedback')?.textContent || '').trim()})"
+    );
+    if (state.recoveryKey) return { success:true };
+    if (state.feedback) return { success:false, feedback:state.feedback };
+    return false;
+  }, 45000);
+  if (!registrationOutcome.success) {
+    throw new Error("Passkey registration did not complete: " + registrationOutcome.feedback);
+  }
 
   const identifier = await evaluate("document.getElementById('account-one-time-account-identifier').value");
   const firstKey = await evaluate("document.getElementById('account-one-time-recovery-key').value");
@@ -267,6 +289,17 @@ try {
   console.log("PASS: Chrome virtual-authenticator registration, discoverable sign-in, sign-out, passkey-loss simulation, offline recovery, previous-key rejection, recovery-key rotation and replacement-passkey sign-in.");
 } catch (error) {
   console.error(String(error?.stack || error));
+  try {
+    const details = await evaluate(
+      "({url:location.href,title:document.title,dialogOpen:Boolean(document.getElementById('account-dialog')?.open)," +
+      "feedback:(document.getElementById('account-feedback')?.textContent || '').trim()," +
+      "accountText:(document.getElementById('account-content')?.innerText || '').slice(0,1600)})"
+    );
+    console.error("Account UI diagnostics:", JSON.stringify(details));
+  } catch (diagnosticError) {
+    console.error("Account UI diagnostics unavailable:", String(diagnosticError?.message || diagnosticError));
+  }
+  console.error("Account API events:", JSON.stringify(apiEvents));
   if (browserOutput) console.error("Chrome output:\n" + browserOutput);
   process.exitCode = 1;
 } finally {
