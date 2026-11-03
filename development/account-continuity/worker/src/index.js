@@ -199,6 +199,7 @@ async function summary(db, account) {
     authMethod: "webauthn",
     passkeyCount: Number(counts.passkey_count || 0),
     postQuantumPasskeyCount: Number(counts.pq_count || 0),
+    mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
     recoveryKeyAvailable: Number(counts.recovery_count || 0) > 0,
     createdAt: account.created_at,
     avatarId: account.avatar_id || "person",
@@ -541,15 +542,21 @@ async function diagnostics() {
   const algorithms = getDefaultSupportedAlgorithmIDs().map(Number);
   const cryptoSupport = {};
   for (const name of ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]) {
-    try { cryptoSupport[name] = Boolean(globalThis.SubtleCrypto?.supports?.("sign", name)); }
-    catch { cryptoSupport[name] = false; }
+    let canSign = false;
+    let canVerify = false;
+    try { canSign = Boolean(globalThis.SubtleCrypto?.supports?.("sign", name)); } catch { canSign = false; }
+    try { canVerify = Boolean(globalThis.SubtleCrypto?.supports?.("verify", name)); } catch { canVerify = false; }
+    cryptoSupport[name] = { sign: canSign, verify: canVerify };
   }
+  const mlDsa44Advertised = algorithms.includes(-48);
   return {
     runtime: "cloudflare-workers",
     simpleWebAuthnSupportedRegistrationAlgorithms: algorithms,
-    webCryptoMlDsaSignSupport: cryptoSupport,
-    pqcRegistrationAlgorithmAdvertised: algorithms.some((n) => PQ_ALGS.includes(n)),
-    note: "Capability reporting only. A real authenticator registration and subsequent assertion are required before claiming an ML-DSA passkey.",
+    webCryptoMlDsaSupport: cryptoSupport,
+    mlDsa44VerificationSupported: cryptoSupport["ML-DSA-44"].verify,
+    mlDsa44RegistrationPreferred: mlDsa44Advertised,
+    pqcRegistrationAlgorithmAdvertised: mlDsa44Advertised,
+    note: "SimpleWebAuthn offers ML-DSA-44 first when the runtime supports verification. A real authenticator must register a credential whose stored COSE alg is -48 and later complete a valid assertion before that account is counted as post-quantum.",
   };
 }
 async function status(db, request) {
@@ -560,6 +567,7 @@ async function status(db, request) {
     adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
     admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
     passkeyAvailable: true, emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
+    mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
     activeSessionCount: 0, scope: "staging-test-account-only",
   });
 }
