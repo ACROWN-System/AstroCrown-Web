@@ -261,12 +261,19 @@ try {
   assert.equal(await evaluate("Boolean(document.getElementById('account-password'))"), false,
     "the active sign-in view must not request a password");
   assert.equal(await evaluate("Boolean(document.getElementById('account-passkey-signin'))"), true);
-  assert.equal(await evaluate("document.querySelector('#account-passkey-signin + p.account-security-assurance a').textContent.trim()"),
-    "What is a passkey?", "the explainer link must sit immediately below the passkey sign-in button");
-  assert.equal(await evaluate("document.querySelector('#account-passkey-signin + p.account-security-assurance a').getAttribute('href')"),
+  assert.equal(await evaluate("document.querySelector('#account-passkey-signin + p.account-signin-help a').textContent.trim()"),
+    "Why Passkeys?", "the explainer link must sit immediately below the passkey sign-in button");
+  assert.equal(await evaluate("document.querySelector('#account-passkey-signin + p.account-signin-help a').getAttribute('href')"),
     "./account-continuity/prototype/security-assurance.html");
   assert.equal(await evaluate("document.querySelectorAll('a[href=\"./account-continuity/prototype/security-assurance.html\"]').length"), 1,
     "the sign-in view must expose one passkey/security explainer link");
+  const signInLayout = await evaluate("(() => { const content = document.getElementById('account-content'); const form = content.querySelector('.account-form'); const help = content.querySelector('.account-signin-help'); const divider = content.querySelector('.account-signin-divider'); const recovery = content.querySelector('.account-signin-recovery'); const feedback = content.querySelector('.account-signin-feedback'); const line = divider.getBoundingClientRect(); const bounds = content.getBoundingClientRect(); const targets = [help.querySelector('a'), recovery.querySelector('button'), feedback.querySelector('a')].map(el => { const r = el.getBoundingClientRect(); return {width:r.width,height:r.height}; }); return {ordered: document.getElementById('account-passkey-signin').nextElementSibling === help && form.nextElementSibling === divider && divider.nextElementSibling === recovery && recovery.nextElementSibling === feedback, dividerInset: line.left > bounds.left && line.right < bounds.right && line.width < bounds.width - 35, targets}; })()");
+  assert.equal(signInLayout.ordered, true,
+    "the passkey link, inset divider, centered recovery action and footer feedback link must appear in the intended order");
+  assert.equal(signInLayout.dividerInset, true,
+    "the gold divider must leave a visible gap before both popup content edges");
+  assert.ok(signInLayout.targets.every(target => target.width >= 25 && target.height >= 25),
+    "passkey, recovery and feedback pointer targets must each measure at least 25 by 25 CSS pixels");
   assert.doesNotMatch(await evaluate("document.getElementById('account-content').innerText"),
     /Your authenticator keeps the private key|does not receive your biometric/i,
     "the removed technical paragraph must not reappear in the sign-in view");
