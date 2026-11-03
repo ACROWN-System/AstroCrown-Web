@@ -26,8 +26,13 @@
   var pendingAdminWalletMessage = null;
   var termsVersion = "development-terms-2026-10-31-v0.3";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
-  var forceBrowserDemo = new URLSearchParams(window.location.search).get("account-preview-demo") === "1";
-  var browserPreviewMode = forceBrowserDemo || loopbackHosts.indexOf(window.location.hostname) === -1;
+  var queryParams = new URLSearchParams(window.location.search);
+  var forceBrowserDemo = queryParams.get("account-preview-demo") === "1";
+  var liveTestHost = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.trycloudflare\.com$/i.test(window.location.hostname);
+  var liveTestMode = queryParams.get("account-live-test") === "1" &&
+    window.location.protocol === "https:" && liveTestHost;
+  var browserPreviewMode = forceBrowserDemo ||
+    (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);
   // Built-in glyphs only: no user-uploaded image, remote URL or third-party asset.
   // The server independently validates the selected identifier.
   var avatarOptions = {
@@ -269,7 +274,7 @@
         body: payload === undefined ? undefined : JSON.stringify(payload)
       });
     } catch (_error) {
-      throw new Error("The local account prototype is not running. Start it with the documented local command.");
+      throw new Error(liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command.");
     }
     var data;
     try { data = await response.json(); }
@@ -376,9 +381,12 @@
 
   function renderDevelopmentNotice() {
     if (browserPreviewMode) return "";
-    return '<p class="account-demo-notice" id="account-demo-notice" data-mode="local-passkey-test">' +
-      "LOCAL PASSKEY TEST — WebAuthn is verified by this computer's local AstroCrown server. No email, SMS or external identity provider is used. Not production authentication." +
-      '</p>';
+    var noticeMode = liveTestMode ? "https-live-test" : "local-passkey-test";
+    var noticeText = liveTestMode
+      ? "TEMPORARY HTTPS LIVE TEST — Use only invented test details and a new passkey created for this temporary hostname. Never use production account data, personal recovery keys, wallet secrets or real assets. This is not a production service."
+      : "LOCAL PASSKEY TEST — WebAuthn is verified by this computer's local AstroCrown server. No email, SMS or external identity provider is used. Not production authentication.";
+    return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' + noticeMode + '">' +
+      noticeText + '</p>';
   }
 
   function renderSignIn() {
