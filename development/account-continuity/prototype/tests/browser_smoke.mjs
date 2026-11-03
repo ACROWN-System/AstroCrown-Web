@@ -265,6 +265,19 @@ try {
 
   await cdp("Page.navigate", { url: localUrl });
   await waitFor("homepage load", pageReady);
+  await waitFor("development safety notice opens on a fresh visit", () =>
+    evaluate("document.getElementById('development-notice').open"));
+  assert.equal(await evaluate("document.getElementById('development-notice-acknowledged').checked"), false,
+    "the safety notice must require an explicit acknowledgement on a fresh visit");
+  assert.equal(await evaluate("document.getElementById('development-notice-continue').disabled"), true,
+    "the preview must not continue before the notice is acknowledged");
+  await trustedClick("#development-notice-acknowledged");
+  await waitFor("development notice acknowledgement enables Continue", () =>
+    evaluate("document.getElementById('development-notice-acknowledged').checked && !document.getElementById('development-notice-continue').disabled"));
+  await trustedClick("#development-notice-continue");
+  await waitFor("development safety notice closes after explicit acknowledgement", () =>
+    evaluate("!document.getElementById('development-notice').open"));
+  assert.equal(await evaluate("document.getElementById('development-notice').open"), false);
   assert.equal(await evaluate("window.isSecureContext"), true, "localhost must be a WebAuthn secure context");
   assert.equal(await evaluate("Boolean(window.ethereum)"), false, "ordinary account access must not request a crypto wallet");
 
