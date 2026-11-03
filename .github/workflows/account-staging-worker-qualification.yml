@@ -98,7 +98,11 @@ jobs:
             echo "::error::BLOCKED: no preinstalled Chrome/Chromium; Worker passkey browser evidence is required."
             exit 1
           fi
-          CHROME_BIN="$CHROME_BIN" node tests/worker_browser_smoke.mjs
+          if ! CHROME_BIN="$CHROME_BIN" node tests/worker_browser_smoke.mjs; then
+            echo "Local-only Worker diagnostics (no credential or request body is logged):"
+            grep "LOCAL TEST ONLY" "$RUNNER_TEMP/acrown-worker.log" || true
+            exit 1
+          fi
       - name: Verify remote environment is still fail-closed
         run: |
           node --input-type=module - <<'NODE'
