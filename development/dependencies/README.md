@@ -102,3 +102,19 @@ See [Python CI Dependency Hash-Lock Qualification](../audit/Active/2026-11-04-Py
 The first live scan found no known vulnerabilities for 49/49 application/account-continuity packages and 27/29 packages represented in the audit-tool vulnerability/SBOM reports. The two scanner-lock entries `pip` and `packaging` were missing from those reports and are not counted as scanned. PyPI release metadata independently matched 49/49 and 29/29 locked wheel hashes. The scanner mode and report validator have since been corrected; complete 29/29 coverage is pending a new passing audit run. This is a point-in-time advisory result, not a guarantee that the packages are vulnerability-free.
 
 The license reporter now emits explicit review flags for composite SPDX expressions, classifier-only license signals, non-canonical or mixed free-text declarations, and `Other/Proprietary` classifier conflicts. Publisher metadata is never treated as legal approval. The dated audit record identifies the SIWE metadata/provenance exception and composite-license handling.
+
+
+## Corrected full-scan and wheel-lock qualification — 2026-11-04
+
+The corrected frozen-input audit used `pip-audit --strict --disable-pip --require-hashes` and a report-completeness verifier. It confirmed:
+- 49/49 application/account-continuity packages in both vulnerability JSON and CycloneDX;
+- 29/29 audit-tool packages in both reports;
+- zero known vulnerabilities in either exact inventory;
+- 49/49 and 29/29 PyPI artifact hashes matched;
+- all 78 packages had a publisher license signal, with 16 review-flag occurrences retained for source/notice review (not legal approvals).
+
+Evidence: [full frozen-lock audit run #577](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41715226331), artifact ID `13268329430`.
+
+A separate live check then regenerated all three wheel locks from fresh uncached downloads on Ubuntu 24.04 / CPython 3.12 / x86_64 and matched every committed lock exactly. The same run passed the 17 wallet tests and the headless-browser journey: [run #581](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41715825128).
+
+The routine wallet workflow has since been restored to its lightweight form. The full audit and weekly lock refresh remain in the single dedicated Python Dependency Governance workflow. The scheduled workflow becomes active after it is present on the default branch through the normal approved PR process.
