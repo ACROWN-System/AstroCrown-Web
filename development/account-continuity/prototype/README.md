@@ -61,7 +61,6 @@ The optional wallet authenticator for ordinary account recovery is not yet conne
 
 The active account journey is passkey-first. It does not request an email address, password or phone number, and does not include email verification, email password-reset, newsletter delivery or an outbound email service. Do not add email or an external identity provider as an account-access or recovery dependency.
 
-> **Legacy-code warning — test-only, not a product feature:** Dormant email-verification and email-delivery code remains in this local prototype solely so explicitly opted-in legacy regression tests can exercise the retired email-first implementation. It is not part of the passkey-first account flow, is not activated by the default server configuration, must not be configured, exposed or used for public accounts, and must not be treated as a supported capability or a planned direction. New account work must not depend on it. Removing this compatibility code requires a separate, reviewed test-pruning change.
 
 The hosted HTML Preview is a third-party interface proxy. It cannot create passkeys or exercise the local SQLite backend. It must never be used for real authentication, recovery material or wallet secrets.
 
