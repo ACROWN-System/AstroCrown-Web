@@ -692,3 +692,26 @@ All five tracked workflows passed against implementation/test head ff5be04091750
 - [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41548300739).
 
 These automated results verify the localhost/SQLite development prototype only. They are not an independent security assessment, formal standards certification, production readiness or release approval. PR #141 remains open, draft, unmerged and undeployed. No main, production service, secret, real wallet, transaction, paid provider, domain/DNS setting, deployment or historical backup was changed.
+
+
+## 28. Complete Alerts and Messages history — cursor pagination — 2026-11-03
+
+### Issue identified and correction
+
+- Review found that the original inbox query returned only the latest 100 communication records while its unread counters covered every record. A recipient with more than 100 records could therefore see a pending count for older Alerts or Messages that the inbox could not return.
+- Added `POST /api/account/communications/page`, which loads one explicitly selected destination (Alerts or Messages) in batches of 50. The page cursor uses the stored creation timestamp and communication UUID as a stable keyset; it avoids offset drift when newer communications arrive between page requests.
+- The server binds every page query to the authenticated session's recipient account ID and the requested section. Cursor validation is strict, and a cursor cannot override the recipient scope. Unread counters continue to cover the recipient's full inbox rather than only the currently loaded page.
+- The header bell and inbox now use the paged route, offer **Load older Alerts** or **Load older Messages**, append only the selected section's next page, and preserve read/acknowledgement state when the recipient changes a record.
+- The legacy GET listing remains available for compatibility and continues to return only the most recent 100 records; it is no longer the UI's inbox loading path.
+
+### Regression coverage
+
+- Added a test with 55 Alerts and 55 Messages sharing identical timestamps. It verifies two complete pages per destination, deterministic cursor traversal without duplicates or omissions, full-inbox unread counts, acknowledgement of an item beyond the first page, invalid section/cursor rejection, and recipient isolation when another account reuses the cursor.
+- The seeded pagination fixture is local test data only. The test does not send email, SMS, push notifications, or external requests.
+- Implementation commits: backend `ec7483e28ec07ea33bdbfdbe4143cbc7e6825856`; inbox UI `5261b2608f81a5f3dc203cf11e4fd7c929eddb02`; API regression tests `b8b9d99bfbdf855924fb32cb2390c2664cc2dc84`. Requirements and README describe the 50-record section-specific pagination contract.
+
+### Verification status
+
+Exact-head CI is pending until all implementation, test and documentation commits are complete. Do not describe this block as passed until the latest branch head's tracked workflows have completed successfully.
+
+This remains a localhost/SQLite prototype capability. It does not change message delivery scope, permission requirements, the admin send audit model, production retention policy or release gates. PR #141 remains draft, open, unmerged and undeployed.
