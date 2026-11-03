@@ -715,3 +715,27 @@ These automated results verify the localhost/SQLite development prototype only. 
 Exact-head CI is pending until all implementation, test and documentation commits are complete. Do not describe this block as passed until the latest branch head's tracked workflows have completed successfully.
 
 This remains a localhost/SQLite prototype capability. It does not change message delivery scope, permission requirements, the admin send audit model, production retention policy or release gates. PR #141 remains draft, open, unmerged and undeployed.
+
+
+## 29. Cursor pagination browser journey and exact-head CI — 2026-11-03
+
+### Browser verification and fixture isolation
+
+- Updated the actual headless Chrome account journey to seed 55 Messages into its isolated temporary SQLite database, all initially marked read so the later administrator-revocation Alert acknowledgement assertion remains independent of this pagination fixture.
+- Chrome opens the authenticated Communications page, switches to Messages, waits for the server-selected Messages page, verifies 50 displayed records and a **Load older Messages** control, activates it, and verifies all 55 records are present with the paging control removed.
+- The same browser journey subsequently completes the existing administrator wallet enrollment/step-up flow, administrator communication checks, step-up termination, administrator-role revocation, recipient-only revocation Alert presentation and acknowledgement, then verifies the ordinary account session remains available.
+- The browser test's post-revocation wait now requires the Administrator entry to be absent before proceeding. This avoids accepting the already-visible pre-refresh User dashboard as the completed post-revocation state.
+- The loopback/API regression test independently seeds 55 Alerts and 55 Messages at identical timestamps, verifies stable cursor paging without duplicates or omissions, whole-inbox unread counts, acknowledgement of an older Alert, strict cursor/section validation and recipient isolation.
+- Browser pagination fixture rows are read-state examples only; the API regression remains responsible for proving full-inbox unread accounting and old unread Alert handling.
+
+### Exact implementation/test-head evidence
+
+All five tracked workflows passed on implementation/test head `9ea9654d45860f5d4e75698e562281c184fd98ff`:
+
+- [Local Account Continuity Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41552328122) — Python/JavaScript syntax, loopback API/account suite, static security-boundary checks and complete headless Chrome journey passed.
+- [Local Wallet Authentication Prototype Tests — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41552328252).
+- [NOVA RSI Engine CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41552328265).
+- [NOVA RSI CodeQL Security Analysis — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41552328323).
+- [External Review Pipeline CI — PASS](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41552328120).
+
+These are automated results for the localhost/SQLite development prototype. They are not an independent security assessment, production-readiness determination, formal certification or release authorization. The exact latest documentation-updated head still requires its own CI result. PR #141 remains open, draft, unmerged and undeployed. No main content, production service, secret, real wallet, transaction, paid provider, deployment, domain/DNS setting or historical backup was changed.
