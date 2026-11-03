@@ -19,13 +19,13 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 
 - Administrator role provisioning, EVM/SIWE wallet enrollment, privileged dashboard APIs and administrator actions are not enabled. This Worker creates ordinary user accounts only.
 - In-app communications return an empty/disabled staging result. No email, SMS or identity provider is used.
-- The case portal's static page is copied for continuity, but its API is not implemented by this account Worker.
+- Feedback/case-portal entry points are replaced with an explicit not-enabled note in the staging asset build; no non-working case API is exposed.
 - ML-DSA capability is not credential evidence. A real authenticator must register an ML-DSA credential, the server must store its actual COSE algorithm, and a later assertion must verify before the credential is described as post-quantum.
 - This port has not yet had independent security review and does not replace the Python reference. Account API parity, runtime quota measurements and end-to-end regression tests remain required.
 
 ## Local qualification
 
-Use a supported Node.js LTS and npm. From this directory, run npm install, npm run build:site, npx wrangler d1 migrations apply DB --local, and npx wrangler dev --local. Wrangler displays the local URL. Local development uses the localhost RP ID; it is not the remote staging URL.
+Use a supported Node.js LTS, npm, and a preinstalled Chrome/Chromium browser. From this directory, run npm install, npm run build:site, npx wrangler d1 migrations apply acrown-account-staging --local, and npx wrangler dev --local. Wrangler displays the local URL. Local development uses the localhost RP ID; it is not the remote staging URL. The qualification workflow also runs a Chrome virtual-authenticator registration, discoverable sign-in, passkey-loss and offline-recovery test against the local Worker.
 
 ## Remote staging — not authorized or performed
 

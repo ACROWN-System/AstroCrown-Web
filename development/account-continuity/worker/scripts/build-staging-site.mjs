@@ -16,9 +16,6 @@ const allowlist = [
   "account-continuity/prototype/security-assurance.html",
   "account-continuity/prototype/terms-of-use.html",
   "account-continuity/prototype/privacy-policy.html",
-  "account-continuity/prototype/cases.html",
-  "account-continuity/prototype/cases.css",
-  "account-continuity/prototype/cases-ui.js"
 ];
 
 await rm(publicRoot, { recursive: true, force: true });
@@ -53,6 +50,22 @@ for (const relativePath of allowlist) {
       throw new Error("Account UI runtime guard changed; refusing to publish without review.");
     }
     js = js.replace(original, revised);
+    js = js.replace(
+      'var noticeMode = liveTestMode ? "https-live-test" : "local-passkey-test";',
+      'var noticeMode = workerStagingMode ? "worker-staging" : (liveTestMode ? "https-live-test" : "local-passkey-test");'
+    );
+    js = js.replace(
+      'var noticeText = liveTestMode',
+      'var noticeText = workerStagingMode ? "ASTROCROWN STAGING TEST — Use invented test details only. This is a restricted staging environment, not the public service. Never use production account data, personal recovery keys, wallet secrets or real assets." : liveTestMode'
+    );
+    const oldSigninCase = '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
+    const newSigninCase = '<p class="account-signin-feedback">Feedback and case access are not enabled in this staging qualification.</p>';
+    const oldDashboardCase = '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>';
+    const newDashboardCase = '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Not included in this staging qualification. This test environment is limited to ordinary account registration, sign-in and recovery.</p></section>';
+    if (!js.includes(oldSigninCase) || !js.includes(oldDashboardCase)) {
+      throw new Error("The account UI case-portal entry points changed; refusing to publish broken staging links.");
+    }
+    js = js.replace(oldSigninCase, newSigninCase).replace(oldDashboardCase, newDashboardCase);
     js = js.replaceAll("local development account", "staging test account");
     js = js.replace(
       'throw new Error(liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command.");',
