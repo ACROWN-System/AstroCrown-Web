@@ -358,13 +358,14 @@
     openButton.classList.remove("is-authenticated");
     openButton.removeAttribute("data-avatar-id");
     openButton.removeAttribute("title");
-    openButton.setAttribute("aria-label", "Account");
+    openButton.setAttribute("aria-label", "Log In to AstroCrown");
+    openButton.setAttribute("title", "Log In to AstroCrown");
     openButton.setAttribute("aria-haspopup", "dialog");
     openButton.setAttribute("aria-controls", "account-dialog");
     openButton.innerHTML =
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">' +
         '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/>' +
-      '</svg><span>Account</span>';
+      '</svg><span>Log In</span>';
   }
 
   function renderTabs(selected) {
