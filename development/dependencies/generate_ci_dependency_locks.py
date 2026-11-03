@@ -149,9 +149,32 @@ def main() -> int:
         if args.check:
             existing = lock_path.read_text(encoding="utf-8")
             if existing != output:
+                row_pattern = re.compile(
+                    r"^([A-Za-z0-9._-]+)==([^\\s]+) --hash=sha256:([0-9a-f]{64})$"
+                )
+                def rows(value: str) -> dict[str, tuple[str, str]]:
+                    parsed = {}
+                    for raw in value.splitlines():
+                        match = row_pattern.fullmatch(raw.strip())
+                        if match:
+                            name, version, digest = match.groups()
+                            parsed[canonicalize(name)] = (version, digest)
+                    return parsed
+                previous = rows(existing)
+                fresh = rows(output)
+                changed = []
+                for package in sorted(set(previous) | set(fresh)):
+                    before = previous.get(package)
+                    after = fresh.get(package)
+                    if before != after:
+                        reason = "added" if before is None else "removed" if after is None else "version/hash changed"
+                        changed.append(f"{package}: {reason}; committed={before}; fresh={after}")
+                print(f"{filename}: fresh wheel selection differs for {len(changed)} package(s):")
+                for item in changed:
+                    print("  " + item)
                 raise SystemExit(
                     f"{filename}: fresh artifact hashes differ from the committed lock. "
-                    "Review the PyPI artifact change before updating."
+                    "Investigate PyPI file selection and publisher release metadata; do not auto-update."
                 )
             print(f"{filename}: fresh wheel hashes match the committed lock.")
         else:
