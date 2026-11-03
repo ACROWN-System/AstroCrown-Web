@@ -251,10 +251,10 @@ async function verifiedPasskey(response, challenge, config, excluded = []) {
     });
   } catch (error) {
     if (config.localDiagnostics) {
-      console.warn("LOCAL TEST ONLY — SimpleWebAuthn registration verifier rejected a credential:", {
+      console.warn("LOCAL_TEST_WEBAUTHN_REGISTRATION_REJECTED " + JSON.stringify({
         name: String(error?.name || "Error"),
         message: String(error?.message || "No diagnostic message"),
-      });
+      }));
     }
     throw fail(401, "The passkey registration proof was not accepted. Start again.");
   }
