@@ -389,9 +389,8 @@
       '<div class="account-form">' +
         '<button class="account-primary" type="button" id="account-passkey-signin"' +
           (browserPreviewMode ? ' disabled' : '') + '>Sign in with passkey</button>' +
-        '<p class="account-provider-note">Your authenticator keeps the private key. AstroCrown verifies a fresh signature and does not receive your biometric, device PIN or private key.</p>' +
+        '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">What is a passkey?</a></p>' +
       '</div>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>' +
       '<p class="account-security-assurance"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>' +
       '<p class="account-security-assurance"><button class="account-text-button" type="button" id="account-recovery-start">Lost your passkey? Use a recovery key</button></p>';
   }
