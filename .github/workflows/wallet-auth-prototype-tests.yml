@@ -42,7 +42,7 @@ jobs:
           python development/dependencies/verify_ci_dependency_locks.py all
           python development/dependencies/generate_spdx_sbom.py --check
           python development/dependencies/generate_spdx_sbom.py --lock development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock --output development/dependencies/SBOM-Python-Audit-Toolchain.spdx.json --check
-          python -m py_compile development/dependencies/verify_ci_dependency_locks.py development/dependencies/generate_spdx_sbom.py development/dependencies/report_pypi_license_metadata.py development/dependencies/generate_ci_dependency_locks.py
+          python -m py_compile development/dependencies/verify_ci_dependency_locks.py development/dependencies/verify_dependency_audit_evidence.py development/dependencies/generate_spdx_sbom.py development/dependencies/report_pypi_license_metadata.py development/dependencies/generate_ci_dependency_locks.py
 
       - name: Install hash-verified Python dependencies
         run: |
