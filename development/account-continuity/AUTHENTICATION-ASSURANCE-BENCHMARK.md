@@ -106,7 +106,7 @@ Never include recovery material, assertions, private keys, session cookies, user
 
 - Passkey-first localhost registration/sign-in and one-time offline recovery: implemented in the development prototype.
 - Experimental ML-DSA registration negotiation, matching server verification allow-list, algorithm persistence and dashboard counter: implemented in the draft branch; real client interoperability not established.
-- Unit tests for algorithm order and algorithm metadata: added; they do not create a genuine ML-DSA credential or test a real ML-DSA signature.
+- A new cryptographic regression test generates ephemeral ML-DSA-44/65/87 keypairs and synthetic WebAuthn assertions, then verifies genuine signatures through AstroCrown's server authentication service and rejects wrong challenges/modified signatures. This is backend cryptographic evidence, not a browser or real authenticator ceremony.
 - A virtual-authenticator browser journey exists in CI. At the 2026-11-04 snapshot, the five exact-head workflow runs and limitations are recorded in the [OWASP ASVS 5.0.0 Account Assurance Mapping](../audit/Active/2026-11-03-OWASP-ASVS-5.0.0-Account-Assurance-Mapping.md).
 - Multi-passkey lifecycle/device management UI, production HTTPS/storage/recovery, operational controls and independent review: not qualified.
 - FIDO membership/certification: not obtained.
