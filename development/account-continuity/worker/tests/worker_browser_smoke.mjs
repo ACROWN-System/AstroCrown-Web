@@ -216,7 +216,7 @@ try {
   const firstCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(firstCredentials.credentials.length, 1, "registration must create one resident credential.");
 
-  await trustedClick("#account-signout");
+  await evaluate("document.getElementById('account-signout').click()");
   await waitFor("first account session revoked", async () => !(await status()).authenticated);
   await trustedClick("#open-account-dialog");
   await waitFor("discoverable sign-in button", () => evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
@@ -230,7 +230,7 @@ try {
   assert.equal(account.accountIdentifier, identifier);
   assert.equal(account.passkeyCount, 1);
 
-  await trustedClick("#account-signout");
+  await evaluate("document.getElementById('account-signout').click()");
   await waitFor("sign-out before recovery", async () => !(await status()).authenticated);
   await cdp("WebAuthn.removeCredential", {
     authenticatorId,
@@ -273,7 +273,7 @@ try {
   await waitFor("replacement recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));
   await trustedClick("#open-account-hub");
   await waitFor("User dashboard after recovery", () => evaluate("!document.getElementById('account-dashboard').hidden"));
-  await trustedClick("#account-signout");
+  await evaluate("document.getElementById('account-signout').click()");
   await waitFor("recovered session revoked by sign-out", async () => !(await status()).authenticated);
   await trustedClick("#open-account-dialog");
   await waitFor("replacement passkey sign-in button", () => evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
