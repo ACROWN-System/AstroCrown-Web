@@ -99,6 +99,6 @@ See [Python CI Dependency Hash-Lock Qualification](../audit/Active/2026-11-04-Py
 
 ## Initial scan outcome — 2026-11-04
 
-The first live full-inventory scan found no known vulnerabilities in either locked inventory: 49 application/account-continuity packages and 29 audit-tool packages. PyPI release metadata matched 49/49 and 29/29 locked wheel hashes. This is a point-in-time advisory result, not a guarantee that the packages are vulnerability-free.
+The first live scan found no known vulnerabilities for 49/49 application/account-continuity packages and 27/29 packages represented in the audit-tool vulnerability/SBOM reports. The two scanner-lock entries `pip` and `packaging` were missing from those reports and are not counted as scanned. PyPI release metadata independently matched 49/49 and 29/29 locked wheel hashes. The scanner mode and report validator have since been corrected; complete 29/29 coverage is pending a new passing audit run. This is a point-in-time advisory result, not a guarantee that the packages are vulnerability-free.
 
 The license reporter now emits explicit review flags for composite SPDX expressions, classifier-only license signals, non-canonical or mixed free-text declarations, and `Other/Proprietary` classifier conflicts. Publisher metadata is never treated as legal approval. The dated audit record identifies the SIWE metadata/provenance exception and composite-license handling.
