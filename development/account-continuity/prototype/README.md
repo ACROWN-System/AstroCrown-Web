@@ -29,11 +29,11 @@ See [Passkey-First Account Authentication and Recovery Requirements](../PASSKEY-
 - Confirm that administrator role visibility, permissioned appointment/revocation, and the separate administrator-wallet step-up remain server-enforced and cannot be granted by passkey registration.
 - Open the hosted HTML preview for layout inspection only. For real browser passkey registration, sign-in and recovery, use the separate [Temporary HTTPS live-test procedure](LIVE-HTTPS-TEST-ENVIRONMENT.md).
 
-## Temporary HTTPS live test — Windows PowerShell
+## Temporary HTTPS diagnostic — not the staging website
 
-For actual browser WebAuthn ceremonies over HTTPS, use [LIVE-HTTPS-TEST-ENVIRONMENT.md](LIVE-HTTPS-TEST-ENVIRONMENT.md). The runner starts the same passkey backend on loopback, exposes it through a temporary Cloudflare Quick Tunnel, validates one exact HTTPS origin/RP ID, requires a random 256-bit Basic Authentication access code, sets Secure cookies and creates a fresh temporary SQLite database. It stops after four hours or Ctrl+C; normal shutdown removes the temporary database directory.
+For a short-lived diagnostic browser WebAuthn ceremony over HTTPS, the [temporary Quick Tunnel procedure](LIVE-HTTPS-TEST-ENVIRONMENT.md) remains available. It proves the local backend can complete a ceremony on a temporary HTTPS hostname, but it is NOT the production-parity staging website and is not the target deployment architecture. The preferred next build is a deployed staging environment using the same runtime, application artifact, database model, migrations, security controls and release path intended for public production; see [Production-Parity Staging Architecture](../PRODUCTION-PARITY-STAGING-AND-THREE-PASS-CLEANUP-REQUIREMENTS.md).
 
-Use only invented test details and a brand-new passkey created for that temporary hostname. Do not enter production account data, personal recovery keys, wallet secrets or real assets. Cloudflare processes traffic at its public edge. The random URL is public at the network layer and the access code is a temporary test gate, not a production access system. No Cloudflare account, custom domain, API token or paid service is required.
+This diagnostic uses only invented test details and a brand-new passkey created for its temporary hostname. Do not enter production account data, personal recovery keys, wallet secrets or real assets. Cloudflare processes traffic at its public edge. The random URL is public at the network layer and the access code is a temporary test gate, not a production access system. The diagnostic is optional and does not satisfy the production-parity staging requirement.
 
 ## Install and run locally — Windows PowerShell
 
