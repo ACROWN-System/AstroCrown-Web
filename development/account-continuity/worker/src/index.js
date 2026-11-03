@@ -71,8 +71,10 @@ function equalConstantTime(a, b) {
   return diff === 0;
 }
 function accountId(value) {
-  if (typeof value !== "string" || !/^AC-[A-Fa-f0-9]{10}$/.test(value.trim())) throw fail(400, "Enter the AstroCrown account identifier shown after registration.");
-  return value.trim().toUpperCase();
+  if (typeof value !== "string") throw fail(400, "Enter the AstroCrown account identifier shown after registration.");
+  const candidate = value.trim().toUpperCase();
+  if (!/^AC-[A-F0-9]{10}$/.test(candidate)) throw fail(400, "Enter the AstroCrown account identifier shown after registration.");
+  return candidate;
 }
 function recoveryKey(value) {
   if (typeof value !== "string" || !/^ACR1-[A-Za-z0-9_-]{43}$/.test(value.trim())) throw fail(401, "Account recovery could not be started. Check the account identifier and recovery key.");
