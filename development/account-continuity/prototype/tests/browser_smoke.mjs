@@ -317,12 +317,31 @@ try {
     "the homepage header must expose the communications bell");
   assert.equal(await evaluate("document.getElementById('communications-unread-count').hidden"), true,
     "the communications badge must remain hidden when there are no pending items");
+
+  const communicationSeed = spawnSync(python, [
+    "-c",
+    "import sqlite3,sys,uuid; c=sqlite3.connect(sys.argv[1]); a=c.execute('SELECT account_id FROM accounts').fetchone()[0]; c.executemany('INSERT INTO account_communications(communication_id,recipient_account_id,sender_account_id,section,subject,body,created_at) VALUES (?,?,NULL,?,?,?,?)', [(str(uuid.uuid4()),a,'messages','Message '+str(i),'Body '+str(i),'2026-11-01T00:00:00Z') for i in range(55)]); c.commit()",
+    databasePath
+  ], { encoding: "utf8" });
+  assert.equal(communicationSeed.status, 0,
+    communicationSeed.stderr || "Unable to seed local communications pagination fixture.");
+
   await evaluate("document.getElementById('open-communications').click()");
   await waitFor("authenticated user opens private communications", () =>
     evaluate("!document.getElementById('communications-page').hidden && Boolean(document.querySelector('.communications-tabs'))"));
   assert.match(await evaluate("document.getElementById('communications-content').innerText"), /No alerts yet/i);
   await evaluate("document.querySelector('[data-communication-section=messages]').click()");
-  assert.match(await evaluate("document.getElementById('communications-content').innerText"), /No messages yet/i);
+  await waitFor("Messages section page is loaded", () => evaluate(
+    "document.querySelector('[data-communication-section=messages]').getAttribute('aria-selected') === 'true' && " +
+    "document.querySelectorAll('#communications-content .communication-item').length === 50 && " +
+    "Boolean(document.querySelector('[data-communications-load-older=true]'))"
+  ));
+  assert.match(await evaluate("document.getElementById('communications-content').innerText"), /Load older Messages/i);
+  await evaluate("document.querySelector('[data-communications-load-older=true]').click()");
+  await waitFor("older Messages page is appended without loss", () =>
+    evaluate("document.querySelectorAll('#communications-content .communication-item').length === 55 && " +
+      "!document.querySelector('[data-communications-load-older=true]')"));
+  assert.equal(await evaluate("document.querySelectorAll('#communications-content .communication-item').length"), 55);
   await evaluate("window.location.hash = '#account'");
   await waitFor("return from communications to User dashboard", () =>
     evaluate("!document.getElementById('account-dashboard').hidden && document.getElementById('communications-page').hidden"));
