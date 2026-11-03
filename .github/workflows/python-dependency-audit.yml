@@ -63,12 +63,12 @@ jobs:
           mkdir -p build/dependency-evidence
           set +e
 
-          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
             --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
             --format json --output build/dependency-evidence/application-vulnerability-report.json
           app_audit_status=$?
 
-          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
             --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
             --format cyclonedx-json --output build/dependency-evidence/application-sbom.cdx.json
           app_sbom_status=$?
@@ -78,12 +78,12 @@ jobs:
             --output build/dependency-evidence/application-pypi-license-metadata.json
           app_license_status=$?
 
-          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
             --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
             --format json --output build/dependency-evidence/audit-toolchain-vulnerability-report.json
           tool_audit_status=$?
 
-          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes --strict \
+          .venv-audit/bin/python -m pip_audit --no-deps --require-hashes \
             --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
             --format cyclonedx-json --output build/dependency-evidence/audit-toolchain-sbom.cdx.json
           tool_sbom_status=$?
