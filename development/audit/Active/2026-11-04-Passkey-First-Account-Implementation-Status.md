@@ -40,6 +40,8 @@ No account-authentication or recovery behavior may depend on email, password, em
 
 Dormant email-oriented test/legacy code remains isolated in the development branch only; it is not a supported account feature and must not be enabled or configured for public users. Its removal is a separate code-pruning task with a dedicated regression review.
 
+> **Legacy-code warning — test-only, not a product feature:** Dormant email-verification and email-delivery code remains in this local prototype solely so explicitly opted-in legacy regression tests can exercise the retired email-first implementation. It is not part of the passkey-first account flow, is not activated by the default server configuration, must not be configured, exposed or used for public accounts, and must not be treated as a supported capability or a planned direction. New account work must not depend on it. Removing this compatibility code requires a separate, reviewed test-pruning change.
+
 Astro-Wallet, custody, seed-phrase collection, generic multichain signing, payment/transaction execution, MPC/TSS, a production account API, public database, production session infrastructure and public onboarding are outside the current prototype's implemented scope.
 
 ## 5. Production readiness blockers
