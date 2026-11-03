@@ -58,6 +58,12 @@
       transform: translateY(-150%); font-weight: 750;
     }
     .skip-link:focus { transform: translateY(0); }
+    .preview-ribbon {
+      min-height: 25px; padding: 4px 14px; display: flex; justify-content: center; align-items: center;
+      gap: 9px; color: #d9e1ef; background: #060d18; border-bottom: 1px solid rgba(255,255,255,.045);
+      text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .105em; text-transform: uppercase;
+    }
+    .preview-ribbon .ribbon-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 9px rgba(255,210,74,.35); }
 
     .development-notice-dialog {
       width:min(680px,calc(100vw - 28px)); max-width:680px;
@@ -469,6 +475,7 @@
       .discovery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
     @media (max-width: 560px) {
+      .preview-ribbon { font-size:8px; letter-spacing:.06em; }
       .site-header { gap:7px; }
       .brand-word { font-size:13px; }
       .brand-mark-link { width:36px; }
@@ -528,6 +535,7 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>Visual review build&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;no live services connected</div>
 
   <header class="site-header">
     <div class="brand-group" aria-label="AstroCrown brand">
