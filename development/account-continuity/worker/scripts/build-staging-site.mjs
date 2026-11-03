@@ -66,6 +66,10 @@ for (const relativePath of allowlist) {
       throw new Error("The account UI case-portal entry points changed; refusing to publish broken staging links.");
     }
     js = js.replace(oldSigninCase, newSigninCase).replace(oldDashboardCase, newDashboardCase);
+    const oldCommunicationsCard = '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">\' + String(unreadCommunicationCount) + \' pending</p><p>Important account alerts and private in-app messages are kept in one place, with separate sections and acknowledgement/read status.</p><button class="account-primary" type="button" id="open-account-communications">Open communications</button></section>';
+    const newCommunicationsCard = '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">Disabled in this staging qualification</p><p>Account communications are not part of this test release. Email and SMS delivery are not configured; no messages or alerts are sent.</p></section>';
+    if (!js.includes(oldCommunicationsCard)) throw new Error("The communications dashboard card changed; refusing to publish a non-working control.");
+    js = js.replace(oldCommunicationsCard, newCommunicationsCard);
     js = js.replaceAll("local development account", "staging test account");
     const oldMlDsaStatus = "'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.'";
     const newMlDsaStatus = "'ML-DSA-44 ' + (accountState.mlDsaRegistrationAvailable ? 'is supported for verification by this runtime and is offered first during registration. ' : 'is not supported for verification by this runtime and cannot be offered here. ') + 'The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.'";
