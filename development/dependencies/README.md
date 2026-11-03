@@ -9,6 +9,7 @@
 The source package/version lists are:
 - `../auth-prototype/requirements.txt`
 - `../account-continuity/prototype/requirements.txt`
+- `requirements-pip-audit.txt` (direct source pin for the isolated security scanner)
 
 The platform-specific, wheel-only hash locks are:
 - `requirements-wallet-auth-py312-ubuntu24-x86_64.lock` — 41 exact package versions and SHA-256 wheel hashes.
@@ -19,11 +20,11 @@ The app locks are scoped to CPython 3.12 / Ubuntu 24.04 / x86_64. Do not copy th
 
 ### Dependabot update procedure
 
-Weekly Dependabot updates are enabled for the two Python requirement directories and GitHub Actions. Dependency update PRs do not automatically bypass hash-lock controls:
+Weekly Dependabot updates are enabled for the wallet, account-continuity and isolated audit-tool requirement directories, plus GitHub Actions. Dependency update PRs do not automatically bypass hash-lock controls:
 1. Review the proposed exact version changes and upstream release/security information.
-2. In that same PR, regenerate both platform locks using `python development/dependencies/generate_ci_dependency_locks.py` on CPython 3.12 / Ubuntu 24.04 / x86_64.
+2. In that same PR, regenerate all three platform locks using `python development/dependencies/generate_ci_dependency_locks.py` on CPython 3.12 / Ubuntu 24.04 / x86_64.
 3. Or run **Actions → Python CI Wheel-Lock Refresh** on the branch with mode `regenerate`, then apply the uploaded candidate lock files to the PR.
-4. Run `python development/dependencies/verify_ci_dependency_locks.py all`.
+4. Run `python development/dependencies/verify_ci_dependency_locks.py all` (including the audit tool's direct source pin).
 5. Run the account/wallet tests and dependency audit. Do not merge a version update while source pins and hash locks disagree.
 
 To test whether today's PyPI wheel artifacts still match the committed digests without rewriting files:
