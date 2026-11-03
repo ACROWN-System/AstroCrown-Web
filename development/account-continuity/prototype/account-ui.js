@@ -16,7 +16,7 @@
   var communicationsBadge = document.getElementById("communications-unread-count");
   var communicationsPage = document.getElementById("communications-page");
   var communicationsContent = document.getElementById("communications-content");
-  var communicationsState = { items: [], unreadCounts: { alerts: 0, messages: 0 } };
+  var communicationsState = { items: [], unreadCounts: { alerts: 0, messages: 0 }, nextCursor: null };
   var activeCommunicationsSection = "alerts";
   var mode = "signin";
   var successKind = "signup";
@@ -647,7 +647,23 @@
     communicationsContent.innerHTML =
       tabHtml +
       '<div class="communications-list" aria-live="polite">' + itemsHtml + '</div>' +
+      (communicationsState.nextCursor
+        ? '<div class="communications-load-older"><button class="account-secondary" type="button" data-communications-load-older="true">Load older ' + (isAlerts ? 'Alerts' : 'Messages') + '</button></div>'
+        : '') +
       '<p id="communications-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>';
+  }
+
+  async function loadCommunicationsPage(section, cursor, append) {
+    var previousItems = Array.isArray(communicationsState.items) ? communicationsState.items : [];
+    var page = await requestJson("/api/account/communications/page", {
+      section: section,
+      cursor: cursor || null
+    });
+    if (append) page.items = previousItems.concat(page.items || []);
+    communicationsState = page;
+    accountState.communicationsUnreadCounts = page.unreadCounts || { alerts: 0, messages: 0 };
+    syncAccountButton();
+    renderCommunicationsPage();
   }
 
   async function showCommunicationsPage() {
@@ -668,8 +684,7 @@
     if (communicationsPage) communicationsPage.hidden = false;
     activeCommunicationsSection = "alerts";
     try {
-      communicationsState = await requestJson("/api/account/communications");
-      renderCommunicationsPage();
+      await loadCommunicationsPage("alerts", null, false);
     } catch (error) {
       communicationsContent.innerHTML =
         '<div class="communication-empty"><strong>Communications could not be loaded.</strong><p>' +
@@ -1116,17 +1131,52 @@
     var button = event.target.closest("button");
     if (!button || busy) return;
     if (button.dataset.communicationSection) {
-      activeCommunicationsSection = button.dataset.communicationSection === "messages" ? "messages" : "alerts";
-      renderCommunicationsPage();
+      var nextSection = button.dataset.communicationSection === "messages" ? "messages" : "alerts";
+      if (nextSection === activeCommunicationsSection) return;
+      activeCommunicationsSection = nextSection;
+      setBusy(true);
+      try {
+        await loadCommunicationsPage(activeCommunicationsSection, null, false);
+      } catch (error) {
+        var tabFeedback = document.getElementById("communications-feedback");
+        if (tabFeedback) tabFeedback.textContent =
+          error.message || "This communication section could not be loaded.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.dataset.communicationsLoadOlder === "true") {
+      var olderCursor = communicationsState.nextCursor;
+      if (!olderCursor) return;
+      setBusy(true);
+      try {
+        await loadCommunicationsPage(activeCommunicationsSection, olderCursor, true);
+      } catch (error) {
+        var olderFeedback = document.getElementById("communications-feedback");
+        if (olderFeedback) olderFeedback.textContent =
+          error.message || "Older communications could not be loaded.";
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (!button.dataset.communicationAction || !button.dataset.communicationId) return;
     setBusy(true);
     try {
-      communicationsState = await requestJson("/api/account/communications/state", {
+      var stateResult = await requestJson("/api/account/communications/state", {
         communicationId: button.dataset.communicationId,
         action: button.dataset.communicationAction
       });
+      var changedItem = communicationsState.items.find(function (item) {
+        return item.communicationId === button.dataset.communicationId;
+      });
+      if (changedItem && button.dataset.communicationAction === "acknowledge") {
+        changedItem.acknowledgedAt = changedItem.acknowledgedAt || "acknowledged";
+      } else if (changedItem && button.dataset.communicationAction === "read") {
+        changedItem.readAt = changedItem.readAt || "read";
+      }
+      communicationsState.unreadCounts = stateResult.unreadCounts || communicationsState.unreadCounts;
       accountState.communicationsUnreadCounts = communicationsState.unreadCounts;
       syncAccountButton();
       renderCommunicationsPage();
