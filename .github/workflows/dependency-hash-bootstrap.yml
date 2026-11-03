@@ -1,0 +1,112 @@
+name: Temporary Python Dependency Hash Bootstrap
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/dependency-hash-bootstrap.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-platform-wheel-hashes:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Generate temporary platform-specific SHA-256 lock candidates
+        shell: bash
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import os
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+          from pip._vendor.packaging.requirements import Requirement
+          from pip._vendor.packaging.utils import canonicalize_name, parse_wheel_filename
+
+          root = Path.cwd()
+          auth = root / "development/auth-prototype/requirements.txt"
+          account = root / "development/account-continuity/prototype/requirements.txt"
+          targets = {
+              "wallet-auth-py312-ubuntu24-x86_64.lock": [auth],
+              "account-continuity-py312-ubuntu24-x86_64.lock": [auth, account],
+          }
+
+          def expected_pins(files):
+              pins = {}
+              for file in files:
+                  for raw in file.read_text(encoding="utf-8").splitlines():
+                      line = raw.split("#", 1)[0].strip()
+                      if not line:
+                          continue
+                      req = Requirement(line)
+                      name = canonicalize_name(req.name)
+                      spec = str(req.specifier)
+                      if not spec.startswith("==") or "," in spec or req.url or req.marker:
+                          raise SystemExit(f"Not a simple exact unconditional pin: {line}")
+                      version = spec[2:]
+                      if name in pins and pins[name] != version:
+                          raise SystemExit(f"Conflicting versions for {name}: {pins[name]} vs {version}")
+                      pins[name] = version
+              return pins
+
+          with tempfile.TemporaryDirectory(prefix="astrocrown-wheel-lock-") as tmp:
+              tmp_path = Path(tmp)
+              for filename, files in targets.items():
+                  dest = tmp_path / filename.removesuffix(".lock")
+                  dest.mkdir()
+                  command = [
+                      sys.executable, "-m", "pip", "download",
+                      "--disable-pip-version-check",
+                      "--no-deps",
+                      "--only-binary=:all:",
+                      "--dest", str(dest),
+                  ]
+                  for file in files:
+                      command.extend(["-r", str(file)])
+                  print("Downloading only binary wheels for", filename, flush=True)
+                  subprocess.run(command, check=True)
+
+                  expected = expected_pins(files)
+                  wheels = {}
+                  for wheel in sorted(dest.glob("*.whl")):
+                      name, version, _build, _tags = parse_wheel_filename(wheel.name)
+                      normalized = canonicalize_name(name)
+                      actual_version = str(version)
+                      if normalized in wheels:
+                          raise SystemExit(f"Multiple wheels unexpectedly downloaded for {normalized}")
+                      wheels[normalized] = (actual_version, hashlib.sha256(wheel.read_bytes()).hexdigest())
+                  if set(wheels) != set(expected):
+                      raise SystemExit(
+                          "Wheel/pin mismatch. Missing=" + repr(sorted(set(expected) - set(wheels)))
+                          + " extra=" + repr(sorted(set(wheels) - set(expected)))
+                      )
+                  lines = [
+                      "# Generated from reviewed exact-version requirements.",
+                      "# Target: CPython 3.12, Ubuntu 24.04, x86_64; wheels only.",
+                      "# Re-generate and review hashes before changing target platform or Python ABI.",
+                  ]
+                  for name in sorted(expected):
+                      version, digest = wheels[name]
+                      if version != expected[name]:
+                          raise SystemExit(f"Version mismatch for {name}: expected {expected[name]}, got {version}")
+                      lines.append(f"{name}=={version} --hash=sha256:{digest}")
+                  output = "\n".join(lines) + "\n"
+                  print(f"\n===== BEGIN {filename} =====\n{output}===== END {filename} =====", flush=True)
+          PY
