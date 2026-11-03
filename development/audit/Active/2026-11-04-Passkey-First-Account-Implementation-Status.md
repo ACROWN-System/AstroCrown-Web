@@ -43,7 +43,20 @@ Dormant email-oriented test/legacy code remains isolated in the development bran
 
 Astro-Wallet, custody, seed-phrase collection, generic multichain signing, payment/transaction execution, MPC/TSS, a production account API, public database, production session infrastructure and public onboarding are outside the current prototype's implemented scope.
 
-## 5. Production readiness blockers
+## 5. Temporary HTTPS browser-test path
+
+A separate test-only runner, LIVE-HTTPS-TEST-ENVIRONMENT.md, exposes the local account prototype through a temporary Cloudflare Quick Tunnel for real browser WebAuthn ceremonies over HTTPS. It does not deploy the account service, create a durable cloud backend or make the prototype production-ready.
+
+- Each run creates a new temporary SQLite database on the operator machine; it does not open the regular local prototype database or a production database.
+- The runner validates one temporary trycloudflare.com hostname and uses that exact HTTPS origin and hostname as the WebAuthn RP ID. Browser Origin and Host checks are exact-match only.
+- Each run generates a random 256-bit Basic Authentication access code. The code is printed to the operator's terminal and is not committed or stored in GitHub secrets. Repeated incorrect codes lock the session.
+- Session cookies are Secure, HttpOnly and SameSite=Strict. The page adds a prominent synthetic-data warning and disables wallet connection for this passkey-only test.
+- The tunnel is internet-reachable and Cloudflare processes edge traffic. Use only invented test details and disposable passkeys; never enter personal data, production recovery material, wallet secrets or real assets.
+- The operator stops the runner with Ctrl+C; a four-hour maximum also stops the session. Normal shutdown removes the temporary SQLite directory. Abrupt termination may leave temporary files for manual cleanup.
+
+This temporary URL is for ordinary passkey registration, sign-in, dashboard and recovery testing only. The runner does not provision administrator roles or enable administrator wallet step-up. Those privileged scenarios remain in the local test suite pending a separate disposable-wallet procedure.
+
+## 6. Production readiness blockers
 
 Before any real-user onboarding, the project still requires:
 
@@ -55,7 +68,7 @@ Before any real-user onboarding, the project still requires:
 6. A threat-model review, independent security testing and an explicit production promotion decision.
 7. Evidence that the chosen hosting and operating model can remain within the strict $0/no-card constraint without promising unsupported uptime or capacity.
 
-## 6. Verification record
+## 7. Verification record
 
 The implementation and its browser/API regression tests are maintained in PR #141. Current exact-head workflow results must be read from the PR's Checks tab and the linked GitHub Actions runs; a previous green result must not be carried forward to a later commit without checking that exact commit.
 
