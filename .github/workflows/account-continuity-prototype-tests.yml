@@ -41,7 +41,7 @@ jobs:
 
       - name: Validate Python syntax
         run: |
-          python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/passkey_auth.py development/account-continuity/prototype/case_management.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py development/account-continuity/prototype/tests/test_passkey_auth.py development/account-continuity/prototype/tests/test_case_management.py development/account-continuity/prototype/tests/test_email_delivery.py
+          python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/passkey_auth.py development/account-continuity/prototype/case_management.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py development/account-continuity/prototype/tests/test_passkey_auth.py development/account-continuity/prototype/tests/test_case_management.py development/account-continuity/prototype/tests/test_email_delivery.py development/account-continuity/prototype/tests/test_ml_dsa_verification.py
 
       - name: Validate browser JavaScript syntax
         run: |
