@@ -37,6 +37,13 @@ jobs:
       - name: Verify hash-lock package pins
         run: python development/dependencies/verify_ci_dependency_locks.py wallet
 
+      - name: Verify dependency inventories and SPDX snapshots
+        run: |
+          python development/dependencies/verify_ci_dependency_locks.py all
+          python development/dependencies/generate_spdx_sbom.py --check
+          python development/dependencies/generate_spdx_sbom.py --lock development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock --output development/dependencies/SBOM-Python-Audit-Toolchain.spdx.json --check
+          python -m py_compile development/dependencies/verify_ci_dependency_locks.py development/dependencies/generate_spdx_sbom.py development/dependencies/report_pypi_license_metadata.py development/dependencies/generate_ci_dependency_locks.py
+
       - name: Install hash-verified Python dependencies
         run: |
           python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-wallet-auth-py312-ubuntu24-x86_64.lock
