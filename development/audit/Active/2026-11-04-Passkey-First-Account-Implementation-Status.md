@@ -43,18 +43,60 @@ Dormant email-oriented test/legacy code remains isolated in the development bran
 
 Astro-Wallet, custody, seed-phrase collection, generic multichain signing, payment/transaction execution, MPC/TSS, a production account API, public database, production session infrastructure and public onboarding are outside the current prototype's implemented scope.
 
-## 5. Temporary HTTPS browser-test path
+## 5. Production-parity staging architecture — accepted direction
 
-A separate test-only runner, LIVE-HTTPS-TEST-ENVIRONMENT.md, exposes the local account prototype through a temporary Cloudflare Quick Tunnel for real browser WebAuthn ceremonies over HTTPS. It does not deploy the account service, create a durable cloud backend or make the prototype production-ready.
+The next shared browser-test website is to be built as a **production-shaped staging deployment**, not by exposing the loopback server through a temporary tunnel. Staging and production must use the same application architecture, runtime, database technology/schema/migrations, same-origin API topology, HTTPS policy, WebAuthn verification implementation, session/cookie controls, security headers, rate limits, build artifact and deployment method. Differences are limited to the exact host/origin/RP ID, isolated database and secrets, test-only access gate, environment label, synthetic dataset and controlled test observability.
 
-- Each run creates a new temporary SQLite database on the operator machine; it does not open the regular local prototype database or a production database.
-- The runner validates one temporary trycloudflare.com hostname and uses that exact HTTPS origin and hostname as the WebAuthn RP ID. Browser Origin and Host checks are exact-match only.
-- Each run generates a random 256-bit Basic Authentication access code. The code is printed to the operator's terminal and is not committed or stored in GitHub secrets. Repeated incorrect codes lock the session.
-- Session cookies are Secure, HttpOnly and SameSite=Strict. The page adds a prominent synthetic-data warning and disables wallet connection for this passkey-only test.
-- The tunnel is internet-reachable and Cloudflare processes edge traffic. Use only invented test details and disposable passkeys; never enter personal data, production recovery material, wallet secrets or real assets.
-- The operator stops the runner with Ctrl+C; a four-hour maximum also stops the session. Normal shutdown removes the temporary SQLite directory. Abrupt termination may leave temporary files for manual cleanup.
+The staging environment must be independently deletable and must never read from, write to, or share credentials/secrets with production. Passkeys and recovery keys created for staging are disposable and cannot be migrated to the production RP ID. The same source/build is promoted through an auditable pipeline; environment-specific settings must be explicit, not inferred or silently defaulted.
 
-This temporary URL is for ordinary passkey registration, sign-in, dashboard and recovery testing only. The runner does not provision administrator roles or enable administrator wallet step-up. Those privileged scenarios remain in the local test suite pending a separate disposable-wallet procedure.
+### Platform qualification boundary
+
+Cloudflare Workers Free + static assets + D1 is a **candidate**, not an approved provider decision. Published free limits currently include 100,000 Worker requests/day and 10 ms CPU time per invocation; D1 Free currently permits 10 databases per account, 500 MB per database, 5 GB aggregate account storage, 5 million rows read/day, 100,000 rows written/day and 7 days of Time Travel retention. Exceeding free D1 daily quotas causes queries to fail rather than automatically upgrading the plan. These are current published limits, not guarantees of future availability or account eligibility.
+
+Before selecting it, the team must prove the real account flows against this runtime. The present Python server is a local ThreadingHTTPServer process using sqlite3 on a local file; it cannot be deployed unchanged as a Worker. A Worker implementation would need a request-handler/runtime adapter and an asynchronous D1 persistence layer while preserving the same account, challenge, session, recovery and audit contracts. The free 10 ms CPU allowance must be benchmarked against real passkey verification, including large ML-DSA signatures.
+
+The current Python WebAuthn dependency uses cryptography and pyOpenSSL; Python Workers execute through Pyodide and document support for pure-Python/PyEmscripten packages. Package compatibility and the required versions have not been proven. A JavaScript/TypeScript Worker using SimpleWebAuthn is another candidate, but its current ML-DSA guide lists Node 24.7+ and Deno 2.8.2+ as supported runtimes, not Cloudflare Workers. Cloudflare Workers separately exposes ML-DSA-44/65/87 through an opt-in Web Crypto compatibility flag; that primitive-level support does not prove that the complete WebAuthn library/runtime combination verifies the project's exact profile. The actual deployed Worker must pass real ML-DSA registration and subsequent assertion tests before this path can be approved.
+
+Cloudflare Containers are excluded under the strict $0 rule: the current documentation makes Containers available on the Workers Paid plan, whose minimum charge is $5/month. GitHub Pages is also not a backend option because it publishes static files and does not run Python server-side code.
+
+### Required technical proof before platform selection
+
+1. Deploy a minimal non-production Worker using the exact free plan and record the account's billing state and any payment-method requirements.
+2. Serve the AstroCrown frontend and same-origin account API from one deployed origin.
+3. Prove separate staging and production-like database bindings with the same migration set and no cross-environment access.
+4. Run account registration, discoverable sign-in, recovery-key replacement, session revocation and negative-origin tests from a real browser.
+5. Verify actual ML-DSA-44, -65 and -87 credentials through registration, persistent storage, reload and subsequent assertion verification. Classical fallback must be reported as classical.
+6. Measure CPU time, Worker request use, database row reads/writes and storage under realistic test flows; confirm the application fails closed at free limits and cannot incur paid usage.
+7. Review vendor-managed log, backup, point-in-time recovery and deletion retention before claiming residual-zero cleanup.
+
+### Three-pass zero-residual cleanup requirement
+
+Before public-production promotion, run three separately recorded and independently checked cleanup passes. Each must return **zero** for all project-controlled residual test secrets, test recovery material, test sessions/tokens, test passkey records, synthetic personal-like data, stale environment variables and test-only credentials:
+
+1. **Source and build pass:** scan current source, all tracked files, Git history, branch refs, deployment manifests, CI logs/artifacts/caches, generated bundles, source maps and environment configuration. Rotate/revoke any value that could have been exposed; deleting a file is never a substitute for revocation. Never put production secrets in staging.
+2. **Runtime and storage pass:** delete disposable staging accounts/credentials/challenges/sessions, revoke staged keys, clear caches and test objects, remove the staging database/resource when the test cycle ends, and inspect application/provider logs and provider-managed snapshots/backups against published retention rules. Resource deletion is not proof that every provider-managed backup copy is instantly erased.
+3. **Independent evidence pass:** repeat secret scanning independently against the release artifact and deployed staging endpoint; verify that no test session or credential remains valid; inspect database/log/cache/backup state and retention expiry; compare exact artifact hashes and deployment configuration; record evidence, timestamp, scope and result. A surface that cannot be inspected or whose deletion/retention cannot yet be proven is UNVERIFIABLE/BLOCKED, never silently counted as zero.
+
+The three passes must each independently show zero across the surfaces we control. They are not three repetitions of the same narrow repository scan. Provider-held logs, backups and point-in-time recovery copies remain subject to documented retention; do not claim immediate erasure where the platform does not provide evidence. The safest invariant is that only synthetic, non-identifying test data and test-only secrets ever enter staging.
+
+### Immutable backup and Git-history boundary
+
+Do not modify, delete, rewrite, rename, relocate or compact immutable historical NOVA/AstroCrown backup snapshots to satisfy cleanup. If a test-only secret ever appears in an immutable backup or old Git object, preserve the backup/history as governed but revoke/rotate that secret and record the residual as retained historical material; never misreport it as erased.
+
+### Production-parity staging acceptance
+
+- One immutable build artifact and dependency inventory are recorded and promoted without rebuild.
+- Staging/production use the same runtime, application logic, data schema/migrations, HTTP/API topology and security controls.
+- The exact staging HTTPS Host, Origin and WebAuthn RP ID are verified; wrong-origin and wrong-RP tests fail.
+- Real browser registration, sign-in, recovery and session revocation pass against the deployed staging service.
+- ML-DSA is claimed only after a real credential is registered and a later assertion verifies under its actual stored algorithm.
+- Staging and production have physically separate databases, secrets and access configuration; no production binding is reachable from staging.
+- Logs do not contain passkeys, recovery keys, session cookies, secrets or request bodies.
+- Free quota exhaustion and missing configuration fail closed without paid fallback or resource activation.
+- All three cleanup passes show zero controlled residuals; vendor-retained surfaces are separately proven or labelled blocked.
+- Rollback, migration compatibility, dependency provenance and release evidence are retained.
+
+Passing CI alone is not sufficient. This document does not authorize a merge, paid service, provider lock-in, public deployment or public account onboarding.
 
 ## 6. Production readiness blockers
 
