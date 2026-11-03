@@ -37,7 +37,7 @@ TARGETS = {
         "include_dependencies": True,
     },
 }
-SOURCE_LINE = re.compile(r"^([A-Za-z0-9._-]+)==([^<>=!~;\\s]+)$")
+SOURCE_LINE = re.compile(r"^([A-Za-z0-9._-]+)==([^<>=!~;\s]+)$")
 
 
 def canonicalize(name: str) -> str:
@@ -128,7 +128,7 @@ def build_lock(name: str, source_files: list[Path], wheel_dir: Path, include_dep
     for package in sorted(wheels):
         version, digest = wheels[package]
         lines.append(f"{package}=={version} --hash=sha256:{digest}")
-    return "\\n".join(lines) + "\\n"
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
