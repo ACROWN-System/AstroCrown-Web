@@ -385,7 +385,6 @@
   function renderSignIn() {
     title.textContent = "AstroCrown account";
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Sign in to AstroCrown using a passkey saved in your device or security key. No email address or password is required.</p>' +
       '<div class="account-form">' +
         '<button class="account-primary" type="button" id="account-passkey-signin"' +
           (browserPreviewMode ? ' disabled' : '') + '>Sign in with passkey</button>' +
