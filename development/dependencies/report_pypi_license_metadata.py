@@ -89,6 +89,21 @@ def fetch_package(entry: dict[str, str], timeout: int, retries: int) -> dict:
         value for value in (info.get("classifiers") or [])
         if value.startswith("License ::")
     )
+    review_flags = []
+    if expression and (" AND " in expression or " OR " in expression):
+        review_flags.append("COMPOSITE_SPDX_EXPRESSION_REQUIRES_NOTICE_REVIEW")
+    if any("Other/Proprietary License" in value for value in classifiers):
+        review_flags.append("OTHER_OR_PROPRIETARY_CLASSIFIER_REQUIRES_MANUAL_REVIEW")
+    if not expression and not legacy_license and classifiers:
+        review_flags.append("CLASSIFIER_ONLY_LICENSE_SIGNAL_REQUIRES_SOURCE_REVIEW")
+    if legacy_license:
+        normalized_text = str(legacy_license).strip().casefold()
+        canonical_text = {
+            "mit", "apache-2.0", "apache 2.0", "apache license, version 2.0",
+            "bsd-2-clause", "bsd-3-clause", "psf-2.0", "psfl", "mpl-2.0",
+        }
+        if normalized_text not in canonical_text:
+            review_flags.append("NON_CANONICAL_OR_MIXED_LICENSE_TEXT_REQUIRES_SOURCE_REVIEW")
     if expression:
         status = "publisher SPDX license expression supplied; not independently verified"
     elif legacy_license and str(legacy_license).strip().casefold() not in {"unknown", "n/a", "none"}:
@@ -109,6 +124,7 @@ def fetch_package(entry: dict[str, str], timeout: int, retries: int) -> dict:
         "publisher_license_text": legacy_license,
         "publisher_license_classifiers": classifiers,
         "license_review_status": status,
+        "license_review_flags": review_flags,
         "legal_approval": "NOT ASSESSED",
     }
 
@@ -147,6 +163,11 @@ def main() -> int:
         "package_count": len(results),
         "matched_artifact_hash_count": sum(item["pypi_artifact_sha256_match"] for item in results),
         "license_metadata_missing_count": sum(item["license_review_status"].startswith("NOASSERTION") for item in results),
+        "license_review_flag_count": sum(len(item.get("license_review_flags", [])) for item in results),
+        "license_review_flag_totals": {
+            flag: sum(flag in item.get("license_review_flags", []) for item in results)
+            for flag in sorted({flag for item in results for flag in item.get("license_review_flags", [])})
+        },
         "legal_approval": "NOT ASSESSED — human license review is required before certification or redistribution claims",
         "packages": results,
     }
