@@ -81,14 +81,14 @@ async function cloudflare(method, path, body) {
 
 function runProgram(program, args, options = {}) {
   const windows = process.platform === "win32";
+  const childEnv = { ...process.env, WRANGLER_SEND_METRICS: "false" };
+  if (options.allowCloudflareCredentials !== true) {
+    delete childEnv.CLOUDFLARE_ACCOUNT_ID;
+    delete childEnv.CLOUDFLARE_API_TOKEN;
+  }
   const result = spawnSync(program, args, {
     cwd: workerRoot,
-    env: {
-      ...process.env,
-      CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-      CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-      WRANGLER_SEND_METRICS: "false",
-    },
+    env: childEnv,
     input: options.input,
     encoding: "utf8",
     timeout: options.timeout || 180000,
@@ -156,6 +156,25 @@ async function getDatabase(accountId, databaseId) {
   return result;
 }
 
+async function persistCreatedDatabaseState(state) {
+  await mkdir(localStateDir, { recursive: true, mode: 0o700 });
+  try { await chmod(localStateDir, 0o700); } catch { /* Windows ACLs govern directory access on Windows. */ }
+  try {
+    await writeFile(statePath, JSON.stringify(state, null, 2) + "\n", {
+      encoding: "utf8",
+      mode: 0o600,
+      flag: "wx",
+    });
+    try { await chmod(statePath, 0o600); } catch { /* Windows ACLs govern file access on Windows. */ }
+  } catch {
+    fail(
+      "The remote staging D1 database was created with ID " + state.databaseId +
+      ", but its local identity record could not be saved. Do not retry database creation. " +
+      "Preserve this ID and reconcile the ignored local state file manually."
+    );
+  }
+}
+
 async function resolveDatabase(accountId) {
   let state = null;
   try {
@@ -202,12 +221,14 @@ async function resolveDatabase(accountId) {
   const created = await cloudflare("POST", "/accounts/" + accountId + "/d1/database", { name: databaseName });
   if (!created?.uuid || created.name !== databaseName) fail("Cloudflare did not return the expected new staging D1 identity.");
 
-  return {
+  const state = {
     accountId,
     databaseName,
     databaseId: created.uuid,
     createdAt: new Date().toISOString(),
   };
+  await persistCreatedDatabaseState(state);
+  return state;
 }
 
 function writeRemoteConfig(sourceConfig, subdomain, databaseId) {
@@ -226,7 +247,7 @@ async function setSecret(name, value) {
   if (typeof value !== "string" || value.length < 32) fail("Generated staging secret did not meet the minimum length.");
   runNpx(
     ["wrangler", "secret", "put", name, "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"],
-    { input: value + "\n" },
+    { input: value + "\n", allowCloudflareCredentials: true },
   );
 }
 
@@ -308,11 +329,11 @@ async function main() {
   console.log("Applying the staging D1 migration to the isolated remote database.");
   runNpx(
     ["wrangler", "d1", "migrations", "apply", databaseName, "--remote", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"],
-    { input: "y\n" },
+    { input: "y\n", allowCloudflareCredentials: true },
   );
 
   console.log("Deploying only the staging Worker environment. Missing secrets keep the service closed.");
-  runNpx(["wrangler", "deploy", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"]);
+  runNpx(["wrangler", "deploy", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"], { allowCloudflareCredentials: true });
 
   console.log("Installing the two staging-only secrets through Wrangler's secret interface.");
   await setSecret("STAGING_ACCESS_CODE", accessCode);
@@ -322,7 +343,7 @@ async function main() {
   const evidence = await smokeTest(configInfo.origin, accessCode);
 
   console.log("");
-  console.log("REMOTE STAGING DEPLOYMENT QUALIFIED");
+  console.log("REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED");
   console.log("Staging URL: " + configInfo.origin + "/");
   console.log("HTTP Basic Auth username: staging");
   console.log("HTTP Basic Auth access code: " + accessCode);
@@ -333,6 +354,9 @@ async function main() {
   console.log("ML-DSA-44 verify: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].verify);
   console.log("ML-DSA-44 algorithm -48 advertised first: " + evidence.diagnostics.pqcRegistrationAlgorithmAdvertised);
   console.log("");
+  console.log("This is only initial deployment smoke evidence, not full remote account qualification.");
+  console.log("A real remote browser must still prove registration, discoverable sign-in, sign-out, recovery, old-key rejection, key rotation and replacement-passkey sign-in.");
+  console.log("Claim ML-DSA-44 for a remote credential only after the actual stored COSE algorithm is -48 and a later assertion verifies on this deployed Worker.");
   console.log("Use synthetic data only. The one-time recovery key is displayed by the site and must be kept offline.");
   console.log("This script does not enable billing, add a payment method, deploy production, or delete resources after a failed run.");
   console.log("Record three-pass cleanup and the provider's retention quarantine before closing this staging environment.");
