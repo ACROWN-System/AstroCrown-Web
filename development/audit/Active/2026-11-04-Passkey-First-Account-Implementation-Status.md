@@ -177,3 +177,32 @@ This is local browser evidence of an actual ML-DSA-44 virtual-authenticator cred
 The job used Wrangler/Workerd locally and confirmed remote staging RP/origin/database values remain deliberate sentinels. It did not deploy, create a remote D1 database, set provider secrets, establish a remote hostname, or modify a Cloudflare account. The Worker remains a local qualification build only. Remote no-card/free-tier eligibility, deployed persistence, remote HTTPS browser tests, quota measurements, provider-retention evidence and the three cleanup passes remain open blockers.
 
 No public onboarding, merge, production deployment, paid plan, billing method or provider resource is authorized by this verification update. Immutable historical backups remain untouched.
+
+
+### Exact Worker and deployment-guard refresh — implementation commit `8567b39ad7d5157777a4f8e3d93b0e80bd854573` — 2026-11-04
+
+The tested account Worker implementation at `8567b39ad7d5157777a4f8e3d93b0e80bd854573` passed the complete local Worker qualification on both event paths:
+
+- [Account Staging Worker Qualification #77 — push](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41744824033) — PASS.
+- [Account Staging Worker Qualification #78 — pull request](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41744828184) — PASS on retry attempt 2. Attempt 1 timed out while waiting for the Chrome DevTools page; its other preceding steps passed. The same commit's push run passed the browser step, and the retry of the PR job passed all steps, so no application assertion or credential-verification defect was indicated by the first-attempt timeout.
+
+Both successful Worker runs completed all 11 qualification stages: locked dependency install, Worker invariant tests, allowlisted staging-site build, JavaScript/bundle checks, local D1 migration, local Worker HTTP/homepage/origin checks, Chrome virtual-authenticator browser E2E and remote-deployment sentinel verification. The invariant suite reported 9 passed and 0 failed.
+
+The browser log again confirms the actual stored test credential COSE algorithm `-48` (ML-DSA-44). The regression assertions require that algorithm on initial registration, after one-time offline recovery replaces the credential, and on a fresh discoverable sign-in. The lifecycle passed: registration, sign-in, sign-out/session revocation, original passkey removal, recovery-key use, rejection of the consumed key, recovery-key rotation, replacement-passkey registration and subsequent replacement-passkey authentication.
+
+The staging homepage test also confirms that the ordinary User dashboard displays an explicit disabled-communications notice and does not show an active communications button, a case portal link or an administrator entry.
+
+All five substantive pull-request check groups passed on this exact commit:
+- [Account Staging Worker Qualification #78](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41744828184) — PASS on retry attempt 2.
+- [Local Wallet Authentication Prototype Tests #639](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41744827881) — PASS.
+- [External Review Pipeline CI #914](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41744827873) — PASS.
+- [NOVA RSI Engine CI #1403](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41744828008) — PASS.
+- [NOVA RSI CodeQL Security Analysis #935](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41744828112) — PASS.
+
+The staging deployment script was hardened in this branch: Cloudflare account credentials are excluded from local test/build/dry-run subprocesses and passed only to remote Wrangler migration/deploy/secret operations; a newly created remote D1 identity is written immediately to an ignored local state file using exclusive creation and restrictive file/directory permissions; and successful deployment now reports only "initial smoke checks passed". The script explicitly requires a later remote browser lifecycle and actual stored ML-DSA-44 credential assertion before remote account qualification. Four new invariant tests cover these safeguards.
+
+**Unverified Python reference path:** the separate `.github/workflows/account-continuity-prototype-tests.yml` and `.github/workflows/python-ci-lock-refresh.yml` push-triggered records on this commit reported failure with zero jobs and no job logs. They do not provide an executed Python reference-suite result. The Local Wallet Authentication Prototype Tests PR check is a separate workflow and passed; do not use it as a substitute for the Python account-continuity reference suite. The Python reference suite remains UNVERIFIED/BLOCKED until a properly executed job provides evidence.
+
+**Remote deployment remains unperformed.** The successful Worker runs used local Wrangler/Workerd and a disposable Chrome virtual CTAP2 authenticator. They confirmed the checked-in remote database ID, staging hostname, RP ID and origin still remain fail-closed sentinels. No Cloudflare API token was supplied to this task; no remote D1 database, staging Worker, hostname, provider secret or Cloudflare account setting was created or changed. The exact deployed Cloudflare runtime and real HTTPS origin still need a separate, explicitly authorized, free/no-card account qualification and remote browser lifecycle. This local run does not qualify physical authenticators, synced passkeys, other browsers, ML-DSA-65/-87, or Cloudflare's remote runtime.
+
+PR #141 remains open, draft, unmerged and undeployed. No main-branch publication, public onboarding, paid plan, billing method or production deployment is authorized by this verification. Immutable historical backups remain untouched.
