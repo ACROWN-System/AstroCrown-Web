@@ -221,14 +221,14 @@ async function resolveDatabase(accountId) {
   const created = await cloudflare("POST", "/accounts/" + accountId + "/d1/database", { name: databaseName });
   if (!created?.uuid || created.name !== databaseName) fail("Cloudflare did not return the expected new staging D1 identity.");
 
-  const state = {
+  const createdState = {
     accountId,
     databaseName,
     databaseId: created.uuid,
     createdAt: new Date().toISOString(),
   };
-  await persistCreatedDatabaseState(state);
-  return state;
+  await persistCreatedDatabaseState(createdState);
+  return createdState;
 }
 
 function writeRemoteConfig(sourceConfig, subdomain, databaseId) {
