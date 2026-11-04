@@ -219,6 +219,14 @@ try {
   await trustedClick("#open-account-hub");
   await waitFor("ordinary User dashboard", () =>
     evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  const stagingDashboard = await evaluate("document.getElementById('account-dashboard').innerText");
+  assert.match(stagingDashboard, /Alerts & Messages[\\s\\S]*Disabled in this staging qualification/);
+  assert.equal(await evaluate("Boolean(document.getElementById('open-account-communications'))"), false,
+    "the disabled communications API must not have an active dashboard button");
+  assert.equal(await evaluate("Boolean(document.querySelector('a[href*=\"cases.html\"]'))"), false,
+    "the out-of-scope case portal must not be linked from the staging homepage");
+  assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false,
+    "an ordinary user must not see an administrator entry");
 
   const firstCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(firstCredentials.credentials.length, 1, "registration must create one resident credential.");
