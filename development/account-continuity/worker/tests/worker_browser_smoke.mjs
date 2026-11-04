@@ -204,7 +204,8 @@ try {
   assert.equal(account.authMethod, "webauthn");
   assert.equal(account.passkeyCount, 1);
   assert.equal(account.mlDsaRegistrationAvailable, true, "the qualified Worker runtime must offer ML-DSA-44 first.");
-  assert.equal(account.passkeyAlgorithmIds.length, 1, "the account must expose the actual active credential algorithm identifier.");
+  assert.deepEqual(account.passkeyAlgorithmIds, [-48], "the registered test credential must actually use ML-DSA-44 (COSE alg -48), not a classical fallback.");
+  assert.equal(account.postQuantumPasskeyCount, 1, "the actual persisted credential must be counted as post-quantum.");
   assert.equal(account.postQuantumPasskeyCount, account.passkeyAlgorithmIds.filter(id => [-48, -49, -50].includes(id)).length);
   console.log("Authenticator credential COSE algorithm: " + account.passkeyAlgorithmIds[0] +
     "; ML-DSA-44 advertised: " + account.mlDsaRegistrationAvailable +
@@ -263,6 +264,8 @@ try {
   assert.equal(account.authenticated, true);
   assert.equal(account.accountIdentifier, identifier);
   assert.equal(account.passkeyCount, 1);
+  assert.deepEqual(account.passkeyAlgorithmIds, [-48], "the replacement passkey registered during recovery must also use ML-DSA-44.");
+  assert.equal(account.postQuantumPasskeyCount, 1, "recovery must not silently replace the post-quantum credential with a classical fallback.");
   assert.equal(account.recoveryKeyAvailable, true);
   assert.equal(account.activeSessionCount, 1);
 
@@ -291,6 +294,8 @@ try {
   assert.equal(account.authenticated, true);
   assert.equal(account.accountIdentifier, identifier);
   assert.equal(account.passkeyCount, 1);
+  assert.deepEqual(account.passkeyAlgorithmIds, [-48], "the replacement ML-DSA-44 credential must remain usable after a fresh discoverable sign-in.");
+  assert.equal(account.postQuantumPasskeyCount, 1);
 
   console.log("PASS: Chrome virtual-authenticator registration, discoverable sign-in, sign-out, passkey-loss simulation, offline recovery, previous-key rejection, recovery-key rotation and replacement-passkey sign-in.");
 } catch (error) {
