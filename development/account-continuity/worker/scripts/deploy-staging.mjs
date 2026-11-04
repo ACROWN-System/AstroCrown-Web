@@ -297,7 +297,8 @@ async function main() {
     origin: configInfo.origin,
     updatedAt: new Date().toISOString(),
   };
-  await mkdir(localStateDir, { recursive: true });
+  await mkdir(localStateDir, { recursive: true, mode: 0o700 });
+  try { await chmod(localStateDir, 0o700); } catch { /* Windows ACLs govern directory access on Windows. */ }
   await writeFile(statePath, JSON.stringify(completeState, null, 2) + "\n", { encoding: "utf8", mode: 0o600 });
   try { await chmod(statePath, 0o600); } catch { /* Windows ACLs govern file access on Windows. */ }
 
