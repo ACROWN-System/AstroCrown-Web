@@ -47,7 +47,7 @@ test("new D1 identity is persisted exclusively before database setup continues",
   assert.match(deployScript, /flag: "wx"/);
   assert.match(deployScript, /mode: 0o700/);
   assert.match(deployScript, /mode: 0o600/);
-  assert.match(deployScript, /await persistCreatedDatabaseState\(state\);[\s\S]*return state;/);
+  assert.match(deployScript, /await persistCreatedDatabaseState\(createdState\);[\s\S]*return createdState;/);
   assert.match(deployScript, /Do not retry database creation/);
 });
 
