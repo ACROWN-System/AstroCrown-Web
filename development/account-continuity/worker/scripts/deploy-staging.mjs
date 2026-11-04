@@ -225,7 +225,7 @@ function writeRemoteConfig(sourceConfig, subdomain, databaseId) {
 async function setSecret(name, value) {
   if (typeof value !== "string" || value.length < 32) fail("Generated staging secret did not meet the minimum length.");
   runNpx(
-    ["wrangler", "secret", "put", name, "--env", "staging", "--config", remoteConfigPath],
+    ["wrangler", "secret", "put", name, "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"],
     { input: value + "\n" },
   );
 }
@@ -307,12 +307,12 @@ async function main() {
 
   console.log("Applying the staging D1 migration to the isolated remote database.");
   runNpx(
-    ["wrangler", "d1", "migrations", "apply", databaseName, "--remote", "--env", "staging", "--config", remoteConfigPath],
+    ["wrangler", "d1", "migrations", "apply", databaseName, "--remote", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"],
     { input: "y\n" },
   );
 
   console.log("Deploying only the staging Worker environment. Missing secrets keep the service closed.");
-  runNpx(["wrangler", "deploy", "--env", "staging", "--config", remoteConfigPath]);
+  runNpx(["wrangler", "deploy", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"]);
 
   console.log("Installing the two staging-only secrets through Wrangler's secret interface.");
   await setSecret("STAGING_ACCESS_CODE", accessCode);
