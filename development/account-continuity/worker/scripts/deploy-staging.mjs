@@ -186,7 +186,19 @@ async function resolveDatabase(accountId) {
     );
   }
 
-  console.log("No existing D1 database with the staging name was found. Creating one isolated staging database.");
+  const allDatabases = await cloudflare("GET", "/accounts/" + accountId + "/d1/database?per_page=100&page=1");
+  if (!Array.isArray(allDatabases)) fail("Cloudflare did not return the D1 database inventory in the expected format.");
+  const totalDatabases = Number(allDatabases.result_info?.total_count ?? allDatabases.length);
+  if (!Number.isInteger(totalDatabases) || totalDatabases < 0) fail("Cloudflare returned an invalid D1 database count.");
+  if (totalDatabases >= 10) {
+    fail(
+      "The Cloudflare Workers Free allowance is 10 D1 databases per account and this account already reports " +
+      totalDatabases + ". No database was created. Free-tier capacity must be confirmed manually; this script never upgrades a plan."
+    );
+  }
+
+  console.log("No existing D1 database with the staging name was found and the account inventory reports " +
+    totalDatabases + " of 10 Free-tier database slots in use. Creating one isolated staging database.");
   const created = await cloudflare("POST", "/accounts/" + accountId + "/d1/database", { name: databaseName });
   if (!created?.uuid || created.name !== databaseName) fail("Cloudflare did not return the expected new staging D1 identity.");
 
