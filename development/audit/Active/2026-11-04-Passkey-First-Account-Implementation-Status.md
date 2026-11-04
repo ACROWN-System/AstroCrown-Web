@@ -150,3 +150,20 @@ Before any real-user onboarding, the project still requires:
 The implementation and its browser/API regression tests are maintained in PR #141. Current exact-head workflow results must be read from the PR's Checks tab and the linked GitHub Actions runs; a previous green result must not be carried forward to a later commit without checking that exact commit.
 
 This is the current implementation/status summary. Earlier account-flow, email-provider and hosting experiments are not current product requirements or provider selections.
+
+### Exact current-head verification refresh — 2026-11-04
+
+The previous local Worker qualification result remains valid historical evidence. The PR head at the time of this refresh was `4b4e52087ff50de26a3a7c5d75bc3cad4b32cc9e`, a direct descendant of browser-test commit `893dbee7f2a346ed974e80cf0807b3dffe9ec512` (10 commits ahead, 0 behind).
+
+On exact PR head `4b4e52087ff50de26a3a7c5d75bc3cad4b32cc9e`, Account Staging Worker Qualification run #53 (GitHub Actions run `41742993943`) completed successfully. Its qualification job completed dependency lock/install, Worker invariant tests, allowlisted site build, JavaScript/bundle checks, local D1 migration, local Worker HTTP/homepage/origin smoke tests, Chrome browser E2E, and remote-deployment sentinel verification. The four additional exact-head checks also passed: External Review Pipeline CI #901, Local Wallet Authentication Prototype Tests #626, NOVA RSI Engine CI #1390, and NOVA RSI CodeQL #922.
+
+The browser job log records:
+- local Workerd ML-DSA-44 sign and verify support, with registration algorithm `-48` advertised;
+- the actual registered/persisted test credential COSE algorithm was `-48`, and account status reported one active post-quantum credential;
+- Chrome headless with a disposable CTAP2 virtual authenticator completed registration, discoverable passkey sign-in, sign-out, simulated loss of the original passkey, one-time offline recovery, rejection of the consumed recovery key, recovery-key rotation, and successful sign-in with the replacement passkey.
+
+This is local browser evidence of an actual ML-DSA-44 virtual-authenticator credential and subsequent assertion. It is not proof of physical security-key, OS/platform authenticator, synced passkey-provider, other-browser, or remote Cloudflare-runtime interoperability. It does not qualify ML-DSA-65 or ML-DSA-87 credentials.
+
+The job used Wrangler/Workerd locally and confirmed remote staging RP/origin/database values remain deliberate sentinels. It did not deploy, create a remote D1 database, set provider secrets, establish a remote hostname, or modify a Cloudflare account. The Worker remains a local qualification build only. Remote no-card/free-tier eligibility, deployed persistence, remote HTTPS browser tests, quota measurements, provider-retention evidence and the three cleanup passes remain open blockers.
+
+No public onboarding, merge, production deployment, paid plan, billing method or provider resource is authorized by this verification update. Immutable historical backups remain untouched.
