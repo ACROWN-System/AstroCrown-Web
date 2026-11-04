@@ -32,7 +32,7 @@ Use a supported Node.js LTS, npm, and a preinstalled Chrome/Chromium browser. Fr
 A guarded remote setup script is provided. It runs only from a local checkout when **both** explicit confirmation variables and the Cloudflare account credentials are present. It first runs the local tests, restricted asset build and Wrangler dry run. It then:
 
 - Reads the account's existing workers.dev subdomain; it does not create or modify the account subdomain.
-- Creates the dedicated staging D1 database only if there is no database with the reserved staging name and no prior local deployment-state record. If one already exists without matching state, it stops instead of adopting or overwriting it.
+- Creates the dedicated staging D1 database only if there is no database with the reserved staging name and no prior local deployment-state record. If one already exists without matching state, it stops instead of adopting or overwriting it. It also stops before creation when the Cloudflare D1 inventory reports 10 or more databases, the published Workers Free account limit.
 - Generates two random staging-only secrets and keeps the access code/rate-limit key in ignored local files. They are not written to Git. The Worker is deployed only with the exact HTTPS origin/RP ID derived from the account subdomain and the staging Worker name.
 - Applies only the staging D1 migration, deploys only the `staging` Wrangler environment, sets only the staging secrets, then checks the staging URL, homepage, account status, ML-DSA-44 support and wrong-Origin rejection.
 - Never configures a production database or environment, never enables a paid product, never adds a payment method, and never automatically deletes a resource if a later check fails.
