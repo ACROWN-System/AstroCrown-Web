@@ -282,17 +282,39 @@ async function resolveDatabase(accountId) {
   return createdState;
 }
 
+async function publishGithubD1Identity(state) {
+  if (process.env.GITHUB_ACTIONS !== "true") return;
+
+  const outputPath = process.env.GITHUB_OUTPUT;
+  if (outputPath) {
+    await appendFile(outputPath, "staging_d1_database_id=" + state.databaseId + "\n", "utf8");
+  }
+
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+  if (summaryPath) {
+    await appendFile(
+      summaryPath,
+      [
+        "## AstroCrown staging D1 identity",
+        "",
+        "- Database name: " + databaseName,
+        "- Database ID (non-secret): " + state.databaseId,
+        "- State: verified or created; remote migration/deployment may still be pending",
+        "",
+        "Add this exact UUID as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment before any later deployment. Preserve it if a later deployment step fails; do not retry database creation or adopt by name.",
+        "",
+      ].join("\n") + "\n",
+      "utf8",
+    );
+  }
+}
+
 async function publishGithubDeploymentMetadata(state, configInfo) {
   if (process.env.GITHUB_ACTIONS !== "true") return;
 
   const outputPath = process.env.GITHUB_OUTPUT;
   if (outputPath) {
-    await appendFile(
-      outputPath,
-      "staging_d1_database_id=" + state.databaseId + "\n" +
-      "staging_origin=" + configInfo.origin + "\n",
-      "utf8",
-    );
+    await appendFile(outputPath, "staging_origin=" + configInfo.origin + "\n", "utf8");
   }
 
   const summaryPath = process.env.GITHUB_STEP_SUMMARY;
@@ -310,7 +332,7 @@ async function publishGithubDeploymentMetadata(state, configInfo) {
         "- Access code: supplied by protected GitHub environment secret; not displayed",
         "- Full remote browser and credential qualification: still required",
         "",
-        "After the first successful deployment, add the D1 database ID above as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment before any later deployment.",
+        "The D1 UUID is stored as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment for subsequent runs.",
         "",
       ].join("\n") + "\n",
       "utf8",
@@ -393,6 +415,9 @@ async function main() {
   const subdomain = validateSubdomain(subdomainResponse?.subdomain);
 
   const state = await resolveDatabase(accountId);
+  // Publish the non-secret D1 UUID immediately: a later migration or deploy
+  // failure must not leave an ephemeral runner's newly created database orphaned.
+  await publishGithubD1Identity(state);
   if (state.subdomain && state.subdomain !== subdomain) {
     fail("The Cloudflare workers.dev subdomain differs from the saved staging state. Review the account/domain change manually.");
   }
