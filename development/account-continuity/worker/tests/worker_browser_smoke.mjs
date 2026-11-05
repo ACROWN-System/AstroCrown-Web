@@ -68,10 +68,15 @@ async function trustedClick(selector) {
   const point = await evaluate(
     "(() => { const element = document.querySelector(" + JSON.stringify(selector) + ");" +
     " if (!element) throw new Error('Missing click target: ' + " + JSON.stringify(selector) + ");" +
-    " element.scrollIntoView({block:'center',inline:'center'});" +
+    " element.scrollIntoView({block:'center',inline:'center',behavior:'instant'});" +
     " const r = element.getBoundingClientRect();" +
-    " return {x:r.left+r.width/2,y:r.top+r.height/2}; })()"
+    " return {x:r.left+r.width/2,y:r.top+r.height/2,width:r.width,height:r.height," +
+    "viewportWidth:innerWidth,viewportHeight:innerHeight}; })()"
   );
+  if (!point.width || !point.height || point.x < 0 || point.y < 0 ||
+      point.x >= point.viewportWidth || point.y >= point.viewportHeight) {
+    throw new Error("Click target is not in the viewport after instant scrolling: " + JSON.stringify(point));
+  }
   await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
   await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", clickCount: 1 });
   await cdp("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", clickCount: 1 });
