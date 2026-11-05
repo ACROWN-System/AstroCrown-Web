@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
+  appendFile,
   chmod,
   mkdir,
   readFile,
@@ -50,6 +51,21 @@ function validateEnv() {
   const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || "";
   if (!token || token.length < 20) fail("CLOUDFLARE_API_TOKEN is missing or too short.");
   if (!/^[a-f0-9]{32}$/i.test(accountId)) fail("CLOUDFLARE_ACCOUNT_ID must be the 32-character account identifier.");
+
+  if (process.env.GITHUB_ACTIONS === "true") {
+    for (const name of ["ASTROCROWN_STAGING_ACCESS_CODE", "ASTROCROWN_RATE_LIMIT_HMAC_KEY"]) {
+      const value = process.env[name] || "";
+      if (value.length < 32 || value.trim() !== value) {
+        fail(name + " must be configured as a protected GitHub environment secret with at least 32 characters. " +
+          "The hosted runner will not generate an unreported access credential.");
+      }
+    }
+  }
+
+  const suppliedDatabaseId = process.env.ASTROCROWN_STAGING_D1_DATABASE_ID || "";
+  if (suppliedDatabaseId && !/^[a-f0-9-]{36}$/i.test(suppliedDatabaseId)) {
+    fail("ASTROCROWN_STAGING_D1_DATABASE_ID must be a valid 36-character D1 database UUID.");
+  }
   return { token, accountId };
 }
 
@@ -86,6 +102,10 @@ function runProgram(program, args, options = {}) {
     delete childEnv.CLOUDFLARE_ACCOUNT_ID;
     delete childEnv.CLOUDFLARE_API_TOKEN;
   }
+  // Access-gate and rate-limit secrets are supplied to Wrangler only through stdin
+  // when setting the corresponding Cloudflare secret; never expose them in its environment.
+  delete childEnv.ASTROCROWN_STAGING_ACCESS_CODE;
+  delete childEnv.ASTROCROWN_RATE_LIMIT_HMAC_KEY;
   const result = spawnSync(program, args, {
     cwd: workerRoot,
     env: childEnv,
@@ -110,7 +130,22 @@ function runNpx(args, options = {}) {
   return runProgram(process.platform === "win32" ? "npx.cmd" : "npx", args, options);
 }
 
-async function loadOrCreateLocalSecret(path, bytes = 32) {
+async function loadOrCreateLocalSecret(path, bytes = 32, environmentVariableName) {
+  const supplied = environmentVariableName ? process.env[environmentVariableName] : "";
+  if (supplied) {
+    if (supplied.length < 32 || supplied.trim() !== supplied) {
+      fail(environmentVariableName + " must contain at least 32 characters without leading/trailing whitespace.");
+    }
+    if (process.env.GITHUB_ACTIONS === "true") {
+      process.stdout.write("::add-mask::" + supplied + "\n");
+    }
+    return supplied;
+  }
+
+  if (process.env.GITHUB_ACTIONS === "true") {
+    fail(environmentVariableName + " is required as a protected GitHub environment secret; hosted runners do not generate unreported credentials.");
+  }
+
   try {
     const current = (await readFile(path, "utf8")).trim();
     if (current.length >= 32) return current;
@@ -183,6 +218,7 @@ async function resolveDatabase(accountId) {
     if (error?.code !== "ENOENT") fail("The local staging deployment state file is invalid. Inspect it manually; do not overwrite it.");
   }
 
+  const suppliedDatabaseId = process.env.ASTROCROWN_STAGING_D1_DATABASE_ID || "";
   if (state) {
     if (
       state.accountId !== accountId ||
@@ -192,8 +228,23 @@ async function resolveDatabase(accountId) {
     ) {
       fail("Saved staging deployment state belongs to a different or invalid Cloudflare resource.");
     }
+    if (suppliedDatabaseId && suppliedDatabaseId !== state.databaseId) {
+      fail("The protected ASTROCROWN_STAGING_D1_DATABASE_ID does not match the saved local deployment state.");
+    }
     await getDatabase(accountId, state.databaseId);
     return state;
+  }
+
+  // GitHub-hosted runners are ephemeral. Pin later runs to the UUID recorded
+  // as a GitHub environment variable; never adopt a database by name alone.
+  if (suppliedDatabaseId) {
+    await getDatabase(accountId, suppliedDatabaseId);
+    return {
+      accountId,
+      databaseName,
+      databaseId: suppliedDatabaseId,
+      createdAt: "identity-supplied-by-protected-github-environment-variable",
+    };
   }
 
   const query = "?name=" + encodeURIComponent(databaseName) + "&per_page=100&page=1";
@@ -229,6 +280,42 @@ async function resolveDatabase(accountId) {
   };
   await persistCreatedDatabaseState(createdState);
   return createdState;
+}
+
+async function publishGithubDeploymentMetadata(state, configInfo) {
+  if (process.env.GITHUB_ACTIONS !== "true") return;
+
+  const outputPath = process.env.GITHUB_OUTPUT;
+  if (outputPath) {
+    await appendFile(
+      outputPath,
+      "staging_d1_database_id=" + state.databaseId + "\n" +
+      "staging_origin=" + configInfo.origin + "\n",
+      "utf8",
+    );
+  }
+
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+  if (summaryPath) {
+    await appendFile(
+      summaryPath,
+      [
+        "## AstroCrown staging deployment",
+        "",
+        "- Result: initial deployment smoke checks only",
+        "- Worker: " + configInfo.scriptName,
+        "- Staging origin: " + configInfo.origin,
+        "- D1 database name: " + databaseName,
+        "- D1 database ID (non-secret): " + state.databaseId,
+        "- Access code: supplied by protected GitHub environment secret; not displayed",
+        "- Full remote browser and credential qualification: still required",
+        "",
+        "After the first successful deployment, add the D1 database ID above as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment before any later deployment.",
+        "",
+      ].join("\n") + "\n",
+      "utf8",
+    );
+  }
 }
 
 function writeRemoteConfig(sourceConfig, subdomain, databaseId) {
@@ -323,8 +410,17 @@ async function main() {
   await writeFile(statePath, JSON.stringify(completeState, null, 2) + "\n", { encoding: "utf8", mode: 0o600 });
   try { await chmod(statePath, 0o600); } catch { /* Windows ACLs govern file access on Windows. */ }
 
-  const accessCode = await loadOrCreateLocalSecret(accessCodePath, 32);
-  const rateLimitKey = await loadOrCreateLocalSecret(rateKeyPath, 32);
+  const accessCode = await loadOrCreateLocalSecret(
+    accessCodePath,
+    32,
+    "ASTROCROWN_STAGING_ACCESS_CODE",
+  );
+  const rateLimitKey = await loadOrCreateLocalSecret(
+    rateKeyPath,
+    32,
+    "ASTROCROWN_RATE_LIMIT_HMAC_KEY",
+  );
+  await publishGithubDeploymentMetadata(completeState, configInfo);
 
   console.log("Applying the staging D1 migration to the isolated remote database.");
   runNpx(
@@ -346,8 +442,12 @@ async function main() {
   console.log("REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED");
   console.log("Staging URL: " + configInfo.origin + "/");
   console.log("HTTP Basic Auth username: staging");
-  console.log("HTTP Basic Auth access code: " + accessCode);
-  console.log("Local ignored access-code file: " + accessCodePath);
+  if (process.env.GITHUB_ACTIONS === "true") {
+    console.log("HTTP Basic Auth access code: configured from protected GitHub environment secret; value withheld.");
+  } else {
+    console.log("HTTP Basic Auth access code: " + accessCode);
+    console.log("Local ignored access-code file: " + accessCodePath);
+  }
   console.log("Remote D1 database name: " + databaseName);
   console.log("Remote D1 database ID: " + state.databaseId);
   console.log("ML-DSA-44 sign: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].sign);
