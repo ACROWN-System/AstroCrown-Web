@@ -27,30 +27,49 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 
 Use a supported Node.js LTS, npm, and a preinstalled Chrome/Chromium browser. From this directory, run npm install, npm run build:site, npx wrangler d1 migrations apply acrown-account-staging --local, and npx wrangler dev --local. Wrangler displays the local URL. Local development uses the localhost RP ID; it is not the remote staging URL. The qualification workflow also runs a Chrome virtual-authenticator registration, discoverable sign-in, passkey-loss and offline-recovery test against the local Worker.
 
-## Remote staging — prepared, not deployed or authorized
+## GitHub-hosted remote staging — prepared, not deployed or authorized
 
-A guarded remote setup script is provided. It runs only from a local checkout when **both** explicit confirmation variables and the Cloudflare account credentials are present. It first runs the local tests, restricted asset build and Wrangler dry run. It then:
+The preferred operating path is GitHub Actions on GitHub-hosted Ubuntu runners. A developer workstation is not required for dependency installation, tests, site builds, Worker dry-runs or the guarded remote deployment. The local script path remains available for exceptional diagnostics only.
 
-- Reads the account's existing workers.dev subdomain; it does not create or modify the account subdomain.
-- Creates the dedicated staging D1 database only if there is no database with the reserved staging name and no prior local deployment-state record. If one already exists without matching state, it stops instead of adopting or overwriting it. It also stops before creation when the Cloudflare D1 inventory reports 10 or more databases, the published Workers Free account limit.
-- Generates two random staging-only secrets and keeps the access code/rate-limit key in ignored local files. They are not written to Git. The Worker is deployed only with the exact HTTPS origin/RP ID derived from the account subdomain and the staging Worker name.
-- Applies only the staging D1 migration, deploys only the `staging` Wrangler environment, sets only the staging secrets, then checks the staging URL, homepage, account status, ML-DSA-44 support and wrong-Origin rejection.
-- Never configures a production database or environment, never enables a paid product, never adds a payment method, and never automatically deletes a resource if a later check fails.
+Workflow: `.github/workflows/cloudflare-staging-deployment.yml`
 
-**Nothing is deployed by CI or by this chat.** Before using the script, verify in the Cloudflare dashboard that this account is eligible for Workers Free and D1 Free, that no payment method/card is required or attached, and that you will not enable Workers Paid or any paid product. Cloudflare documents that a Workers API token and account ID are required for GitHub/CLI deployments, and documents separate D1 database and workers.dev subdomain APIs. The script uses those APIs only after the confirmations below.
+The workflow is deliberately manual and restricted to the reviewed `main` branch. It has two separate confirmation inputs: one confirms the Workers Free/D1 Free and no-card conditions, and the other explicitly authorizes creation/use of the isolated staging database and deployment of the staging Worker. Pushes, pull requests and CI runs never deploy remotely. A concurrency lock prevents overlapping staging deployments.
 
-From a local checkout, set these environment variables in the same terminal (never commit them):
+**Activation boundary:** `workflow_dispatch` is available only after this workflow file is present on the repository's default branch. PR #141 remains a draft and this workflow does not merge it, publish the account implementation, or authorize production deployment. Until the reviewed branch is merged by an authorized maintainer, the workflow is prepared but cannot be used for remote deployment.
 
-- `CLOUDFLARE_API_TOKEN`: account-scoped API token with Workers Scripts Read/Write and D1 Read/Write permissions.
-- `CLOUDFLARE_ACCOUNT_ID`: the 32-character account identifier.
-- `ASTROCROWN_CONFIRM_WORKERS_FREE_NO_CARD=I_CONFIRMED_WORKERS_FREE_NO_CARD`: only after you have verified the account's plan/payment-method conditions.
-- `ASTROCROWN_CONFIRM_REMOTE_STAGING_DEPLOY=I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY`: only when you explicitly authorize creating the isolated staging database and deploying the staging Worker.
+### One-time GitHub environment setup
 
-Then run `npm install` and `npm run deploy:staging`. On Windows PowerShell, use `$env:NAME = 'value'` for each variable before running the command. The script displays a random HTTP Basic access code on successful completion and stores it in `.wrangler/staging-access-code.txt` (ignored by Git). The staging username is `staging`. Treat that code as a private test gate and use synthetic account details only. Deleting that local ignored file before a future deployment causes a new access code to be generated.
+After the workflow is present on `main`, create a GitHub Actions environment named `cloudflare-staging` under repository Settings → Environments. Restrict allowed deployment branches to `main`. Add the following environment secrets:
 
-If the workers.dev subdomain is not already configured, the script stops and asks for it to be enabled in the Cloudflare dashboard; it will not create or change it automatically. A deployment run that creates the D1 database is a persistent remote resource; no cleanup is automatic because database deletion and provider Time Travel/retention must be handled under the three-pass cleanup procedure.
+- `CLOUDFLARE_API_TOKEN_02` — the account-scoped Cloudflare token created for this account (D1 Read/Edit and Workers Editor only).
+- `ASTROCROWN_STAGING_ACCESS_CODE` — a password-manager-generated random value of at least 32 characters. This is the HTTP Basic access code for the restricted staging site.
+- `ASTROCROWN_RATE_LIMIT_HMAC_KEY` — a separate password-manager-generated random value of at least 32 characters.
 
-The staging environment's checked-in all-zero D1 ID and invalid hostname remain deliberate sentinels. The script writes an ignored temporary Wrangler config with the exact account-specific D1 ID and hostname; never commit that generated config or any files under `.wrangler/`.
+Add this environment variable:
+
+- `CLOUDFLARE_ACCOUNT_ID` — the 32-character Cloudflare account identifier.
+
+Do not create these as repository-wide secrets. The workflow references them only from its final deployment step after the explicit authorization job succeeds. The deployment script removes the access-code and rate-limit secrets from all child-process environments, masks them in GitHub Actions, sends them to Wrangler through standard input, and never prints the access code. No credential or access-code artifact is uploaded.
+
+For additional review, configure an environment required reviewer if a separate authorized reviewer is available. Environment branch restrictions are mandatory; a manual workflow trigger alone is not a substitute for controlling who can modify the deployment workflow.
+
+### First deployment and persistent D1 identity
+
+On the first authorized deployment, the script creates the reserved D1 database `acrown-account-staging` only if it is absent and the account has fewer than ten D1 databases. The hosted runner is ephemeral, so its local `.wrangler/` state does not persist across runs.
+
+The first successful or partially completed deployment reports the D1 UUID as non-secret workflow output/summary. Before any subsequent deployment, add that exact UUID as the `ASTROCROWN_STAGING_D1_DATABASE_ID` variable in the `cloudflare-staging` GitHub environment. Later runs verify the UUID against Cloudflare and use that exact database; they never adopt an existing database by name alone. If the variable is absent but the reserved database already exists, the script stops safely rather than guessing.
+
+The deployment script also creates or uses two staging-only Cloudflare Worker secrets: `STAGING_ACCESS_CODE` and `RATE_LIMIT_HMAC_KEY`. The values come from the protected GitHub environment secrets above. The staging Worker name remains `astrocrown-account-staging-staging`; the script deploys only the `staging` Wrangler environment and does not create or delete Workers.
+
+### What the workflow does and does not do
+
+Before any Cloudflare API request or remote resource change, the script verifies both confirmation values, the account ID, token presence, and both staging-only secret values. It then performs local invariant tests, the allowlisted website build and Wrangler bundle dry-run on GitHub's hosted runner. The Cloudflare token and account ID are removed from those child processes.
+
+Only after those checks pass does it read the configured workers.dev subdomain, verify/create the dedicated D1 database, apply the staging migration, deploy the staging Worker, install the two staging secrets and perform initial remote smoke checks. If a later stage fails, resources are not automatically deleted; preserve the reported D1 UUID and reconcile the state deliberately.
+
+The workflow never configures production, enables Workers Paid, adds a payment method, enables another paid product, or performs automatic cleanup. A successful workflow run is only initial deployment smoke evidence. It is not full remote browser/credential qualification, production approval, or permission to announce public account onboarding.
+
+Do not put the Cloudflare token in source files, Git history, workflow YAML, build variables, artifacts, issue comments or logs. Do not upload `.wrangler/` or the generated remote Wrangler configuration as an artifact.
 
 ## Test account safety
 
