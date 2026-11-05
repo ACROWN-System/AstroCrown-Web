@@ -719,3 +719,145 @@
   .communication-actions > button { width:100%; }
   .admin-communication-composer > button { width:100%; }
 }
+
+
+/* Passkey-first account security centre. */
+.account-security-panel {
+  display:grid;
+  gap:16px;
+  margin-top:14px;
+  padding-top:14px;
+  border-top:1px solid rgba(153,178,213,.16);
+}
+.account-security-panel[hidden],
+.account-security-pending-passkey[hidden],
+.account-security-recovery-output[hidden] { display:none!important; }
+.account-security-panel-heading { display:grid;gap:4px; }
+.account-security-panel-heading h3 { margin:0;color:#e7edf6;font-size:12px;letter-spacing:.025em; }
+.account-security-panel-heading p,
+.account-security-note {
+  margin:0!important;
+  color:#9aa9be!important;
+  font-size:10px!important;
+  line-height:1.6!important;
+}
+.account-security-list { display:grid;gap:9px; }
+.account-security-item {
+  display:grid;
+  gap:7px;
+  min-width:0;
+  padding:12px;
+  border:1px solid rgba(153,178,213,.17);
+  border-radius:10px;
+  background:rgba(3,9,17,.32);
+}
+.account-security-item-heading {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:5px 12px;
+}
+.account-security-item-heading strong,
+.account-security-item > strong { color:#e7edf6;font-size:11px;overflow-wrap:anywhere; }
+.account-security-item-heading span {
+  color:#a9b9cd;
+  font-size:9px;
+  line-height:1.45;
+}
+.account-security-item p {
+  margin:0!important;
+  color:#92a2b8!important;
+  font-size:9px!important;
+  line-height:1.5!important;
+  overflow-wrap:anywhere;
+}
+.account-security-label-field {
+  display:grid;
+  gap:5px;
+  color:#c5d1e1;
+  font-size:10px;
+  font-weight:650;
+}
+.account-security-label-field input {
+  width:100%;
+  min-width:0;
+  min-height:37px;
+  padding:8px 10px;
+  border:1px solid rgba(153,178,213,.24);
+  border-radius:8px;
+  background:rgba(3,9,17,.48);
+  color:#f2f5fb;
+  font:inherit;
+  font-size:11px;
+}
+.account-security-label-field input:focus {
+  outline:2px solid rgba(255,215,0,.58);
+  outline-offset:2px;
+}
+.account-security-item-actions,
+.account-security-add {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+}
+.account-security-add {
+  align-items:end;
+  padding:12px;
+  border:1px solid rgba(153,178,213,.15);
+  border-radius:10px;
+  background:rgba(255,255,255,.018);
+}
+.account-security-add > .account-security-label-field { flex:1 1 180px; }
+.account-security-add > button { flex:0 0 auto; }
+.account-security-pending-passkey {
+  display:grid;
+  gap:8px;
+  flex:1 1 100%;
+  padding-top:10px;
+  border-top:1px solid rgba(153,178,213,.14);
+}
+.account-security-pending-passkey p {
+  margin:0;
+  color:#c6d3e5;
+  font-size:10px;
+  line-height:1.6;
+}
+.account-security-recovery-output {
+  display:grid;
+  gap:8px;
+  padding:12px;
+  border:1px solid rgba(255,210,74,.34);
+  border-radius:10px;
+  background:rgba(255,210,74,.055);
+}
+.account-security-recovery-output > strong { color:#ffe6a0;font-size:11px; }
+.account-security-recovery-output p {
+  margin:0;
+  color:#d8cda8;
+  font-size:10px;
+  line-height:1.55;
+}
+.account-security-recovery-output textarea {
+  width:100%;
+  min-height:58px;
+  padding:9px 10px;
+  border:1px solid rgba(255,215,0,.38);
+  border-radius:8px;
+  background:rgba(1,6,12,.78);
+  color:#fff0aa;
+  font:11px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;
+  overflow-wrap:anywhere;
+  resize:vertical;
+}
+.account-security-panel > button { justify-self:start; }
+.account-security-note { padding-top:8px;border-top:1px solid rgba(153,178,213,.12); }
+@media(max-width:560px) {
+  .account-security-add { align-items:stretch;flex-direction:column; }
+  .account-security-add > .account-security-label-field,
+  .account-security-add > button { width:100%; }
+  .account-security-item-actions > button,
+  .account-security-pending-passkey > button { flex:1 1 100%;width:100%; }
+  .account-security-panel > button { width:100%; }
+}
