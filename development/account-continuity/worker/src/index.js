@@ -820,6 +820,8 @@ async function verifyRegistration(db, env, request, payload, config) {
   const expires = now + SESSION_SECONDS;
   const metadata = JSON.parse(challenge.payload_json || "{}");
   const marker = b64u(bytes(18));
+  const passkeyRef = hex(bytes(16));
+  const sessionRef = hex(bytes(16));
   const queries = [
     db.prepare(
       "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
@@ -830,17 +832,17 @@ async function verifyRegistration(db, env, request, payload, config) {
       "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND used_at IS NULL AND EXISTS(SELECT 1 FROM auth_accounts WHERE account_id = ?)"
     ).bind(marker, challengeId, challenge.account_id),
     db.prepare(
-      "INSERT INTO auth_passkeys(credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
-      "SELECT ?,?,?,?,?,?,?,?, ?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(credential.id, challenge.account_id, credential.publicKey, credential.algorithm, credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp), created, challengeId, marker),
+      "INSERT INTO auth_passkeys(passkey_ref,display_label,credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
+      "SELECT ?,?,?,?,?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(passkeyRef, "Primary passkey", credential.id, challenge.account_id, credential.publicKey, credential.algorithm, credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp), created, challengeId, marker),
     db.prepare(
       "INSERT INTO auth_recovery_keys(account_id,key_version,salt_b64,verifier_b64,created_at) " +
       "SELECT ?,1,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
     ).bind(challenge.account_id, recovery.salt, recovery.verifier, created, challengeId, marker),
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,created_at,expires_at) " +
-      "SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(tokenHash, challenge.account_id, now, expires, challengeId, marker),
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
+      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(tokenHash, challenge.account_id, sessionRef, now, expires, challengeId, marker),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
       "SELECT ?,?,'account_created_with_passkey',?,'recovery_key_version=1' WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
@@ -877,6 +879,10 @@ async function verifyAuthentication(db, env, request, payload, config) {
     "SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'authentication' AND used_at IS NULL AND expires_at > ?"
   ).bind(challengeId, now).first();
   if (!challenge) throw fail(410, "This passkey sign-in request expired or was already used. Start again.");
+  const challengeDetails = JSON.parse(challenge.payload_json || "{}");
+  if (challengeDetails.flow === "security-step-up") {
+    throw fail(400, "This passkey challenge is reserved for an authenticated account-security action.");
+  }
   const credentialId = String(response.id || "");
   const row = await db.prepare(
     "SELECT p.*,a.account_id,a.account_identifier,a.user_handle,a.created_at,a.avatar_id,a.referral_id,a.terms_version,a.terms_accepted_at,a.role " +
@@ -906,6 +912,7 @@ async function verifyAuthentication(db, env, request, payload, config) {
   const marker = b64u(bytes(18));
   const token = b64u(bytes(32));
   const tokenHash = await hashText(token);
+  const sessionRef = hex(bytes(16));
   const expires = now + SESSION_SECONDS;
   const timestamp = new Date().toISOString();
   const queries = [
@@ -915,10 +922,10 @@ async function verifyAuthentication(db, env, request, payload, config) {
       "AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
     ).bind(verified.authenticationInfo.newCounter, timestamp, credentialId, challengeId, marker),
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,created_at,expires_at) " +
-      "SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
+      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
       "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE credential_id = ? AND active = 1 AND sign_count = ?)"
-    ).bind(tokenHash, row.account_id, now, expires, challengeId, marker, credentialId, verified.authenticationInfo.newCounter),
+    ).bind(tokenHash, row.account_id, sessionRef, now, expires, challengeId, marker, credentialId, verified.authenticationInfo.newCounter),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
       "SELECT ?,?,'passkey_sign_in',?,'user_verified=true' WHERE EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ?)"
@@ -993,6 +1000,8 @@ async function completeRecovery(db, env, request, payload, config) {
   const token = b64u(bytes(32));
   const tokenHash = await hashText(token);
   const marker = b64u(bytes(18));
+  const passkeyRef = hex(bytes(16));
+  const sessionRef = hex(bytes(16));
   const timestamp = new Date().toISOString();
   const expires = now + SESSION_SECONDS;
   const nextVersion = Number(challengePayload.keyVersion) + 1;
@@ -1003,9 +1012,9 @@ async function completeRecovery(db, env, request, payload, config) {
     ).bind(marker, id, now, challenge.account_id, Number(challengePayload.keyVersion)),
     db.prepare("UPDATE auth_passkeys SET active = 0 WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)").bind(challenge.account_id, id, marker),
     db.prepare(
-      "INSERT INTO auth_passkeys(credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
-      "SELECT ?,?,?,?,?,?,?,?, ?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(credential.id, challenge.account_id, credential.publicKey, credential.algorithm, credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp), timestamp, id, marker),
+      "INSERT INTO auth_passkeys(passkey_ref,display_label,credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
+      "SELECT ?,?,?,?,?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(passkeyRef, "Recovery replacement passkey", credential.id, challenge.account_id, credential.publicKey, credential.algorithm, credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp), timestamp, id, marker),
     db.prepare(
       "UPDATE auth_recovery_keys SET used_at = ? WHERE account_id = ? AND key_version = ? AND used_at IS NULL " +
       "AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
@@ -1016,9 +1025,9 @@ async function completeRecovery(db, env, request, payload, config) {
     ).bind(challenge.account_id, nextVersion, nextKey.salt, nextKey.verifier, timestamp, id, marker),
     db.prepare("DELETE FROM auth_sessions WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)").bind(challenge.account_id, id, marker),
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,created_at,expires_at) " +
-      "SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(tokenHash, challenge.account_id, now, expires, id, marker),
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
+      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(tokenHash, challenge.account_id, sessionRef, now, expires, id, marker),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
       "SELECT ?,?,'account_recovered_with_recovery_key',?,? WHERE EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ?)"
@@ -1089,10 +1098,19 @@ async function api(request, env, config) {
   const db = env.DB;
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
+  if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
   if (request.method === "GET" || request.method === "HEAD") throw fail(404, "The account endpoint does not exist.");
   if (request.method !== "POST") throw fail(405, "The account endpoint requires POST.");
   const payload = await bodyJson(request);
+  if (url.pathname === "/api/account/security/step-up/options") return issueSecurityStepUp(db, env, request, payload, config);
+  if (url.pathname === "/api/account/security/step-up/verify") return verifySecurityStepUp(db, env, request, payload, config);
+  if (url.pathname === "/api/account/security/passkeys/add/options") return addPasskeyOptions(db, env, request, payload, config);
+  if (url.pathname === "/api/account/security/passkeys/add/verify") return addPasskeyVerify(db, env, request, payload, config);
+  if (url.pathname === "/api/account/security/passkeys/rename") return renamePasskey(db, request, payload);
+  if (url.pathname === "/api/account/security/passkeys/revoke") return revokePasskey(db, env, request, payload);
+  if (url.pathname === "/api/account/security/sessions/revoke") return revokeSessions(db, request, payload);
+  if (url.pathname === "/api/account/security/recovery/rotate") return rotateRecoveryKey(db, request, payload);
   if (url.pathname === "/api/passkeys/register/options") return issueRegistration(db, env, request, payload, config);
   if (url.pathname === "/api/passkeys/register/verify") return verifyRegistration(db, env, request, payload, config);
   if (url.pathname === "/api/passkeys/authentication/options") return issueAuthentication(db, env, request, config);
