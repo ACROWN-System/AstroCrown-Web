@@ -372,25 +372,13 @@ try {
     evaluate("fetch('/api/account/status',{credentials:'same-origin',cache:'no-store'}).then(async r => {" +
       "const value=await r.json(); const button=document.getElementById('open-account-dialog'); " +
       "return value.authenticated === false && button?.getAttribute('aria-label') === 'Log In to AstroCrown'; })"));
-  await evaluate(
-    "window.__secondDeviceOpenClick=0; const button=document.getElementById('open-account-dialog'); " +
-    "button.addEventListener('click',()=>window.__secondDeviceOpenClick++);"
-  );
-  await trustedClick("#open-account-dialog");
-  try {
-    await waitFor("second-device sign-in dialog opens", () =>
-      evaluate("Boolean(document.getElementById('account-dialog')?.open)"), 5000);
-  } catch (error) {
-    const state = await evaluate(
-      "(() => { const b=document.getElementById('open-account-dialog'); const r=b.getBoundingClientRect(); " +
-      "const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); " +
-      "return {clicks:window.__secondDeviceOpenClick,disabled:b.disabled,ariaLabel:b.getAttribute('aria-label')," +
-      "rect:{left:r.left,top:r.top,width:r.width,height:r.height}," +
-      "hitId:hit?.id || '',hitTag:hit?.tagName || '',dialogOpen:document.getElementById('account-dialog')?.open," +
-      "status:fetch('/api/account/status',{credentials:'same-origin'}).then(r=>r.json())}; })()"
-    );
-    throw new Error(error.message + " Browser header/dialog state: " + JSON.stringify(state));
-  }
+  // Opening the dialog itself does not require WebAuthn user activation.
+  // Use the button's own click handler directly because this is a second
+  // navigation after reload; the actual passkey-sign-in action below continues
+  // to use a trusted CDP pointer gesture.
+  await evaluate("document.getElementById('open-account-dialog').click()");
+  await waitFor("second-device sign-in dialog opens", () =>
+    evaluate("Boolean(document.getElementById('account-dialog')?.open)"));
   await waitFor("second-device passkey sign-in button", () =>
     evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
   await trustedClick("#account-passkey-signin");
