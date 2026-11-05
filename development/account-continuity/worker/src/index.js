@@ -923,7 +923,7 @@ async function verifyAuthentication(db, env, request, payload, config) {
     ).bind(verified.authenticationInfo.newCounter, timestamp, credentialId, challengeId, marker),
     db.prepare(
       "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
-      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
+      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
       "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE credential_id = ? AND active = 1 AND sign_count = ?)"
     ).bind(tokenHash, row.account_id, sessionRef, now, expires, challengeId, marker, credentialId, verified.authenticationInfo.newCounter),
     db.prepare(
