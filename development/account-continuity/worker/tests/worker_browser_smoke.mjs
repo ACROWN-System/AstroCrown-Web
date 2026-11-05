@@ -23,6 +23,8 @@ let socket = null;
 let authenticatorId = null;
 let nextCommandId = 0;
 let browserOutput = "";
+let browserExit = null;
+let browserStartError = null;
 const pending = new Map();
 const apiEvents = [];
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -98,19 +100,33 @@ try {
     "about:blank",
   ], { stdio: ["ignore", "ignore", "pipe"] });
   browser.stderr.setEncoding("utf8");
-  browser.stderr.on("data", chunk => { browserOutput = (browserOutput + chunk).slice(-6000); });
+  browser.stderr.on("data", chunk => { browserOutput = (browserOutput + chunk).slice(-12000); });
+  browser.on("error", error => { browserStartError = String(error?.message || error); });
+  browser.on("exit", (code, signal) => { browserExit = { code, signal }; });
 
   let target;
-  await waitFor("Chrome DevTools page", async () => {
-    try {
-      const response = await fetch("http://127.0.0.1:" + debugPort + "/json");
-      const targets = await response.json();
-      target = targets.find(item => item.type === "page" && item.url === "about:blank");
-      return Boolean(target?.webSocketDebuggerUrl);
-    } catch {
-      return false;
-    }
-  }, 20000);
+  try {
+    await waitFor("Chrome DevTools page", async () => {
+      if (browserStartError || browserExit) {
+        throw new Error("Chrome exited before DevTools became available.");
+      }
+      try {
+        const response = await fetch("http://127.0.0.1:" + debugPort + "/json");
+        const targets = await response.json();
+        target = targets.find(item => item.type === "page" && item.url === "about:blank");
+        return Boolean(target?.webSocketDebuggerUrl);
+      } catch {
+        return false;
+      }
+    }, 45000);
+  } catch (error) {
+    throw new Error(
+      String(error?.message || error) +
+      "\nChrome launch error: " + (browserStartError || "none") +
+      "\nChrome exit: " + JSON.stringify(browserExit) +
+      "\nChrome stderr tail: " + (browserOutput || "(empty)")
+    );
+  }
 
   socket = new WebSocket(target.webSocketDebuggerUrl);
   await new Promise((resolve, reject) => {
@@ -535,6 +551,8 @@ try {
     console.error("Account UI diagnostics unavailable:", String(diagnosticError?.message || diagnosticError));
   }
   console.error("Account API events:", JSON.stringify(apiEvents));
+  if (browserStartError) console.error("Chrome launch error:", browserStartError);
+  if (browserExit) console.error("Chrome exit:", JSON.stringify(browserExit));
   if (browserOutput) console.error("Chrome output:\n" + browserOutput);
   process.exitCode = 1;
 } finally {
