@@ -271,6 +271,8 @@ try {
     "the real browser click must reach the account-security button: " + JSON.stringify(securityClickProbe));
   await waitFor("account security panel becomes visible", () =>
     evaluate("Boolean(document.getElementById('account-security-panel') && !document.getElementById('account-security-panel').hidden)"));
+  await waitFor("account security panel passkey controls load", () =>
+    evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1"), 15000);
   const securityPanelState = await evaluate(
     "(() => { const p=document.getElementById('account-security-panel'); return {text:p?.innerText || '',passkeyActions:p?.querySelectorAll('[data-security-action=\"revoke-passkey\"]').length || 0}; })()"
   );
