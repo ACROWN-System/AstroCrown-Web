@@ -308,8 +308,9 @@ async function findSecurityStepUp(db, account, request, rawToken, purpose) {
   const row = await db.prepare(
     "SELECT stepup_token_hash FROM auth_security_stepups " +
     "WHERE stepup_token_hash = ? AND account_id = ? AND session_token_hash = ? " +
-    "AND purpose = ? AND used_at IS NULL AND expires_at > ?"
-  ).bind(tokenHash, account.account_id, sessionHash, purpose, now).first();
+    "AND purpose = ? AND used_at IS NULL AND expires_at > ? " +
+    "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+  ).bind(tokenHash, account.account_id, sessionHash, purpose, now, sessionHash, account.account_id, now).first();
   if (!row) throw fail(401, "Fresh passkey verification is required before this security change. Start the verification again.");
   return { tokenHash, sessionHash };
 }
@@ -572,8 +573,10 @@ async function renamePasskey(db, request, payload) {
   const results = await db.batch([
     db.prepare(
       "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ?"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000)),
+      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000),
+      grant.sessionHash, account.account_id, Math.floor(Date.now() / 1000)),
     db.prepare(
       "UPDATE auth_passkeys SET display_label = ? WHERE passkey_ref = ? AND account_id = ? AND active = 1 " +
       "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
@@ -611,8 +614,10 @@ async function revokePasskey(db, env, request, payload) {
   const results = await db.batch([
     db.prepare(
       "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ?"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000)),
+      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000),
+      grant.sessionHash, account.account_id, Math.floor(Date.now() / 1000)),
     db.prepare(
       "UPDATE auth_passkeys SET active = 0 WHERE passkey_ref = ? AND account_id = ? AND active = 1 " +
       "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?) " +
@@ -667,8 +672,9 @@ async function revokeSessions(db, request, payload) {
   const results = await db.batch([
     db.prepare(
       "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'manage-sessions' AND used_at IS NULL AND expires_at > ?"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now),
+      "AND session_token_hash = ? AND purpose = 'manage-sessions' AND used_at IS NULL AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now, grant.sessionHash, account.account_id, now),
     deleteStatement,
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
@@ -699,8 +705,9 @@ async function rotateRecoveryKey(db, request, payload) {
   const results = await db.batch([
     db.prepare(
       "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'rotate-recovery-key' AND used_at IS NULL AND expires_at > ?"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now),
+      "AND session_token_hash = ? AND purpose = 'rotate-recovery-key' AND used_at IS NULL AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now, grant.sessionHash, account.account_id, now),
     db.prepare(
       "UPDATE auth_recovery_keys SET used_at = ? WHERE account_id = ? AND used_at IS NULL " +
       "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
