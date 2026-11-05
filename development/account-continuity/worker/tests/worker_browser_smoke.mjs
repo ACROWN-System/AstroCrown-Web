@@ -288,8 +288,19 @@ try {
   const firstPasskeyRef = security.passkeys[0].passkeyRef;
 
   await trustedClick("#account-security-add-passkey");
-  await waitFor("second registered passkey", () =>
-    evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 2"), 45000);
+  await waitFor("second-step passkey creation control", () =>
+    evaluate("Boolean(document.getElementById('account-security-create-passkey') && !document.getElementById('account-security-create-passkey').disabled)"), 45000);
+  await trustedClick("#account-security-create-passkey");
+  await waitFor("second passkey creation result", async () =>
+    evaluate("({count:document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length," +
+      "feedback:document.getElementById('account-security-feedback')?.textContent || ''})")
+      .then(value => value.count === 2 || Boolean(value.feedback && !value.feedback.includes('step-up verified'))), 45000);
+  const passkeyCreationState = await evaluate(
+    "({count:document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length," +
+    "feedback:document.getElementById('account-security-feedback')?.textContent || ''})"
+  );
+  assert.equal(passkeyCreationState.count, 2,
+    "the second user gesture must complete the authenticator creation ceremony: " + passkeyCreationState.feedback);
   security = await evaluate(
     "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
   );
