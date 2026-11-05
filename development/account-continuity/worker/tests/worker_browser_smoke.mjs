@@ -238,22 +238,6 @@ try {
   const firstCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(firstCredentials.credentials.length, 1, "registration must create one resident credential.");
 
-  // Multi-passkey coverage uses two independent authenticators. The server
-  // correctly excludes credential IDs already enrolled on a device, so a
-  // second credential must be created on a different authenticator.
-  const secondaryVirtual = await cdp("WebAuthn.addVirtualAuthenticator", {
-    options: {
-      protocol: "ctap2",
-      transport: "usb",
-      hasResidentKey: true,
-      hasUserVerification: true,
-      isUserVerified: true,
-      automaticPresenceSimulation: true,
-    },
-  });
-  const secondaryAuthenticatorId = secondaryVirtual.authenticatorId;
-  assert.ok(secondaryAuthenticatorId, "Chrome must create an independent second virtual authenticator.");
-
   assert.equal(account.securityManagementAvailable, true,
     "the Worker account summary must explicitly advertise the implemented security controls.");
 
@@ -308,6 +292,21 @@ try {
   await trustedClick("#account-security-add-passkey");
   await waitFor("second-step passkey creation control", () =>
     evaluate("Boolean(document.getElementById('account-security-create-passkey') && !document.getElementById('account-security-create-passkey').disabled)"), 45000);
+  // Complete step-up on the original device first. Chrome's virtual
+  // authenticator environment has one active authenticator at a time.
+  await cdp("WebAuthn.removeVirtualAuthenticator", { authenticatorId });
+  const secondaryVirtual = await cdp("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "usb",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  authenticatorId = secondaryVirtual.authenticatorId;
+  assert.ok(authenticatorId, "Chrome must activate the independent second virtual authenticator.");
   await trustedClick("#account-security-create-passkey");
   await waitFor("second passkey creation result", async () =>
     evaluate("({count:document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length," +
@@ -326,12 +325,11 @@ try {
   const secondPasskey = security.passkeys.find(item => item.passkeyRef !== firstPasskeyRef);
   assert.ok(secondPasskey, "the second passkey must have its own opaque reference.");
   const credentialsAfterAdd = await cdp("WebAuthn.getCredentials", { authenticatorId });
-  const secondaryCredentialsAfterAdd = await cdp("WebAuthn.getCredentials", { authenticatorId: secondaryAuthenticatorId });
   assert.equal(credentialsAfterAdd.credentials.length, 1,
-    "the original authenticator must retain its original resident passkey.");
-  assert.equal(secondaryCredentialsAfterAdd.credentials.length, 1,
-    "the independent second authenticator must hold the newly enrolled resident passkey.");
-  const secondCredential = secondaryCredentialsAfterAdd.credentials[0];
+    "the newly active independent authenticator must hold the additional resident passkey.");
+  const secondCredential = credentialsAfterAdd.credentials[0];
+  assert.notEqual(secondCredential.credentialId, firstCredentials.credentials[0].credentialId,
+    "the additional authenticator must create a distinct credential ID.");
   assert.ok(secondCredential, "the newly added passkey must be separately represented by the authenticator.");
 
   const renameSelector = 'button[data-security-action="rename-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]';
@@ -347,22 +345,19 @@ try {
     "Secondary test authenticator", "passkey names must persist in D1.");
 
   await evaluate("window.confirm = function () { return true; };");
-  await trustedClick('button[data-security-action="revoke-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]');
+  await trustedClick('button[data-security-action="revoke-passkey"][data-passkey-ref="' + firstPasskeyRef + '"]');
   await waitFor("second passkey revoked", () =>
     evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1"));
   security = await evaluate(
     "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
   );
   assert.equal(security.passkeys.length, 1, "revoking one passkey must preserve the remaining active passkey.");
-  assert.equal(security.passkeys[0].passkeyRef, firstPasskeyRef);
+  assert.equal(security.passkeys[0].passkeyRef, secondPasskey.passkeyRef);
   assert.equal(await evaluate("document.querySelector('#account-security-panel [data-security-action=\"revoke-passkey\"]').disabled"),
     true, "the last active passkey must not be removable from the normal management screen.");
-  await cdp("WebAuthn.removeCredential", {
-    authenticatorId: secondaryAuthenticatorId,
-    credentialId: secondCredential.credentialId,
-  });
-  assert.equal((await cdp("WebAuthn.getCredentials", { authenticatorId: secondaryAuthenticatorId })).credentials.length, 0);
-  assert.equal((await cdp("WebAuthn.getCredentials", { authenticatorId })).credentials.length, 1);
+  // Keep the remaining authenticator available for the recovery and session
+  // tests. The server-side revocation is authoritative; no physical credential
+  // deletion is needed to prove the credential is rejected by the backend.
 
   await trustedClick("#account-security-rotate-recovery-key");
   await waitFor("one-time replacement recovery key", () =>
@@ -443,7 +438,7 @@ try {
   await waitFor("sign-out before recovery", async () => !(await status()).authenticated);
   await cdp("WebAuthn.removeCredential", {
     authenticatorId,
-    credentialId: firstCredentials.credentials[0].credentialId,
+    credentialId: secondCredential.credentialId,
   });
   const afterLoss = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(afterLoss.credentials.length, 0, "the simulated lost passkey must be removed from the authenticator.");
