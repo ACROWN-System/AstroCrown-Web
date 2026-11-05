@@ -14,6 +14,8 @@ const [port, debugPort] = await findFreePorts(2);
 const localUrl = "http://localhost:" + port + "/";
 let server = null;
 let browser = null;
+let browserClosed = Promise.resolve();
+let serverClosed = Promise.resolve();
 let socket = null;
 let requestId = 0;
 let serverOutput = "";
@@ -105,6 +107,7 @@ try {
     env: testEnv,
     stdio: ["ignore", "pipe", "pipe"],
   });
+  serverClosed = new Promise(resolvePromise => server.once("close", resolvePromise));
   server.stdout.setEncoding("utf8");
   server.stderr.setEncoding("utf8");
   server.stdout.on("data", chunk => { serverOutput = (serverOutput + chunk).slice(-3000); });
@@ -119,6 +122,7 @@ try {
     "--remote-debugging-port=" + debugPort, "--remote-allow-origins=*",
     "--user-data-dir=" + join(work, "profile"), "about:blank",
   ], { stdio: ["ignore", "ignore", "pipe"] });
+  browserClosed = new Promise(resolvePromise => browser.once("close", resolvePromise));
   browser.stderr.setEncoding("utf8");
   browser.stderr.on("data", chunk => { browserOutput = (browserOutput + chunk).slice(-5000); });
 
@@ -210,8 +214,18 @@ try {
   }
   pending.clear();
   try { if (socket && socket.readyState === WebSocket.OPEN) socket.close(); } catch {}
-  try { if (browser && browser.exitCode === null) browser.kill("SIGTERM"); } catch {}
-  try { if (server && server.exitCode === null) server.kill("SIGTERM"); } catch {}
-  await sleep(250);
-  rmSync(work, { recursive: true, force: true });
+  async function stopChildAndWait(child, closed) {
+    if (!child) return;
+    if (child.exitCode === null && child.signalCode === null) {
+      try { child.kill("SIGTERM"); } catch {}
+    }
+    await Promise.race([closed, sleep(5000)]);
+    if (child.exitCode === null && child.signalCode === null) {
+      try { child.kill("SIGKILL"); } catch {}
+      await Promise.race([closed, sleep(3000)]);
+    }
+  }
+  await stopChildAndWait(browser, browserClosed);
+  await stopChildAndWait(server, serverClosed);
+  rmSync(work, { recursive: true, force: true, maxRetries: 8, retryDelay: 200 });
 }
