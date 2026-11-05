@@ -219,6 +219,7 @@ async function summary(db, account) {
     passwordResetAvailable: false,
     sessionExpiresAt: new Date(Number(account.expires_at) * 1000).toISOString(),
     activeSessionCount: Number(counts.session_count || 0),
+    securityManagementAvailable: true,
     scope: "staging-test-account-only",
     role: "user",
     adminRoleAssigned: false,
@@ -234,6 +235,496 @@ async function summary(db, account) {
     communicationsUnreadCounts: { alerts: 0, messages: 0 },
   };
 }
+
+function validatePasskeyLabel(value) {
+  if (typeof value !== "string") throw fail(400, "Enter a name for this passkey.");
+  const label = value.normalize("NFKC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  if (!label || label.length > 40) throw fail(400, "Passkey names must contain between 1 and 40 characters.");
+  return label;
+}
+function validatePasskeyRef(value) {
+  if (typeof value !== "string" || !/^[a-f0-9]{32}$/i.test(value)) {
+    throw fail(400, "The selected passkey reference is invalid.");
+  }
+  return value.toLowerCase();
+}
+function validateSessionRef(value) {
+  if (typeof value !== "string" || !/^[a-f0-9]{32}$/i.test(value)) {
+    throw fail(400, "The selected session reference is invalid.");
+  }
+  return value.toLowerCase();
+}
+async function securityStatus(db, request) {
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in to review your account security.");
+  const sessionToken = cookie(request, SESSION_COOKIE);
+  if (!sessionToken) throw fail(401, "Your account session is no longer active.");
+  const currentTokenHash = await hashText(sessionToken);
+  const now = Math.floor(Date.now() / 1000);
+  const [passkeys, sessions, recovery] = await Promise.all([
+    db.prepare(
+      "SELECT passkey_ref,display_label,credential_alg,device_type,backed_up,created_at,last_used_at " +
+      "FROM auth_passkeys WHERE account_id = ? AND active = 1 ORDER BY created_at,passkey_ref"
+    ).bind(account.account_id).all(),
+    db.prepare(
+      "SELECT session_ref,token_hash,created_at,expires_at FROM auth_sessions " +
+      "WHERE account_id = ? AND expires_at > ? ORDER BY created_at DESC,session_ref LIMIT 50"
+    ).bind(account.account_id, now).all(),
+    db.prepare(
+      "SELECT COUNT(*) AS active_count FROM auth_recovery_keys WHERE account_id = ? AND used_at IS NULL"
+    ).bind(account.account_id).first(),
+  ]);
+  return json(200, {
+    available: true,
+    passkeys: (passkeys.results || []).map((row) => ({
+      passkeyRef: row.passkey_ref,
+      label: row.display_label || "Passkey",
+      algorithm: Number(row.credential_alg),
+      postQuantum: PQ_ALGS.includes(Number(row.credential_alg)),
+      deviceType: row.device_type || "unknown",
+      backedUp: Boolean(row.backed_up),
+      createdAt: row.created_at,
+      lastUsedAt: row.last_used_at || null,
+    })),
+    sessions: (sessions.results || []).map((row) => ({
+      sessionRef: row.session_ref,
+      createdAt: new Date(Number(row.created_at) * 1000).toISOString(),
+      expiresAt: new Date(Number(row.expires_at) * 1000).toISOString(),
+      isCurrent: equalConstantTime(row.token_hash, currentTokenHash),
+    })),
+    activeRecoveryKey: Number(recovery?.active_count || 0) > 0,
+    activeSessionCount: (sessions.results || []).length,
+  });
+}
+async function findSecurityStepUp(db, account, request, rawToken, purpose) {
+  if (typeof rawToken !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(rawToken)) {
+    throw fail(401, "Fresh passkey verification is required before this security change.");
+  }
+  const sessionToken = cookie(request, SESSION_COOKIE);
+  if (!sessionToken) throw fail(401, "Your account session is no longer active.");
+  const sessionHash = await hashText(sessionToken);
+  const tokenHash = await hashText(rawToken);
+  const now = Math.floor(Date.now() / 1000);
+  const row = await db.prepare(
+    "SELECT stepup_token_hash FROM auth_security_stepups " +
+    "WHERE stepup_token_hash = ? AND account_id = ? AND session_token_hash = ? " +
+    "AND purpose = ? AND used_at IS NULL AND expires_at > ?"
+  ).bind(tokenHash, account.account_id, sessionHash, purpose, now).first();
+  if (!row) throw fail(401, "Fresh passkey verification is required before this security change. Start the verification again.");
+  return { tokenHash, sessionHash };
+}
+async function issueSecurityStepUp(db, env, request, payload, config) {
+  if (Object.keys(payload).length !== 1 || !["manage-passkeys", "manage-sessions", "rotate-recovery-key"].includes(payload.purpose)) {
+    throw fail(400, "Choose a supported account-security action.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before changing account security.");
+  const sessionToken = cookie(request, SESSION_COOKIE);
+  if (!sessionToken) throw fail(401, "Your account session is no longer active.");
+  const sessionHash = await hashText(sessionToken);
+  await rateLimit(db, env, request, "security-step-up-options", account.account_id, 10, 3600);
+  const challengeId = b64u(bytes(24));
+  const challenge = b64u(bytes(32));
+  const publicKey = await generateAuthenticationOptions({
+    rpID: config.rpId,
+    challenge,
+    timeout: 60000,
+    userVerification: "required",
+  });
+  const now = Math.floor(Date.now() / 1000);
+  await db.prepare(
+    "DELETE FROM auth_security_stepups WHERE expires_at <= ? OR (used_at IS NOT NULL AND created_at < ?)"
+  ).bind(now, now - 86400).run();
+  await createChallenge(db, {
+    id: challengeId,
+    challenge: publicKey.challenge,
+    ceremony: "authentication",
+    accountId: account.account_id,
+    accountIdentifier: account.account_identifier,
+    userHandle: account.user_handle,
+    payload: { flow: "security-step-up", purpose: payload.purpose, sessionHash },
+    now,
+  });
+  return json(200, { challengeId, publicKey, purpose: payload.purpose, expiresInSeconds: CHALLENGE_SECONDS });
+}
+async function verifySecurityStepUp(db, env, request, payload, config) {
+  if (Object.keys(payload).some((key) => !["challengeId", "credential"].includes(key))) {
+    throw fail(400, "The passkey verification response contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before changing account security.");
+  const challengeId = String(payload.challengeId || "");
+  const response = payload.credential;
+  if (!/^[A-Za-z0-9_-]{24,64}$/.test(challengeId) || !response || typeof response !== "object") {
+    throw fail(400, "A valid passkey verification response is required.");
+  }
+  await rateLimit(db, env, request, "security-step-up-verify", account.account_id, 8, 300);
+  const now = Math.floor(Date.now() / 1000);
+  const challenge = await db.prepare(
+    "SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'authentication' " +
+    "AND account_id = ? AND used_at IS NULL AND expires_at > ?"
+  ).bind(challengeId, account.account_id, now).first();
+  if (!challenge) throw fail(410, "This security verification expired or was already used. Start again.");
+  const details = JSON.parse(challenge.payload_json || "{}");
+  const sessionToken = cookie(request, SESSION_COOKIE);
+  if (
+    details.flow !== "security-step-up" ||
+    !["manage-passkeys", "manage-sessions", "rotate-recovery-key"].includes(details.purpose) ||
+    !sessionToken ||
+    !equalConstantTime(String(details.sessionHash || ""), await hashText(sessionToken)) ||
+    challenge.user_handle !== account.user_handle
+  ) throw fail(401, "This passkey verification is not bound to your current account session.");
+  const credentialId = String(response.id || "");
+  const row = await db.prepare(
+    "SELECT p.* FROM auth_passkeys p WHERE p.credential_id = ? AND p.account_id = ? AND p.active = 1"
+  ).bind(credentialId, account.account_id).first();
+  if (!row || !response.response?.userHandle || !equalConstantTime(String(response.response.userHandle), account.user_handle)) {
+    throw fail(401, "Passkey verification could not be completed. Use an active passkey belonging to this account.");
+  }
+  let verified;
+  try {
+    verified = await verifyAuthenticationResponse({
+      response,
+      expectedChallenge: challenge.challenge,
+      expectedOrigin: config.origin,
+      expectedRPID: config.rpId,
+      credential: {
+        id: row.credential_id,
+        publicKey: unb64u(row.public_key_b64),
+        counter: Number(row.sign_count || 0),
+        transports: JSON.parse(row.transports_json || "[]"),
+      },
+      requireUserVerification: true,
+    });
+  } catch {
+    throw fail(401, "Passkey verification could not be completed. Start again with an active passkey.");
+  }
+  if (!verified.verified || !verified.authenticationInfo.userVerified) {
+    throw fail(401, "Passkey verification could not be completed. Start again with an active passkey.");
+  }
+  const marker = b64u(bytes(18));
+  const rawGrant = b64u(bytes(32));
+  const grantHash = await hashText(rawGrant);
+  const timestamp = new Date().toISOString();
+  const sessionHash = await hashText(sessionToken);
+  const grantExpiry = now + 120;
+  const results = await db.batch([
+    db.prepare(
+      "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND account_id = ? " +
+      "AND ceremony = 'authentication' AND used_at IS NULL AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+    ).bind(marker, challengeId, account.account_id, now, sessionHash, account.account_id, now),
+    db.prepare(
+      "UPDATE auth_passkeys SET sign_count = ?, last_used_at = ? WHERE credential_id = ? " +
+      "AND account_id = ? AND active = 1 AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(verified.authenticationInfo.newCounter, timestamp, credentialId, account.account_id, challengeId, marker),
+    db.prepare(
+      "INSERT INTO auth_security_stepups(stepup_token_hash,account_id,session_token_hash,purpose,created_at,expires_at) " +
+      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE credential_id = ? AND account_id = ? AND active = 1 AND sign_count = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+    ).bind(grantHash, account.account_id, sessionHash, details.purpose, now, grantExpiry, challengeId, marker,
+      credentialId, account.account_id, verified.authenticationInfo.newCounter, sessionHash, account.account_id, now),
+    db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
+      "SELECT ?,?,'security_step_up_verified',?,? WHERE EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ?)"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp, "purpose=" + details.purpose, grantHash),
+  ]);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[2]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "Your account session or security verification changed. Start the security action again.");
+  }
+  return json(200, {
+    stepUpToken: rawGrant,
+    purpose: details.purpose,
+    expiresInSeconds: 120,
+    message: "Your passkey verified this security action. The authorization is short-lived and can be used once.",
+  });
+}
+async function addPasskeyOptions(db, env, request, payload, config) {
+  if (Object.keys(payload).some((key) => !["stepUpToken", "label"].includes(key))) {
+    throw fail(400, "The additional passkey request contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before adding a passkey.");
+  const label = validatePasskeyLabel(payload.label);
+  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-passkeys");
+  await rateLimit(db, env, request, "passkey-add-options", account.account_id, 10, 3600);
+  const existing = await db.prepare(
+    "SELECT credential_id,transports_json FROM auth_passkeys WHERE account_id = ? AND active = 1"
+  ).bind(account.account_id).all();
+  const challengeId = b64u(bytes(24));
+  const challenge = b64u(bytes(32));
+  const publicKey = await generateRegistrationOptions({
+    rpName: config.rpName,
+    rpID: config.rpId,
+    userName: account.account_identifier,
+    userDisplayName: "AstroCrown Member",
+    userID: unb64u(account.user_handle),
+    challenge,
+    timeout: 60000,
+    attestationType: "none",
+    authenticatorSelection: { residentKey: "required", userVerification: "required" },
+    excludeCredentials: (existing.results || []).map((item) => ({
+      id: item.credential_id,
+      transports: JSON.parse(item.transports_json || "[]"),
+    })),
+    supportedAlgorithmIDs: getDefaultSupportedAlgorithmIDs(),
+  });
+  const now = Math.floor(Date.now() / 1000);
+  await createChallenge(db, {
+    id: challengeId,
+    challenge: publicKey.challenge,
+    ceremony: "registration",
+    accountId: account.account_id,
+    accountIdentifier: account.account_identifier,
+    userHandle: account.user_handle,
+    payload: { flow: "additional-passkey", label, sessionHash: grant.sessionHash, stepupTokenHash: grant.tokenHash },
+    now,
+  });
+  return json(200, { challengeId, publicKey, purpose: "add-account-passkey" });
+}
+async function addPasskeyVerify(db, env, request, payload, config) {
+  if (Object.keys(payload).some((key) => !["challengeId", "credential"].includes(key))) {
+    throw fail(400, "The additional passkey response contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before adding a passkey.");
+  const challengeId = String(payload.challengeId || "");
+  if (!/^[A-Za-z0-9_-]{24,64}$/.test(challengeId) || !payload.credential || typeof payload.credential !== "object") {
+    throw fail(400, "A valid additional passkey response is required.");
+  }
+  await rateLimit(db, env, request, "passkey-add-verify", account.account_id, 8, 3600);
+  const now = Math.floor(Date.now() / 1000);
+  const challenge = await db.prepare(
+    "SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'registration' " +
+    "AND account_id = ? AND used_at IS NULL AND expires_at > ?"
+  ).bind(challengeId, account.account_id, now).first();
+  if (!challenge) throw fail(410, "This additional passkey request expired or was already used. Start again.");
+  const details = JSON.parse(challenge.payload_json || "{}");
+  const sessionToken = cookie(request, SESSION_COOKIE);
+  if (
+    details.flow !== "additional-passkey" ||
+    !sessionToken ||
+    !equalConstantTime(String(details.sessionHash || ""), await hashText(sessionToken)) ||
+    challenge.user_handle !== account.user_handle ||
+    challenge.account_identifier !== account.account_identifier
+  ) throw fail(401, "This passkey registration is not bound to your current account session.");
+  const grant = await db.prepare(
+    "SELECT stepup_token_hash FROM auth_security_stepups WHERE stepup_token_hash = ? " +
+    "AND account_id = ? AND session_token_hash = ? AND purpose = 'manage-passkeys' " +
+    "AND used_at IS NULL AND expires_at > ?"
+  ).bind(details.stepupTokenHash, account.account_id, details.sessionHash, now).first();
+  if (!grant) throw fail(401, "Fresh passkey verification is required. Start the add-passkey action again.");
+  const existing = await db.prepare(
+    "SELECT credential_id FROM auth_passkeys WHERE account_id = ? AND active = 1"
+  ).bind(account.account_id).all();
+  const credential = await verifiedPasskey(
+    payload.credential,
+    challenge,
+    config,
+    (existing.results || []).map((row) => row.credential_id)
+  );
+  const passkeyRef = hex(bytes(16));
+  const marker = b64u(bytes(18));
+  const timestamp = new Date().toISOString();
+  const results = await db.batch([
+    db.prepare(
+      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
+      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ?"
+    ).bind(marker, details.stepupTokenHash, account.account_id, details.sessionHash, now),
+    db.prepare(
+      "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND account_id = ? " +
+      "AND ceremony = 'registration' AND used_at IS NULL AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
+    ).bind(marker, challengeId, account.account_id, now, details.stepupTokenHash, marker, details.sessionHash, account.account_id, now),
+    db.prepare(
+      "INSERT INTO auth_passkeys(passkey_ref,display_label,credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
+      "SELECT ?,?,?,?,?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(passkeyRef, details.label, credential.id, account.account_id, credential.publicKey, credential.algorithm,
+      credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp),
+      timestamp, challengeId, marker),
+    db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
+      "SELECT ?,?,'passkey_added',?,? WHERE EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1)"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp, "passkey_ref=" + passkeyRef, passkeyRef, account.account_id),
+  ]);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[2]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The passkey could not be added because the account security state changed. Start again.");
+  }
+  return await securityStatus(db, request);
+}
+async function renamePasskey(db, request, payload) {
+  if (Object.keys(payload).some((key) => !["stepUpToken", "passkeyRef", "label"].includes(key))) {
+    throw fail(400, "The passkey rename request contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before renaming a passkey.");
+  const passkeyRef = validatePasskeyRef(payload.passkeyRef);
+  const label = validatePasskeyLabel(payload.label);
+  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-passkeys");
+  const exists = await db.prepare(
+    "SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1"
+  ).bind(passkeyRef, account.account_id).first();
+  if (!exists) throw fail(404, "That active passkey could not be found.");
+  const marker = b64u(bytes(18));
+  const timestamp = new Date().toISOString();
+  const results = await db.batch([
+    db.prepare(
+      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
+      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ?"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000)),
+    db.prepare(
+      "UPDATE auth_passkeys SET display_label = ? WHERE passkey_ref = ? AND account_id = ? AND active = 1 " +
+      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
+    ).bind(label, passkeyRef, account.account_id, grant.tokenHash, marker),
+    db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
+      "SELECT ?,?,'passkey_label_changed',?,? WHERE EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND display_label = ?)"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp, "passkey_ref=" + passkeyRef, passkeyRef, account.account_id, label),
+  ]);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[1]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The passkey name could not be changed. Verify your passkey and try again.");
+  }
+  return await securityStatus(db, request);
+}
+async function revokePasskey(db, env, request, payload) {
+  if (Object.keys(payload).some((key) => !["stepUpToken", "passkeyRef"].includes(key))) {
+    throw fail(400, "The passkey revocation request contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before revoking a passkey.");
+  const passkeyRef = validatePasskeyRef(payload.passkeyRef);
+  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-passkeys");
+  const counts = await db.prepare(
+    "SELECT COUNT(*) AS active_count FROM auth_passkeys WHERE account_id = ? AND active = 1"
+  ).bind(account.account_id).first();
+  if (Number(counts?.active_count || 0) <= 1) {
+    throw fail(409, "The last active passkey cannot be removed here. Add another passkey or use account recovery first.");
+  }
+  const target = await db.prepare(
+    "SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1"
+  ).bind(passkeyRef, account.account_id).first();
+  if (!target) throw fail(404, "That active passkey could not be found.");
+  const marker = b64u(bytes(18));
+  const timestamp = new Date().toISOString();
+  const results = await db.batch([
+    db.prepare(
+      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
+      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ?"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000)),
+    db.prepare(
+      "UPDATE auth_passkeys SET active = 0 WHERE passkey_ref = ? AND account_id = ? AND active = 1 " +
+      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?) " +
+      "AND (SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) > 1"
+    ).bind(passkeyRef, account.account_id, grant.tokenHash, marker, account.account_id),
+    db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
+      "SELECT ?,?,'passkey_revoked',?,? WHERE EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 0)"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp, "passkey_ref=" + passkeyRef, passkeyRef, account.account_id),
+  ]);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[1]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The passkey could not be revoked. The account must retain at least one active passkey.");
+  }
+  return await securityStatus(db, request);
+}
+async function revokeSessions(db, request, payload) {
+  if (Object.keys(payload).some((key) => !["stepUpToken", "sessionRef", "revokeOthers"].includes(key))) {
+    throw fail(400, "The session revocation request contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before managing sessions.");
+  const hasTarget = typeof payload.sessionRef === "string";
+  const revokeOthers = payload.revokeOthers === true;
+  if (hasTarget === revokeOthers || (payload.revokeOthers !== undefined && typeof payload.revokeOthers !== "boolean")) {
+    throw fail(400, "Choose one other session or explicitly choose to sign out all other sessions.");
+  }
+  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-sessions");
+  const sessionToken = cookie(request, SESSION_COOKIE);
+  const currentHash = await hashText(sessionToken);
+  const now = Math.floor(Date.now() / 1000);
+  const targetRef = hasTarget ? validateSessionRef(payload.sessionRef) : null;
+  if (targetRef) {
+    const target = await db.prepare(
+      "SELECT token_hash FROM auth_sessions WHERE session_ref = ? AND account_id = ? AND expires_at > ?"
+    ).bind(targetRef, account.account_id, now).first();
+    if (!target) throw fail(404, "That active session could not be found.");
+    if (equalConstantTime(target.token_hash, currentHash)) {
+      throw fail(400, "The current session cannot be revoked from this screen. Use Sign out instead.");
+    }
+  }
+  const marker = b64u(bytes(18));
+  const timestamp = new Date().toISOString();
+  const deleteStatement = targetRef
+    ? db.prepare(
+      "DELETE FROM auth_sessions WHERE session_ref = ? AND account_id = ? AND token_hash <> ? AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
+    ).bind(targetRef, account.account_id, currentHash, now, grant.tokenHash, marker)
+    : db.prepare(
+      "DELETE FROM auth_sessions WHERE account_id = ? AND token_hash <> ? AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
+    ).bind(account.account_id, currentHash, now, grant.tokenHash, marker);
+  const results = await db.batch([
+    db.prepare(
+      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
+      "AND session_token_hash = ? AND purpose = 'manage-sessions' AND used_at IS NULL AND expires_at > ?"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now),
+    deleteStatement,
+    db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
+      "SELECT ?,?,'account_sessions_revoked',?,? WHERE EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp,
+      targetRef ? "scope=selected-other-session" : "scope=all-other-sessions", grant.tokenHash, marker),
+  ]);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The session list could not be changed. Verify your passkey and try again.");
+  }
+  return await securityStatus(db, request);
+}
+async function rotateRecoveryKey(db, request, payload) {
+  if (Object.keys(payload).some((key) => key !== "stepUpToken")) {
+    throw fail(400, "The recovery-key rotation request contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before replacing your recovery key.");
+  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "rotate-recovery-key");
+  const version = await db.prepare(
+    "SELECT COALESCE(MAX(key_version),0) AS latest_version FROM auth_recovery_keys WHERE account_id = ?"
+  ).bind(account.account_id).first();
+  const nextVersion = Number(version?.latest_version || 0) + 1;
+  const nextKey = await newRecoveryKey();
+  const marker = b64u(bytes(18));
+  const timestamp = new Date().toISOString();
+  const now = Math.floor(Date.now() / 1000);
+  const results = await db.batch([
+    db.prepare(
+      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
+      "AND session_token_hash = ? AND purpose = 'rotate-recovery-key' AND used_at IS NULL AND expires_at > ?"
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now),
+    db.prepare(
+      "UPDATE auth_recovery_keys SET used_at = ? WHERE account_id = ? AND used_at IS NULL " +
+      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
+    ).bind(timestamp, account.account_id, grant.tokenHash, marker),
+    db.prepare(
+      "INSERT INTO auth_recovery_keys(account_id,key_version,salt_b64,verifier_b64,created_at) " +
+      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
+    ).bind(account.account_id, nextVersion, nextKey.salt, nextKey.verifier, timestamp, grant.tokenHash, marker),
+    db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
+      "SELECT ?,?,'recovery_key_rotated',?,? WHERE EXISTS(SELECT 1 FROM auth_recovery_keys WHERE account_id = ? AND key_version = ?)"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp, "new_recovery_key_version=" + nextVersion, account.account_id, nextVersion),
+  ]);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[2]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The recovery key could not be replaced. Verify your passkey and try again.");
+  }
+  const result = await securityStatus(db, request);
+  const data = await result.json();
+  data.oneTimeRecoveryKey = nextKey.value;
+  data.recoveryKeyVersion = nextVersion;
+  data.message = "Your previous recovery key has been invalidated. Save this replacement key offline; it will not be displayed again.";
+  return json(200, data);
+}
+
 async function newRecoveryKey() {
   const value = "ACR1-" + b64u(bytes(32));
   const salt = bytes(16);
@@ -573,7 +1064,7 @@ async function status(db, request) {
     admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
     passkeyAvailable: true, emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
-    activeSessionCount: 0, scope: "staging-test-account-only",
+    activeSessionCount: 0, securityManagementAvailable: false, scope: "staging-test-account-only",
   });
 }
 async function logout(db, request, config) {
