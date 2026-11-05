@@ -196,6 +196,7 @@ try {
 
   const identifier = await evaluate("document.getElementById('account-one-time-account-identifier').value");
   const firstKey = await evaluate("document.getElementById('account-one-time-recovery-key').value");
+  let currentRecoveryKey = firstKey;
   assert.match(identifier, /^AC-[A-F0-9]{10}$/);
   assert.match(firstKey, /^ACR1-[A-Za-z0-9_-]{43}$/);
   let account = await status();
@@ -213,6 +214,133 @@ try {
   assert.equal(account.email, null);
   assert.equal(account.role, "user");
   assert.equal(account.recoveryKeyAvailable, true);
+
+
+  assert.equal(account.securityManagementAvailable, true,
+    "the Worker account summary must explicitly advertise the implemented security controls.");
+
+  await trustedClick("#account-security-manage");
+  await waitFor("account security panel", () =>
+    evaluate("Boolean(document.getElementById('account-security-panel') && !document.getElementById('account-security-panel').hidden && document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1")));
+  let security = await evaluate(
+    "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
+  );
+  assert.equal(security.available, true);
+  assert.equal(security.passkeys.length, 1);
+  assert.equal(security.sessions.length, 1);
+  assert.equal(security.activeRecoveryKey, true);
+  assert.equal(typeof security.passkeys[0].passkeyRef, "string");
+  assert.equal("credentialId" in security.passkeys[0], false,
+    "the security listing must not expose raw WebAuthn credential identifiers.");
+  assert.equal("publicKey" in security.passkeys[0], false,
+    "the security listing must not expose stored public-key material.");
+  const firstPasskeyRef = security.passkeys[0].passkeyRef;
+
+  await trustedClick("#account-security-add-passkey");
+  await waitFor("second registered passkey", () =>
+    evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 2"), 45000);
+  security = await evaluate(
+    "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
+  );
+  assert.equal(security.passkeys.length, 2, "fresh passkey step-up must permit a second account passkey.");
+  const secondPasskey = security.passkeys.find(item => item.passkeyRef !== firstPasskeyRef);
+  assert.ok(secondPasskey, "the second passkey must have its own opaque reference.");
+  const credentialsAfterAdd = await cdp("WebAuthn.getCredentials", { authenticatorId });
+  assert.equal(credentialsAfterAdd.credentials.length, 2,
+    "the virtual authenticator must hold both resident passkeys after the add ceremony.");
+  const secondCredential = credentialsAfterAdd.credentials.find(
+    item => item.credentialId !== firstCredentials.credentials[0].credentialId
+  );
+  assert.ok(secondCredential, "the newly added passkey must be separately represented by the authenticator.");
+
+  const renameSelector = 'button[data-security-action="rename-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]';
+  const renameInputSelector = 'input[data-passkey-label-input="' + secondPasskey.passkeyRef + '"]';
+  await evaluate("document.querySelector(" + JSON.stringify(renameInputSelector) + ").value='Secondary test authenticator'");
+  await trustedClick(renameSelector);
+  await waitFor("renamed passkey label", () =>
+    evaluate("document.getElementById('account-security-panel').innerText.includes('Secondary test authenticator')"));
+  security = await evaluate(
+    "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
+  );
+  assert.equal(security.passkeys.find(item => item.passkeyRef === secondPasskey.passkeyRef).label,
+    "Secondary test authenticator", "passkey names must persist in D1.");
+
+  await evaluate("window.confirm = function () { return true; };");
+  await trustedClick('button[data-security-action="revoke-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]');
+  await waitFor("second passkey revoked", () =>
+    evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1"));
+  security = await evaluate(
+    "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
+  );
+  assert.equal(security.passkeys.length, 1, "revoking one passkey must preserve the remaining active passkey.");
+  assert.equal(security.passkeys[0].passkeyRef, firstPasskeyRef);
+  assert.equal(await evaluate("document.querySelector('#account-security-panel [data-security-action=\"revoke-passkey\"]').disabled"),
+    true, "the last active passkey must not be removable from the normal management screen.");
+  await cdp("WebAuthn.removeCredential", {
+    authenticatorId,
+    credentialId: secondCredential.credentialId,
+  });
+  assert.equal((await cdp("WebAuthn.getCredentials", { authenticatorId })).credentials.length, 1);
+
+  await trustedClick("#account-security-rotate-recovery-key");
+  await waitFor("one-time replacement recovery key", () =>
+    evaluate("Boolean(document.getElementById('account-security-recovery-key-value'))"), 45000);
+  currentRecoveryKey = await evaluate("document.getElementById('account-security-recovery-key-value').value");
+  assert.match(currentRecoveryKey, /^ACR1-[A-Za-z0-9_-]{43}$/);
+  assert.notEqual(currentRecoveryKey, firstKey, "recovery-key replacement must issue a different high-entropy key.");
+  const supersededRecoveryKey = await evaluate(
+    "fetch('/api/account/recovery/options',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(identifier) +
+    ",recoveryKey:" + JSON.stringify(firstKey) + "})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(supersededRecoveryKey.status, 401,
+    "the previous offline recovery key must stop working immediately after rotation.");
+  await trustedClick('[data-security-action="acknowledge-recovery-key"]');
+  await waitFor("replacement recovery-key acknowledgement", () =>
+    evaluate("!document.getElementById('account-security-recovery-key-value')"));
+
+  // Create a second active server session without calling logout: clear only the
+  // browser cookie, then sign in again. The first server-side session must remain
+  // visible as an independently revocable session.
+  await cdp("Network.deleteCookies", { name: "acrown_account_session", url: baseUrl });
+  await cdp("Page.reload", { ignoreCache: true });
+  await waitFor("homepage after clearing only the browser session cookie", () =>
+    evaluate("document.readyState === 'complete' && Boolean(document.getElementById('open-account-dialog'))"));
+  await trustedClick("#open-account-dialog");
+  await waitFor("second-session passkey sign-in", () =>
+    evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
+  await trustedClick("#account-passkey-signin");
+  await waitFor("second server session created", () =>
+    evaluate("Boolean(document.getElementById('open-account-hub'))"), 45000);
+  await trustedClick("#open-account-hub");
+  await waitFor("dashboard with second session", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden"));
+  account = await status();
+  assert.equal(account.authenticated, true);
+  assert.equal(account.activeSessionCount, 2,
+    "passkey re-authentication without revoking the previous server session must create two active sessions.");
+
+  await trustedClick("#account-security-manage");
+  await waitFor("two sessions displayed", () =>
+    evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-session\"]').length === 1"));
+  security = await evaluate(
+    "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
+  );
+  assert.equal(security.sessions.length, 2);
+  assert.equal(security.sessions.filter(item => item.isCurrent).length, 1);
+  assert.equal(security.sessions.filter(item => !item.isCurrent).length, 1);
+  await evaluate("window.confirm = function () { return true; };");
+  await trustedClick("#account-security-revoke-others");
+  await waitFor("other session revoked", async () => {
+    const value = await evaluate(
+      "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
+    );
+    return value.sessions.length === 1 && value.sessions[0].isCurrent === true;
+  });
+  account = await status();
+  assert.equal(account.authenticated, true,
+    "revoking other sessions must not revoke the current browser session.");
+  assert.equal(account.activeSessionCount, 1);
 
   await trustedClick("#account-recovery-key-saved");
   await waitFor("offline recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));
@@ -260,7 +388,7 @@ try {
   await waitFor("offline recovery form", () => evaluate("Boolean(document.getElementById('account-recovery-form'))"));
   await evaluate(
     "document.getElementById('account-recovery-identifier').value=" + JSON.stringify(identifier) + ";" +
-    "document.getElementById('account-recovery-secret').value=" + JSON.stringify(firstKey) + ";"
+    "document.getElementById('account-recovery-secret').value=" + JSON.stringify(currentRecoveryKey) + ";"
   );
   await trustedClick("#account-recovery-form button[type=submit]");
   await waitFor("replacement passkey and rotated recovery key", () =>
@@ -280,7 +408,7 @@ try {
   const oldKey = await evaluate(
     "fetch('/api/account/recovery/options',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
     "body:JSON.stringify({accountIdentifier:" + JSON.stringify(identifier) +
-    ",recoveryKey:" + JSON.stringify(firstKey) + "})}).then(async r=>({status:r.status,body:await r.json()}))"
+    ",recoveryKey:" + JSON.stringify(currentRecoveryKey) + "})}).then(async r=>({status:r.status,body:await r.json()}))"
   );
   assert.equal(oldKey.status, 401, "the consumed offline recovery key must no longer work.");
 
@@ -305,7 +433,7 @@ try {
   assert.deepEqual(account.passkeyAlgorithmIds, [-48], "the replacement ML-DSA-44 credential must remain usable after a fresh discoverable sign-in.");
   assert.equal(account.postQuantumPasskeyCount, 1);
 
-  console.log("PASS: Chrome virtual-authenticator registration, discoverable sign-in, sign-out, passkey-loss simulation, offline recovery, previous-key rejection, recovery-key rotation and replacement-passkey sign-in.");
+  console.log("PASS: Chrome virtual-authenticator account creation and sign-in; security step-up; additional passkey enrollment, label update and revocation; last-passkey protection; recovery-key rotation and prior-key rejection; concurrent-session listing and revocation; passkey-loss recovery and replacement sign-in.");
 } catch (error) {
   console.error(String(error?.stack || error));
   try {
