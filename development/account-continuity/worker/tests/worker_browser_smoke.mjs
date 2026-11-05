@@ -236,12 +236,28 @@ try {
   assert.equal(account.securityManagementAvailable, true,
     "the Worker account summary must explicitly advertise the implemented security controls.");
 
-  await trustedClick("#account-security-manage");
-  await waitFor("account security panel", () =>
-    evaluate("Boolean(document.getElementById('account-security-panel') && !document.getElementById('account-security-panel').hidden && document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1)"));
-  let security = await evaluate(
-    "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
+  const securityApi = await evaluate(
+    "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(async r=>({status:r.status,body:await r.json()}))"
   );
+  assert.equal(securityApi.status, 200,
+    "the new account-security endpoint must return a signed-in account's credential/session list: " + JSON.stringify(securityApi.body));
+  assert.equal(securityApi.body.available, true);
+  let security = securityApi.body;
+  const securityButtonState = await evaluate(
+    "(() => { const b=document.getElementById('account-security-manage'); const p=document.getElementById('account-security-panel'); " +
+    "return {button:!!b,disabled:!!b?.disabled,dashboardHidden:!!document.getElementById('account-dashboard')?.hidden," +
+    "panelHidden:!!p?.hidden}; })()"
+  );
+  assert.equal(securityButtonState.button, true, "the User dashboard must show the security control when the backend enables it.");
+  assert.equal(securityButtonState.disabled, false, "the security management control must be usable after account creation.");
+  await trustedClick("#account-security-manage");
+  await waitFor("account security panel becomes visible", () =>
+    evaluate("Boolean(document.getElementById('account-security-panel') && !document.getElementById('account-security-panel').hidden)"));
+  const securityPanelState = await evaluate(
+    "(() => { const p=document.getElementById('account-security-panel'); return {text:p?.innerText || '',passkeyActions:p?.querySelectorAll('[data-security-action=\"revoke-passkey\"]').length || 0}; })()"
+  );
+  assert.equal(securityPanelState.passkeyActions, 1,
+    "the User dashboard security panel should render its passkey controls: " + securityPanelState.text);
   assert.equal(security.available, true);
   assert.equal(security.passkeys.length, 1);
   assert.equal(security.sessions.length, 1);
