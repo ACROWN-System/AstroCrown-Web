@@ -403,9 +403,34 @@ try {
   assert.equal(account.authenticated, true);
   assert.equal(account.activeSessionCount, 2,
     "signing in with the second passkey must create a second session while retaining the first-device session.");
+  await waitFor("second-device security management button rendered", () =>
+    evaluate("Boolean(document.getElementById('account-security-manage'))"));
+  const manageButtonBeforeClick = await evaluate(
+    "(() => { const b=document.getElementById('account-security-manage'); const r=b.getBoundingClientRect(); " +
+    "return {disabled:b.disabled,rect:{left:r.left,top:r.top,width:r.width,height:r.height}," +
+    "dialogOpen:document.getElementById('account-dialog')?.open,dashboardHidden:document.getElementById('account-dashboard')?.hidden," +
+    "hash:location.hash}; })()"
+  );
+  assert.equal(manageButtonBeforeClick.disabled, false,
+    "account security must be enabled after the second passkey sign-in: " + JSON.stringify(manageButtonBeforeClick));
+  await evaluate(
+    "window.__secondDeviceSecurityClick=0; document.getElementById('account-security-manage').addEventListener('click',()=>window.__secondDeviceSecurityClick++);"
+  );
   await trustedClick("#account-security-manage");
-  await waitFor("two passkeys and two sessions displayed", () =>
-    evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 2"));
+  try {
+    await waitFor("two passkeys and two sessions displayed", () =>
+      evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 2 && " +
+        "document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-session\"]').length === 1"), 8000);
+  } catch (error) {
+    const state = await evaluate(
+      "(() => { const b=document.getElementById('account-security-manage'); const p=document.getElementById('account-security-panel'); " +
+      "return {clicks:window.__secondDeviceSecurityClick,buttonDisabled:b?.disabled,panelHidden:p?.hidden," +
+      "panelText:p?.innerText || '',revokePasskeyCount:p?.querySelectorAll('[data-security-action=\"revoke-passkey\"]').length || 0," +
+      "revokeSessionCount:p?.querySelectorAll('[data-security-action=\"revoke-session\"]').length || 0," +
+      "accountDialogOpen:document.getElementById('account-dialog')?.open,dashboardHidden:document.getElementById('account-dashboard')?.hidden}; })()"
+    );
+    throw new Error(error.message + " Second-device security panel state: " + JSON.stringify(state));
+  }
 
   const renameSelector = 'button[data-security-action="rename-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]';
   const renameInputSelector = 'input[data-passkey-label-input="' + secondPasskey.passkeyRef + '"]';
