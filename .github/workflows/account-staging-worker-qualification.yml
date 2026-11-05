@@ -7,12 +7,14 @@ on:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
       - ".github/workflows/account-staging-worker-qualification.yml"
+      - ".github/workflows/cloudflare-staging-deployment.yml"
   push:
     branches: [docs/provider-independent-wallet-auth-plan-2026-10-20]
     paths:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
       - ".github/workflows/account-staging-worker-qualification.yml"
+      - ".github/workflows/cloudflare-staging-deployment.yml"
 
 permissions:
   contents: read
@@ -110,6 +112,10 @@ jobs:
             grep "LOCAL TEST ONLY" "$RUNNER_TEMP/acrown-worker.log" || true
             exit 1
           fi
+      - name: Parse the manual Cloudflare deployment workflow
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-staging-deployment.yml"); puts "Cloudflare deployment workflow YAML parsed successfully."'
+
       - name: Verify remote environment is still fail-closed
         run: |
           node --input-type=module - <<'NODE'
