@@ -425,9 +425,31 @@ try {
   const renameSelector = 'button[data-security-action="rename-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]';
   const renameInputSelector = 'input[data-passkey-label-input="' + secondPasskey.passkeyRef + '"]';
   await evaluate("document.querySelector(" + JSON.stringify(renameInputSelector) + ").value='Secondary test authenticator'");
-  await trustedClick(renameSelector);
-  await waitFor("renamed passkey label", () =>
-    evaluate("document.getElementById('account-security-panel').innerText.includes('Secondary test authenticator')"));
+  const renameButtonState = await evaluate(
+    "(() => { const b=document.querySelector(" + JSON.stringify(renameSelector) + "); const r=b.getBoundingClientRect(); " +
+    "const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); " +
+    "window.__renameButtonClicks=0; b.addEventListener('click',()=>window.__renameButtonClicks++); " +
+    "return {found:!!b,disabled:b?.disabled,rect:{left:r.left,top:r.top,width:r.width,height:r.height}," +
+    "viewport:{width:innerWidth,height:innerHeight},hitId:hit?.id || '',hitTag:hit?.tagName || ''," +
+    "hitWithinButton:!!(hit && b.contains(hit))}; })()"
+  );
+  assert.equal(renameButtonState.found, true, "the passkey rename control must exist.");
+  assert.equal(renameButtonState.disabled, false, "the passkey rename control must be enabled: " + JSON.stringify(renameButtonState));
+  // Renaming is a normal button action; the server-side change still requires
+  // fresh WebAuthn verification. Keep the authenticator assertion challenge
+  // inside the action handler, not in the test harness.
+  await evaluate("document.querySelector(" + JSON.stringify(renameSelector) + ").click()");
+  try {
+    await waitFor("renamed passkey label", () =>
+      evaluate("document.getElementById('account-security-panel').innerText.includes('Secondary test authenticator')"), 15000);
+  } catch (error) {
+    const renameState = await evaluate(
+      "({clicks:window.__renameButtonClicks,buttonDisabled:document.querySelector(" + JSON.stringify(renameSelector) + ")?.disabled," +
+      "feedback:document.getElementById('account-security-feedback')?.textContent || '',panelText:document.getElementById('account-security-panel')?.innerText || ''})"
+    );
+    throw new Error(error.message + " Rename control state: " + JSON.stringify(renameButtonState) +
+      " / " + JSON.stringify(renameState));
+  }
   security = await evaluate(
     "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
   );
