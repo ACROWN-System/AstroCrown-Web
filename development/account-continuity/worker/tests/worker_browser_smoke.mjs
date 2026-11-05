@@ -457,7 +457,11 @@ try {
     "Secondary test authenticator", "passkey names must persist in D1.");
 
   await evaluate("window.confirm = function () { return true; };");
-  await trustedClick('button[data-security-action="revoke-passkey"][data-passkey-ref="' + firstPasskeyRef + '"]');
+  // This invokes the ordinary dashboard handler; the server still demands a
+  // fresh, one-use WebAuthn step-up before it will revoke the credential.
+  await evaluate(
+    "document.querySelector(" + JSON.stringify('button[data-security-action="revoke-passkey"][data-passkey-ref="' + firstPasskeyRef + '"]') + ").click()"
+  );
   await waitFor("second passkey revoked", () =>
     evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1"));
   security = await evaluate(
