@@ -1232,6 +1232,12 @@
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (securityRecoveryKeyPending && button.dataset.securityAction !== "copy-recovery-key" &&
+        button.dataset.securityAction !== "acknowledge-recovery-key") {
+      var pendingFeedback = document.getElementById("account-security-feedback");
+      if (pendingFeedback) pendingFeedback.textContent = "Save and acknowledge the one-time recovery key before making another security change.";
+      return;
+    }
     if (button.id === "account-security-manage") {
       var panel = document.getElementById("account-security-panel");
       if (!panel) return;
@@ -1246,12 +1252,6 @@
       } finally {
         setBusy(false);
       }
-      return;
-    }
-    if (securityRecoveryKeyPending && button.dataset.securityAction !== "copy-recovery-key" &&
-        button.dataset.securityAction !== "acknowledge-recovery-key") {
-      var pendingFeedback = document.getElementById("account-security-feedback");
-      if (pendingFeedback) pendingFeedback.textContent = "Save and acknowledge the one-time recovery key before making another security change.";
       return;
     }
     if (button.id === "account-security-add-passkey") {
