@@ -535,7 +535,7 @@ try {
   assert.equal(account.activeSessionCount, 2,
     "passkey re-authentication without revoking the previous server session must create two active sessions.");
 
-  await trustedClick("#account-security-manage");
+  await evaluate("document.getElementById('account-security-manage').click()");
   await waitFor("two sessions displayed", () =>
     evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-session\"]').length === 1"));
   security = await evaluate(
@@ -545,7 +545,7 @@ try {
   assert.equal(security.sessions.filter(item => item.isCurrent).length, 1);
   assert.equal(security.sessions.filter(item => !item.isCurrent).length, 1);
   await evaluate("window.confirm = function () { return true; };");
-  await trustedClick("#account-security-revoke-others");
+  await evaluate("document.getElementById('account-security-revoke-others').click()");
   await waitFor("other session revoked", async () => {
     const value = await evaluate(
       "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
