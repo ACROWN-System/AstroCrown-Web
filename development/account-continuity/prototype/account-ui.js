@@ -1390,9 +1390,22 @@
       setBusy(true);
       try {
         var revokedPasskey = await revokeAccountPasskey(button.dataset.passkeyRef);
+        if (revokedPasskey.sessionRevoked === true) {
+          securityRecoveryKeyPending = false;
+          accountSecurityData = null;
+          accountState = { authenticated: false };
+          await refreshStatus();
+          mode = "signin";
+          render();
+          showFeedback(
+            revokedPasskey.message || "The passkey was revoked and this session was ended. Sign in with another active passkey.",
+            "success"
+          );
+          return;
+        }
         renderSecurityPanel(revokedPasskey);
         var revokeFeedback = document.getElementById("account-security-feedback");
-        if (revokeFeedback) revokeFeedback.textContent = "The selected passkey was revoked.";
+        if (revokeFeedback) revokeFeedback.textContent = "The selected passkey was revoked. Sessions established by that passkey were also ended.";
       } catch (error) {
         var revokeError = document.getElementById("account-security-feedback");
         if (revokeError) revokeError.textContent = error.message || "The passkey could not be revoked.";
