@@ -335,7 +335,7 @@
         '<div class="account-security-item-actions">' +
         '<button class="account-secondary" type="button" data-security-action="rename-passkey" data-passkey-ref="' + ref + '">Save name</button>' +
         '<button class="account-secondary" type="button" data-security-action="revoke-passkey" data-passkey-ref="' + ref +
-        '"' + (passkeys.length <= 1 ? " disabled" : "") + '>Revoke passkey</button>' +
+        '"' + (passkeys.length <= 1 ? ' disabled data-original-disabled="true"' : "") + '>Revoke passkey</button>' +
         '</div></article>';
     }).join("") : '<p>No active passkeys were returned by the account service.</p>';
     var sessionMarkup = sessions.length ? sessions.map(function (item) {
@@ -364,7 +364,7 @@
       '<div class="account-security-panel-heading"><h3>Sign-in sessions</h3><p>Only session creation and expiry are shown. No IP address, location or device fingerprint is collected for this list.</p></div>' +
       '<div class="account-security-list">' + sessionMarkup + '</div>' +
       '<button class="account-secondary" type="button" id="account-security-revoke-others"' +
-        (sessions.filter(function (item) { return item.isCurrent !== true; }).length === 0 ? " disabled" : "") +
+        (sessions.filter(function (item) { return item.isCurrent !== true; }).length === 0 ? ' disabled data-original-disabled="true"' : "") +
         '>Sign out all other sessions</button>' +
       '<div class="account-security-panel-heading"><h3>Offline recovery key</h3><p>' +
         (safeData.activeRecoveryKey === true ? "One unused recovery key is active." : "No unused recovery key is currently registered.") +
