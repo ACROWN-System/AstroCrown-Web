@@ -76,3 +76,20 @@ test("GitHub-hosted reruns require the recorded D1 UUID and never adopt by datab
   assert.match(deployScript, /staging_d1_database_id=/);
   assert.match(deployScript, /GITHUB_STEP_SUMMARY/);
 });
+
+
+test("GitHub staging deployment workflow is manual, main-only and environment-scoped", async () => {
+  const workflowPath = new URL("../../../../.github/workflows/cloudflare-staging-deployment.yml", import.meta.url);
+  const workflow = await readFile(workflowPath, "utf8");
+  assert.match(workflow, /^on:\s*\n\s+workflow_dispatch:/m);
+  assert.doesNotMatch(workflow, /^\s+push:/m);
+  assert.match(workflow, /refs\/heads\/main/);
+  assert.match(workflow, /I_CONFIRMED_WORKERS_FREE_NO_CARD/);
+  assert.match(workflow, /I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY/);
+  assert.match(workflow, /name: cloudflare-staging/);
+  assert.match(workflow, /secrets\.CLOUDFLARE_API_TOKEN_02/);
+  assert.match(workflow, /secrets\.ASTROCROWN_STAGING_ACCESS_CODE/);
+  assert.match(workflow, /secrets\.ASTROCROWN_RATE_LIMIT_HMAC_KEY/);
+  assert.match(workflow, /vars\.ASTROCROWN_STAGING_D1_DATABASE_ID/);
+  assert.doesNotMatch(workflow, /upload-artifact/); 
+});
