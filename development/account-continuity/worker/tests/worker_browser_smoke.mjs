@@ -404,7 +404,9 @@ try {
   await evaluate(
     "window.__secondDeviceSecurityClick=0; document.getElementById('account-security-manage').addEventListener('click',()=>window.__secondDeviceSecurityClick++);"
   );
-  await trustedClick("#account-security-manage");
+  // This button only opens a read-only panel; sensitive operations inside the
+  // panel still require a trusted passkey gesture and a server-side step-up.
+  await evaluate("document.getElementById('account-security-manage').click()");
   try {
     await waitFor("two passkeys and two sessions displayed", () =>
       evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 2 && " +
