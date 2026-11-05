@@ -22,6 +22,7 @@
   var recoveryKeyAcknowledged = false;
   var accountState = { authenticated: false };
   var accountSecurityData = null;
+  var accountSecurityPendingPasskeyOptions = null;
   var securityRecoveryKeyPending = false;
   var focusBeforeOpen = null;
   var busy = false;
@@ -211,26 +212,48 @@
     return verified.stepUpToken;
   }
 
-  async function addAnotherPasskey(label) {
+  async function prepareAnotherPasskey(label) {
     var stepUpToken = await requestSecurityStepUp("manage-passkeys");
     var options = await requestJson("/api/account/security/passkeys/add/options", {
       stepUpToken: stepUpToken,
       label: label
     });
-    var credential;
+    return {
+      challengeId: options.challengeId,
+      publicKey: options.publicKey,
+      label: label,
+      expiresInSeconds: Number(options.expiresInSeconds || 120)
+    };
+  }
+
+  async function createPreparedPasskey() {
+    if (!accountSecurityPendingPasskeyOptions) {
+      throw new Error("Start the additional passkey verification again.");
+    }
+    ensurePasskeyContext();
+    var pending = accountSecurityPendingPasskeyOptions;
+    var creation;
     try {
-      credential = await navigator.credentials.create({
-        publicKey: webauthnOptionsFromJson(options.publicKey)
+      // Call WebAuthn immediately inside the user's second click; no network
+      // request or other await is allowed before navigator.credentials.create.
+      creation = navigator.credentials.create({
+        publicKey: webauthnOptionsFromJson(pending.publicKey)
       });
     } catch (error) {
+      throw new Error("The browser could not start the additional passkey ceremony. No credential was added.");
+    }
+    var credential;
+    try {
+      credential = await creation;
+    } catch (error) {
       if (error && error.name === "NotAllowedError") {
-        throw new Error("Additional passkey creation was cancelled. No credential was added.");
+        throw new Error("Additional passkey creation was cancelled or expired. No credential was added. Start again.");
       }
       throw new Error("The browser could not create the additional passkey. No credential was added.");
     }
     if (!credential) throw new Error("Additional passkey creation was cancelled. No credential was added.");
     return requestJson("/api/account/security/passkeys/add/verify", {
-      challengeId: options.challengeId,
+      challengeId: pending.challengeId,
       credential: serializeWebAuthnCredential(credential, true)
     });
   }
@@ -331,7 +354,12 @@
       '<div class="account-security-add">' +
         '<label class="account-security-label-field">Name for the additional passkey' +
         '<input id="account-security-new-passkey-label" type="text" maxlength="40" value="Additional passkey"></label>' +
-        '<button class="account-primary" type="button" id="account-security-add-passkey">Add another passkey</button>' +
+        '<button class="account-primary" type="button" id="account-security-add-passkey">Verify existing passkey</button>' +
+        '<div id="account-security-pending-passkey" class="account-security-pending-passkey" hidden>' +
+          '<p>Your existing passkey was verified. Select the next button to open your authenticator and create the additional passkey.</p>' +
+          '<button class="account-primary" type="button" id="account-security-create-passkey">Continue to create passkey</button>' +
+          '<button class="account-secondary" type="button" id="account-security-cancel-passkey">Cancel</button>' +
+        '</div>' +
       '</div>' +
       '<div class="account-security-panel-heading"><h3>Sign-in sessions</h3><p>Only session creation and expiry are shown. No IP address, location or device fingerprint is collected for this list.</p></div>' +
       '<div class="account-security-list">' + sessionMarkup + '</div>' +
@@ -1264,16 +1292,45 @@
       }
       setBusy(true);
       try {
-        var addedPasskeyData = await addAnotherPasskey(labelValue);
+        accountSecurityPendingPasskeyOptions = await prepareAnotherPasskey(labelValue);
+        var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
+        if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = false;
+        var addFeedback = document.getElementById("account-security-feedback");
+        if (addFeedback) addFeedback.textContent = "Passkey step-up verified. Continue with the second button to open your authenticator.";
+      } catch (error) {
+        accountSecurityPendingPasskeyOptions = null;
+        var addErrorFeedback = document.getElementById("account-security-feedback");
+        if (addErrorFeedback) addErrorFeedback.textContent = error.message || "The additional passkey could not be prepared.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "account-security-create-passkey") {
+      setBusy(true);
+      try {
+        var addedPasskeyData = await createPreparedPasskey();
+        accountSecurityPendingPasskeyOptions = null;
         renderSecurityPanel(addedPasskeyData);
         var addFeedback = document.getElementById("account-security-feedback");
         if (addFeedback) addFeedback.textContent = "The additional passkey was added to this account.";
       } catch (error) {
         var addErrorFeedback = document.getElementById("account-security-feedback");
         if (addErrorFeedback) addErrorFeedback.textContent = error.message || "The additional passkey could not be added.";
+        accountSecurityPendingPasskeyOptions = null;
+        var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
+        if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = true;
       } finally {
         setBusy(false);
       }
+      return;
+    }
+    if (button.id === "account-security-cancel-passkey") {
+      accountSecurityPendingPasskeyOptions = null;
+      var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
+      if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = true;
+      var addFeedback = document.getElementById("account-security-feedback");
+      if (addFeedback) addFeedback.textContent = "Additional passkey registration cancelled. No credential was added.";
       return;
     }
     if (button.id === "account-security-rotate-recovery-key") {
