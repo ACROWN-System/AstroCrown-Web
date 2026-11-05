@@ -332,6 +332,30 @@ try {
     "the additional authenticator must create a distinct credential ID.");
   assert.ok(secondCredential, "the newly added passkey must be separately represented by the authenticator.");
 
+  // Establish the current browser session with the second passkey before
+  // revoking the first one. The older session remains bound to the first
+  // credential and must be invalidated when that credential is revoked.
+  await cdp("Network.deleteCookies", { name: "acrown_account_session", url: baseUrl });
+  await cdp("Page.reload", { ignoreCache: true });
+  await waitFor("homepage before sign-in from the second device", () =>
+    evaluate("document.readyState === 'complete' && Boolean(document.getElementById('open-account-dialog'))"));
+  await trustedClick("#open-account-dialog");
+  await waitFor("second-device passkey sign-in button", () =>
+    evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
+  await trustedClick("#account-passkey-signin");
+  await waitFor("second-device account session", () =>
+    evaluate("Boolean(document.getElementById('open-account-hub'))"), 45000);
+  await trustedClick("#open-account-hub");
+  await waitFor("User dashboard authenticated by second passkey", () =>
+    evaluate("!document.getElementById('account-dashboard').hidden"));
+  account = await status();
+  assert.equal(account.authenticated, true);
+  assert.equal(account.activeSessionCount, 2,
+    "signing in with the second passkey must create a second session while retaining the first-device session.");
+  await trustedClick("#account-security-manage");
+  await waitFor("two passkeys and two sessions displayed", () =>
+    evaluate("document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 2"));
+
   const renameSelector = 'button[data-security-action="rename-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]';
   const renameInputSelector = 'input[data-passkey-label-input="' + secondPasskey.passkeyRef + '"]';
   await evaluate("document.querySelector(" + JSON.stringify(renameInputSelector) + ").value='Secondary test authenticator'");
@@ -353,6 +377,9 @@ try {
   );
   assert.equal(security.passkeys.length, 1, "revoking one passkey must preserve the remaining active passkey.");
   assert.equal(security.passkeys[0].passkeyRef, secondPasskey.passkeyRef);
+  account = await status();
+  assert.equal(account.activeSessionCount, 1,
+    "revoking the first passkey must also invalidate the older session that was established by that credential.");
   assert.equal(await evaluate("document.querySelector('#account-security-panel [data-security-action=\"revoke-passkey\"]').disabled"),
     true, "the last active passkey must not be removable from the normal management screen.");
   // Keep the remaining authenticator available for the recovery and session
