@@ -238,6 +238,22 @@ try {
   const firstCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(firstCredentials.credentials.length, 1, "registration must create one resident credential.");
 
+  // Multi-passkey coverage uses two independent authenticators. The server
+  // correctly excludes credential IDs already enrolled on a device, so a
+  // second credential must be created on a different authenticator.
+  const secondaryVirtual = await cdp("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "usb",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+  const secondaryAuthenticatorId = secondaryVirtual.authenticatorId;
+  assert.ok(secondaryAuthenticatorId, "Chrome must create an independent second virtual authenticator.");
+
   assert.equal(account.securityManagementAvailable, true,
     "the Worker account summary must explicitly advertise the implemented security controls.");
 
@@ -310,11 +326,12 @@ try {
   const secondPasskey = security.passkeys.find(item => item.passkeyRef !== firstPasskeyRef);
   assert.ok(secondPasskey, "the second passkey must have its own opaque reference.");
   const credentialsAfterAdd = await cdp("WebAuthn.getCredentials", { authenticatorId });
-  assert.equal(credentialsAfterAdd.credentials.length, 2,
-    "the virtual authenticator must hold both resident passkeys after the add ceremony.");
-  const secondCredential = credentialsAfterAdd.credentials.find(
-    item => item.credentialId !== firstCredentials.credentials[0].credentialId
-  );
+  const secondaryCredentialsAfterAdd = await cdp("WebAuthn.getCredentials", { authenticatorId: secondaryAuthenticatorId });
+  assert.equal(credentialsAfterAdd.credentials.length, 1,
+    "the original authenticator must retain its original resident passkey.");
+  assert.equal(secondaryCredentialsAfterAdd.credentials.length, 1,
+    "the independent second authenticator must hold the newly enrolled resident passkey.");
+  const secondCredential = secondaryCredentialsAfterAdd.credentials[0];
   assert.ok(secondCredential, "the newly added passkey must be separately represented by the authenticator.");
 
   const renameSelector = 'button[data-security-action="rename-passkey"][data-passkey-ref="' + secondPasskey.passkeyRef + '"]';
@@ -341,9 +358,10 @@ try {
   assert.equal(await evaluate("document.querySelector('#account-security-panel [data-security-action=\"revoke-passkey\"]').disabled"),
     true, "the last active passkey must not be removable from the normal management screen.");
   await cdp("WebAuthn.removeCredential", {
-    authenticatorId,
+    authenticatorId: secondaryAuthenticatorId,
     credentialId: secondCredential.credentialId,
   });
+  assert.equal((await cdp("WebAuthn.getCredentials", { authenticatorId: secondaryAuthenticatorId })).credentials.length, 0);
   assert.equal((await cdp("WebAuthn.getCredentials", { authenticatorId })).credentials.length, 1);
 
   await trustedClick("#account-security-rotate-recovery-key");
