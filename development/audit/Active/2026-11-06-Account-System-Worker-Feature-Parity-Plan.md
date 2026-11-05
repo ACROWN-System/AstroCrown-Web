@@ -52,6 +52,19 @@ Latest exact-head CI observed for the baseline:
 
 These checks establish the tested local qualification scope only. They do not qualify a deployed Cloudflare Worker, physical authenticators, all browsers/devices or a production security posture.
 
+### 3.1.1 Block A browser qualification — PASS (local only)
+
+The complete ordinary-account security lifecycle was verified by the GitHub-hosted **Account Staging Worker Qualification #176**:
+- [Run #176](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42122679471) — **PASS**.
+- Chrome virtual-authenticator assertions passed for account creation and sign-in, fresh security step-up, additional passkey enrollment on a separate authenticator, passkey label update and revocation, last-passkey protection, recovery-key rotation, rejection of the superseded recovery key, concurrent session listing and revocation, and passkey-loss recovery/replacement sign-in.
+- The run also passed all Worker invariant checks, restricted asset build, JavaScript/Worker bundle validation, all three local D1 migrations, local HTTP/origin checks, manual deployment-workflow parsing and remote fail-closed sentinel checks.
+- [Local Wallet Authentication Prototype Tests #691](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42122679444) — **PASS**.
+- [External Review Pipeline CI #966](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42122679562) — **PASS**.
+- [NOVA RSI Engine CI #1454](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42122679446) — **PASS**.
+- CodeQL run #987 was still in progress at the time this record was updated; it is not counted as a pass.
+
+This is a GitHub-hosted local Worker/D1 qualification using disposable synthetic test data and Chrome virtual authenticators. It is **not** a remote Cloudflare deployment, physical-device cross-browser qualification, independent penetration test, certification, or production approval.
+
 ### 3.2 Capabilities present only in the local reference prototype
 
 The Python reference prototype includes broader development-only account and administrator functionality, including:
@@ -80,7 +93,7 @@ The current UI's dashboard/security copy accurately marks some of these as not i
 
 ## 4. Ordered implementation blocks
 
-### Block A — Ordinary account security lifecycle (first implementation block)
+### Block A — Ordinary account security lifecycle (local qualification passed)
 
 Port a complete user-controlled security center to Worker/D1 while preserving the passkey-first authority:
 - list active passkeys with privacy-minimal metadata and user-chosen labels;
@@ -172,6 +185,6 @@ Only after the Worker/D1 lifecycle and UI parity tests pass:
 
 ## 6. Current release boundary
 
-At the reviewed baseline, the local Worker/D1 account lifecycle is qualified for its limited scope, but the account system is **not feature-complete, not remotely deployed and not production-ready**. The next code block is **Block A — Ordinary account security lifecycle**. Administrator role governance, administrator-wallet step-up, ordinary-user wallet backup, complete dashboard parity and deployed staging remain separate implementation and evidence gates.
+The local Worker/D1 account lifecycle, including **Block A ordinary-account security management**, has passed its scoped GitHub-hosted browser qualification. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**. The next code block is **Block B — Administrator role and permission authority**, followed by Block C administrator-wallet step-up. Block D ordinary-user wallet backup, full dashboard parity and deployed staging remain separate implementation and evidence gates.
 
 This plan is a scope and sequencing record. Each block must be implemented, tested and reviewed against its own acceptance evidence before being marked complete.
