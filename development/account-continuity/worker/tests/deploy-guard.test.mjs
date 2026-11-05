@@ -34,6 +34,8 @@ test("local tests, build and dry-run do not inherit Cloudflare account credentia
   assert.match(deployScript, /if \(options\.allowCloudflareCredentials !== true\)/);
   assert.match(deployScript, /delete childEnv\.CLOUDFLARE_API_TOKEN;/);
   assert.match(deployScript, /delete childEnv\.CLOUDFLARE_ACCOUNT_ID;/);
+  assert.match(deployScript, /delete childEnv\.ASTROCROWN_STAGING_ACCESS_CODE;/);
+  assert.match(deployScript, /delete childEnv\.ASTROCROWN_RATE_LIMIT_HMAC_KEY;/);
   assert.match(deployScript, /runNpm\(\["test"\]\);[\s\S]*runNpm\(\["run", "build:site"\]\);[\s\S]*runNpm\(\["run", "check:worker"\]\);/);
 });
 
@@ -55,4 +57,22 @@ test("remote smoke checks are not represented as full account qualification", ()
   assert.match(deployScript, /REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED/);
   assert.match(deployScript, /not full remote account qualification/);
   assert.match(deployScript, /actual stored COSE algorithm is -48/);
+});
+
+
+test("GitHub-hosted deployment requires protected staging secrets before network access", () => {
+  assert.match(deployScript, /process\.env\.GITHUB_ACTIONS === "true"/);
+  assert.match(deployScript, /ASTROCROWN_STAGING_ACCESS_CODE/);
+  assert.match(deployScript, /ASTROCROWN_RATE_LIMIT_HMAC_KEY/);
+  assert.match(deployScript, /hosted runner will not generate an unreported access credential/);
+  assert.match(deployScript, /::add-mask::/);
+  assert.match(deployScript, /HTTP Basic Auth access code: configured from protected GitHub environment secret; value withheld\./);
+});
+
+test("GitHub-hosted reruns require the recorded D1 UUID and never adopt by database name", () => {
+  assert.match(deployScript, /ASTROCROWN_STAGING_D1_DATABASE_ID/);
+  assert.match(deployScript, /identity-supplied-by-protected-github-environment-variable/);
+  assert.match(deployScript, /never adopt a database by name alone/);
+  assert.match(deployScript, /staging_d1_database_id=/);
+  assert.match(deployScript, /GITHUB_STEP_SUMMARY/);
 });
