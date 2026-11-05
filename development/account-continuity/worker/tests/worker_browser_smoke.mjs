@@ -498,7 +498,26 @@ try {
   await cdp("Page.reload", { ignoreCache: true });
   await waitFor("homepage after clearing only the browser session cookie", () =>
     evaluate("document.readyState === 'complete' && Boolean(document.getElementById('open-account-dialog'))"));
-  await trustedClick("#open-account-dialog");
+  // A fresh page load deliberately re-displays the development notice. It
+  // must be acknowledged before the account header can be used.
+  const sessionReloadNoticeOpen = await evaluate(
+    "Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)"
+  );
+  if (sessionReloadNoticeOpen) {
+    if (!(await evaluate("document.getElementById('development-notice-acknowledged').checked"))) {
+      await trustedClick("#development-notice-acknowledged");
+    }
+    await trustedClick("#development-notice-continue");
+    await waitFor("session-reload development notice acknowledgement", () =>
+      evaluate("!document.getElementById('development-notice').open"));
+  }
+  await waitFor("unauthenticated header before a new passkey session", async () =>
+    evaluate("fetch('/api/account/status',{credentials:'same-origin',cache:'no-store'}).then(async r => {" +
+      "const value=await r.json(); return value.authenticated === false && " +
+      "document.getElementById('open-account-dialog')?.getAttribute('aria-label') === 'Log In to AstroCrown'; })"));
+  await evaluate("document.getElementById('open-account-dialog').click()");
+  await waitFor("second-session sign-in dialog opens", () =>
+    evaluate("Boolean(document.getElementById('account-dialog')?.open)"));
   await waitFor("second-session passkey sign-in", () =>
     evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
   await trustedClick("#account-passkey-signin");
