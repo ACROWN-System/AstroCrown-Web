@@ -1,6 +1,6 @@
 # AstroCrown account staging Worker — qualification build
 
-**Status: local qualification build only. Not deployed, not approved for public onboarding, and not a production release.**
+**Status: hosted qualification build; remote staging deployment remains prepared but not deployed, approved for public onboarding, or a production release.**
 
 This is an isolated Worker/D1 implementation path for the adopted passkey-first account model. It is separate from the Python loopback reference prototype.
 
@@ -23,9 +23,17 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 - ML-DSA capability is not credential evidence. A real authenticator must register an ML-DSA credential, the server must store its actual COSE algorithm, and a later assertion must verify before the credential is described as post-quantum.
 - This port has not yet had independent security review and does not replace the Python reference. Account API parity, runtime quota measurements and end-to-end regression tests remain required.
 
-## Local qualification
+## Automated qualification — GitHub-hosted first
 
-Use a supported Node.js LTS, npm, and a preinstalled Chrome/Chromium browser. From this directory, run npm install, npm run build:site, npx wrangler d1 migrations apply acrown-account-staging --local, and npx wrangler dev --local. Wrangler displays the local URL. Local development uses the localhost RP ID; it is not the remote staging URL. The qualification workflow also runs a Chrome virtual-authenticator registration, discoverable sign-in, passkey-loss and offline-recovery test against the local Worker.
+The normal qualification path is `.github/workflows/account-staging-worker-qualification.yml`, running on GitHub-hosted `ubuntu-24.04` with Node.js 22. It installs dependencies, runs Worker invariant tests, builds the restricted site assets, checks the Worker bundle, applies the D1 schema locally to the ephemeral runner, launches the local Worker, and runs the Chrome virtual-authenticator registration/sign-in/recovery tests. It also verifies that the remote staging RP/origin/D1 identifiers remain fail-closed sentinels. This workflow does not deploy to Cloudflare or create remote resources.
+
+Do not ask the owner to install Node.js/npm or run this qualification locally when the hosted workflow can provide the required evidence. Read the exact-commit Actions result and job steps instead. A passing hosted local-Worker test is not proof of remote Cloudflare runtime or real-authenticator compatibility.
+
+## Optional local diagnostics — exception only
+
+A local checkout may be used when a specific device, browser, physical authenticator, private file or reproducible failure cannot be tested through the hosted runner. Record why the hosted path is insufficient and request only the smallest necessary local action.
+
+When a local diagnostic is justified, use a supported Node.js LTS and a preinstalled Chrome/Chromium browser. From this directory, run `npm install`, `npm run build:site`, `npx wrangler d1 migrations apply acrown-account-staging --local`, and `npx wrangler dev --local`. Wrangler displays a local URL and uses the localhost RP ID; it is not the remote staging URL. Do not treat local diagnostic output as remote integration evidence.
 
 ## GitHub-hosted remote staging — prepared, not deployed or authorized
 
