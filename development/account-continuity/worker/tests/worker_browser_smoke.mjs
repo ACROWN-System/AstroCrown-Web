@@ -256,8 +256,10 @@ try {
   await trustedClick("#account-security-manage");
   const securityClickProbe = await evaluate(
     "(() => { const b=document.getElementById('account-security-manage'); const r=b.getBoundingClientRect(); " +
-    "const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); " +
+    "const x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y); " +
     "return {clicks:window.__accountSecurityClickCount,buttonDisabled:b.disabled,buttonVisible:!!(r.width&&r.height)," +
+    "rect:{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height}," +
+    "viewport:{width:innerWidth,height:innerHeight,scrollX,scrollY}," +
     "hitId:hit?.id || '',hitTag:hit?.tagName || '',panelHidden:document.getElementById('account-security-panel')?.hidden}; })()"
   );
   assert.equal(securityClickProbe.clicks, 1,
