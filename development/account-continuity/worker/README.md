@@ -15,6 +15,22 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 - Restricted static build copies only the homepage, account UI assets, and explicitly allowlisted account/legal pages from development. It does not publish repository documentation, audit records, backups, or source files.
 - Existing homepage/account UI are reused. The generated static homepage receives a visible synthetic-data banner and a runtime marker enabling same-origin Worker API requests.
 
+## Account security lifecycle — under active qualification
+
+The Worker branch now contains an implementation candidate for the ordinary-account security centre. It adds opaque passkey/session references, user-managed passkey labels and additional passkey enrollment/revocation, session listing/revocation, and one-time recovery-key rotation. Sensitive operations require a fresh WebAuthn assertion and a short-lived, purpose-bound, single-use grant tied to the active account session. The normal revoke path refuses to remove the last active passkey; session controls preserve the current session.
+
+The related API surface is:
+- `GET /api/account/security`
+- `POST /api/account/security/step-up/options` and `/verify`
+- `POST /api/account/security/passkeys/add/options` and `/verify`
+- `POST /api/account/security/passkeys/rename` and `/revoke`
+- `POST /api/account/security/sessions/revoke`
+- `POST /api/account/security/recovery/rotate`
+
+The User dashboard exposes these controls only when the authenticated backend explicitly advertises them. Additional passkey enrollment is a two-gesture flow: the first click performs fresh passkey step-up and prepares a short-lived registration challenge; a second explicit click opens the authenticator ceremony directly from the user gesture. This is necessary to avoid losing WebAuthn user activation across asynchronous network requests.
+
+**Maturity boundary:** implementation is present in the branch but the expanded Chrome virtual-authenticator regression sequence has not yet passed in hosted CI. Do not treat these controls as qualified, deployed or ready for real users until the Worker qualification workflow verifies the full lifecycle and the relevant security review is complete. The staging account remains synthetic-test-only.
+
 ## Deliberate limits
 
 - Administrator role provisioning, EVM/SIWE wallet enrollment, privileged dashboard APIs and administrator actions are not enabled. This Worker creates ordinary user accounts only.
