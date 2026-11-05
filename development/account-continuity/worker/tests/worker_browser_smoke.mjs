@@ -238,7 +238,7 @@ try {
 
   await trustedClick("#account-security-manage");
   await waitFor("account security panel", () =>
-    evaluate("Boolean(document.getElementById('account-security-panel') && !document.getElementById('account-security-panel').hidden && document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1")));
+    evaluate("Boolean(document.getElementById('account-security-panel') && !document.getElementById('account-security-panel').hidden && document.querySelectorAll('#account-security-panel [data-security-action=\"revoke-passkey\"]').length === 1)"));
   let security = await evaluate(
     "fetch('/api/account/security',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())"
   );
