@@ -606,23 +606,39 @@ async function revokePasskey(db, env, request, payload) {
     throw fail(409, "The last active passkey cannot be removed here. Add another passkey or use account recovery first.");
   }
   const target = await db.prepare(
-    "SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1"
+    "SELECT credential_id FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1"
   ).bind(passkeyRef, account.account_id).first();
   if (!target) throw fail(404, "That active passkey could not be found.");
+  const currentToken = cookie(request, SESSION_COOKIE);
+  if (!currentToken) throw fail(401, "Your account session is no longer active.");
+  const currentTokenHash = await hashText(currentToken);
+  const currentSession = await db.prepare(
+    "SELECT authenticated_credential_id FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?"
+  ).bind(currentTokenHash, account.account_id, Math.floor(Date.now() / 1000)).first();
+  if (!currentSession) throw fail(401, "Your account session is no longer active.");
+  const currentSessionWillBeRevoked = equalConstantTime(
+    String(currentSession.authenticated_credential_id || ""),
+    String(target.credential_id)
+  );
   const marker = b64u(bytes(18));
   const timestamp = new Date().toISOString();
+  const now = Math.floor(Date.now() / 1000);
   const results = await db.batch([
     db.prepare(
       "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
       "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ? " +
       "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000),
-      grant.sessionHash, account.account_id, Math.floor(Date.now() / 1000)),
+    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now,
+      grant.sessionHash, account.account_id, now),
     db.prepare(
       "UPDATE auth_passkeys SET active = 0 WHERE passkey_ref = ? AND account_id = ? AND active = 1 " +
       "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?) " +
       "AND (SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) > 1"
     ).bind(passkeyRef, account.account_id, grant.tokenHash, marker, account.account_id),
+    db.prepare(
+      "DELETE FROM auth_sessions WHERE account_id = ? AND authenticated_credential_id = ? " +
+      "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 0)"
+    ).bind(account.account_id, target.credential_id, passkeyRef, account.account_id),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
       "SELECT ?,?,'passkey_revoked',?,? WHERE EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 0)"
@@ -630,6 +646,13 @@ async function revokePasskey(db, env, request, payload) {
   ]);
   if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[1]?.meta?.changes || 0) !== 1) {
     throw fail(409, "The passkey could not be revoked. The account must retain at least one active passkey.");
+  }
+  if (currentSessionWillBeRevoked) {
+    return json(200, {
+      revoked: true,
+      sessionRevoked: true,
+      message: "The passkey was revoked, and this session was ended because that passkey originally authenticated it. Sign in again with another active passkey.",
+    }, { "Set-Cookie": clearCookie(new URL(request.url)) });
   }
   return await securityStatus(db, request);
 }
@@ -847,9 +870,9 @@ async function verifyRegistration(db, env, request, payload, config) {
       "SELECT ?,1,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
     ).bind(challenge.account_id, recovery.salt, recovery.verifier, created, challengeId, marker),
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
-      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(tokenHash, challenge.account_id, sessionRef, now, expires, challengeId, marker),
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
+      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(tokenHash, challenge.account_id, sessionRef, credential.id, now, expires, challengeId, marker),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
       "SELECT ?,?,'account_created_with_passkey',?,'recovery_key_version=1' WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
@@ -929,10 +952,10 @@ async function verifyAuthentication(db, env, request, payload, config) {
       "AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
     ).bind(verified.authenticationInfo.newCounter, timestamp, credentialId, challengeId, marker),
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
-      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
+      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
       "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE credential_id = ? AND active = 1 AND sign_count = ?)"
-    ).bind(tokenHash, row.account_id, sessionRef, now, expires, challengeId, marker, credentialId, verified.authenticationInfo.newCounter),
+    ).bind(tokenHash, row.account_id, sessionRef, credentialId, now, expires, challengeId, marker, credentialId, verified.authenticationInfo.newCounter),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
       "SELECT ?,?,'passkey_sign_in',?,'user_verified=true' WHERE EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ?)"
@@ -1032,9 +1055,9 @@ async function completeRecovery(db, env, request, payload, config) {
     ).bind(challenge.account_id, nextVersion, nextKey.salt, nextKey.verifier, timestamp, id, marker),
     db.prepare("DELETE FROM auth_sessions WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)").bind(challenge.account_id, id, marker),
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
-      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(tokenHash, challenge.account_id, sessionRef, now, expires, id, marker),
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
+      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(tokenHash, challenge.account_id, sessionRef, credential.id, now, expires, id, marker),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
       "SELECT ?,?,'account_recovered_with_recovery_key',?,? WHERE EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ?)"
