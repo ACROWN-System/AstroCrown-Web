@@ -1026,7 +1026,7 @@ async function completeRecovery(db, env, request, payload, config) {
     db.prepare("DELETE FROM auth_sessions WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)").bind(challenge.account_id, id, marker),
     db.prepare(
       "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) " +
-      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
+      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
     ).bind(tokenHash, challenge.account_id, sessionRef, now, expires, id, marker),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
