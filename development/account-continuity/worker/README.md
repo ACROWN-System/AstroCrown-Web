@@ -15,7 +15,7 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 - Restricted static build copies only the homepage, account UI assets, and explicitly allowlisted account/legal pages from development. It does not publish repository documentation, audit records, backups, or source files.
 - Existing homepage/account UI are reused. The generated static homepage receives a visible synthetic-data banner and a runtime marker enabling same-origin Worker API requests.
 
-## Account security lifecycle — under active qualification
+## Account security lifecycle — local qualification passed; not deployed
 
 The Worker branch now contains an implementation candidate for the ordinary-account security centre. It adds opaque passkey/session references, user-managed passkey labels and additional passkey enrollment/revocation, session listing/revocation, and one-time recovery-key rotation. Sensitive operations require a fresh WebAuthn assertion and a short-lived, purpose-bound, single-use grant tied to the active account session. The normal revoke path refuses to remove the last active passkey; session controls preserve the current session.
 
@@ -29,7 +29,9 @@ The related API surface is:
 
 The User dashboard exposes these controls only when the authenticated backend explicitly advertises them. Additional passkey enrollment is a two-gesture flow: the first click performs fresh passkey step-up and prepares a short-lived registration challenge; a second explicit click opens the authenticator ceremony directly from the user gesture. This is necessary to avoid losing WebAuthn user activation across asynchronous network requests.
 
-**Maturity boundary:** implementation is present in the branch but the expanded Chrome virtual-authenticator regression sequence has not yet passed in hosted CI. Do not treat these controls as qualified, deployed or ready for real users until the Worker qualification workflow verifies the full lifecycle and the relevant security review is complete. The staging account remains synthetic-test-only.
+**Qualification evidence:** [Account Staging Worker Qualification #176](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42122679471) passed the full Chrome virtual-authenticator lifecycle. The run verified account creation/sign-in, the security step-up, a second passkey on an independent authenticator, naming and revocation, final-passkey protection, passkey-bound session invalidation, recovery-key rotation and prior-key rejection, multiple sessions and other-session revocation, and recovery/replacement sign-in. The local D1 migrations, Worker invariants, restricted asset build and fail-closed deployment sentinels also passed.
+
+**Maturity boundary:** this is only a GitHub-hosted local Worker/D1 qualification with disposable synthetic data and virtual authenticators. It is not a remote Cloudflare deployment, cross-browser/physical-authenticator qualification, independent penetration test, certification, or approval for real users. The staging account remains synthetic-test-only.
 
 ## Deliberate limits
 
