@@ -250,7 +250,18 @@ try {
   );
   assert.equal(securityButtonState.button, true, "the User dashboard must show the security control when the backend enables it.");
   assert.equal(securityButtonState.disabled, false, "the security management control must be usable after account creation.");
+  await evaluate(
+    "window.__accountSecurityClickCount=0; document.getElementById('account-security-manage').addEventListener('click',()=>window.__accountSecurityClickCount++);"
+  );
   await trustedClick("#account-security-manage");
+  const securityClickProbe = await evaluate(
+    "(() => { const b=document.getElementById('account-security-manage'); const r=b.getBoundingClientRect(); " +
+    "const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); " +
+    "return {clicks:window.__accountSecurityClickCount,buttonDisabled:b.disabled,buttonVisible:!!(r.width&&r.height)," +
+    "hitId:hit?.id || '',hitTag:hit?.tagName || '',panelHidden:document.getElementById('account-security-panel')?.hidden}; })()"
+  );
+  assert.equal(securityClickProbe.clicks, 1,
+    "the real browser click must reach the account-security button: " + JSON.stringify(securityClickProbe));
   await waitFor("account security panel becomes visible", () =>
     evaluate("Boolean(document.getElementById('account-security-panel') && !document.getElementById('account-security-panel').hidden)"));
   const securityPanelState = await evaluate(
