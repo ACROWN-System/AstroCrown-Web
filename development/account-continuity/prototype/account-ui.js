@@ -21,6 +21,8 @@
   var successKind = "signup";
   var recoveryKeyAcknowledged = false;
   var accountState = { authenticated: false };
+  var accountSecurityData = null;
+  var securityRecoveryKeyPending = false;
   var focusBeforeOpen = null;
   var busy = false;
   var pendingAdminWalletMessage = null;
@@ -180,6 +182,184 @@
         typeof navigator.credentials.get !== "function" ||
         typeof PublicKeyCredential === "undefined") {
       throw new Error("This browser does not expose WebAuthn in a supported secure context. Use a current browser on localhost or the approved HTTPS site.");
+    }
+  }
+
+
+  async function requestSecurityStepUp(purpose) {
+    ensurePasskeyContext();
+    var options = await requestJson("/api/account/security/step-up/options", { purpose: purpose });
+    var credential;
+    try {
+      credential = await navigator.credentials.get({
+        publicKey: webauthnOptionsFromJson(options.publicKey)
+      });
+    } catch (error) {
+      if (error && error.name === "NotAllowedError") {
+        throw new Error("Passkey verification was cancelled. No security change was made.");
+      }
+      throw new Error("The browser could not verify your passkey. No security change was made.");
+    }
+    if (!credential) throw new Error("Passkey verification was cancelled. No security change was made.");
+    var verified = await requestJson("/api/account/security/step-up/verify", {
+      challengeId: options.challengeId,
+      credential: serializeWebAuthnCredential(credential, false)
+    });
+    if (verified.purpose !== purpose || typeof verified.stepUpToken !== "string") {
+      throw new Error("The server did not return the expected one-use security authorization.");
+    }
+    return verified.stepUpToken;
+  }
+
+  async function addAnotherPasskey(label) {
+    var stepUpToken = await requestSecurityStepUp("manage-passkeys");
+    var options = await requestJson("/api/account/security/passkeys/add/options", {
+      stepUpToken: stepUpToken,
+      label: label
+    });
+    var credential;
+    try {
+      credential = await navigator.credentials.create({
+        publicKey: webauthnOptionsFromJson(options.publicKey)
+      });
+    } catch (error) {
+      if (error && error.name === "NotAllowedError") {
+        throw new Error("Additional passkey creation was cancelled. No credential was added.");
+      }
+      throw new Error("The browser could not create the additional passkey. No credential was added.");
+    }
+    if (!credential) throw new Error("Additional passkey creation was cancelled. No credential was added.");
+    return requestJson("/api/account/security/passkeys/add/verify", {
+      challengeId: options.challengeId,
+      credential: serializeWebAuthnCredential(credential, true)
+    });
+  }
+
+  async function renameAccountPasskey(passkeyRef, label) {
+    var stepUpToken = await requestSecurityStepUp("manage-passkeys");
+    return requestJson("/api/account/security/passkeys/rename", {
+      stepUpToken: stepUpToken,
+      passkeyRef: passkeyRef,
+      label: label
+    });
+  }
+
+  async function revokeAccountPasskey(passkeyRef) {
+    var stepUpToken = await requestSecurityStepUp("manage-passkeys");
+    return requestJson("/api/account/security/passkeys/revoke", {
+      stepUpToken: stepUpToken,
+      passkeyRef: passkeyRef
+    });
+  }
+
+  async function revokeAccountSession(sessionRef) {
+    var stepUpToken = await requestSecurityStepUp("manage-sessions");
+    return requestJson("/api/account/security/sessions/revoke", {
+      stepUpToken: stepUpToken,
+      sessionRef: sessionRef
+    });
+  }
+
+  async function revokeOtherAccountSessions() {
+    var stepUpToken = await requestSecurityStepUp("manage-sessions");
+    return requestJson("/api/account/security/sessions/revoke", {
+      stepUpToken: stepUpToken,
+      revokeOthers: true
+    });
+  }
+
+  async function rotateOfflineRecoveryKey() {
+    var stepUpToken = await requestSecurityStepUp("rotate-recovery-key");
+    return requestJson("/api/account/security/recovery/rotate", {
+      stepUpToken: stepUpToken
+    });
+  }
+
+  function securityDateLabel(value) {
+    if (!value) return "Not recorded";
+    var date = new Date(value);
+    return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
+  }
+
+  function renderSecurityPanel(data) {
+    var panel = document.getElementById("account-security-panel");
+    if (!panel) return;
+    var oneTimeKey = data && typeof data.oneTimeRecoveryKey === "string"
+      ? data.oneTimeRecoveryKey : null;
+    var safeData = Object.assign({}, data || {});
+    delete safeData.oneTimeRecoveryKey;
+    delete safeData.message;
+    accountSecurityData = safeData;
+    var passkeys = Array.isArray(safeData.passkeys) ? safeData.passkeys : [];
+    var sessions = Array.isArray(safeData.sessions) ? safeData.sessions : [];
+    var passkeyMarkup = passkeys.length ? passkeys.map(function (item) {
+      var ref = escapeHtml(item.passkeyRef || "");
+      var algorithm = Number(item.algorithm);
+      var algorithmLabel = algorithm === -48 ? "ML-DSA-44 · COSE -48"
+        : algorithm === -49 ? "ML-DSA-65 · COSE -49"
+          : algorithm === -50 ? "ML-DSA-87 · COSE -50"
+            : "COSE algorithm " + String(algorithm);
+      return '<article class="account-security-item">' +
+        '<div class="account-security-item-heading"><strong>' + escapeHtml(item.label || "Passkey") + '</strong>' +
+        '<span>' + (item.postQuantum === true ? "Post-quantum credential algorithm" : "Credential algorithm recorded") + '</span></div>' +
+        '<p>Added: ' + escapeHtml(securityDateLabel(item.createdAt)) + '</p>' +
+        '<p>Last used: ' + escapeHtml(securityDateLabel(item.lastUsedAt)) + '</p>' +
+        '<p>' + escapeHtml(algorithmLabel) + ' · Authenticator: ' + escapeHtml(item.deviceType || "unknown") +
+        ' · Backup state: ' + (item.backedUp === true ? "reported backed up" : "not reported backed up") + '</p>' +
+        '<label class="account-security-label-field">Passkey name' +
+        '<input type="text" maxlength="40" value="' + escapeHtml(item.label || "Passkey") +
+        '" data-passkey-label-input="' + ref + '"></label>' +
+        '<div class="account-security-item-actions">' +
+        '<button class="account-secondary" type="button" data-security-action="rename-passkey" data-passkey-ref="' + ref + '">Save name</button>' +
+        '<button class="account-secondary" type="button" data-security-action="revoke-passkey" data-passkey-ref="' + ref +
+        '"' + (passkeys.length <= 1 ? " disabled" : "") + '>Revoke passkey</button>' +
+        '</div></article>';
+    }).join("") : '<p>No active passkeys were returned by the account service.</p>';
+    var sessionMarkup = sessions.length ? sessions.map(function (item) {
+      var ref = escapeHtml(item.sessionRef || "");
+      return '<article class="account-security-item">' +
+        '<strong>' + (item.isCurrent === true ? "Current browser session" : "Other sign-in session") + '</strong>' +
+        '<p>Started: ' + escapeHtml(securityDateLabel(item.createdAt)) + '</p>' +
+        '<p>Expires: ' + escapeHtml(securityDateLabel(item.expiresAt)) + '</p>' +
+        (item.isCurrent === true ? '<span class="account-dashboard-status">This session remains active</span>' :
+          '<button class="account-secondary" type="button" data-security-action="revoke-session" data-session-ref="' + ref + '">Revoke this session</button>') +
+        '</article>';
+    }).join("") : '<p>No active sign-in sessions were returned by the account service.</p>';
+    panel.innerHTML =
+      '<div class="account-security-panel-heading"><h3>Passkeys</h3><p>Private keys remain with your authenticators. Names are labels you control; AstroCrown does not need a device fingerprint.</p></div>' +
+      '<div class="account-security-list">' + passkeyMarkup + '</div>' +
+      '<div class="account-security-add">' +
+        '<label class="account-security-label-field">Name for the additional passkey' +
+        '<input id="account-security-new-passkey-label" type="text" maxlength="40" value="Additional passkey"></label>' +
+        '<button class="account-primary" type="button" id="account-security-add-passkey">Add another passkey</button>' +
+      '</div>' +
+      '<div class="account-security-panel-heading"><h3>Sign-in sessions</h3><p>Only session creation and expiry are shown. No IP address, location or device fingerprint is collected for this list.</p></div>' +
+      '<div class="account-security-list">' + sessionMarkup + '</div>' +
+      '<button class="account-secondary" type="button" id="account-security-revoke-others"' +
+        (sessions.filter(function (item) { return item.isCurrent !== true; }).length === 0 ? " disabled" : "") +
+        '>Sign out all other sessions</button>' +
+      '<div class="account-security-panel-heading"><h3>Offline recovery key</h3><p>' +
+        (safeData.activeRecoveryKey === true ? "One unused recovery key is active." : "No unused recovery key is currently registered.") +
+        ' Replacing it requires a fresh passkey verification. The new key is shown once.</p></div>' +
+      '<button class="account-secondary" type="button" id="account-security-rotate-recovery-key">Replace offline recovery key</button>' +
+      '<div id="account-security-recovery-output" class="account-security-recovery-output" hidden></div>' +
+      '<p id="account-security-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+      '<p class="account-security-note">Each sensitive change requires a fresh passkey assertion. The authorization is short-lived, bound to this signed-in session, and accepted once.</p>';
+    panel.hidden = false;
+    if (oneTimeKey) {
+      securityRecoveryKeyPending = true;
+      var output = document.getElementById("account-security-recovery-output");
+      if (output) {
+        output.hidden = false;
+        output.innerHTML =
+          '<strong>Save this new recovery key offline now.</strong>' +
+          '<p>The previous key has been invalidated. This replacement will not be displayed again after you close or acknowledge this notice.</p>' +
+          '<textarea id="account-security-recovery-key-value" rows="2" readonly spellcheck="false">' + escapeHtml(oneTimeKey) + '</textarea>' +
+          '<div class="account-security-item-actions">' +
+          '<button class="account-secondary" type="button" data-security-action="copy-recovery-key">Copy recovery key</button>' +
+          '<button class="account-primary" type="button" data-security-action="acknowledge-recovery-key">I have saved it offline</button>' +
+          '</div>';
+      }
     }
   }
 
@@ -553,7 +733,9 @@
             : 'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.') + '</p>' +
           '<p>The authenticator keeps your private key. AstroCrown verifies a fresh challenge using the registered public credential. No email, password, SMS or external identity provider is used for this account sign-in.</p>' +
           '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
-          '<p>Additional passkey enrollment, revocation and passkey-confirmed session management are being implemented separately. Do not rely on this prototype for real assets.</p>' +
+          (accountState.securityManagementAvailable === true
+            ? '<p>Manage registered passkeys, sign-in sessions and the offline recovery key. Sensitive changes require a fresh passkey verification.</p><button class="account-primary" type="button" id="account-security-manage">Manage account security</button><div id="account-security-panel" class="account-security-panel" hidden></div>'
+            : '<p>Detailed passkey and session management is not available in this account backend yet. Do not rely on this prototype for real assets.</p>') +
           '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
           '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         '<section class="account-dashboard-card"><h2>Optional wallet backup</h2><p class="account-dashboard-value">Not required</p><p>A user-controlled wallet may be enrolled as an additional authenticator in a later implementation. Ordinary account access does not require a wallet, balance, deposit or blockchain transaction.</p></section>' +
@@ -1050,6 +1232,165 @@
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.id === "account-security-manage") {
+      var panel = document.getElementById("account-security-panel");
+      if (!panel) return;
+      panel.hidden = false;
+      panel.textContent = "Loading account security information…";
+      setBusy(true);
+      try {
+        var securityData = await requestJson("/api/account/security");
+        renderSecurityPanel(securityData);
+      } catch (error) {
+        panel.textContent = error.message || "Account security information could not be loaded.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (securityRecoveryKeyPending && button.dataset.securityAction !== "copy-recovery-key" &&
+        button.dataset.securityAction !== "acknowledge-recovery-key") {
+      var pendingFeedback = document.getElementById("account-security-feedback");
+      if (pendingFeedback) pendingFeedback.textContent = "Save and acknowledge the one-time recovery key before making another security change.";
+      return;
+    }
+    if (button.id === "account-security-add-passkey") {
+      var newPasskeyLabel = document.getElementById("account-security-new-passkey-label");
+      var labelValue = newPasskeyLabel ? newPasskeyLabel.value.trim() : "";
+      if (!labelValue || labelValue.length > 40) {
+        var addFeedbackInvalid = document.getElementById("account-security-feedback");
+        if (addFeedbackInvalid) addFeedbackInvalid.textContent = "Enter a passkey name between 1 and 40 characters.";
+        return;
+      }
+      setBusy(true);
+      try {
+        var addedPasskeyData = await addAnotherPasskey(labelValue);
+        renderSecurityPanel(addedPasskeyData);
+        var addFeedback = document.getElementById("account-security-feedback");
+        if (addFeedback) addFeedback.textContent = "The additional passkey was added to this account.";
+      } catch (error) {
+        var addErrorFeedback = document.getElementById("account-security-feedback");
+        if (addErrorFeedback) addErrorFeedback.textContent = error.message || "The additional passkey could not be added.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "account-security-rotate-recovery-key") {
+      setBusy(true);
+      try {
+        var rotatedRecoveryData = await rotateOfflineRecoveryKey();
+        renderSecurityPanel(rotatedRecoveryData);
+      } catch (error) {
+        var rotateFeedback = document.getElementById("account-security-feedback");
+        if (rotateFeedback) rotateFeedback.textContent = error.message || "The offline recovery key could not be replaced.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "account-security-revoke-others") {
+      if (!window.confirm("Sign out every other active session for this account? The current browser session will remain active.")) return;
+      setBusy(true);
+      try {
+        var sessionsResult = await revokeOtherAccountSessions();
+        renderSecurityPanel(sessionsResult);
+        var sessionFeedback = document.getElementById("account-security-feedback");
+        if (sessionFeedback) sessionFeedback.textContent = "Other active sessions have been revoked. This browser session remains active.";
+      } catch (error) {
+        var sessionErrorFeedback = document.getElementById("account-security-feedback");
+        if (sessionErrorFeedback) sessionErrorFeedback.textContent = error.message || "Other sessions could not be revoked.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.dataset.securityAction === "rename-passkey") {
+      var passkeyRef = button.dataset.passkeyRef;
+      var labelInput = dashboardContent.querySelector('input[data-passkey-label-input="' + passkeyRef + '"]');
+      var nextLabel = labelInput ? labelInput.value.trim() : "";
+      if (!nextLabel || nextLabel.length > 40) {
+        var renameInvalid = document.getElementById("account-security-feedback");
+        if (renameInvalid) renameInvalid.textContent = "Enter a passkey name between 1 and 40 characters.";
+        return;
+      }
+      setBusy(true);
+      try {
+        var renamed = await renameAccountPasskey(passkeyRef, nextLabel);
+        renderSecurityPanel(renamed);
+        var renameFeedback = document.getElementById("account-security-feedback");
+        if (renameFeedback) renameFeedback.textContent = "Passkey name updated.";
+      } catch (error) {
+        var renameError = document.getElementById("account-security-feedback");
+        if (renameError) renameError.textContent = error.message || "The passkey name could not be updated.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.dataset.securityAction === "revoke-passkey") {
+      if (!window.confirm("Revoke this passkey? It will no longer be able to sign in. Keep at least one usable passkey on the account.")) return;
+      setBusy(true);
+      try {
+        var revokedPasskey = await revokeAccountPasskey(button.dataset.passkeyRef);
+        renderSecurityPanel(revokedPasskey);
+        var revokeFeedback = document.getElementById("account-security-feedback");
+        if (revokeFeedback) revokeFeedback.textContent = "The selected passkey was revoked.";
+      } catch (error) {
+        var revokeError = document.getElementById("account-security-feedback");
+        if (revokeError) revokeError.textContent = error.message || "The passkey could not be revoked.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.dataset.securityAction === "revoke-session") {
+      if (!window.confirm("Sign out the selected session? This action cannot be undone.")) return;
+      setBusy(true);
+      try {
+        var revokedSession = await revokeAccountSession(button.dataset.sessionRef);
+        renderSecurityPanel(revokedSession);
+        var revokeSessionFeedback = document.getElementById("account-security-feedback");
+        if (revokeSessionFeedback) revokeSessionFeedback.textContent = "The selected other session was revoked.";
+      } catch (error) {
+        var revokeSessionError = document.getElementById("account-security-feedback");
+        if (revokeSessionError) revokeSessionError.textContent = error.message || "The session could not be revoked.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.dataset.securityAction === "copy-recovery-key") {
+      var recoveryKeyField = document.getElementById("account-security-recovery-key-value");
+      if (!recoveryKeyField) return;
+      recoveryKeyField.focus();
+      recoveryKeyField.select();
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        try {
+          await navigator.clipboard.writeText(recoveryKeyField.value);
+          var copyFeedback = document.getElementById("account-security-feedback");
+          if (copyFeedback) copyFeedback.textContent = "Recovery key copied. Store it offline and do not share it.";
+        } catch (_error) {
+          var copyFallback = document.getElementById("account-security-feedback");
+          if (copyFallback) copyFallback.textContent = "The key is selected. Copy it manually and store it offline.";
+        }
+      } else {
+        var copyUnavailable = document.getElementById("account-security-feedback");
+        if (copyUnavailable) copyUnavailable.textContent = "The key is selected. Copy it manually and store it offline.";
+      }
+      return;
+    }
+    if (button.dataset.securityAction === "acknowledge-recovery-key") {
+      var output = document.getElementById("account-security-recovery-output");
+      var secretField = document.getElementById("account-security-recovery-key-value");
+      if (secretField) secretField.value = "";
+      if (output) {
+        output.textContent = "The replacement key has been acknowledged. AstroCrown will not display it again.";
+        output.setAttribute("role", "status");
+      }
+      securityRecoveryKeyPending = false;
+      return;
+    }
     if (button.id === "open-account-communications") {
       window.location.hash = "communications";
       return;
@@ -1110,6 +1451,11 @@
       return;
     }
     if (button.id !== "account-signout") return;
+    if (securityRecoveryKeyPending) {
+      var saveKeyNotice = document.getElementById("account-security-feedback");
+      if (saveKeyNotice) saveKeyNotice.textContent = "Save and acknowledge the new recovery key before signing out.";
+      return;
+    }
     setBusy(true);
     try {
       await requestJson("/api/account/logout", {});
