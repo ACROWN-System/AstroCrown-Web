@@ -355,6 +355,19 @@ try {
   await cdp("Page.reload", { ignoreCache: true });
   await waitFor("homepage before sign-in from the second device", () =>
     evaluate("document.readyState === 'complete' && Boolean(document.getElementById('open-account-dialog'))"));
+  // The development notice intentionally reappears on every fresh homepage
+  // load. Acknowledge it as a user would before interacting with the header.
+  const secondNoticeOpen = await evaluate(
+    "Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)"
+  );
+  if (secondNoticeOpen) {
+    if (!(await evaluate("document.getElementById('development-notice-acknowledged').checked"))) {
+      await trustedClick("#development-notice-acknowledged");
+    }
+    await trustedClick("#development-notice-continue");
+    await waitFor("second homepage development notice acknowledgement", () =>
+      evaluate("!document.getElementById('development-notice').open"));
+  }
   await waitFor("unauthenticated account UI has finished initializing", async () =>
     evaluate("fetch('/api/account/status',{credentials:'same-origin',cache:'no-store'}).then(async r => {" +
       "const value=await r.json(); const button=document.getElementById('open-account-dialog'); " +
