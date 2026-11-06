@@ -1078,11 +1078,8 @@ try {
   await waitFor("second-device passkey sign-in button", () =>
     evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
   await trustedClick("#account-passkey-signin");
-  await waitFor("second-device account session", () =>
-    evaluate("Boolean(document.getElementById('open-account-hub'))"), 45000);
-  await trustedClick("#open-account-hub");
-  await waitFor("User dashboard authenticated by second passkey", () =>
-    evaluate("!document.getElementById('account-dashboard').hidden"));
+  await waitFor("second-device passkey sign-in opens the User dashboard", () =>
+    evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 45000);
   account = await status();
   assert.equal(account.authenticated, true);
   assert.equal(account.activeSessionCount, 2,
@@ -1221,11 +1218,8 @@ try {
   await waitFor("second-session passkey sign-in", () =>
     evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
   await trustedClick("#account-passkey-signin");
-  await waitFor("second server session created", () =>
-    evaluate("Boolean(document.getElementById('open-account-hub'))"), 45000);
-  await trustedClick("#open-account-hub");
-  await waitFor("dashboard with second session", () =>
-    evaluate("!document.getElementById('account-dashboard').hidden"));
+  await waitFor("second passkey sign-in opens the dashboard with the new session", () =>
+    evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 45000);
   account = await status();
   assert.equal(account.authenticated, true);
   assert.equal(account.activeSessionCount, 2,
@@ -1259,10 +1253,8 @@ try {
   await trustedClick("#open-account-dialog");
   await waitFor("discoverable sign-in button", () => evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
   await trustedClick("#account-passkey-signin");
-  await waitFor("discoverable passkey sign-in", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 45000);
-  await trustedClick("#open-account-hub");
-  await waitFor("User dashboard after passkey sign-in", () =>
-    evaluate("!document.getElementById('account-dashboard').hidden"));
+  await waitFor("discoverable passkey sign-in opens the User dashboard directly", () =>
+    evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 45000);
   account = await status();
   assert.equal(account.authenticated, true);
   assert.equal(account.accountIdentifier, identifier);
@@ -1318,9 +1310,8 @@ try {
   await trustedClick("#open-account-dialog");
   await waitFor("replacement passkey sign-in button", () => evaluate("Boolean(document.getElementById('account-passkey-signin'))"));
   await trustedClick("#account-passkey-signin");
-  await waitFor("replacement passkey authenticates", () => evaluate("Boolean(document.getElementById('open-account-hub'))"), 45000);
-  await trustedClick("#open-account-hub");
-  await waitFor("final recovered User dashboard", () => evaluate("!document.getElementById('account-dashboard').hidden"));
+  await waitFor("replacement passkey sign-in opens the final User dashboard directly", () =>
+    evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 45000);
   account = await status();
   assert.equal(account.authenticated, true);
   assert.equal(account.accountIdentifier, identifier);
