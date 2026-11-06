@@ -175,6 +175,7 @@ async function connectTestWalletFromHeader(account) {
   await completeTestWalletSignature(account);
 }
 async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
+  const uiAdditionalWalletAccount = privateKeyToAccount("0x" + "66".repeat(32));
   resetLocalAdminWalletRateLimits("Reset disposable local wallet-test throttles before header/dashboard UI qualification");
   const ended = await postWorkerJson("/api/admin/wallet-logout", {});
   assert.equal(ended.status, 200);
@@ -211,7 +212,7 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
 
   // Add a second, distinct EVM wallet using the same shared header Wallet
   // button and the separate one-time enrollment signature.
-  await installTestWalletProvider(secondWalletAccount.address);
+  await installTestWalletProvider(uiAdditionalWalletAccount.address);
   await evaluate(
     "window.__acrownWalletUiTrace=[];" +
     "document.getElementById('admin-dashboard-content').addEventListener('click',event=>{" +
@@ -230,7 +231,7 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
       JSON.stringify(enrollmentUiTrace) + "; feedback=" +
       await evaluate("document.getElementById('admin-wallet-enrollment-feedback')?.textContent || ''"));
   }
-  await connectTestWalletFromHeader(secondWalletAccount);
+  await connectTestWalletFromHeader(uiAdditionalWalletAccount);
   await waitFor("User dashboard after additional wallet enrollment", async () =>
     evaluate(
       "window.location.hash === '#account' && " +
@@ -245,7 +246,7 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
     evaluate("Boolean(document.getElementById('admin-access-dialog')?.open)")
   );
   await trustedClick("#admin-access-continue");
-  await connectTestWalletFromHeader(secondWalletAccount);
+  await connectTestWalletFromHeader(uiAdditionalWalletAccount);
   await waitFor("Administrator dashboard after second-wallet step-up", async () =>
     evaluate(
       "window.location.hash === '#admin' && " +
@@ -274,7 +275,7 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
   const afterRevoke = await getWorkerJson("/api/admin/wallet-options");
   assert.equal(afterRevoke.status, 200);
   assert.equal(afterRevoke.body.wallets.length, 1);
-  assert.equal(afterRevoke.body.wallets[0].address.toLowerCase(), secondWalletAccount.address.toLowerCase());
+  assert.equal(afterRevoke.body.wallets[0].address.toLowerCase(), uiAdditionalWalletAccount.address.toLowerCase());
   const currentAdmin = await getWorkerJson("/api/admin/status");
   assert.equal(currentAdmin.status, 200,
     "revoking another wallet must preserve the wallet currently authorizing this administrator session.");
