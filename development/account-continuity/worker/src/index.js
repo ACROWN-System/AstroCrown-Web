@@ -6,6 +6,7 @@ import {
   verifyRegistrationResponse,
 } from "@simplewebauthn/server";
 import { decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
+import { getAddress, isAddress, recoverMessageAddress } from "viem";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -323,6 +324,480 @@ async function requireAdminPermission(db, account, request, permission) {
 function adminHolderGuardParams(context, permission) {
   return [context.tokenHash, context.accountId, context.now, context.now, context.now, permission];
 }
+
+
+function normalizeEvmAddress(value) {
+  if (typeof value !== "string" || !/^0x[0-9a-f]{40}$/i.test(value) || !isAddress(value, { strict: false })) {
+    throw fail(400, "Enter a valid 20-byte EVM wallet address.");
+  }
+  try {
+    return getAddress(value);
+  } catch {
+    throw fail(400, "The EVM wallet address checksum is invalid.");
+  }
+}
+function validateEvmChainId(value) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
+    throw fail(400, "Enter a valid positive EVM chain ID.");
+  }
+  return value;
+}
+function createAdminSiweMessage(config, address, chainId, challengeId, nonce, issuedAt, expiresAt, purpose) {
+  const origin = new URL(config.origin);
+  const statement = purpose === "admin-session-step-up"
+    ? "AstroCrown administrator session verification. This signature authorizes only a temporary administrator session and does not authorize a transaction."
+    : "AstroCrown administrator wallet enrollment. This signature proves control of the proposed address only and does not authorize a transaction.";
+  return [
+    origin.protocol.replace(/:$/, "") + "://" + origin.host + " wants you to sign in with your Ethereum account:",
+    address,
+    "",
+    statement,
+    "",
+    "URI: " + config.origin,
+    "Version: 1",
+    "Chain ID: " + String(chainId),
+    "Nonce: " + nonce,
+    "Issued At: " + issuedAt,
+    "Expiration Time: " + expiresAt,
+    "Request ID: " + challengeId,
+  ].join("\n");
+}
+async function verifyAdminSiweSignature(message, signature, expectedAddress) {
+  if (typeof message !== "string" || !message || message.length > 8192 ||
+      typeof signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(signature)) {
+    throw fail(401, "The administrator wallet signature is invalid.");
+  }
+  let recovered;
+  try {
+    recovered = normalizeEvmAddress(await recoverMessageAddress({ message, signature }));
+  } catch {
+    throw fail(401, "The administrator wallet signature could not be verified.");
+  }
+  if (recovered.toLowerCase() !== expectedAddress.toLowerCase()) {
+    throw fail(401, "The signature was not produced by the proposed administrator wallet.");
+  }
+  return recovered;
+}
+async function requireAdminAccountRole(db, account) {
+  const role = await db.prepare(
+    "SELECT account_id FROM auth_admin_roles WHERE account_id = ?"
+  ).bind(account.account_id).first();
+  if (!role) throw fail(403, "Administrator authority has not been assigned to this account.");
+}
+async function requireFreshAdminWalletSession(db, account, request) {
+  const state = await summary(db, account);
+  if (state.adminRoleAssigned !== true) throw fail(403, "Administrator authority has not been assigned to this account.");
+  if (state.adminSessionAuthorized !== true) {
+    throw fail(403, "A fresh signature from an active enrolled administrator wallet is required.");
+  }
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  return {
+    tokenHash: await hashText(token),
+    walletAddress: state.adminWalletAddress,
+    now: Math.floor(Date.now() / 1000),
+  };
+}
+async function adminWalletOptions(db, request) {
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before reviewing administrator wallets.");
+  await requireAdminAccountRole(db, account);
+  const [wallets, state] = await Promise.all([
+    db.prepare(
+      "SELECT address,chain_id,created_at FROM auth_admin_wallets " +
+      "WHERE account_id = ? AND active = 1 ORDER BY created_at,address"
+    ).bind(account.account_id).all(),
+    summary(db, account),
+  ]);
+  return json(200, {
+    wallets: (wallets.results || []).map(row => ({
+      address: row.address,
+      chainId: Number(row.chain_id),
+      createdAt: row.created_at,
+    })),
+    maxWallets: 3,
+    requiresFreshSignature: true,
+    adminSessionAuthorized: state.adminSessionAuthorized === true,
+    transactionAuthorized: false,
+    walletFamily: "evm-eoa",
+  });
+}
+async function issueAdminWalletEnrollmentChallenge(db, env, request, payload, config) {
+  if (Object.keys(payload).length !== 2 ||
+      !Object.prototype.hasOwnProperty.call(payload, "address") ||
+      !Object.prototype.hasOwnProperty.call(payload, "chainId")) {
+    throw fail(400, "Only the proposed EVM wallet address and chain ID are accepted.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before enrolling an administrator wallet.");
+  await requireAdminAccountRole(db, account);
+  await rateLimit(db, env, request, "admin-wallet-enrollment-options", account.account_id, 5, 300);
+  const address = normalizeEvmAddress(payload.address);
+  const chainId = validateEvmChainId(payload.chainId);
+  const countRow = await db.prepare(
+    "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
+  ).bind(account.account_id).first();
+  const activeCount = Number(countRow?.active_count || 0);
+  if (activeCount >= 3) throw fail(409, "This administrator account already has three active wallets.");
+  const existing = await db.prepare(
+    "SELECT account_id,active FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE"
+  ).bind(address).first();
+  if (existing) {
+    if (existing.account_id !== account.account_id) throw fail(409, "That wallet is already associated with another administrator account.");
+    throw fail(409, "That wallet is already enrolled or was previously revoked. Use a different wallet address.");
+  }
+  let purpose = "initial-wallet-enrollment";
+  let actorWalletAddress = null;
+  if (activeCount > 0) {
+    const stepUp = await requireFreshAdminWalletSession(db, account, request);
+    purpose = "wallet-enrollment";
+    actorWalletAddress = stepUp.walletAddress;
+  }
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  const sessionHash = await hashText(token);
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + CHALLENGE_SECONDS;
+  const challengeId = b64u(bytes(24));
+  const nonce = hex(bytes(16));
+  const issuedAt = new Date(now * 1000).toISOString();
+  const expiresAt = new Date(expires * 1000).toISOString();
+  const message = createAdminSiweMessage(config, address, chainId, challengeId, nonce, issuedAt, expiresAt, purpose);
+  await db.prepare(
+    "DELETE FROM auth_admin_wallet_challenges WHERE expires_at <= ? OR (used_at IS NOT NULL AND created_at < ?)"
+  ).bind(now, now - 86400).run();
+  await db.prepare(
+    "INSERT INTO auth_admin_wallet_challenges(challenge_id,account_id,session_token_hash,purpose,actor_wallet_address,address,chain_id,message,created_at,expires_at) " +
+    "VALUES(?,?,?,?,?,?,?,?,?,?)"
+  ).bind(challengeId, account.account_id, sessionHash, purpose, actorWalletAddress, address, chainId, message, now, expires).run();
+  return json(200, {
+    challengeId,
+    message,
+    expiresAt,
+    address,
+    chainId,
+    purpose: "administrator-wallet-enrollment",
+    enrollmentType: activeCount === 0 ? "initial" : "additional",
+    transactionAuthorized: false,
+  });
+}
+async function verifyAdminWalletEnrollment(db, env, request, payload) {
+  if (Object.keys(payload).length !== 3 ||
+      !Object.prototype.hasOwnProperty.call(payload, "challengeId") ||
+      !Object.prototype.hasOwnProperty.call(payload, "message") ||
+      !Object.prototype.hasOwnProperty.call(payload, "signature")) {
+    throw fail(400, "Only the issued wallet challenge ID, exact message and signature are accepted.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before verifying administrator wallet enrollment.");
+  await requireAdminAccountRole(db, account);
+  await rateLimit(db, env, request, "admin-wallet-enrollment-verify", account.account_id, 8, 300);
+  if (typeof payload.challengeId !== "string" || !/^[A-Za-z0-9_-]{24,64}$/.test(payload.challengeId)) {
+    throw fail(400, "The administrator wallet challenge reference is invalid.");
+  }
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  const sessionHash = await hashText(token);
+  const now = Math.floor(Date.now() / 1000);
+  const challenge = await db.prepare(
+    "SELECT * FROM auth_admin_wallet_challenges WHERE challenge_id = ? AND account_id = ? " +
+    "AND session_token_hash = ? AND purpose IN ('initial-wallet-enrollment','wallet-enrollment') " +
+    "AND used_at IS NULL AND expires_at > ?"
+  ).bind(payload.challengeId, account.account_id, sessionHash, now).first();
+  if (!challenge) throw fail(401, "This administrator wallet challenge is missing, expired or already used.");
+  if (typeof payload.message !== "string" || payload.message !== challenge.message) {
+    throw fail(401, "The signed message does not exactly match the challenge issued for this account session.");
+  }
+  const address = normalizeEvmAddress(challenge.address);
+  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+  if (challenge.purpose === "initial-wallet-enrollment") {
+    const state = await db.prepare(
+      "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
+    ).bind(account.account_id).first();
+    if (Number(state?.active_count || 0) !== 0 || challenge.actor_wallet_address !== null) {
+      throw fail(409, "Initial administrator wallet enrollment is no longer available. Refresh wallet status.");
+    }
+  } else {
+    const current = await requireFreshAdminWalletSession(db, account, request);
+    if (!challenge.actor_wallet_address ||
+        current.walletAddress.toLowerCase() !== String(challenge.actor_wallet_address).toLowerCase()) {
+      throw fail(401, "The previously verified administrator wallet changed. Start enrollment again.");
+    }
+  }
+  const duplicate = await db.prepare(
+    "SELECT 1 FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE"
+  ).bind(address).first();
+  if (duplicate) throw fail(409, "That wallet address has already been registered or revoked.");
+  const countRow = await db.prepare(
+    "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
+  ).bind(account.account_id).first();
+  if (Number(countRow?.active_count || 0) >= 3) throw fail(409, "This administrator account already has three active wallets.");
+  const marker = b64u(bytes(18));
+  const auditId = hex(bytes(16));
+  const walletId = hex(bytes(16));
+  const createdAt = new Date().toISOString();
+  const challengeGuard =
+    "UPDATE auth_admin_wallet_challenges SET used_at = ? " +
+    "WHERE challenge_id = ? AND account_id = ? AND session_token_hash = ? " +
+    "AND used_at IS NULL AND expires_at > ? AND message = ? " +
+    "AND EXISTS(SELECT 1 FROM auth_sessions s WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ?) " +
+    "AND EXISTS(SELECT 1 FROM auth_admin_roles r WHERE r.account_id = ?) " +
+    "AND ((purpose = 'initial-wallet-enrollment' AND NOT EXISTS(" +
+    "SELECT 1 FROM auth_admin_wallets w WHERE w.account_id = ? AND w.active = 1)) " +
+    "OR (purpose = 'wallet-enrollment' AND actor_wallet_address IS NOT NULL AND EXISTS(" +
+    "SELECT 1 FROM auth_sessions s JOIN auth_admin_wallets w ON w.account_id = s.account_id " +
+    "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+    "AND s.admin_authenticated_at > 0 AND s.admin_authenticated_at <= ? " +
+    "AND s.admin_expires_at <= s.expires_at AND s.admin_expires_at <= s.admin_authenticated_at + 600 " +
+    "AND s.admin_wallet_address = actor_wallet_address COLLATE NOCASE AND w.address = actor_wallet_address COLLATE NOCASE AND w.active = 1)))";
+  const statements = [
+    db.prepare(challengeGuard).bind(marker, challenge.challenge_id, account.account_id, sessionHash,
+      now, payload.message, sessionHash, account.account_id, now, account.account_id, account.account_id,
+      sessionHash, account.account_id, now, now, now),
+    db.prepare(
+      "INSERT INTO auth_admin_wallets(wallet_id,account_id,address,chain_id,created_at,active,provisioning_source) " +
+      "SELECT ?,?,?,?,?,1,'account-holder-siwe-enrollment' WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_wallet_challenges WHERE challenge_id = ? AND used_at = ?) " +
+      "AND NOT EXISTS(SELECT 1 FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE) " +
+      "AND (SELECT COUNT(*) FROM auth_admin_wallets WHERE account_id = ? AND active = 1) < 3"
+    ).bind(walletId, account.account_id, address, Number(challenge.chain_id), createdAt,
+      challenge.challenge_id, marker, address, account.account_id),
+    db.prepare(
+      "UPDATE auth_sessions SET admin_wallet_address = NULL,admin_authenticated_at = NULL,admin_expires_at = NULL " +
+      "WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_admin_wallets WHERE wallet_id = ? AND active = 1)"
+    ).bind(account.account_id, walletId),
+    db.prepare(
+      "INSERT INTO auth_admin_wallet_audit(audit_id,event_type,account_id,wallet_id,address,chain_id,created_at,detail_json) " +
+      "SELECT ?,'admin_wallet_enrolled',?,?,?,?,?,? WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_wallets WHERE wallet_id = ? AND account_id = ? AND active = 1)"
+    ).bind(auditId, account.account_id, walletId, address, Number(challenge.chain_id), createdAt,
+      JSON.stringify({ purpose: challenge.purpose, verification: "EIP-4361/EIP-191 EOA" }), walletId, account.account_id),
+  ];
+  const results = await db.batch(statements);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[1]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[3]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "Wallet enrollment state changed during verification. Refresh and begin again.");
+  }
+  const refreshed = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + token },
+  }));
+  const result = await summary(db, refreshed);
+  result.walletEnrolledAddress = address;
+  result.transactionAuthorized = false;
+  result.message = challenge.purpose === "initial-wallet-enrollment"
+    ? "The first administrator wallet was enrolled. A separate fresh signature from this wallet is required to open the Administrator dashboard."
+    : "The additional administrator wallet was enrolled. Re-verify an enrolled wallet before returning to administrator services.";
+  return json(200, result);
+}
+async function issueAdminWalletChallenge(db, env, request, payload, config) {
+  if (Object.keys(payload).length !== 2 ||
+      !Object.prototype.hasOwnProperty.call(payload, "address") ||
+      !Object.prototype.hasOwnProperty.call(payload, "chainId")) {
+    throw fail(400, "Only a registered EVM wallet address and chain ID are accepted.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before verifying an administrator wallet.");
+  await requireAdminAccountRole(db, account);
+  await rateLimit(db, env, request, "admin-wallet-step-up-options", account.account_id, 5, 300);
+  const address = normalizeEvmAddress(payload.address);
+  const chainId = validateEvmChainId(payload.chainId);
+  const wallet = await db.prepare(
+    "SELECT address,chain_id FROM auth_admin_wallets WHERE account_id = ? " +
+    "AND address = ? COLLATE NOCASE AND chain_id = ? AND active = 1"
+  ).bind(account.account_id, address, chainId).first();
+  if (!wallet) throw fail(403, "That wallet is not registered for this administrator account.");
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  const sessionHash = await hashText(token);
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + CHALLENGE_SECONDS;
+  const challengeId = b64u(bytes(24));
+  const nonce = hex(bytes(16));
+  const issuedAt = new Date(now * 1000).toISOString();
+  const expiresAt = new Date(expires * 1000).toISOString();
+  const message = createAdminSiweMessage(
+    config, address, chainId, challengeId, nonce, issuedAt, expiresAt, "admin-session-step-up"
+  );
+  await db.prepare(
+    "DELETE FROM auth_admin_wallet_challenges WHERE expires_at <= ? OR (used_at IS NOT NULL AND created_at < ?)"
+  ).bind(now, now - 86400).run();
+  await db.prepare(
+    "INSERT INTO auth_admin_wallet_challenges(challenge_id,account_id,session_token_hash,purpose,actor_wallet_address,address,chain_id,message,created_at,expires_at) " +
+    "VALUES(?,?,?,'admin-session-step-up',NULL,?,?,?,?,?)"
+  ).bind(challengeId, account.account_id, sessionHash, address, chainId, message, now, expires).run();
+  return json(200, {
+    challengeId, message, expiresAt, address, chainId,
+    purpose: "administrator-session-step-up",
+    transactionAuthorized: false,
+  });
+}
+async function verifyAdminWalletChallenge(db, env, request, payload, config) {
+  if (Object.keys(payload).length !== 3 ||
+      !Object.prototype.hasOwnProperty.call(payload, "challengeId") ||
+      !Object.prototype.hasOwnProperty.call(payload, "message") ||
+      !Object.prototype.hasOwnProperty.call(payload, "signature")) {
+    throw fail(400, "Only the issued administrator challenge ID, exact message and signature are accepted.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before verifying an administrator wallet.");
+  await requireAdminAccountRole(db, account);
+  await rateLimit(db, env, request, "admin-wallet-step-up-verify", account.account_id, 8, 300);
+  if (typeof payload.challengeId !== "string" || !/^[A-Za-z0-9_-]{24,64}$/.test(payload.challengeId)) {
+    throw fail(400, "The administrator wallet challenge reference is invalid.");
+  }
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  const sessionHash = await hashText(token);
+  const now = Math.floor(Date.now() / 1000);
+  const challenge = await db.prepare(
+    "SELECT * FROM auth_admin_wallet_challenges WHERE challenge_id = ? AND account_id = ? " +
+    "AND session_token_hash = ? AND purpose = 'admin-session-step-up' AND used_at IS NULL AND expires_at > ?"
+  ).bind(payload.challengeId, account.account_id, sessionHash, now).first();
+  if (!challenge) throw fail(401, "This administrator session challenge is missing, expired or already used.");
+  if (typeof payload.message !== "string" || payload.message !== challenge.message) {
+    throw fail(401, "The signed message does not exactly match the challenge issued for this account session.");
+  }
+  const address = normalizeEvmAddress(challenge.address);
+  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+  const wallet = await db.prepare(
+    "SELECT wallet_id,address,chain_id FROM auth_admin_wallets WHERE account_id = ? " +
+    "AND address = ? COLLATE NOCASE AND chain_id = ? AND active = 1"
+  ).bind(account.account_id, address, Number(challenge.chain_id)).first();
+  if (!wallet) throw fail(403, "The proposed administrator wallet is no longer active for this account.");
+  const sessionExpiry = Number(account.expires_at);
+  const adminExpiry = Math.min(sessionExpiry, now + 600);
+  if (!Number.isSafeInteger(sessionExpiry) || sessionExpiry <= now || adminExpiry <= now) {
+    throw fail(401, "The ordinary account session expired before administrator verification completed.");
+  }
+  const marker = b64u(bytes(18));
+  const auditId = hex(bytes(16));
+  const createdAt = new Date().toISOString();
+  const statements = [
+    db.prepare(
+      "UPDATE auth_admin_wallet_challenges SET used_at = ? " +
+      "WHERE challenge_id = ? AND account_id = ? AND session_token_hash = ? " +
+      "AND purpose = 'admin-session-step-up' AND used_at IS NULL AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions s WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_wallets w WHERE w.account_id = ? AND w.address = ? COLLATE NOCASE " +
+      "AND w.chain_id = ? AND w.active = 1)"
+    ).bind(marker, challenge.challenge_id, account.account_id, sessionHash, now,
+      sessionHash, account.account_id, now, account.account_id, account.account_id, address, Number(challenge.chain_id)),
+    db.prepare(
+      "UPDATE auth_sessions SET admin_wallet_address = ?,admin_authenticated_at = ?,admin_expires_at = ? " +
+      "WHERE token_hash = ? AND account_id = ? AND expires_at > ? " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_wallet_challenges WHERE challenge_id = ? AND used_at = ?)"
+    ).bind(address, now, adminExpiry, sessionHash, account.account_id, now, challenge.challenge_id, marker),
+    db.prepare(
+      "INSERT INTO auth_admin_wallet_audit(audit_id,event_type,account_id,wallet_id,address,chain_id,created_at,detail_json) " +
+      "SELECT ?,'admin_session_authorized',?,?,?,?,?,? WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_wallet_challenges WHERE challenge_id = ? AND used_at = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND admin_wallet_address = ? COLLATE NOCASE " +
+      "AND admin_expires_at = ?)"
+    ).bind(auditId, account.account_id, wallet.wallet_id, address, Number(challenge.chain_id), createdAt,
+      JSON.stringify({ purpose: "admin-session-step-up", ttlSeconds: adminExpiry - now }),
+      challenge.challenge_id, marker, sessionHash, account.account_id, address, adminExpiry),
+  ];
+  const results = await db.batch(statements);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[1]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[2]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "Administrator wallet state changed during verification. Sign in and try again.");
+  }
+  const refreshed = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + token },
+  }));
+  const result = await summary(db, refreshed);
+  if (result.adminSessionAuthorized !== true) throw fail(403, "The wallet signature was accepted, but the administrator session did not pass the final authorization check.");
+  result.transactionAuthorized = false;
+  result.message = "Administrator wallet verification succeeded. The session is authorized for no more than ten minutes and no transaction was submitted.";
+  return json(200, result);
+}
+async function endAdminWalletSession(db, request, payload) {
+  if (Object.keys(payload).length !== 0) throw fail(400, "Administrator wallet sign-out accepts no request fields.");
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before ending administrator access.");
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  const sessionHash = await hashText(token);
+  const previousAddress = account.admin_wallet_address || null;
+  const result = await db.batch([
+    db.prepare(
+      "UPDATE auth_sessions SET admin_wallet_address = NULL,admin_authenticated_at = NULL,admin_expires_at = NULL " +
+      "WHERE token_hash = ? AND account_id = ? AND expires_at > ?"
+    ).bind(sessionHash, account.account_id, Math.floor(Date.now() / 1000)),
+    db.prepare(
+      "INSERT INTO auth_admin_wallet_audit(audit_id,event_type,account_id,address,created_at,detail_json) " +
+      "SELECT ?,'admin_session_ended',?,?,?,? WHERE ? IS NOT NULL"
+    ).bind(hex(bytes(16)), account.account_id, previousAddress, new Date().toISOString(),
+      JSON.stringify({ purpose: "administrator-session-ended" }), previousAddress),
+  ]);
+  if (Number(result?.[0]?.meta?.changes || 0) !== 1) throw fail(401, "The ordinary account session is no longer active.");
+  const refreshed = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + token },
+  }));
+  const state = await summary(db, refreshed);
+  state.message = "Administrator access ended. Your ordinary AstroCrown account remains signed in.";
+  return json(200, state);
+}
+async function revokeAdminWallet(db, request, payload) {
+  if (Object.keys(payload).length !== 2 ||
+      !Object.prototype.hasOwnProperty.call(payload, "address") ||
+      !Object.prototype.hasOwnProperty.call(payload, "chainId")) {
+    throw fail(400, "Provide the enrolled wallet address and chain ID only.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before revoking an administrator wallet.");
+  const context = await requireFreshAdminWalletSession(db, account, request);
+  const address = normalizeEvmAddress(payload.address);
+  const chainId = validateEvmChainId(payload.chainId);
+  const wallet = await db.prepare(
+    "SELECT wallet_id,address,chain_id FROM auth_admin_wallets WHERE account_id = ? " +
+    "AND address = ? COLLATE NOCASE AND chain_id = ? AND active = 1"
+  ).bind(account.account_id, address, chainId).first();
+  if (!wallet) throw fail(404, "That active administrator wallet could not be found.");
+  const count = await db.prepare(
+    "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
+  ).bind(account.account_id).first();
+  if (Number(count?.active_count || 0) <= 1) {
+    throw fail(409, "The last active administrator wallet cannot be removed while the role remains assigned. Revoke the administrator role separately or enroll another wallet first.");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const createdAt = new Date().toISOString();
+  const auditId = hex(bytes(16));
+  const results = await db.batch([
+    db.prepare(
+      "UPDATE auth_admin_wallets SET active = 0 WHERE wallet_id = ? AND account_id = ? AND active = 1 " +
+      "AND EXISTS(SELECT 1 FROM auth_sessions s JOIN auth_admin_roles r ON r.account_id = s.account_id " +
+      "JOIN auth_admin_wallets aw ON aw.account_id = r.account_id " +
+      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+      "AND s.admin_authenticated_at > 0 AND s.admin_authenticated_at <= ? " +
+      "AND s.admin_expires_at <= s.expires_at AND s.admin_expires_at <= s.admin_authenticated_at + 600 " +
+      "AND s.admin_wallet_address = aw.address COLLATE NOCASE AND aw.active = 1)"
+    ).bind(wallet.wallet_id, account.account_id, context.tokenHash, account.account_id,
+      now, now, now),
+    db.prepare(
+      "UPDATE auth_sessions SET admin_wallet_address = NULL,admin_authenticated_at = NULL,admin_expires_at = NULL " +
+      "WHERE account_id = ? AND admin_wallet_address = ? COLLATE NOCASE"
+    ).bind(account.account_id, address),
+    db.prepare(
+      "INSERT INTO auth_admin_wallet_audit(audit_id,event_type,account_id,wallet_id,address,chain_id,created_at,detail_json) " +
+      "SELECT ?,'admin_wallet_revoked',?,?,?,?,?,? WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_wallets WHERE wallet_id = ? AND active = 0)"
+    ).bind(auditId, account.account_id, wallet.wallet_id, address, chainId, createdAt,
+      JSON.stringify({ reason: "administrator-self-service-wallet-revocation" }), wallet.wallet_id),
+  ]);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[2]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The administrator wallet changed during revocation. Refresh wallet status and try again.");
+  }
+  const refreshed = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + cookie(request, SESSION_COOKIE) },
+  }));
+  return json(200, await summary(db, refreshed));
+}
+
 async function grantAdminRole(db, request, payload) {
   if (Object.keys(payload).some((key) => !["accountIdentifier", "reason", "permissions"].includes(key)) ||
       !Object.prototype.hasOwnProperty.call(payload, "accountIdentifier") ||
@@ -1390,6 +1865,7 @@ async function api(request, env, config) {
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
+  if (url.pathname === "/api/admin/wallet-options" && request.method === "GET") return adminWalletOptions(db, request);
   if (url.pathname === "/api/admin/status" && request.method === "GET") {
     const account = await activeAccount(db, request);
     if (!account) throw fail(401, "Sign in before opening administrator services.");
@@ -1401,6 +1877,12 @@ async function api(request, env, config) {
   if (request.method === "GET" || request.method === "HEAD") throw fail(404, "The account endpoint does not exist.");
   if (request.method !== "POST") throw fail(405, "The account endpoint requires POST.");
   const payload = await bodyJson(request);
+  if (url.pathname === "/api/admin/wallet-enrollment-challenge") return issueAdminWalletEnrollmentChallenge(db, env, request, payload, config);
+  if (url.pathname === "/api/admin/wallet-enrollment-verify") return verifyAdminWalletEnrollment(db, env, request, payload);
+  if (url.pathname === "/api/admin/wallet-challenge") return issueAdminWalletChallenge(db, env, request, payload, config);
+  if (url.pathname === "/api/admin/wallet-verify") return verifyAdminWalletChallenge(db, env, request, payload, config);
+  if (url.pathname === "/api/admin/wallet-logout") return endAdminWalletSession(db, request, payload);
+  if (url.pathname === "/api/admin/wallet-revoke") return revokeAdminWallet(db, request, payload);
   if (url.pathname === "/api/admin/roles/grant") return grantAdminRole(db, request, payload);
   if (url.pathname === "/api/admin/roles/revoke") return revokeAdminRole(db, request, payload);
   if (url.pathname === "/api/account/administrator-notice/acknowledge") return acknowledgeAdminRevocationNotice(db, request, payload);
