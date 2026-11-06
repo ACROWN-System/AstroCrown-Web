@@ -853,7 +853,6 @@ try {
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false,
     "an ordinary user must not see an administrator entry");
 
-  await testAdminGovernanceFixture(identifier);
 
   const firstCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(firstCredentials.credentials.length, 1, "registration must create one resident credential.");
@@ -1236,6 +1235,7 @@ try {
   assert.deepEqual(account.passkeyAlgorithmIds, [-48], "the replacement ML-DSA-44 credential must remain usable after a fresh discoverable sign-in.");
   assert.equal(account.postQuantumPasskeyCount, 1);
 
+  await testAdminGovernanceFixture(identifier);
   console.log("PASS: Chrome virtual-authenticator account creation and sign-in; security step-up; additional passkey enrollment, label update and revocation; last-passkey protection; recovery-key rotation and prior-key rejection; concurrent-session listing and revocation; passkey-loss recovery and replacement sign-in.");
 } catch (error) {
   console.error(String(error?.stack || error));
