@@ -959,7 +959,7 @@ try {
     }
     await trustedClick("#development-notice-continue");
     await waitFor("returning-member development notice acknowledgement", () =>
-      !evaluate("document.getElementById('development-notice').open"));
+      evaluate("!document.getElementById('development-notice').open"));
   }
   await waitFor("authenticated root reload resumes at User dashboard", () =>
     evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 30000);
