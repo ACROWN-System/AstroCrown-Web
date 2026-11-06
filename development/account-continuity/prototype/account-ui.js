@@ -1830,6 +1830,11 @@
     } else if (window.location.hash === "#communications") {
       if (status.authenticated) showCommunicationsPage();
       else clearAccountRoute();
+    } else if (status.authenticated && !window.location.hash) {
+      // An existing member returning to the site resumes at the shared
+      // User dashboard. The homepage remains the entry point for signed-out
+      // visitors; administrator access is still a separate gated route.
+      navigateToAccount();
     }
   });
 }());
