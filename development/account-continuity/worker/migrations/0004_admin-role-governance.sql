@@ -66,3 +66,17 @@ CREATE TABLE IF NOT EXISTS auth_admin_revocation_notices (
 );
 CREATE INDEX IF NOT EXISTS auth_admin_revocation_notices_account_idx
   ON auth_admin_revocation_notices(account_id, created_at, acknowledged_at);
+
+-- Governance evidence is append-only through the application and at the
+-- database layer. Corrections require a new event, never an edit or deletion.
+CREATE TRIGGER IF NOT EXISTS auth_admin_governance_audit_no_update
+BEFORE UPDATE ON auth_admin_governance_audit
+BEGIN
+  SELECT RAISE(ABORT, 'administrator governance audit is append-only');
+END;
+
+CREATE TRIGGER IF NOT EXISTS auth_admin_governance_audit_no_delete
+BEFORE DELETE ON auth_admin_governance_audit
+BEGIN
+  SELECT RAISE(ABORT, 'administrator governance audit is append-only');
+END;
