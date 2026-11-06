@@ -368,6 +368,7 @@
     }
     feedback("Verifying that you control the proposed first administrator wallet…");
     var enrolled = await requestJson("/api/admin/wallet-enrollment-verify", {
+      challengeId: challenge.challengeId,
       message: challenge.message,
       signature: signature
     });
@@ -396,7 +397,7 @@
         window.location.hash = "admin";
         return;
       }
-      var walletOptions = await requestJson("/api/admin/wallet-options", {});
+      var walletOptions = await requestJson("/api/admin/wallet-options");
       if (!Array.isArray(walletOptions.wallets)) {
         throw new Error("The server returned an invalid administrator wallet registry.");
       }
@@ -424,7 +425,7 @@
       if (walletOptions.wallets.length === 0) {
         var initialWalletEnrolled = await requestInitialAdminWalletEnrollment(provider, accounts, chainId);
         if (!initialWalletEnrolled) return;
-        walletOptions = await requestJson("/api/admin/wallet-options", {});
+        walletOptions = await requestJson("/api/admin/wallet-options");
         if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length !== 1) {
           throw new Error("The first administrator wallet was not available for the separate access-verification step.");
         }
@@ -460,6 +461,7 @@
 
       feedback("Submitting the signature for server-side verification…");
       var verified = await requestJson("/api/admin/wallet-verify", {
+        challengeId: challenge.challengeId,
         message: challenge.message,
         signature: signature
       });
@@ -491,7 +493,7 @@
           accountStatus.adminSessionAuthorized !== true) {
         throw new Error("A currently wallet-verified administrator session is required before another wallet can be enrolled.");
       }
-      var walletOptions = await requestJson("/api/admin/wallet-options", {});
+      var walletOptions = await requestJson("/api/admin/wallet-options");
       if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length >= 3) {
         throw new Error("This account already has the maximum of three active wallets.");
       }
@@ -545,6 +547,7 @@
 
       feedback("Verifying proof-of-control for the proposed wallet…");
       var enrolled = await requestJson("/api/admin/wallet-enrollment-verify", {
+        challengeId: challenge.challengeId,
         message: challenge.message,
         signature: signature
       });
