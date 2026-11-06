@@ -628,6 +628,54 @@ async function testAdminGovernanceFixture(accountIdentifier) {
   });
   assert.equal(targetUnauthorizedRevoke.status, 403);
 
+  // Simulate the owner/NOVA invalidating every enrolled wallet after a
+  // security review. A passkey-only account session must not be able to
+  // replace the complete admin-wallet set and silently restore admin access.
+  const walletLossAuditId = randomBytes(16).toString("hex");
+  const walletLossAt = new Date().toISOString();
+  executeLocalD1Fixture([
+    "INSERT INTO auth_admin_wallet_audit(audit_id,event_type,account_id,wallet_id,address,chain_id,created_at,detail_json) " +
+      "SELECT " + sqlLiteral(walletLossAuditId) + ",'admin_wallet_revoked',account_id,wallet_id,address,chain_id," +
+      sqlLiteral(walletLossAt) + "," + sqlLiteral(JSON.stringify({ reason: "test-only simulated all-wallet invalidation" })) +
+      " FROM auth_admin_wallets WHERE account_id=" + sqlLiteral(targetAccountId) + " AND active=1;",
+    "UPDATE auth_admin_wallets SET active=0 WHERE account_id=" + sqlLiteral(targetAccountId) + " AND active=1;",
+  ].join("\n"), "Simulate owner-authorized invalidation of all target admin wallets");
+  await setBrowserAccountSession(targetToken);
+  const walletLossState = await status();
+  assert.equal(walletLossState.authenticated, true);
+  assert.equal(walletLossState.role, "admin");
+  assert.equal(walletLossState.adminRoleAssigned, true);
+  assert.equal(walletLossState.adminWalletCount, 0);
+  assert.equal(walletLossState.adminWalletEverEnrolled, true);
+  assert.equal(walletLossState.adminWalletRecoveryRequired, true);
+  assert.equal(walletLossState.adminSessionAuthorized, false);
+  resetLocalAdminWalletRateLimits("Reset local wallet-test throttles before all-wallet-loss negative case");
+  const selfServiceWalletRecovery = await postWorkerJson("/api/admin/wallet-enrollment-challenge", {
+    address: wrongSigner.address,
+    chainId: 1,
+  });
+  assert.equal(selfServiceWalletRecovery.status, 409,
+    "an ordinary passkey session must not replace every previously registered admin wallet.");
+  assert.match(selfServiceWalletRecovery.body.error, /owner-authorized recovery/i);
+  await evaluate("window.location.hash='#home';true");
+  await evaluate("window.location.hash='#admin';true");
+  await waitFor("User dashboard after all-wallet-loss admin route denial", async () =>
+    evaluate(
+      "window.location.hash === '#account' && " +
+      "!document.getElementById('account-dashboard').hidden && " +
+      "Boolean(document.querySelector('.account-admin-access-card'))"
+    )
+  );
+  const walletLossUi = await evaluate(
+    "(() => {const card=document.querySelector('.account-admin-access-card');" +
+    "const button=document.getElementById('account-admin-wallet-access');" +
+    "return {text:card?.innerText||'',disabled:!!button?.disabled,label:button?.textContent?.trim()||''};})()"
+  );
+  assert.match(walletLossUi.text, /owner-authorized recovery review is required/i);
+  assert.equal(walletLossUi.disabled, true,
+    "the User dashboard must not present self-service admin wallet recovery as available.");
+  assert.equal(walletLossUi.label, "Administrator recovery required");
+
   await setBrowserAccountSession(rootToken);
   const rootFinalStepUp = await stepUpAdminWallet(rootAccount);
   assert.equal(rootFinalStepUp.status, 200, JSON.stringify(rootFinalStepUp.body));
