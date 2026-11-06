@@ -175,6 +175,7 @@ async function connectTestWalletFromHeader(account) {
   await completeTestWalletSignature(account);
 }
 async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
+  resetLocalAdminWalletRateLimits("Reset disposable local wallet-test throttles before header/dashboard UI qualification");
   const ended = await postWorkerJson("/api/admin/wallet-logout", {});
   assert.equal(ended.status, 200);
   assert.equal(ended.body.authenticated, true);
