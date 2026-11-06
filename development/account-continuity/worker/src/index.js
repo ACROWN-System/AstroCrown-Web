@@ -222,7 +222,10 @@ async function summary(db, account) {
   const adminWalletAuthenticated = Boolean(
     roleAssigned && matchedWallet &&
     Number(account.admin_authenticated_at || 0) > 0 &&
-    Number(account.admin_expires_at || 0) > now
+    Number(account.admin_authenticated_at || 0) <= now &&
+    Number(account.admin_expires_at || 0) > now &&
+    Number(account.admin_expires_at || 0) <= Number(account.expires_at || 0) &&
+    Number(account.admin_expires_at || 0) <= Number(account.admin_authenticated_at || 0) + 600
   );
   const adminPermissions = (permissions.results || []).map((row) => row.permission);
   const adminDelegablePermissions = (permissions.results || [])
@@ -302,7 +305,7 @@ const ADMIN_PERMISSION_HOLDER_SQL =
   "JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
   "JOIN auth_admin_wallets w ON w.account_id = r.account_id " +
   "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? " +
-  "AND s.admin_expires_at > ? AND s.admin_wallet_address = w.address COLLATE NOCASE " +
+  "AND s.admin_expires_at > ? AND s.admin_authenticated_at > 0 AND s.admin_authenticated_at <= ? AND s.admin_expires_at <= s.expires_at AND s.admin_expires_at <= s.admin_authenticated_at + 600 AND s.admin_wallet_address = w.address COLLATE NOCASE " +
   "AND w.active = 1 AND p.permission = ? LIMIT 1";
 async function requireAdminPermission(db, account, request, permission) {
   if (!ADMIN_PERMISSION_NAMES.includes(permission)) throw fail(403, "The requested administrator permission is not recognized.");
@@ -311,14 +314,14 @@ async function requireAdminPermission(db, account, request, permission) {
   const tokenHash = await hashText(token);
   const now = Math.floor(Date.now() / 1000);
   const holder = await db.prepare(ADMIN_PERMISSION_HOLDER_SQL)
-    .bind(tokenHash, account.account_id, now, now, permission).first();
+    .bind(tokenHash, account.account_id, now, now, now, permission).first();
   if (!holder) {
     throw fail(403, "This action requires the separately granted administrator permission and a current wallet-verified administrator session.");
   }
   return { tokenHash, accountId: account.account_id, now, walletAddress: holder.admin_wallet_address };
 }
 function adminHolderGuardParams(context, permission) {
-  return [context.tokenHash, context.accountId, context.now, context.now, permission];
+  return [context.tokenHash, context.accountId, context.now, context.now, context.now, permission];
 }
 async function grantAdminRole(db, request, payload) {
   if (Object.keys(payload).some((key) => !["accountIdentifier", "reason", "permissions"].includes(key)) ||
@@ -359,7 +362,7 @@ async function grantAdminRole(db, request, payload) {
       "SELECT ?,?,?,? WHERE " +
       "EXISTS(SELECT 1 FROM auth_admin_roles r JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
       "JOIN auth_admin_wallets w ON w.account_id = r.account_id JOIN auth_sessions s ON s.account_id = r.account_id " +
-      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? AND s.admin_authenticated_at > 0 AND s.admin_authenticated_at <= ? AND s.admin_expires_at <= s.expires_at AND s.admin_expires_at <= s.admin_authenticated_at + 600 " +
       "AND s.admin_wallet_address = w.address COLLATE NOCASE AND w.active = 1 AND p.permission = ?) " +
       "AND NOT EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?)"
     ).bind(target.account_id, actor.account_id, reason, createdAt, ...guard, target.account_id),
@@ -433,7 +436,7 @@ async function revokeAdminRole(db, request, payload) {
       "SELECT ?,'admin_role_revoked',?,?,?,?,? WHERE EXISTS(" +
       "SELECT 1 FROM auth_admin_roles r JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
       "JOIN auth_admin_wallets w ON w.account_id = r.account_id JOIN auth_sessions s ON s.account_id = r.account_id " +
-      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? AND s.admin_authenticated_at > 0 AND s.admin_authenticated_at <= ? AND s.admin_expires_at <= s.expires_at AND s.admin_expires_at <= s.admin_authenticated_at + 600 " +
       "AND s.admin_wallet_address = w.address COLLATE NOCASE AND w.active = 1 AND p.permission = ?) " +
       "AND EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?)"
     ).bind(auditId, actor.account_id, target.account_id, reason, createdAt,
