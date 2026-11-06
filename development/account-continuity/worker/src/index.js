@@ -1437,6 +1437,8 @@ export {
   equalConstantTime,
   accountId as validateAccountIdentifier,
   recoveryKey as validateRecoveryKey,
+  validateAdminReason,
+  validateAdminPermissions,
   diagnostics,
 };
 export default {
