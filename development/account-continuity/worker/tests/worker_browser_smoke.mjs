@@ -70,16 +70,18 @@ async function evaluate(expression) {
 
 async function trustedClick(selector) {
   const point = await evaluate(
-    "(() => { const element = document.querySelector(" + JSON.stringify(selector) + ");" +
+    "(async () => { const element = document.querySelector(" + JSON.stringify(selector) + ");" +
     " if (!element) throw new Error('Missing click target: ' + " + JSON.stringify(selector) + ");" +
     " element.scrollIntoView({block:'center',inline:'center',behavior:'instant'});" +
+    " await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);" +
     " const r = element.getBoundingClientRect();" +
-    " return {x:r.left+r.width/2,y:r.top+r.height/2,width:r.width,height:r.height," +
-    "viewportWidth:innerWidth,viewportHeight:innerHeight}; })()"
+    " const x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);" +
+    " return {x,y,width:r.width,height:r.height,viewportWidth:innerWidth,viewportHeight:innerHeight," +
+    "hitTag:hit?.tagName||'',hitId:hit?.id||'',hitInside:!!hit&&(hit===element||element.contains(hit))}; })()"
   );
   if (!point.width || !point.height || point.x < 0 || point.y < 0 ||
-      point.x >= point.viewportWidth || point.y >= point.viewportHeight) {
-    throw new Error("Click target is not in the viewport after instant scrolling: " + JSON.stringify(point));
+      point.x >= point.viewportWidth || point.y >= point.viewportHeight || !point.hitInside) {
+    throw new Error("Click target is not the hit-tested element after scrolling/layout stabilization: " + JSON.stringify(point));
   }
   await cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
   await cdp("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", clickCount: 1 });
