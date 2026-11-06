@@ -406,6 +406,19 @@ async function testAdminGovernanceFixture(accountIdentifier) {
   ].join("\n");
   executeLocalD1Fixture(sql, "Seed local administrator role fixture");
 
+  const unsupportedPermissionInsert = executeLocalD1Fixture(
+    "INSERT INTO auth_admin_permissions(account_id,permission,can_delegate,granted_by_account_id,reason,created_at) " +
+      "SELECT account_id,'admin.messages.send',0,NULL,'unsupported permission constraint test'," + sqlLiteral(createdAt) +
+      " FROM auth_admin_roles WHERE account_id=(SELECT account_id FROM auth_accounts WHERE account_identifier=" +
+      sqlLiteral(accountIdentifier) + ");",
+    "Attempt direct insertion of an unimplemented administrator permission",
+    true
+  );
+  assert.notEqual(unsupportedPermissionInsert.status, 0,
+    "the D1 schema must reject administrator permissions for actions that are not implemented.");
+  assert.match(String(unsupportedPermissionInsert.stderr || "") + String(unsupportedPermissionInsert.stdout || ""),
+    /check constraint failed/i);
+
   let rootStatus = await status();
   assert.equal(rootStatus.role, "admin");
   assert.equal(rootStatus.adminRoleAssigned, true);
