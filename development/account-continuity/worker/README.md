@@ -33,7 +33,7 @@ The User dashboard exposes these controls only when the authenticated backend ex
 
 **Maturity boundary:** this is only a GitHub-hosted local Worker/D1 qualification with disposable synthetic data and virtual authenticators. It is not a remote Cloudflare deployment, cross-browser/physical-authenticator qualification, independent penetration test, certification, or approval for real users. The staging account remains synthetic-test-only.
 
-## Administrator role governance — RBAC core qualified locally; wallet proof not yet implemented
+## Administrator role governance — RBAC core qualified locally; first-admin bootstrap remains blocked
 
 The Worker/D1 port now has a separate server-owned administrator role registry, explicit permission records, active EVM-wallet registry storage, an append-only governance audit table, and target-owned revocation notices. Account identity remains independent of roles and wallet addresses.
 
@@ -47,7 +47,7 @@ Permission assignment is allowlisted. A grantor can delegate only permissions ex
 
 **Qualification evidence:** [Account Staging Worker Qualification #198](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42147751078) passed the local D1 role-governance integration sequence. The test seeded a synthetic already-wallet-verified administrator session directly into the disposable Wrangler local D1 database to isolate RBAC. It did not test real wallet signature verification or create a public bootstrap mechanism.
 
-**Maturity boundary:** real EVM/SIWE wallet enrollment, wallet challenge verification and administrator session step-up are the next Block C. Initial administrator bootstrap/recovery remains a separate owner-authorized design and implementation gate. These endpoints remain inaccessible to ordinary users; there is no public self-appointment route. No remote D1, Cloudflare deployment or real-user administrative service is enabled.
+**Current boundary:** real EVM/SIWE wallet enrollment and administrator step-up are now locally qualified under Block C (see below). The Worker has no public self-appointment route. The first-administrator bootstrap and its recovery/continuity rules remain a separate owner-authorized design and implementation gate. No remote D1, Cloudflare deployment or real-user administrative service is enabled.
 
 ## EVM administrator wallet enrollment and step-up — local qualification passed; not deployed
 
@@ -64,11 +64,13 @@ The first enrollment requires an already-appointed administrator role, an authen
 
 **Adapter boundary:** EOA-only EVM/EIP-191 recovery is implemented. There is no RPC, balance check, transaction, deposit, stake or funds requirement. ERC-1271 contract wallets and other wallet families are not yet supported.
 
-**Maturity boundary:** this is only a GitHub-hosted local Worker/D1 test using disposable synthetic data. The first-administrator bootstrap is not implemented; no remote D1 or real account administrator authority exists. The homepage header wallet control and full Administrator dashboard are not yet integrated into the Worker asset build. Do not present this as a deployed or production administrator service.
+**Administrator UI qualification:** [Account Staging Worker Qualification #259](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42152828129) passed the real browser flow through the shared homepage header Wallet control, explicit access confirmation, signature review, separate ten-minute step-up, additional-wallet enrollment, wallet-list revocation controls, and ending administrator access while preserving ordinary sign-in. The same run passed the ordinary account security lifecycle and admin RBAC/EVM API integration. The Worker asset build includes the shared homepage, account UI and administrator-wallet UI.
+
+**Maturity boundary:** this is still only a GitHub-hosted local Worker/D1 qualification using disposable synthetic data. The first-administrator bootstrap is not implemented; no remote D1 or real account administrator authority exists. This is partial dashboard integration, not complete User/Administrator dashboard parity; the role-management forms and full communications/service surfaces need separate end-to-end qualification. Do not present this as a deployed or production administrator service.
 
 ## Deliberate limits
 
-- The real EVM/SIWE enrollment and step-up APIs are locally qualified but not remotely deployed. The authorized first-administrator bootstrap, homepage header-wallet integration, full privileged dashboard UI and administrator communications actions are not yet implemented in this Worker. Until bootstrap and dashboard parity are qualified, RBAC operations cannot be used by public member accounts.
+- The real EVM/SIWE enrollment and step-up APIs and a limited header-wallet/Administrator dashboard journey are locally qualified but not remotely deployed. The authorized first-administrator bootstrap, full dashboard parity, role-management UI click-through tests and administrator communications actions remain incomplete. Until bootstrap and dashboard parity are qualified, RBAC operations cannot be used by public member accounts.
 - In-app communications return an empty/disabled staging result. No email, SMS or identity provider is used.
 - Feedback/case-portal entry points are replaced with an explicit not-enabled note in the staging asset build; no non-working case API is exposed.
 - ML-DSA capability is not credential evidence. A real authenticator must register an ML-DSA credential, the server must store its actual COSE algorithm, and a later assertion must verify before the credential is described as post-quantum.
