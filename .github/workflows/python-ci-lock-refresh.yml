@@ -1,0 +1,172 @@
+name: Python Dependency Governance — Lock Refresh, Vulnerability Audit and SBOM
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/auth-prototype/requirements.txt"
+      - "development/account-continuity/prototype/requirements.txt"
+      - "development/dependencies/**"
+      - ".github/dependabot.yml"
+      - ".github/workflows/python-ci-lock-refresh.yml"
+  schedule:
+    # One weekly dependency-maintenance pass; no paid service or credentials.
+    - cron: "17 3 * * 6"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Verify current wheel hashes or regenerate owner-reviewable lock candidates"
+        type: choice
+        required: true
+        default: verify
+        options:
+          - verify
+          - regenerate
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-dependency-governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wheel-locks:
+    name: Verify or regenerate platform-specific wheel locks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify committed locks against fresh wheel downloads
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'verify')
+        run: python development/dependencies/generate_ci_dependency_locks.py --check
+
+      - name: Generate lock candidates from reviewed source pins
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'regenerate')
+        run: python development/dependencies/generate_ci_dependency_locks.py
+
+      - name: Verify exact package-version parity
+        run: python development/dependencies/verify_ci_dependency_locks.py all
+
+      - name: Upload candidate wheel locks for owner-reviewed application
+        if: github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'regenerate')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-ci-wheel-lock-candidates-${{ github.sha }}
+          path: |
+            development/dependencies/requirements-wallet-auth-py312-ubuntu24-x86_64.lock
+            development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock
+            development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock
+          if-no-files-found: error
+          retention-days: 14
+
+  dependency-audit:
+    name: Audit application and audit-tool dependencies
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify source requirements and committed wheel locks
+        run: python development/dependencies/verify_ci_dependency_locks.py all
+
+      - name: Verify both committed SPDX 2.3 inventories
+        run: |
+          python development/dependencies/generate_spdx_sbom.py --check
+          python development/dependencies/generate_spdx_sbom.py --lock development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock --output development/dependencies/SBOM-Python-Audit-Toolchain.spdx.json --check
+
+      - name: Compile dependency governance scripts
+        run: |
+          python -m py_compile development/dependencies/verify_ci_dependency_locks.py development/dependencies/verify_dependency_audit_evidence.py development/dependencies/generate_spdx_sbom.py development/dependencies/report_pypi_license_metadata.py development/dependencies/generate_ci_dependency_locks.py
+
+      - name: Create isolated audit-tool environment
+        run: python -m venv .venv-audit
+
+      - name: Install the hash-pinned audit toolchain
+        run: .venv-audit/bin/python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock
+
+      - name: Audit both complete locked inventories and collect publisher license metadata
+        shell: bash
+        run: |
+          mkdir -p build/dependency-evidence
+          set +e
+
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
+            --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --format json --output build/dependency-evidence/application-vulnerability-report.json
+          app_audit_status=$?
+
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
+            --requirement development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --format cyclonedx-json --output build/dependency-evidence/application-sbom.cdx.json
+          app_sbom_status=$?
+
+          python development/dependencies/report_pypi_license_metadata.py \
+            --lock development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --output build/dependency-evidence/application-pypi-license-metadata.json
+          app_license_status=$?
+
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
+            --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --format json --output build/dependency-evidence/audit-toolchain-vulnerability-report.json
+          tool_audit_status=$?
+
+          .venv-audit/bin/python -m pip_audit --strict --disable-pip --require-hashes \
+            --requirement development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --format cyclonedx-json --output build/dependency-evidence/audit-toolchain-sbom.cdx.json
+          tool_sbom_status=$?
+
+          python development/dependencies/report_pypi_license_metadata.py \
+            --lock development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --output build/dependency-evidence/audit-toolchain-pypi-license-metadata.json
+          tool_license_status=$?
+
+          python development/dependencies/verify_dependency_audit_evidence.py \
+            --lock development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock \
+            --vulnerability-report build/dependency-evidence/application-vulnerability-report.json \
+            --cyclonedx-report build/dependency-evidence/application-sbom.cdx.json
+          app_report_coverage_status=$?
+
+          python development/dependencies/verify_dependency_audit_evidence.py \
+            --lock development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock \
+            --vulnerability-report build/dependency-evidence/audit-toolchain-vulnerability-report.json \
+            --cyclonedx-report build/dependency-evidence/audit-toolchain-sbom.cdx.json
+          tool_report_coverage_status=$?
+
+          set -e
+          echo "application audit=$app_audit_status sbom=$app_sbom_status license-metadata=$app_license_status coverage=$app_report_coverage_status"
+          echo "audit-toolchain audit=$tool_audit_status sbom=$tool_sbom_status license-metadata=$tool_license_status coverage=$tool_report_coverage_status"
+
+          if [ "$app_audit_status" -ne 0 ] || [ "$app_sbom_status" -ne 0 ] || \
+             [ "$app_license_status" -ne 0 ] || [ "$tool_audit_status" -ne 0 ] || \
+             [ "$tool_sbom_status" -ne 0 ] || [ "$tool_license_status" -ne 0 ] || \
+             [ "$app_report_coverage_status" -ne 0 ] || [ "$tool_report_coverage_status" -ne 0 ]; then
+            echo "::error::A vulnerability audit or evidence-generation step failed. Review uploaded reports before changing or promoting dependencies."
+            exit 1
+          fi
+
+      - name: Upload vulnerability reports, CycloneDX SBOMs and license metadata
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: python-dependency-evidence-${{ github.sha }}
+          path: build/dependency-evidence/
+          if-no-files-found: warn
+          retention-days: 14

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#081426">
-  <meta name="description" content="AstroCrown homepage design preview. Market values and assets are illustrative demo data, not live financial information.">
-  <title>AstroCrown — Market Discovery Preview</title>
+  <meta name="description" content="AstroCrown market discovery, digital-asset information and ecosystem.">
+  <title>AstroCrown — Market Discovery</title>
   <style>
     :root {
       color-scheme: dark;
@@ -64,6 +64,72 @@
       text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .105em; text-transform: uppercase;
     }
     .preview-ribbon .ribbon-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: var(--warning); box-shadow: 0 0 9px rgba(255,210,74,.35); }
+
+    .development-notice-dialog {
+      width:min(680px,calc(100vw - 28px)); max-width:680px;
+      max-height:min(90vh,860px); padding:0; overflow:auto;
+      border:1px solid rgba(255,215,0,.34); border-radius:20px;
+      color:var(--ink); background:
+        radial-gradient(ellipse at 8% 0%,rgba(255,215,0,.10),transparent 24rem),
+        linear-gradient(155deg,rgba(15,31,52,.995),rgba(5,12,23,.995));
+      box-shadow:0 32px 110px rgba(0,0,0,.78),0 0 0 1px rgba(255,215,0,.06);
+    }
+    .development-notice-dialog::backdrop { background:rgba(1,5,12,.88); backdrop-filter:blur(9px); }
+    .development-notice-topline { height:5px; background:linear-gradient(90deg,#b88620,#ffd700,#fff0a5,#b88620); }
+    .development-notice-content { padding:clamp(22px,4.5vw,38px); }
+    .development-notice-kicker {
+      display:flex; align-items:center; gap:9px; margin:0 0 15px;
+      color:#ffe18a; font-size:11px; font-weight:850; letter-spacing:.13em; text-transform:uppercase;
+    }
+    .development-notice-icon {
+      width:34px; height:34px; display:grid; place-items:center; flex:0 0 34px;
+      border:1px solid rgba(255,210,74,.37); border-radius:10px;
+      color:#ffe18a; background:rgba(255,210,74,.10); font-size:19px;
+    }
+    .development-notice-title {
+      margin:0; color:#fff; font-size:clamp(25px,4.5vw,35px);
+      line-height:1.12; letter-spacing:-.04em;
+    }
+    .development-notice-intro {
+      max-width:590px; margin:13px 0 23px; color:#c5d1e2;
+      font-size:14px; line-height:1.7;
+    }
+    .development-notice-warning {
+      margin:0 0 13px; padding:16px 17px;
+      border:1px solid rgba(229,72,77,.38); border-radius:13px;
+      background:linear-gradient(135deg,rgba(229,72,77,.14),rgba(229,72,77,.055));
+    }
+    .development-notice-warning strong {
+      display:block; margin:0 0 7px; color:#ffb2ad;
+      font-size:13px; font-weight:850; letter-spacing:.035em; text-transform:uppercase;
+    }
+    .development-notice-warning p { margin:0; color:#f1d5d4; font-size:13px; line-height:1.65; }
+    .development-notice-terms { margin:17px 0 0; color:#aebbd0; font-size:11px; line-height:1.65; }
+    .development-notice-ack {
+      display:flex; align-items:flex-start; gap:11px; margin:22px 0 15px;
+      padding:14px 15px; border:1px solid rgba(153,178,213,.23);
+      border-radius:11px; background:rgba(255,255,255,.035);
+      color:#e2e9f3; font-size:12px; line-height:1.55; cursor:pointer;
+    }
+    .development-notice-ack input {
+      width:17px; height:17px; flex:0 0 17px; margin:1px 0 0;
+      accent-color:#ffd700; cursor:pointer;
+    }
+    .development-notice-continue {
+      width:100%; min-height:48px; padding:12px 18px;
+      border:1px solid rgba(255,236,161,.56); border-radius:11px;
+      color:#17130a; background:linear-gradient(180deg,#ffe58a,#ffd700);
+      font-size:13px; font-weight:850; cursor:pointer;
+      transition:filter .15s ease,transform .15s ease;
+    }
+    .development-notice-continue:not(:disabled):hover { filter:brightness(1.06); transform:translateY(-1px); }
+    .development-notice-continue:disabled { opacity:.42; cursor:not-allowed; }
+    @media (max-width:560px) {
+      .development-notice-dialog { width:calc(100vw - 20px); max-height:92vh; border-radius:15px; }
+      .development-notice-content { padding:21px 17px 19px; }
+      .development-notice-intro { font-size:13px; }
+      .development-notice-warning { padding:13px 14px; }
+    }
     .site-header {
       position: sticky; top: 0; z-index: 30; width: 100%; min-height: 62px;
       display: flex; align-items: center; gap: clamp(9px, 1.3vw, 22px);
@@ -108,7 +174,6 @@
       background: transparent; color: #dce5f3; font-size: 12px; cursor: pointer;
     }
     .nav-panel a:hover, .control-panel a:hover, .panel-action:hover { background: rgba(255,255,255,.06); color: #fff; }
-    .panel-note { margin: 7px 8px 5px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
     .search-wrap { position: relative; display: flex; align-items: center; flex: 1 1 175px; min-width: 95px; max-width: 255px; }
     .search-field {
       width: 100%; height: 36px; padding: 0 34px 0 34px; border-radius: 10px; border: 1px solid var(--line);
@@ -145,6 +210,19 @@
     .wallet-trigger:active { transform:scale(.97); }
     .wallet-trigger svg { width:13px; height:13px; }
     .right-controls .control-panel { left:auto; right:0; width:255px; }
+    .admin-wallet-connect-notice {
+      position:fixed; z-index:10040; right:18px; bottom:20px; width:min(380px,calc(100vw - 36px));
+      padding:15px 16px; border:1px solid rgba(255,215,0,.38); border-radius:13px;
+      background:rgba(8,20,38,.98); color:#e8edf6; box-shadow:0 18px 55px rgba(0,0,0,.48);
+    }
+    .admin-wallet-connect-notice strong { display:block; margin-bottom:7px; color:#ffe58a; font-size:13px; }
+    .admin-wallet-connect-notice p { margin:0 0 12px; color:#b9c7d9; font-size:11px; line-height:1.55; }
+    .admin-wallet-connect-notice-actions { display:flex; justify-content:flex-end; }
+    .admin-wallet-connect-notice button {
+      min-height:37px; padding:0 13px; border:1px solid rgba(190,205,225,.3); border-radius:8px;
+      background:rgba(255,255,255,.06); color:#edf2fa; font:inherit; font-size:11px; font-weight:700; cursor:pointer;
+    }
+    .admin-wallet-connect-notice button:focus-visible { outline:2px solid #ffd700; outline-offset:3px; }
     .menu-status { color:var(--warning); font-size:10px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; }
     .mobile-more { display:none; }
 
@@ -328,13 +406,6 @@
     .discovery-card:nth-child(3n+3) { --tile-color:#9be6c4; --tile-bg:rgba(32,200,120,.07); --tile-border:rgba(32,200,120,.22); --tile-glow:rgba(32,200,120,.24); }
     .discovery-card:nth-child(4n) { --tile-color:#d1b0ff; --tile-bg:rgba(154,113,230,.08); --tile-border:rgba(154,113,230,.22); --tile-glow:rgba(154,113,230,.22); }
 
-    .preview-note {
-      display:flex; align-items:flex-start; gap:12px; margin-top:27px; padding:15px 16px;
-      border:1px solid rgba(255,210,74,.19); border-radius:12px; background:rgba(255,210,74,.035);
-    }
-    .preview-note-icon { display:grid; place-items:center; width:27px; height:27px; flex:0 0 27px; border-radius:8px; color:var(--warning); background:rgba(255,210,74,.09); font-weight:900; }
-    .preview-note h2 { margin:0; color:#eddea7; font-size:11px; font-weight:800; }
-    .preview-note p { margin:4px 0 0; color:#9eacc0; font-size:10px; line-height:1.6; }
     .site-footer { margin-top:27px; padding:24px 0 5px; border-top:1px solid var(--line); }
     .footer-main { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; }
     .footer-brand { display:flex; align-items:center; gap:10px; }
@@ -458,6 +529,9 @@
       *, *::before, *::after { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
     }
   </style>
+  <link rel="stylesheet" href="./account-continuity/prototype/account-prototype.css">
+  <script src="./account-continuity/prototype/account-ui.js" defer></script>
+  <script src="./account-continuity/prototype/admin-wallet-ui.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -485,8 +559,7 @@
           <div class="panel-label">Market workspace</div>
           <a href="#market-context">Market overview <span>↗</span></a>
           <a href="#market-directory">Asset directory <span>↗</span></a>
-          <a href="#sentiment-card">Sentiment preview <span>↗</span></a>
-          <p class="panel-note">Sample figures only. Live market feeds are not connected.</p>
+          <a href="#sentiment-card">Sentiment insights <span>↗</span></a>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -495,7 +568,6 @@
           <div class="panel-label">Exchange concepts</div>
           <a href="#explore">Swap discovery <span>↗</span></a>
           <a href="#explore">Execution comparison <span>↗</span></a>
-          <p class="panel-note">No orders, wallets, or transactions can be initiated from this preview.</p>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -504,7 +576,6 @@
           <div class="panel-label">Tracking concepts</div>
           <a href="#explore">Watchlists <span>↗</span></a>
           <a href="#explore">On-chain activity <span>↗</span></a>
-          <p class="panel-note">Wallet tracking is not connected. Do not enter wallet or account details.</p>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -513,7 +584,6 @@
           <div class="panel-label">Creation studio</div>
           <a href="#explore">Token design <span>↗</span></a>
           <a href="#explore">Logo generator concept <span>↗</span></a>
-          <p class="panel-note">Creation tools are not connected in this visual draft.</p>
         </div>
       </div>
       <div class="menu-slot nav-slot optional-nav">
@@ -521,8 +591,7 @@
         <div class="nav-panel" id="nova-menu">
           <div class="panel-label">Coordination systems</div>
           <a href="#explore">NOVA systems <span>↗</span></a>
-          <a href="#preview-notes">Prototype boundaries <span>↗</span></a>
-          <p class="panel-note">NOVA is an evolving operational ecosystem; these links are concept previews.</p>
+          <a href="#development-notice">Development notice <span>↗</span></a>
         </div>
       </div>
       <div class="menu-slot nav-slot mobile-more">
@@ -533,38 +602,40 @@
           <a href="#explore">Wallet Tracker concepts <span>↗</span></a>
           <a href="#explore">Token Studio concepts <span>↗</span></a>
           <a href="#explore">NOVA systems <span>↗</span></a>
-          <a href="#preview-notes">About this preview <span>↗</span></a>
+          <a href="#development-notice">Development notice <span>↗</span></a>
         </div>
       </div>
     </nav>
 
     <form class="search-wrap" role="search" id="search-form">
       <span class="search-glass" aria-hidden="true"></span>
-      <label class="sr-only" for="site-search" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Search sample assets</label>
-      <input class="search-field" id="site-search" type="search" placeholder="Search" autocomplete="off" aria-label="Search sample assets" aria-controls="search-results" aria-expanded="false">
+      <label class="sr-only" for="site-search" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Search assets</label>
+      <input class="search-field" id="site-search" type="search" placeholder="Search" autocomplete="off" aria-label="Search assets" aria-controls="search-results" aria-expanded="false">
       <span class="search-shortcut" aria-hidden="true">/</span>
-      <div class="search-results" id="search-results" role="listbox" aria-label="Sample asset suggestions"></div>
+      <div class="search-results" id="search-results" role="listbox" aria-label="Asset suggestions"></div>
     </form>
 
     <div class="right-controls">
       <div class="menu-slot">
-        <button class="avatar-trigger" type="button" data-menu="account-menu" aria-expanded="false" aria-controls="account-menu" aria-label="Account preview">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>
+        <button class="communications-trigger" id="open-communications" type="button" aria-label="Open Alerts and Messages" title="Alerts and Messages">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          <span id="communications-unread-count" class="communications-unread-count" hidden></span>
         </button>
-        <div class="control-panel" id="account-menu">
-          <div class="panel-label">Account</div>
-          <div style="padding:4px 9px 9px;"><span class="menu-status">Not connected</span><p style="margin:6px 0 0;color:#c2cede;font-size:11px;">Account creation, recovery, passkeys and identity choices need a dedicated implementation.</p></div>
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/132" target="_blank" rel="noreferrer">Account continuity roadmap <span>↗</span></a>
-        </div>
       </div>
       <div class="menu-slot">
-        <button class="wallet-trigger" type="button" data-menu="wallet-menu" aria-expanded="false" aria-controls="wallet-menu">
+        <button class="avatar-trigger" id="open-account-dialog" type="button" aria-haspopup="dialog" aria-controls="account-dialog" aria-label="Log In to AstroCrown">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/></svg>
+          <span>Log In</span>
+        </button>
+      </div>
+      <div class="menu-slot">
+        <button class="wallet-trigger" id="wallet-connect-trigger" type="button" data-menu="wallet-menu" aria-expanded="false" aria-controls="wallet-menu" aria-label="Wallet connection options">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="2.5"/><path d="M3 9h18M16 14h2"/></svg>
           Wallet <span class="chevron" aria-hidden="true"></span>
         </button>
         <div class="control-panel" id="wallet-menu">
           <div class="panel-label">Wallet connection</div>
-          <div style="padding:4px 9px 9px;"><span class="menu-status">Disconnected</span><p style="margin:6px 0 0;color:#c2cede;font-size:11px;">This preview cannot connect a wallet, sign messages, submit orders, or move assets.</p></div>
+          <div style="padding:4px 9px 9px;"><span class="menu-status" id="wallet-menu-status">Available on request</span><p id="wallet-menu-note" style="margin:6px 0 0;color:#c2cede;font-size:11px;"></p></div>
           <a href="#explore">Explore wallet concepts <span>↗</span></a>
         </div>
       </div>
@@ -579,30 +650,30 @@
           <span class="info-priority-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3 20 6v5c0 5-3.2 8-8 10-4.8-2-8-5-8-10V6Z"/><path d="m8.5 12 2.2 2.2 4.7-4.8"/></svg>
           </span>
-          <span><strong>Daily Information</strong><small>Preview notice</small></span>
+          <span><strong>Daily Information</strong><small>Market brief</small></span>
         </div>
         <div class="info-message">
-          <p><strong>Build the signal, verify the source.</strong> <span>— This homepage is using sample content until data contracts are validated.</span></p>
-          <a class="learn-link" href="#preview-notes">Learn more</a>
+          <p><strong>Build the signal, verify the source.</strong> <span>— Market information with evidence at its foundation.</span></p>
+          <a class="learn-link" href="#development-notice">Development notice</a>
         </div>
       </div>
     </section>
 
     <section class="hero-section" aria-label="Market discovery">
       <div class="hero-grid">
-        <a class="hero-card" href="#market-context" id="sentiment-card" aria-label="Open market context from the Fear and Greed Consensus preview">
+        <a class="hero-card" href="#market-context" id="sentiment-card" aria-label="Open market context from the Fear and Greed Consensus">
           <div class="hero-card-head">
             <div><h2 class="hero-card-title">Fear &amp; Greed Consensus</h2><p class="hero-card-subtitle">How does the market feel?</p></div>
-            <span class="pill preview">Sample</span>
+            
           </div>
           <div class="sentiment-main">
             <div>
               <div class="sentiment-value mono">58<small> / 100</small></div>
               <div class="sentiment-state">Mild greed</div>
-              <div class="sentiment-copy">Illustrative multi-source consensus</div>
+              <div class="sentiment-copy">Multi-source market sentiment</div>
             </div>
             <div>
-              <svg class="gauge" viewBox="0 0 150 100" role="img" aria-label="Illustrative sentiment gauge showing 58 out of 100">
+              <svg class="gauge" viewBox="0 0 150 100" role="img" aria-label="Market sentiment gauge showing 58 out of 100">
                 <defs><linearGradient id="gaugeGradient" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#e5484d"/><stop offset=".52" stop-color="#ffd24a"/><stop offset="1" stop-color="#20c878"/></linearGradient></defs>
                 <path d="M 15 83 A 60 60 0 0 1 135 83" stroke="#24364d" stroke-width="12" fill="none" stroke-linecap="round"/>
                 <path d="M 15 83 A 60 60 0 0 1 135 83" stroke="url(#gaugeGradient)" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="174 189"/>
@@ -620,7 +691,7 @@
         <a class="hero-card" href="#market-directory" aria-label="Explore winners and losers in the market directory">
           <div class="hero-card-head">
             <div><h2 class="hero-card-title">Winners &amp; Losers</h2><p class="hero-card-subtitle">What is moving?</p></div>
-            <span class="pill preview">Sample</span>
+            
           </div>
           <div class="movers-list">
             <div class="mover-row"><span class="mini-coin">RN</span><span class="mover-name"><strong>Render</strong><small>AI / Compute</small></span><span class="mover-number positive">+8.4%</span></div>
@@ -635,7 +706,7 @@
         <a class="hero-card" href="#explore" aria-label="Explore the influence map concepts">
           <div class="hero-card-head">
             <div><h2 class="hero-card-title">Influence Map</h2><p class="hero-card-subtitle">What appears connected to movement?</p></div>
-            <span class="pill preview">Sample</span>
+            
           </div>
           <div class="influence-list">
             <div class="influence-row"><span>Spot flows</span><span class="influence-track"><span class="influence-fill" style="display:block;width:76%"></span></span><span class="influence-score">76</span></div>
@@ -651,16 +722,15 @@
 
     <section class="market-context" id="market-context" aria-labelledby="market-context-heading">
       <div class="market-context-head">
-        <div class="market-context-title"><span class="live-dot" aria-hidden="true"></span><h2 id="market-context-heading">MARKET CONTEXT</h2><span class="pill preview">Illustrative values</span></div>
-        <span class="context-note">No market provider is connected in this preview</span>
+        <div class="market-context-title"><h2 id="market-context-heading">MARKET CONTEXT</h2></div>
       </div>
       <div class="market-strip">
-        <div class="market-metric"><span class="metric-label">Total market cap</span><strong class="metric-value mono">$2.41T</strong><span class="metric-change positive">+1.8% · sample</span></div>
-        <div class="market-metric"><span class="metric-label">BTC dominance</span><strong class="metric-value mono">56.8%</strong><span class="metric-change neutral">Example value</span></div>
-        <div class="market-metric"><span class="metric-label">ETH dominance</span><strong class="metric-value mono">11.4%</strong><span class="metric-change neutral">Example value</span></div>
-        <div class="market-metric"><span class="metric-label">Bitcoin · BTC</span><strong class="metric-value mono">$67,420</strong><span class="metric-change positive">+2.18% · sample</span></div>
-        <div class="market-metric"><span class="metric-label">Ethereum · ETH</span><strong class="metric-value mono">$3,482</strong><span class="metric-change positive">+1.24% · sample</span></div>
-        <div class="market-metric"><span class="metric-label">24h volume</span><strong class="metric-value mono">$84.6B</strong><span class="metric-change neutral">Example value</span></div>
+        <div class="market-metric"><span class="metric-label">Total market cap</span><strong class="metric-value mono">$2.41T</strong><span class="metric-change positive">+1.8%</span></div>
+        <div class="market-metric"><span class="metric-label">BTC dominance</span><strong class="metric-value mono">56.8%</strong><span class="metric-change neutral">—</span></div>
+        <div class="market-metric"><span class="metric-label">ETH dominance</span><strong class="metric-value mono">11.4%</strong><span class="metric-change neutral">—</span></div>
+        <div class="market-metric"><span class="metric-label">Bitcoin · BTC</span><strong class="metric-value mono">$67,420</strong><span class="metric-change positive">+2.18%</span></div>
+        <div class="market-metric"><span class="metric-label">Ethereum · ETH</span><strong class="metric-value mono">$3,482</strong><span class="metric-change positive">+1.24%</span></div>
+        <div class="market-metric"><span class="metric-label">24h volume</span><strong class="metric-value mono">$84.6B</strong><span class="metric-change neutral">—</span></div>
         <div class="market-metric"><span class="metric-label">ACROWN</span><strong class="metric-value mono">—</strong><span class="metric-change neutral">No verified listing</span></div>
       </div>
     </section>
@@ -670,13 +740,12 @@
         <div class="heading-copy">
           <span class="section-kicker">Explore the market</span>
           <h2 id="directory-heading">Market directory</h2>
-          <p>Filter, search and compare the sample assets. Figures are intentionally illustrative until verified data sources are integrated.</p>
+          <p>Explore digital assets, compare sectors and review market indicators.</p>
         </div>
-        <div class="right-note"><span class="pill preview">Local demo dataset</span><br><span style="display:inline-block;margin-top:6px;">Filters and pagination work in this page.</span></div>
       </div>
 
       <div class="filter-bar">
-        <div class="filter-options" role="group" aria-label="Filter sample assets by sector">
+        <div class="filter-options" role="group" aria-label="Filter assets by sector">
           <button class="filter-button" type="button" data-filter="all" aria-pressed="true">All <span class="filter-count" data-count="all">24</span></button>
           <button class="filter-button" type="button" data-filter="AI" aria-pressed="false">AI</button>
           <button class="filter-button" type="button" data-filter="Gaming" aria-pressed="false">Gaming</button>
@@ -698,8 +767,8 @@
       </div>
 
       <div class="directory-caption">
-        <span id="directory-result-summary">Showing <strong>1–12 of 24</strong> illustrative assets</span>
-        <span>Reference currency: <strong>USD</strong> · values are not live</span>
+        <span id="directory-result-summary">Showing <strong>1–12 of 24</strong> assets</span>
+        <span>Reference currency: <strong>USD</strong></span>
       </div>
       <div class="directory-shell">
         <div class="table-viewport">
@@ -720,7 +789,7 @@
             </thead>
             <tbody id="asset-rows"></tbody>
           </table>
-          <div class="empty-state" id="empty-state"><strong>No sample assets match</strong><p>Try another search term or choose a different sector.</p></div>
+          <div class="empty-state" id="empty-state"><strong>No assets match</strong><p>Try another search term or choose a different sector.</p></div>
         </div>
         <div class="pagination-bar">
           <div class="pagination-summary" id="pagination-summary">Showing <strong>1–12</strong> of 24 demo assets</div>
@@ -734,7 +803,7 @@
         <div>
           <span class="section-kicker">Beyond the market table</span>
           <h2 id="explore-heading">Explore the AstroCrown ecosystem</h2>
-          <p>These twelve tiles map the broader destination ideas into one visual layer. Select a tile to inspect its concept; the separate pages and services are not connected yet.</p>
+          <p>Explore market, research and utility destinations across the AstroCrown ecosystem. Select a tile to learn more.</p>
         </div>
         <div class="discovery-counter"><strong>12</strong> discovery cards</div>
       </div>
@@ -815,19 +884,11 @@
       </div>
     </section>
 
-    <div class="preview-note" id="preview-notes">
-      <div class="preview-note-icon" aria-hidden="true">i</div>
-      <div>
-        <h2>Prototype boundaries — please read before evaluating the numbers</h2>
-        <p>This is a visual and interaction prototype. Market figures, price changes, rankings, sentiment scores and influence weights are illustrative sample values, not live data or financial advice. Search, filters, sorting, pagination and preview dialogs operate only on the local sample set. Wallet, account, trading, token creation, external market data and separate destination pages are not connected.</p>
-      </div>
-    </div>
-
     <footer class="site-footer">
       <div class="footer-main">
         <div class="footer-brand">
           <svg class="footer-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,215,0,.25)"/><path d="M24 6 28 19 42 14 33 24 42 34 28 29 24 42 20 29 6 34 15 24 6 14 20 19Z" fill="#ffd700"/><circle cx="24" cy="24" r="4" fill="#081426"/></svg>
-          <span><strong>ASTROCROWN</strong><small>Market discovery · visual prototype</small></span>
+          <span><strong>ASTROCROWN</strong><small>Market discovery</small></span>
         </div>
         <nav class="footer-nav" aria-label="Footer navigation">
           <a href="#market-context">Market context</a>
@@ -839,10 +900,71 @@
       </div>
       <div class="footer-bottom">
         <span>© AstroCrown project · Brand and product concepts remain subject to review.</span>
-        <span><a href="#preview-notes">Prototype scope and data limitations</a></span>
+        <span><a href="#development-notice" id="reopen-development-notice">Development notice</a></span>
       </div>
     </footer>
   </main>
+
+  <section id="account-dashboard" class="account-dashboard-page" hidden aria-labelledby="account-dashboard-title">
+    <div class="account-dashboard-shell">
+      <div class="account-dashboard-header">
+        <div>
+          <p class="account-dashboard-kicker">ASTROCROWN · USER DASHBOARD</p>
+          <h1 id="account-dashboard-title" tabindex="-1">User dashboard</h1>
+          <p class="account-dashboard-intro">Your main AstroCrown workspace for user-facing services, personal activity and account settings. This dashboard is shared by ordinary users and administrators; administrative work is handled separately. Wallets remain optional unless a specific feature explains why it needs one.</p>
+        </div>
+        <a class="account-dashboard-home" href="#top" id="account-dashboard-home">Return to homepage</a>
+      </div>
+      <div id="account-dashboard-content" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="communications-page" class="account-dashboard-page" hidden aria-labelledby="communications-title">
+    <div class="account-dashboard-shell">
+      <div class="account-dashboard-header">
+        <div>
+          <p class="account-dashboard-kicker">ASTROCROWN · PRIVATE COMMUNICATIONS</p>
+          <h1 id="communications-title" tabindex="-1">Communications</h1>
+          <p class="account-dashboard-intro">Alerts contain important account or service notices and remain pending until acknowledged. Messages are private in-app correspondence and can be marked as read. No external email or SMS delivery is used.</p>
+        </div>
+        <a class="account-dashboard-home" href="#account" id="communications-return-account">Return to User dashboard</a>
+      </div>
+      <div id="communications-content" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section id="admin-dashboard" class="account-dashboard-page account-admin-dashboard" hidden aria-labelledby="admin-dashboard-title">
+    <div class="account-dashboard-shell">
+      <div class="account-dashboard-header">
+        <div>
+          <p class="account-dashboard-kicker">ASTROCROWN · ADMINISTRATION</p>
+          <h1 id="admin-dashboard-title" tabindex="-1">Administrator dashboard</h1>
+          <p class="account-dashboard-intro">This separate development dashboard opens only after the backend confirms the administrator role and a valid, short-lived wallet step-up.</p>
+        </div>
+        <a class="account-dashboard-home" href="#account" id="admin-return-account">Return to user dashboard</a>
+      </div>
+      <div id="admin-dashboard-content" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <dialog id="development-notice" class="development-notice-dialog" aria-labelledby="development-notice-title" aria-describedby="development-notice-description">
+    <div class="development-notice-topline" aria-hidden="true"></div>
+    <div class="development-notice-content">
+      <p class="development-notice-kicker"><span class="development-notice-icon" aria-hidden="true">!</span> Important development notice</p>
+      <h1 class="development-notice-title" id="development-notice-title">AstroCrown is under development</h1>
+      <p class="development-notice-intro" id="development-notice-description">You are viewing an unfinished development preview, not a live or operational financial service. Features, account flows, market information and integrations may be incomplete, simulated, unavailable or changed without notice. This preview is provided for visual review only.</p>
+      <div class="development-notice-warning">
+        <strong>Do not use real assets or make transactions</strong>
+        <p>Do not connect a wallet containing real assets, reveal a recovery phrase or private key, sign transaction requests, approve contracts, transfer or deposit funds, swap, stake, or otherwise use real digital assets with this development version. Any assets sent or approvals granted in connection with this preview could be permanently lost and may be impossible to recover.</p>
+      </div>
+      <p class="development-notice-terms">You proceed at your own risk. To the fullest extent permitted by applicable law, AstroCrown and its contributors disclaim responsibility for loss or damage arising from the use of this development preview. Nothing in this notice excludes any right or liability that cannot lawfully be excluded.</p>
+      <label class="development-notice-ack" for="development-notice-acknowledged">
+        <input id="development-notice-acknowledged" type="checkbox">
+        <span>I have read and understood this notice. I will not use this development preview with real assets, real-money wallets or transactions.</span>
+      </label>
+      <button class="development-notice-continue" id="development-notice-continue" type="button" disabled>Continue to development preview</button>
+    </div>
+  </dialog>
 
   <dialog id="preview-dialog" aria-labelledby="dialog-title">
     <div class="dialog-topline"></div>
@@ -851,7 +973,23 @@
       <h2 class="dialog-title" id="dialog-title">Preview</h2>
       <p class="dialog-copy" id="dialog-copy"></p>
       <div class="dialog-note" id="dialog-note"></div>
-      <div class="dialog-actions"><button class="dialog-close" type="button" id="dialog-close">Close preview</button><a class="dialog-link" href="#preview-notes" id="dialog-notes-link">Read prototype notes</a></div>
+      <div class="dialog-actions"><button class="dialog-close" type="button" id="dialog-close">Close preview</button><a class="dialog-link" href="#development-notice" id="dialog-notes-link">Development notice</a></div>
+    </div>
+  </dialog>
+
+  <dialog id="account-dialog" class="account-dialog" aria-labelledby="account-dialog-title">
+    <div class="account-dialog-shell">
+      <div class="account-dialog-header">
+        <div>
+          <h2 class="account-dialog-title" id="account-dialog-title" aria-label="AstroCrown account">
+            <span class="account-dialog-wordmark" aria-hidden="true"><span class="account-dialog-astro">ASTRO</span><span class="account-dialog-crown">CROWN</span></span>
+            <span class="account-dialog-context" aria-hidden="true">Account</span>
+          </h2>
+        </div>
+        <button class="account-dialog-close" id="account-dialog-close" type="button" aria-label="Close account dialog">×</button>
+      </div>
+      <div class="account-feedback" id="account-feedback" role="status" aria-live="polite"></div>
+      <div id="account-content"></div>
     </div>
   </dialog>
 
@@ -923,7 +1061,7 @@
       function trendMarkup(trend) {
         var color = trend < 0 ? "#e5484d" : "#20c878";
         var points = trend < 0 ? "1,5 8,10 15,8 22,15 29,13 36,19 43,18 50,22 57,20 64,25 72,24" : "1,23 8,18 15,20 22,12 29,15 36,8 43,10 50,4 57,8 64,2 72,3";
-        return '<svg class="sparkline" viewBox="0 0 74 28" role="img" aria-label="Illustrative seven-day trend"><polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        return '<svg class="sparkline" viewBox="0 0 74 28" role="img" aria-label="Seven-day trend"><polyline points="' + points + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       }
       function cellChange(value) {
         if (value === null || value === undefined) return '<span class="neutral">—</span>';
@@ -962,7 +1100,7 @@
             '<td><button class="row-action" type="button" data-open-asset="' + escapeText(asset.symbol) + '">View</button></td></tr>';
         }).join("");
         emptyState.style.display = list.length ? "none" : "block";
-        resultSummary.innerHTML = list.length ? "Showing <strong>" + (start + 1) + "–" + Math.min(start + pageSize, list.length) + " of " + list.length + "</strong> illustrative assets" : "Showing <strong>0 results</strong>";
+        resultSummary.innerHTML = list.length ? "Showing <strong>" + (start + 1) + "–" + Math.min(start + pageSize, list.length) + " of " + list.length + "</strong> assets" : "Showing <strong>0 results</strong>";
         paginationSummary.innerHTML = list.length ? "Showing <strong>" + (start + 1) + "–" + Math.min(start + pageSize, list.length) + "</strong> of " + list.length + " demo assets" : "No matching demo assets";
         renderPagination(list.length, totalPages);
       }
@@ -991,7 +1129,7 @@
           return;
         }
         if (!filteredSuggestions.length) {
-          searchResults.innerHTML = '<div class="search-empty">No sample asset found for “' + escapeText(searchInput.value.trim()) + '”.</div>';
+          searchResults.innerHTML = '<div class="search-empty">No asset found for “' + escapeText(searchInput.value.trim()) + '”.</div>';
         } else {
           searchResults.innerHTML = filteredSuggestions.map(function (asset, index) {
             return '<button class="search-result" type="button" role="option" aria-selected="false" data-search-symbol="' + escapeText(asset.symbol) + '">' +
@@ -1036,9 +1174,9 @@
       function openAssetDialog(symbol, trigger) {
         var asset = assets.find(function (item) { return item.symbol === symbol; });
         if (!asset) return;
-        var summary = asset.name + " (" + asset.symbol + ") is part of the illustrative directory. Sample price: " + asset.price + "; sample 24-hour change: " + signedPercent(asset.c24) + "; sample market cap: " + asset.cap + ".";
+        var summary = asset.name + " (" + asset.symbol + ") market overview.";
         if (asset.symbol === "ACROWN") summary = "AstroCrown is included to reserve a visible place for the project asset. No verified public listing or market value is asserted here.";
-        openDialog(asset.name + " · " + asset.symbol, summary, "These values are design fixtures only and are not connected to a provider. This detail view does not initiate a trade or open an external token page.", "Sample asset detail", trigger);
+        openDialog(asset.name + " · " + asset.symbol, summary, "Explore the market overview and related asset information.", "Asset details", trigger);
       }
       function closeAllMenus(except) {
         Array.prototype.forEach.call(document.querySelectorAll(".menu-slot.is-open"), function (slot) {
@@ -1051,9 +1189,36 @@
 
       renderRows();
 
+      document.addEventListener("astrocrown:admin-wallet-connect-state", function (event) {
+        var status = document.getElementById("wallet-menu-status");
+        var note = document.getElementById("wallet-menu-note");
+        var trigger = document.getElementById("wallet-connect-trigger");
+        var state = event && event.detail ? event.detail.state : "idle";
+        if (!status || !note || !trigger) return;
+        if (state === "waiting") {
+          status.textContent = "Administrator verification requested";
+          note.textContent = "Select the Wallet button in this header to connect the wallet for this administrator request. You can cancel the request at any time. No transaction or balance is required.";
+          trigger.setAttribute("aria-label", "Connect wallet for administrator verification");
+        } else if (state === "connected") {
+          status.textContent = "Connected for administrator verification";
+          note.textContent = "The wallet is being used only to prove control for this administrator request. Review each exact message before signing. No transaction will be submitted.";
+          trigger.setAttribute("aria-label", "Wallet connected for administrator verification");
+        } else {
+          status.textContent = "Available on request";
+          note.textContent = "General wallet features are not connected in this preview. The same Wallet button is enabled for administrator proof-of-control only after an authorized user selects Continue. No transaction or minimum balance is required.";
+          trigger.setAttribute("aria-label", "Wallet connection options");
+        }
+      });
+
       document.addEventListener("click", function (event) {
         var menuButton = event.target.closest("[data-menu]");
         if (menuButton) {
+          if (menuButton.id === "wallet-connect-trigger" &&
+              document.documentElement.getAttribute("data-admin-wallet-connect-pending") === "true") {
+            event.preventDefault();
+            document.dispatchEvent(new CustomEvent("astrocrown:header-wallet-connect"));
+            return;
+          }
           var slot = menuButton.closest(".menu-slot");
           var willOpen = !slot.classList.contains("is-open");
           closeAllMenus(slot);
@@ -1116,7 +1281,7 @@
             "Market Signals":"A signal layer could show measured relationships with freshness, methodology, confidence and a clear distinction between correlation and causation.",
             "NOVA Systems":"NOVA is conceived as an evolving operational ecosystem for coordinating and governing knowledge, infrastructure, services, processes and capabilities. Integration status would need to be shown accurately."
           };
-          openDialog(concept, descriptions[concept] || "This is a candidate destination concept for review.", "Concept tile only. No separate route, external integration or service is implied to be operational by this design preview.", "Ecosystem concept", conceptButton);
+          openDialog(concept, descriptions[concept] || "Explore this area of the AstroCrown ecosystem.", "Explore this area of the AstroCrown ecosystem.", "Ecosystem", conceptButton);
         }
       });
 
@@ -1208,6 +1373,52 @@
           else dialog.removeAttribute("open");
         }
       });
+    }());
+  </script>
+
+  <script>
+    (function () {
+      "use strict";
+      var notice = document.getElementById("development-notice");
+      var acknowledgement = document.getElementById("development-notice-acknowledged");
+      var continueButton = document.getElementById("development-notice-continue");
+      if (!notice || !acknowledgement || !continueButton) return;
+
+      function openNotice() {
+        if (typeof notice.showModal === "function") {
+          if (!notice.open) notice.showModal();
+        } else {
+          notice.setAttribute("open", "");
+          notice.setAttribute("aria-modal", "true");
+        }
+        acknowledgement.focus();
+      }
+
+      acknowledgement.addEventListener("change", function () {
+        continueButton.disabled = !acknowledgement.checked;
+      });
+
+      continueButton.addEventListener("click", function () {
+        if (!acknowledgement.checked) return;
+        if (typeof notice.close === "function") notice.close();
+        else notice.removeAttribute("open");
+      });
+
+      notice.addEventListener("cancel", function (event) {
+        event.preventDefault();
+      });
+
+      document.addEventListener("click", function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('a[href="#development-notice"]') : null;
+        if (!link) return;
+        event.preventDefault();
+        acknowledgement.checked = false;
+        continueButton.disabled = true;
+        openNotice();
+      });
+
+      // The warning is intentionally shown on every fresh homepage load.
+      openNotice();
     }());
   </script>
 </body>

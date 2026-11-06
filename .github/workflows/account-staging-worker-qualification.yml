@@ -1,0 +1,134 @@
+name: Account Staging Worker Qualification
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/account-continuity/worker/**"
+      - "development/account-continuity/prototype/account-ui.js"
+      - "development/account-continuity/prototype/admin-wallet-ui.js"
+      - "development/account-continuity/prototype/account-prototype.css"
+      - "development/index.html"
+      - ".github/workflows/account-staging-worker-qualification.yml"
+      - ".github/workflows/cloudflare-staging-deployment.yml"
+  push:
+    branches: [docs/provider-independent-wallet-auth-plan-2026-10-20]
+    paths:
+      - "development/account-continuity/worker/**"
+      - "development/account-continuity/prototype/account-ui.js"
+      - "development/account-continuity/prototype/admin-wallet-ui.js"
+      - "development/account-continuity/prototype/account-prototype.css"
+      - "development/index.html"
+      - ".github/workflows/account-staging-worker-qualification.yml"
+      - ".github/workflows/cloudflare-staging-deployment.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: development/account-continuity/worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v6.1.0
+        with:
+          node-version: "22"
+      - name: Generate the reproducible dependency lock
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run Worker invariant tests
+        run: npm test
+      - name: Build the restricted website asset set
+        run: npm run build:site
+      - name: Validate browser code and Worker bundle without deploying
+        run: |
+          node --check src/index.js
+          node --check scripts/build-staging-site.mjs
+          node --check public/account-continuity/prototype/account-ui.js
+          node --check tests/worker_browser_smoke.mjs
+          npm run check:worker
+      - name: Apply local D1 schema
+        run: printf 'y\n' | npx wrangler d1 migrations apply acrown-account-staging --local
+      - name: Smoke-test the local Worker HTTP API and homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --ip 127.0.0.1 --port 8787 > "$RUNNER_TEMP/acrown-worker.log" 2>&1 &
+          worker_pid=$!
+          cleanup() {
+            kill "$worker_pid" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          base="http://localhost:8787"
+          ready=false
+          for attempt in $(seq 1 40); do
+            if curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/account/status" -o "$RUNNER_TEMP/account-status.json"; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != true ]; then
+            cat "$RUNNER_TEMP/acrown-worker.log"
+            echo "::error::Local Worker did not become ready."
+            exit 1
+          fi
+          node --input-type=module - "$RUNNER_TEMP/account-status.json" <<'NODE'
+          import fs from "node:fs";
+          const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (status.authenticated !== false) throw new Error("A fresh local request must be unauthenticated.");
+          if (status.scope !== "staging-test-account-only") throw new Error("The account scope marker is missing.");
+          if (status.passkeyAvailable !== true) throw new Error("The Worker did not report its passkey service.");
+          NODE
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/diagnostics/runtime" -o "$RUNNER_TEMP/runtime.json"
+          node --input-type=module - "$RUNNER_TEMP/runtime.json" <<'NODE'
+          import fs from "node:fs";
+          const runtime = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (runtime.runtime !== "cloudflare-workers") throw new Error("Unexpected Worker runtime.");
+          if (!Array.isArray(runtime.simpleWebAuthnSupportedRegistrationAlgorithms)) throw new Error("Registration algorithm diagnostics missing.");
+          const algorithms = runtime.simpleWebAuthnSupportedRegistrationAlgorithms;
+          const mldsa44 = runtime.webCryptoMlDsaSupport?.["ML-DSA-44"];
+          if (!mldsa44 || typeof mldsa44.sign !== "boolean" || typeof mldsa44.verify !== "boolean") throw new Error("ML-DSA-44 sign/verify capability diagnostics missing.");
+          const advertised = algorithms.includes(-48);
+          if (advertised !== (mldsa44.verify === true)) throw new Error("SimpleWebAuthn's ML-DSA-44 advertisement does not match runtime verification support.");
+          if (runtime.mlDsa44RegistrationPreferred !== advertised) throw new Error("The ML-DSA-44 registration preference diagnostic is inconsistent.");
+          console.log("Local Worker ML-DSA-44 capability: " + JSON.stringify({sign:mldsa44.sign,verify:mldsa44.verify,registrationAlgorithmAdvertised:advertised}));
+          if (!mldsa44.sign || !mldsa44.verify || !advertised) throw new Error("BLOCKED: this runtime cannot qualify ML-DSA-44 sign/verify and first-preference registration.");
+          NODE
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
+          grep -q "STAGING ENVIRONMENT" "$RUNNER_TEMP/home.html"
+          code=$(curl --resolve localhost:8787:127.0.0.1 -sS -o "$RUNNER_TEMP/wrong-origin.json" -w "%{http_code}" -X POST "$base/api/passkeys/authentication/options" -H "Origin: https://untrusted.invalid" -H "Content-Type: application/json" --data "{}")
+          test "$code" = "403"
+          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME_BIN" ]; then
+            echo "::error::BLOCKED: no preinstalled Chrome/Chromium; Worker passkey browser evidence is required."
+            exit 1
+          fi
+          if ! CHROME_BIN="$CHROME_BIN" node tests/worker_browser_smoke.mjs; then
+            echo "Local-only Worker diagnostics (no credential or request body is logged):"
+            grep "LOCAL TEST ONLY" "$RUNNER_TEMP/acrown-worker.log" || true
+            exit 1
+          fi
+      - name: Parse the manual Cloudflare deployment workflow
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-staging-deployment.yml"); puts "Cloudflare deployment workflow YAML parsed successfully."'
+
+      - name: Verify remote environment is still fail-closed
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from "node:fs";
+          const config = JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"));
+          const stage = config.env.staging;
+          if (stage.vars.RP_ID !== "SET_BEFORE_DEPLOY") throw new Error("Staging RP sentinel missing.");
+          if (stage.vars.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") throw new Error("Staging origin sentinel missing.");
+          if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") throw new Error("Staging D1 sentinel missing.");
+          NODE
