@@ -353,16 +353,14 @@ async function testAdminGovernanceFixture(accountIdentifier) {
   assert.equal(revokedCurrentWallet.body.adminRoleAssigned, true,
     "wallet revocation must not revoke the separate administrator role.");
 
+  const rootBeforeLastRemoval = await stepUpAdminWallet(rootAccount);
+  assert.equal(rootBeforeLastRemoval.status, 200, JSON.stringify(rootBeforeLastRemoval.body));
   const lastWalletRemoval = await postWorkerJson("/api/admin/wallet-revoke", {
     address: rootAccount.address,
     chainId: 1,
   });
-  assert.equal(lastWalletRemoval.status, 403,
-    "a wallet that is not part of a fresh admin step-up cannot remove the remaining wallet.");
-
-  const rootReauthorized = await stepUpAdminWallet(rootAccount);
-  assert.equal(rootReauthorized.status, 200, JSON.stringify(rootReauthorized.body));
-  assert.equal(rootReauthorized.body.adminSessionAuthorized, true);
+  assert.equal(lastWalletRemoval.status, 409,
+    "the last active administrator wallet must be protected even after a fresh step-up.");
 
   const endedAdminSession = await postWorkerJson("/api/admin/wallet-logout", {});
   assert.equal(endedAdminSession.status, 200);
