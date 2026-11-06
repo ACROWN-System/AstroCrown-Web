@@ -14,6 +14,7 @@ const MAX_BODY_BYTES = 65536;
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
 const AVATARS = ["person", "crown", "star", "moon", "orbit", "shield"];
 const PQ_ALGS = [-48, -49, -50];
+const ADMIN_PERMISSION_NAMES = ["admin.messages.send", "admin.roles.grant", "admin.roles.revoke"];
 
 function secureHeaders(headers = new Headers()) {
   const h = new Headers(headers);
@@ -178,24 +179,55 @@ async function activeAccount(db, request) {
   const tokenHash = await hashText(token);
   const now = Math.floor(Date.now() / 1000);
   const row = await db.prepare(
-    "SELECT a.*, s.expires_at FROM auth_sessions s JOIN auth_accounts a ON a.account_id = s.account_id WHERE s.token_hash = ? AND s.expires_at > ?"
+    "SELECT a.*, s.expires_at, s.admin_wallet_address, s.admin_authenticated_at, s.admin_expires_at " +
+    "FROM auth_sessions s JOIN auth_accounts a ON a.account_id = s.account_id WHERE s.token_hash = ? AND s.expires_at > ?"
   ).bind(tokenHash, now).first();
   if (!row) await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
   return row || null;
 }
 async function summary(db, account) {
   const now = Math.floor(Date.now() / 1000);
-  const counts = await db.prepare(
-    "SELECT " +
-    "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) AS passkey_count, " +
-    "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1 AND credential_alg IN (-48,-49,-50)) AS pq_count, " +
-    "(SELECT COUNT(*) FROM auth_recovery_keys WHERE account_id = ? AND used_at IS NULL) AS recovery_count, " +
-    "(SELECT COUNT(*) FROM auth_sessions WHERE account_id = ? AND expires_at > ?) AS session_count"
-  ).bind(account.account_id, account.account_id, account.account_id, account.account_id, now).first();
-  const algorithmRows = await db.prepare(
-    "SELECT credential_alg FROM auth_passkeys WHERE account_id = ? AND active = 1 ORDER BY created_at, credential_id"
-  ).bind(account.account_id).all();
+  const [counts, algorithmRows, role, permissions, wallets, notice] = await Promise.all([
+    db.prepare(
+      "SELECT " +
+      "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) AS passkey_count, " +
+      "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1 AND credential_alg IN (-48,-49,-50)) AS pq_count, " +
+      "(SELECT COUNT(*) FROM auth_recovery_keys WHERE account_id = ? AND used_at IS NULL) AS recovery_count, " +
+      "(SELECT COUNT(*) FROM auth_sessions WHERE account_id = ? AND expires_at > ?) AS session_count"
+    ).bind(account.account_id, account.account_id, account.account_id, account.account_id, now).first(),
+    db.prepare(
+      "SELECT credential_alg FROM auth_passkeys WHERE account_id = ? AND active = 1 ORDER BY created_at, credential_id"
+    ).bind(account.account_id).all(),
+    db.prepare(
+      "SELECT granted_by_account_id,reason,created_at FROM auth_admin_roles WHERE account_id = ?"
+    ).bind(account.account_id).first(),
+    db.prepare(
+      "SELECT permission,can_delegate FROM auth_admin_permissions WHERE account_id = ? ORDER BY permission"
+    ).bind(account.account_id).all(),
+    db.prepare(
+      "SELECT address,chain_id FROM auth_admin_wallets WHERE account_id = ? AND active = 1 ORDER BY created_at,address"
+    ).bind(account.account_id).all(),
+    db.prepare(
+      "SELECT notice_id,reason,created_at FROM auth_admin_revocation_notices " +
+      "WHERE account_id = ? AND acknowledged_at IS NULL ORDER BY created_at DESC,notice_id DESC LIMIT 1"
+    ).bind(account.account_id).first(),
+  ]);
   const passkeyAlgorithmIds = (algorithmRows.results || []).map((row) => Number(row.credential_alg));
+  const activeWallets = wallets.results || [];
+  const currentWallet = String(account.admin_wallet_address || "");
+  const matchedWallet = activeWallets.find((wallet) =>
+    currentWallet && equalConstantTime(String(wallet.address || "").toLowerCase(), currentWallet.toLowerCase())
+  );
+  const roleAssigned = Boolean(role);
+  const adminWalletAuthenticated = Boolean(
+    roleAssigned && matchedWallet &&
+    Number(account.admin_authenticated_at || 0) > 0 &&
+    Number(account.admin_expires_at || 0) > now
+  );
+  const adminPermissions = (permissions.results || []).map((row) => row.permission);
+  const adminDelegablePermissions = (permissions.results || [])
+    .filter((row) => Number(row.can_delegate) === 1)
+    .map((row) => row.permission);
   return {
     authenticated: true,
     email: null,
@@ -221,20 +253,464 @@ async function summary(db, account) {
     activeSessionCount: Number(counts.session_count || 0),
     securityManagementAvailable: true,
     scope: "staging-test-account-only",
-    role: "user",
-    adminRoleAssigned: false,
-    adminPermissions: [],
-    adminDelegablePermissions: [],
-    adminWalletCount: 0,
-    adminWalletAuthenticated: false,
-    adminSessionAuthorized: false,
-    admin: false,
-    adminWalletAddress: null,
-    adminSessionExpiresAt: null,
-    administratorRevocationNotice: null,
+    role: roleAssigned ? "admin" : "user",
+    adminRoleAssigned: roleAssigned,
+    adminPermissions,
+    adminDelegablePermissions,
+    adminWalletCount: activeWallets.length,
+    adminWalletAuthenticated,
+    adminSessionAuthorized: adminWalletAuthenticated,
+    admin: adminWalletAuthenticated,
+    adminWalletAddress: adminWalletAuthenticated ? matchedWallet.address : null,
+    adminSessionExpiresAt: adminWalletAuthenticated
+      ? new Date(Number(account.admin_expires_at) * 1000).toISOString()
+      : null,
+    administratorRevocationNotice: notice ? {
+      noticeId: notice.notice_id,
+      reason: notice.reason,
+      createdAt: notice.created_at,
+    } : null,
     communicationsUnreadCounts: { alerts: 0, messages: 0 },
   };
 }
+
+function validateAdminReason(value) {
+  if (typeof value !== "string") throw fail(400, "Enter a reason for the administrator change.");
+  const reason = value.normalize("NFKC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  if (!reason || reason.length > 500) {
+    throw fail(400, "The administrator change reason must contain between 1 and 500 characters.");
+  }
+  return reason;
+}
+function validateAdminPermissions(value) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > ADMIN_PERMISSION_NAMES.length) {
+    throw fail(400, "The permission list must contain recognized permission names only.");
+  }
+  if (value.some((item) => typeof item !== "string" || !ADMIN_PERMISSION_NAMES.includes(item))) {
+    throw fail(400, "One or more administrator permissions are not recognized.");
+  }
+  if (new Set(value).size !== value.length) {
+    throw fail(400, "An administrator permission may appear only once.");
+  }
+  return [...value].sort();
+}
+const ADMIN_PERMISSION_HOLDER_SQL =
+  "SELECT p.can_delegate,s.admin_wallet_address,s.admin_expires_at " +
+  "FROM auth_sessions s " +
+  "JOIN auth_admin_roles r ON r.account_id = s.account_id " +
+  "JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
+  "JOIN auth_admin_wallets w ON w.account_id = r.account_id " +
+  "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? " +
+  "AND s.admin_expires_at > ? AND s.admin_wallet_address = w.address COLLATE NOCASE " +
+  "AND w.active = 1 AND p.permission = ? LIMIT 1";
+async function requireAdminPermission(db, account, request, permission) {
+  if (!ADMIN_PERMISSION_NAMES.includes(permission)) throw fail(403, "The requested administrator permission is not recognized.");
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "Sign in before using administrator services.");
+  const tokenHash = await hashText(token);
+  const now = Math.floor(Date.now() / 1000);
+  const holder = await db.prepare(ADMIN_PERMISSION_HOLDER_SQL)
+    .bind(tokenHash, account.account_id, now, now, permission).first();
+  if (!holder) {
+    throw fail(403, "This action requires the separately granted administrator permission and a current wallet-verified administrator session.");
+  }
+  return { tokenHash, accountId: account.account_id, now, walletAddress: holder.admin_wallet_address };
+}
+function adminHolderGuardParams(context, permission) {
+  return [context.tokenHash, context.accountId, context.now, context.now, permission];
+}
+async function grantAdminRole(db, request, payload) {
+  if (Object.keys(payload).some((key) => !["accountIdentifier", "reason", "permissions"].includes(key)) ||
+      !Object.prototype.hasOwnProperty.call(payload, "accountIdentifier") ||
+      !Object.prototype.hasOwnProperty.call(payload, "reason")) {
+    throw fail(400, "Provide the existing account identifier, a reason and optional delegated permissions only.");
+  }
+  const actor = await activeAccount(db, request);
+  if (!actor) throw fail(401, "Sign in before appointing an administrator.");
+  const context = await requireAdminPermission(db, actor, request, "admin.roles.grant");
+  const targetIdentifier = accountId(payload.accountIdentifier);
+  const reason = validateAdminReason(payload.reason);
+  const delegated = validateAdminPermissions(payload.permissions);
+  if (delegated.length) {
+    const rows = await db.prepare(
+      "SELECT permission FROM auth_admin_permissions WHERE account_id = ? AND can_delegate = 1"
+    ).bind(actor.account_id).all();
+    const allowed = new Set((rows.results || []).map((row) => row.permission));
+    if (delegated.some((permission) => !allowed.has(permission))) {
+      throw fail(403, "You may assign only permissions that were explicitly made delegable to your administrator account.");
+    }
+  }
+  const target = await db.prepare(
+    "SELECT account_id,account_identifier FROM auth_accounts WHERE account_identifier = ?"
+  ).bind(targetIdentifier).first();
+  if (!target) throw fail(404, "No existing AstroCrown account was found for that account identifier.");
+  if (target.account_id === actor.account_id) throw fail(400, "An administrator cannot grant the role to their own account.");
+  const existing = await db.prepare(
+    "SELECT 1 FROM auth_admin_roles WHERE account_id = ?"
+  ).bind(target.account_id).first();
+  if (existing) throw fail(409, "The target account already holds the administrator role.");
+  const createdAt = new Date().toISOString();
+  const auditId = hex(bytes(16));
+  const guard = adminHolderGuardParams(context, "admin.roles.grant");
+  const statements = [
+    db.prepare(
+      "INSERT INTO auth_admin_roles(account_id,granted_by_account_id,reason,created_at) " +
+      "SELECT ?,?,?,? WHERE " +
+      "EXISTS(SELECT 1 FROM auth_admin_roles r JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
+      "JOIN auth_admin_wallets w ON w.account_id = r.account_id JOIN auth_sessions s ON s.account_id = r.account_id " +
+      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+      "AND s.admin_wallet_address = w.address COLLATE NOCASE AND w.active = 1 AND p.permission = ?) " +
+      "AND NOT EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?)"
+    ).bind(target.account_id, actor.account_id, reason, createdAt, ...guard, target.account_id),
+  ];
+  for (const permission of delegated) {
+    statements.push(
+      db.prepare(
+        "INSERT INTO auth_admin_permissions(account_id,permission,can_delegate,granted_by_account_id,reason,created_at) " +
+        "SELECT ?,?,0,?,?,? WHERE EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ? AND granted_by_account_id = ? AND created_at = ?)"
+      ).bind(target.account_id, permission, actor.account_id, reason, createdAt, target.account_id, actor.account_id, createdAt)
+    );
+  }
+  statements.push(
+    db.prepare(
+      "INSERT INTO auth_admin_governance_audit(audit_id,event_type,actor_account_id,target_account_id,reason,created_at,detail_json) " +
+      "SELECT ?,'admin_role_granted',?,?,?,?,? WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_roles WHERE account_id = ? AND granted_by_account_id = ? AND created_at = ?)"
+    ).bind(auditId, actor.account_id, target.account_id, reason, createdAt,
+      JSON.stringify({ permissionsAssigned: delegated, permissionsDelegable: [] }),
+      target.account_id, actor.account_id, createdAt)
+  );
+  const results = await db.batch(statements);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[results.length - 1]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "Administrator authority changed during appointment. Refresh and verify again.");
+  }
+  return json(200, {
+    granted: true,
+    targetAccountIdentifier: target.account_identifier,
+    role: "admin",
+    adminRoleAssigned: true,
+    adminPermissions: delegated,
+    adminWalletCount: 0,
+    walletEnrolled: false,
+    message: "The existing account was granted the administrator role. The member must enrol and separately verify their own administrator wallet before administrator access is available.",
+  });
+}
+async function revokeAdminRole(db, request, payload) {
+  if (Object.keys(payload).length !== 2 ||
+      !Object.prototype.hasOwnProperty.call(payload, "accountIdentifier") ||
+      !Object.prototype.hasOwnProperty.call(payload, "reason")) {
+    throw fail(400, "Provide the existing administrator account identifier and a revocation reason only.");
+  }
+  const actor = await activeAccount(db, request);
+  if (!actor) throw fail(401, "Sign in before revoking administrator authority.");
+  const context = await requireAdminPermission(db, actor, request, "admin.roles.revoke");
+  const targetIdentifier = accountId(payload.accountIdentifier);
+  const reason = validateAdminReason(payload.reason);
+  const target = await db.prepare(
+    "SELECT account_id,account_identifier FROM auth_accounts WHERE account_identifier = ?"
+  ).bind(targetIdentifier).first();
+  if (!target) throw fail(404, "No existing AstroCrown account was found for that account identifier.");
+  if (target.account_id === actor.account_id) throw fail(400, "An administrator cannot revoke their own role through this workflow.");
+  const role = await db.prepare(
+    "SELECT account_id FROM auth_admin_roles WHERE account_id = ?"
+  ).bind(target.account_id).first();
+  if (!role) throw fail(409, "The target account does not currently hold the administrator role.");
+  const [permissionRows, walletCountRow] = await Promise.all([
+    db.prepare("SELECT permission FROM auth_admin_permissions WHERE account_id = ? ORDER BY permission").bind(target.account_id).all(),
+    db.prepare("SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1").bind(target.account_id).first(),
+  ]);
+  const previousPermissions = (permissionRows.results || []).map((row) => row.permission);
+  const revokedWalletCount = Number(walletCountRow?.active_count || 0);
+  const createdAt = new Date().toISOString();
+  const auditId = hex(bytes(16));
+  const noticeId = hex(bytes(16));
+  const guard = adminHolderGuardParams(context, "admin.roles.revoke");
+  const statements = [
+    db.prepare(
+      "INSERT INTO auth_admin_governance_audit(audit_id,event_type,actor_account_id,target_account_id,reason,created_at,detail_json) " +
+      "SELECT ?,'admin_role_revoked',?,?,?,?,? WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_roles r JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
+      "JOIN auth_admin_wallets w ON w.account_id = r.account_id JOIN auth_sessions s ON s.account_id = r.account_id " +
+      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+      "AND s.admin_wallet_address = w.address COLLATE NOCASE AND w.active = 1 AND p.permission = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?)"
+    ).bind(auditId, actor.account_id, target.account_id, reason, createdAt,
+      JSON.stringify({ permissionsRevoked: previousPermissions, walletsDisabled: revokedWalletCount }),
+      ...guard, target.account_id),
+    db.prepare(
+      "DELETE FROM auth_admin_permissions WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "UPDATE auth_admin_wallets SET active = 0 WHERE account_id = ? AND active = 1 " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "UPDATE auth_sessions SET admin_wallet_address = NULL,admin_authenticated_at = NULL,admin_expires_at = NULL " +
+      "WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "DELETE FROM auth_admin_roles WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "INSERT INTO auth_admin_revocation_notices(notice_id,account_id,reason,created_at) " +
+      "SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(noticeId, target.account_id, reason, createdAt, auditId),
+  ];
+  const results = await db.batch(statements);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[4]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[5]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "Administrator authority changed during revocation. Refresh and verify again.");
+  }
+  return json(200, {
+    revoked: true,
+    targetAccountIdentifier: target.account_identifier,
+    role: "user",
+    revokedWalletCount,
+    revokedPermissions: previousPermissions,
+    message: "Administrator authority, delegated permissions and enrolled administrator wallets have been revoked. The member's ordinary account sessions remain active.",
+  });
+}
+async function acknowledgeAdminRevocationNotice(db, request, payload) {
+  if (Object.keys(payload).length !== 1 || typeof payload.noticeId !== "string" || !/^[a-f0-9]{32}$/i.test(payload.noticeId)) {
+    throw fail(400, "The administrator revocation notice reference is invalid.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in to acknowledge the administrator notice.");
+  const result = await db.prepare(
+    "UPDATE auth_admin_revocation_notices SET acknowledged_at = ? " +
+    "WHERE notice_id = ? AND account_id = ? AND acknowledged_at IS NULL"
+  ).bind(new Date().toISOString(), payload.noticeId.toLowerCase(), account.account_id).run();
+  if (Number(result.meta?.changes || 0) !== 1) {
+    throw fail(404, "That unacknowledged administrator notice could not be found for this account.");
+  }
+  const refreshed = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + cookie(request, SESSION_COOKIE) },
+  }));
+  return json(200, await summary(db, refreshed));
+}
+
+
+function validateAdminReason(value) {
+  if (typeof value !== "string") throw fail(400, "Enter a reason for the administrator change.");
+  const reason = value.normalize("NFKC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
+  if (!reason || reason.length > 500) {
+    throw fail(400, "The administrator change reason must contain between 1 and 500 characters.");
+  }
+  return reason;
+}
+function validateAdminPermissions(value) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > ADMIN_PERMISSION_NAMES.length) {
+    throw fail(400, "The permission list must contain recognized permission names only.");
+  }
+  if (value.some((item) => typeof item !== "string" || !ADMIN_PERMISSION_NAMES.includes(item))) {
+    throw fail(400, "One or more administrator permissions are not recognized.");
+  }
+  if (new Set(value).size !== value.length) {
+    throw fail(400, "An administrator permission may appear only once.");
+  }
+  return [...value].sort();
+}
+const ADMIN_PERMISSION_HOLDER_SQL =
+  "SELECT p.can_delegate,s.admin_wallet_address,s.admin_expires_at " +
+  "FROM auth_sessions s " +
+  "JOIN auth_admin_roles r ON r.account_id = s.account_id " +
+  "JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
+  "JOIN auth_admin_wallets w ON w.account_id = r.account_id " +
+  "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? " +
+  "AND s.admin_expires_at > ? AND s.admin_wallet_address = w.address COLLATE NOCASE " +
+  "AND w.active = 1 AND p.permission = ? LIMIT 1";
+async function requireAdminPermission(db, account, request, permission) {
+  if (!ADMIN_PERMISSION_NAMES.includes(permission)) throw fail(403, "The requested administrator permission is not recognized.");
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "Sign in before using administrator services.");
+  const tokenHash = await hashText(token);
+  const now = Math.floor(Date.now() / 1000);
+  const holder = await db.prepare(ADMIN_PERMISSION_HOLDER_SQL)
+    .bind(tokenHash, account.account_id, now, now, permission).first();
+  if (!holder) {
+    throw fail(403, "This action requires the separately granted administrator permission and a current wallet-verified administrator session.");
+  }
+  return { tokenHash, accountId: account.account_id, now, walletAddress: holder.admin_wallet_address };
+}
+function adminHolderGuardParams(context, permission) {
+  return [context.tokenHash, context.accountId, context.now, context.now, permission];
+}
+async function grantAdminRole(db, request, payload) {
+  if (Object.keys(payload).some((key) => !["accountIdentifier", "reason", "permissions"].includes(key)) ||
+      !Object.prototype.hasOwnProperty.call(payload, "accountIdentifier") ||
+      !Object.prototype.hasOwnProperty.call(payload, "reason")) {
+    throw fail(400, "Provide the existing account identifier, a reason and optional delegated permissions only.");
+  }
+  const actor = await activeAccount(db, request);
+  if (!actor) throw fail(401, "Sign in before appointing an administrator.");
+  const context = await requireAdminPermission(db, actor, request, "admin.roles.grant");
+  const targetIdentifier = accountId(payload.accountIdentifier);
+  const reason = validateAdminReason(payload.reason);
+  const delegated = validateAdminPermissions(payload.permissions);
+  if (delegated.length) {
+    const rows = await db.prepare(
+      "SELECT permission FROM auth_admin_permissions WHERE account_id = ? AND can_delegate = 1"
+    ).bind(actor.account_id).all();
+    const allowed = new Set((rows.results || []).map((row) => row.permission));
+    if (delegated.some((permission) => !allowed.has(permission))) {
+      throw fail(403, "You may assign only permissions that were explicitly made delegable to your administrator account.");
+    }
+  }
+  const target = await db.prepare(
+    "SELECT account_id,account_identifier FROM auth_accounts WHERE account_identifier = ?"
+  ).bind(targetIdentifier).first();
+  if (!target) throw fail(404, "No existing AstroCrown account was found for that account identifier.");
+  if (target.account_id === actor.account_id) throw fail(400, "An administrator cannot grant the role to their own account.");
+  const existing = await db.prepare(
+    "SELECT 1 FROM auth_admin_roles WHERE account_id = ?"
+  ).bind(target.account_id).first();
+  if (existing) throw fail(409, "The target account already holds the administrator role.");
+  const createdAt = new Date().toISOString();
+  const auditId = hex(bytes(16));
+  const guard = adminHolderGuardParams(context, "admin.roles.grant");
+  const statements = [
+    db.prepare(
+      "INSERT INTO auth_admin_roles(account_id,granted_by_account_id,reason,created_at) " +
+      "SELECT ?,?,?,? WHERE " +
+      "EXISTS(SELECT 1 FROM auth_admin_roles r JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
+      "JOIN auth_admin_wallets w ON w.account_id = r.account_id JOIN auth_sessions s ON s.account_id = r.account_id " +
+      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+      "AND s.admin_wallet_address = w.address COLLATE NOCASE AND w.active = 1 AND p.permission = ?) " +
+      "AND NOT EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?)"
+    ).bind(target.account_id, actor.account_id, reason, createdAt, ...guard, target.account_id),
+  ];
+  for (const permission of delegated) {
+    statements.push(
+      db.prepare(
+        "INSERT INTO auth_admin_permissions(account_id,permission,can_delegate,granted_by_account_id,reason,created_at) " +
+        "SELECT ?,?,0,?,?,? WHERE EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ? AND granted_by_account_id = ? AND created_at = ?)"
+      ).bind(target.account_id, permission, actor.account_id, reason, createdAt, target.account_id, actor.account_id, createdAt)
+    );
+  }
+  statements.push(
+    db.prepare(
+      "INSERT INTO auth_admin_governance_audit(audit_id,event_type,actor_account_id,target_account_id,reason,created_at,detail_json) " +
+      "SELECT ?,'admin_role_granted',?,?,?,?,? WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_roles WHERE account_id = ? AND granted_by_account_id = ? AND created_at = ?)"
+    ).bind(auditId, actor.account_id, target.account_id, reason, createdAt,
+      JSON.stringify({ permissionsAssigned: delegated, permissionsDelegable: [] }),
+      target.account_id, actor.account_id, createdAt)
+  );
+  const results = await db.batch(statements);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[results.length - 1]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "Administrator authority changed during appointment. Refresh and verify again.");
+  }
+  return json(200, {
+    granted: true,
+    targetAccountIdentifier: target.account_identifier,
+    role: "admin",
+    adminRoleAssigned: true,
+    adminPermissions: delegated,
+    adminWalletCount: 0,
+    walletEnrolled: false,
+    message: "The existing account was granted the administrator role. The member must enrol and separately verify their own administrator wallet before administrator access is available.",
+  });
+}
+async function revokeAdminRole(db, request, payload) {
+  if (Object.keys(payload).length !== 2 ||
+      !Object.prototype.hasOwnProperty.call(payload, "accountIdentifier") ||
+      !Object.prototype.hasOwnProperty.call(payload, "reason")) {
+    throw fail(400, "Provide the existing administrator account identifier and a revocation reason only.");
+  }
+  const actor = await activeAccount(db, request);
+  if (!actor) throw fail(401, "Sign in before revoking administrator authority.");
+  const context = await requireAdminPermission(db, actor, request, "admin.roles.revoke");
+  const targetIdentifier = accountId(payload.accountIdentifier);
+  const reason = validateAdminReason(payload.reason);
+  const target = await db.prepare(
+    "SELECT account_id,account_identifier FROM auth_accounts WHERE account_identifier = ?"
+  ).bind(targetIdentifier).first();
+  if (!target) throw fail(404, "No existing AstroCrown account was found for that account identifier.");
+  if (target.account_id === actor.account_id) throw fail(400, "An administrator cannot revoke their own role through this workflow.");
+  const role = await db.prepare(
+    "SELECT account_id FROM auth_admin_roles WHERE account_id = ?"
+  ).bind(target.account_id).first();
+  if (!role) throw fail(409, "The target account does not currently hold the administrator role.");
+  const [permissionRows, walletCountRow] = await Promise.all([
+    db.prepare("SELECT permission FROM auth_admin_permissions WHERE account_id = ? ORDER BY permission").bind(target.account_id).all(),
+    db.prepare("SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1").bind(target.account_id).first(),
+  ]);
+  const previousPermissions = (permissionRows.results || []).map((row) => row.permission);
+  const revokedWalletCount = Number(walletCountRow?.active_count || 0);
+  const createdAt = new Date().toISOString();
+  const auditId = hex(bytes(16));
+  const noticeId = hex(bytes(16));
+  const guard = adminHolderGuardParams(context, "admin.roles.revoke");
+  const statements = [
+    db.prepare(
+      "INSERT INTO auth_admin_governance_audit(audit_id,event_type,actor_account_id,target_account_id,reason,created_at,detail_json) " +
+      "SELECT ?,'admin_role_revoked',?,?,?,?,? WHERE EXISTS(" +
+      "SELECT 1 FROM auth_admin_roles r JOIN auth_admin_permissions p ON p.account_id = r.account_id " +
+      "JOIN auth_admin_wallets w ON w.account_id = r.account_id JOIN auth_sessions s ON s.account_id = r.account_id " +
+      "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
+      "AND s.admin_wallet_address = w.address COLLATE NOCASE AND w.active = 1 AND p.permission = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?)"
+    ).bind(auditId, actor.account_id, target.account_id, reason, createdAt,
+      JSON.stringify({ permissionsRevoked: previousPermissions, walletsDisabled: revokedWalletCount }),
+      ...guard, target.account_id),
+    db.prepare(
+      "DELETE FROM auth_admin_permissions WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "UPDATE auth_admin_wallets SET active = 0 WHERE account_id = ? AND active = 1 " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "UPDATE auth_sessions SET admin_wallet_address = NULL,admin_authenticated_at = NULL,admin_expires_at = NULL " +
+      "WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "DELETE FROM auth_admin_roles WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(target.account_id, auditId),
+    db.prepare(
+      "INSERT INTO auth_admin_revocation_notices(notice_id,account_id,reason,created_at) " +
+      "SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_admin_governance_audit WHERE audit_id = ?)"
+    ).bind(noticeId, target.account_id, reason, createdAt, auditId),
+  ];
+  const results = await db.batch(statements);
+  if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[4]?.meta?.changes || 0) !== 1 ||
+      Number(results?.[5]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "Administrator authority changed during revocation. Refresh and verify again.");
+  }
+  return json(200, {
+    revoked: true,
+    targetAccountIdentifier: target.account_identifier,
+    role: "user",
+    revokedWalletCount,
+    revokedPermissions: previousPermissions,
+    message: "Administrator authority, delegated permissions and enrolled administrator wallets have been revoked. The member's ordinary account sessions remain active.",
+  });
+}
+async function acknowledgeAdminRevocationNotice(db, request, payload) {
+  if (Object.keys(payload).length !== 1 || typeof payload.noticeId !== "string" || !/^[a-f0-9]{32}$/i.test(payload.noticeId)) {
+    throw fail(400, "The administrator revocation notice reference is invalid.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in to acknowledge the administrator notice.");
+  const result = await db.prepare(
+    "UPDATE auth_admin_revocation_notices SET acknowledged_at = ? " +
+    "WHERE notice_id = ? AND account_id = ? AND acknowledged_at IS NULL"
+  ).bind(new Date().toISOString(), payload.noticeId.toLowerCase(), account.account_id).run();
+  if (Number(result.meta?.changes || 0) !== 1) {
+    throw fail(404, "That unacknowledged administrator notice could not be found for this account.");
+  }
+  const refreshed = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + cookie(request, SESSION_COOKIE) },
+  }));
+  return json(200, await summary(db, refreshed));
+}
+
 
 function validatePasskeyLabel(value) {
   if (typeof value !== "string") throw fail(400, "Enter a name for this passkey.");
@@ -1130,9 +1606,20 @@ async function api(request, env, config) {
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
+  if (url.pathname === "/api/admin/status" && request.method === "GET") {
+    const account = await activeAccount(db, request);
+    if (!account) throw fail(401, "Sign in before opening administrator services.");
+    const state = await summary(db, account);
+    if (state.adminRoleAssigned !== true) throw fail(403, "Administrator authority has not been assigned to this account.");
+    if (state.adminSessionAuthorized !== true) throw fail(403, "A fresh signature from an active enrolled administrator wallet is required.");
+    return json(200, state);
+  }
   if (request.method === "GET" || request.method === "HEAD") throw fail(404, "The account endpoint does not exist.");
   if (request.method !== "POST") throw fail(405, "The account endpoint requires POST.");
   const payload = await bodyJson(request);
+  if (url.pathname === "/api/admin/roles/grant") return grantAdminRole(db, request, payload);
+  if (url.pathname === "/api/admin/roles/revoke") return revokeAdminRole(db, request, payload);
+  if (url.pathname === "/api/account/administrator-notice/acknowledge") return acknowledgeAdminRevocationNotice(db, request, payload);
   if (url.pathname === "/api/account/security/step-up/options") return issueSecurityStepUp(db, env, request, payload, config);
   if (url.pathname === "/api/account/security/step-up/verify") return verifySecurityStepUp(db, env, request, payload, config);
   if (url.pathname === "/api/account/security/passkeys/add/options") return addPasskeyOptions(db, env, request, payload, config);
@@ -1150,7 +1637,7 @@ async function api(request, env, config) {
   if (url.pathname === "/api/account/logout") return logout(db, request, config);
   if (url.pathname === "/api/account/avatar") return avatar(db, request, payload);
   if (url.pathname === "/api/account/communications/page" || url.pathname === "/api/account/communications/state") return communications(db, request);
-  if (url.pathname.startsWith("/api/admin/")) throw fail(403, "Administrator services are not enabled in the ordinary-user staging qualification.");
+  if (url.pathname.startsWith("/api/admin/")) throw fail(403, "Administrator services require a server-assigned role and a fresh authorized administrator wallet session.");
   throw fail(404, "The requested account endpoint does not exist.");
 }
 async function staticAssets(request, env) {
