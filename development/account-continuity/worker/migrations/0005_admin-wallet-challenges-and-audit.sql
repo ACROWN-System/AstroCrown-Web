@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS auth_admin_wallet_challenges (
   purpose TEXT NOT NULL CHECK (
     purpose IN ('initial-wallet-enrollment','wallet-enrollment','admin-session-step-up')
   ),
+  actor_wallet_address TEXT,
   address TEXT NOT NULL COLLATE NOCASE,
   chain_id INTEGER NOT NULL CHECK (chain_id > 0),
   message TEXT NOT NULL,
