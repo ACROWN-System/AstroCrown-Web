@@ -263,8 +263,26 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
     "each wallet should have a revoke control while another active wallet remains."
   );
 
-  const rootSelector = "[data-admin-wallet-revoke='true'][data-wallet-address='" + rootAccount.address + "']";
-  await trustedClick("#admin-dashboard-content " + rootSelector);
+  const rootSelector = "#admin-dashboard-content [data-admin-wallet-revoke='true'][data-wallet-address='" + rootAccount.address + "']";
+  await evaluate(
+    "window.__adminWalletRevokeClickTrace=[];" +
+    "document.addEventListener('click',event=>{" +
+    "const button=event.target?.closest?.('[data-admin-wallet-revoke=\"true\"]');" +
+    "if(button)window.__adminWalletRevokeClickTrace.push({address:button.dataset.walletAddress,disabled:button.disabled,defaultPrevented:event.defaultPrevented});" +
+    "},true);window.confirm=()=>true;true"
+  );
+  const preRevokeButton = await evaluate(
+    "(() => {const b=document.querySelector(" + JSON.stringify(rootSelector) + ");" +
+    "if(!b)return null;const r=b.getBoundingClientRect();const h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+    "return {disabled:b.disabled,address:b.dataset.walletAddress,chainId:b.dataset.walletChainId," +
+    "hitId:h?.id||'',hitTag:h?.tagName||'',visible:!!(r.width&&r.height)};})()"
+  );
+  assert.ok(preRevokeButton && !preRevokeButton.disabled && preRevokeButton.visible,
+    "the other-wallet revoke control must be interactable: " + JSON.stringify(preRevokeButton));
+  await trustedClick(rootSelector);
+  await waitFor("wallet revoke button click event", async () =>
+    evaluate("window.__adminWalletRevokeClickTrace.length > 0")
+  );
   await waitFor("wallet revocation UI refresh", async () =>
     evaluate(
       "window.location.hash === '#admin' && " +
