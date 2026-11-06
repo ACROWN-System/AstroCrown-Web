@@ -975,15 +975,21 @@
         '</section>';
     }
     var walletRows = registeredWallets.map(function (item) {
+      var revokeButton = registeredWallets.length > 1
+        ? '<button class="account-secondary" type="button" data-admin-wallet-revoke="true" data-wallet-address="' +
+          escapeHtml(item.address || "") + '" data-wallet-chain-id="' +
+          escapeHtml(String(item.chainId)) + '" aria-label="Revoke administrator wallet ' +
+          escapeHtml(item.address || "") + '">Revoke wallet</button>'
+        : '<span class="account-admin-wallet-limit">Keep at least one active administrator wallet.</span>';
       return '<li class="account-admin-wallet-row"><span class="account-wallet-address">' +
         escapeHtml(item.address || "") + '</span><span class="account-admin-wallet-chain">Chain ID ' +
-        escapeHtml(String(item.chainId)) + '</span></li>';
+        escapeHtml(String(item.chainId)) + '</span>' + revokeButton + '</li>';
     }).join("");
     var enrollmentControl = registeredWallets.length < 3
       ? '<button class="account-primary" type="button" id="admin-add-wallet">Add another wallet</button>'
       : '<p class="account-admin-wallet-limit">Three active wallets are registered. The prototype does not permit a fourth wallet.</p>';
     adminDashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development-only Administrator dashboard.</strong> This workspace is separate from the shared User dashboard. The backend verified the assigned role and a wallet signature for a short-lived session. Wallet registration and any explicitly granted account-communication permission are limited prototype operations; publishing, payments and recovery remain disabled.</div>' +
+      '<div class="account-dashboard-notice"><strong>Restricted Administrator dashboard.</strong> This workspace is separate from the shared User dashboard. The backend verified the assigned role and an enrolled-wallet signature for a short-lived session. Only explicitly granted operations are available; publishing, payments and all-wallet-loss recovery remain disabled.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-shield" aria-hidden="true">' + avatarSvg("shield", "account-dashboard-avatar-svg") + '</div>' +
         '<div class="account-dashboard-welcome-copy"><strong>Administrator access verified</strong><span>Backend-authorized · development prototype · no production privileges</span></div>' +
@@ -992,10 +998,10 @@
         '<section class="account-dashboard-card"><h2>Authority</h2><p class="account-dashboard-value">Role: Administrator</p><p>Role assignment is stored by the server and is separate from the wallet signature. A connected wallet alone cannot create this role.</p></section>' +
         '<section class="account-dashboard-card"><h2>Verified wallet</h2><p class="account-dashboard-value account-wallet-address">' + wallet + '</p><p>Only the public address is shown. No private key, seed phrase or transaction is requested by this prototype.</p></section>' +
         '<section class="account-dashboard-card"><h2>Session expiration</h2><p class="account-dashboard-value">' + expires + '</p><p>Administrator step-up expires after ten minutes or when the underlying account session expires, whichever happens first.</p></section>' +
-        '<section class="account-dashboard-card account-admin-wallets-card"><h2>Registered administrator wallets</h2><p>Your local account may register up to three distinct public wallet addresses. A wallet is not added until it signs a separate server-issued enrollment message.</p>' +
+        '<section class="account-dashboard-card account-admin-wallets-card"><h2>Registered administrator wallets</h2><p>This account may register up to three distinct EVM wallet addresses. A wallet is not added until it signs a separate server-issued enrollment message. Revoke a lost or no-longer-authorized wallet below.</p>' +
           '<ul class="account-admin-wallet-list">' + walletRows + '</ul>' +
           enrollmentControl +
-          '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this dashboard. A lost-wallet recovery workflow is not implemented.</p>' +
+          '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this dashboard. Revoked wallet addresses cannot be enrolled again. Losing every enrolled wallet requires a separately authorized recovery process that is not yet implemented.</p>' +
           '<p id="admin-wallet-enrollment-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p></section>' +
         '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, account-wide management, payments and all-wallet-loss recovery are not available in this console. Administrator appointment and revocation are shown separately only when the server confirms their corresponding permissions.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         roleManagementCard +
@@ -1614,6 +1620,40 @@
   adminDashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.dataset.adminWalletRevoke === "true") {
+      var walletAddress = button.dataset.walletAddress || "";
+      var walletChainId = Number(button.dataset.walletChainId);
+      if (!/^0x[0-9a-f]{40}$/i.test(walletAddress) ||
+          !Number.isSafeInteger(walletChainId) || walletChainId <= 0) {
+        return;
+      }
+      if (!window.confirm(
+        "Revoke this administrator wallet? It will no longer authorize Administrator access. " +
+        "The ordinary account remains active. You must keep at least one other enrolled wallet."
+      )) return;
+      setBusy(true);
+      try {
+        var walletRevocation = await requestJson("/api/admin/wallet-revoke", {
+          address: walletAddress,
+          chainId: walletChainId
+        });
+        accountState = walletRevocation;
+        syncAccountButton();
+        if (walletRevocation.adminSessionAuthorized === true) {
+          var remainingWallets = await requestJson("/api/admin/wallet-options");
+          renderAdminDashboard(walletRevocation, remainingWallets);
+        } else {
+          window.location.hash = "account";
+        }
+      } catch (error) {
+        var walletFeedback = document.getElementById("admin-wallet-enrollment-feedback");
+        if (walletFeedback) walletFeedback.textContent =
+          error.message || "The administrator wallet could not be revoked.";
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (button.id === "admin-communication-send") {
       var recipientInput = document.getElementById("admin-communication-recipient");
       var sectionInput = document.getElementById("admin-communication-section");
