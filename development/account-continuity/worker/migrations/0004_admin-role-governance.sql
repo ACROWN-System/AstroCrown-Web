@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS auth_admin_roles (
 CREATE TABLE IF NOT EXISTS auth_admin_permissions (
   account_id TEXT NOT NULL REFERENCES auth_admin_roles(account_id) ON DELETE CASCADE,
   permission TEXT NOT NULL CHECK (
-    permission IN ('admin.roles.grant','admin.roles.revoke','admin.messages.send')
+    permission IN ('admin.roles.grant','admin.roles.revoke')
   ),
   can_delegate INTEGER NOT NULL DEFAULT 0 CHECK (can_delegate IN (0,1)),
   granted_by_account_id TEXT REFERENCES auth_accounts(account_id),
