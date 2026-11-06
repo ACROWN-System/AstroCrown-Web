@@ -1938,6 +1938,10 @@ export {
   recoveryKey as validateRecoveryKey,
   validateAdminReason,
   validateAdminPermissions,
+  normalizeEvmAddress,
+  validateEvmChainId,
+  createAdminSiweMessage,
+  verifyAdminSiweSignature,
   diagnostics,
 };
 export default {
