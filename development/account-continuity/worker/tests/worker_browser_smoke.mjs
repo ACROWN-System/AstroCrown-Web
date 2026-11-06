@@ -216,12 +216,23 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
   await evaluate(
     "window.__acrownWalletUiTrace=[];" +
     "document.getElementById('admin-dashboard-content').addEventListener('click',event=>{" +
-    "window.__acrownWalletUiTrace.push({type:'click',id:event.target?.id||'',tag:event.target?.tagName||''});" +
+    "const button=event.target?.closest?.('button');" +
+    "window.__acrownWalletUiTrace.push({type:'click',id:event.target?.id||'',tag:event.target?.tagName||''," +
+    "closestButtonId:button?.id||'',closestButtonDisabled:button?.disabled??null," +
+    "insideAdmin:!!button&&document.getElementById('admin-dashboard-content').contains(button)});" +
     "},true);" +
     "document.addEventListener('astrocrown:request-admin-wallet-enrollment',()=>{" +
     "window.__acrownWalletUiTrace.push({type:'request-admin-wallet-enrollment'});" +
     "});true"
   );
+  const addWalletButtonState = await evaluate(
+    "(() => {const b=document.getElementById('admin-add-wallet');" +
+    "const r=b?.getBoundingClientRect();const hit=r&&document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);" +
+    "return {exists:!!b,disabled:!!b?.disabled,outerHTML:b?.outerHTML||'',tag:hit?.tagName||'',hitId:hit?.id||''," +
+    "closestButtonId:hit?.closest?.('button')?.id||'',insideAdmin:!!b&&document.getElementById('admin-dashboard-content').contains(b)};})()"
+  );
+  assert.ok(addWalletButtonState.exists && !addWalletButtonState.disabled && addWalletButtonState.insideAdmin,
+    "Add another wallet must be an enabled Admin dashboard control: " + JSON.stringify(addWalletButtonState));
   await trustedClick("#admin-add-wallet");
   const enrollmentUiTrace = await waitFor("administrator wallet enrollment button trace", async () =>
     evaluate("window.__acrownWalletUiTrace.length ? window.__acrownWalletUiTrace : null")
