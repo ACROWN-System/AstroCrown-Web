@@ -234,7 +234,30 @@ try {
     "; actual active ML-DSA credentials: " + account.postQuantumPasskeyCount);
   assert.equal(account.email, null);
   assert.equal(account.role, "user");
+  assert.equal(account.adminRoleAssigned, false);
+  assert.equal(account.adminSessionAuthorized, false);
+  assert.equal(account.adminPermissions.length, 0);
   assert.equal(account.recoveryKeyAvailable, true);
+
+  const ordinaryRoleGrantAttempt = await evaluate(
+    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin'," +
+    "headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(identifier) +
+    ",reason:'Attempted ordinary-account self promotion',permissions:['admin.roles.grant']})})" +
+    ".then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(ordinaryRoleGrantAttempt.status, 403,
+    "an ordinary passkey-authenticated member must not grant an administrator role, including to themselves.");
+  const ordinaryAdminDashboardAttempt = await evaluate(
+    "fetch('/api/admin/status',{credentials:'same-origin',cache:'no-store'})" +
+    ".then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(ordinaryAdminDashboardAttempt.status, 403,
+    "an ordinary account must not enter the Administrator dashboard by changing client state or supplying a role.");
+  account = await status();
+  assert.equal(account.role, "user");
+  assert.equal(account.adminRoleAssigned, false);
+  assert.equal(account.admin, false);
 
 
   await trustedClick("#account-recovery-key-saved");
