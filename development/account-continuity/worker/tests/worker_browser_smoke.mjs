@@ -69,6 +69,12 @@ async function evaluate(expression) {
 }
 
 async function trustedClick(selector) {
+  await waitFor("visible click target " + selector, () => evaluate(
+    "(() => { const element=document.querySelector(" + JSON.stringify(selector) + ");" +
+    " if(!element || element.disabled) return false;" +
+    " const rect=element.getBoundingClientRect(), style=getComputedStyle(element);" +
+    " return rect.width>0 && rect.height>0 && style.display!=='none' && style.visibility!=='hidden'; })()"
+  ));
   const point = await evaluate(
     "(async () => { const element = document.querySelector(" + JSON.stringify(selector) + ");" +
     " if (!element) throw new Error('Missing click target: ' + " + JSON.stringify(selector) + ");" +
@@ -937,6 +943,27 @@ try {
   await trustedClick("#open-account-hub");
   await waitFor("ordinary User dashboard", () =>
     evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+
+  // A returning member who reloads the root URL with a valid session must
+  // resume at the User dashboard instead of seeing the public homepage.
+  await evaluate("history.replaceState(null,'',location.pathname+location.search)");
+  await cdp("Page.reload", { ignoreCache: true });
+  await waitFor("authenticated root homepage reload", () =>
+    evaluate("document.readyState === 'complete' && Boolean(document.getElementById('open-account-dialog'))"));
+  const returningNoticeOpen = await evaluate(
+    "Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)"
+  );
+  if (returningNoticeOpen) {
+    if (!(await evaluate("document.getElementById('development-notice-acknowledged').checked"))) {
+      await trustedClick("#development-notice-acknowledged");
+    }
+    await trustedClick("#development-notice-continue");
+    await waitFor("returning-member development notice acknowledgement", () =>
+      !evaluate("document.getElementById('development-notice').open"));
+  }
+  await waitFor("authenticated root reload resumes at User dashboard", () =>
+    evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 30000);
+
   const stagingDashboard = await evaluate("document.getElementById('account-dashboard').innerText");
   assert.match(stagingDashboard, /Alerts & Messages[\s\S]*Disabled in this staging qualification/);
   assert.equal(await evaluate("Boolean(document.getElementById('open-account-communications'))"), false,
