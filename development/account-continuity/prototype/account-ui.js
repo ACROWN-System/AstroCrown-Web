@@ -703,25 +703,32 @@
     if (accountState.adminRoleAssigned === true) {
       var walletCount = Number(accountState.adminWalletCount || 0);
       var adminSessionVerified = accountState.adminSessionAuthorized === true;
+      var adminWalletRecoveryRequired = accountState.adminWalletRecoveryRequired === true;
       var adminAccessStatus = adminSessionVerified
         ? "Wallet verified for this session"
-        : walletCount > 0
-          ? "Wallet verification required"
-          : "No administrator wallet enrolled";
+        : adminWalletRecoveryRequired
+          ? "Owner-authorized wallet recovery required"
+          : walletCount > 0
+            ? "Wallet verification required"
+            : "No administrator wallet enrolled";
       var adminAccessDescription = adminSessionVerified
         ? "The server currently confirms a wallet-verified administrator session. Continue through the administrator access dialog to open the separate administrator dashboard."
-        : walletCount > 0
-          ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
-            escapeHtml(String(walletCount)) +
-            " registered administrator wallets, then review a one-time signature request. It is not a blockchain transaction."
-          : "This existing account has been granted the administrator role, but has not enrolled an administrator wallet yet. The user-selected backup wallet and administrator wallet remain separate purposes.";
+        : adminWalletRecoveryRequired
+          ? "All previously enrolled administrator wallets are now inactive. Your ordinary passkey account and User dashboard remain available, but signing in with a passkey or connecting a new wallet cannot restore administrator access. A separate owner-authorized recovery review is required; this staging interface does not offer a self-service reset."
+          : walletCount > 0
+            ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
+              escapeHtml(String(walletCount)) +
+              " registered administrator wallets, then review a one-time signature request. It is not a blockchain transaction."
+            : "This existing account has been granted the administrator role, but has not enrolled an administrator wallet yet. The user-selected backup wallet and administrator wallet remain separate purposes.";
       adminCard =
         '<section class="account-dashboard-card account-admin-access-card">' +
           '<h2>Administrator access</h2>' +
           '<span class="account-dashboard-status">' + escapeHtml(adminAccessStatus) + '</span>' +
           '<p>' + adminAccessDescription + '</p>' +
           '<div class="account-admin-access-actions">' +
-            '<button class="account-primary" type="button" id="account-admin-wallet-access">Open administrator dashboard</button>' +
+            '<button class="account-primary" type="button" id="account-admin-wallet-access"' +
+              (adminWalletRecoveryRequired ? ' disabled title="Owner-authorized wallet recovery is required before administrator access can resume."' : '') +
+              '>' + (adminWalletRecoveryRequired ? 'Administrator recovery required' : 'Open administrator dashboard') + '</button>' +
             (adminSessionVerified ? '<button class="account-secondary" type="button" id="end-admin-access">End admin access</button>' : '') +
           '</div>' +
           '<p id="account-admin-access-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
