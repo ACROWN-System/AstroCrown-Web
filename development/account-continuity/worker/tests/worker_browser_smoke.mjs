@@ -462,7 +462,6 @@ try {
   assert.equal(account.admin, false);
 
 
-  await testAdminGovernanceFixture(identifier);
   await trustedClick("#account-recovery-key-saved");
   await waitFor("offline recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));
   await trustedClick("#open-account-hub");
@@ -476,6 +475,8 @@ try {
     "the out-of-scope case portal must not be linked from the staging homepage");
   assert.equal(await evaluate("Boolean(document.querySelector('.account-admin-access-card'))"), false,
     "an ordinary user must not see an administrator entry");
+
+  await testAdminGovernanceFixture(identifier);
 
   const firstCredentials = await cdp("WebAuthn.getCredentials", { authenticatorId });
   assert.equal(firstCredentials.credentials.length, 1, "registration must create one resident credential.");
