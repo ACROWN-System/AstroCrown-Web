@@ -460,8 +460,19 @@
     accountState = result;
     successKind = kind;
     recoveryKeyAcknowledged = false;
-    mode = "success";
     syncAccountButton();
+
+    // A returning member's first authenticated page is the shared User
+    // dashboard. Only new registration/recovery pauses for the one-time
+    // offline recovery-key acknowledgement below.
+    if (kind === "signin") {
+      mode = "signin";
+      if (dialog.open) closeDialog();
+      navigateToAccount();
+      return;
+    }
+
+    mode = "success";
     render();
     var successAction = document.getElementById("open-account-hub");
     if (successAction) successAction.focus();
