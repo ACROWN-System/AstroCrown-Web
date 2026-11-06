@@ -33,9 +33,25 @@ The User dashboard exposes these controls only when the authenticated backend ex
 
 **Maturity boundary:** this is only a GitHub-hosted local Worker/D1 qualification with disposable synthetic data and virtual authenticators. It is not a remote Cloudflare deployment, cross-browser/physical-authenticator qualification, independent penetration test, certification, or approval for real users. The staging account remains synthetic-test-only.
 
+## Administrator role governance — RBAC core qualified locally; wallet proof not yet implemented
+
+The Worker/D1 port now has a separate server-owned administrator role registry, explicit permission records, active EVM-wallet registry storage, an append-only governance audit table, and target-owned revocation notices. Account identity remains independent of roles and wallet addresses.
+
+The role APIs are:
+- `POST /api/admin/roles/grant` — requires a current wallet-verified session with `admin.roles.grant`
+- `POST /api/admin/roles/revoke` — requires a current wallet-verified session with the separate `admin.roles.revoke`
+- `GET /api/admin/status` — requires a server-assigned role and current enrolled-wallet step-up
+- `POST /api/account/administrator-notice/acknowledge` — acknowledges only the signed-in account's own revocation notice
+
+Permission assignment is allowlisted. A grantor can delegate only permissions explicitly marked delegable; newly assigned permissions are non-delegable by default. Self-grant, duplicate appointment, unauthorized escalation and self-revocation are rejected. Role revocation disables administrator wallets and session step-up, removes permissions and role, preserves ordinary account sessions, and creates a target-only notice. Governance audit rows have database triggers preventing UPDATE and DELETE.
+
+**Qualification evidence:** [Account Staging Worker Qualification #198](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42147751078) passed the local D1 role-governance integration sequence. The test seeded a synthetic already-wallet-verified administrator session directly into the disposable Wrangler local D1 database to isolate RBAC. It did not test real wallet signature verification or create a public bootstrap mechanism.
+
+**Maturity boundary:** real EVM/SIWE wallet enrollment, wallet challenge verification and administrator session step-up are the next Block C. Initial administrator bootstrap/recovery remains a separate owner-authorized design and implementation gate. These endpoints remain inaccessible to ordinary users; there is no public self-appointment route. No remote D1, Cloudflare deployment or real-user administrative service is enabled.
+
 ## Deliberate limits
 
-- Administrator role provisioning, EVM/SIWE wallet enrollment, privileged dashboard APIs and administrator actions are not enabled. This Worker creates ordinary user accounts only.
+- Real EVM/SIWE enrollment and step-up APIs, the authorized first-administrator bootstrap, privileged dashboard UI and administrator communications actions are not yet implemented in this Worker. Until Block C and bootstrap are qualified, RBAC operations cannot be used by an ordinary live member account.
 - In-app communications return an empty/disabled staging result. No email, SMS or identity provider is used.
 - Feedback/case-portal entry points are replaced with an explicit not-enabled note in the staging asset build; no non-working case API is exposed.
 - ML-DSA capability is not credential evidence. A real authenticator must register an ML-DSA credential, the server must store its actual COSE algorithm, and a later assertion must verify before the credential is described as post-quantum.
