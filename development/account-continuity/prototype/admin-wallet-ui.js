@@ -469,7 +469,7 @@
           verified.adminSessionAuthorized !== true || verified.admin !== true) {
         throw new Error("The server did not authorize the administrator session. The dashboard remains closed.");
       }
-      feedback("Administrator wallet verification succeeded. Opening the read-only development console…");
+      feedback("Administrator wallet verification succeeded. Opening the separate Administrator dashboard…");
       window.location.hash = "admin";
     } catch (error) {
       feedback(error && typeof error.message === "string"
