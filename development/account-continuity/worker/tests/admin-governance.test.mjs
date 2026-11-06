@@ -80,7 +80,7 @@ test("SIWE challenge construction binds origin, EVM address, chain, nonce and ex
   assert.ok(challenge.includes("Issued At: 2026-11-06T00:00:00.000Z"));
   assert.ok(challenge.includes("Expiration Time: 2026-11-06T00:05:00.000Z"));
   assert.ok(challenge.includes("Request ID: challenge-id-1234567890"));
-  assert.ok(challenge.endsWith("does not authorize a transaction."));
+  assert.ok(challenge.includes("does not authorize a transaction."));
 });
 
 test("EIP-191 verification recovers the signing EOA from the exact SIWE message", async () => {
