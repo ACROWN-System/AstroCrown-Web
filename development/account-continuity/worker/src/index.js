@@ -188,7 +188,7 @@ async function activeAccount(db, request) {
 }
 async function summary(db, account) {
   const now = Math.floor(Date.now() / 1000);
-  const [counts, algorithmRows, role, permissions, wallets, notice] = await Promise.all([
+  const [counts, algorithmRows, role, permissions, wallets, walletHistory, notice] = await Promise.all([
     db.prepare(
       "SELECT " +
       "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) AS passkey_count, " +
@@ -209,6 +209,9 @@ async function summary(db, account) {
       "SELECT address,chain_id FROM auth_admin_wallets WHERE account_id = ? AND active = 1 ORDER BY created_at,address"
     ).bind(account.account_id).all(),
     db.prepare(
+      "SELECT COUNT(*) AS history_count FROM auth_admin_wallets WHERE account_id = ?"
+    ).bind(account.account_id).first(),
+    db.prepare(
       "SELECT notice_id,reason,created_at FROM auth_admin_revocation_notices " +
       "WHERE account_id = ? AND acknowledged_at IS NULL ORDER BY created_at DESC,notice_id DESC LIMIT 1"
     ).bind(account.account_id).first(),
@@ -220,6 +223,10 @@ async function summary(db, account) {
     currentWallet && equalConstantTime(String(wallet.address || "").toLowerCase(), currentWallet.toLowerCase())
   );
   const roleAssigned = Boolean(role);
+  const adminWalletHistoryCount = Number(walletHistory?.history_count || 0);
+  const adminWalletRecoveryRequired = Boolean(
+    roleAssigned && activeWallets.length === 0 && adminWalletHistoryCount > 0
+  );
   const adminWalletAuthenticated = Boolean(
     roleAssigned && matchedWallet &&
     Number(account.admin_authenticated_at || 0) > 0 &&
@@ -262,6 +269,8 @@ async function summary(db, account) {
     adminPermissions,
     adminDelegablePermissions,
     adminWalletCount: activeWallets.length,
+    adminWalletEverEnrolled: adminWalletHistoryCount > 0,
+    adminWalletRecoveryRequired,
     adminWalletAuthenticated,
     adminSessionAuthorized: adminWalletAuthenticated,
     admin: adminWalletAuthenticated,
@@ -435,10 +444,16 @@ async function issueAdminWalletEnrollmentChallenge(db, env, request, payload, co
   const address = normalizeEvmAddress(payload.address);
   const chainId = validateEvmChainId(payload.chainId);
   const countRow = await db.prepare(
-    "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
-  ).bind(account.account_id).first();
+    "SELECT COUNT(*) AS history_count, " +
+    "(SELECT COUNT(*) FROM auth_admin_wallets WHERE account_id = ? AND active = 1) AS active_count " +
+    "FROM auth_admin_wallets WHERE account_id = ?"
+  ).bind(account.account_id, account.account_id).first();
   const activeCount = Number(countRow?.active_count || 0);
+  const historyCount = Number(countRow?.history_count || 0);
   if (activeCount >= 3) throw fail(409, "This administrator account already has three active wallets.");
+  if (historyCount > 0 && activeCount === 0) {
+    throw fail(409, "All previously enrolled administrator wallets are inactive. A separate owner-authorized recovery review is required; ordinary passkey sign-in cannot register a replacement wallet.");
+  }
   const existing = await db.prepare(
     "SELECT account_id,active FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE"
   ).bind(address).first();
@@ -448,7 +463,7 @@ async function issueAdminWalletEnrollmentChallenge(db, env, request, payload, co
   }
   let purpose = "initial-wallet-enrollment";
   let actorWalletAddress = null;
-  if (activeCount > 0) {
+  if (historyCount > 0 && activeCount > 0) {
     const stepUp = await requireFreshAdminWalletSession(db, account, request);
     purpose = "wallet-enrollment";
     actorWalletAddress = stepUp.walletAddress;
@@ -510,11 +525,15 @@ async function verifyAdminWalletEnrollment(db, env, request, payload) {
   }
   const address = normalizeEvmAddress(challenge.address);
   const currentCount = await db.prepare(
-    "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
-  ).bind(account.account_id).first();
+    "SELECT COUNT(*) AS history_count, " +
+    "(SELECT COUNT(*) FROM auth_admin_wallets WHERE account_id = ? AND active = 1) AS active_count " +
+    "FROM auth_admin_wallets WHERE account_id = ?"
+  ).bind(account.account_id, account.account_id).first();
   if (challenge.purpose === "initial-wallet-enrollment") {
-    if (Number(currentCount?.active_count || 0) !== 0 || challenge.actor_wallet_address !== null) {
-      throw fail(409, "Initial administrator wallet enrollment is no longer available. Refresh wallet status.");
+    if (Number(currentCount?.active_count || 0) !== 0 ||
+        Number(currentCount?.history_count || 0) !== 0 ||
+        challenge.actor_wallet_address !== null) {
+      throw fail(409, "Initial administrator wallet enrollment is only available before any wallet has ever been registered. A separate owner-authorized recovery review is required.");
     }
   } else {
     const current = await requireFreshAdminWalletSession(db, account, request);
@@ -541,7 +560,7 @@ async function verifyAdminWalletEnrollment(db, env, request, payload) {
     "AND EXISTS(SELECT 1 FROM auth_sessions s WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ?) " +
     "AND EXISTS(SELECT 1 FROM auth_admin_roles r WHERE r.account_id = ?) " +
     "AND ((purpose = 'initial-wallet-enrollment' AND NOT EXISTS(" +
-    "SELECT 1 FROM auth_admin_wallets w WHERE w.account_id = ? AND w.active = 1)) " +
+    "SELECT 1 FROM auth_admin_wallets w WHERE w.account_id = ?)) " +
     "OR (purpose = 'wallet-enrollment' AND actor_wallet_address IS NOT NULL AND EXISTS(" +
     "SELECT 1 FROM auth_sessions s JOIN auth_admin_wallets w ON w.account_id = s.account_id " +
     "WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ? AND s.admin_expires_at > ? " +
