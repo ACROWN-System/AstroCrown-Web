@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { privateKeyToAccount } from "viem/accounts";
 import { createServer } from "node:net";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -116,19 +117,71 @@ async function setBrowserAccountSession(token) {
   });
   if (result.success === false) throw new Error("Chrome refused the local test account session cookie.");
 }
+async function postWorkerJson(path, payload) {
+  const body = JSON.stringify(payload);
+  return evaluate(
+    "fetch(" + JSON.stringify(path) + ",{method:'POST',credentials:'same-origin'," +
+    "headers:{'Content-Type':'application/json'},body:" + JSON.stringify(body) + "})" +
+    ".then(async r=>({status:r.status,body:await r.json()}))"
+  );
+}
+async function getWorkerJson(path) {
+  return evaluate(
+    "fetch(" + JSON.stringify(path) + ",{credentials:'same-origin',cache:'no-store'})" +
+    ".then(async r=>({status:r.status,body:await r.json()}))"
+  );
+}
+async function signSiwe(account, challenge) {
+  assert.equal(challenge.status, 200, JSON.stringify(challenge.body));
+  assert.equal(challenge.body.transactionAuthorized, false);
+  assert.match(challenge.body.message, /wants you to sign in with your Ethereum account:/);
+  assert.ok(challenge.body.message.includes("Version: 1"));
+  assert.ok(challenge.body.message.includes("Chain ID: 1"));
+  assert.ok(challenge.body.message.includes("Nonce: "));
+  assert.ok(challenge.body.message.includes("Expiration Time: "));
+  assert.ok(challenge.body.message.includes("does not authorize a transaction."));
+  const signature = await account.signMessage({ message: challenge.body.message });
+  return {
+    challengeId: challenge.body.challengeId,
+    message: challenge.body.message,
+    signature,
+  };
+}
+async function stepUpAdminWallet(account) {
+  const challenge = await postWorkerJson("/api/admin/wallet-challenge", {
+    address: account.address,
+    chainId: 1,
+  });
+  assert.equal(challenge.status, 200, JSON.stringify(challenge.body));
+  assert.equal(challenge.body.purpose, "administrator-session-step-up");
+  const proof = await signSiwe(account, challenge);
+  return postWorkerJson("/api/admin/wallet-verify", proof);
+}
+async function enrollAdminWallet(account) {
+  const challenge = await postWorkerJson("/api/admin/wallet-enrollment-challenge", {
+    address: account.address,
+    chainId: 1,
+  });
+  assert.equal(challenge.status, 200, JSON.stringify(challenge.body));
+  assert.equal(challenge.body.purpose, "administrator-wallet-enrollment");
+  const proof = await signSiwe(account, challenge);
+  return postWorkerJson("/api/admin/wallet-enrollment-verify", proof);
+}
 async function testAdminGovernanceFixture(accountIdentifier) {
-  // Local-only test fixture: seed an already-verified wallet step-up into the
-  // ephemeral Wrangler D1 database. This tests RBAC independently from the
-  // separate Block C SIWE verification; no fixture endpoint exists in Worker.
+  // Local-only fixture: seed the first administrator ROLE and its separately
+  // delegable permissions. Real EIP-4361 wallet enrollment and EIP-191
+  // signature recovery then run through the Worker API below. Private keys
+  // here are deterministic test vectors only and never enter Worker config.
   const cookies = await cdp("Network.getCookies", { urls: [baseUrl] });
   const rootCookie = (cookies.cookies || []).find(item => item.name === "acrown_account_session" && item.value);
   assert.ok(rootCookie, "the initial test account needs an active ordinary session.");
   const rootToken = rootCookie.value;
   const rootHash = createHash("sha256").update(rootToken).digest("base64url");
-  const rootWallet = "0x" + randomBytes(20).toString("hex");
-  const targetWallet = "0x" + randomBytes(20).toString("hex");
-  const rootWalletId = randomUUID();
-  const targetWalletId = randomUUID();
+  const rootAccount = privateKeyToAccount("0x" + "11".repeat(32));
+  const secondWalletAccount = privateKeyToAccount("0x" + "22".repeat(32));
+  const thirdWalletAccount = privateKeyToAccount("0x" + "33".repeat(32));
+  const targetWalletAccount = privateKeyToAccount("0x" + "44".repeat(32));
+  const wrongSigner = privateKeyToAccount("0x" + "55".repeat(32));
   const targetAccountId = "fixture-admin-target-" + randomUUID();
   const successorAccountId = "fixture-admin-successor-" + randomUUID();
   const targetIdentifier = "AC-" + randomBytes(5).toString("hex").toUpperCase();
@@ -149,13 +202,6 @@ async function testAdminGovernanceFixture(accountIdentifier) {
     "INSERT INTO auth_admin_permissions(account_id,permission,can_delegate,granted_by_account_id,reason,created_at) " +
       "SELECT account_id,'admin.roles.revoke',1,NULL,'hosted local test fixture'," + sqlLiteral(createdAt) +
       " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
-    "INSERT INTO auth_admin_wallets(wallet_id,account_id,address,chain_id,created_at,active,provisioning_source) " +
-      "SELECT " + sqlLiteral(rootWalletId) + ",account_id," + sqlLiteral(rootWallet) + ",1," +
-      sqlLiteral(createdAt) + ",1,'hosted-test-fixture' FROM auth_accounts WHERE account_identifier=" +
-      sqlLiteral(accountIdentifier) + ";",
-    "UPDATE auth_sessions SET admin_wallet_address=" + sqlLiteral(rootWallet) +
-      ",admin_authenticated_at=" + now + ",admin_expires_at=" + (now + 600) +
-      " WHERE token_hash=" + sqlLiteral(rootHash) + ";",
     "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
       [targetAccountId,targetIdentifier,targetHandle,createdAt,"person","","development-terms-2026-10-31-v0.3",createdAt,"user"].map(sqlLiteral).join(",") + ");",
     "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
@@ -163,87 +209,237 @@ async function testAdminGovernanceFixture(accountIdentifier) {
     "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
       [targetHash,targetAccountId,randomBytes(16).toString("hex"),null,now,now+1800].map(sqlLiteral).join(",") + ");",
   ].join("\n");
-  executeLocalD1Fixture(sql, "Seed local administrator governance fixture");
+  executeLocalD1Fixture(sql, "Seed local administrator role fixture");
 
   let rootStatus = await status();
   assert.equal(rootStatus.role, "admin");
   assert.equal(rootStatus.adminRoleAssigned, true);
-  assert.equal(rootStatus.adminSessionAuthorized, true);
+  assert.equal(rootStatus.adminSessionAuthorized, false);
   assert.deepEqual(rootStatus.adminPermissions, ["admin.roles.grant", "admin.roles.revoke"]);
   assert.deepEqual(rootStatus.adminDelegablePermissions, ["admin.roles.grant", "admin.roles.revoke"]);
-  const adminStatus = await evaluate(
-    "fetch('/api/admin/status',{credentials:'same-origin'}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
-  assert.equal(adminStatus.status, 200);
+  const noStepUp = await getWorkerJson("/api/admin/status");
+  assert.equal(noStepUp.status, 403, "role assignment alone must not authorize the Administrator dashboard.");
 
-  const selfGrant = await evaluate(
-    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(accountIdentifier) +
-    ",reason:'Prevent self appointment',permissions:[]})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const emptyWallets = await getWorkerJson("/api/admin/wallet-options");
+  assert.equal(emptyWallets.status, 200);
+  assert.deepEqual(emptyWallets.body.wallets, []);
+  assert.equal(emptyWallets.body.maxWallets, 3);
+
+  // Invalid EIP-191 signature consumes the enrollment challenge. A later
+  // correct signature against the same challenge must be rejected as replay.
+  const invalidEnrollmentChallenge = await postWorkerJson("/api/admin/wallet-enrollment-challenge", {
+    address: rootAccount.address,
+    chainId: 1,
+  });
+  assert.equal(invalidEnrollmentChallenge.status, 200);
+  const invalidEnrollmentSignature = await wrongSigner.signMessage({
+    message: invalidEnrollmentChallenge.body.message,
+  });
+  const invalidEnrollment = await postWorkerJson("/api/admin/wallet-enrollment-verify", {
+    challengeId: invalidEnrollmentChallenge.body.challengeId,
+    message: invalidEnrollmentChallenge.body.message,
+    signature: invalidEnrollmentSignature,
+  });
+  assert.equal(invalidEnrollment.status, 401, "a signature from another EOA must not enroll the proposed wallet.");
+  const replayedEnrollmentSignature = await rootAccount.signMessage({
+    message: invalidEnrollmentChallenge.body.message,
+  });
+  const replayedEnrollment = await postWorkerJson("/api/admin/wallet-enrollment-verify", {
+    challengeId: invalidEnrollmentChallenge.body.challengeId,
+    message: invalidEnrollmentChallenge.body.message,
+    signature: replayedEnrollmentSignature,
+  });
+  assert.equal(replayedEnrollment.status, 401, "a failed signature must consume its one-use SIWE enrollment challenge.");
+
+  const enrolledRoot = await enrollAdminWallet(rootAccount);
+  assert.equal(enrolledRoot.status, 200, JSON.stringify(enrolledRoot.body));
+  assert.equal(enrolledRoot.body.adminRoleAssigned, true);
+  assert.equal(enrolledRoot.body.adminWalletCount, 1);
+  assert.equal(enrolledRoot.body.adminWalletAuthenticated, false);
+  assert.equal(enrolledRoot.body.adminSessionAuthorized, false);
+  assert.equal(enrolledRoot.body.transactionAuthorized, false);
+  assert.equal(enrolledRoot.body.walletEnrolledAddress.toLowerCase(), rootAccount.address.toLowerCase());
+
+  const duplicateRootWallet = await postWorkerJson("/api/admin/wallet-enrollment-challenge", {
+    address: rootAccount.address,
+    chainId: 1,
+  });
+  assert.equal(duplicateRootWallet.status, 409, "an already enrolled wallet cannot be enrolled again.");
+
+  // Enrollment does not grant admin access. A separate signature-purpose
+  // challenge is required to create a ten-minute administrator session.
+  const wrongStepUpChallenge = await postWorkerJson("/api/admin/wallet-challenge", {
+    address: rootAccount.address,
+    chainId: 1,
+  });
+  assert.equal(wrongStepUpChallenge.status, 200);
+  const wrongStepUpSignature = await wrongSigner.signMessage({
+    message: wrongStepUpChallenge.body.message,
+  });
+  const wrongStepUp = await postWorkerJson("/api/admin/wallet-verify", {
+    challengeId: wrongStepUpChallenge.body.challengeId,
+    message: wrongStepUpChallenge.body.message,
+    signature: wrongStepUpSignature,
+  });
+  assert.equal(wrongStepUp.status, 401);
+  const replayedStepUpSignature = await rootAccount.signMessage({
+    message: wrongStepUpChallenge.body.message,
+  });
+  const replayedStepUp = await postWorkerJson("/api/admin/wallet-verify", {
+    challengeId: wrongStepUpChallenge.body.challengeId,
+    message: wrongStepUpChallenge.body.message,
+    signature: replayedStepUpSignature,
+  });
+  assert.equal(replayedStepUp.status, 401, "a failed signature must consume its one-use session step-up challenge.");
+
+  const rootStepUp = await stepUpAdminWallet(rootAccount);
+  assert.equal(rootStepUp.status, 200, JSON.stringify(rootStepUp.body));
+  assert.equal(rootStepUp.body.adminSessionAuthorized, true);
+  assert.equal(rootStepUp.body.adminWalletAuthenticated, true);
+  assert.equal(rootStepUp.body.adminWalletAddress.toLowerCase(), rootAccount.address.toLowerCase());
+  assert.ok(Date.parse(rootStepUp.body.adminSessionExpiresAt) <= Date.now() + 610000,
+    "administrator step-up must not exceed ten minutes.");
+  assert.equal((await getWorkerJson("/api/admin/status")).status, 200);
+
+  // Add a second independent EOA while the first wallet has an active
+  // administrator step-up. Enrollment invalidates the old admin step-up.
+  const enrolledSecond = await enrollAdminWallet(secondWalletAccount);
+  assert.equal(enrolledSecond.status, 200, JSON.stringify(enrolledSecond.body));
+  assert.equal(enrolledSecond.body.adminWalletCount, 2);
+  assert.equal(enrolledSecond.body.adminSessionAuthorized, false);
+  assert.equal((await postWorkerJson("/api/admin/wallet-enrollment-challenge", {
+    address: thirdWalletAccount.address,
+    chainId: 1,
+  })).status, 403, "additional wallet enrollment requires another fresh signature after inventory changes.");
+
+  const secondStepUp = await stepUpAdminWallet(secondWalletAccount);
+  assert.equal(secondStepUp.status, 200, JSON.stringify(secondStepUp.body));
+  assert.equal(secondStepUp.body.adminSessionAuthorized, true);
+  const enrolledThird = await enrollAdminWallet(thirdWalletAccount);
+  assert.equal(enrolledThird.status, 200, JSON.stringify(enrolledThird.body));
+  assert.equal(enrolledThird.body.adminWalletCount, 3);
+  assert.equal(enrolledThird.body.adminSessionAuthorized, false);
+
+  const fullWalletRegistry = await getWorkerJson("/api/admin/wallet-options");
+  assert.equal(fullWalletRegistry.status, 200);
+  assert.equal(fullWalletRegistry.body.wallets.length, 3);
+  assert.equal(fullWalletRegistry.body.maxWallets, 3);
+  const stepUpThird = await stepUpAdminWallet(thirdWalletAccount);
+  assert.equal(stepUpThird.status, 200, JSON.stringify(stepUpThird.body));
+
+  const fourthWalletLimit = await postWorkerJson("/api/admin/wallet-enrollment-challenge", {
+    address: wrongSigner.address,
+    chainId: 1,
+  });
+  assert.equal(fourthWalletLimit.status, 409, "the fourth active administrator wallet must be refused.");
+
+  const revokedSecondWallet = await postWorkerJson("/api/admin/wallet-revoke", {
+    address: secondWalletAccount.address,
+    chainId: 1,
+  });
+  assert.equal(revokedSecondWallet.status, 200, JSON.stringify(revokedSecondWallet.body));
+  assert.equal(revokedSecondWallet.body.adminWalletCount, 2);
+  assert.equal(revokedSecondWallet.body.adminSessionAuthorized, true,
+    "revoking a different wallet must preserve the current wallet-verified administrator session.");
+
+  const revokedCurrentWallet = await postWorkerJson("/api/admin/wallet-revoke", {
+    address: thirdWalletAccount.address,
+    chainId: 1,
+  });
+  assert.equal(revokedCurrentWallet.status, 200, JSON.stringify(revokedCurrentWallet.body));
+  assert.equal(revokedCurrentWallet.body.adminWalletCount, 1);
+  assert.equal(revokedCurrentWallet.body.adminSessionAuthorized, false,
+    "revoking the wallet used for this admin session must end its administrator step-up.");
+  assert.equal(revokedCurrentWallet.body.adminRoleAssigned, true,
+    "wallet revocation must not revoke the separate administrator role.");
+
+  const lastWalletRemoval = await postWorkerJson("/api/admin/wallet-revoke", {
+    address: rootAccount.address,
+    chainId: 1,
+  });
+  assert.equal(lastWalletRemoval.status, 403,
+    "a wallet that is not part of a fresh admin step-up cannot remove the remaining wallet.");
+
+  const rootReauthorized = await stepUpAdminWallet(rootAccount);
+  assert.equal(rootReauthorized.status, 200, JSON.stringify(rootReauthorized.body));
+  assert.equal(rootReauthorized.body.adminSessionAuthorized, true);
+
+  const endedAdminSession = await postWorkerJson("/api/admin/wallet-logout", {});
+  assert.equal(endedAdminSession.status, 200);
+  assert.equal(endedAdminSession.body.authenticated, true);
+  assert.equal(endedAdminSession.body.adminSessionAuthorized, false,
+    "ending administrator access must preserve the ordinary account session.");
+  assert.equal((await getWorkerJson("/api/admin/status")).status, 403);
+  const rootReadyForGovernance = await stepUpAdminWallet(rootAccount);
+  assert.equal(rootReadyForGovernance.status, 200);
+
+  const selfGrant = await postWorkerJson("/api/admin/roles/grant", {
+    accountIdentifier,
+    reason: "Prevent self appointment",
+    permissions: [],
+  });
   assert.equal(selfGrant.status, 400);
 
-  const overDelegation = await evaluate(
-    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
-    ",reason:'Attempt to delegate an unavailable permission',permissions:['admin.messages.send']})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const overDelegation = await postWorkerJson("/api/admin/roles/grant", {
+    accountIdentifier: targetIdentifier,
+    reason: "Attempt to delegate an unavailable permission",
+    permissions: ["admin.messages.send"],
+  });
   assert.equal(overDelegation.status, 403);
 
-  const granted = await evaluate(
-    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
-    ",reason:'Appoint reviewed member',permissions:['admin.roles.grant']})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const granted = await postWorkerJson("/api/admin/roles/grant", {
+    accountIdentifier: targetIdentifier,
+    reason: "Appoint reviewed member",
+    permissions: ["admin.roles.grant"],
+  });
   assert.equal(granted.status, 200, JSON.stringify(granted.body));
   assert.equal(granted.body.role, "admin");
   assert.deepEqual(granted.body.adminPermissions, ["admin.roles.grant"]);
   assert.equal(granted.body.adminWalletCount, 0);
   assert.equal(granted.body.walletEnrolled, false);
 
-  const duplicate = await evaluate(
-    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
-    ",reason:'Duplicate appointment',permissions:[]})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const duplicate = await postWorkerJson("/api/admin/roles/grant", {
+    accountIdentifier: targetIdentifier,
+    reason: "Duplicate appointment",
+    permissions: [],
+  });
   assert.equal(duplicate.status, 409);
-
-  const targetFixture = [
-    "INSERT INTO auth_admin_wallets(wallet_id,account_id,address,chain_id,created_at,active,provisioning_source) VALUES (" +
-      [targetWalletId,targetAccountId,targetWallet,1,createdAt,1,"hosted-test-fixture"].map(sqlLiteral).join(",") + ");",
-    "UPDATE auth_sessions SET admin_wallet_address=" + sqlLiteral(targetWallet) +
-      ",admin_authenticated_at=" + now + ",admin_expires_at=" + (now + 600) +
-      " WHERE token_hash=" + sqlLiteral(targetHash) + ";",
-  ].join("\n");
-  executeLocalD1Fixture(targetFixture, "Prepare local non-delegable administrator fixture");
 
   await setBrowserAccountSession(targetToken);
   const targetState = await status();
   assert.equal(targetState.role, "admin");
-  assert.equal(targetState.adminSessionAuthorized, true);
+  assert.equal(targetState.adminSessionAuthorized, false);
   assert.deepEqual(targetState.adminPermissions, ["admin.roles.grant"]);
   assert.deepEqual(targetState.adminDelegablePermissions, []);
 
-  const targetEscalation = await evaluate(
-    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(successorIdentifier) +
-    ",reason:'Attempt to re-delegate a non-delegable permission',permissions:['admin.roles.grant']})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const targetWalletEnrollment = await enrollAdminWallet(targetWalletAccount);
+  assert.equal(targetWalletEnrollment.status, 200, JSON.stringify(targetWalletEnrollment.body));
+  assert.equal(targetWalletEnrollment.body.adminWalletCount, 1);
+  assert.equal(targetWalletEnrollment.body.adminSessionAuthorized, false);
+  const targetStepUp = await stepUpAdminWallet(targetWalletAccount);
+  assert.equal(targetStepUp.status, 200, JSON.stringify(targetStepUp.body));
+  assert.equal(targetStepUp.body.adminSessionAuthorized, true);
+
+  const targetEscalation = await postWorkerJson("/api/admin/roles/grant", {
+    accountIdentifier: successorIdentifier,
+    reason: "Attempt to re-delegate a non-delegable permission",
+    permissions: ["admin.roles.grant"],
+  });
   assert.equal(targetEscalation.status, 403);
 
-  const targetUnauthorizedRevoke = await evaluate(
-    "fetch('/api/admin/roles/revoke',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(accountIdentifier) +
-    ",reason:'Attempt revoke without separate permission'})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const targetUnauthorizedRevoke = await postWorkerJson("/api/admin/roles/revoke", {
+    accountIdentifier,
+    reason: "Attempt revoke without separate permission",
+  });
   assert.equal(targetUnauthorizedRevoke.status, 403);
 
   await setBrowserAccountSession(rootToken);
-  const revoked = await evaluate(
-    "fetch('/api/admin/roles/revoke',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
-    ",reason:'Remove reviewed administrator authority'})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const rootFinalStepUp = await stepUpAdminWallet(rootAccount);
+  assert.equal(rootFinalStepUp.status, 200, JSON.stringify(rootFinalStepUp.body));
+  const revoked = await postWorkerJson("/api/admin/roles/revoke", {
+    accountIdentifier: targetIdentifier,
+    reason: "Remove reviewed administrator authority",
+  });
   assert.equal(revoked.status, 200, JSON.stringify(revoked.body));
   assert.equal(revoked.body.revoked, true);
   assert.equal(revoked.body.role, "user");
@@ -261,17 +457,11 @@ async function testAdminGovernanceFixture(accountIdentifier) {
   const noticeId = afterRevocation.administratorRevocationNotice.noticeId;
 
   await setBrowserAccountSession(rootToken);
-  const crossAccountAck = await evaluate(
-    "fetch('/api/account/administrator-notice/acknowledge',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({noticeId:" + JSON.stringify(noticeId) + "})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const crossAccountAck = await postWorkerJson("/api/account/administrator-notice/acknowledge", { noticeId });
   assert.equal(crossAccountAck.status, 404);
 
   await setBrowserAccountSession(targetToken);
-  const ack = await evaluate(
-    "fetch('/api/account/administrator-notice/acknowledge',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
-    "body:JSON.stringify({noticeId:" + JSON.stringify(noticeId) + "})}).then(async r=>({status:r.status,body:await r.json()}))"
-  );
+  const ack = await postWorkerJson("/api/account/administrator-notice/acknowledge", { noticeId });
   assert.equal(ack.status, 200);
   assert.equal(ack.body.role, "user");
   assert.equal(ack.body.administratorRevocationNotice, null);
@@ -288,6 +478,15 @@ async function testAdminGovernanceFixture(accountIdentifier) {
   );
   assert.notEqual(auditTamper.status, 0, "administrator audit must be immutable at the database layer.");
   assert.match(String(auditTamper.stderr || "") + String(auditTamper.stdout || ""), /append-only/i);
+  const walletAuditTamper = executeLocalD1Fixture(
+    "UPDATE auth_admin_wallet_audit SET detail_json='{}' WHERE event_type='admin_wallet_enrolled';",
+    "Attempted wallet audit tamper",
+    true
+  );
+  assert.notEqual(walletAuditTamper.status, 0, "administrator wallet audit must be immutable at the database layer.");
+  assert.match(String(walletAuditTamper.stderr || "") + String(walletAuditTamper.stdout || ""), /append-only/i);
+
+  console.log("PASS: local admin role/permission governance plus real EIP-4361/EIP-191 wallet enrollment, nonce replay rejection, distinct ten-minute wallet step-up, three-wallet limit, self-revocation safety, admin-session logout, and target-only notice lifecycle.");
 }
 
 try {
