@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { createServer } from "node:net";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -86,6 +87,207 @@ async function trustedClick(selector) {
 
 async function status() {
   return evaluate("fetch('/api/account/status',{credentials:'same-origin',cache:'no-store'}).then(r=>r.json())");
+}
+
+
+function sqlLiteral(value) {
+  return "'" + String(value).replace(/'/g, "''") + "'";
+}
+function executeLocalD1Fixture(sql, label, expectFailure = false) {
+  const file = join(temp, "admin-governance-fixture.sql");
+  writeFileSync(file, sql, { mode: 0o600 });
+  const result = spawnSync(
+    process.platform === "win32" ? "npx.cmd" : "npx",
+    ["wrangler", "d1", "execute", "acrown-account-staging", "--local", "--file", file],
+    { cwd: process.cwd(), encoding: "utf8", timeout: 45000 }
+  );
+  if (expectFailure) return result;
+  if (result.error || result.status !== 0) {
+    throw new Error(label + " failed against local D1. " +
+      String(result.error?.message || "") + "\n" +
+      String(result.stderr || "") + "\n" + String(result.stdout || ""));
+  }
+  return result.stdout || "";
+}
+async function setBrowserAccountSession(token) {
+  const result = await cdp("Network.setCookie", {
+    name: "acrown_account_session", value: token, url: baseUrl,
+    httpOnly: true, sameSite: "Strict",
+  });
+  if (result.success === false) throw new Error("Chrome refused the local test account session cookie.");
+}
+async function testAdminGovernanceFixture(accountIdentifier) {
+  // Local-only test fixture: seed an already-verified wallet step-up into the
+  // ephemeral Wrangler D1 database. This tests RBAC independently from the
+  // separate Block C SIWE verification; no fixture endpoint exists in Worker.
+  const cookies = await cdp("Network.getCookies", { urls: [baseUrl] });
+  const rootCookie = (cookies.cookies || []).find(item => item.name === "acrown_account_session" && item.value);
+  assert.ok(rootCookie, "the initial test account needs an active ordinary session.");
+  const rootToken = rootCookie.value;
+  const rootHash = createHash("sha256").update(rootToken).digest("base64url");
+  const rootWallet = "0x" + randomBytes(20).toString("hex");
+  const targetWallet = "0x" + randomBytes(20).toString("hex");
+  const rootWalletId = randomUUID();
+  const targetWalletId = randomUUID();
+  const targetAccountId = "fixture-admin-target-" + randomUUID();
+  const successorAccountId = "fixture-admin-successor-" + randomUUID();
+  const targetIdentifier = "AC-" + randomBytes(5).toString("hex").toUpperCase();
+  const successorIdentifier = "AC-" + randomBytes(5).toString("hex").toUpperCase();
+  const targetHandle = randomBytes(32).toString("base64url");
+  const successorHandle = randomBytes(32).toString("base64url");
+  const targetToken = randomBytes(32).toString("base64url");
+  const targetHash = createHash("sha256").update(targetToken).digest("base64url");
+  const now = Math.floor(Date.now() / 1000);
+  const createdAt = new Date().toISOString();
+  const sql = [
+    "INSERT INTO auth_admin_roles(account_id,granted_by_account_id,reason,created_at) " +
+      "SELECT account_id,NULL,'hosted local test fixture bootstrap'," + sqlLiteral(createdAt) +
+      " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO auth_admin_permissions(account_id,permission,can_delegate,granted_by_account_id,reason,created_at) " +
+      "SELECT account_id,'admin.roles.grant',1,NULL,'hosted local test fixture'," + sqlLiteral(createdAt) +
+      " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO auth_admin_permissions(account_id,permission,can_delegate,granted_by_account_id,reason,created_at) " +
+      "SELECT account_id,'admin.roles.revoke',1,NULL,'hosted local test fixture'," + sqlLiteral(createdAt) +
+      " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO auth_admin_wallets(wallet_id,account_id,address,chain_id,created_at,active,provisioning_source) " +
+      "SELECT " + sqlLiteral(rootWalletId) + ",account_id," + sqlLiteral(rootWallet) + ",1," +
+      sqlLiteral(createdAt) + ",1,'hosted-test-fixture' FROM auth_accounts WHERE account_identifier=" +
+      sqlLiteral(accountIdentifier) + ";",
+    "UPDATE auth_sessions SET admin_wallet_address=" + sqlLiteral(rootWallet) +
+      ",admin_authenticated_at=" + now + ",admin_expires_at=" + (now + 600) +
+      " WHERE token_hash=" + sqlLiteral(rootHash) + ";",
+    "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
+      [targetAccountId,targetIdentifier,targetHandle,createdAt,"person","","development-terms-2026-10-31-v0.3",createdAt,"user"].map(sqlLiteral).join(",") + ");",
+    "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
+      [successorAccountId,successorIdentifier,successorHandle,createdAt,"person","","development-terms-2026-10-31-v0.3",createdAt,"user"].map(sqlLiteral).join(",") + ");",
+    "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
+      [targetHash,targetAccountId,randomBytes(16).toString("hex"),null,now,now+1800].map(sqlLiteral).join(",") + ");",
+  ].join("\n");
+  executeLocalD1Fixture(sql, "Seed local administrator governance fixture");
+
+  let rootStatus = await status();
+  assert.equal(rootStatus.role, "admin");
+  assert.equal(rootStatus.adminRoleAssigned, true);
+  assert.equal(rootStatus.adminSessionAuthorized, true);
+  assert.deepEqual(rootStatus.adminPermissions, ["admin.roles.grant", "admin.roles.revoke"]);
+  assert.deepEqual(rootStatus.adminDelegablePermissions, ["admin.roles.grant", "admin.roles.revoke"]);
+  const adminStatus = await evaluate(
+    "fetch('/api/admin/status',{credentials:'same-origin'}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(adminStatus.status, 200);
+
+  const selfGrant = await evaluate(
+    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(accountIdentifier) +
+    ",reason:'Prevent self appointment',permissions:[]})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(selfGrant.status, 400);
+
+  const overDelegation = await evaluate(
+    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
+    ",reason:'Attempt to delegate an unavailable permission',permissions:['admin.messages.send']})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(overDelegation.status, 403);
+
+  const granted = await evaluate(
+    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
+    ",reason:'Appoint reviewed member',permissions:['admin.roles.grant']})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(granted.status, 200, JSON.stringify(granted.body));
+  assert.equal(granted.body.role, "admin");
+  assert.deepEqual(granted.body.adminPermissions, ["admin.roles.grant"]);
+  assert.equal(granted.body.adminWalletCount, 0);
+  assert.equal(granted.body.walletEnrolled, false);
+
+  const duplicate = await evaluate(
+    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
+    ",reason:'Duplicate appointment',permissions:[]})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(duplicate.status, 409);
+
+  const targetFixture = [
+    "INSERT INTO auth_admin_wallets(wallet_id,account_id,address,chain_id,created_at,active,provisioning_source) VALUES (" +
+      [targetWalletId,targetAccountId,targetWallet,1,createdAt,1,"hosted-test-fixture"].map(sqlLiteral).join(",") + ");",
+    "UPDATE auth_sessions SET admin_wallet_address=" + sqlLiteral(targetWallet) +
+      ",admin_authenticated_at=" + now + ",admin_expires_at=" + (now + 600) +
+      " WHERE token_hash=" + sqlLiteral(targetHash) + ";",
+  ].join("\n");
+  executeLocalD1Fixture(targetFixture, "Prepare local non-delegable administrator fixture");
+
+  await setBrowserAccountSession(targetToken);
+  const targetState = await status();
+  assert.equal(targetState.role, "admin");
+  assert.equal(targetState.adminSessionAuthorized, true);
+  assert.deepEqual(targetState.adminPermissions, ["admin.roles.grant"]);
+  assert.deepEqual(targetState.adminDelegablePermissions, []);
+
+  const targetEscalation = await evaluate(
+    "fetch('/api/admin/roles/grant',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(successorIdentifier) +
+    ",reason:'Attempt to re-delegate a non-delegable permission',permissions:['admin.roles.grant']})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(targetEscalation.status, 403);
+
+  const targetUnauthorizedRevoke = await evaluate(
+    "fetch('/api/admin/roles/revoke',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(accountIdentifier) +
+    ",reason:'Attempt revoke without separate permission'})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(targetUnauthorizedRevoke.status, 403);
+
+  await setBrowserAccountSession(rootToken);
+  const revoked = await evaluate(
+    "fetch('/api/admin/roles/revoke',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({accountIdentifier:" + JSON.stringify(targetIdentifier) +
+    ",reason:'Remove reviewed administrator authority'})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(revoked.status, 200, JSON.stringify(revoked.body));
+  assert.equal(revoked.body.revoked, true);
+  assert.equal(revoked.body.role, "user");
+  assert.equal(revoked.body.revokedWalletCount, 1);
+  assert.deepEqual(revoked.body.revokedPermissions, ["admin.roles.grant"]);
+
+  await setBrowserAccountSession(targetToken);
+  const afterRevocation = await status();
+  assert.equal(afterRevocation.authenticated, true);
+  assert.equal(afterRevocation.role, "user");
+  assert.equal(afterRevocation.adminRoleAssigned, false);
+  assert.equal(afterRevocation.adminSessionAuthorized, false);
+  assert.equal(afterRevocation.adminWalletCount, 0);
+  assert.equal(afterRevocation.administratorRevocationNotice.reason, "Remove reviewed administrator authority");
+  const noticeId = afterRevocation.administratorRevocationNotice.noticeId;
+
+  await setBrowserAccountSession(rootToken);
+  const crossAccountAck = await evaluate(
+    "fetch('/api/account/administrator-notice/acknowledge',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({noticeId:" + JSON.stringify(noticeId) + "})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(crossAccountAck.status, 404);
+
+  await setBrowserAccountSession(targetToken);
+  const ack = await evaluate(
+    "fetch('/api/account/administrator-notice/acknowledge',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}," +
+    "body:JSON.stringify({noticeId:" + JSON.stringify(noticeId) + "})}).then(async r=>({status:r.status,body:await r.json()}))"
+  );
+  assert.equal(ack.status, 200);
+  assert.equal(ack.body.role, "user");
+  assert.equal(ack.body.administratorRevocationNotice, null);
+
+  await setBrowserAccountSession(rootToken);
+  rootStatus = await status();
+  assert.equal(rootStatus.role, "admin");
+  assert.equal(rootStatus.adminSessionAuthorized, true);
+
+  const auditTamper = executeLocalD1Fixture(
+    "UPDATE auth_admin_governance_audit SET detail_json='{}' WHERE event_type='admin_role_granted';",
+    "Attempted governance audit tamper",
+    true
+  );
+  assert.notEqual(auditTamper.status, 0, "administrator audit must be immutable at the database layer.");
+  assert.match(String(auditTamper.stderr || "") + String(auditTamper.stdout || ""), /append-only/i);
 }
 
 try {
@@ -260,6 +462,7 @@ try {
   assert.equal(account.admin, false);
 
 
+  await testAdminGovernanceFixture(identifier);
   await trustedClick("#account-recovery-key-saved");
   await waitFor("offline recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));
   await trustedClick("#open-account-hub");
