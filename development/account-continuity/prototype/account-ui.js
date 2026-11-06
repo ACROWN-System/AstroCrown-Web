@@ -1037,7 +1037,7 @@
       if (verified.adminSessionAuthorized !== true || verified.admin !== true) {
         throw new Error("The backend did not confirm administrator access.");
       }
-      var walletOptions = await requestJson("/api/admin/wallet-options", {});
+      var walletOptions = await requestJson("/api/admin/wallet-options");
       if (!Array.isArray(walletOptions.wallets) || walletOptions.wallets.length > 3) {
         throw new Error("The backend returned an invalid administrator wallet registry.");
       }
