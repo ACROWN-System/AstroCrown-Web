@@ -15,7 +15,7 @@ const MAX_BODY_BYTES = 65536;
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
 const AVATARS = ["person", "crown", "star", "moon", "orbit", "shield"];
 const PQ_ALGS = [-48, -49, -50];
-const ADMIN_PERMISSION_NAMES = ["admin.messages.send", "admin.roles.grant", "admin.roles.revoke"];
+const ADMIN_PERMISSION_NAMES = ["admin.roles.grant", "admin.roles.revoke"];
 
 function secureHeaders(headers = new Headers()) {
   const h = new Headers(headers);
