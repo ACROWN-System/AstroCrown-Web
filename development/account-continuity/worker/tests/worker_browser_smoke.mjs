@@ -699,7 +699,8 @@ async function testAdminGovernanceFixture(accountIdentifier) {
   assert.equal(revoked.status, 200, JSON.stringify(revoked.body));
   assert.equal(revoked.body.revoked, true);
   assert.equal(revoked.body.role, "user");
-  assert.equal(revoked.body.revokedWalletCount, 1);
+  assert.equal(revoked.body.revokedWalletCount, 0,
+    "the wallet was already inactive after the all-wallet-loss recovery test.");
   assert.deepEqual(revoked.body.revokedPermissions, ["admin.roles.grant"]);
 
   await setBrowserAccountSession(targetToken);
