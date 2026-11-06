@@ -27,6 +27,7 @@ test("administrator permission validation rejects client-invented roles and perm
     ["owner"],
     ["admin.roles.grant", "admin.roles.grant"],
     ["admin.roles.grant", "admin.messages.broadcast"],
+    ["admin.messages.send"],
     ["admin.roles.grant", "admin.roles.revoke", "admin.messages.send", "extra"],
   ]) {
     assert.throws(() => validateAdminPermissions(value), error => error.status === 400);
