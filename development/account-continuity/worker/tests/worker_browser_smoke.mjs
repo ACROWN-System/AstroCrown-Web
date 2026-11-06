@@ -127,6 +127,154 @@ async function setBrowserAccountSession(token) {
   });
   if (result.success === false) throw new Error("Chrome refused the local test account session cookie.");
 }
+
+async function installTestWalletProvider(address) {
+  const js = "(" + function (walletAddress) {
+    window.ethereum = {
+      request: async function ({ method, params = [] }) {
+        if (method === "eth_requestAccounts" || method === "eth_accounts") return [walletAddress];
+        if (method === "eth_chainId") return "0x1";
+        if (method === "personal_sign") {
+          const encoded = params[0];
+          if (typeof encoded !== "string" || !/^0x(?:[0-9a-f]{2})+$/i.test(encoded)) {
+            throw new Error("Test wallet received a malformed EIP-191 message.");
+          }
+          const hex = encoded.slice(2);
+          const bytes = new Uint8Array(hex.match(/.{2}/g).map(value => Number.parseInt(value, 16)));
+          window.__acrownPendingWalletMessage = new TextDecoder().decode(bytes);
+          return new Promise(resolve => { window.__acrownResolveWalletSignature = resolve; });
+        }
+        throw new Error("Test wallet method is not enabled: " + method);
+      }
+    };
+    window.confirm = function () { return true; };
+    return true;
+  }.toString() + ")(" + JSON.stringify(address) + ")";
+  await evaluate(js);
+}
+async function completeTestWalletSignature(account) {
+  await trustedClick("#admin-wallet-proof-sign");
+  const message = await waitFor("test wallet SIWE message", async () =>
+    evaluate("window.__acrownPendingWalletMessage || null")
+  );
+  assert.equal(typeof message, "string");
+  const signature = await account.signMessage({ message });
+  await evaluate(
+    "window.__acrownResolveWalletSignature(" + JSON.stringify(signature) + ");" +
+    "window.__acrownPendingWalletMessage=null;window.__acrownResolveWalletSignature=null;true"
+  );
+}
+async function connectTestWalletFromHeader(account) {
+  await waitFor("header wallet connect request", async () =>
+    evaluate("document.documentElement.getAttribute('data-admin-wallet-connect-pending') === 'true'")
+  );
+  await trustedClick("#wallet-connect-trigger");
+  await waitFor("administrator signature review dialog", async () =>
+    evaluate("Boolean(document.getElementById('admin-wallet-proof-dialog')?.open)")
+  );
+  await completeTestWalletSignature(account);
+}
+async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
+  const ended = await postWorkerJson("/api/admin/wallet-logout", {});
+  assert.equal(ended.status, 200);
+  assert.equal(ended.body.authenticated, true);
+  assert.equal(ended.body.adminSessionAuthorized, false);
+
+  await evaluate("window.location.hash='#admin';true");
+  await waitFor("ordinary account after admin step-up logout", async () =>
+    evaluate(
+      "window.location.hash === '#account' && " +
+      "!document.getElementById('account-dashboard').hidden && " +
+      "Boolean(document.getElementById('account-admin-wallet-access'))"
+    )
+  );
+
+  await installTestWalletProvider(rootAccount.address);
+  await trustedClick("#account-admin-wallet-access");
+  await waitFor("administrator access confirmation", async () =>
+    evaluate("Boolean(document.getElementById('admin-access-dialog')?.open)")
+  );
+  await trustedClick("#admin-access-continue");
+  await connectTestWalletFromHeader(rootAccount);
+  await waitFor("server-verified Administrator dashboard", async () =>
+    evaluate(
+      "window.location.hash === '#admin' && " +
+      "!document.getElementById('admin-dashboard').hidden"
+    )
+  );
+  assert.equal(
+    await evaluate("document.querySelectorAll('#admin-dashboard-content [data-admin-wallet-revoke=\"true\"]').length"),
+    0,
+    "the dashboard must not offer removal of the last active administrator wallet."
+  );
+
+  // Add a second, distinct EVM wallet using the same shared header Wallet
+  // button and the separate one-time enrollment signature.
+  await installTestWalletProvider(secondWalletAccount.address);
+  await trustedClick("#admin-add-wallet");
+  await connectTestWalletFromHeader(secondWalletAccount);
+  await waitFor("User dashboard after additional wallet enrollment", async () =>
+    evaluate(
+      "window.location.hash === '#account' && " +
+      "!document.getElementById('account-dashboard').hidden"
+    )
+  );
+
+  // Enrollment invalidates the old step-up. Re-enter using the newly added
+  // second wallet and the same shared header button.
+  await trustedClick("#account-admin-wallet-access");
+  await waitFor("administrator access confirmation after enrollment", async () =>
+    evaluate("Boolean(document.getElementById('admin-access-dialog')?.open)")
+  );
+  await trustedClick("#admin-access-continue");
+  await connectTestWalletFromHeader(secondWalletAccount);
+  await waitFor("Administrator dashboard after second-wallet step-up", async () =>
+    evaluate(
+      "window.location.hash === '#admin' && " +
+      "!document.getElementById('admin-dashboard').hidden"
+    )
+  );
+
+  const beforeRevoke = await getWorkerJson("/api/admin/wallet-options");
+  assert.equal(beforeRevoke.status, 200);
+  assert.equal(beforeRevoke.body.wallets.length, 2);
+  assert.equal(
+    await evaluate("document.querySelectorAll('#admin-dashboard-content [data-admin-wallet-revoke=\"true\"]').length"),
+    2,
+    "each wallet should have a revoke control while another active wallet remains."
+  );
+
+  const rootSelector = "[data-admin-wallet-revoke='true'][data-wallet-address='" + rootAccount.address + "']";
+  await trustedClick("#admin-dashboard-content " + rootSelector);
+  await waitFor("wallet revocation UI refresh", async () =>
+    evaluate(
+      "window.location.hash === '#admin' && " +
+      "!document.getElementById('admin-dashboard').hidden && " +
+      "document.querySelectorAll('#admin-dashboard-content [data-admin-wallet-revoke=\"true\"]').length === 0"
+    )
+  );
+  const afterRevoke = await getWorkerJson("/api/admin/wallet-options");
+  assert.equal(afterRevoke.status, 200);
+  assert.equal(afterRevoke.body.wallets.length, 1);
+  assert.equal(afterRevoke.body.wallets[0].address.toLowerCase(), secondWalletAccount.address.toLowerCase());
+  const currentAdmin = await getWorkerJson("/api/admin/status");
+  assert.equal(currentAdmin.status, 200,
+    "revoking another wallet must preserve the wallet currently authorizing this administrator session.");
+
+  await trustedClick("#admin-end-access");
+  await waitFor("User dashboard after admin access ended in UI", async () =>
+    evaluate(
+      "window.location.hash === '#account' && " +
+      "!document.getElementById('account-dashboard').hidden"
+    )
+  );
+  const ordinary = await status();
+  assert.equal(ordinary.authenticated, true);
+  assert.equal(ordinary.role, "admin");
+  assert.equal(ordinary.adminSessionAuthorized, false);
+  console.log("PASS: shared homepage Wallet UI, explicit Administrator access confirmation, signature-review dialog, server step-up, additional wallet enrollment, visible wallet revocation controls, retained current wallet session, and ordinary-session preservation.");
+}
+
 async function postWorkerJson(path, payload) {
   const body = JSON.stringify(payload);
   return evaluate(
@@ -496,6 +644,7 @@ async function testAdminGovernanceFixture(accountIdentifier) {
   assert.notEqual(walletAuditTamper.status, 0, "administrator wallet audit must be immutable at the database layer.");
   assert.match(String(walletAuditTamper.stderr || "") + String(walletAuditTamper.stdout || ""), /append-only/i);
 
+  await testAdminWalletDashboardUi(rootAccount, secondWalletAccount);
   console.log("PASS: local admin role/permission governance plus real EIP-4361/EIP-191 wallet enrollment, nonce replay rejection, distinct ten-minute wallet step-up, three-wallet limit, self-revocation safety, admin-session logout, and target-only notice lifecycle.");
 }
 
