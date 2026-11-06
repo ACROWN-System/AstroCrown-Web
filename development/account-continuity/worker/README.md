@@ -49,9 +49,26 @@ Permission assignment is allowlisted. A grantor can delegate only permissions ex
 
 **Maturity boundary:** real EVM/SIWE wallet enrollment, wallet challenge verification and administrator session step-up are the next Block C. Initial administrator bootstrap/recovery remains a separate owner-authorized design and implementation gate. These endpoints remain inaccessible to ordinary users; there is no public self-appointment route. No remote D1, Cloudflare deployment or real-user administrative service is enabled.
 
+## EVM administrator wallet enrollment and step-up — local qualification passed; not deployed
+
+The Worker now exposes:
+- `GET /api/admin/wallet-options`
+- `POST /api/admin/wallet-enrollment-challenge` and `/verify`
+- `POST /api/admin/wallet-challenge` and `/verify`
+- `POST /api/admin/wallet-revoke`
+- `POST /api/admin/wallet-logout`
+
+The first enrollment requires an already-appointed administrator role, an authenticated ordinary passkey session, and a fresh SIWE/EIP-191 signature. Enrollment alone does not grant Administrator access: a second purpose-bound signature creates a separate administrator session of no more than ten minutes. Further wallet enrollment requires an already active wallet-verified session. Up to three unique active EVM EOA wallets may be enrolled; the last active wallet cannot be removed while the role remains assigned. Ending administrator access preserves ordinary account sign-in. Challenges are stored with account/session/purpose/address/chain bindings, expire after five minutes, and are consumed before signature verification so invalid signatures cannot reuse the challenge. Wallet actions have separate append-only audit evidence.
+
+**Qualification evidence:** [Account Staging Worker Qualification #229](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42149830004) passed the complete local EVM lifecycle with deterministic test-only keys, EIP-191 recovery, replay rejection, separate enrollment and step-up, three-wallet cap, wallet revocation and admin-session logout.
+
+**Adapter boundary:** EOA-only EVM/EIP-191 recovery is implemented. There is no RPC, balance check, transaction, deposit, stake or funds requirement. ERC-1271 contract wallets and other wallet families are not yet supported.
+
+**Maturity boundary:** this is only a GitHub-hosted local Worker/D1 test using disposable synthetic data. The first-administrator bootstrap is not implemented; no remote D1 or real account administrator authority exists. The homepage header wallet control and full Administrator dashboard are not yet integrated into the Worker asset build. Do not present this as a deployed or production administrator service.
+
 ## Deliberate limits
 
-- Real EVM/SIWE enrollment and step-up APIs, the authorized first-administrator bootstrap, privileged dashboard UI and administrator communications actions are not yet implemented in this Worker. Until Block C and bootstrap are qualified, RBAC operations cannot be used by an ordinary live member account.
+- The real EVM/SIWE enrollment and step-up APIs are locally qualified but not remotely deployed. The authorized first-administrator bootstrap, homepage header-wallet integration, full privileged dashboard UI and administrator communications actions are not yet implemented in this Worker. Until bootstrap and dashboard parity are qualified, RBAC operations cannot be used by public member accounts.
 - In-app communications return an empty/disabled staging result. No email, SMS or identity provider is used.
 - Feedback/case-portal entry points are replaced with an explicit not-enabled note in the staging asset build; no non-working case API is exposed.
 - ML-DSA capability is not credential evidence. A real authenticator must register an ML-DSA credential, the server must store its actual COSE algorithm, and a later assertion must verify before the credential is described as post-quantum.
