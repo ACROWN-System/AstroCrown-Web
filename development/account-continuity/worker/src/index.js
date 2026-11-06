@@ -509,12 +509,11 @@ async function verifyAdminWalletEnrollment(db, env, request, payload) {
     throw fail(401, "The signed message does not exactly match the challenge issued for this account session.");
   }
   const address = normalizeEvmAddress(challenge.address);
-  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+  const currentCount = await db.prepare(
+    "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
+  ).bind(account.account_id).first();
   if (challenge.purpose === "initial-wallet-enrollment") {
-    const state = await db.prepare(
-      "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
-    ).bind(account.account_id).first();
-    if (Number(state?.active_count || 0) !== 0 || challenge.actor_wallet_address !== null) {
+    if (Number(currentCount?.active_count || 0) !== 0 || challenge.actor_wallet_address !== null) {
       throw fail(409, "Initial administrator wallet enrollment is no longer available. Refresh wallet status.");
     }
   } else {
@@ -524,18 +523,17 @@ async function verifyAdminWalletEnrollment(db, env, request, payload) {
       throw fail(401, "The previously verified administrator wallet changed. Start enrollment again.");
     }
   }
+  if (Number(currentCount?.active_count || 0) >= 3) {
+    throw fail(409, "This administrator account already has three active wallets.");
+  }
   const duplicate = await db.prepare(
     "SELECT 1 FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE"
   ).bind(address).first();
   if (duplicate) throw fail(409, "That wallet address has already been registered or revoked.");
-  const countRow = await db.prepare(
-    "SELECT COUNT(*) AS active_count FROM auth_admin_wallets WHERE account_id = ? AND active = 1"
-  ).bind(account.account_id).first();
-  if (Number(countRow?.active_count || 0) >= 3) throw fail(409, "This administrator account already has three active wallets.");
+
+  // Consume the one-use SIWE challenge before signature verification. A bad
+  // signature therefore cannot be retried against the same nonce/message.
   const marker = b64u(bytes(18));
-  const auditId = hex(bytes(16));
-  const walletId = hex(bytes(16));
-  const createdAt = new Date().toISOString();
   const challengeGuard =
     "UPDATE auth_admin_wallet_challenges SET used_at = ? " +
     "WHERE challenge_id = ? AND account_id = ? AND session_token_hash = ? " +
@@ -550,10 +548,20 @@ async function verifyAdminWalletEnrollment(db, env, request, payload) {
     "AND s.admin_authenticated_at > 0 AND s.admin_authenticated_at <= ? " +
     "AND s.admin_expires_at <= s.expires_at AND s.admin_expires_at <= s.admin_authenticated_at + 600 " +
     "AND s.admin_wallet_address = actor_wallet_address COLLATE NOCASE AND w.address = actor_wallet_address COLLATE NOCASE AND w.active = 1)))";
+  const consumed = await db.prepare(challengeGuard).bind(
+    marker, challenge.challenge_id, account.account_id, sessionHash, now, payload.message,
+    sessionHash, account.account_id, now, account.account_id, account.account_id,
+    sessionHash, account.account_id, now, now, now
+  ).run();
+  if (Number(consumed?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The wallet challenge or administrator session changed. Begin enrollment again.");
+  }
+
+  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+  const walletId = hex(bytes(16));
+  const auditId = hex(bytes(16));
+  const createdAt = new Date().toISOString();
   const statements = [
-    db.prepare(challengeGuard).bind(marker, challenge.challenge_id, account.account_id, sessionHash,
-      now, payload.message, sessionHash, account.account_id, now, account.account_id, account.account_id,
-      sessionHash, account.account_id, now, now, now),
     db.prepare(
       "INSERT INTO auth_admin_wallets(wallet_id,account_id,address,chain_id,created_at,active,provisioning_source) " +
       "SELECT ?,?,?,?,?,1,'account-holder-siwe-enrollment' WHERE EXISTS(" +
@@ -575,8 +583,7 @@ async function verifyAdminWalletEnrollment(db, env, request, payload) {
   ];
   const results = await db.batch(statements);
   if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
-      Number(results?.[1]?.meta?.changes || 0) !== 1 ||
-      Number(results?.[3]?.meta?.changes || 0) !== 1) {
+      Number(results?.[2]?.meta?.changes || 0) !== 1) {
     throw fail(409, "Wallet enrollment state changed during verification. Refresh and begin again.");
   }
   const refreshed = await activeAccount(db, new Request(request.url, {
