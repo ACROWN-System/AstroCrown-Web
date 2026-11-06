@@ -135,7 +135,11 @@ The same exact revision passed [Local Wallet Authentication Prototype Tests #718
 
 **Adapter boundary:** this is EOA-only EVM/EIP-191 verification performed locally with message recovery; no RPC, on-chain transaction, balance check or funds are used. Contract-wallet ERC-1271, Bitcoin/BIP-322, Solana/SIWS and other wallet families are not included. The test-only private keys never enter Worker code or configuration.
 
-**Release boundary:** the first-administrator bootstrap is still not implemented, no remote D1 exists, and the Worker account assets do not yet expose the full Administrator dashboard/UI. The local RBAC and wallet APIs are qualified independently; they are not yet deployable administrator service for public accounts.
+**Dashboard UI integration evidence:** [Account Staging Worker Qualification #259](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42152828129) passed the complete GitHub-hosted local browser sequence, including the shared homepage header Wallet control, explicit Administrator access confirmation, exact-message signature-review dialog, server-verified dashboard entry, additional-wallet enrollment through the same header control, per-wallet revocation controls, preserving the currently authorizing wallet when another is revoked, and ending admin step-up without signing out of the ordinary account. This is a scoped UI integration pass, not full dashboard parity.
+
+**Other exact-revision checks:** [Local Wallet Authentication Prototype Tests #734](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42152828150), [External Review Pipeline CI #1009](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42152828144), [NOVA RSI Engine CI #1497](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42152828126), and [NOVA RSI CodeQL #1030](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42152828133) all passed.
+
+**Release boundary:** the first-administrator bootstrap is still not implemented, no remote D1 exists, and no real account has been appointed as administrator. The qualified local UI path runs only against synthetic accounts and a seeded test role. The overall User/Administrator dashboard parity, role-management UI click-through coverage, communications, and production onboarding remain incomplete; these APIs are not a deployable public administrator service.
 
 
 
@@ -164,7 +168,11 @@ Keep this separately scoped from administrator wallets. Implement only after a c
 
 The EVM adapter may be evaluated first, but the account-level optional wallet-backup path must not be described as implemented until the complete lifecycle is present and tested.
 
-### Block E — Dashboard parity and security assurance
+### Block E — Dashboard parity and security assurance (partial UI integration locally qualified)
+
+**Scoped qualification:** the administrator entry/step-up path has been integrated with the existing homepage header Wallet control and separate Administrator dashboard shell. [Account Staging Worker Qualification #259](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42152828129) passed real browser interactions for role-confirmed entry, wallet signature review, first/additional wallet enrollment, wallet-list revocation controls, continued access through a different registered wallet, and admin-only logout while preserving the User session. The ordinary-account browser lifecycle and the Worker API governance tests also passed in the same run.
+
+This does not complete Block E. The following remain separate coverage and implementation work: full account/profile/service parity, explicit dashboard click-through tests for the role grant/revoke forms and revocation notice, accurate communications/case availability, complete assurance-page parity, and the remaining account features listed below.
 
 Complete the product-facing areas against the same authoritative backend state:
 - common User dashboard available to every signed-in member, including administrators;
@@ -201,6 +209,6 @@ Only after the Worker/D1 lifecycle and UI parity tests pass:
 
 ## 6. Current release boundary
 
-The local Worker/D1 ordinary-account security lifecycle (**Block A**), RBAC core (**Block B**), and EOA EVM/SIWE administrator-wallet enrollment and ten-minute step-up (**Block C**) have passed their scoped GitHub-hosted local qualification. The first-administrator bootstrap remains blocked; no real account has yet received production administrator authority. The Worker does not yet expose the complete User/Administrator dashboard parity. The next work is the separately authorized initial-admin bootstrap design and Block E dashboard integration; Block D optional ordinary-user wallet backup and Block F deployed staging remain separate gates. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**.
+The local Worker/D1 ordinary-account security lifecycle (**Block A**), RBAC core (**Block B**), and EOA EVM/SIWE administrator-wallet enrollment and ten-minute step-up (**Block C**) have passed their scoped GitHub-hosted local qualification. The shared header Wallet and a limited Administrator dashboard journey have also passed browser integration within Block E; full dashboard parity is still incomplete. The first-administrator bootstrap remains blocked; no real account has yet been appointed administrator, and no remote D1 or deployment exists. The next work is the separately authorized initial-admin bootstrap design and the remaining Block E dashboard/API parity and click-through tests; Block D optional ordinary-user wallet backup and Block F deployed staging remain separate gates. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**.
 
 This plan is a scope and sequencing record. Each block must be implemented, tested and reviewed against its own acceptance evidence before being marked complete.
