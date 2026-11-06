@@ -71,7 +71,7 @@ test("SIWE challenge construction binds origin, EVM address, chain, nonce and ex
     "2026-11-06T00:05:00.000Z",
     "admin-session-step-up"
   );
-  assert.match(challenge, /^https:\\/\\/accounts\\.astrocrown\\.example wants you to sign in with your Ethereum account:/);
+  assert.ok(challenge.startsWith("https://accounts.astrocrown.example wants you to sign in with your Ethereum account:"));
   assert.ok(challenge.includes(account.address));
   assert.ok(challenge.includes("URI: https://accounts.astrocrown.example"));
   assert.ok(challenge.includes("Version: 1"));
