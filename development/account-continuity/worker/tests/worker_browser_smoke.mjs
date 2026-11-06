@@ -110,6 +110,16 @@ function executeLocalD1Fixture(sql, label, expectFailure = false) {
   }
   return result.stdout || "";
 }
+function resetLocalAdminWalletRateLimits(label) {
+  // Reset only the disposable Wrangler --local test database. Production
+  // anti-abuse limits are unchanged.
+  executeLocalD1Fixture(
+    "DELETE FROM auth_rate_events WHERE action IN (" +
+      ["admin-wallet-enrollment-options","admin-wallet-enrollment-verify",
+       "admin-wallet-step-up-options","admin-wallet-step-up-verify"].map(sqlLiteral).join(",") + ");",
+    label
+  );
+}
 async function setBrowserAccountSession(token) {
   const result = await cdp("Network.setCookie", {
     name: "acrown_account_session", value: token, url: baseUrl,
@@ -312,6 +322,7 @@ async function testAdminGovernanceFixture(accountIdentifier) {
     chainId: 1,
   })).status, 403, "additional wallet enrollment requires another fresh signature after inventory changes.");
 
+  resetLocalAdminWalletRateLimits("Reset disposable local wallet-test throttles between enrollment devices");
   const secondStepUp = await stepUpAdminWallet(secondWalletAccount);
   assert.equal(secondStepUp.status, 200, JSON.stringify(secondStepUp.body));
   assert.equal(secondStepUp.body.adminSessionAuthorized, true);
