@@ -212,7 +212,24 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
   // Add a second, distinct EVM wallet using the same shared header Wallet
   // button and the separate one-time enrollment signature.
   await installTestWalletProvider(secondWalletAccount.address);
+  await evaluate(
+    "window.__acrownWalletUiTrace=[];" +
+    "document.getElementById('admin-dashboard-content').addEventListener('click',event=>{" +
+    "window.__acrownWalletUiTrace.push({type:'click',id:event.target?.id||'',tag:event.target?.tagName||''});" +
+    "},true);" +
+    "document.addEventListener('astrocrown:request-admin-wallet-enrollment',()=>{" +
+    "window.__acrownWalletUiTrace.push({type:'request-admin-wallet-enrollment'});" +
+    "});true"
+  );
   await trustedClick("#admin-add-wallet");
+  const enrollmentUiTrace = await waitFor("administrator wallet enrollment button trace", async () =>
+    evaluate("window.__acrownWalletUiTrace.length ? window.__acrownWalletUiTrace : null")
+  );
+  if (!enrollmentUiTrace.some(item => item.type === "request-admin-wallet-enrollment")) {
+    throw new Error("The Add another wallet button click did not dispatch its enrollment request: " +
+      JSON.stringify(enrollmentUiTrace) + "; feedback=" +
+      await evaluate("document.getElementById('admin-wallet-enrollment-feedback')?.textContent || ''"));
+  }
   await connectTestWalletFromHeader(secondWalletAccount);
   await waitFor("User dashboard after additional wallet enrollment", async () =>
     evaluate(
