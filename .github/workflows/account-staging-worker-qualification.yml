@@ -6,6 +6,9 @@ on:
     paths:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
+      - "development/account-continuity/prototype/admin-wallet-ui.js"
+      - "development/account-continuity/prototype/account-prototype.css"
+      - "development/index.html"
       - ".github/workflows/account-staging-worker-qualification.yml"
       - ".github/workflows/cloudflare-staging-deployment.yml"
   push:
@@ -13,6 +16,9 @@ on:
     paths:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
+      - "development/account-continuity/prototype/admin-wallet-ui.js"
+      - "development/account-continuity/prototype/account-prototype.css"
+      - "development/index.html"
       - ".github/workflows/account-staging-worker-qualification.yml"
       - ".github/workflows/cloudflare-staging-deployment.yml"
 
