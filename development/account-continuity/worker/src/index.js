@@ -666,7 +666,6 @@ async function verifyAdminWalletChallenge(db, env, request, payload, config) {
     throw fail(401, "The signed message does not exactly match the challenge issued for this account session.");
   }
   const address = normalizeEvmAddress(challenge.address);
-  await verifyAdminSiweSignature(payload.message, payload.signature, address);
   const wallet = await db.prepare(
     "SELECT wallet_id,address,chain_id FROM auth_admin_wallets WHERE account_id = ? " +
     "AND address = ? COLLATE NOCASE AND chain_id = ? AND active = 1"
@@ -677,25 +676,37 @@ async function verifyAdminWalletChallenge(db, env, request, payload, config) {
   if (!Number.isSafeInteger(sessionExpiry) || sessionExpiry <= now || adminExpiry <= now) {
     throw fail(401, "The ordinary account session expired before administrator verification completed.");
   }
+
+  // Consume the one-use nonce before signature verification, including when
+  // the signature is invalid. The challenge cannot be brute-force retried.
   const marker = b64u(bytes(18));
+  const consumed = await db.prepare(
+    "UPDATE auth_admin_wallet_challenges SET used_at = ? " +
+    "WHERE challenge_id = ? AND account_id = ? AND session_token_hash = ? " +
+    "AND purpose = 'admin-session-step-up' AND used_at IS NULL AND expires_at > ? AND message = ? " +
+    "AND EXISTS(SELECT 1 FROM auth_sessions s WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ?) " +
+    "AND EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?) " +
+    "AND EXISTS(SELECT 1 FROM auth_admin_wallets w WHERE w.account_id = ? AND w.address = ? COLLATE NOCASE " +
+    "AND w.chain_id = ? AND w.active = 1)"
+  ).bind(marker, challenge.challenge_id, account.account_id, sessionHash, now, payload.message,
+    sessionHash, account.account_id, now, account.account_id, account.account_id, address, Number(challenge.chain_id)).run();
+  if (Number(consumed?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The administrator wallet or account session changed. Start a fresh verification.");
+  }
+
+  await verifyAdminSiweSignature(payload.message, payload.signature, address);
   const auditId = hex(bytes(16));
   const createdAt = new Date().toISOString();
   const statements = [
     db.prepare(
-      "UPDATE auth_admin_wallet_challenges SET used_at = ? " +
-      "WHERE challenge_id = ? AND account_id = ? AND session_token_hash = ? " +
-      "AND purpose = 'admin-session-step-up' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions s WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ?) " +
-      "AND EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?) " +
-      "AND EXISTS(SELECT 1 FROM auth_admin_wallets w WHERE w.account_id = ? AND w.address = ? COLLATE NOCASE " +
-      "AND w.chain_id = ? AND w.active = 1)"
-    ).bind(marker, challenge.challenge_id, account.account_id, sessionHash, now,
-      sessionHash, account.account_id, now, account.account_id, account.account_id, address, Number(challenge.chain_id)),
-    db.prepare(
       "UPDATE auth_sessions SET admin_wallet_address = ?,admin_authenticated_at = ?,admin_expires_at = ? " +
       "WHERE token_hash = ? AND account_id = ? AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_admin_wallet_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(address, now, adminExpiry, sessionHash, account.account_id, now, challenge.challenge_id, marker),
+      "AND EXISTS(SELECT 1 FROM auth_admin_wallet_challenges WHERE challenge_id = ? AND used_at = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_roles WHERE account_id = ?) " +
+      "AND EXISTS(SELECT 1 FROM auth_admin_wallets WHERE account_id = ? AND address = ? COLLATE NOCASE " +
+      "AND chain_id = ? AND active = 1)"
+    ).bind(address, now, adminExpiry, sessionHash, account.account_id, now,
+      challenge.challenge_id, marker, account.account_id, account.account_id, address, Number(challenge.chain_id)),
     db.prepare(
       "INSERT INTO auth_admin_wallet_audit(audit_id,event_type,account_id,wallet_id,address,chain_id,created_at,detail_json) " +
       "SELECT ?,'admin_session_authorized',?,?,?,?,?,? WHERE EXISTS(" +
@@ -708,8 +719,7 @@ async function verifyAdminWalletChallenge(db, env, request, payload, config) {
   ];
   const results = await db.batch(statements);
   if (Number(results?.[0]?.meta?.changes || 0) !== 1 ||
-      Number(results?.[1]?.meta?.changes || 0) !== 1 ||
-      Number(results?.[2]?.meta?.changes || 0) !== 1) {
+      Number(results?.[1]?.meta?.changes || 0) !== 1) {
     throw fail(409, "Administrator wallet state changed during verification. Sign in and try again.");
   }
   const refreshed = await activeAccount(db, new Request(request.url, {
