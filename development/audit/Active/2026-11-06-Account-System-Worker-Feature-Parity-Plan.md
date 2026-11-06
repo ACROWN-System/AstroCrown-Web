@@ -107,7 +107,13 @@ Port a complete user-controlled security center to Worker/D1 while preserving th
 
 Acceptance must include real-browser virtual-authenticator tests for adding a second credential, cancellation, duplicate registration, invalid/replayed/expired challenges, revocation, last-authenticator protection, session revocation and recovery-key rotation. Do not add device fingerprinting, unnecessary IP history or user-agent tracking merely to label sessions.
 
-### Block B — Administrator role and permission authority
+### Block B — Administrator role and permission authority (RBAC core qualified locally; bootstrap and wallet proof remain gated)
+
+**Hosted evidence:** [Account Staging Worker Qualification #198](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42147751078) passed the Worker/D1 role-governance integration sequence on 2026-11-06. It verified ordinary-user self-promotion denial, authorized grant, self-grant rejection, duplicate-grant rejection, explicit delegation checks, non-delegable default on newly assigned permissions, the separate revocation permission, role/wallet revocation, preservation of ordinary account sessions, target-only revocation notices, notice acknowledgement ownership and database-enforced append-only audit rows. The same commit passed [Local Wallet Authentication Prototype Tests #702](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42147751121), [External Review Pipeline CI #977](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42147751202), [NOVA RSI Engine CI #1465](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42147751058) and [NOVA RSI CodeQL #998](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42147751119).
+
+**Test boundary:** the role-governance browser fixture seeded a synthetic already-verified administrator wallet session directly into the disposable Wrangler local D1 database. That tests RBAC independently; it does not qualify a real EVM signature, a deployed wallet enrollment API or a production root administrator. No fixture endpoint exists in the Worker and no remote D1 was used.
+
+**Still blocked within Block B:** an authorized, auditable first-administrator bootstrap and its recovery/continuity boundary are not implemented in the Worker. No public or unauthenticated bootstrap endpoint may be added. Production role appointment must remain closed until the owner-controlled bootstrap is separately specified and qualified. Real wallet proof is Block C.
 
 Port the existing permission model only after its provisioning/trust boundary is independently reviewed:
 - support ordinary and administrator roles in persistent storage without allowing public self-assignment;
@@ -121,7 +127,7 @@ Port the existing permission model only after its provisioning/trust boundary is
 
 No ordinary user, passkey registration, wallet connection or wallet signature can create an administrator role.
 
-### Block C — Administrator wallet registry and step-up
+### Block C — Administrator wallet registry and step-up (next implementation block)
 
 Port the existing EVM/SIWE implementation as a separate wallet-authentication boundary:
 - show the wallet connection prompt only after the user explicitly requests Administrator access or another wallet-dependent feature;
@@ -185,6 +191,6 @@ Only after the Worker/D1 lifecycle and UI parity tests pass:
 
 ## 6. Current release boundary
 
-The local Worker/D1 account lifecycle, including **Block A ordinary-account security management**, has passed its scoped GitHub-hosted browser qualification. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**. The next code block is **Block B — Administrator role and permission authority**, followed by Block C administrator-wallet step-up. Block D ordinary-user wallet backup, full dashboard parity and deployed staging remain separate implementation and evidence gates.
+The local Worker/D1 ordinary-account security lifecycle (**Block A**) and the RBAC core of administrator role governance (**Block B**) have passed scoped GitHub-hosted local qualification. Block B is not operationally complete: the Worker still lacks the real wallet enrollment/step-up API and the separately authorized first-administrator bootstrap. The next code block is **Block C — real EVM/SIWE administrator-wallet enrollment and step-up**, with Block B bootstrap continuity kept as a distinct gate. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**. Block D ordinary-user wallet backup, full dashboard parity and deployed staging remain separate implementation and evidence gates.
 
 This plan is a scope and sequencing record. Each block must be implemented, tested and reviewed against its own acceptance evidence before being marked complete.
