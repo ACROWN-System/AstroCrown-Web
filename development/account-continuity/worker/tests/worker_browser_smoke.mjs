@@ -394,7 +394,8 @@ async function testAdminGovernanceFixture(accountIdentifier) {
     reason: "Attempt to delegate an unavailable permission",
     permissions: ["admin.messages.send"],
   });
-  assert.equal(overDelegation.status, 403);
+  assert.equal(overDelegation.status, 400,
+    "permissions without an implemented server operation must not be assignable.");
 
   const granted = await postWorkerJson("/api/admin/roles/grant", {
     accountIdentifier: targetIdentifier,
