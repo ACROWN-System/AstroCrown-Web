@@ -127,7 +127,17 @@ Port the existing permission model only after its provisioning/trust boundary is
 
 No ordinary user, passkey registration, wallet connection or wallet signature can create an administrator role.
 
-### Block C — Administrator wallet registry and step-up (next implementation block)
+### Block C — Administrator wallet registry and step-up (local qualification passed; deployment/bootstrap gated)
+
+**Hosted evidence:** [Account Staging Worker Qualification #229](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42149830004) passed the real EVM wallet lifecycle using deterministic test-only accounts in the GitHub-hosted runner and ephemeral Wrangler local D1 database. It verified exact EIP-4361 message binding, EIP-191 EOA recovery, rejection of a wrong signer, consumption/replay rejection after invalid signatures, first-wallet enrollment, a separate fresh administrator-session signature, ten-minute expiry, additional wallet enrollment only after renewed step-up, a three-wallet maximum, fourth-wallet rejection, individual wallet revocation, last-wallet protection, ending administrator-only access without signing out of the ordinary account, and immutable wallet audit.
+
+The same exact revision passed [Local Wallet Authentication Prototype Tests #718](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42149830035), [External Review Pipeline CI #993](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42149830000), [NOVA RSI Engine CI #1481](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42149829848), and [NOVA RSI CodeQL #1014](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/42149830352).
+
+**Adapter boundary:** this is EOA-only EVM/EIP-191 verification performed locally with message recovery; no RPC, on-chain transaction, balance check or funds are used. Contract-wallet ERC-1271, Bitcoin/BIP-322, Solana/SIWS and other wallet families are not included. The test-only private keys never enter Worker code or configuration.
+
+**Release boundary:** the first-administrator bootstrap is still not implemented, no remote D1 exists, and the Worker account assets do not yet expose the full Administrator dashboard/UI. The local RBAC and wallet APIs are qualified independently; they are not yet deployable administrator service for public accounts.
+
+
 
 Port the existing EVM/SIWE implementation as a separate wallet-authentication boundary:
 - show the wallet connection prompt only after the user explicitly requests Administrator access or another wallet-dependent feature;
@@ -191,6 +201,6 @@ Only after the Worker/D1 lifecycle and UI parity tests pass:
 
 ## 6. Current release boundary
 
-The local Worker/D1 ordinary-account security lifecycle (**Block A**) and the RBAC core of administrator role governance (**Block B**) have passed scoped GitHub-hosted local qualification. Block B is not operationally complete: the Worker still lacks the real wallet enrollment/step-up API and the separately authorized first-administrator bootstrap. The next code block is **Block C — real EVM/SIWE administrator-wallet enrollment and step-up**, with Block B bootstrap continuity kept as a distinct gate. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**. Block D ordinary-user wallet backup, full dashboard parity and deployed staging remain separate implementation and evidence gates.
+The local Worker/D1 ordinary-account security lifecycle (**Block A**), RBAC core (**Block B**), and EOA EVM/SIWE administrator-wallet enrollment and ten-minute step-up (**Block C**) have passed their scoped GitHub-hosted local qualification. The first-administrator bootstrap remains blocked; no real account has yet received production administrator authority. The Worker does not yet expose the complete User/Administrator dashboard parity. The next work is the separately authorized initial-admin bootstrap design and Block E dashboard integration; Block D optional ordinary-user wallet backup and Block F deployed staging remain separate gates. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**.
 
 This plan is a scope and sequencing record. Each block must be implemented, tested and reviewed against its own acceptance evidence before being marked complete.
