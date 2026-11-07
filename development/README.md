@@ -13,6 +13,7 @@ Current major development subsystems include:
 - `nova-context-memory-optimization/` — evaluation and integration of established memory, semantic compression, retrieval, context-pruning, token-budgeting, caching, and related efficiency techniques.
 - `nova-recursive-self-improvement/` — autonomous RSI experimentation, protected evaluation, evidence, and candidate retention.
 - `account-continuity/` — development-only roadmap for account continuity, accessible authentication, privacy-preserving eligibility, recovery, member benefits, and optional community resource contribution.
+- `community-network/` — development-only requirements for AstroCrown's first-party general post feed, specialized communities and groups, communications, community-elected Councillors, and user-controlled external sharing.
 - `ai-sanctuary/` — Sanctuary research/protection architecture, AI welfare evidence mapping, and cross-repository integration with NOVA.
 - `index-section/` — active homepage section requirements, discoveries, and implementation-specific documentation.
 - `index-reference/` — shared homepage reference conventions.
