@@ -113,8 +113,10 @@ These are not interchangeable with NOVA's `CLOUDFLARE_API_KEY_01`. Keep the stag
 
 The existing `.github/workflows/nova-credential-readiness.yml` checks for these repository-level values:
 
-- Secrets: `GROQ_API_KEY_01`, `GEMINI_API_KEY_01`, `CLOUDFLARE_API_KEY_01`, `CLOUDFLARE_ACCOUNT_ID`, `NOVA_RSI_APP_PRIVATE_KEY`.
-- Variables: `NOVA_RSI_APP_CLIENT_ID`, `NOVA_RSI_AUTOMERGE_ENABLED`, `RSI_AI_BASE_URL`, `RSI_AI_MODEL`, `RSI_AI_COMMERCIAL_ELIGIBILITY`, `RSI_BENCHMARK_COMMAND`.
+- Secrets: `GROQ_API_KEY_01`, `GEMINI_API_KEY_01`, `CLOUDFLARE_API_KEY_01`, `NOVA_RSI_APP_PRIVATE_KEY`.
+- Variables: `CLOUDFLARE_ACCOUNT_ID`, `NOVA_RSI_APP_CLIENT_ID`, `NOVA_RSI_AUTOMERGE_ENABLED`, `RSI_AI_BASE_URL`, `RSI_AI_MODEL`, `RSI_AI_COMMERCIAL_ELIGIBILITY`, `RSI_BENCHMARK_COMMAND`.
+
+The Cloudflare account ID is an identifier, not an API credential. The readiness workflow has been aligned to read it from a repository variable; that same repository variable can be consumed by the `cloudflare-staging` deployment job, unless an environment-scoped variable intentionally overrides it.
 
 The provider credentials should only be duplicated into AstroCrown-Web where an AstroCrown workflow/component actually consumes them. If the NOVA control plane is later moved into AstroCrown-Web, then the NOVA-only credentials above must also be provisioned there (or, preferably, replaced with purpose-scoped credentials for that deployment).
 
