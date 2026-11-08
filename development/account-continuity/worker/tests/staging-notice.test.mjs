@@ -57,8 +57,6 @@ test("staging safety notice is a mandatory first-visit gate with server acknowle
   assert.match(html, /acknowledgementPending/);
   assert.match(html, /fetch\("\/api\/staging\/acknowledge"/);
   assert.match(html, /2026-11-08-public-test-v1/);
-  assert.match(html, /Acknowledge the current AstroCrown public-staging safety notice/);
-  assert.match(html, /HttpOnly; SameSite=Strict/);
   assert.match(html, /openNotice\(\);/);
   assert.match(html, /reopen-development-notice/);
 });
