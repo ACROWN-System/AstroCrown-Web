@@ -178,3 +178,54 @@ Do not modify, delete, rewrite, rename, relocate or compact immutable historical
 
 Passing CI alone is not sufficient. This document does not authorize a merge, paid service, provider lock-in, public deployment or public account onboarding.
 
+## 8. Public interactive staging and mandatory first-visit safety notice
+
+**Owner clarification — 2026-11-08:** The intended shared environment is the actual browser-accessible AstroCrown staging application, not the GitHub HTML preview proxy and not a local server exposed through a temporary tunnel. A person who discovers the staging website should be able to understand its test-only status before interacting with it. The first screen must therefore be the main safety notice, not a browser-level shared-password prompt or an ordinary sign-in form.
+
+### 8.1 Mandatory first-screen notice
+
+The production-parity staging build must transform the current visual-preview notice into a staging-specific notice. Do not add a second competing popup. Reuse the existing accessible `#development-notice` modal and its explicit acknowledgement control, but change its copy for the environment.
+
+The notice must state, in clear language and before any account or wallet interaction, that:
+
+- This is a public **staging/test environment**, not the production AstroCrown service. Features may be incomplete, experimental, inaccurate, simulated, interrupted or changed without notice.
+- Test accounts are temporary test identities, not permanent customer accounts. Accounts, passkeys registered for the staging origin, test recovery keys, sessions, profiles, posts and other test records may be reset or deleted at any time. Do not rely on their continued existence or use them as the only copy of important information.
+- No personal, identifying, sensitive, confidential or otherwise private information should be submitted. Users must assume that anything entered, posted, uploaded or transmitted may be accessible to other testers or service operators, may be publicly visible depending on the feature, and may be present in operational/security logs or provider-retained backups. Do not assume private messages, profile fields, account metadata or uploaded material are confidential in this staging environment.
+- Only explicitly supported blockchain **test networks** and valueless test tokens may be used. Never use mainnet, real assets, real funds, real payments, valuable approvals or a wallet holding assets of value. Use a separate disposable test wallet and obtain test tokens only from appropriate testnet faucets. Never provide a seed phrase, private key, production recovery material or production wallet authorization.
+- Account registration must use a passkey created specifically for the staging origin and a staging-only recovery key. Never reuse a production credential, passkey, recovery key or wallet.
+- The environment is offered for testing and evaluation, without production-service, availability, data-retention or account-persistence guarantees.
+
+The wording must not falsely say that all transactions are prohibited: qualified testnet interactions are permitted only after the relevant network and transaction controls have actually passed qualification. If testnet functionality is not yet deployed/qualified, the notice and UI must state that it is unavailable rather than imply that it works.
+
+### 8.2 Enforced acknowledgement and interaction order
+
+- Show the notice automatically on every fresh homepage load/session, before any other interactive control can be used. Do not permanently remember acceptance across unrelated future visits; the notice must be shown again on a new visit and whenever its version materially changes.
+- Require an explicit unchecked-by-default acknowledgement checkbox and a separate Continue action. Continue remains disabled until the checkbox is checked.
+- Prevent dismissal through Escape, backdrop click, browser navigation into an interactive sub-route, or other UI bypass. Provide a clear way to leave the site.
+- Keep account sign-up, sign-in, recovery, wallet connection, testnet transaction initiation, posting, messaging, uploads and other state-changing interactions unavailable until the notice has been acknowledged.
+- Enforce the acknowledgement/version at the relevant server-side state-changing endpoints as well as in the frontend. A client-side modal alone is not an authorization or security boundary; direct API requests must not bypass the required safety acknowledgement.
+- Keep a persistent, unmistakable staging label visible after acknowledgement and retain a footer link that reopens the notice.
+- Verify mobile/desktop layouts, keyboard navigation, focus management, screen-reader labels, and every supported entry route. Add browser tests that prove users cannot interact before acknowledgement and that the notice reappears on a fresh visit.
+
+### 8.3 Public discovery versus a shared access gate
+
+The target public test experience is intended to be discoverable and usable by testers in different countries without distributing one shared Basic Authentication password. The current Worker `gate()` returns HTTP 401 Basic Authentication for all staging requests, and the current deployment workflow requires a shared `ASTROCROWN_STAGING_ACCESS_CODE`. This means the current deployment design does **not yet** meet the intended public-discovery experience: the browser password prompt appears before the AstroCrown safety notice and prevents an unaffiliated visitor from reaching the page.
+
+Do not simply remove the existing gate. First qualify an alternative public-staging threat model and controls, including registration and API rate limits, abuse/resource-exhaustion controls, origin/CSRF checks, safe session handling, synthetic-only data, bounded storage/retention, testnet-only chain allowlists enforced server-side, and fail-closed behavior when quotas or configuration are exhausted. The public homepage and safety notice may be served before acknowledgement, but account creation and every other state-changing operation must remain protected by the relevant controls. Until that replacement is implemented and tested, retain the current gate and mark public tester access BLOCKED; do not describe the site as publicly interactive.
+
+### 8.4 Staging build and verification requirements
+
+- The staging asset builder must replace the visual-preview-specific title, description, transaction warning, acknowledgement text and button label with the staging-specific notice above. It must fail the build if the source notice changes and the transformation can no longer be verified; never silently publish the old misleading notice.
+- The visual-only HTML preview may retain its separate preview notice. The staging artifact must clearly identify itself as staging and must not be confused with the `htmlpreview.github.io` page.
+- Test the generated staging artifact itself, not only the source HTML. Automated tests must assert the required copy is present, obsolete "visual review only" copy is absent, and the modal is invoked before user interactions become available.
+- Test direct API access without acknowledgement, mainnet-chain attempts, missing/invalid staging configuration, rate-limit exhaustion, database quota exhaustion and reset/deletion behavior. These must fail safely without paid fallback, production access or real-asset handling.
+- Do not announce a public staging URL until the actual remote deployment, public-entry behavior, account API/database, testnet controls and real-browser acceptance checks have passed.
+
+### 8.5 Current evidence-based status
+
+The current branch already contains an accessible first-visit dialog in `development/index.html`. It opens on every fresh homepage load, blocks dismissal through the cancel event, requires a checkbox and disabled-until-checked Continue button, and provides a footer link to reopen it. This is the correct foundation.
+
+However, the current dialog copy is for a visual-only preview and prohibits every transaction. The current `build-staging-site.mjs` copies that dialog unchanged and injects only a narrow staging banner. The account UI has a separate notice only inside the account modal; it is not a substitute for the homepage notice. The Worker Basic Authentication gate currently blocks the homepage before the notice can be displayed. Therefore the staging-specific main notice, its generated-artifact tests, and the public-entry/access-control redesign remain **NOT IMPLEMENTED / BLOCKED**.
+
+No remote staging deployment, public account onboarding, access-gate removal, testnet transaction enablement, paid-plan activation or production deployment is authorized by this clarification.
+
