@@ -102,21 +102,21 @@ The `cloudflare-staging` GitHub Environment used by `.github/workflows/cloudflar
 
 | Type | Name | Purpose |
 |---|---|---|
-| Environment secret | `CLOUDFLARE_API_TOKEN_02` | Dedicated scoped token for deploying the staging Worker and provisioning/using staging D1 |
+| Repository Actions secret | `CLOUDFLARE_API_TOKEN_02` | Account-02 token used by the staging deployment and, while the controller remains in NOVA, by NOVA's Workers AI operations |
 | Environment secret | `ASTROCROWN_RATE_LIMIT_HMAC_KEY` | Secret key for public-staging rate limiting and signed notice acknowledgement |
 | Repository Actions variable | `CLOUDFLARE_ACCOUNT_ID_02` | Account identifier for Cloudflare account 02; shared by AstroCrown staging and NOVA Workers AI operations |
 | Environment variable, after first database creation | `ASTROCROWN_STAGING_D1_DATABASE_ID` | Pins subsequent deployments to the already-created staging D1 database |
 
-Cloudflare account 02 is now the only Cloudflare account used by the active AstroCrown/NOVA workflows. The `CLOUDFLARE_API_TOKEN_02` value must be available in both repositories while NOVA's heartbeat remains in the NOVA repository. Its scope must include the staging Worker/D1 operations and Workers AI inference permissions described in the PR. The D1 database ID is configuration, not a secret. Do not enable billing, attach a payment card, or select a paid plan to satisfy this workflow.
+Cloudflare account 02 is now the only Cloudflare account used by the active AstroCrown/NOVA workflows. Store `CLOUDFLARE_API_TOKEN_02` as a repository Actions secret in AstroCrown-Web and copy the same account-02 token into NOVA while the heartbeat still runs there. Its scope must include product-level Workers Admin, D1 Read/Edit, and Workers AI Read/Edit; do not grant Billing, DNS, Global API Key, or account-wide administrator permissions. Store `CLOUDFLARE_ACCOUNT_ID_02` once as a repository Actions variable in each repository. The D1 database ID is configuration, not a secret. Do not enable billing, attach a payment card, or select a paid plan to satisfy this workflow.
 
 ### 5.3 AstroCrown-Web RSI/readiness configuration
 
 The existing `.github/workflows/nova-credential-readiness.yml` checks for these repository-level values:
 
 - Secrets: `GROQ_API_KEY_01`, `GEMINI_API_KEY_01`, `CLOUDFLARE_API_TOKEN_02`, `NOVA_RSI_APP_PRIVATE_KEY`.
-- Variables: `CLOUDFLARE_ACCOUNT_ID_02`, `CLOUDFLARE_ACCOUNT_ID_02`, `NOVA_RSI_APP_CLIENT_ID`, `NOVA_RSI_AUTOMERGE_ENABLED`, `RSI_AI_BASE_URL`, `RSI_AI_MODEL`, `RSI_AI_COMMERCIAL_ELIGIBILITY`, `RSI_BENCHMARK_COMMAND`.
+- Variables: `CLOUDFLARE_ACCOUNT_ID_02`, `NOVA_RSI_APP_CLIENT_ID`, `NOVA_RSI_AUTOMERGE_ENABLED`, `RSI_AI_BASE_URL`, `RSI_AI_MODEL`, `RSI_AI_COMMERCIAL_ELIGIBILITY`, `RSI_BENCHMARK_COMMAND`.
 
-`CLOUDFLARE_ACCOUNT_ID_02` belongs to `CLOUDFLARE_API_TOKEN_02` and is used by the NOVA/Cloudflare provider-readiness path. `CLOUDFLARE_ACCOUNT_ID_02` belongs to `CLOUDFLARE_API_TOKEN_02` and is used by the AstroCrown staging deployment. They must never be interchanged. Both account IDs are identifiers, not authentication secrets, so store them as GitHub Actions variables (not secrets). The readiness workflow reads `_01`; the staging deployment reads `_02`.
+`CLOUDFLARE_ACCOUNT_ID_02` is the one Cloudflare account identifier used by both the NOVA/Cloudflare readiness path and the AstroCrown staging deployment. There is no active `_01` Cloudflare account binding. The account ID is an identifier, not an authentication secret, so store it as a repository Actions variable in both repositories (not as a secret). Both workflows now read the `_02` variable.
 
 The account-02 Cloudflare token and account ID must currently be configured in both repositories because the active NOVA control-plane workflows still execute from NOVA, while AstroCrown staging deploys from AstroCrown-Web. Once the NOVA portability package and replacement scheduler are fully qualified and the active controller is deliberately moved, the old NOVA repository copy can be retired. Other providers remain independently scoped; do not rename Groq, Gemini, or Mistral `_01` key slots as Cloudflare account numbers.
 
