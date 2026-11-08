@@ -1,3 +1,4 @@
+  assert.doesNotMatch(workflow, /ASTROCROWN_STAGING_ACCESS_CODE/);
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -34,7 +35,6 @@ test("local tests, build and dry-run do not inherit Cloudflare account credentia
   assert.match(deployScript, /if \(options\.allowCloudflareCredentials !== true\)/);
   assert.match(deployScript, /delete childEnv\.CLOUDFLARE_API_TOKEN;/);
   assert.match(deployScript, /delete childEnv\.CLOUDFLARE_ACCOUNT_ID;/);
-  assert.match(deployScript, /delete childEnv\.ASTROCROWN_STAGING_ACCESS_CODE;/);
   assert.match(deployScript, /delete childEnv\.ASTROCROWN_RATE_LIMIT_HMAC_KEY;/);
   assert.match(deployScript, /runNpm\(\["test"\]\);[\s\S]*runNpm\(\["run", "build:site"\]\);[\s\S]*runNpm\(\["run", "check:worker"\]\);/);
 });
@@ -89,7 +89,6 @@ test("GitHub staging deployment workflow is manual, main-only and environment-sc
   assert.match(workflow, /I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY/);
   assert.match(workflow, /name: cloudflare-staging/);
   assert.match(workflow, /secrets\.CLOUDFLARE_API_TOKEN_02/);
-  assert.match(workflow, /secrets\.ASTROCROWN_STAGING_ACCESS_CODE/);
   assert.match(workflow, /secrets\.ASTROCROWN_RATE_LIMIT_HMAC_KEY/);
   assert.match(workflow, /vars\.ASTROCROWN_STAGING_D1_DATABASE_ID/);
   assert.doesNotMatch(workflow, /upload-artifact/); 
