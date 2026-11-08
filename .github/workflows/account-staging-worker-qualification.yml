@@ -105,7 +105,7 @@ jobs:
           if (!mldsa44.sign || !mldsa44.verify || !advertised) throw new Error("BLOCKED: this runtime cannot qualify ML-DSA-44 sign/verify and first-preference registration.");
           NODE
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
-          grep -q "STAGING ENVIRONMENT" "$RUNNER_TEMP/home.html"
+          grep -q "LIVE PUBLIC TEST ENVIRONMENT" "$RUNNER_TEMP/home.html"
           code=$(curl --resolve localhost:8787:127.0.0.1 -sS -o "$RUNNER_TEMP/wrong-origin.json" -w "%{http_code}" -X POST "$base/api/passkeys/authentication/options" -H "Origin: https://untrusted.invalid" -H "Content-Type: application/json" --data "{}")
           test "$code" = "403"
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
