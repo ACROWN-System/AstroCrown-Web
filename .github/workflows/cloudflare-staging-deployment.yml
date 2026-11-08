@@ -1,0 +1,122 @@
+name: Cloudflare Staging Deployment
+run-name: AstroCrown staging deployment on ${{ github.ref_name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      free_no_card_confirmation:
+        description: Confirm that Workers Free and D1 Free are active, no payment method is required or attached, and no paid product will be enabled.
+        required: true
+        type: choice
+        options:
+          - DO_NOT_DEPLOY
+          - I_CONFIRMED_WORKERS_FREE_NO_CARD
+        default: DO_NOT_DEPLOY
+      staging_deployment_authorization:
+        description: Explicitly authorize creation/use of the isolated staging D1 database and deployment of the staging Worker only.
+        required: true
+        type: choice
+        options:
+          - DO_NOT_DEPLOY
+          - I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY
+        default: DO_NOT_DEPLOY
+
+permissions:
+  contents: read
+
+concurrency:
+  group: astrocrown-cloudflare-staging
+  cancel-in-progress: false
+
+jobs:
+  authorization:
+    name: Verify manual staging authorization
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Require main branch and both explicit confirmations
+        env:
+          SELECTED_REF: ${{ github.ref }}
+          FREE_CONFIRMATION: ${{ inputs.free_no_card_confirmation }}
+          DEPLOY_CONFIRMATION: ${{ inputs.staging_deployment_authorization }}
+        run: |
+          set -eu
+          if [ "$SELECTED_REF" != "refs/heads/main" ]; then
+            echo "::error::Staging deployment is restricted to the reviewed main branch."
+            exit 1
+          fi
+          if [ "$FREE_CONFIRMATION" != "I_CONFIRMED_WORKERS_FREE_NO_CARD" ]; then
+            echo "::error::Free/no-card confirmation was not supplied. No deployment was attempted."
+            exit 1
+          fi
+          if [ "$DEPLOY_CONFIRMATION" != "I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY" ]; then
+            echo "::error::Explicit staging deployment authorization was not supplied. No deployment was attempted."
+            exit 1
+          fi
+          echo "Manual staging authorization checks passed. No Cloudflare credentials are available in this job."
+
+  deploy:
+    name: Deploy isolated AstroCrown staging environment
+    needs: authorization
+    if: ${{ github.ref == 'refs/heads/main' && needs.authorization.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    environment:
+      name: cloudflare-staging
+    defaults:
+      run:
+        working-directory: development/account-continuity/worker
+    steps:
+      - name: Checkout reviewed main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v6.1.0
+        with:
+          node-version: "22"
+
+      - name: Generate dependency lock for this ephemeral runner
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Deploy staging after local tests, restricted build and dry-run pass
+        id: deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_02 }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          ASTROCROWN_RATE_LIMIT_HMAC_KEY: ${{ secrets.ASTROCROWN_RATE_LIMIT_HMAC_KEY }}
+          ASTROCROWN_STAGING_D1_DATABASE_ID: ${{ vars.ASTROCROWN_STAGING_D1_DATABASE_ID }}
+          ASTROCROWN_CONFIRM_WORKERS_FREE_NO_CARD: ${{ inputs.free_no_card_confirmation == 'I_CONFIRMED_WORKERS_FREE_NO_CARD' && 'I_CONFIRMED_WORKERS_FREE_NO_CARD' || '' }}
+          ASTROCROWN_CONFIRM_REMOTE_STAGING_DEPLOY: ${{ inputs.staging_deployment_authorization == 'I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY' && 'I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY' || '' }}
+        run: |
+          set -eu
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing cloudflare-staging secret CLOUDFLARE_API_TOKEN_02."; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing cloudflare-staging variable CLOUDFLARE_ACCOUNT_ID."; exit 1; }
+          test -n "$ASTROCROWN_RATE_LIMIT_HMAC_KEY" || { echo "::error::Missing cloudflare-staging secret ASTROCROWN_RATE_LIMIT_HMAC_KEY."; exit 1; }
+          node scripts/deploy-staging.mjs
+
+      - name: Report non-secret deployment outputs
+        if: always()
+        env:
+          DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
+          STAGING_ORIGIN: ${{ steps.deploy.outputs.staging_origin }}
+          STAGING_D1_DATABASE_ID: ${{ steps.deploy.outputs.staging_d1_database_id }}
+        run: |
+          {
+            echo "## Cloudflare staging workflow"
+            echo ""
+            echo "- Deployment step: $DEPLOY_OUTCOME"
+            if [ -n "$STAGING_ORIGIN" ]; then
+              echo "- Staging origin: $STAGING_ORIGIN"
+            fi
+            if [ -n "$STAGING_D1_DATABASE_ID" ]; then
+              echo "- D1 database ID (non-secret): $STAGING_D1_DATABASE_ID"
+              echo "- Before future runs, add this as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment."
+            fi
+            echo "- No production deployment, paid upgrade, billing change, or automatic resource deletion is performed by this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"

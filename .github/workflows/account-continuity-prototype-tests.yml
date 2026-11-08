@@ -1,0 +1,191 @@
+name: Local Account Continuity Prototype Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/index.html"
+      - "development/dependencies/**"
+      - "development/account-continuity/**"
+      - "development/auth-prototype/wallet_auth_core.py"
+      - "development/audit/Active/2026-10-21-Local-Account-Creation-and-Sign-In-Prototype.md"
+      - "development/audit/Active/2026-10-21-CMC-Style-Email-Account-Flow.md"
+      - ".github/workflows/account-continuity-prototype-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "development/index.html"
+      - "development/dependencies/**"
+      - "development/account-continuity/**"
+      - "development/auth-prototype/wallet_auth_core.py"
+      - ".github/workflows/account-continuity-prototype-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  local-account-tests:
+    runs-on: ubuntu-24.04
+    # Matches the committed CPython 3.12 Ubuntu 24.04 x86_64 hash-locked wheel set.
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify hash-lock package pins
+        run: python development/dependencies/verify_ci_dependency_locks.py account
+
+      - name: Install hash-verified Python dependencies
+        run: python -m pip install --disable-pip-version-check --require-hashes --only-binary=:all: -r development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock
+
+      - name: Validate Python syntax
+        run: |
+          python -m py_compile development/auth-prototype/wallet_auth_core.py development/account-continuity/prototype/server.py development/account-continuity/prototype/passkey_auth.py development/account-continuity/prototype/case_management.py development/account-continuity/prototype/provision_admin.py development/account-continuity/prototype/tests/test_account_server.py development/account-continuity/prototype/tests/test_passkey_auth.py development/account-continuity/prototype/tests/test_case_management.py development/account-continuity/prototype/tests/test_email_delivery.py development/account-continuity/prototype/tests/test_ml_dsa_verification.py development/account-continuity/prototype/live_test_tunnel.py development/account-continuity/prototype/tests/test_live_test_tunnel.py
+
+      - name: Validate browser JavaScript syntax
+        run: |
+          node --check development/account-continuity/prototype/account-ui.js
+          node --check development/account-continuity/prototype/admin-wallet-ui.js
+          node --check development/account-continuity/prototype/email-action.js
+          node --check development/account-continuity/prototype/cases-ui.js
+          node --check development/account-continuity/prototype/tests/browser_smoke.mjs
+
+      - name: Run loopback HTTP and account-contract tests
+        run: python -m unittest discover -s development/account-continuity/prototype/tests -p "test_*.py" -v
+
+      - name: Verify account entry point and security boundaries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html = Path("development/index.html").read_text(encoding="utf-8")
+          server = Path("development/account-continuity/prototype/server.py").read_text(encoding="utf-8")
+          passkey = Path("development/account-continuity/prototype/passkey_auth.py").read_text(encoding="utf-8")
+          ui = Path("development/account-continuity/prototype/account-ui.js").read_text(encoding="utf-8")
+          admin_wallet_ui = Path("development/account-continuity/prototype/admin-wallet-ui.js").read_text(encoding="utf-8")
+          css = Path("development/account-continuity/prototype/account-prototype.css").read_text(encoding="utf-8")
+          terms = Path("development/account-continuity/prototype/terms-of-use.html").read_text(encoding="utf-8")
+          privacy = Path("development/account-continuity/prototype/privacy-policy.html").read_text(encoding="utf-8")
+          cases_html = Path("development/account-continuity/prototype/cases.html").read_text(encoding="utf-8")
+          cases_ui = Path("development/account-continuity/prototype/cases-ui.js").read_text(encoding="utf-8")
+          cases_module = Path("development/account-continuity/prototype/case_management.py").read_text(encoding="utf-8")
+          required = (
+              'id="open-account-dialog"', 'id="account-dialog"',
+              'href="./account-continuity/prototype/account-prototype.css"',
+              'src="./account-continuity/prototype/account-ui.js"', "Account"
+          )
+          missing = [item for item in required if item not in html]
+          if missing:
+              raise SystemExit(f"Account entry point or relative preview asset is missing: {missing}")
+          if "ASTROCROWN · ACCOUNT ACCESS" in html or 'class="account-dialog-kicker"' in html:
+              raise SystemExit("Remove the redundant AstroCrown account-access kicker above the dialog title.")
+          if 'ThreadingHTTPServer(("127.0.0.1", port)' not in server:
+              raise SystemExit("The local account prototype must bind only to loopback.")
+          for item in (
+              'id="account-demo-notice"', "function registerWithPasskey", "function signInWithPasskey",
+              "function syncAccountButton", "navigator.credentials.create", "navigator.credentials.get",
+              "account-passkey-signin", "hosted-preview-no-authentication"
+          ):
+              if item not in ui:
+                  raise SystemExit(f"Expected passkey account UX/security control missing: {item}")
+          if "account-other-options" in ui:
+              raise SystemExit("The Or divider must not be a clickable/toggle control.")
+          for item in (
+              ".account-provider-placeholder", ".account-or-divider", ".account-or-divider-arrow",
+              ".account-or-divider-line", ".account-or-divider-line-row",
+              "grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)",
+              "background-image:linear-gradient(90deg, transparent 0%, rgba(255,215,0,.9) 17%, rgba(255,215,0,.9) 83%, transparent 100%)",
+              "pointer-events:none", "--gold", "rgba(15,31,52,.97)"
+          ):
+              if item not in css:
+                  raise SystemExit(f"Expected AstroCrown account visual styling missing: {item}")
+          if "repeating-linear-gradient" in css:
+              raise SystemExit("The Or divider side segments must be solid continuous lines, not dotted or dashed.")
+          for item in (
+              "data-account-mode", "Referral ID (Optional)", "Terms of Use", "Privacy Policy",
+              "termsAccepted", "termsVersion", "No email, SMS or external identity provider",
+              "publicKey", "challengeId", "account-recovery-form",
+              "account-one-time-account-identifier", "account-one-time-recovery-key",
+              "account-recovery-key-saved",
+              "/api/account/recovery/options", "/api/account/recovery/complete"
+          ):
+              if item not in ui and item not in server:
+                  raise SystemExit(f"Expected passkey account UX/security boundary missing: {item}")
+          if ("authenticator_selection=" not in passkey or "ResidentKeyRequirement.REQUIRED" not in passkey or "user_verification=UserVerificationRequirement.REQUIRED" not in passkey):
+              raise SystemExit("WebAuthn registration must require a discoverable credential.")
+          for item in ("ML_DSA_65", "ML_DSA_44", "ML_DSA_87", "supported_pub_key_algs=self.SUPPORTED_PUB_KEY_ALGS", "credential_algorithm_id"):
+              if item not in passkey:
+                  raise SystemExit(f"Post-quantum passkey policy missing: {item}")
+          for item in ("credential_alg INTEGER", "credential_alg IN (-48, -49, -50)", '"postQuantumPasskeyCount"'):
+              if item not in server:
+                  raise SystemExit(f"Actual credential algorithm tracking missing: {item}")
+          if "postQuantumPasskeyCount" not in ui:
+              raise SystemExit("The User dashboard must distinguish an actual ML-DSA credential from a capability offer.")
+          for item in ("generate_recovery_key", "account_recovery_keys", "account_recovery_challenges"):
+              if item not in server:
+                  raise SystemExit(f"Offline recovery-key backend control missing: {item}")
+          for item in ('name="email"', 'type="password"', "/api/account/login", "/api/account/register"):
+              if item in ui:
+                  raise SystemExit(f"Legacy email/password account flow remains in the active UI: {item}")
+          for item in ("/api/passkeys/register/options", "/api/passkeys/register/verify", "/api/passkeys/authentication/options", "/api/passkeys/authentication/verify"):
+              if item not in server:
+                  raise SystemExit(f"Passkey API route missing: {item}")
+          if "browser-preview-memory-only" in ui:
+              raise SystemExit("The hosted preview must not claim to simulate authenticated accounts.")
+          if "DRAFT ONLY" not in terms or "DRAFT ONLY" not in privacy:
+              raise SystemExit("Policy links must point to explicitly marked development drafts.")
+          for item in ("case-create-form", "case-lookup-form", "case-recovery-form", "administrator-case-panel"):
+              if item not in cases_html:
+                  raise SystemExit(f"Case portal control missing: {item}")
+          for item in ("/admin/action", "/recovery-request", "/recovery-status", "/account-view", "data-download-case-history"):
+              if item not in cases_ui:
+                  raise SystemExit(f"Case portal API client route missing: {item}")
+          for item in ("community_cases", "access_key_hash", "manualVerificationConfirmed", "case_reference_hint"):
+              if item not in cases_module:
+                  raise SystemExit(f"Case storage or independent recovery control missing: {item}")
+          if "cases.html" not in server or "cases-ui.js" not in server:
+              raise SystemExit("The local server allowlist must serve the case portal and its script.")
+          for item in ("terms-of-use.html", "privacy-policy.html"):
+              if item not in server:
+                  raise SystemExit(f"Local allowlist missing development policy page: {item}")
+          if any(item in ui for item in ("localStorage.", "sessionStorage.", "indexedDB.")):
+              raise SystemExit("Preview account flow must not persist credentials or account state in browser storage.")
+          if "window.ethereum" in ui or "eth_requestAccounts" in ui:
+              raise SystemExit("Ordinary account prototype must not load or prompt a wallet.")
+          for item in (
+              'id="wallet-connect-trigger"', "astrocrown:header-wallet-connect",
+              "data-admin-wallet-connect-pending", "astrocrown:admin-wallet-connect-state"
+          ):
+              if item not in html:
+                  raise SystemExit(f"Shared homepage wallet connection control is missing: {item}")
+          if "astrocrown:header-wallet-connect" not in admin_wallet_ui:
+              raise SystemExit("Administrator wallet authentication must use the shared homepage Wallet control.")
+          if admin_wallet_ui.count('method: "eth_requestAccounts"') != 1:
+              raise SystemExit("Wallet connection requests must be initiated only by the shared homepage Wallet control.")
+          for method in ("eth_sendTransaction", "eth_signTransaction", "eth_sendRawTransaction", "eth_getBalance"):
+              if method in admin_wallet_ui:
+                  raise SystemExit(f"Administrator wallet authentication must not use {method}.")
+          PY
+
+      - name: Run account flow in headless Chrome
+        shell: bash
+        env:
+          PYTHON: python
+        run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v google-chrome)"
+          elif command -v chromium >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v chromium)"
+          elif command -v chromium-browser >/dev/null 2>&1; then
+            export CHROME_BIN="$(command -v chromium-browser)"
+          else
+            echo "::error::BLOCKED: no preinstalled Chrome/Chromium; account creation/sign-in browser evidence is required."
+            exit 1
+          fi
+          node development/account-continuity/prototype/tests/browser_smoke.mjs

@@ -1,0 +1,4 @@
+# Direct source pin for the isolated Python dependency-audit toolchain.
+# The complete transitive wheel closure and artifact hashes are generated into
+# requirements-pip-audit-py312-ubuntu24-x86_64.lock.
+pip-audit==2.10.1
