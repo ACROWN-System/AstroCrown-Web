@@ -2003,6 +2003,7 @@ export {
   validateAdminReason,
   validateAdminPermissions,
   gate,
+  createStagingAcknowledgement,
   hasStagingAcknowledgement,
   normalizeEvmAddress,
   validateEvmChainId,
