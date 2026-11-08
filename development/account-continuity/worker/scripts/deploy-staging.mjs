@@ -15,7 +15,6 @@ const sourceConfigPath = join(workerRoot, "wrangler.jsonc");
 const remoteConfigPath = join(workerRoot, ".wrangler.remote-staging.jsonc");
 const localStateDir = join(workerRoot, ".wrangler");
 const statePath = join(localStateDir, "remote-staging-state.json");
-const accessCodePath = join(localStateDir, "staging-access-code.txt");
 const rateKeyPath = join(localStateDir, "rate-limit-hmac-key.txt");
 const workerBaseApi = "https://api.cloudflare.com/client/v4";
 const databaseName = "acrown-account-staging";
@@ -53,12 +52,9 @@ function validateEnv() {
   if (!/^[a-f0-9]{32}$/i.test(accountId)) fail("CLOUDFLARE_ACCOUNT_ID must be the 32-character account identifier.");
 
   if (process.env.GITHUB_ACTIONS === "true") {
-    for (const name of ["ASTROCROWN_STAGING_ACCESS_CODE", "ASTROCROWN_RATE_LIMIT_HMAC_KEY"]) {
-      const value = process.env[name] || "";
-      if (value.length < 32 || value.trim() !== value) {
-        fail(name + " must be configured as a protected GitHub environment secret with at least 32 characters. " +
-          "The hosted runner will not generate an unreported access credential.");
-      }
+    const value = process.env.ASTROCROWN_RATE_LIMIT_HMAC_KEY || "";
+    if (value.length < 32 || value.trim() !== value) {
+      fail("ASTROCROWN_RATE_LIMIT_HMAC_KEY must be configured as a protected GitHub environment secret with at least 32 characters.");
     }
   }
 
@@ -104,7 +100,6 @@ function runProgram(program, args, options = {}) {
   }
   // Access-gate and rate-limit secrets are supplied to Wrangler only through stdin
   // when setting the corresponding Cloudflare secret; never expose them in its environment.
-  delete childEnv.ASTROCROWN_STAGING_ACCESS_CODE;
   delete childEnv.ASTROCROWN_RATE_LIMIT_HMAC_KEY;
   const result = spawnSync(program, args, {
     cwd: workerRoot,
@@ -165,6 +160,7 @@ function assertSentinelConfig(config) {
     fail("The staging Wrangler configuration shape changed; refusing remote deployment.");
   }
   if (stage.vars?.ENVIRONMENT !== "staging") fail("The staging environment marker is not exact.");
+  if (stage.vars?.STAGING_ACCESS_MODE !== "public") fail("Staging must explicitly select the qualified public-access mode.");
   if (stage.vars?.RP_ID !== "SET_BEFORE_DEPLOY") fail("The staging RP ID is no longer the expected non-deployable sentinel.");
   if (stage.vars?.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") fail("The staging origin is no longer the expected non-deployable sentinel.");
   if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") {
@@ -329,7 +325,7 @@ async function publishGithubDeploymentMetadata(state, configInfo) {
         "- Staging origin: " + configInfo.origin,
         "- D1 database name: " + databaseName,
         "- D1 database ID (non-secret): " + state.databaseId,
-        "- Access code: supplied by protected GitHub environment secret; not displayed",
+        "- Access mode: public staging; no shared Basic Authentication prompt",
         "- Full remote browser and credential qualification: still required",
         "",
         "The D1 UUID is stored as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment for subsequent runs.",
@@ -360,12 +356,41 @@ async function setSecret(name, value) {
   );
 }
 
-async function smokeTest(origin, accessCode) {
-  const authorization = "Basic " + Buffer.from("staging:" + accessCode, "utf8").toString("base64");
-  const headers = { Authorization: authorization };
+async function smokeTest(origin) {
+  const homeResponse = await fetch(origin + "/", { signal: AbortSignal.timeout(30000) });
+  if (homeResponse.status !== 200) fail("Public staging homepage check failed (HTTP " + homeResponse.status + ").");
+  const homepage = await homeResponse.text();
+  if (
+    !homepage.includes("LIVE PUBLIC TEST ENVIRONMENT") ||
+    !homepage.includes("astro-account-runtime") ||
+    !homepage.includes("AstroCrown is live for public testing") ||
+    !homepage.includes("openly available to anyone on the internet")
+  ) fail("Public staging homepage is missing the live-environment marker or public safety notice.");
 
+  const beforeAcknowledgement = await fetch(origin + "/api/account/status", { signal: AbortSignal.timeout(30000) });
+  if (beforeAcknowledgement.status !== 428) {
+    fail("Remote account API did not require acknowledgement of the public-staging notice (expected HTTP 428).");
+  }
+
+  const acknowledgement = await fetch(origin + "/api/staging/acknowledge", {
+    method: "POST",
+    headers: {
+      Origin: origin,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ noticeVersion: "2026-11-08-public-test-v1" }),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (acknowledgement.status !== 200) fail("Remote staging notice acknowledgement failed (HTTP " + acknowledgement.status + ").");
+  const acknowledgementBody = await acknowledgement.json();
+  if (acknowledgementBody.acknowledged !== true) fail("Remote staging did not confirm the notice acknowledgement.");
+  const setCookie = acknowledgement.headers.get("Set-Cookie") || "";
+  const cookie = setCookie.split(";")[0];
+  if (!cookie.startsWith("acrown_staging_notice_ack=")) fail("Remote staging did not issue the signed acknowledgement cookie.");
+
+  const headers = { Cookie: cookie };
   const statusResponse = await fetch(origin + "/api/account/status", { headers, signal: AbortSignal.timeout(30000) });
-  if (statusResponse.status !== 200) fail("Remote staging account-status check failed (HTTP " + statusResponse.status + ").");
+  if (statusResponse.status !== 200) fail("Remote staging account-status check after acknowledgement failed (HTTP " + statusResponse.status + ").");
   const status = await statusResponse.json();
   if (status.authenticated !== false || status.passkeyAvailable !== true || status.mlDsaRegistrationAvailable !== true) {
     fail("Remote staging account-status response did not meet the required passkey/ML-DSA-44 qualification.");
@@ -380,17 +405,9 @@ async function smokeTest(origin, accessCode) {
     fail("Remote Worker does not support and advertise ML-DSA-44 as required. Keep staging closed and investigate; do not fall back silently.");
   }
 
-  const homeResponse = await fetch(origin + "/", { headers, signal: AbortSignal.timeout(30000) });
-  if (homeResponse.status !== 200) fail("Remote staging homepage check failed (HTTP " + homeResponse.status + ").");
-  const homepage = await homeResponse.text();
-  if (!homepage.includes("STAGING ENVIRONMENT") || !homepage.includes("astro-account-runtime")) {
-    fail("Remote staging homepage is missing its staging warning or account-runtime marker.");
-  }
-
   const negative = await fetch(origin + "/api/passkeys/authentication/options", {
     method: "POST",
     headers: {
-      ...headers,
       Origin: "https://untrusted.invalid",
       "Content-Type": "application/json",
     },
@@ -435,11 +452,6 @@ async function main() {
   await writeFile(statePath, JSON.stringify(completeState, null, 2) + "\n", { encoding: "utf8", mode: 0o600 });
   try { await chmod(statePath, 0o600); } catch { /* Windows ACLs govern file access on Windows. */ }
 
-  const accessCode = await loadOrCreateLocalSecret(
-    accessCodePath,
-    32,
-    "ASTROCROWN_STAGING_ACCESS_CODE",
-  );
   const rateLimitKey = await loadOrCreateLocalSecret(
     rateKeyPath,
     32,
@@ -456,23 +468,17 @@ async function main() {
   console.log("Deploying only the staging Worker environment. Missing secrets keep the service closed.");
   runNpx(["wrangler", "deploy", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"], { allowCloudflareCredentials: true });
 
-  console.log("Installing the two staging-only secrets through Wrangler's secret interface.");
-  await setSecret("STAGING_ACCESS_CODE", accessCode);
+  console.log("Installing the staging-only rate-limit and acknowledgement-signing key.");
   await setSecret("RATE_LIMIT_HMAC_KEY", rateLimitKey);
 
-  console.log("Checking the exact deployed HTTPS origin, ML-DSA-44 runtime, homepage and wrong-Origin rejection.");
-  const evidence = await smokeTest(configInfo.origin, accessCode);
+  console.log("Checking public homepage access, required notice acknowledgement, the account API, ML-DSA-44 and wrong-Origin rejection.");
+  const evidence = await smokeTest(configInfo.origin);
 
   console.log("");
   console.log("REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED");
   console.log("Staging URL: " + configInfo.origin + "/");
-  console.log("HTTP Basic Auth username: staging");
-  if (process.env.GITHUB_ACTIONS === "true") {
-    console.log("HTTP Basic Auth access code: configured from protected GitHub environment secret; value withheld.");
-  } else {
-    console.log("HTTP Basic Auth access code: " + accessCode);
-    console.log("Local ignored access-code file: " + accessCodePath);
-  }
+  console.log("Access mode: public live test environment; visitors see the mandatory safety notice before account services.");
+  console.log("Account API: server-enforced staging acknowledgement and per-IP passkey/recovery rate limits are active.");
   console.log("Remote D1 database name: " + databaseName);
   console.log("Remote D1 database ID: " + state.databaseId);
   console.log("ML-DSA-44 sign: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].sign);
