@@ -60,13 +60,14 @@ test("remote smoke checks are not represented as full account qualification", ()
 });
 
 
-test("GitHub-hosted deployment requires protected staging secrets before network access", () => {
-  assert.match(deployScript, /process\.env\.GITHUB_ACTIONS === "true"/);
-  assert.match(deployScript, /ASTROCROWN_STAGING_ACCESS_CODE/);
+test("GitHub-hosted public staging requires a protected HMAC key and no shared Basic Auth secret", () => {
+  assert.match(deployScript, /process\\.env\\.GITHUB_ACTIONS === "true"/);
   assert.match(deployScript, /ASTROCROWN_RATE_LIMIT_HMAC_KEY/);
-  assert.match(deployScript, /hosted runner will not generate an unreported access credential/);
+  assert.match(deployScript, /at least 32 characters/);
   assert.match(deployScript, /::add-mask::/);
-  assert.match(deployScript, /HTTP Basic Auth access code: configured from protected GitHub environment secret; value withheld\./);
+  assert.match(deployScript, /Access mode: public live test environment/);
+  assert.doesNotMatch(deployScript, /ASTROCROWN_STAGING_ACCESS_CODE/);
+  assert.doesNotMatch(deployScript, /HTTP Basic Auth access code/);
 });
 
 test("GitHub-hosted reruns require the recorded D1 UUID and never adopt by database name", () => {
@@ -92,4 +93,13 @@ test("GitHub staging deployment workflow is manual, main-only and environment-sc
   assert.match(workflow, /secrets\.ASTROCROWN_RATE_LIMIT_HMAC_KEY/);
   assert.match(workflow, /vars\.ASTROCROWN_STAGING_D1_DATABASE_ID/);
   assert.doesNotMatch(workflow, /upload-artifact/); 
+});
+
+test("staging Wrangler environment explicitly selects public mode and keeps local/production distinct", async () => {
+  const configPath = new URL("../wrangler.jsonc", import.meta.url);
+  const config = JSON.parse(await readFile(configPath, "utf8"));
+  assert.equal(config.env.staging.vars.ENVIRONMENT, "staging");
+  assert.equal(config.env.staging.vars.STAGING_ACCESS_MODE, "public");
+  assert.equal(config.vars.ENVIRONMENT, "local");
+  assert.equal(config.env.staging.d1_databases[0].database_id, "00000000-0000-0000-0000-000000000000");
 });
