@@ -1,4 +1,3 @@
-  assert.doesNotMatch(workflow, /ASTROCROWN_STAGING_ACCESS_CODE/);
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -61,7 +60,7 @@ test("remote smoke checks are not represented as full account qualification", ()
 
 
 test("GitHub-hosted public staging requires a protected HMAC key and no shared Basic Auth secret", () => {
-  assert.match(deployScript, /process\\.env\\.GITHUB_ACTIONS === "true"/);
+  assert.ok(deployScript.includes('if (process.env.GITHUB_ACTIONS === "true") {'));
   assert.match(deployScript, /ASTROCROWN_RATE_LIMIT_HMAC_KEY/);
   assert.match(deployScript, /at least 32 characters/);
   assert.match(deployScript, /::add-mask::/);
