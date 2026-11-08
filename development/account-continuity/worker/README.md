@@ -1,19 +1,19 @@
 # AstroCrown account staging Worker — qualification build
 
-**Status: hosted qualification build; remote staging deployment remains prepared but not deployed, approved for public onboarding, or a production release.**
+**Status: public-access staging implementation is in qualification; remote staging is not yet deployed. This is not a production release or a completed commercial platform.**
 
 This is an isolated Worker/D1 implementation path for the adopted passkey-first account model. It is separate from the Python loopback reference prototype.
 
 ## Included
 
-- Same-origin Worker request handler; exact Host, Origin and RP ID binding; security headers; no CORS; fail-closed staging access gate.
+- Same-origin Worker request handler; exact Host, Origin and RP ID binding; security headers; no CORS; public staging mode without a shared browser password; fail-closed if the rate-limit/acknowledgement-signing key is missing.
 - D1 schema for ordinary accounts, WebAuthn credentials, one-use challenges, recovery-key verifiers, sessions, persistent rate-limit events and security audit.
 - Discoverable WebAuthn registration and sign-in through pinned SimpleWebAuthn 14.0.3.
 - One-time 256-bit offline recovery key; only a salted SHA-256 verifier is stored. Recovery requires a new passkey, consumes/rotates the key, deactivates old credentials, revokes prior sessions and records an audit event.
 - Session tokens stored only as SHA-256 hashes; HttpOnly, SameSite=Strict cookies; Secure on HTTPS.
 - Runtime diagnostics for the actual SimpleWebAuthn default algorithm list and native ML-DSA Web Crypto support.
 - Restricted static build copies only the homepage, account UI assets, and explicitly allowlisted account/legal pages from development. It does not publish repository documentation, audit records, backups, or source files.
-- Existing homepage/account UI are reused. The generated static homepage receives a visible synthetic-data banner and a runtime marker enabling same-origin Worker API requests.
+- Existing homepage/account UI are reused. The generated staging homepage is clearly marked as a live public test environment. Its mandatory first-visit notice explains that public submissions are visible to anyone, that accounts/data are disposable, and that only enabled test functionality may be used. The notice must be acknowledged through a same-origin API request before account APIs accept requests.
 
 ## Account security lifecycle — local qualification passed; not deployed
 
@@ -94,7 +94,7 @@ The preferred operating path is GitHub Actions on GitHub-hosted Ubuntu runners. 
 
 Workflow: `.github/workflows/cloudflare-staging-deployment.yml`
 
-The workflow is deliberately manual and restricted to the reviewed `main` branch. It has two separate confirmation inputs: one confirms the Workers Free/D1 Free and no-card conditions, and the other explicitly authorizes creation/use of the isolated staging database and deployment of the staging Worker. Pushes, pull requests and CI runs never deploy remotely. A concurrency lock prevents overlapping staging deployments.
+The workflow is deliberately manual and restricted to the reviewed `main` branch. It has two separate confirmation inputs: one confirms the Workers Free/D1 Free and no-card conditions, and the other explicitly authorizes creation/use of the isolated staging database and deployment of the public staging Worker. Pushes, pull requests and CI runs never deploy remotely. A concurrency lock prevents overlapping staging deployments.
 
 **Activation boundary:** `workflow_dispatch` is available only after this workflow file is present on the repository's default branch. PR #141 remains a draft and this workflow does not merge it, publish the account implementation, or authorize production deployment. Until the reviewed branch is merged by an authorized maintainer, the workflow is prepared but cannot be used for remote deployment.
 
@@ -103,14 +103,13 @@ The workflow is deliberately manual and restricted to the reviewed `main` branch
 After the workflow is present on `main`, create a GitHub Actions environment named `cloudflare-staging` under repository Settings → Environments. Restrict allowed deployment branches to `main`. Add the following environment secrets:
 
 - `CLOUDFLARE_API_TOKEN_02` — the account-scoped Cloudflare token created for this account (D1 Read/Edit and Workers Editor only).
-- `ASTROCROWN_STAGING_ACCESS_CODE` — a password-manager-generated random value of at least 32 characters. This is the HTTP Basic access code for the restricted staging site.
 - `ASTROCROWN_RATE_LIMIT_HMAC_KEY` — a separate password-manager-generated random value of at least 32 characters.
 
 Add this environment variable:
 
 - `CLOUDFLARE_ACCOUNT_ID` — the 32-character Cloudflare account identifier.
 
-Do not create these as repository-wide secrets. The workflow references them only from its final deployment step after the explicit authorization job succeeds. The deployment script removes the access-code and rate-limit secrets from all child-process environments, masks them in GitHub Actions, sends them to Wrangler through standard input, and never prints the access code. No credential or access-code artifact is uploaded.
+Do not create these as repository-wide secrets. The workflow references the Cloudflare token and rate-limit/acknowledgement-signing secret only from its final deployment step after explicit authorization. The deployment script removes sensitive values from local test/build subprocess environments, masks secrets in GitHub Actions, sends the key to Wrangler through standard input, and never prints it. There is no shared Basic Authentication password for public visitors.
 
 For additional review, configure an environment required reviewer if a separate authorized reviewer is available. Environment branch restrictions are mandatory; a manual workflow trigger alone is not a substitute for controlling who can modify the deployment workflow.
 
@@ -120,13 +119,13 @@ On the first authorized deployment, the script creates the reserved D1 database 
 
 The first successful or partially completed deployment reports the D1 UUID as non-secret workflow output/summary. Before any subsequent deployment, add that exact UUID as the `ASTROCROWN_STAGING_D1_DATABASE_ID` variable in the `cloudflare-staging` GitHub environment. Later runs verify the UUID against Cloudflare and use that exact database; they never adopt an existing database by name alone. If the variable is absent but the reserved database already exists, the script stops safely rather than guessing.
 
-The deployment script also creates or uses two staging-only Cloudflare Worker secrets: `STAGING_ACCESS_CODE` and `RATE_LIMIT_HMAC_KEY`. The values come from the protected GitHub environment secrets above. The staging Worker name remains `astrocrown-account-staging-staging`; the script deploys only the `staging` Wrangler environment and does not create or delete Workers.
+The deployment script creates or uses one staging-only Cloudflare Worker secret, `RATE_LIMIT_HMAC_KEY`, supplied through the protected GitHub environment. It supports IP-based abuse limits and signs the short-lived staging-notice acknowledgement cookie. The Worker is explicitly configured for public staging; it serves the homepage without a shared browser password but rejects account/API access until a valid acknowledgement cookie is presented. The staging Worker name remains `astrocrown-account-staging-staging`; the script deploys only the `staging` Wrangler environment and does not create or delete Workers.
 
 ### What the workflow does and does not do
 
 Before any Cloudflare API request or remote resource change, the script verifies both confirmation values, the account ID, token presence, and both staging-only secret values. It then performs local invariant tests, the allowlisted website build and Wrangler bundle dry-run on GitHub's hosted runner. The Cloudflare token and account ID are removed from those child processes.
 
-Only after those checks pass does it read the configured workers.dev subdomain, verify/create the dedicated D1 database, apply the staging migration, deploy the staging Worker, install the two staging secrets and perform initial remote smoke checks. If a later stage fails, resources are not automatically deleted; preserve the reported D1 UUID and reconcile the state deliberately.
+Only after those checks pass does it read the configured workers.dev subdomain, verify/create the dedicated D1 database, apply the staging migration, deploy the staging Worker, install the staging rate-limit/acknowledgement secret and perform public-entry/acknowledgement smoke checks. If a later stage fails, resources are not automatically deleted; preserve the reported D1 UUID and reconcile the state deliberately.
 
 The workflow never configures production, enables Workers Paid, adds a payment method, enables another paid product, or performs automatic cleanup. A successful workflow run is only initial deployment smoke evidence. It is not full remote browser/credential qualification, production approval, or permission to announce public account onboarding.
 
@@ -137,3 +136,14 @@ Do not put the Cloudflare token in source files, Git history, workflow YAML, bui
 Use synthetic details only. Save the one-time recovery key offline when first displayed. Never use production credentials, personal recovery material, wallet seed phrases or real assets. Staging passkeys are tied to the staging RP ID and cannot be transferred to the production RP ID.
 
 Production parity and the three independent cleanup passes plus the eight-day quarantine remain governed by the staging requirements document.
+
+
+## Public staging access and notice acknowledgement
+
+The staging homepage is intended to be publicly reachable so a visitor from any country can open the real AstroCrown staging application without a shared HTTP Basic Authentication password. `STAGING_ACCESS_MODE=public` is an explicit staging-only setting. The Worker fails closed if `RATE_LIMIT_HMAC_KEY` is absent or too short.
+
+The first-visit popup posts the current notice version to `POST /api/staging/acknowledge`. The Worker validates the same-origin request and returns a 12-hour signed `HttpOnly; Secure; SameSite=Strict` cookie. All other staging API routes require that cookie; missing, modified, expired or wrong-version acknowledgements are rejected. The public homepage and static assets remain viewable before acknowledgement. Acknowledgement is a UX/policy gate, not proof that a person actually read the notice.
+
+Passkey registration, sign-in and recovery retain their existing per-IP and per-account D1 rate limits. The site continues to use exact origin/RP checks, same-origin restrictions and server-side session authorization. Public staging must use only synthetic, disposable account data. Cloudflare Free quotas must be monitored; requests must fail closed on missing configuration or exhausted quotas and must never trigger a paid fallback. This access model does not itself enable blockchain transactions: a network and transaction feature must separately be allowlisted, qualified and identified as enabled before testers are instructed to use it.
+
+This public mode is a limited-access application test, not a complete public production service. It does not make unfinished features operational, and it does not replace independent remote-browser qualification.
