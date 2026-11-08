@@ -1394,14 +1394,69 @@
         acknowledgement.focus();
       }
 
-      acknowledgement.addEventListener("change", function () {
-        continueButton.disabled = !acknowledgement.checked;
-      });
+      var runtimeMarker = document.querySelector('meta[name="astro-account-runtime"]');
+      var workerStagingMode = Boolean(runtimeMarker && runtimeMarker.content === "worker-staging" &&
+        window.location.protocol === "https:");
+      var acknowledgementPending = false;
+      var noticeFeedback = null;
 
-      continueButton.addEventListener("click", function () {
-        if (!acknowledgement.checked) return;
+      function closeNotice() {
         if (typeof notice.close === "function") notice.close();
         else notice.removeAttribute("open");
+      }
+
+      function showNoticeFeedback(message) {
+        if (!noticeFeedback) {
+          noticeFeedback = document.createElement("p");
+          noticeFeedback.id = "development-notice-feedback";
+          noticeFeedback.setAttribute("role", "status");
+          noticeFeedback.setAttribute("aria-live", "polite");
+          noticeFeedback.style.cssText = "margin:12px 0;color:#ffb2ad;font-size:12px;line-height:1.5";
+          continueButton.parentNode.insertBefore(noticeFeedback, continueButton);
+        }
+        noticeFeedback.textContent = message;
+      }
+
+      acknowledgement.addEventListener("change", function () {
+        continueButton.disabled = !acknowledgement.checked || acknowledgementPending;
+      });
+
+      continueButton.addEventListener("click", async function () {
+        if (!acknowledgement.checked || acknowledgementPending) return;
+        if (!workerStagingMode) {
+          closeNotice();
+          return;
+        }
+
+        acknowledgementPending = true;
+        continueButton.disabled = true;
+        continueButton.textContent = "Confirming acknowledgement…";
+        showNoticeFeedback("");
+
+        try {
+          var response = await fetch("/api/staging/acknowledge", {
+            method: "POST",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: {
+              "Accept": "application/json",
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ noticeVersion: "2026-11-08-public-test-v1" })
+          });
+          var result = await response.json();
+          if (!response.ok || result.acknowledged !== true) {
+            throw new Error(result.error || "The staging service could not verify your acknowledgement.");
+          }
+          closeNotice();
+        } catch (error) {
+          showNoticeFeedback(error && error.message
+            ? error.message
+            : "The staging service could not verify your acknowledgement. Please retry; account services remain unavailable.");
+          acknowledgementPending = false;
+          continueButton.textContent = "Continue to public test environment";
+          continueButton.disabled = !acknowledgement.checked;
+        }
       });
 
       notice.addEventListener("cancel", function (event) {
