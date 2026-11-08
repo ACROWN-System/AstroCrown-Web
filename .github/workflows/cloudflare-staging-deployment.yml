@@ -96,7 +96,7 @@ jobs:
         run: |
           set -eu
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing cloudflare-staging secret CLOUDFLARE_API_TOKEN_02."; exit 1; }
-          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing cloudflare-staging variable CLOUDFLARE_ACCOUNT_ID."; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing repository Actions variable CLOUDFLARE_ACCOUNT_ID_02."; exit 1; }
           test -n "$ASTROCROWN_RATE_LIMIT_HMAC_KEY" || { echo "::error::Missing cloudflare-staging secret ASTROCROWN_RATE_LIMIT_HMAC_KEY."; exit 1; }
           node scripts/deploy-staging.mjs
 
