@@ -857,7 +857,7 @@ try {
   );
   assert.equal(await evaluate("window.isSecureContext"), true, "localhost must be a WebAuthn secure context.");
   assert.equal(await evaluate("Boolean(window.ethereum)"), false, "ordinary account login must not require a wallet.");
-  assert.match(await evaluate("document.body.innerText"), /STAGING ENVIRONMENT/);
+  assert.match(await evaluate("document.body.innerText"), /LIVE PUBLIC TEST ENVIRONMENT/);
 
   const noticeOpen = await evaluate("Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)");
   if (noticeOpen) {
