@@ -167,7 +167,7 @@ async function createStagingAcknowledgement(env, payload, config) {
     Object.keys(payload).length !== 1 ||
     payload.noticeVersion !== STAGING_NOTICE_VERSION
   ) throw fail(400, "The staging safety notice version is invalid or outdated.");
-  const secret = env.RATE_LIMIT_HMAC_KEY || "";
+  const secret = env.RATE_LIMIT_HMAC_KEY || (env.ENVIRONMENT === "local" ? "local-development-only-not-for-staging" : "");
   if (secret.length < 32) throw fail(503, "The staging acknowledgement service is not configured.");
   const expires = Math.floor(Date.now() / 1000) + STAGING_ACK_SECONDS;
   const nonce = b64u(bytes(18));
@@ -175,7 +175,8 @@ async function createStagingAcknowledgement(env, payload, config) {
   const signature = await hmac(secret, "astro-staging-notice-ack\0" + signed);
   const value = signed + "." + signature;
   const cookieValue = STAGING_ACK_COOKIE + "=" + value +
-    "; Path=/; Max-Age=" + STAGING_ACK_SECONDS + "; HttpOnly; SameSite=Strict; Secure";
+    "; Path=/; Max-Age=" + STAGING_ACK_SECONDS + "; HttpOnly; SameSite=Strict" +
+    (new URL(config.origin).protocol === "https:" ? "; Secure" : "");
   return json(200, {
     acknowledged: true,
     noticeVersion: STAGING_NOTICE_VERSION,
