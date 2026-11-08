@@ -30,6 +30,7 @@
       "workers_dev": true,
       "vars": {
         "ENVIRONMENT": "staging",
+        "STAGING_ACCESS_MODE": "public",
         "RP_NAME": "AstroCrown",
         "RP_ID": "SET_BEFORE_DEPLOY",
         "EXPECTED_ORIGIN": "https://SET_BEFORE_DEPLOY.invalid"
