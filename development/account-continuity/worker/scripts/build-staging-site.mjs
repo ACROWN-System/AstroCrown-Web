@@ -39,7 +39,7 @@ for (const relativePath of allowlist) {
     const noticeReplacements = [
       [
         '<div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>Visual review build&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;no live services connected</div>',
-        '<div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>STAGING TEST ENVIRONMENT&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;limited test services</div>',
+        '<div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>LIVE PUBLIC TEST ENVIRONMENT&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;limited test services</div>',
         "staging status ribbon",
       ],
       [
@@ -49,12 +49,12 @@ for (const relativePath of allowlist) {
       ],
       [
         '<h1 class="development-notice-title" id="development-notice-title">AstroCrown is under development</h1>',
-        '<h1 class="development-notice-title" id="development-notice-title">AstroCrown is a staging test environment</h1>',
+        '<h1 class="development-notice-title" id="development-notice-title">AstroCrown is live for public testing</h1>',
         "notice title",
       ],
       [
         '<p class="development-notice-intro" id="development-notice-description">You are viewing an unfinished development preview, not a live or operational financial service. Features, account flows, market information and integrations may be incomplete, simulated, unavailable or changed without notice. This preview is provided for visual review only.</p>',
-        '<p class="development-notice-intro" id="development-notice-description">You are entering a non-production AstroCrown staging environment for testing and evaluation. It is not the production service or a live financial service. Features, data, balances, accounts and integrations may be incomplete, experimental, simulated, unavailable, interrupted or changed without notice.</p>',
+        '<p class="development-notice-intro" id="development-notice-description">You are entering the live, publicly accessible AstroCrown test environment. The website is online and intended for real-world interaction with the features explicitly enabled in this staging release. It is not the production commercial service. Features, data, balances, accounts and integrations may be incomplete, experimental, simulated, unavailable, interrupted or changed without notice. Test accounts and records are temporary and may be reset.</p>',
         "staging environment description",
       ],
       [
@@ -64,22 +64,22 @@ for (const relativePath of allowlist) {
       ],
       [
         "<p>Do not connect a wallet containing real assets, reveal a recovery phrase or private key, sign transaction requests, approve contracts, transfer or deposit funds, swap, stake, or otherwise use real digital assets with this development version. Any assets sent or approvals granted in connection with this preview could be permanently lost and may be impossible to recover.</p>",
-        "<p>Use only a separate disposable wallet on a blockchain test network that AstroCrown explicitly identifies as supported, and only valueless test tokens. Do not connect a wallet holding real assets, switch to mainnet, sign mainnet transactions, approve mainnet contracts, transfer or deposit real funds, use a real payment method, or interact with assets of monetary value. Never reveal a seed phrase, private key, recovery phrase or production wallet secret. If the active network is not clearly identified as an approved testnet, do not sign or continue. Testnet activity may still be recorded publicly on that test network.</p>",
+        "<p>Only use a separate disposable wallet and valueless test tokens when a specific AstroCrown feature is clearly marked as enabled for an identified test network. Until a network and transaction feature are explicitly identified as enabled, do not assume that wallet connection or transaction functionality is available. Never connect a wallet holding real assets, switch to mainnet, sign mainnet transactions, approve mainnet contracts, transfer or deposit real funds, use a real payment method, or interact with assets of monetary value. Never reveal a seed phrase, private key, recovery phrase or production wallet secret. Testnet activity may be permanently visible on the relevant public testnet explorer.</p>",
         "testnet-only warning",
       ],
       [
         '<p class="development-notice-terms">You proceed at your own risk. To the fullest extent permitted by applicable law, AstroCrown and its contributors disclaim responsibility for loss or damage arising from the use of this development preview. Nothing in this notice excludes any right or liability that cannot lawfully be excluded.</p>',
-        '<p class="development-notice-terms">Accounts created here are temporary test accounts, not permanent AstroCrown customer accounts. Test accounts, staging passkeys, recovery keys, sessions, profiles, posts and other test data may be reset or deleted at any time without notice. Use invented, non-identifying details and a passkey and recovery key dedicated to this staging origin; never reuse production credentials. Treat everything entered, posted, messaged or uploaded as non-confidential: depending on the feature, it may be visible to other testers or service operators, may be publicly accessible, and may appear in operational/security logs or provider-retained backups. Do not submit personal, identifying, sensitive or confidential information. This environment may fail or change and provides no production availability, account-persistence or financial-service guarantee.</p>',
+        '<p class="development-notice-terms">Accounts created here are temporary test accounts, not permanent AstroCrown customer accounts. Test accounts, staging passkeys, recovery keys, sessions, profiles and test records may be reset or deleted at any time without notice. Use invented, non-identifying details and a passkey and recovery key dedicated to this staging origin; never reuse production credentials. <strong>Default-to-public rule:</strong> unless a particular field or channel is clearly marked private and its privacy behavior is explicitly enabled, assume that anything you submit is openly available to anyone on the internet, including visitors without accounts—not merely other testers or operators. This includes public posts, comments, profiles, community contributions, chats, uploads, documents, polls and other public submissions. Anyone may read, copy, save, screenshot, index, quote or redistribute that content; removing it from AstroCrown cannot remove copies made elsewhere. Do not submit personal, identifying, sensitive, confidential or third-party information. Never publish account credentials, passkeys, recovery keys, private keys or other security secrets. Hosting operators may separately process technical logs and provider-managed backups under their retention policies; those are additional processing surfaces, not the public feed. This environment may fail or change and provides no production availability, account-persistence or financial-service guarantee.</p>',
         "temporary-account and data-exposure warning",
       ],
       [
         "<span>I have read and understood this notice. I will not use this development preview with real assets, real-money wallets or transactions.</span>",
-        "<span>I understand this is a temporary test environment. I will use invented details and only a dedicated testnet wallet with valueless test tokens; I will not submit personal, sensitive or confidential information or reuse production credentials.</span>",
+        "<span>I understand this is a live public test environment, that most submissions are openly available to anyone on the internet, and that test accounts and records may be reset or deleted. I will use invented details, never submit personal or sensitive information, and never reuse production credentials or real assets.</span>",
         "acknowledgement text",
       ],
       [
         ">Continue to development preview</button>",
-        ">Continue to staging test environment</button>",
+        ">Continue to public test environment</button>",
         "continue button label",
       ],
     ];
@@ -95,7 +95,7 @@ for (const relativePath of allowlist) {
     if (!html.includes("astro-staging-banner")) {
       html = html.replace(
         /<body([^>]*)>/i,
-        '<body$1>\n  <div class="astro-staging-banner" role="status" style="padding:7px 14px;text-align:center;background:#463715;color:#fff0b2;border-bottom:1px solid #9b7c28;font-size:11px;font-weight:700;letter-spacing:.08em">STAGING ENVIRONMENT · SYNTHETIC TEST ACCOUNTS ONLY · NOT THE PUBLIC SERVICE</div>'
+        '<body$1>\n  <div class="astro-staging-banner" role="status" style="padding:7px 14px;text-align:center;background:#463715;color:#fff0b2;border-bottom:1px solid #9b7c28;font-size:11px;font-weight:700;letter-spacing:.08em">LIVE PUBLIC TEST ENVIRONMENT · TEMPORARY TEST ACCOUNTS · NOT THE PRODUCTION SERVICE</div>'
       );
     }
     await writeFile(destination, html, "utf8");
@@ -114,7 +114,7 @@ for (const relativePath of allowlist) {
     );
     js = js.replace(
       'var noticeText = liveTestMode',
-      'var noticeText = workerStagingMode ? "ASTROCROWN STAGING TEST — Use invented test details only. This is a restricted staging environment, not the public service. Never use production account data, personal recovery keys, wallet secrets or real assets." : liveTestMode'
+      'var noticeText = workerStagingMode ? "ASTROCROWN LIVE PUBLIC TEST — Temporary test account only. Public submissions may be visible to anyone on the internet; use invented details and never use production credentials, personal information, recovery keys, wallet secrets or real assets." : liveTestMode'
     );
     const oldSigninCase = '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
     const newSigninCase = '<p class="account-signin-feedback">Feedback and case access are not enabled in this staging qualification.</p>';
