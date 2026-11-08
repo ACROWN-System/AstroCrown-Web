@@ -98,8 +98,8 @@ function runProgram(program, args, options = {}) {
     delete childEnv.CLOUDFLARE_ACCOUNT_ID;
     delete childEnv.CLOUDFLARE_API_TOKEN;
   }
-  // Access-gate and rate-limit secrets are supplied to Wrangler only through stdin
-  // when setting the corresponding Cloudflare secret; never expose them in its environment.
+  // The rate-limit/acknowledgement signing key is supplied to Wrangler only through stdin
+  // when setting the corresponding Cloudflare secret; never expose it in its environment.
   delete childEnv.ASTROCROWN_RATE_LIMIT_HMAC_KEY;
   const result = spawnSync(program, args, {
     cwd: workerRoot,
