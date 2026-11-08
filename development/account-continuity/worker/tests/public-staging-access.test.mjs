@@ -83,3 +83,21 @@ test("missing, modified and wrong-version acknowledgement material is rejected",
     /invalid or outdated/,
   );
 });
+
+test("acknowledgement cookies are invalid when the notice version changes", async () => {
+  const { createHmac, randomBytes } = await import("node:crypto");
+  const expires = Math.floor(Date.now() / 1000) + 3600;
+  const nonce = randomBytes(18).toString("base64url");
+  const signed = "v1.previous-notice-version." + expires + "." + nonce;
+  const signature = createHmac("sha256", secret)
+    .update("astro-staging-notice-ack\\0" + signed)
+    .digest("base64url");
+  const cookie = "acrown_staging_notice_ack=" + signed + "." + signature;
+
+  assert.equal(
+    await hasStagingAcknowledgement(new Request(origin + "/api/account/status", {
+      headers: { Cookie: cookie },
+    }), { ENVIRONMENT: "staging", RATE_LIMIT_HMAC_KEY: secret }),
+    false,
+  );
+});
