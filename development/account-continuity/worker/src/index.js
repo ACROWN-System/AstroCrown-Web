@@ -1957,7 +1957,10 @@ async function api(request, env, config) {
   if (request.method === "GET" || request.method === "HEAD") throw fail(404, "The account endpoint does not exist.");
   if (request.method !== "POST") throw fail(405, "The account endpoint requires POST.");
   const payload = await bodyJson(request);
-  if (url.pathname === "/api/staging/acknowledge") return createStagingAcknowledgement(env, payload, config);
+  if (url.pathname === "/api/staging/acknowledge") {
+    await rateLimit(db, env, request, "staging-notice-acknowledgement", "public", 60, 3600);
+    return createStagingAcknowledgement(env, payload, config);
+  }
   if (url.pathname === "/api/admin/wallet-enrollment-challenge") return issueAdminWalletEnrollmentChallenge(db, env, request, payload, config);
   if (url.pathname === "/api/admin/wallet-enrollment-verify") return verifyAdminWalletEnrollment(db, env, request, payload);
   if (url.pathname === "/api/admin/wallet-challenge") return issueAdminWalletChallenge(db, env, request, payload, config);
