@@ -171,7 +171,7 @@ async function createStagingAcknowledgement(env, payload, config) {
   if (secret.length < 32) throw fail(503, "The staging acknowledgement service is not configured.");
   const expires = Math.floor(Date.now() / 1000) + STAGING_ACK_SECONDS;
   const nonce = b64u(bytes(18));
-  const signed = "v1." + expires + "." + nonce;
+  const signed = "v1." + STAGING_NOTICE_VERSION + "." + expires + "." + nonce;
   const signature = await hmac(secret, "astro-staging-notice-ack\0" + signed);
   const value = signed + "." + signature;
   const cookieValue = STAGING_ACK_COOKIE + "=" + value +
@@ -188,14 +188,20 @@ async function hasStagingAcknowledgement(request, env) {
   if (secret.length < 32) return false;
   const value = cookie(request, STAGING_ACK_COOKIE) || "";
   const parts = value.split(".");
-  if (parts.length !== 4 || parts[0] !== "v1" || !/^\d{10}$/.test(parts[1]) ||
-      !/^[A-Za-z0-9_-]{20,}$/.test(parts[2]) || !/^[A-Za-z0-9_-]{20,}$/.test(parts[3])) return false;
-  const expires = Number(parts[1]);
+  if (
+    parts.length !== 5 ||
+    parts[0] !== "v1" ||
+    parts[1] !== STAGING_NOTICE_VERSION ||
+    !/^\d{10}$/.test(parts[2]) ||
+    !/^[A-Za-z0-9_-]{20,}$/.test(parts[3]) ||
+    !/^[A-Za-z0-9_-]{20,}$/.test(parts[4])
+  ) return false;
+  const expires = Number(parts[2]);
   const now = Math.floor(Date.now() / 1000);
   if (!Number.isSafeInteger(expires) || expires <= now || expires > now + STAGING_ACK_SECONDS + 60) return false;
-  const signed = parts.slice(0, 3).join(".");
+  const signed = parts.slice(0, 4).join(".");
   const expected = await hmac(secret, "astro-staging-notice-ack\0" + signed);
-  return equalConstantTime(parts[3], expected);
+  return equalConstantTime(parts[4], expected);
 }
 async function rateLimit(db, env, request, action, subject, maximum, seconds) {
   const secret = env.RATE_LIMIT_HMAC_KEY || (env.ENVIRONMENT === "local" ? "local-development-only-not-for-staging" : "");
