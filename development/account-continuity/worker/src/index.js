@@ -12,6 +12,9 @@ const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
 const CHALLENGE_SECONDS = 300;
 const MAX_BODY_BYTES = 65536;
+const STAGING_NOTICE_VERSION = "2026-11-08-public-test-v1";
+const STAGING_ACK_COOKIE = "acrown_staging_notice_ack";
+const STAGING_ACK_SECONDS = 12 * 60 * 60;
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
 const AVATARS = ["person", "crown", "star", "moon", "orbit", "shield"];
 const PQ_ALGS = [-48, -49, -50];
@@ -129,6 +132,12 @@ function configuration(env, request) {
 }
 function gate(request, env) {
   if (env.ENVIRONMENT !== "staging") return null;
+  if (env.STAGING_ACCESS_MODE === "public") {
+    if (typeof env.RATE_LIMIT_HMAC_KEY !== "string" || env.RATE_LIMIT_HMAC_KEY.length < 32) {
+      return json(503, { error: "Public staging access is closed because its abuse-control key is not configured." });
+    }
+    return null;
+  }
   if (!env.STAGING_ACCESS_CODE) return json(503, { error: "The staging access gate is not configured. Access is closed." });
   const header = request.headers.get("Authorization") || "";
   if (!header.startsWith("Basic ")) {
@@ -152,6 +161,41 @@ function checkOrigin(request, config) {
     if (request.headers.get("Origin") !== config.origin) throw fail(403, "The request origin could not be verified.");
     if ((request.headers.get("Sec-Fetch-Site") || "").toLowerCase() === "cross-site") throw fail(403, "Cross-site account requests are not enabled.");
   }
+}
+async function createStagingAcknowledgement(env, payload, config) {
+  if (
+    Object.keys(payload).length !== 1 ||
+    payload.noticeVersion !== STAGING_NOTICE_VERSION
+  ) throw fail(400, "The staging safety notice version is invalid or outdated.");
+  const secret = env.RATE_LIMIT_HMAC_KEY || "";
+  if (secret.length < 32) throw fail(503, "The staging acknowledgement service is not configured.");
+  const expires = Math.floor(Date.now() / 1000) + STAGING_ACK_SECONDS;
+  const nonce = b64u(bytes(18));
+  const signed = "v1." + expires + "." + nonce;
+  const signature = await hmac(secret, "astro-staging-notice-ack\\0" + signed);
+  const value = signed + "." + signature;
+  const cookieValue = STAGING_ACK_COOKIE + "=" + value +
+    "; Path=/; Max-Age=" + STAGING_ACK_SECONDS + "; HttpOnly; SameSite=Strict; Secure";
+  return json(200, {
+    acknowledged: true,
+    noticeVersion: STAGING_NOTICE_VERSION,
+    expiresAt: new Date(expires * 1000).toISOString(),
+  }, { "Set-Cookie": cookieValue });
+}
+async function hasStagingAcknowledgement(request, env) {
+  if (env.ENVIRONMENT !== "staging") return true;
+  const secret = env.RATE_LIMIT_HMAC_KEY || "";
+  if (secret.length < 32) return false;
+  const value = cookie(request, STAGING_ACK_COOKIE) || "";
+  const parts = value.split(".");
+  if (parts.length !== 4 || parts[0] !== "v1" || !/^\\d{10}$/.test(parts[1]) ||
+      !/^[A-Za-z0-9_-]{20,}$/.test(parts[2]) || !/^[A-Za-z0-9_-]{20,}$/.test(parts[3])) return false;
+  const expires = Number(parts[1]);
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(expires) || expires <= now || expires > now + STAGING_ACK_SECONDS + 60) return false;
+  const signed = parts.slice(0, 3).join(".");
+  const expected = await hmac(secret, "astro-staging-notice-ack\\0" + signed);
+  return equalConstantTime(parts[3], expected);
 }
 async function rateLimit(db, env, request, action, subject, maximum, seconds) {
   const secret = env.RATE_LIMIT_HMAC_KEY || (env.ENVIRONMENT === "local" ? "local-development-only-not-for-staging" : "");
@@ -1913,6 +1957,7 @@ async function api(request, env, config) {
   if (request.method === "GET" || request.method === "HEAD") throw fail(404, "The account endpoint does not exist.");
   if (request.method !== "POST") throw fail(405, "The account endpoint requires POST.");
   const payload = await bodyJson(request);
+  if (url.pathname === "/api/staging/acknowledge") return createStagingAcknowledgement(env, payload, config);
   if (url.pathname === "/api/admin/wallet-enrollment-challenge") return issueAdminWalletEnrollmentChallenge(db, env, request, payload, config);
   if (url.pathname === "/api/admin/wallet-enrollment-verify") return verifyAdminWalletEnrollment(db, env, request, payload);
   if (url.pathname === "/api/admin/wallet-challenge") return issueAdminWalletChallenge(db, env, request, payload, config);
@@ -1957,6 +2002,8 @@ export {
   recoveryKey as validateRecoveryKey,
   validateAdminReason,
   validateAdminPermissions,
+  gate,
+  hasStagingAcknowledgement,
   normalizeEvmAddress,
   validateEvmChainId,
   createAdminSiweMessage,
@@ -1972,7 +2019,15 @@ export default {
       if (request.method === "OPTIONS") return json(405, { error: "Cross-origin requests are not enabled." });
       if (new URL(request.url).origin !== config.origin) return json(403, { error: "The request host could not be verified." });
       if (new URL(request.url).pathname.startsWith("/api/")) {
+        const pathname = new URL(request.url).pathname;
         checkOrigin(request, config);
+        if (
+          env.ENVIRONMENT === "staging" &&
+          pathname !== "/api/staging/acknowledge" &&
+          !(await hasStagingAcknowledgement(request, env))
+        ) {
+          return json(428, { error: "Acknowledge the current AstroCrown public-staging safety notice before using account services." });
+        }
         return await api(request, env, config);
       }
       return await staticAssets(request, env);
