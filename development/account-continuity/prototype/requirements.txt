@@ -5,8 +5,8 @@
 # This is a local first-party verifier dependency; it makes no external runtime API calls.
 # CI installs use the platform-specific SHA-256 wheel lock under development/dependencies/;
 # this version list remains the reviewed source of package/version pins.
-cbor2==6.1.5
-cffi==2.0.0
+cbor2==6.2.0.post2
+cffi==2.1.1
 cryptography==50.0.2
 pyOpenSSL==26.4.0
 pyasn1==0.6.5
