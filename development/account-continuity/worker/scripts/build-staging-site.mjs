@@ -8,6 +8,14 @@ const repoRoot = resolve(workerRoot, "../../..");
 const developmentRoot = join(repoRoot, "development");
 const publicRoot = join(workerRoot, "public");
 
+function replaceExactlyOnce(value, original, replacement, label) {
+  const first = value.indexOf(original);
+  if (first < 0 || value.indexOf(original, first + original.length) !== -1) {
+    throw new Error("Expected exactly one source fragment for " + label + "; refusing to publish an unverified staging notice.");
+  }
+  return value.slice(0, first) + replacement + value.slice(first + original.length);
+}
+
 const allowlist = [
   "index.html",
   "account-continuity/prototype/account-prototype.css",
@@ -28,6 +36,56 @@ for (const relativePath of allowlist) {
 
   if (relativePath === "index.html") {
     let html = await readFile(source, "utf8");
+    const noticeReplacements = [
+      [
+        '<div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>Visual review build&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;no live services connected</div>',
+        '<div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>STAGING TEST ENVIRONMENT&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;limited test services</div>',
+        "staging status ribbon",
+      ],
+      [
+        '<p class="development-notice-kicker"><span class="development-notice-icon" aria-hidden="true">!</span> Important development notice</p>',
+        '<p class="development-notice-kicker"><span class="development-notice-icon" aria-hidden="true">!</span> Important staging safety notice</p>',
+        "notice heading",
+      ],
+      [
+        '<h1 class="development-notice-title" id="development-notice-title">AstroCrown is under development</h1>',
+        '<h1 class="development-notice-title" id="development-notice-title">AstroCrown is a staging test environment</h1>',
+        "notice title",
+      ],
+      [
+        '<p class="development-notice-intro" id="development-notice-description">You are viewing an unfinished development preview, not a live or operational financial service. Features, account flows, market information and integrations may be incomplete, simulated, unavailable or changed without notice. This preview is provided for visual review only.</p>',
+        '<p class="development-notice-intro" id="development-notice-description">You are entering a non-production AstroCrown staging environment for testing and evaluation. It is not the production service or a live financial service. Features, data, balances, accounts and integrations may be incomplete, experimental, simulated, unavailable, interrupted or changed without notice.</p>',
+        "staging environment description",
+      ],
+      [
+        "<strong>Do not use real assets or make transactions</strong>",
+        "<strong>TEST NETWORKS ONLY — NEVER USE REAL ASSETS OR MAINNET FUNDS</strong>",
+        "testnet warning heading",
+      ],
+      [
+        "<p>Do not connect a wallet containing real assets, reveal a recovery phrase or private key, sign transaction requests, approve contracts, transfer or deposit funds, swap, stake, or otherwise use real digital assets with this development version. Any assets sent or approvals granted in connection with this preview could be permanently lost and may be impossible to recover.</p>",
+        "<p>Use only a separate disposable wallet on a blockchain test network that AstroCrown explicitly identifies as supported, and only valueless test tokens. Do not connect a wallet holding real assets, switch to mainnet, sign mainnet transactions, approve mainnet contracts, transfer or deposit real funds, use a real payment method, or interact with assets of monetary value. Never reveal a seed phrase, private key, recovery phrase or production wallet secret. If the active network is not clearly identified as an approved testnet, do not sign or continue. Testnet activity may still be recorded publicly on that test network.</p>",
+        "testnet-only warning",
+      ],
+      [
+        '<p class="development-notice-terms">You proceed at your own risk. To the fullest extent permitted by applicable law, AstroCrown and its contributors disclaim responsibility for loss or damage arising from the use of this development preview. Nothing in this notice excludes any right or liability that cannot lawfully be excluded.</p>',
+        '<p class="development-notice-terms">Accounts created here are temporary test accounts, not permanent AstroCrown customer accounts. Test accounts, staging passkeys, recovery keys, sessions, profiles, posts and other test data may be reset or deleted at any time without notice. Use invented, non-identifying details and a passkey and recovery key dedicated to this staging origin; never reuse production credentials. Treat everything entered, posted, messaged or uploaded as non-confidential: depending on the feature, it may be visible to other testers or service operators, may be publicly accessible, and may appear in operational/security logs or provider-retained backups. Do not submit personal, identifying, sensitive or confidential information. This environment may fail or change and provides no production availability, account-persistence or financial-service guarantee.</p>',
+        "temporary-account and data-exposure warning",
+      ],
+      [
+        "<span>I have read and understood this notice. I will not use this development preview with real assets, real-money wallets or transactions.</span>",
+        "<span>I understand this is a temporary test environment. I will use invented details and only a dedicated testnet wallet with valueless test tokens; I will not submit personal, sensitive or confidential information or reuse production credentials.</span>",
+        "acknowledgement text",
+      ],
+      [
+        ">Continue to development preview</button>",
+        ">Continue to staging test environment</button>",
+        "continue button label",
+      ],
+    ];
+    for (const [original, replacement, label] of noticeReplacements) {
+      html = replaceExactlyOnce(html, original, replacement, label);
+    }
     if (!html.includes('<meta name="astro-account-runtime"')) {
       html = html.replace(
         '<meta name="theme-color" content="#081426">',
