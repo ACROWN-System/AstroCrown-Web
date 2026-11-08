@@ -104,7 +104,7 @@ The `cloudflare-staging` GitHub Environment used by `.github/workflows/cloudflar
 |---|---|---|
 | Environment secret | `CLOUDFLARE_API_TOKEN_02` | Dedicated scoped token for deploying the staging Worker and provisioning/using staging D1 |
 | Environment secret | `ASTROCROWN_RATE_LIMIT_HMAC_KEY` | Secret key for public-staging rate limiting and signed notice acknowledgement |
-| Environment variable | `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account identifier |
+| Environment variable (repository variable or environment override) | `CLOUDFLARE_ACCOUNT_ID_02` | Account identifier belonging specifically to `CLOUDFLARE_API_TOKEN_02` for AstroCrown staging deployment |
 | Environment variable, after first database creation | `ASTROCROWN_STAGING_D1_DATABASE_ID` | Pins subsequent deployments to the already-created staging D1 database |
 
 These are not interchangeable with NOVA's `CLOUDFLARE_API_KEY_01`. Keep the staging deployment token narrowly scoped and separate from NOVA's provider/inference credential. The D1 database ID is configuration, not a secret. Do not enable billing, attach a payment card, or select a paid plan to satisfy this workflow.
@@ -114,9 +114,9 @@ These are not interchangeable with NOVA's `CLOUDFLARE_API_KEY_01`. Keep the stag
 The existing `.github/workflows/nova-credential-readiness.yml` checks for these repository-level values:
 
 - Secrets: `GROQ_API_KEY_01`, `GEMINI_API_KEY_01`, `CLOUDFLARE_API_KEY_01`, `NOVA_RSI_APP_PRIVATE_KEY`.
-- Variables: `CLOUDFLARE_ACCOUNT_ID`, `NOVA_RSI_APP_CLIENT_ID`, `NOVA_RSI_AUTOMERGE_ENABLED`, `RSI_AI_BASE_URL`, `RSI_AI_MODEL`, `RSI_AI_COMMERCIAL_ELIGIBILITY`, `RSI_BENCHMARK_COMMAND`.
+- Variables: `CLOUDFLARE_ACCOUNT_ID_01`, `CLOUDFLARE_ACCOUNT_ID_02`, `NOVA_RSI_APP_CLIENT_ID`, `NOVA_RSI_AUTOMERGE_ENABLED`, `RSI_AI_BASE_URL`, `RSI_AI_MODEL`, `RSI_AI_COMMERCIAL_ELIGIBILITY`, `RSI_BENCHMARK_COMMAND`.
 
-The Cloudflare account ID is an identifier, not an API credential. The readiness workflow has been aligned to read it from a repository variable; that same repository variable can be consumed by the `cloudflare-staging` deployment job, unless an environment-scoped variable intentionally overrides it.
+`CLOUDFLARE_ACCOUNT_ID_01` belongs to `CLOUDFLARE_API_KEY_01` and is used by the NOVA/Cloudflare provider-readiness path. `CLOUDFLARE_ACCOUNT_ID_02` belongs to `CLOUDFLARE_API_TOKEN_02` and is used by the AstroCrown staging deployment. They must never be interchanged. Both account IDs are identifiers, not authentication secrets, so store them as GitHub Actions variables (not secrets). The readiness workflow reads `_01`; the staging deployment reads `_02`.
 
 The provider credentials should only be duplicated into AstroCrown-Web where an AstroCrown workflow/component actually consumes them. If the NOVA control plane is later moved into AstroCrown-Web, then the NOVA-only credentials above must also be provisioned there (or, preferably, replaced with purpose-scoped credentials for that deployment).
 
