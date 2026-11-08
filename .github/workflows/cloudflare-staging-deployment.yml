@@ -89,7 +89,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_02 }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          ASTROCROWN_STAGING_ACCESS_CODE: ${{ secrets.ASTROCROWN_STAGING_ACCESS_CODE }}
           ASTROCROWN_RATE_LIMIT_HMAC_KEY: ${{ secrets.ASTROCROWN_RATE_LIMIT_HMAC_KEY }}
           ASTROCROWN_STAGING_D1_DATABASE_ID: ${{ vars.ASTROCROWN_STAGING_D1_DATABASE_ID }}
           ASTROCROWN_CONFIRM_WORKERS_FREE_NO_CARD: ${{ inputs.free_no_card_confirmation == 'I_CONFIRMED_WORKERS_FREE_NO_CARD' && 'I_CONFIRMED_WORKERS_FREE_NO_CARD' || '' }}
@@ -98,7 +97,6 @@ jobs:
           set -eu
           test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing cloudflare-staging secret CLOUDFLARE_API_TOKEN_02."; exit 1; }
           test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing cloudflare-staging variable CLOUDFLARE_ACCOUNT_ID."; exit 1; }
-          test -n "$ASTROCROWN_STAGING_ACCESS_CODE" || { echo "::error::Missing cloudflare-staging secret ASTROCROWN_STAGING_ACCESS_CODE."; exit 1; }
           test -n "$ASTROCROWN_RATE_LIMIT_HMAC_KEY" || { echo "::error::Missing cloudflare-staging secret ASTROCROWN_RATE_LIMIT_HMAC_KEY."; exit 1; }
           node scripts/deploy-staging.mjs
 
