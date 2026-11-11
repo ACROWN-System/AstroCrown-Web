@@ -249,9 +249,52 @@ Sources:
 
 Decision: **CI and audit automation only; not the live payment confirmation daemon.**
 
+### 6.3 Proposed initial paid-production transition reserve
+
+The owner has previously set a maximum planning envelope of **USDT 150** for the initial paid deployment (hosting, domain and minimal network costs). The Supporter Programme page now uses this as a **provisional aggregate activation threshold**, not as a verified provider quote and not as evidence that production is ready.
+
+The intended gate is:
+- Keep the $0 qualification environment as the development and evidence source until the migration has been rehearsed.
+- Before accepting contributions, obtain actual order-level quotes for the chosen host, domain, first three months of hosting, essential backup/restore arrangement, and any mandatory paid network, conversion, gas or migration cost.
+- Include a contingency. Do not count promotional pricing that expires before the prepaid term without recording both the promotional and renewal price.
+- Require the provider to pass legal-entity/terms review, actual account signup and payment-network tests, no-card/no-KYC conditions where required, workload tests, backup restore tests and the relevant security checks.
+- If the full initial cost plus contingency fits within USDT 150, that amount may serve as the minimum aggregate migration reserve. If not, revise the threshold **before** opening the programme.
+- Do not spend migration funds before the cleared reserve and all activation gates are met. Keep it separately accounted for inside the supporter treasury; it is not ACS reserve and not competition-prize funding.
+- Publish how the reserve is treated if the threshold is never reached before accepting any contribution, preserving non-waivable rights under applicable law.
+
+Published candidate-price examples observed on 2026-11-11 show why the first transition may be modest, but neither candidate is approved:
+- VPSDEN's 4 GB / 2 vCPU SHADE plan was listed at **€21.39 prepaid for three months**. The provider's published crypto methods include USDT on TRC-20 and ERC-20, not Solana SPL. Provider identity, backup options, terms, actual account eligibility and measured uptime still need due diligence. Sources: https://vpsden.com/pricing/ and https://vpsden.com/payment-methods/
+- Cloudzy's 4 GB / 2 vCPU plan displayed a promotional **US$14.48/month** price and a **US$28.95/month** list price at observation time. Three months at the promotional rate would be US$43.44 before any domain, backup, conversion/network fees or contingency. Account-country/payment-processor rules and the complete no-KYC condition were not established. Source: https://cloudzy.com/pricing/ and https://cloudzy.com/payment-methods/ (confirm the exact checkout network and terms; do not infer SPL-USDT acceptance from the word "USDT").
+- These examples are market snapshots, not contractual quotes. They do not prove either provider is suitable for AstroCrown production. In particular, a provider accepting TRC-20/ERC-20 USDT is not automatically compatible with a supporter treasury receiving Solana SPL USDT. Prefer the same network end-to-end; otherwise quantify and disclose every conversion, bridge and withdrawal cost before activation.
+
+A reserve threshold can materially reduce the narrow risk of beginning migration without enough funds for known initial invoices. It does **not** make overall risk near zero: provider failure, compromised credentials, data loss, security incidents, legal requirements, renewal pricing and ongoing cashflow remain. Maintain a documented renewal plan and recoverable backup independently of the activation threshold.
+
+The USDT 150 amount is provisional until checkout/order-level verification is complete. It must not be displayed as a guaranteed all-in cost or used to open contributions before the terms and complete spending plan are published.
+
 ## 7. Transaction and accounting controls the providers must support
 
 The actual financial rules belong in the application and must not depend on an RPC provider's proprietary interpretation.
+
+### Supporter wallet association and GitHub backup design
+
+Keep these fields separate in the registry:
+- A pseudonymous supporter/account reference.
+- The supporter's declared public wallet address(es).
+- Wallet-control proof status, method, challenge nonce/reference, signature and verification time where signed-message proof is supported.
+- The actual source address/token account owner observed in the on-chain payment.
+- The contribution transaction signature and exact contribution intent.
+- A review status and audit event when the source address differs from the declared wallet.
+
+A wallet-control message must be a fresh, purpose-bound, single-use nonce, verified against the selected chain/wallet standard. Never request, receive, store, log or export a seed phrase, private key, wallet JSON keypair or recovery code. For custodial/exchange transfers, do not falsely mark the exchange's pooled sender as the supporter's registered wallet; link the contribution using its unique transaction signature and a controlled reconciliation/review process.
+
+GitHub backup boundary:
+- The current `ACROWN-System/AstroCrown-Web` repository is **public**. Never place names, email addresses, private account-to-wallet mappings, identity documents, IP addresses, or other confidential supporter data in it.
+- A public archive may contain only the minimum pseudonymous, explicitly disclosed ledger fields required for auditability, such as contribution reference, network, mint, amount, transaction signature, date/time, reconciliation status and a public source/treasury wallet reference.
+- A private account-to-wallet mapping, if retained, must be encrypted before export and backed up to a separately restricted private repository or equivalent restricted storage. Keep the encryption key outside GitHub and separate from the encrypted archive.
+- Export dated append-only snapshots with cryptographic checksums; protect the archive branch/repository against routine force-push and deletion, and verify restore procedures. A GitHub copy is one backup layer, not the sole system of record.
+- Explain before payment that on-chain addresses and transaction histories are publicly traceable. Publicly linking a wallet to a real name or public supporter identity requires separate explicit opt-in.
+
+This registry and backup design is a requirement proposal only. No supporter wallet registry or backup job is currently implemented or deployed.
 
 For each contribution:
 - Verify the expected network/cluster.
