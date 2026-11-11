@@ -164,6 +164,16 @@
     }
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
   
+    .wallet-instructions{margin:13px 0;color:var(--muted);font-size:10px;line-height:1.7}
+    .wallet-ecosystem-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:14px}
+    .wallet-ecosystem-card{min-width:0;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(4,12,22,.34)}
+    .ecosystem-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;margin-bottom:7px}
+    .ecosystem-heading strong{color:#eef2f9;font-size:11px}
+    .ecosystem-tag{padding:3px 7px;border:1px solid rgba(255,215,0,.2);border-radius:999px;color:var(--gold-soft);font-size:8px;font-weight:800;letter-spacing:.045em}
+    .wallet-ecosystem-card .wallet-actions{display:grid;grid-template-columns:minmax(0,1fr) auto}
+    .wallet-ecosystem-card .wallet-actions button{padding-inline:9px}
+    .wallet-ecosystem-card .wallet-feedback{min-height:52px}
+    .wallet-ecosystem-card .wallet-address-card{min-height:87px}
     .dashboard-grid{display:grid;grid-template-columns:minmax(0,1.03fr) minmax(0,.97fr);gap:15px;align-items:stretch}
     .dashboard-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
     .dashboard-state{display:inline-flex;align-items:center;min-height:24px;padding:4px 9px;border:1px solid rgba(153,178,213,.22);border-radius:999px;color:#bac7d9;background:rgba(255,255,255,.035);font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
@@ -188,7 +198,7 @@
     .entitlement-summary strong{display:block;margin-top:5px;color:var(--gold-soft);font-size:20px;line-height:1.2;letter-spacing:-.025em}
     .entitlement-summary p{margin:7px 0 0;color:var(--muted);font-size:10px;line-height:1.65}
     .dashboard-purchase-button{width:100%;margin-top:12px}
-    @media(max-width:820px){.dashboard-grid{grid-template-columns:1fr}}
+    @media(max-width:820px){.dashboard-grid{grid-template-columns:1fr}.wallet-ecosystem-grid{grid-template-columns:1fr}}
     @media(max-width:560px){.wallet-actions{display:grid;grid-template-columns:1fr}.wallet-actions button,.profile-actions button{width:100%}.profile-actions{align-items:stretch}.member-display-name{width:100%}}
 
   </style>
@@ -253,7 +263,7 @@
       <div class="status-icon" aria-hidden="true">!</div>
       <div>
         <strong>Wallet connection is display-only in this preview. USDT contributions and ACROWN purchases are not enabled.</strong>
-        <p>You may connect a compatible Solana wallet to see its public address here. This does not register the wallet or activate entitlement. This page will not request message signatures, transaction signatures or transfers. Do not send funds or sign any transaction for this preview.</p>
+        <p>You may connect compatible Ethereum/EVM and/or Solana wallets to display their public addresses. MetaMask and other multichain wallets may appear in both wallet lists. This does not register or link the addresses or activate entitlement. This page will not request message signatures, transaction signatures or transfers. Do not send funds or sign any transaction for this preview.</p>
       </div>
     </section>
 
@@ -284,23 +294,54 @@
             <button class="secondary-button" id="member-name-randomize" type="button">Generate another name</button>
             <span class="member-display-name" id="member-display-name" aria-live="polite"></span>
           </div>
-          <div class="field">
-            <label for="supporter-wallet-choice">Choose your Solana wallet</label>
-            <select id="supporter-wallet-choice" disabled>
-              <option value="">Looking for compatible wallets…</option>
-            </select>
-            <small>Wallets are discovered through Solana Wallet Standard. Connecting only shares the public address; this page does not request a signature or transaction.</small>
+          <p class="wallet-instructions">Connect one or both wallet ecosystems. MetaMask and other multichain wallets may appear in both lists when they expose both standards. Connecting only shares public addresses; no message or transaction signature is requested.</p>
+          <div class="wallet-ecosystem-grid">
+            <section class="wallet-ecosystem-card" aria-labelledby="evm-wallet-heading">
+              <div class="ecosystem-heading">
+                <strong id="evm-wallet-heading">Ethereum &amp; EVM networks</strong>
+                <span class="ecosystem-tag">EIP-6963 / EIP-1193</span>
+              </div>
+              <div class="field">
+                <label for="supporter-evm-wallet-choice">Choose your EVM wallet</label>
+                <select id="supporter-evm-wallet-choice" disabled>
+                  <option value="">Looking for EVM wallets…</option>
+                </select>
+              </div>
+              <div class="wallet-actions">
+                <button class="primary-button" id="supporter-evm-wallet-connect" type="button" disabled>Connect EVM wallet</button>
+                <button class="secondary-button" id="supporter-evm-wallet-clear" type="button" disabled>Clear</button>
+              </div>
+              <div class="wallet-feedback" id="supporter-evm-wallet-feedback" role="status" aria-live="polite">No EVM wallet connected.</div>
+              <div class="wallet-address-card">
+                <span class="side-label">EVM public address</span>
+                <strong id="supporter-evm-wallet-address">Not connected</strong>
+                <span id="supporter-evm-wallet-chain">No EVM network confirmed</span>
+              </div>
+            </section>
+            <section class="wallet-ecosystem-card" aria-labelledby="solana-wallet-heading">
+              <div class="ecosystem-heading">
+                <strong id="solana-wallet-heading">Solana</strong>
+                <span class="ecosystem-tag">Solana Wallet Standard</span>
+              </div>
+              <div class="field">
+                <label for="supporter-wallet-choice">Choose your Solana wallet</label>
+                <select id="supporter-wallet-choice" disabled>
+                  <option value="">Looking for Solana wallets…</option>
+                </select>
+              </div>
+              <div class="wallet-actions">
+                <button class="primary-button" id="supporter-wallet-connect" type="button" disabled>Connect Solana wallet</button>
+                <button class="secondary-button" id="supporter-wallet-clear" type="button" disabled>Clear</button>
+              </div>
+              <div class="wallet-feedback" id="supporter-wallet-feedback" role="status" aria-live="polite">No Solana wallet connected.</div>
+              <div class="wallet-address-card">
+                <span class="side-label">Solana public address</span>
+                <strong id="supporter-wallet-address">Not connected</strong>
+                <span id="supporter-wallet-chain">No Solana cluster confirmed</span>
+              </div>
+            </section>
           </div>
-          <div class="wallet-actions">
-            <button class="primary-button" id="supporter-wallet-connect" type="button" disabled>Connect wallet</button>
-            <button class="secondary-button" id="supporter-wallet-clear" type="button" disabled>Clear connection</button>
-          </div>
-          <div class="wallet-feedback" id="supporter-wallet-feedback" role="status" aria-live="polite">No wallet connected.</div>
-          <div class="wallet-address-card">
-            <span class="side-label">Connected public wallet</span>
-            <strong id="supporter-wallet-address">Not connected</strong>
-            <span id="supporter-wallet-chain">No wallet network confirmed</span>
-          </div>
+          <p class="fine-print">A multichain wallet can expose separate EVM and Solana addresses. This preview displays those addresses independently; it does not yet prove or permanently link them to one supporter record. The payment network and authoritative entitlement wallet will be set in the approved programme configuration.</p>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
