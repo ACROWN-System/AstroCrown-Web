@@ -229,6 +229,51 @@
       </div>
     </section>
 
+    <section class="section" id="migration-reserve" aria-labelledby="migration-reserve-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">First production transition</div>
+          <h2 id="migration-reserve-title">A small, defined funding gate to leave the $0 environment</h2>
+        </div>
+        <p>AstroCrown remains in its $0 qualification environment until the first paid production order is fully costed, independently checked and funded. The supporter programme is intended to cover that narrow transition, not an open-ended operating budget.</p>
+      </div>
+      <div class="stat-grid">
+        <article class="stat-card">
+          <div class="side-label">Proposed migration threshold</div>
+          <div class="stat-value">USDT 150</div>
+          <p class="stat-note">A provisional aggregate reserve target based on the current deployment-budget envelope, not a final provider quote or a live funding counter.</p>
+        </article>
+        <article class="stat-card">
+          <div class="side-label">Initial hosting runway</div>
+          <div class="stat-value">3 months</div>
+          <p class="stat-note">The transition budget should cover at least the first three months of the selected production host, plus the domain and essential backup arrangements.</p>
+        </article>
+        <article class="stat-card">
+          <div class="side-label">How the target could be reached</div>
+          <div class="stat-value">1 or 2</div>
+          <p class="stat-note">Illustratively, one USDT 150 contribution or two USDT 75 contributions would reach the aggregate target. These are examples, not individual contribution minimums.</p>
+        </article>
+      </div>
+      <div class="transparency-grid">
+        <article class="transparency-card">
+          <strong>What the reserve is meant to cover</strong>
+          <p>Initial VPS/hosting prepayment, domain registration, essential independent backup, required network or conversion fees, minimum gas, migration and restore testing, and a modest contingency.</p>
+        </article>
+        <article class="transparency-card">
+          <strong>When the reserve can be spent</strong>
+          <p>Only after the selected provider passes the required account, payment-network, terms, security and restore checks, and the actual order-level costs fit inside the cleared reserve.</p>
+        </article>
+        <article class="transparency-card">
+          <strong>What happens if the quote is higher</strong>
+          <p>The transition does not begin. The budget and threshold must be revised transparently before contributions open; the programme must not quietly rely on an unfunded balance or a paid fallback.</p>
+        </article>
+      </div>
+      <div class="policy-highlight">
+        <strong>Funding gate, not a promise of zero risk.</strong> Reaching USDT 150 would be a proposed minimum aggregate migration reserve, not proof that every provider or future operating cost is funded. It materially reduces the risk of starting migration without enough money for known initial costs, but it cannot eliminate vendor, security, availability, legal, renewal or future operating risks. Funds remain in the separate supporter treasury until the approved activation conditions are met.
+      </div>
+      <p class="fine-print">The USDT 150 figure is provisional. Before contributions are enabled, the exact provider, accepted USDT network, domain price, backup plan, required fees and first three months of hosting must be verified from checkout/order quotes. If those costs plus contingency exceed USDT 150, the threshold must be increased before launch. Final terms must also explain how the segregated reserve is handled if the threshold is never reached, subject to mandatory legal rights.</p>
+    </section>
+
     <section class="section" id="calculator" aria-labelledby="calculator-title">
       <div class="section-heading">
         <div>
@@ -322,6 +367,35 @@
       </div>
     </section>
 
+    <section class="section" id="wallet-records" aria-labelledby="wallet-records-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Supporter identity and records</div>
+          <h2 id="wallet-records-title">Register a public wallet — never hand over its keys</h2>
+        </div>
+        <p>A supporter may associate a public wallet address with their AstroCrown supporter record. The address, transaction source and account identity must be handled as distinct data points.</p>
+      </div>
+      <div class="transparency-grid">
+        <article class="transparency-card">
+          <strong>1. Public address only</strong>
+          <p>The registration flow may verify control with a fresh, single-use signed-message challenge where the selected wallet supports it. AstroCrown must never request or store a seed phrase, private key, wallet JSON keypair or recovery code.</p>
+        </article>
+        <article class="transparency-card">
+          <strong>2. Registered wallet is not always the sender</strong>
+          <p>The address recorded as the supporter’s wallet must remain separate from the source address observed in a payment. Exchange and custodial services may send from pooled wallets; a transaction signature and controlled review may be needed to link that payment correctly.</p>
+        </article>
+        <article class="transparency-card">
+          <strong>3. GitHub backups with privacy controls</strong>
+          <p>Dated, checksummed public ledger snapshots may be archived in the public repository using pseudonymous supporter references. Any private account-to-wallet mapping must be encrypted and backed up separately in restricted storage; its encryption key must not be stored in GitHub.</p>
+        </article>
+        <article class="transparency-card">
+          <strong>4. Public-chain disclosure</strong>
+          <p>Wallet addresses and transaction histories are publicly traceable on-chain. The programme must explain this before payment. Linking a wallet to a real name or public supporter profile must be a separate, explicit opt-in.</p>
+        </article>
+      </div>
+      <p class="fine-print">The current AstroCrown-Web repository is public. It must not contain names, email addresses, private account mappings, identity documents, private keys or other confidential supporter data. These wallet-registration and backup controls are proposed requirements, not implemented services in this preview.</p>
+    </section>
+
     <section class="section" aria-labelledby="rules-title">
       <div class="section-heading">
         <div>
@@ -373,7 +447,7 @@
         </article>
         <article class="transparency-card">
           <strong>2. Public contribution record</strong>
-          <p>Each confirmed USDT contribution will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference.</p>
+          <p>Each confirmed USDT contribution will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The registered supporter wallet, observed transaction source and account association will be stored as separate fields with an explicit verification status.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Every use of funds</strong>
@@ -434,6 +508,14 @@
         <details>
           <summary>Can I send USDT now?</summary>
           <p>No. This is a development preview and does not accept USDT. No receiving address or network is published. Do not send funds for this programme until an official, verified payment flow is enabled on the AstroCrown website.</p>
+        </details>
+        <details>
+          <summary>What is the USDT 150 transition threshold?</summary>
+          <p>It is a provisional aggregate funding gate intended to cover the initial move from $0 qualification to paid hosting, including at least three months of hosting, the domain, essential backup and required migration/network costs. It is not a provider quote. The final amount must be checked against actual order costs before contributions open; if those costs exceed USDT 150, the target must be raised.</p>
+        </details>
+        <details>
+          <summary>Can I register a wallet and have it backed up?</summary>
+          <p>The proposed design records a public wallet address and its verification status, never a seed phrase or private key. Public GitHub snapshots will be pseudonymous; private account-to-wallet mappings must be encrypted and stored separately in restricted storage. A wallet’s public address and transaction history remain publicly traceable on-chain.</p>
         </details>
         <details>
           <summary>Is the USDT 250,000 target a live contribution cap?</summary>
