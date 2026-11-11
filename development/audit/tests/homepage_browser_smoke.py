@@ -614,7 +614,7 @@ def main() -> int:
                   page.locator("#account-dialog").evaluate("(d) => d.open"))
 
             # Exercise the supporter dashboard independently of the homepage.
-            # A synthetic Wallet Standard provider is injected; no real wallet or external service is used.
+            # Synthetic EIP-6963/EIP-1193 and Solana Wallet Standard interfaces are injected; no real wallet or external service is used.
             supporter_page = context.new_page()
             attach_diagnostics(supporter_page)
             supporter_page.add_init_script("""(() => {
@@ -788,7 +788,7 @@ def main() -> int:
                  "multiplier": supporter_page.locator("#supporter-multiplier-state").inner_text()},
             )
             check(
-                "same multichain wallet provider can connect EVM and Solana address families",
+                "multichain wallet label appears in both ecosystem lists and both address families connect",
                 supporter_page.locator("#supporter-evm-wallet-address").inner_text() == "0x1111111111111111111111111111111111111111"
                 and supporter_page.locator("#supporter-wallet-address").inner_text() == "11111111111111111111111111111111",
                 {"evm":supporter_page.locator("#supporter-evm-wallet-address").inner_text(),
