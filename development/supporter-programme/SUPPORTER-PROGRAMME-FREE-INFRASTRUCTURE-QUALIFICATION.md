@@ -26,22 +26,35 @@ The working architecture for qualification is:
 
 No AI inference provider is required to verify a contribution. Token-transfer validation, entitlement calculation, reconciliation and public ledger updates must be deterministic and auditable; LLM output must never authorize or validate a financial transaction.
 
-### Public URL and API separation
+### One public hostname and one site project
+
+Use the **existing AstroCrown website hostname and existing site project**. Do not create a separate public hostname, separate Pages project, or separate public Worker URL just for the Supporter Programme.
 
 The account-staging endpoint
 `https://astrocrown-account-staging-staging.sylvainbradford3.workers.dev/`
-is a technical staging address and must not be used as the public Supporter Programme URL or shown in supporter-facing navigation.
+is a technical staging endpoint. It must not be linked from public navigation, printed on the supporter page, or treated as the public Supporter Programme address.
 
-Recommended branded URL structure, subject to registration and DNS control of the final AstroCrown domain:
+Use one public origin and keep all features under it:
 
-- Public programme and rules: `https://<official-astrocrown-domain>/supporters/`
-- Registered wallet dashboard: `https://<official-astrocrown-domain>/supporters/dashboard/`
-- Payment and entitlement API: a same-origin `/api/supporters/*` route backed by the qualified Worker/Pages Functions architecture. The implementation may use an internal Worker custom domain or route, but the public UI should not depend on or advertise the account-staging `workers.dev` hostname.
+- Existing AstroCrown homepage: `/` (or the existing repository preview prefix while previewing).
+- Supporter Programme and wallet dashboard: `/supporters/` — one page/route. Registration, member profile, entitlement display and purchase dashboard should be views within this same route, not separate public hostnames.
+- Backend requests: same-origin `/api/supporters/*` paths, served through the existing site's Pages Functions/Worker routing. These are paths on the same hostname, not additional public domains.
 
-The repository preview is arranged as `/preview/supporters/` (directory index route), so the same page can map to `/supporters/` when the production site is deployed at its domain root. This is a route design only; no domain ownership, DNS record, custom-domain binding, production dashboard route or API route is asserted here.
+Do not provision a second `pages.dev` project hostname or a separate `workers.dev` hostname for the supporter feature. If the existing site uses its Cloudflare Pages project hostname, retain that one hostname for the entire site. If a custom AstroCrown domain is later connected, use it as the single canonical public hostname and redirect or retire the temporary public preview address once migration is verified; do not advertise multiple parallel public addresses.
 
-Before using a branded hostname in public material, verify that the project controls the domain and its Cloudflare zone. Do not assume `astrocrown.com` or another candidate is registered or controlled merely because it is a plausible brand URL. Keep the public landing/dashboard host stable when the backend Worker, API implementation or hosting provider changes.
+Cloudflare's published Free limits distinguish **projects, domains and routes**, not the number of URL paths:
+- Pages Free: up to 100 Pages projects per account; up to 100 custom domains per Pages project.
+- Workers Free: up to 100 Workers per account; routes and custom domains have separate per-zone limits.
+- A Pages Functions route is selected by its file path. The same site can serve `/supporters/` and `/api/supporters/*` on the existing hostname without creating another public hostname.
+- Configure the Pages `_routes.json` include/exclude rules so only the API paths that need server execution invoke Pages Functions. Exclude static page/assets paths so static delivery remains on the Pages static-asset path and does not unnecessarily consume the Workers request quota.
 
+Official limit and routing references:
+- Pages limits: https://developers.cloudflare.com/pages/platform/limits/
+- Workers limits: https://developers.cloudflare.com/workers/platform/limits/
+- Pages Functions routing and `_routes.json`: https://developers.cloudflare.com/pages/functions/routing/
+- Pages route matching: https://developers.cloudflare.com/pages/configuration/serving-pages/
+
+This is a routing and resource-conservation decision only. The exact existing production/preview hostname, Cloudflare Pages project, deployment binding and Pages Functions configuration must be inspected in the Cloudflare account before activation. No new public hostname or project is being provisioned by this document.
 
 ## 2. Network and USDT identity
 
