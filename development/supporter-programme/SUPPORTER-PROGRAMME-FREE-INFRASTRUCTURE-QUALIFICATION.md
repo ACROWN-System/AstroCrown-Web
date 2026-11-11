@@ -408,6 +408,28 @@ Before opening contributions, the following remain mandatory:
 - Monitoring, quota thresholds, automatic pause/fail-closed behavior and incident recovery tests.
 - Security, privacy, legal and jurisdictional review of the contribution and no-voluntary-refund terms.
 
+### Multi-ecosystem wallet connection
+
+The supporter dashboard now presents two independent discovery paths under the same member profile:
+
+- **Ethereum and EVM-compatible networks:** EIP-6963 multi-provider discovery, with EIP-1193 `eth_requestAccounts` and `eth_chainId` for display-only account connection and network identification. A legacy `window.ethereum` provider fallback is used only if no EIP-6963 providers are discovered.
+- **Solana:** Solana Wallet Standard registration and `standard:connect`, filtered to Solana account/chain entries.
+
+This permits a multichain wallet such as MetaMask to be discovered in both wallet lists when its browser integration exposes both interfaces. Other EVM wallets can appear in the EVM list; other Solana wallets can appear in the Solana list. The page does not assume that the same provider name proves that two address families belong to the same wallet/account.
+
+Official integration references:
+- MetaMask Connect overview (desktop extension, mobile app, EVM and Solana support): https://docs.metamask.io/metamask-connect/
+- MetaMask integration options (unified multichain API versus separate EVM/Solana standards): https://github.com/MetaMask/metamask-docs/blob/main/metamask-connect/integration-options.md
+- EIP-6963 multi-injected provider discovery: https://eips.ethereum.org/EIPS/eip-6963
+- EIP-1193 provider API: https://eips.ethereum.org/EIPS/eip-1193
+- Solana Wallet Standard registration: https://github.com/wallet-standard/wallet-standard/blob/master/packages/core/wallet/src/register.ts
+
+The current implementation uses the browser-injected standards directly and adds no MetaMask SDK, WalletConnect or other runtime package. It requests EVM account exposure and current chain ID, and Solana `standard:connect`; it does not request message signatures, EVM signatures, Solana signatures, transaction submission or payments. It is intended for compatible browser-extension providers. MetaMask mobile/QR deep-link transport is not included; adding that would require a separate SDK integration and a further cost/permissions review.
+
+Each connected address is displayed under its own ecosystem. The addresses are not yet proven to be controlled by one common multichain account, and they are not linked into a persisted supporter member record. Before a real entitlement can rely on cross-chain identity, the backend must verify control of each address using chain-appropriate, purpose-bound challenges and record the linkage explicitly. A provider name, matching account label or wallet icon is not proof of common control.
+
+The browser smoke test now injects a synthetic wallet provider that exposes both EIP-6963/EIP-1193 and Solana Wallet Standard. It verifies that the same wallet name can be discovered in both lists, that EVM and Solana addresses/networks display independently, and that neither connection asks for signatures, sends transactions or calls a backend endpoint.
+
 ### Supporter page front-end implementation status
 
 The feature branch now contains a supporter dashboard preview at:
@@ -418,6 +440,7 @@ The feature branch now contains a supporter dashboard preview at:
 The existing homepage links to the clean route `/preview/supporters/` in the current repository preview. The intended eventual production route is `/supporters/` under the single existing AstroCrown public hostname. No separate Pages project or public Worker hostname is required for this page.
 
 The browser interface includes:
+- Separate EVM and Solana wallet discovery/connection options, allowing a multichain wallet provider to appear in both lists when it implements both standards.
 - Random member pseudonym generation and supporter customization.
 - Solana wallet discovery/connection using the Wallet Standard browser event protocol, with no additional front-end dependency.
 - Display of the wallet-reported public address and reported Solana chain(s).
