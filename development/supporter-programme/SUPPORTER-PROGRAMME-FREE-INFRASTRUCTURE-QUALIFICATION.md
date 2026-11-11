@@ -38,7 +38,7 @@ Recommended branded URL structure, subject to registration and DNS control of th
 - Registered wallet dashboard: `https://<official-astrocrown-domain>/supporters/dashboard/`
 - Payment and entitlement API: a same-origin `/api/supporters/*` route backed by the qualified Worker/Pages Functions architecture. The implementation may use an internal Worker custom domain or route, but the public UI should not depend on or advertise the account-staging `workers.dev` hostname.
 
-The repository preview is arranged as `/preview/support/` (directory index route), so the same page can map to `/supporters/` when the production site is deployed at its domain root. This is a route design only; no domain ownership, DNS record, custom-domain binding, production dashboard route or API route is asserted here.
+The repository preview is arranged as `/preview/supporters/` (directory index route), so the same page can map to `/supporters/` when the production site is deployed at its domain root. This is a route design only; no domain ownership, DNS record, custom-domain binding, production dashboard route or API route is asserted here.
 
 Before using a branded hostname in public material, verify that the project controls the domain and its Cloudflare zone. Do not assume `astrocrown.com` or another candidate is registered or controlled merely because it is a plausible brand URL. Keep the public landing/dashboard host stable when the backend Worker, API implementation or hosting provider changes.
 
