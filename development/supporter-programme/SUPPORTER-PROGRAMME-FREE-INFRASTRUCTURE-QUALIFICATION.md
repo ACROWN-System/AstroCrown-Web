@@ -26,6 +26,23 @@ The working architecture for qualification is:
 
 No AI inference provider is required to verify a contribution. Token-transfer validation, entitlement calculation, reconciliation and public ledger updates must be deterministic and auditable; LLM output must never authorize or validate a financial transaction.
 
+### Public URL and API separation
+
+The account-staging endpoint
+`https://astrocrown-account-staging-staging.sylvainbradford3.workers.dev/`
+is a technical staging address and must not be used as the public Supporter Programme URL or shown in supporter-facing navigation.
+
+Recommended branded URL structure, subject to registration and DNS control of the final AstroCrown domain:
+
+- Public programme and rules: `https://<official-astrocrown-domain>/supporters/`
+- Registered wallet dashboard: `https://<official-astrocrown-domain>/supporters/dashboard/`
+- Payment and entitlement API: a same-origin `/api/supporters/*` route backed by the qualified Worker/Pages Functions architecture. The implementation may use an internal Worker custom domain or route, but the public UI should not depend on or advertise the account-staging `workers.dev` hostname.
+
+The repository preview is arranged as `/preview/support/` (directory index route), so the same page can map to `/supporters/` when the production site is deployed at its domain root. This is a route design only; no domain ownership, DNS record, custom-domain binding, production dashboard route or API route is asserted here.
+
+Before using a branded hostname in public material, verify that the project controls the domain and its Cloudflare zone. Do not assume `astrocrown.com` or another candidate is registered or controlled merely because it is a plausible brand URL. Keep the public landing/dashboard host stable when the backend Worker, API implementation or hosting provider changes.
+
+
 ## 2. Network and USDT identity
 
 AstroCrown's current working chain direction has been Solana, but the supporter programme's accepted network still needs an explicit owner decision before any live payment address is published.
