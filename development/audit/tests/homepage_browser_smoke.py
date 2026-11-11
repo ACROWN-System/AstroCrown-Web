@@ -618,24 +618,63 @@ def main() -> int:
             supporter_page = context.new_page()
             attach_diagnostics(supporter_page)
             supporter_page.add_init_script("""(() => {
-              const testState = {connectCalls:0, signMessageCalls:0, transactionCalls:0, fetchCalls:0};
+              const testState = {
+                evmConnectCalls:0, evmSigningCalls:0, evmTransactionCalls:0,
+                solanaConnectCalls:0, signMessageCalls:0, transactionCalls:0, fetchCalls:0
+              };
               window.__astroSupporterWalletTest = testState;
               const originalFetch = window.fetch.bind(window);
               window.fetch = (...args) => { testState.fetchCalls += 1; return originalFetch(...args); };
+
+              const evmProvider = {
+                request: async ({method}) => {
+                  if (method === "eth_requestAccounts") {
+                    testState.evmConnectCalls += 1;
+                    return ["0x1111111111111111111111111111111111111111"];
+                  }
+                  if (method === "eth_chainId") return "0x1";
+                  if (method === "personal_sign" || method === "eth_sign" || method === "eth_signTypedData_v4") {
+                    testState.evmSigningCalls += 1;
+                    throw new Error("The supporter preview must not request EVM signatures.");
+                  }
+                  if (method === "eth_sendTransaction" || method === "eth_sendRawTransaction") {
+                    testState.evmTransactionCalls += 1;
+                    throw new Error("The supporter preview must not request EVM transactions.");
+                  }
+                  throw new Error("Unexpected EVM method: " + method);
+                },
+                on: () => {},
+                removeListener: () => {}
+              };
+              const announceEvmWallet = () => {
+                window.dispatchEvent(new CustomEvent("eip6963:announceProvider", {
+                  detail: {
+                    info: {
+                      uuid: "astro-metamask-browser-test",
+                      name: "MetaMask Browser Test Wallet",
+                      icon: "",
+                      rdns: "io.metamask"
+                    },
+                    provider: evmProvider
+                  }
+                }));
+              };
+              window.addEventListener("eip6963:requestProvider", announceEvmWallet);
+
               const account = {
                 address: "11111111111111111111111111111111",
                 chains: ["solana:devnet"],
                 features: ["solana:signMessage", "solana:signAndSendTransaction"]
               };
               const wallet = {
-                name: "AstroCrown Browser Test Wallet",
+                name: "MetaMask Browser Test Wallet",
                 icon: "",
                 chains: ["solana:devnet"],
                 features: {
                   "standard:connect": {
                     version: "1.0.0",
                     connect: async () => {
-                      testState.connectCalls += 1;
+                      testState.solanaConnectCalls += 1;
                       return {accounts:[account]};
                     }
                   },
@@ -695,13 +734,40 @@ def main() -> int:
                 supporter_page.locator("#member-display-name").inner_text() == custom_name,
                 supporter_page.locator("#member-display-name").inner_text(),
             )
+            evm_wallet_options = supporter_page.locator("#supporter-evm-wallet-choice option").all_text_contents()
+            check(
+                "EIP-6963 discovers MetaMask as an EVM wallet",
+                "MetaMask Browser Test Wallet" in evm_wallet_options,
+                evm_wallet_options,
+            )
+            supporter_page.locator("#supporter-evm-wallet-choice").select_option(label="MetaMask Browser Test Wallet")
+            supporter_page.locator("#supporter-evm-wallet-connect").click()
+            supporter_page.wait_for_function(
+                "document.getElementById('supporter-evm-wallet-feedback').dataset.state === 'connected'",
+                timeout=7000,
+            )
+            evm_address = supporter_page.locator("#supporter-evm-wallet-address").inner_text()
+            evm_chain = supporter_page.locator("#supporter-evm-wallet-chain").inner_text()
+            check(
+                "EVM wallet connection displays its public address and detected network",
+                evm_address == "0x1111111111111111111111111111111111111111"
+                and "Ethereum Mainnet" in evm_chain,
+                {"address":evm_address,"chain":evm_chain},
+            )
+            check(
+                "EVM wallet display does not register an entitlement",
+                "not been registered" in supporter_page.locator("#supporter-evm-wallet-feedback").inner_text().lower()
+                and supporter_page.locator("#supporter-multiplier-state").inner_text() == "Not activated",
+                supporter_page.locator("#supporter-evm-wallet-feedback").inner_text(),
+            )
+
             wallet_options = supporter_page.locator("#supporter-wallet-choice option").all_text_contents()
             check(
-                "Solana Wallet Standard provider is discovered without an external adapter dependency",
-                "AstroCrown Browser Test Wallet" in wallet_options,
+                "Solana Wallet Standard discovers MetaMask alongside EVM providers",
+                "MetaMask Browser Test Wallet" in wallet_options,
                 wallet_options,
             )
-            supporter_page.locator("#supporter-wallet-choice").select_option(label="AstroCrown Browser Test Wallet")
+            supporter_page.locator("#supporter-wallet-choice").select_option(label="MetaMask Browser Test Wallet")
             supporter_page.locator("#supporter-wallet-connect").click()
             supporter_page.wait_for_function(
                 "document.getElementById('supporter-wallet-feedback').dataset.state === 'connected'",
@@ -721,10 +787,20 @@ def main() -> int:
                 {"feedback": connected_feedback,
                  "multiplier": supporter_page.locator("#supporter-multiplier-state").inner_text()},
             )
+            check(
+                "same multichain wallet provider can connect EVM and Solana address families",
+                supporter_page.locator("#supporter-evm-wallet-address").inner_text() == "0x1111111111111111111111111111111111111111"
+                and supporter_page.locator("#supporter-wallet-address").inner_text() == "11111111111111111111111111111111",
+                {"evm":supporter_page.locator("#supporter-evm-wallet-address").inner_text(),
+                 "solana":supporter_page.locator("#supporter-wallet-address").inner_text()},
+            )
             wallet_calls = supporter_page.evaluate("() => window.__astroSupporterWalletTest")
             check(
-                "wallet preview connects without signing, transferring or calling a backend API",
-                wallet_calls["connectCalls"] == 1
+                "EVM and Solana wallet previews connect without signing, transferring or calling a backend API",
+                wallet_calls["evmConnectCalls"] == 1
+                and wallet_calls["solanaConnectCalls"] == 1
+                and wallet_calls["evmSigningCalls"] == 0
+                and wallet_calls["evmTransactionCalls"] == 0
                 and wallet_calls["signMessageCalls"] == 0
                 and wallet_calls["transactionCalls"] == 0
                 and wallet_calls["fetchCalls"] == 0,
@@ -758,10 +834,13 @@ def main() -> int:
             supporter_page.set_viewport_size({"width":390,"height":844})
             supporter_page.screenshot(path=str(out / "supporter-dashboard-mobile-390x844.png"), full_page=True)
             supporter_page.locator("#supporter-wallet-clear").click()
+            supporter_page.locator("#supporter-evm-wallet-clear").click()
             check(
-                "supporter dashboard can clear the preview wallet connection",
-                supporter_page.locator("#supporter-wallet-address").inner_text() == "Not connected",
-                supporter_page.locator("#supporter-wallet-feedback").inner_text(),
+                "supporter dashboard can clear both preview wallet connections",
+                supporter_page.locator("#supporter-wallet-address").inner_text() == "Not connected"
+                and supporter_page.locator("#supporter-evm-wallet-address").inner_text() == "Not connected",
+                {"solana":supporter_page.locator("#supporter-wallet-address").inner_text(),
+                 "evm":supporter_page.locator("#supporter-evm-wallet-address").inner_text()},
             )
             supporter_page.close()
 
