@@ -737,8 +737,8 @@ def main() -> int:
             )
             check(
                 "excess-transfer loss warning is visible",
-                "may be permanently unrecoverable" in supporter_page.locator(".policy-highlight").all_inner_texts()[-1],
-                supporter_page.locator(".policy-highlight").all_inner_texts()[-1],
+                "may be permanently unrecoverable" in supporter_page.locator("#excess-payment-warning").inner_text(),
+                supporter_page.locator("#excess-payment-warning").inner_text(),
             )
             supporter_page.set_viewport_size({"width":1440,"height":1000})
             supporter_page.screenshot(path=str(out / "supporter-dashboard-desktop-1440x1000.png"), full_page=True)
