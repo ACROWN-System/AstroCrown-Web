@@ -1,13 +1,6 @@
 (function () {
   "use strict";
 
-  var solanaSelect = document.getElementById("supporter-wallet-choice");
-  var solanaConnectButton = document.getElementById("supporter-wallet-connect");
-  var solanaClearButton = document.getElementById("supporter-wallet-clear");
-  var solanaFeedback = document.getElementById("supporter-wallet-feedback");
-  var solanaAddress = document.getElementById("supporter-wallet-address");
-  var solanaChain = document.getElementById("supporter-wallet-chain");
-
   var evmSelect = document.getElementById("supporter-evm-wallet-choice");
   var evmConnectButton = document.getElementById("supporter-evm-wallet-connect");
   var evmClearButton = document.getElementById("supporter-evm-wallet-clear");
@@ -19,7 +12,7 @@
   var pseudonymDisplay = document.getElementById("member-display-name");
   var randomizeButton = document.getElementById("member-name-randomize");
 
-  if (!solanaSelect || !evmSelect || !pseudonymInput) return;
+  if (!evmSelect || !pseudonymInput) return;
 
   var adjectives = [
     "Golden", "Silver", "Stellar", "Cosmic", "Radiant", "Quiet", "Noble",
@@ -55,8 +48,8 @@
   randomizeButton.addEventListener("click", function () {
     pseudonymInput.value = generatePseudonym();
     updatePseudonym();
-    solanaFeedback.textContent = "A new preview pseudonym has been generated. It is not saved to a member record.";
-    solanaFeedback.dataset.state = "neutral";
+    evmFeedback.textContent = "A new preview pseudonym has been generated. It is not saved to a member record.";
+    evmFeedback.dataset.state = "neutral";
   });
 
   function setFeedback(element, message, state) {
@@ -289,172 +282,6 @@
 
   evmClearButton.addEventListener("click", clearEvmConnection);
 
-  // ---------------------------------------------------------------------------
-  // Solana Wallet Standard discovery and display. No signing/transaction calls.
-  // ---------------------------------------------------------------------------
-
-  var solanaWallets = new Map();
-  var nextSolanaWalletId = 0;
-  var connectedSolana = null;
-  var connectedSolanaAccount = null;
-
-  function supportedSolanaWallet(wallet) {
-    return Boolean(
-      wallet &&
-      typeof wallet.name === "string" &&
-      wallet.features &&
-      wallet.features["standard:connect"] &&
-      typeof wallet.features["standard:connect"].connect === "function"
-    );
-  }
-
-  function renderSolanaChoices() {
-    var previous = solanaSelect.value;
-    solanaSelect.textContent = "";
-    var option = document.createElement("option");
-    option.value = "";
-    option.textContent = solanaWallets.size ? "Select a Solana wallet" : "No Solana browser wallet detected";
-    solanaSelect.appendChild(option);
-
-    solanaWallets.forEach(function (wallet, id) {
-      var item = document.createElement("option");
-      item.value = id;
-      item.textContent = wallet.name;
-      solanaSelect.appendChild(item);
-    });
-
-    if (previous && solanaWallets.has(previous)) solanaSelect.value = previous;
-    solanaSelect.disabled = solanaWallets.size === 0;
-    solanaConnectButton.disabled = solanaWallets.size === 0 || Boolean(connectedSolanaAccount);
-    solanaClearButton.disabled = !connectedSolanaAccount;
-  }
-
-  function clearSolanaConnection(callWalletDisconnect) {
-    var wallet = connectedSolana && connectedSolana.wallet;
-    if (callWalletDisconnect && wallet && wallet.features &&
-        wallet.features["standard:disconnect"] &&
-        typeof wallet.features["standard:disconnect"].disconnect === "function") {
-      try {
-        wallet.features["standard:disconnect"].disconnect();
-      } catch (_) {
-        // Clearing this page's display does not depend on an optional disconnect feature.
-      }
-    }
-
-    connectedSolana = null;
-    connectedSolanaAccount = null;
-    solanaAddress.textContent = "Not connected";
-    solanaChain.textContent = "No Solana cluster confirmed";
-    solanaConnectButton.textContent = "Connect Solana wallet";
-    renderSolanaChoices();
-    setFeedback(solanaFeedback, "Local Solana wallet display cleared. No transaction or message was signed.", "neutral");
-  }
-
-  function registerSolanaWallets() {
-    var incoming = Array.prototype.slice.call(arguments);
-    var registeredIds = [];
-
-    incoming.forEach(function (wallet) {
-      if (!supportedSolanaWallet(wallet)) return;
-      var duplicate = Array.from(solanaWallets.values()).some(function (existing) {
-        return existing === wallet;
-      });
-      if (duplicate) return;
-      var id = "solana-" + (++nextSolanaWalletId);
-      solanaWallets.set(id, wallet);
-      registeredIds.push(id);
-    });
-
-    renderSolanaChoices();
-    if (registeredIds.length) {
-      setFeedback(solanaFeedback, solanaWallets.size + " compatible Solana wallet option(s) detected.", "neutral");
-    }
-
-    return function unregisterWallets() {
-      registeredIds.forEach(function (id) {
-        var removed = solanaWallets.get(id);
-        solanaWallets.delete(id);
-        if (connectedSolana && connectedSolana.wallet === removed) clearSolanaConnection(false);
-      });
-      renderSolanaChoices();
-    };
-  }
-
-  var walletApi = Object.freeze({ register: registerSolanaWallets });
-
-  window.addEventListener("wallet-standard:register-wallet", function (event) {
-    if (event && typeof event.detail === "function") {
-      event.detail(walletApi);
-    }
-  });
-
-  function WalletStandardAppReadyEvent(api) {
-    var event = new Event("wallet-standard:app-ready");
-    Object.defineProperty(event, "detail", { value: api, enumerable: true });
-    return event;
-  }
-
-  window.dispatchEvent(new WalletStandardAppReadyEvent(walletApi));
-
-  solanaSelect.addEventListener("change", renderSolanaChoices);
-  solanaConnectButton.addEventListener("click", async function () {
-    var wallet = solanaWallets.get(solanaSelect.value);
-    if (!wallet || !supportedSolanaWallet(wallet)) {
-      setFeedback(solanaFeedback, "Choose a compatible Solana wallet first.", "error");
-      return;
-    }
-
-    solanaConnectButton.disabled = true;
-    solanaConnectButton.textContent = "Connecting…";
-    setFeedback(solanaFeedback, "Approve the wallet's connection request to share its public Solana address. No signature or transaction is requested.", "neutral");
-
-    try {
-      var result = await wallet.features["standard:connect"].connect({ silent: false });
-      var accounts = result && Array.isArray(result.accounts) ? result.accounts : [];
-      var account = accounts.find(function (candidate) {
-        return candidate &&
-          typeof candidate.address === "string" &&
-          Array.isArray(candidate.chains) &&
-          candidate.chains.some(function (chain) {
-            return typeof chain === "string" && chain.indexOf("solana:") === 0;
-          });
-      });
-
-      if (!account) {
-        throw new Error("The selected wallet did not return a connected Solana account.");
-      }
-
-      connectedSolana = { wallet: wallet };
-      connectedSolanaAccount = account;
-      solanaAddress.textContent = account.address;
-      solanaChain.textContent = "Wallet-reported network(s): " + account.chains
-        .filter(function (chain) { return typeof chain === "string" && chain.indexOf("solana:") === 0; })
-        .join(", ");
-      solanaConnectButton.textContent = "Solana wallet connected";
-      renderSolanaChoices();
-      solanaConnectButton.disabled = true;
-      setFeedback(
-        solanaFeedback,
-        "Solana wallet connected for display only. Its address has not been registered with the programme backend, and no entitlement has been activated.",
-        "connected"
-      );
-    } catch (error) {
-      solanaConnectButton.textContent = "Connect Solana wallet";
-      solanaConnectButton.disabled = false;
-      setFeedback(
-        solanaFeedback,
-        error && error.message ? error.message : "Solana wallet connection was not completed. No funds were requested.",
-        "error"
-      );
-    }
-  });
-
-  solanaClearButton.addEventListener("click", function () {
-    clearSolanaConnection(true);
-  });
-
-  // Never call personal_sign, eth_sign, eth_sendTransaction, signMessage,
-  // signTransaction, signAndSendTransaction, or any wallet payment method here.
+  // This preview exposes EVM account display only; it never signs or sends transactions.
   renderEvmChoices();
-  renderSolanaChoices();
 }());
