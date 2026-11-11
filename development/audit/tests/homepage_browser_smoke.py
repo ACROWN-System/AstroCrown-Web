@@ -613,6 +613,158 @@ def main() -> int:
                   not page.locator("#account-dialog").evaluate("(d) => d.open"),
                   page.locator("#account-dialog").evaluate("(d) => d.open"))
 
+            # Exercise the supporter dashboard independently of the homepage.
+            # A synthetic Wallet Standard provider is injected; no real wallet or external service is used.
+            supporter_page = context.new_page()
+            attach_diagnostics(supporter_page)
+            supporter_page.add_init_script("""() => {
+              const testState = {connectCalls:0, signMessageCalls:0, transactionCalls:0, fetchCalls:0};
+              window.__astroSupporterWalletTest = testState;
+              const originalFetch = window.fetch.bind(window);
+              window.fetch = (...args) => { testState.fetchCalls += 1; return originalFetch(...args); };
+              const account = {
+                address: "11111111111111111111111111111111",
+                chains: ["solana:devnet"],
+                features: ["solana:signMessage", "solana:signAndSendTransaction"]
+              };
+              const wallet = {
+                name: "AstroCrown Browser Test Wallet",
+                icon: "",
+                chains: ["solana:devnet"],
+                features: {
+                  "standard:connect": {
+                    version: "1.0.0",
+                    connect: async () => {
+                      testState.connectCalls += 1;
+                      return {accounts:[account]};
+                    }
+                  },
+                  "solana:signMessage": {
+                    version: "1.0.0",
+                    signMessage: async () => {
+                      testState.signMessageCalls += 1;
+                      throw new Error("The supporter preview must not request message signatures.");
+                    }
+                  },
+                  "solana:signAndSendTransaction": {
+                    version: "1.0.0",
+                    supportedTransactionVersions: ["legacy"],
+                    signAndSendTransaction: async () => {
+                      testState.transactionCalls += 1;
+                      throw new Error("The supporter preview must not request transactions.");
+                    }
+                  },
+                  "standard:disconnect": {
+                    version: "1.0.0",
+                    disconnect: async () => {}
+                  }
+                }
+              };
+              window.addEventListener("wallet-standard:app-ready", (event) => {
+                event.detail.register(wallet);
+              }, {once:true});
+            }""")
+            supporter_response = supporter_page.goto(
+                f"{origin}/preview/supporters/",
+                wait_until="load",
+                timeout=15000
+            )
+            supporter_page.locator("#member-pseudonym").wait_for()
+            check(
+                "supporter directory route loads successfully",
+                supporter_response is not None and supporter_response.status == 200,
+                {"status": supporter_response.status if supporter_response else None, "url": supporter_page.url},
+            )
+            generated_name = supporter_page.locator("#member-pseudonym").input_value()
+            check(
+                "member dashboard generates a non-empty random pseudonym",
+                bool(generated_name) and len(generated_name) <= 28,
+                generated_name,
+            )
+            supporter_page.locator("#member-name-randomize").click()
+            regenerated_name = supporter_page.locator("#member-pseudonym").input_value()
+            check(
+                "member can generate another pseudonym",
+                bool(regenerated_name) and regenerated_name != generated_name,
+                {"before": generated_name, "after": regenerated_name},
+            )
+            custom_name = "SolarVoyager"
+            supporter_page.locator("#member-pseudonym").fill(custom_name)
+            check(
+                "custom member pseudonym updates the dashboard display",
+                supporter_page.locator("#member-display-name").inner_text() == custom_name,
+                supporter_page.locator("#member-display-name").inner_text(),
+            )
+            wallet_options = supporter_page.locator("#supporter-wallet-choice option").all_text_contents()
+            check(
+                "Solana Wallet Standard provider is discovered without an external adapter dependency",
+                "AstroCrown Browser Test Wallet" in wallet_options,
+                wallet_options,
+            )
+            supporter_page.locator("#supporter-wallet-choice").select_option(label="AstroCrown Browser Test Wallet")
+            supporter_page.locator("#supporter-wallet-connect").click()
+            supporter_page.wait_for_function(
+                "document.getElementById('supporter-wallet-feedback').dataset.state === 'connected'",
+                timeout=7000,
+            )
+            connected_address = supporter_page.locator("#supporter-wallet-address").inner_text()
+            connected_feedback = supporter_page.locator("#supporter-wallet-feedback").inner_text()
+            check(
+                "wallet connection displays the wallet-reported public address",
+                connected_address == "11111111111111111111111111111111",
+                connected_address,
+            )
+            check(
+                "wallet display explicitly remains unregistered and does not activate entitlement",
+                "not been registered" in connected_feedback.lower()
+                and supporter_page.locator("#supporter-multiplier-state").inner_text() == "Not activated",
+                {"feedback": connected_feedback,
+                 "multiplier": supporter_page.locator("#supporter-multiplier-state").inner_text()},
+            )
+            wallet_calls = supporter_page.evaluate("() => window.__astroSupporterWalletTest")
+            check(
+                "wallet preview connects without signing, transferring or calling a backend API",
+                wallet_calls["connectCalls"] == 1
+                and wallet_calls["signMessageCalls"] == 0
+                and wallet_calls["transactionCalls"] == 0
+                and wallet_calls["fetchCalls"] == 0,
+                wallet_calls,
+            )
+            check(
+                "ACROWN purchase control remains disabled until entitlement backend is ready",
+                supporter_page.locator("#supporter-purchase-button").is_disabled(),
+                supporter_page.locator("#supporter-purchase-button").get_attribute("disabled"),
+            )
+            check(
+                "excess-transfer loss warning is visible",
+                "may be permanently unrecoverable" in supporter_page.locator(".policy-highlight").all_inner_texts()[-1],
+                supporter_page.locator(".policy-highlight").all_inner_texts()[-1],
+            )
+            supporter_page.set_viewport_size({"width":1440,"height":1000})
+            supporter_page.screenshot(path=str(out / "supporter-dashboard-desktop-1440x1000.png"), full_page=True)
+            for width in (390, 320):
+                supporter_page.set_viewport_size({"width":width,"height":844})
+                layout = supporter_page.evaluate("""() => ({
+                  viewport: innerWidth,
+                  documentWidth: document.documentElement.scrollWidth,
+                  bodyWidth: document.body.scrollWidth,
+                  dashboardColumns: getComputedStyle(document.querySelector('.dashboard-grid')).gridTemplateColumns
+                })""")
+                check(
+                    f"supporter dashboard has no horizontal overflow at {width}px",
+                    layout["documentWidth"] <= width and layout["bodyWidth"] <= width,
+                    layout,
+                )
+            supporter_page.set_viewport_size({"width":390,"height":844})
+            supporter_page.screenshot(path=str(out / "supporter-dashboard-mobile-390x844.png"), full_page=True)
+            supporter_page.locator("#supporter-wallet-clear").click()
+            check(
+                "supporter dashboard can clear the preview wallet connection",
+                supporter_page.locator("#supporter-wallet-address").inner_text() == "Not connected",
+                supporter_page.locator("#supporter-wallet-feedback").inner_text(),
+            )
+            supporter_page.close()
+
             for width, height in [(1440, 1000), (1280, 900), (1024, 900), (768, 900), (390, 844), (320, 780)]:
                 page.set_viewport_size({"width": width, "height": height})
                 page.evaluate("window.scrollTo(0, 0)")
