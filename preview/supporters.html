@@ -108,6 +108,25 @@
     .rule-card{padding:17px;border:1px solid var(--line);border-radius:13px;background:rgba(10,23,41,.78)}
     .rule-card h3{margin:0 0 7px;color:#e9edf6;font-size:12px}
     .rule-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.7}
+    .transparency-intro{max-width:760px;margin:-3px 0 16px;color:var(--muted);font-size:11px;line-height:1.7}
+    .transparency-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:15px 0}
+    .transparency-card{padding:15px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+    .transparency-card strong{display:block;margin:0 0 6px;color:#edf1f8;font-size:11px}
+    .transparency-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.65}
+    .ledger-shell{overflow:hidden;border:1px solid var(--line-strong);border-radius:13px;background:rgba(7,17,31,.86)}
+    .ledger-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+    .ledger-head strong{font-size:12px}
+    .ledger-head span{color:var(--warning);font-size:9px;font-weight:850;letter-spacing:.07em;text-transform:uppercase}
+    .ledger-empty{padding:25px 18px;text-align:center}
+    .ledger-empty strong{display:block;margin-bottom:5px;color:#e7edf7;font-size:12px}
+    .ledger-empty p{max-width:610px;margin:0 auto;color:var(--muted);font-size:10px;line-height:1.7}
+    .ledger-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:14px;text-align:left}
+    .ledger-field{padding:10px;border:1px solid rgba(153,178,213,.12);border-radius:8px;background:rgba(255,255,255,.018)}
+    .ledger-field b{display:block;margin-bottom:3px;color:#dfe6f1;font-size:9px}
+    .ledger-field span{color:var(--quiet);font-size:9px;line-height:1.5}
+    .policy-highlight{margin-top:14px;padding:13px 14px;border:1px solid rgba(255,210,74,.3);border-radius:10px;background:rgba(255,210,74,.055);color:#e5d59d;font-size:10px;line-height:1.7}
+    .policy-highlight strong{color:#ffe8a0}
+    .explorer-note{margin-top:12px;color:var(--quiet);font-size:9px;line-height:1.65}
     .faq{display:grid;gap:9px}
     details{border:1px solid var(--line);border-radius:11px;background:rgba(10,23,41,.76)}
     summary{padding:13px 15px;color:#e9edf6;font-size:11px;font-weight:800;cursor:pointer}
@@ -279,7 +298,7 @@
         <article class="step-card">
           <div class="step-number">01</div>
           <h3>Review the final terms</h3>
-          <p>Read the approved contribution rules, eligibility, period, cancellation/refund treatment, purchase entitlement and applicable jurisdictional conditions.</p>
+          <p>Read the approved contribution rules, eligibility, period, non-cancellable / no-voluntary-refund policy, purchase entitlement and applicable jurisdictional conditions.</p>
           <span class="pending">Terms pending approval</span>
         </article>
         <article class="step-card">
@@ -332,10 +351,56 @@
           <p>Programme operations must preserve the ACS-defined floor, F = V/C. External market prices may differ from the ACS floor and are not guaranteed by this page.</p>
         </article>
         <article class="rule-card">
-          <h3>Final terms must be published first</h3>
-          <p>The multiplier, duration, eligibility, individual limits, treatment of unexercised capacity, refund/cancellation provisions and legal disclosures must be settled before any contribution is accepted.</p>
+          <h3>Final terms and finality must be clear first</h3>
+          <p>The multiplier, duration, eligibility, individual limits, treatment of unused purchase capacity and non-cancellable / no-voluntary-refund policy must be published before any contribution is accepted, subject to mandatory legal rights.</p>
         </article>
       </div>
+    </section>
+
+    <section class="section" aria-labelledby="transparency-title" id="fund-transparency">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Public accountability</div>
+          <h2 id="transparency-title">Every use of supporter funds, publicly accounted for</h2>
+        </div>
+        <p>Supporters and the public should be able to follow contributions into the programme treasury and trace every subsequent use of those funds.</p>
+      </div>
+      <p class="transparency-intro">The planned transparency record is intended to cover every confirmed contribution, every outgoing payment, every treasury-to-treasury transfer, network fee and off-chain expenditure attributable to the programme. Public accounting entries will be paired with independently checkable evidence wherever the underlying activity permits it.</p>
+      <div class="transparency-grid">
+        <article class="transparency-card">
+          <strong>1. Public contribution record</strong>
+          <p>Each confirmed USDT contribution will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference.</p>
+        </article>
+        <article class="transparency-card">
+          <strong>2. Every use of funds</strong>
+          <p>Each outgoing transfer, internal treasury movement, payment, fee and off-chain expense will have a dated public ledger entry showing amount, purpose, destination or payee category, and supporting reference.</p>
+        </article>
+        <article class="transparency-card">
+          <strong>3. External verification</strong>
+          <p>On-chain records will link directly to the relevant public block explorer. Off-chain expenditure will have supporting evidence such as an invoice, receipt or reconciled statement, with private data appropriately protected.</p>
+        </article>
+      </div>
+
+      <div class="ledger-shell" aria-label="Supporter programme public ledger status">
+        <div class="ledger-head">
+          <strong>Supporter fund transparency ledger</strong>
+          <span>Not yet live</span>
+        </div>
+        <div class="ledger-empty">
+          <strong>No supporter contributions accepted in this development preview.</strong>
+          <p>No programme inflows or expenditures are being represented here as actual transactions. Once the programme is activated, this area is intended to show the live reconciled ledger and historical records rather than illustrative or fabricated entries.</p>
+          <div class="ledger-fields">
+            <div class="ledger-field"><b>Contribution inflows</b><span>Timestamp · amount · USDT token/network · sender/treasury references · transaction hash</span></div>
+            <div class="ledger-field"><b>Expenditure outflows</b><span>Timestamp · amount · destination · purpose · transaction hash or off-chain evidence</span></div>
+            <div class="ledger-field"><b>Treasury movements</b><span>Source and destination wallets · amount · reason · linked transaction records</span></div>
+            <div class="ledger-field"><b>Reconciliation</b><span>Opening and closing balances · receipts · expenditures · fees · unexplained difference, if any</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="policy-highlight">
+        <strong>Public traceability is a programme requirement.</strong> The intended treasury design must preserve a traceable path from the receiving wallet through any intermediate wallets to the final destination. No programme expenditure should be omitted merely because it occurs off-chain or is processed by a service provider.
+      </div>
+      <p class="explorer-note">Explorer selection depends on the network actually adopted: Etherscan is an Ethereum explorer; Solana transactions should link to a Solana-compatible explorer such as Solana Explorer or Solscan. A block-explorer record can verify the on-chain transaction details, but it cannot by itself prove the commercial purpose or legitimacy of an off-chain expense. Supporting accounting evidence is therefore also required.</p>
     </section>
 
     <section class="section" aria-labelledby="faq-title">
@@ -346,6 +411,14 @@
         </div>
       </div>
       <div class="faq">
+        <details>
+          <summary>Can I cancel a confirmed contribution or request a refund?</summary>
+          <p>The programme is designed to be non-cancellable and to offer no voluntary refunds once a contribution has been confirmed and recorded. Review the final terms carefully before sending any funds. This policy does not remove a remedy or right that applicable law makes mandatory.</p>
+        </details>
+        <details>
+          <summary>How can I verify what AstroCrown does with supporter funds?</summary>
+          <p>The public ledger is intended to disclose every contribution and every use of programme funds. On-chain transactions will link to the correct network explorer; off-chain payments will be supported by accounting evidence such as receipts, invoices or reconciled records. An explorer link proves the on-chain movement, not by itself the purpose of the expenditure.</p>
+        </details>
         <details>
           <summary>Does my USDT contribution buy ACROWN?</summary>
           <p>No. The proposed programme separates the supporter contribution from a later ACROWN purchase. The contribution does not itself issue tokens or automatically increase the ACS reserve. Any later purchase would be a separate transaction under final approved terms.</p>
