@@ -1,9 +1,9 @@
 # Supporter Programme — Free Infrastructure and Provider Qualification
 
-**Observation date:** 2026-11-11  
+**Observation date:** 2026-11-12  
 **Status:** RESEARCH BASELINE / NO PROVIDER ACCOUNT OR PRODUCTION PAYMENT ROUTE APPROVED  
 **Scope:** USDT supporter contributions, on-chain verification, public fund ledger, off-chain evidence publication, page/API hosting, database, backups, monitoring and CI.  
-**Programme planning ceiling:** USDT 250,000 aggregate contributions (planning assumption, not a live funding cap).  
+**Programme planning ceiling:** USDT 250,000 aggregate supporter contributions (planning assumption, not a live funding cap). The separate maximum ACROWN purchase quantity is a programme-wide token allowance still awaiting approval.  
 **Related implementation:** `preview/supporters.html` and PR #176.
 
 > This is a dated research snapshot, not proof that a provider account is activated, cardless, commercially eligible, within quota, or suitable for production. Every provider must pass account-level and workload-level qualification before production use. Published free limits can change.
@@ -275,37 +275,65 @@ The USDT 150 amount is provisional until checkout/order-level verification is co
 
 The actual financial rules belong in the application and must not depend on an RPC provider's proprietary interpretation.
 
-### Supporter wallet association and GitHub backup design
+### Wallet registration, member pseudonym and public GitHub backup
 
-Keep these fields separate in the registry:
-- A pseudonymous supporter/account reference.
-- The supporter's declared public wallet address(es).
-- Wallet-control proof status, method, challenge nonce/reference, signature and verification time where signed-message proof is supported.
-- The actual source address/token account owner observed in the on-chain payment.
-- The contribution transaction signature and exact contribution intent.
-- A review status and audit event when the source address differs from the declared wallet.
+The wallet is the member's account and the authority for the associated supporter entitlement.
 
-A wallet-control message must be a fresh, purpose-bound, single-use nonce, verified against the selected chain/wallet standard. Never request, receive, store, log or export a seed phrase, private key, wallet JSON keypair or recovery code. For custodial/exchange transfers, do not falsely mark the exchange's pooled sender as the supporter's registered wallet; link the contribution using its unique transaction signature and a controlled reconciliation/review process.
+- When a supporter connects a wallet they control, the application generates a random member pseudonym by default.
+- The supporter may customize that pseudonym. The pseudonym is a display name, not the authority for the entitlement.
+- The registered public wallet address is the authoritative identifier. The wallet controls the multiplier entitlement and signs the contribution and later ACROWN purchase transactions.
+- This programme design does not require a legal name or identity document. Do not describe wallet control as legal-identity verification.
+- Never request, receive, store, log or export a seed phrase, private key, wallet JSON keypair or recovery phrase. The supporter must retain full control of their wallet.
+- A single wallet should map to one member record. The pseudonym may be changed without changing the wallet-bound entitlement.
 
 GitHub backup boundary:
-- The current `ACROWN-System/AstroCrown-Web` repository is **public**. Never place names, email addresses, private account-to-wallet mappings, identity documents, IP addresses, or other confidential supporter data in it.
-- A public archive may contain only the minimum pseudonymous, explicitly disclosed ledger fields required for auditability, such as contribution reference, network, mint, amount, transaction signature, date/time, reconciliation status and a public source/treasury wallet reference.
-- A private account-to-wallet mapping, if retained, must be encrypted before export and backed up to a separately restricted private repository or equivalent restricted storage. Keep the encryption key outside GitHub and separate from the encrypted archive.
-- Export dated append-only snapshots with cryptographic checksums; protect the archive branch/repository against routine force-push and deletion, and verify restore procedures. A GitHub copy is one backup layer, not the sole system of record.
-- Explain before payment that on-chain addresses and transaction histories are publicly traceable. Publicly linking a wallet to a real name or public supporter identity requires separate explicit opt-in.
+- The current `ACROWN-System/AstroCrown-Web` repository is **public**. The programme may publish the wallet address, member pseudonym, verified contribution transaction references, multiplier eligibility, completed purchase records and the shared remaining programme allowance because these are deliberately public programme records.
+- Do not publish seed phrases, private keys, signing material, authentication secrets, API tokens, or unrelated personal information.
+- Export dated, append-only public snapshots with cryptographic checksums and reconciliation totals. Protect the archive from routine force-push/deletion and verify that snapshots can be restored. GitHub is a public audit/backup layer, not the sole live system of record.
+- Tell supporters before registration that the wallet address, chosen pseudonym and associated programme transactions will be publicly linked. The wallet's on-chain history is independently visible by nature.
 
-This registry and backup design is a requirement proposal only. No supporter wallet registry or backup job is currently implemented or deployed.
+This wallet, pseudonym and backup design is a requirement proposal only. No supporter wallet registry or backup job is currently implemented or deployed.
+
+### Global ACROWN purchase allowance and wallet entitlement
+
+The supporter contribution ceiling and the ACROWN purchase allowance are two separate programme limits:
+
+- **USDT 250,000** is the provisional aggregate ceiling for supporter contributions. It does not define the maximum number of ACROWN tokens that may be purchased.
+- The programme must publish one separate, fixed maximum ACROWN purchase quantity before opening. Its final number is not established in this research snapshot and must not be invented from the contribution ceiling.
+- The first qualifying contribution to a registered wallet must meet the programme's minimum activation threshold. That first qualification activates the wallet's approved multiplier entitlement. The threshold and final multiplier terms are still pending approval.
+- There is no separate per-wallet ACROWN quantity ceiling derived from `contribution × multiplier`. The maximum a qualified wallet may purchase is the entire remaining global programme allowance.
+- One eligible supporter may therefore purchase all remaining programme-authorized ACROWN, in one or more transactions, if the amount remains available when each transaction is finalized.
+- Subsequent purchases do not have a separate programme minimum contribution threshold; each purchase is limited by the current remaining global allowance and the transaction's exact authorized amount.
+- Every finalized purchase consumes the same shared allowance. The remaining quantity is total programme allowance minus all finalized programme purchases.
+- Multiple wallet addresses must never multiply or recreate the global allowance. Because the programme does not collect legal identity documents, it must not claim to enforce one natural person/one wallet. The anti-dilution control is the single cumulative programme cap, not identity-based wallet counting.
+- The live purchase path must enforce the shared cap atomically. Prefer an on-chain programme/contract-level cap where the architecture supports it; the backend must also use an atomic reservation/settlement process to prevent simultaneous transactions from overselling the remaining quantity. A page-only or client-side limit is insufficient.
+
+The exact multiplier's priority/eligibility effect must be written plainly in final terms. It must not be presented as a personal token quantity formula unless that is explicitly re-approved.
+
+### Exact payment amount and excess-transfer warning
+
+The connected-wallet dashboard should construct the authorized transaction and display the exact amount, token, network and destination before the supporter signs. The payment path should reject an amount above the current authorization before transferring tokens wherever the selected on-chain mechanism permits it; this is a transaction rejection, not a promise that AstroCrown will refund or return anything.
+
+Public communications must state all of the following:
+- Do not send more than the exact amount displayed by the dashboard.
+- An excess amount does not create extra ACROWN entitlement.
+- AstroCrown does not promise an automated return, refund or compensation for excess funds.
+- A direct transfer or other payment made outside the guarded dashboard flow may be permanently unrecoverable.
+- Even a rejected or failed blockchain transaction may consume network/gas fees; such fees are not promised to be returned.
+- Supporters must never assume AstroCrown can recover or return an excess transfer.
+
+Do not implement an assumed automatic-refund workflow as a safety guarantee. The stronger control is to construct and validate the exact transaction before wallet approval, while clearly warning that funds sent outside the authorized flow may be lost permanently.
 
 For each contribution:
 - Verify the expected network/cluster.
 - Verify the exact official USDT mint and expected token program.
 - Verify the transfer instruction/transaction succeeded.
-- Verify source wallet, destination treasury token account, amount in integer base units and token decimals.
+- Verify the registered entitlement wallet controls/signs the authorized payment; verify the token-account owner, destination treasury token account, amount in integer base units and token decimals.
 - Require the intended commitment/finality before crediting a contribution.
 - Store the transaction signature with a unique constraint to prevent double-credit.
-- Bind the transaction to a specific supporter/contribution intent; do not match solely on amount and timestamp.
+- Bind the transaction to the registered wallet and a specific contribution/purchase intent; do not match solely on amount and timestamp.
 - Record slot, time, amount, sender, treasury destination, network, mint, confirmation/finality status and explorer URL.
-- Credit the supporter purchase entitlement only after deterministic verification and finality.
+- Activate the wallet's multiplier entitlement only after the first qualifying contribution is deterministically verified and finalized. Update the shared ACROWN remaining allowance only after each purchase is deterministically verified and finalized.
 
 For each outgoing use of supporter funds:
 - Record the source wallet, destination, amount, date, purpose/category and transaction signature where on-chain.
@@ -342,7 +370,9 @@ Before opening contributions, the following remain mandatory:
 - Dedicated supporter treasury and custody/authorization policy.
 - Live Worker/D1 deployment and production-parity qualification.
 - At least two independent RPC endpoints tested for the required methods, reset/quota behavior and failover.
-- Account-to-contribution association and replay/double-credit prevention.
+- Wallet-bound member pseudonym, public GitHub snapshot export, account-to-contribution association and replay/double-credit prevention.
+- An approved global ACROWN purchase quantity, first-contribution activation threshold, and atomic shared-cap enforcement across all wallets.
+- Exact-amount dashboard transaction construction and rejection of out-of-authorization amounts, plus explicit no-guaranteed-return warnings for excess/manual transfers.
 - Append-only public ledger, downloadable versioned snapshots and independent reconciliation.
 - Public documentation/evidence publication for all off-chain expenditure.
 - Monitoring, quota thresholds, automatic pause/fail-closed behavior and incident recovery tests.
