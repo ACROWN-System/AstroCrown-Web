@@ -357,7 +357,7 @@
     incoming.forEach(function (wallet) {
       if (!supportedSolanaWallet(wallet)) return;
       var duplicate = Array.from(solanaWallets.values()).some(function (existing) {
-        return existing === wallet || existing.name === wallet.name;
+        return existing === wallet;
       });
       if (duplicate) return;
       var id = "solana-" + (++nextSolanaWalletId);
