@@ -408,6 +408,29 @@ Before opening contributions, the following remain mandatory:
 - Monitoring, quota thresholds, automatic pause/fail-closed behavior and incident recovery tests.
 - Security, privacy, legal and jurisdictional review of the contribution and no-voluntary-refund terms.
 
+### Supporter page front-end implementation status
+
+The feature branch now contains a supporter dashboard preview at:
+
+- `preview/supporters/index.html`
+- `preview/supporters/supporters.js`
+
+The existing homepage links to the clean route `/preview/supporters/` in the current repository preview. The intended eventual production route is `/supporters/` under the single existing AstroCrown public hostname. No separate Pages project or public Worker hostname is required for this page.
+
+The browser interface includes:
+- Random member pseudonym generation and supporter customization.
+- Solana wallet discovery/connection using the Wallet Standard browser event protocol, with no additional front-end dependency.
+- Display of the wallet-reported public address and reported Solana chain(s).
+- A wallet entitlement dashboard that explains the first-contribution activation threshold, multiplier state, shared global ACROWN allowance and remaining allowance.
+- A shared programme cap: an eligible wallet may purchase up to all remaining programme allowance; the page does not calculate a per-wallet token cap from contribution × multiplier.
+- A disabled ACROWN purchase control, explicit excess-transfer warning and a no-funds/no-signature preview notice.
+
+The wallet connection is **display-only at this stage**. It does not prove wallet ownership through a backend challenge, register the wallet, save the pseudonym, activate a multiplier entitlement, create a persistent member record, query live balances, or submit a transaction. No message signing, transaction signing, transfer or payment API is called by this front-end script. The displayed allowance and entitlement values remain non-live placeholders until the deterministic backend and the approved programme constants exist.
+
+The existing GitHub Actions Homepage Browser Smoke workflow now exercises the supporter page using a synthetic Wallet Standard provider and verifies pseudonym generation/customization, wallet discovery/connection, explicit unregistered status, no signing/transaction/backend calls, disabled purchase control, the excess-payment warning and responsive layout. This is local browser qualification only; it does not connect a real wallet or qualify a production payment service.
+
+**Remaining implementation before a genuine registration/purchase flow:** persistent supporter records and pseudonyms, server-verified wallet proof/challenge, first-contribution intent and threshold enforcement, authoritative global purchase allowance with atomic reservation/settlement, on-chain USDT transaction verification, public ledger and archival exports, and the production domain/backend binding. Until those are implemented and independently tested, wallet display must not be represented as registration or entitlement activation.
+
 ## 10. Qualification gates and evidence to record
 
 Do not label a provider `PRODUCTION_ELIGIBLE` based only on a public pricing page. Record these independent gates:
