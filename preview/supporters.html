@@ -214,7 +214,7 @@
         <p class="side-copy">Three distinct stages. The contribution and any later ACROWN purchase must be separately recorded.</p>
         <div class="side-divider"></div>
         <div class="side-label">What the multiplier means</div>
-        <p class="side-copy">A 25× scenario means purchase capacity equal to 25 times the eligible contribution value. It does not mean 25 times that amount in free tokens.</p>
+        <p class="side-copy">The first qualifying contribution unlocks the wallet's approved multiplier entitlement. The wallet may purchase up to the entire remaining programme-wide ACROWN allowance; the contribution amount does not create a separate per-wallet token ceiling.</p>
         <div class="side-divider"></div>
         <div class="side-label">ACS protection</div>
         <p class="side-copy">Any ACROWN purchase or distribution must follow the ACS accounting rules. The official floor must not be reduced by programme operations.</p>
@@ -277,57 +277,37 @@
     <section class="section" id="calculator" aria-labelledby="calculator-title">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">Illustrative calculator</div>
-          <h2 id="calculator-title">Estimate your priority purchase capacity</h2>
+          <div class="eyebrow">Programme-wide purchase allowance</div>
+          <h2 id="calculator-title">One shared ACROWN allowance — no individual wallet ceiling</h2>
         </div>
-        <p>Adjust the contribution amount and multiplier to compare scenarios. This calculator does not reserve an allocation, accept funds or create a contractual entitlement.</p>
+        <p>Every eligible wallet draws from the same approved programme-wide quantity. The live remaining amount will be shown in the wallet dashboard once the token allowance and purchase system are finalized.</p>
       </div>
-
       <div class="calculator-grid">
-        <section class="panel" aria-label="Contribution calculator inputs">
-          <span class="scenario-tag">Planning scenarios · not final terms</span>
-          <h3 style="margin-top:13px">Choose a contribution scenario</h3>
-          <p class="panel-intro">The programme is being modelled against an aggregate target of USDT 250,000. No individual minimum, maximum or remaining-cap figure is currently published.</p>
-          <div class="field">
-            <label for="contribution-amount">Illustrative contribution amount</label>
-            <div class="input-prefix"><span>USDT</span><input id="contribution-amount" type="number" inputmode="decimal" min="0" max="250000" step="0.01" value="100" autocomplete="off"></div>
-            <small>Enter a positive amount up to the full planned aggregate target. Actual availability would depend on the remaining programme capacity and final rules.</small>
-          </div>
-          <div class="field">
-            <label for="multiplier">Purchase-capacity multiplier</label>
-            <select id="multiplier">
-              <option value="10">10× · conservative scenario</option>
-              <option value="25" selected>25× · working reference</option>
-              <option value="50">50× · higher-capacity scenario</option>
-              <option value="100">100× · stress-test scenario</option>
-            </select>
-            <small>The selected multiplier is for comparison only. It has not yet been approved as an offer.</small>
-          </div>
-          <div class="field">
-            <label for="reference-floor">Illustrative ACS floor price</label>
-            <input id="reference-floor" type="text" value="USDT 1.00 per ACROWN" readonly aria-readonly="true">
-            <small>Reference value only. The applicable floor and purchase terms must be confirmed at the time of an approved purchase.</small>
-          </div>
-          <p class="fine-print" id="calculator-message" aria-live="polite">Illustrative calculation only. No contribution or entitlement is created.</p>
-        </section>
-
-        <section class="panel" aria-label="Illustrative purchase capacity result">
-          <div class="side-label">Your simulated scenario</div>
-          <h3 style="margin-top:7px">Potential purchase capacity</h3>
-          <p class="panel-intro">This represents the maximum value of a separate ACROWN purchase that the selected multiplier would model, subject to final approved terms and available allocation.</p>
+        <section class="panel" aria-label="Programme-wide purchase allowance">
+          <span class="scenario-tag">Shared programme limit</span>
+          <h3 style="margin-top:13px">The remaining programme amount sets the limit</h3>
+          <p class="panel-intro">The programme will have one approved maximum ACROWN purchase quantity. The amount must be finalized before launch and enforced across all eligible wallets.</p>
           <div class="result-list">
-            <div class="result-row"><span class="result-label">Illustrative contribution</span><strong class="result-value" id="result-contribution">USDT 100.00</strong></div>
-            <div class="result-row"><span class="result-label">Selected multiplier</span><strong class="result-value" id="result-multiplier">25×</strong></div>
-            <div class="result-row"><span class="result-label">Reference floor price</span><strong class="result-value">USDT 1.00</strong></div>
-            <div class="result-row"><span class="result-label">Estimated token quantity at reference floor</span><strong class="result-value" id="result-tokens">2,500 ACROWN</strong></div>
+            <div class="result-row"><span class="result-label">Total authorized programme allowance</span><strong class="result-value">To be finalized</strong></div>
+            <div class="result-row"><span class="result-label">Completed purchases</span><strong class="result-value">Live ledger required</strong></div>
+            <div class="result-row"><span class="result-label">Remaining allowance</span><strong class="result-value">Displayed in wallet dashboard</strong></div>
           </div>
-          <div class="result-highlight">
-            <div class="result-label">Illustrative purchase capacity</div>
-            <div class="result-value" id="result-capacity">USDT 2,500.00</div>
-          </div>
-          <div class="formula" id="formula-output">USDT 100 × 25 = USDT 2,500 capacity</div>
-          <p class="fine-print">The contribution is separate from the purchase amount. The purchase proceeds, if a purchase is completed under approved terms, are accounted for under the ACS. Reselling purchased tokens does not replenish an already-used purchase entitlement.</p>
+          <p class="fine-print">Remaining allowance = total authorized programme quantity − all completed programme purchases. Every completed purchase reduces the same shared balance.</p>
         </section>
+        <section class="panel" aria-label="Wallet purchase entitlement">
+          <div class="side-label">What one eligible wallet may purchase</div>
+          <h3 style="margin-top:7px">Up to everything that remains</h3>
+          <p class="panel-intro">A single supporter may purchase the entire remaining programme allowance in one or more transactions, if they choose and the allowance is still available when the transaction is confirmed.</p>
+          <div class="result-highlight">
+            <div class="result-label">Maximum available to this wallet</div>
+            <div class="result-value">100% of remaining allowance</div>
+          </div>
+          <div class="formula">No separate contribution × multiplier wallet cap</div>
+          <p class="fine-print">Only the first qualifying contribution will have the programme's minimum activation threshold. The threshold and final multiplier terms remain pending approval. Subsequent purchases draw from the remaining shared allowance rather than receiving a separate per-wallet allocation.</p>
+        </section>
+      </div>
+      <div class="policy-highlight">
+        <strong>One global ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot increase the total ACROWN quantity authorized for the programme. The purchase system must update the shared remaining allowance atomically so simultaneous purchases cannot exceed the global cap. A single eligible wallet may consume the entire remaining amount.
       </div>
     </section>
 
@@ -348,14 +328,14 @@
         </article>
         <article class="step-card">
           <div class="step-number">02</div>
-          <h3>Identify your participation</h3>
-          <p>Use the approved AstroCrown account flow and associate a wallet with the contribution record only where the final design requires it.</p>
+          <h3>Register your wallet and member name</h3>
+          <p>Connect the wallet that you control. AstroCrown generates a random member pseudonym by default, which you may customize. No legal name or identity document is required by this programme design.</p>
           <span class="pending">Production account not enabled</span>
         </article>
         <article class="step-card">
           <div class="step-number">03</div>
-          <h3>Send the correct USDT</h3>
-          <p>The final page will show the verified network, official USDT token identifier, receiving address, exact amount and transaction instructions before wallet approval.</p>
+          <h3>Authorize the exact USDT contribution</h3>
+          <p>The wallet dashboard will display the exact authorized amount, network, token and destination. Review them carefully and authorize the transaction from your registered wallet.</p>
           <span class="pending">Payment route not configured</span>
         </article>
         <article class="step-card">
@@ -367,33 +347,38 @@
       </div>
     </section>
 
+      <div class="policy-highlight" role="note">
+        <strong>Critical payment warning — never send more than the exact authorized amount.</strong>
+        The wallet dashboard must show the exact amount before you approve a transaction. Do not manually transfer an extra amount or send funds outside the authorized transaction. Any excess is not an additional entitlement and is not promised to be returned, refunded or compensated. Excess funds sent directly or outside the guarded payment flow may be permanently unrecoverable. Even a rejected or failed blockchain transaction may still consume network fees. Do not assume that AstroCrown can recover or return excess funds.
+      </div>
+
     <section class="section" id="wallet-records" aria-labelledby="wallet-records-title">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">Supporter identity and records</div>
-          <h2 id="wallet-records-title">Register a public wallet — never hand over its keys</h2>
+          <div class="eyebrow">Wallet and member profile</div>
+          <h2 id="wallet-records-title">Your wallet is your membership and entitlement</h2>
         </div>
-        <p>A supporter may associate a public wallet address with their AstroCrown supporter record. The address, transaction source and account identity must be handled as distinct data points.</p>
+        <p>The supporter controls the registered wallet. The wallet address is the public identifier that owns the multiplier entitlement and authorizes purchases; the member pseudonym is only a customizable display name.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
-          <strong>1. Public address only</strong>
-          <p>The registration flow may verify control with a fresh, single-use signed-message challenge where the selected wallet supports it. AstroCrown must never request or store a seed phrase, private key, wallet JSON keypair or recovery code.</p>
+          <strong>1. Random member name by default</strong>
+          <p>Registration generates a random pseudonym automatically. The supporter may customize it. No legal name, government ID, email identity or other legal-identity registration is required by this programme design.</p>
         </article>
         <article class="transparency-card">
-          <strong>2. Registered wallet is not always the sender</strong>
-          <p>The address recorded as the supporter’s wallet must remain separate from the source address observed in a payment. Exchange and custodial services may send from pooled wallets; a transaction signature and controlled review may be needed to link that payment correctly.</p>
+          <strong>2. The wallet controls the entitlement</strong>
+          <p>The multiplier entitlement is attached to the registered wallet, not to the display name. The supporter uses that wallet to authorize the contribution and later ACROWN purchases. AstroCrown never asks for or stores the wallet's seed phrase or private key.</p>
         </article>
         <article class="transparency-card">
-          <strong>3. GitHub backups with privacy controls</strong>
-          <p>Dated, checksummed public ledger snapshots may be archived in the public repository using pseudonymous supporter references. Any private account-to-wallet mapping must be encrypted and backed up separately in restricted storage; its encryption key must not be stored in GitHub.</p>
+          <strong>3. Public GitHub records and backups</strong>
+          <p>The public audit record may show the wallet address, member pseudonym, verified contribution transaction, multiplier eligibility, completed purchases and remaining programme allowance. Dated, append-only snapshots should include checksums and reconciliation totals.</p>
         </article>
         <article class="transparency-card">
-          <strong>4. Public-chain disclosure</strong>
-          <p>Wallet addresses and transaction histories are publicly traceable on-chain. The programme must explain this before payment. Linking a wallet to a real name or public supporter profile must be a separate, explicit opt-in.</p>
+          <strong>4. No identity-document collection</strong>
+          <p>The programme identifies the entitlement through wallet control and a pseudonym. It does not claim to verify the legal identity of the wallet controller. The public wallet-to-pseudonym association is visible by design and must be explained before registration.</p>
         </article>
       </div>
-      <p class="fine-print">The current AstroCrown-Web repository is public. It must not contain names, email addresses, private account mappings, identity documents, private keys or other confidential supporter data. These wallet-registration and backup controls are proposed requirements, not implemented services in this preview.</p>
+      <p class="fine-print">The wallet owner remains responsible for wallet security and transaction approvals. Never share a seed phrase, private key or recovery phrase with AstroCrown or anyone claiming to represent it. The repository is public, so only the expressly public wallet, pseudonym and audit fields described by the programme may be published; credentials and signing secrets must never be included.</p>
     </section>
 
     <section class="section" aria-labelledby="rules-title">
@@ -409,8 +394,8 @@
           <p>USDT contributed to the programme does not itself purchase ACROWN, enter circulation or automatically increase the ACS reserve. Any later token purchase is a separate transaction.</p>
         </article>
         <article class="rule-card">
-          <h3>Priority capacity is not free-token allocation</h3>
-          <p>The multiplier models the value of a later purchase opportunity at the applicable ACS floor. It is not an airdrop, bonus token issuance, guaranteed profit or promise of external liquidity.</p>
+          <h3>The multiplier is purchase eligibility, not free tokens</h3>
+          <p>The first qualifying contribution activates the approved multiplier entitlement for the registered wallet. It is not an airdrop or bonus token issuance. The wallet may purchase up to the entire remaining programme allowance at the applicable ACS floor, and all wallets share the same global ceiling.</p>
         </article>
         <article class="rule-card">
           <h3>Used entitlement is not replenished by resale</h3>
@@ -425,8 +410,8 @@
           <p>Programme operations must preserve the ACS-defined floor, F = V/C. External market prices may differ from the ACS floor and are not guaranteed by this page.</p>
         </article>
         <article class="rule-card">
-          <h3>Final terms and finality must be clear first</h3>
-          <p>The multiplier, duration, eligibility, individual limits, treatment of unused purchase capacity and non-cancellable / no-voluntary-refund policy must be published before any contribution is accepted, subject to mandatory legal rights.</p>
+          <h3>The first qualification threshold and global cap must be clear</h3>
+          <p>The minimum first contribution, approved multiplier, total ACROWN programme allowance, purchase window and non-cancellable / no-voluntary-refund policy must be published before contributions open. There is no separate per-wallet token ceiling; purchases are limited by the shared programme balance.</p>
         </article>
       </div>
     </section>
@@ -502,8 +487,8 @@
           <p>No. The proposed programme separates the supporter contribution from a later ACROWN purchase. The contribution does not itself issue tokens or automatically increase the ACS reserve. Any later purchase would be a separate transaction under final approved terms.</p>
         </details>
         <details>
-          <summary>Does 25× mean I receive 25 times my contribution in tokens?</summary>
-          <p>No. It is a working reference multiplier for the maximum value of a separate purchase opportunity. At the illustrative USDT 1 floor, a USDT 100 contribution under a 25× scenario models up to USDT 2,500 of purchase capacity, or 2,500 ACROWN if that floor applies. Neither the multiplier nor those terms are approved or active.</p>
+          <summary>What does the multiplier allow me to do?</summary>
+          <p>The first qualifying contribution activates the approved multiplier entitlement for the registered wallet. It does not create free tokens or a personal token quantity calculated as contribution × multiplier. An eligible wallet may purchase up to the entire remaining programme-wide ACROWN allowance at the applicable ACS floor. The final multiplier and first-contribution threshold must be published before launch.</p>
         </details>
         <details>
           <summary>Can I send USDT now?</summary>
@@ -514,12 +499,16 @@
           <p>It is a provisional aggregate funding gate intended to cover the initial move from $0 qualification to paid hosting, including at least three months of hosting, the domain, essential backup and required migration/network costs. It is not a provider quote. The final amount must be checked against actual order costs before contributions open; if those costs exceed USDT 150, the target must be raised.</p>
         </details>
         <details>
-          <summary>Can I register a wallet and have it backed up?</summary>
-          <p>The proposed design records a public wallet address and its verification status, never a seed phrase or private key. Public GitHub snapshots will be pseudonymous; private account-to-wallet mappings must be encrypted and stored separately in restricted storage. A wallet’s public address and transaction history remain publicly traceable on-chain.</p>
+          <summary>How does my member name and wallet registration work?</summary>
+          <p>A random member pseudonym is generated when you register and you may customize it. Your connected wallet address is the public identifier that controls the entitlement and authorizes purchases. No legal name or identity document is required by the programme design. The public GitHub audit snapshot may link your pseudonym, wallet address and programme transactions. Never share your seed phrase or private key.</p>
         </details>
         <details>
-          <summary>Is the USDT 250,000 target a live contribution cap?</summary>
-          <p>It is the current planning ceiling for the aggregate supporter programme. This preview has no live contribution ledger, does not show collected or remaining amounts, and does not allocate capacity to any individual.</p>
+          <summary>Is the USDT 250,000 target the ACROWN purchase allowance?</summary>
+          <p>No. USDT 250,000 is the provisional aggregate contribution planning ceiling. The maximum ACROWN quantity available for purchase is a separate programme-wide limit that must be approved and published independently. Every eligible wallet shares that same ACROWN allowance, and one wallet may purchase all of what remains.</p>
+        </details>
+        <details>
+          <summary>What happens if I send more USDT than the authorized amount?</summary>
+          <p>Do not do this. Excess funds are not credited with extra entitlement and are not promised to be returned, refunded or compensated. A direct or excess transfer may be permanently unrecoverable. Even a failed or rejected blockchain transaction can still consume network fees. Never assume AstroCrown can recover or return excess funds.</p>
         </details>
         <details>
           <summary>Does the ACS guarantee the external market price?</summary>
@@ -546,62 +535,6 @@
     </footer>
   </main>
 
-  <script>
-    (function () {
-      "use strict";
-      var amountInput = document.getElementById("contribution-amount");
-      var multiplierInput = document.getElementById("multiplier");
-      var amountOutput = document.getElementById("result-contribution");
-      var multiplierOutput = document.getElementById("result-multiplier");
-      var tokensOutput = document.getElementById("result-tokens");
-      var capacityOutput = document.getElementById("result-capacity");
-      var formulaOutput = document.getElementById("formula-output");
-      var message = document.getElementById("calculator-message");
-      var formatter = new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      var wholeFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 6 });
-      var referenceFloor = 1;
-      var programmeTarget = 250000;
 
-      function usdt(value) {
-        return "USDT " + formatter.format(value);
-      }
-
-      function update() {
-        var raw = amountInput.value.trim();
-        var amount = raw === "" ? NaN : Number(raw);
-        var multiplier = Number(multiplierInput.value);
-        if (!Number.isFinite(amount) || amount <= 0) {
-          amountOutput.textContent = "—";
-          multiplierOutput.textContent = multiplier + "×";
-          tokensOutput.textContent = "—";
-          capacityOutput.textContent = "—";
-          formulaOutput.textContent = "Enter a positive contribution amount to calculate a scenario.";
-          message.textContent = "Enter an amount greater than zero. No contribution or entitlement is created.";
-          return;
-        }
-        if (amount > programmeTarget) {
-          amountOutput.textContent = usdt(amount);
-          multiplierOutput.textContent = multiplier + "×";
-          tokensOutput.textContent = "—";
-          capacityOutput.textContent = "—";
-          formulaOutput.textContent = "The entered amount is above the entire planned aggregate programme target.";
-          message.textContent = "The amount exceeds the USDT 250,000 aggregate planning ceiling. This is a calculator only; the live remaining capacity is not available.";
-          return;
-        }
-        var capacity = amount * multiplier;
-        var tokenQuantity = capacity / referenceFloor;
-        amountOutput.textContent = usdt(amount);
-        multiplierOutput.textContent = multiplier + "×";
-        tokensOutput.textContent = wholeFormatter.format(tokenQuantity) + " ACROWN";
-        capacityOutput.textContent = usdt(capacity);
-        formulaOutput.textContent = usdt(amount) + " × " + multiplier + " = " + usdt(capacity) + " purchase capacity";
-        message.textContent = "Illustrative calculation only at a reference floor of USDT 1.00. It does not reserve capacity or create an entitlement.";
-      }
-
-      amountInput.addEventListener("input", update);
-      multiplierInput.addEventListener("change", update);
-      update();
-    }());
-  </script>
 </body>
 </html>
