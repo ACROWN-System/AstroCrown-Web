@@ -617,7 +617,7 @@ def main() -> int:
             # A synthetic Wallet Standard provider is injected; no real wallet or external service is used.
             supporter_page = context.new_page()
             attach_diagnostics(supporter_page)
-            supporter_page.add_init_script("""() => {
+            supporter_page.add_init_script("""(() => {
               const testState = {connectCalls:0, signMessageCalls:0, transactionCalls:0, fetchCalls:0};
               window.__astroSupporterWalletTest = testState;
               const originalFetch = window.fetch.bind(window);
@@ -663,7 +663,7 @@ def main() -> int:
               window.addEventListener("wallet-standard:app-ready", (event) => {
                 event.detail.register(wallet);
               }, {once:true});
-            }""")
+            })();""")
             supporter_response = supporter_page.goto(
                 f"{origin}/preview/supporters/",
                 wait_until="load",
