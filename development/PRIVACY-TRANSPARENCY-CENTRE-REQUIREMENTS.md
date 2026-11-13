@@ -80,6 +80,14 @@ Confidential Balances is a Token-2022 extension and is not automatically enabled
 
 “USDT” alone is not a sufficient payment network identifier. Future AstroCrown UI must distinguish each supported chain/token pair and verify the exact canonical asset identifier and receiving route. Tether's official supported-protocol page must be revisited before adding or retiring any USD₮ route.
 
+### Issuer-specific stablecoin controls
+
+The page must explain that self-custody does not remove issuer-level powers attached to an issued token. The current example is Tether's Terms of Sale and Service, last updated 26 February 2026, which state that Tether may freeze Tether Tokens, blacklist digital-token addresses and suspend services in circumstances described in those terms. Attribute this example only to Tether; do not generalize it to all stablecoins or all blockchain networks.
+
+### Heightened-risk user disclosure and scoped restrictions
+
+The page must state that the current preview is not an operational secure environment for sensitive activity. It must also preserve the design requirement that journalists, human-rights defenders, whistleblowers, investigators, judges and other people facing elevated risks are not excluded solely because of occupation, political view, geography or a generalized risk label. Where a mandatory rule actually applies, identify the particular service, entity or transaction and the scope; a selectable privacy-oriented experience is not a bypass.
+
 ## 6. AstroCrown implementation-state disclosures
 
 The page must present the following evidence distinctions as-of the review date and refresh them before promotion:

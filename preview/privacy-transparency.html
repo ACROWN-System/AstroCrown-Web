@@ -389,6 +389,10 @@
             <div class="step"><div><strong>Do not promise absolute anonymity</strong><p>Explain the threat model and limits. Privacy tools can reduce particular exposures; they do not eliminate all on-chain, network, device, provider or human disclosure risks.</p></div></div>
           </div>
           <p>These are architectural and product requirements. They must not be read as a statement that every control has already been implemented or independently verified.</p>
+          <p>Where a mandatory requirement genuinely applies to a particular service, provider, entity or transaction, AstroCrown must identify that specific constraint and its scope. A selectable privacy-oriented or global-facing experience must not be used to evade a rule that actually applies. At the same time, a user's country, profession, political view or risk profile must not be used as an unsupported substitute for a specific assessment.</p>
+          <div class="callout warning">
+            <p><strong>For people facing heightened risk:</strong> this current AstroCrown preview is not a production-secure environment and should not be used to coordinate sensitive operations or expose real asset details. The design requirement is to provide strong, broadly available protection without selective exclusion; that requirement is not a claim that those protections are already deployed or independently assessed.</p>
+          </div>
         </section>
 
         <section id="misconceptions">
@@ -407,6 +411,7 @@
           <details><summary>“Deleting my AstroCrown account erases my blockchain history.”</summary><div class="detail-body"><p>Off-chain data may be deleted or restricted according to the applicable policy and law. A confirmed public-chain transaction is generally not something AstroCrown can delete, rewrite or remove from independent copies and indexes.</p></div></details>
           <details><summary>“Every USDT token and network is interchangeable for a payment.”</summary><div class="detail-body"><p>The token name alone is not enough. A receiving system must support the exact blockchain and token identifier. Sending to the wrong network or contract can result in an unrecoverable loss. Always compare the complete asset-and-network label with the wallet confirmation.</p></div></details>
           <details><summary>“Stablecoins have the same privacy and control properties as cash.”</summary><div class="detail-body"><p>A stablecoin is a token issued under specific terms and contracts, not physical cash. Issuer policies, smart-contract design, public-chain visibility, wallet providers and applicable law all matter. Read the actual issuer terms for the exact asset; do not generalize one issuer's powers to every token.</p></div></details>
+          <details><summary>“A stablecoin issuer can never affect tokens held in my self-custody wallet.”</summary><div class="detail-body"><p>Self-custody means you control the wallet's private keys; it does not remove controls built into an issuer's token or the issuer's contractual powers. For example, Tether's Terms of Sale and Service, last updated 26 February 2026, reserve powers that include freezing Tether Tokens, blacklisting digital-token addresses and suspending services in circumstances described in those terms. This is specific to Tether's products and terms; do not generalize it to every stablecoin. <a href="https://tether.to/en/legal/" target="_blank" rel="noopener noreferrer">Read Tether's current legal terms</a>.</p></div></details>
         </section>
 
         <section id="emerging-tech">
@@ -468,6 +473,7 @@
             <li><a href="https://solana.com/docs/finance/privacy" target="_blank" rel="noopener noreferrer">Solana — Privacy for financial applications</a>: comparison of privacy boundaries.</li>
             <li><a href="https://solana.com/docs/tokens/extensions/confidential-transfer" target="_blank" rel="noopener noreferrer">Solana — Confidential Balances</a>: Token-2022 requirements and auditor option.</li>
             <li><a href="https://tether.to/en/supported-protocols/" target="_blank" rel="noopener noreferrer">Tether — Supported protocols</a>: network-specific token identifiers and legacy protocol status.</li>
+            <li><a href="https://tether.to/en/legal/" target="_blank" rel="noopener noreferrer">Tether — Terms of Sale and Service</a>: issuer-specific token controls and service terms (last updated 26 February 2026).</li>
             <li><a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Google — Gemini API Additional Terms</a>: unpaid-service data handling.</li>
             <li><a href="https://console.groq.com/docs/your-data" target="_blank" rel="noopener noreferrer">Groq — Your Data in GroqCloud</a>: inference retention and data controls.</li>
           </ul>
