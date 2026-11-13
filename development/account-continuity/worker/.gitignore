@@ -1,7 +1,0 @@
-node_modules/
-public/
-.wrangler-out/
-.wrangler/
-.wrangler.remote-staging.jsonc
-.dev.vars*
-.env*

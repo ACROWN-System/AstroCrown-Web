@@ -1,0 +1,111 @@
+# Privacy & Transparency Centre — Active Work Record
+
+**Status:** ACTIVE — preview implementation and verification  
+**Created:** 2026-11-14  
+**Repository:** `ACROWN-System/AstroCrown-Web`  
+**Base commit:** `706f873e460f3c82f42659b43de79462146416b7`  
+**Working branch:** `feature/privacy-transparency-centre-2026-11-14`
+
+> This is a task-specific development/audit work record. The canonical `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` were not found in the accessible AstroCrown-Web or NOVA repository trees during this review. This record does not claim to replace or satisfy those unavailable canonical documents. The existing AstroCrown Development & Audit Convention is used for evidence and verification discipline.
+
+## Objective
+
+Continue the preserved system reassessment at Block 8 without repeating completed Blocks 1–7, while implementing a clear, useful Privacy & Transparency Centre in the AstroCrown preview. The page must communicate what AstroCrown is designed to protect, what public networks reveal, what third parties may observe, common misconceptions and emerging privacy technology. It must accurately disclose current implementation status.
+
+## Scope
+
+- Continue Block 8 AI provider and data-handling assessment from current NOVA repository evidence.
+- Add `preview/privacy-transparency.html` as a static, self-contained education page.
+- Link it from the preview Wallet dropdown and footer.
+- Add requirements/maintenance documentation and a deterministic, dependency-free static smoke test.
+- Preserve the current homepage before changing its navigation links.
+- Keep the page in preview only; no production-root promotion.
+
+## Explicit exclusions
+
+- Do not rewrite Blocks 1–7.
+- Do not enable Strong RSI or run live provider calls.
+- Do not activate provider/GPU candidates.
+- Do not enable real wallet, payment, treasury or account operations.
+- Do not modify the old `preview/privacy-policy.html` or `preview/terms-of-use.html`.
+- Do not modify PR #176 or claim it is live.
+- Do not alter production root, authentication backend, NOVA code or current security controls.
+- Do not claim legal review, certification, anonymity or production readiness.
+
+## Repository discoveries
+
+1. Current `main` commit is `706f873e460f3c82f42659b43de79462146416b7`.
+2. Existing `preview/privacy-policy.html` is a development-only draft for a legacy account prototype, not a complete policy for current or future system data flows.
+3. The current preview Wallet menu explicitly states it cannot connect wallets, sign messages, submit orders or move assets.
+4. Passkey-first account foundation PR #141 is merged. The Worker/D1 account README still limits its qualification to local synthetic testing; remote staging and real-user production deployment are not enabled.
+5. Supporter programme PR #176 remains open/draft; its current preview is not a live payment or treasury feature.
+6. `development/SECURITY-BASELINE.md` has broad review areas marked UNVERIFIED. No overall security status may be inferred.
+7. Canonical Navigation Protocol/template were not located in the accessible active repository trees. Formal Navigation Protocol compliance is therefore UNKNOWN/BLOCKED, not PASS.
+
+## Block 8 — current provider evidence
+
+Source records: `ACROWN-System/NOVA` main `NOVA/roster.json`, `NOVA/gpu_roster.json`, `NOVA/gpu_capacity_evidence.json`, `NOVA/DEVELOPMENT-RESOURCE-READINESS.md`, and branch `nova-operational-state` `NOVA/health_state.json`.
+
+Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
+
+- Groq `openai/gpt-oss-20b`: latest HTTP 200, exact structured health response valid, 294 ms. This is bounded response-contract health only.
+- Gemini `gemini-3.1-flash-lite`: latest HTTP 200, exact response valid, 763 ms; an earlier observation timed out at 18,051 ms and earlier 503s occurred.
+- Cloudflare `@cf/meta/llama-3.1-8b-instruct-fast`: previously qualified for the bounded JSON contract; latest heartbeat skipped it as already qualified. This is not a fresh live pass.
+- Groq `openai/gpt-oss-120b` and Gemini `gemini-3.8-flash`: model-specific structured response contracts remain BLOCKED_UNVERIFIED.
+- Cloudflare `@cf/zai-org/glm-4.7-flash`: not included in the checked official JSON Mode support list; keep blocked for that structured-output requirement.
+- Mistral Free API: deferred by user decision after repeated 429/code 1300; last requalification record remains rate-limited. Do not probe or restore to active capacity without explicit requalification authorization.
+- Cerebras: not eligible under current $0/no-payment-method requirement because the documented promotional credit requires a valid payment method.
+- GPU roster has no active providers. Nosana and Hugging Face ZeroGPU remain candidates with account/no-card eligibility, terms, capacity, workload or data-handling questions unresolved.
+- Free model gateways (including OpenRouter and Requesty) are discovery/route candidates, not independent upstream inference capacity. Verify model-specific source, terms, retention and no-card status before adding any route.
+- Free vs paid use rights remain separate. Current actual research use must be permitted; future commercial production must be requalified. Do not automatically reject a provider merely because future commercial use has not yet been established, but do not use it in breach of a known restriction.
+- Strong RSI readiness remains incomplete and its lifecycle suspended. Weak RSI remains manual/human-in-the-loop/report-only. No live model calls were made during this task.
+
+## Decisions
+
+1. Privacy education is a product and user-rights requirement, not only reputation protection.
+2. Explain privacy, confidentiality, pseudonymity, anonymity, authentication and self-custody separately.
+3. Public-chain data and third-party metadata must be described without absolute guarantees.
+4. Protect journalists, human-rights defenders, whistleblowers, investigators, judges and other sensitive users through universal security/minimization; do not use occupation, politics or geography alone as an exclusion rule.
+5. Keep the Centre separate from the formal Privacy Policy. A legal policy must match real production data flows and be separately reviewed.
+6. Use official primary sources for changing protocol/provider claims and date the review.
+7. Keep page static/no-dependency, accessible and self-contained; no external tracking, JavaScript framework or third-party assets.
+8. The current page is a noindex preview. Production promotion requires its own decision and a complete data-flow/legal/accessibility/security review.
+
+## Dependencies / source links
+
+- `development/DEVELOPMENT-AND-AUDIT-CONVENTION.md`
+- `development/audit/FACT-OBSERVATION-AND-EVIDENCE-GOVERNANCE.md`
+- `development/audit/PUBLIC-CLAIMS-AND-LEGAL-COMMUNICATIONS.md`
+- `development/SECURITY-BASELINE.md`
+- `development/PRIVACY-TRANSPARENCY-CENTRE-REQUIREMENTS.md`
+- Official technical sources linked in the page requirements file.
+
+## Impact analysis
+
+### If modified
+
+- Users gain a clear explanation of public ledger visibility and provider metadata.
+- The Wallet menu and footer expose the guide at relevant decision points.
+- Risks of false expectations about anonymity, privacy tokens, passkeys, stablecoins and deleting accounts are reduced.
+- The preview homepage and new page remain explicitly non-production.
+
+### If not modified
+
+- Users may incorrectly equate no-KYC with anonymity, self-custody with privacy, or passkeys with private payments.
+- Users may not realise that wallet/RPC/AI-provider activity can reveal metadata.
+- The project may appear to promise protections it has not implemented, or fail to explain the limitations of public-chain payments.
+- The old legacy Privacy Policy draft may be mistaken for a complete current privacy statement.
+
+## Verification plan
+
+- [ ] Back up the exact pre-change homepage and verify source SHA.
+- [ ] Verify the new page has unique IDs and valid internal anchor targets.
+- [ ] Verify essential content, source references, preview status and implementation-status caveats.
+- [ ] Verify no scripts, trackers, external assets or unapproved dependencies were added.
+- [ ] Run static smoke tests and HTML structure checks.
+- [ ] Inspect the complete diff and backup.
+- [ ] Create a draft pull request; do not merge or promote to the production root without review.
+
+## Outcome / evidence
+
+To be completed after implementation and tests. Record commit, pull-request number, exact test commands, results and any remaining BLOCKED manual checks. Keep this work item ACTIVE until review requirements are settled.

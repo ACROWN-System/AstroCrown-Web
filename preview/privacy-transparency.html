@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#081426">
+  <meta name="description" content="Understand what AstroCrown is designed to protect, what public blockchains reveal, and what wallets, networks and third-party services may observe.">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Privacy &amp; Transparency Centre — AstroCrown</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050914;
+      --space: #081426;
+      --panel: rgba(11, 25, 43, .94);
+      --panel-soft: rgba(14, 31, 52, .78);
+      --ink: #f2f5fb;
+      --muted: #b0bfd2;
+      --quiet: #8294ad;
+      --gold: #ffd700;
+      --gold-soft: #ffe9a5;
+      --line: rgba(153, 178, 213, .19);
+      --line-strong: rgba(153, 178, 213, .32);
+      --green: #70e0ad;
+      --amber: #ffd36a;
+      --red: #ff999d;
+      --radius: 16px;
+      --shadow: 0 18px 45px rgba(0, 0, 0, .18);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 82px; }
+    body {
+      margin: 0; min-width: 320px; color: var(--ink);
+      background:
+        radial-gradient(1px 1px at 8% 9%, rgba(255,247,224,.4) 55%, transparent 100%),
+        radial-gradient(1px 1px at 22% 27%, rgba(177,206,255,.3) 55%, transparent 100%),
+        radial-gradient(1px 1px at 66% 20%, rgba(177,206,255,.27) 55%, transparent 100%),
+        radial-gradient(ellipse at 15% -5%, rgba(25,61,101,.32), transparent 35rem),
+        linear-gradient(180deg, #050914 0%, #071321 48%, #050914 100%);
+      font: 15px/1.68 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: .005em;
+    }
+    a { color: var(--gold-soft); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { color: #fff2c9; }
+    a:focus-visible, summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; border-radius: 4px; }
+    .skip-link {
+      position: fixed; z-index: 100; top: 8px; left: 12px; padding: 9px 14px;
+      color: #151923; background: var(--gold); border-radius: 8px; font-weight: 800;
+      transform: translateY(-150%);
+    }
+    .skip-link:focus { transform: translateY(0); }
+    .topbar {
+      position: sticky; top: 0; z-index: 20; min-height: 62px; display: flex; align-items: center;
+      justify-content: space-between; gap: 18px; padding: 8px clamp(16px, 4vw, 54px);
+      background: rgba(13, 35, 59, .94); border-bottom: 1px solid rgba(255,215,0,.15);
+      backdrop-filter: blur(14px);
+    }
+    .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; }
+    .brand-mark { width: 37px; height: 37px; flex: 0 0 37px; }
+    .brand-name { display: block; font-size: 13px; font-weight: 900; letter-spacing: .1em; }
+    .brand-sub { display: block; color: var(--quiet); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+    .top-actions { display: flex; align-items: center; gap: 16px; }
+    .back-link { font-size: 12px; font-weight: 750; text-decoration: none; }
+    .preview-chip {
+      display: inline-flex; align-items: center; gap: 7px; padding: 5px 9px; border-radius: 999px;
+      border: 1px solid rgba(255,211,106,.3); background: rgba(255,211,106,.07);
+      color: var(--amber); font-size: 9px; font-weight: 850; letter-spacing: .1em; text-transform: uppercase;
+    }
+    .preview-chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+    .shell { width: min(1220px, calc(100% - 36px)); margin: 0 auto; padding: 38px 0 76px; }
+    .hero {
+      position: relative; overflow: hidden; padding: clamp(25px, 5vw, 56px);
+      border: 1px solid rgba(255,215,0,.22); border-radius: 22px;
+      background: linear-gradient(130deg, rgba(18,42,69,.96), rgba(7,17,31,.96) 70%);
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: ""; position: absolute; width: 330px; height: 330px; right: -115px; top: -165px;
+      border: 1px solid rgba(255,215,0,.16); border-radius: 50%;
+      box-shadow: 0 0 0 28px rgba(255,215,0,.025), 0 0 0 58px rgba(255,215,0,.018);
+      pointer-events: none;
+    }
+    .eyebrow { color: var(--gold); font-size: 10px; font-weight: 900; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { max-width: 850px; margin: 12px 0 14px; font-size: clamp(34px, 6vw, 58px); line-height: 1.05; letter-spacing: -.045em; }
+    .hero-lead { max-width: 790px; margin: 0; color: #d4deeb; font-size: clamp(16px, 2.1vw, 20px); line-height: 1.55; }
+    .hero-quote {
+      max-width: 810px; margin: 26px 0 0; padding: 15px 18px;
+      border-left: 3px solid var(--gold); border-radius: 0 10px 10px 0;
+      background: rgba(255,215,0,.055); color: #fff0ba; font-weight: 750;
+    }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 9px 20px; margin-top: 22px; color: var(--quiet); font-size: 11px; }
+    .hero-meta strong { color: #dfe7f2; }
+    .preview-notice {
+      display: grid; grid-template-columns: 25px minmax(0,1fr); gap: 12px; align-items: start;
+      margin: 20px 0 0; padding: 17px 19px; border: 1px solid rgba(255,211,106,.34);
+      border-radius: 13px; background: rgba(255,211,106,.065); color: #f2dfad;
+    }
+    .notice-mark {
+      display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px;
+      color: #1a1b20; background: var(--amber); font-weight: 950;
+    }
+    .preview-notice strong { display: block; margin-bottom: 3px; color: #ffedbc; font-size: 13px; }
+    .preview-notice p { margin: 0; font-size: 12px; color: #d7c99f; }
+    .at-glance { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 13px; margin: 22px 0 35px; }
+    .glance-card {
+      min-width: 0; padding: 19px 20px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: linear-gradient(145deg, rgba(15,32,53,.95), rgba(7,17,30,.96));
+    }
+    .glance-card h2 { margin: 0 0 7px; font-size: 13px; letter-spacing: .01em; }
+    .glance-card p { margin: 0; color: var(--muted); font-size: 12px; }
+    .glance-card .micro { display: block; margin-bottom: 8px; color: var(--gold-soft); font-size: 9px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+    .layout { display: grid; grid-template-columns: 245px minmax(0,1fr); gap: 27px; align-items: start; }
+    .toc {
+      position: sticky; top: 82px; padding: 17px 15px; border: 1px solid var(--line);
+      border-radius: 14px; background: rgba(8,20,35,.88);
+    }
+    .toc h2 { margin: 0 0 11px; color: var(--gold-soft); font-size: 10px; letter-spacing: .13em; text-transform: uppercase; }
+    .toc ol { margin: 0; padding-left: 19px; color: var(--quiet); }
+    .toc li { padding: 3px 0; font-size: 11px; }
+    .toc a { color: #c4d0e0; text-decoration: none; }
+    .toc a:hover { color: var(--gold-soft); text-decoration: underline; }
+    article { min-width: 0; }
+    section { margin: 0 0 36px; scroll-margin-top: 84px; }
+    .section-kicker { display: block; margin-bottom: 4px; color: var(--gold); font-size: 9px; font-weight: 900; letter-spacing: .15em; text-transform: uppercase; }
+    h2.section-title { margin: 0 0 12px; color: #f1f5fb; font-size: clamp(22px, 3vw, 29px); line-height: 1.2; letter-spacing: -.025em; }
+    h3 { margin: 23px 0 7px; color: #e8eef7; font-size: 16px; line-height: 1.35; }
+    p { margin: 9px 0; color: var(--muted); }
+    strong { color: #eef3fa; }
+    .lead { color: #d5dfec; font-size: 16px; }
+    .callout {
+      margin: 16px 0; padding: 16px 18px; border: 1px solid var(--line-strong);
+      border-radius: 12px; background: rgba(16,37,62,.63);
+    }
+    .callout.gold { border-color: rgba(255,215,0,.27); background: rgba(255,215,0,.055); }
+    .callout.warning { border-color: rgba(255,211,106,.28); background: rgba(255,211,106,.055); }
+    .callout p:first-child { margin-top: 0; }
+    .callout p:last-child { margin-bottom: 0; }
+    .callout strong { color: var(--gold-soft); }
+    .table-wrap { overflow-x: auto; margin: 16px 0; border: 1px solid var(--line); border-radius: 13px; }
+    table { width: 100%; border-collapse: collapse; min-width: 620px; background: rgba(8,19,33,.8); }
+    th, td { padding: 12px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-size: 12px; }
+    th { color: #f7e5a8; background: rgba(255,215,0,.055); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    td { color: var(--muted); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .badge {
+      display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 99px;
+      border: 1px solid var(--line); color: #d4deeb; background: rgba(255,255,255,.035);
+      font-size: 9px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap;
+    }
+    .badge.design { color: var(--amber); border-color: rgba(255,211,106,.28); }
+    .badge.local { color: #a9d1ff; border-color: rgba(119,174,255,.28); }
+    .badge.preview { color: var(--green); border-color: rgba(112,224,173,.25); }
+    .badge.blocked { color: var(--red); border-color: rgba(255,153,157,.28); }
+    .two-col { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 13px; margin: 15px 0; }
+    .mini-card { padding: 17px 18px; border: 1px solid var(--line); border-radius: 13px; background: var(--panel-soft); }
+    .mini-card h3 { margin: 0 0 6px; font-size: 14px; }
+    .mini-card p { margin: 0; font-size: 12px; }
+    .steps { counter-reset: step; display: grid; gap: 10px; margin: 16px 0; }
+    .step {
+      counter-increment: step; display: grid; grid-template-columns: 34px minmax(0,1fr); gap: 12px;
+      padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(10,24,41,.74);
+    }
+    .step::before {
+      content: counter(step, decimal-leading-zero); display: grid; place-items: center; width: 31px; height: 31px;
+      border-radius: 9px; color: #171a21; background: var(--gold); font-size: 10px; font-weight: 950;
+    }
+    .step strong { display: block; margin-bottom: 2px; }
+    .step p { margin: 0; font-size: 12px; }
+    details {
+      margin: 9px 0; border: 1px solid var(--line); border-radius: 12px;
+      background: rgba(10,24,41,.7); overflow: clip;
+    }
+    summary {
+      position: relative; padding: 15px 44px 15px 16px; color: #eaf0f8;
+      font-size: 13px; font-weight: 760; cursor: pointer; list-style: none;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after {
+      content: "+"; position: absolute; right: 16px; top: 10px; color: var(--gold);
+      font-size: 21px; font-weight: 500;
+    }
+    details[open] summary::after { content: "−"; }
+    .detail-body { padding: 0 17px 15px; border-top: 1px solid var(--line); }
+    .detail-body p { font-size: 12px; }
+    .detail-body p:first-child { margin-top: 12px; }
+    .checklist { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 8px; }
+    .checklist li { position: relative; padding: 11px 14px 11px 39px; border: 1px solid var(--line); border-radius: 10px; background: rgba(10,24,41,.66); color: var(--muted); font-size: 12px; }
+    .checklist li::before { content: "✓"; position: absolute; left: 14px; top: 10px; color: var(--gold); font-weight: 900; }
+    .source-list { margin: 13px 0; padding-left: 20px; }
+    .source-list li { padding: 5px 0; color: var(--muted); font-size: 12px; }
+    .source-list a { overflow-wrap: anywhere; }
+    .status-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin: 14px 0; }
+    .status-card { padding: 14px 15px; border: 1px solid var(--line); border-radius: 11px; background: rgba(9,22,38,.8); }
+    .status-card strong { display: block; margin-bottom: 5px; font-size: 12px; }
+    .status-card p { margin: 6px 0 0; font-size: 11px; }
+    .footer {
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px;
+      margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--quiet); font-size: 10px;
+    }
+    .footer a { color: #c8d5e6; }
+    @media (max-width: 920px) {
+      .layout { grid-template-columns: 1fr; }
+      .toc { position: static; }
+      .toc ol { columns: 2; column-gap: 25px; }
+      .toc li { break-inside: avoid; }
+    }
+    @media (max-width: 650px) {
+      .topbar { align-items: flex-start; }
+      .top-actions { flex-direction: column-reverse; align-items: flex-end; gap: 4px; }
+      .preview-chip { font-size: 8px; }
+      .shell { width: min(100% - 24px, 1220px); padding-top: 17px; }
+      .hero { border-radius: 16px; }
+      .at-glance, .two-col, .status-grid { grid-template-columns: 1fr; }
+      .toc ol { columns: 1; }
+      .hero-meta { gap: 6px 12px; }
+      .step { grid-template-columns: 30px minmax(0,1fr); padding: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="AstroCrown preview homepage">
+      <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,215,0,.28)"/>
+        <path d="M24 6 28 19 42 14 33 24 42 34 28 29 24 42 20 29 6 34 15 24 6 14 20 19Z" fill="#ffd700"/>
+        <circle cx="24" cy="24" r="4" fill="#081426"/>
+      </svg>
+      <span><span class="brand-name">ASTROCROWN</span><span class="brand-sub">Privacy &amp; Transparency</span></span>
+    </a>
+    <div class="top-actions">
+      <span class="preview-chip">Education preview</span>
+      <a class="back-link" href="index.html">← Back to AstroCrown</a>
+    </div>
+  </header>
+
+  <main class="shell" id="main-content">
+    <div class="hero">
+      <span class="eyebrow">Privacy · Security · User understanding</span>
+      <h1>Privacy &amp; Transparency Centre</h1>
+      <p class="hero-lead">Understand what AstroCrown is designed to protect, what public blockchains reveal, and what wallets, networks, AI providers and other services may still observe.</p>
+      <p class="hero-quote">Our responsibility is to explain both sides honestly: what we protect, what remains visible, and where protection depends on a third party or a user's own choices.</p>
+      <div class="hero-meta">
+        <span><strong>Information reviewed:</strong> 14 November 2026</span>
+        <span><strong>Format:</strong> Plain-language technical guide</span>
+        <span><strong>Legal status:</strong> Not a Privacy Policy</span>
+      </div>
+    </div>
+
+    <div class="preview-notice" role="note" aria-label="Preview limitation">
+      <span class="notice-mark" aria-hidden="true">!</span>
+      <div>
+        <strong>This is an educational preview, not a claim of production security or anonymity.</strong>
+        <p>It explains public-network behaviour and adopted design requirements. Some AstroCrown account, wallet and payment capabilities remain locally tested, planned or unimplemented. The formal Privacy Policy must be based on the actual deployed data flows and reviewed before real-user operation.</p>
+      </div>
+    </div>
+
+    <div class="at-glance" aria-label="Privacy at a glance">
+      <div class="glance-card">
+        <span class="micro">Layer 01 · Service</span>
+        <h2>What AstroCrown can protect</h2>
+        <p>Information held by the application can be minimized, access-controlled, secured and retained only for defined purposes—when those controls are implemented and verified.</p>
+      </div>
+      <div class="glance-card">
+        <span class="micro">Layer 02 · Public network</span>
+        <h2>What may remain visible</h2>
+        <p>On transparent blockchains, addresses, balances, transfers, timestamps and contract activity can be publicly inspected and analysed.</p>
+      </div>
+      <div class="glance-card">
+        <span class="micro">Layer 03 · Other services</span>
+        <h2>What third parties may observe</h2>
+        <p>Wallets, RPC nodes, indexers, hosting providers and AI services can receive different data depending on how a user or application interacts with them.</p>
+      </div>
+    </div>
+
+    <div class="layout">
+      <nav class="toc" aria-label="On this page">
+        <h2>Explore this guide</h2>
+        <ol>
+          <li><a href="#meaning">Understand the terms</a></li>
+          <li><a href="#public-blockchains">What public chains reveal</a></li>
+          <li><a href="#third-parties">Third-party observations</a></li>
+          <li><a href="#astro-protection">AstroCrown protection principles</a></li>
+          <li><a href="#misconceptions">Common misconceptions</a></li>
+          <li><a href="#emerging-tech">New privacy technologies</a></li>
+          <li><a href="#current-status">What exists today</a></li>
+          <li><a href="#user-checklist">Before you connect or send</a></li>
+          <li><a href="#sources">Sources and review</a></li>
+        </ol>
+      </nav>
+
+      <article>
+        <section id="meaning">
+          <span class="section-kicker">01 · Foundations</span>
+          <h2 class="section-title">Privacy words do not all mean the same thing</h2>
+          <p class="lead">A system can protect account credentials while its blockchain transactions remain public. It can use pseudonyms without making users anonymous. Clear definitions prevent false confidence.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Term</th><th>What it means</th><th>What it does not mean</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Privacy</strong></td><td>Control over information: what is collected, used, linked, stored and disclosed.</td><td>That no one can ever infer anything about you.</td></tr>
+                <tr><td><strong>Confidentiality</strong></td><td>Information is restricted to authorized parties or protected from unauthorized disclosure.</td><td>That the information does not exist or cannot be disclosed under any circumstances.</td></tr>
+                <tr><td><strong>Pseudonymity</strong></td><td>You interact through an identifier that does not directly state your legal name.</td><td>That activity cannot be linked to you through other evidence.</td></tr>
+                <tr><td><strong>Anonymity</strong></td><td>Your activity cannot reasonably be attributed to you within a defined threat model.</td><td>A universal status that can be guaranteed by a wallet, VPN or blockchain.</td></tr>
+                <tr><td><strong>Authentication</strong></td><td>A method establishes control of an account or authenticator.</td><td>Proof of legal identity, unique personhood, wallet ownership in every context, or transaction privacy.</td></tr>
+                <tr><td><strong>Self-custody</strong></td><td>You control the private keys that authorize your wallet's actions.</td><td>That your address, balances or transactions are hidden from a public ledger.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout gold">
+            <p><strong>The distinction to remember:</strong> account security protects access; custody concerns control of assets; privacy concerns information exposure. They are related, but none automatically guarantees the others.</p>
+          </div>
+        </section>
+
+        <section id="public-blockchains">
+          <span class="section-kicker">02 · Public ledgers</span>
+          <h2 class="section-title">What a public blockchain can reveal</h2>
+          <p>On a transparent public network, anyone may inspect the ledger without being given permission by AstroCrown. Depending on the network and transaction type, public information can include:</p>
+          <div class="two-col">
+            <div class="mini-card">
+              <h3>Addresses and relationships</h3>
+              <p>Wallet addresses, token accounts, contract addresses, transaction participants, repeated counterparties and patterns of interaction.</p>
+            </div>
+            <div class="mini-card">
+              <h3>Balances and movements</h3>
+              <p>Token holdings, transfer amounts, deposits, withdrawals, fees and changes in balances where the protocol exposes them.</p>
+            </div>
+            <div class="mini-card">
+              <h3>Timing and transaction detail</h3>
+              <p>Block or transaction time, ordering, network, token or mint, contract calls, public events and transaction status.</p>
+            </div>
+            <div class="mini-card">
+              <h3>Links created outside the chain</h3>
+              <p>Public posts, websites, screenshots, donation announcements or other disclosures that associate an address with a person or pseudonym.</p>
+            </div>
+          </div>
+          <p>A wallet address is usually a pseudonymous identifier—not a legal name. But funding patterns, reused addresses, exchange records, public statements and timing correlations may allow an observer to associate addresses with people or organisations.</p>
+          <div class="callout warning">
+            <p><strong>Important for supporters:</strong> sending a contribution to a public receiving address may expose the sending address, amount, token, destination and transaction time. AstroCrown not publishing your name does not make the payment private.</p>
+          </div>
+          <h3>“USDT” is not a complete network description</h3>
+          <p>The same token name can exist on different blockchains, with different token contracts, mints, fees and wallet requirements. Tether publishes protocol-specific USD₮ identifiers and explicitly distinguishes currently supported protocols from historical or deprecated ones. Always check the exact network and token identifier, not just the ticker symbol. <a href="https://tether.to/en/supported-protocols/" target="_blank" rel="noopener noreferrer">See Tether's supported protocols and token identifiers</a>.</p>
+          <p>AstroCrown's future payment interface must display the selected network and asset explicitly—for example, <strong>USD₮ · Ethereum · ERC-20</strong> or <strong>USD₮ · Solana · SPL</strong>—and verify the precise token identifier and receiving route before accepting payment.</p>
+        </section>
+
+        <section id="third-parties">
+          <span class="section-kicker">03 · Infrastructure visibility</span>
+          <h2 class="section-title">Privacy exposure can happen before a transaction is sent</h2>
+          <p>Blockchain privacy is not only about the final transaction. The software and infrastructure used to check balances, search addresses, estimate fees or prepare a transaction can also observe information.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Service or layer</th><th>What it may observe</th><th>What determines the exposure</th></tr></thead>
+              <tbody>
+                <tr><td><strong>Wallet application</strong></td><td>Addresses it manages, connected sites, local activity and the details required to prepare signatures.</td><td>Wallet architecture, permissions, telemetry and privacy settings.</td></tr>
+                <tr><td><strong>dApp / website</strong></td><td>A connected public address, requested signatures, user actions and data deliberately entered or shared.</td><td>Connection flow, requested permissions, scripts, logs and what the user approves.</td></tr>
+                <tr><td><strong>RPC / node provider</strong></td><td>Network requests, queried addresses or contracts, timing, request volume and potentially source IP or device/network metadata.</td><td>Direct versus shared RPC, proxying, provider logging and its privacy policy.</td></tr>
+                <tr><td><strong>Indexers / analytics</strong></td><td>Public transaction history, address relationships, token movements and derived behavioural patterns.</td><td>Public data access, indexing scope, enrichment sources and the provider's own records.</td></tr>
+                <tr><td><strong>Hosting / security provider</strong></td><td>Requests, IP addresses, timestamps, security events and operational metadata.</td><td>Application design, logs, retention, hosting configuration and provider terms.</td></tr>
+                <tr><td><strong>AI inference provider</strong></td><td>Prompts, documents, outputs, account metadata and usage information sent through its endpoint.</td><td>Exact provider, model, API route, plan, data controls and current terms.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Ethereum's current privacy roadmap describes how ordinary RPC requests can expose IP addresses, device fingerprints, queried addresses and activity timing to node providers. The exact exposure depends on the wallet and network architecture. <a href="https://ethereum.org/roadmap/privacy/" target="_blank" rel="noopener noreferrer">Read the Ethereum privacy roadmap</a>.</p>
+          <div class="callout">
+            <p><strong>One provider's policy is not another provider's policy.</strong> A free plan may have different data-use rules from a paid plan. A gateway may pass requests to another provider. AstroCrown must qualify the exact endpoint and route before sending private, confidential or personal information to it.</p>
+          </div>
+          <h3>AI-service example: free does not automatically mean private</h3>
+          <p>Google's current Gemini API additional terms say content submitted to unpaid services may be used to improve Google products and may be reviewed by humans. The terms advise users not to submit sensitive, confidential or personal information to unpaid services. This is a rule for that service and plan—not a claim about every AI provider. <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Read the Gemini API Additional Terms</a>.</p>
+          <p>Groq separately documents its inference-data retention controls, including limited retention for reliability and abuse investigations, and an optional Zero Data Retention setting. The applicable route and account settings must be checked rather than inferred from the provider name. <a href="https://console.groq.com/docs/your-data" target="_blank" rel="noopener noreferrer">Read Groq's data-retention documentation</a>.</p>
+        </section>
+
+        <section id="astro-protection">
+          <span class="section-kicker">04 · AstroCrown design commitments</span>
+          <h2 class="section-title">What AstroCrown is designed to protect</h2>
+          <p class="lead">Protection must be built into the architecture and verified. It must not be a privilege that depends on a user's profession, political circumstances or geographic identity.</p>
+          <div class="steps">
+            <div class="step"><div><strong>Collect the minimum necessary information</strong><p>Every data field must have a defined purpose, access rule, retention period and deletion or archival decision. Do not collect identity information simply because it might be useful later.</p></div></div>
+            <div class="step"><div><strong>Keep account identity separate from wallet activity</strong><p>Account, pseudonym/profile, authenticator, wallet, blockchain address, payment record and eligibility decision are different objects. Do not link them by default without a necessary, disclosed reason.</p></div></div>
+            <div class="step"><div><strong>Keep secrets off public networks</strong><p>Never place seed phrases, private keys, passkey secrets, recovery material, identity documents or private user memory on a public blockchain. A server should not ask a user to submit their wallet seed phrase or private key.</p></div></div>
+            <div class="step"><div><strong>Make disclosures before consequential actions</strong><p>Before a future wallet connection, public post or payment, explain what is shared, which network and token are involved, what will become public, and which third parties process the request.</p></div></div>
+            <div class="step"><div><strong>Use proportionate, explainable access controls</strong><p>Do not treat a VPN, Tor, shared network, multiple devices or a privacy-conscious browser as proof of wrongdoing. Investigate a specific action with evidence; avoid blanket exclusion where a narrower control is available.</p></div></div>
+            <div class="step"><div><strong>Protect people in sensitive circumstances</strong><p>Journalists, human-rights defenders, whistleblowers, investigators, judges and other people facing heightened risks should not be excluded merely because of their profession or viewpoint. Avoid unnecessary identity or financial exposure and explain residual risks honestly.</p></div></div>
+            <div class="step"><div><strong>Verify every third-party data route</strong><p>Review the exact provider, model, endpoint, terms, retention, training use, region, quotas and account settings. Unknown data handling is a blocker for sensitive data, not an assumed approval.</p></div></div>
+            <div class="step"><div><strong>Do not promise absolute anonymity</strong><p>Explain the threat model and limits. Privacy tools can reduce particular exposures; they do not eliminate all on-chain, network, device, provider or human disclosure risks.</p></div></div>
+          </div>
+          <p>These are architectural and product requirements. They must not be read as a statement that every control has already been implemented or independently verified.</p>
+        </section>
+
+        <section id="misconceptions">
+          <span class="section-kicker">05 · Learn before you act</span>
+          <h2 class="section-title">Common privacy misconceptions—and the reality</h2>
+          <p>These misunderstandings are common enough, and consequential enough, that we should correct them at the point where they affect a user's decision.</p>
+
+          <details><summary>“Crypto is anonymous.”</summary><div class="detail-body"><p>Most transparent public blockchains are pseudonymous. Addresses are not normally labelled with legal names, but transaction graphs, exchange records, public disclosures and other data can make activity attributable. <a href="https://ethereum.org/privacy/ethereum" target="_blank" rel="noopener noreferrer">Ethereum's privacy overview</a> explains the difference.</p></div></details>
+          <details><summary>“No KYC means nobody can identify me.”</summary><div class="detail-body"><p>Not collecting identity documents does not hide a public wallet address, transaction history, IP address or third-party records. It can reduce one form of identity collection without guaranteeing anonymity.</p></div></details>
+          <details><summary>“A self-custody wallet makes my payments private.”</summary><div class="detail-body"><p>Self-custody means you control the signing keys. On a transparent chain, the address and transaction details may still be visible to the public. Key control and transaction confidentiality solve different problems.</p></div></details>
+          <details><summary>“A passkey or encrypted account hides my blockchain activity.”</summary><div class="detail-body"><p>A passkey protects authentication. Encryption protects specific information in specific places. Neither removes a transaction already recorded on a public chain nor conceals an address that is publicly associated with a profile.</p></div></details>
+          <details><summary>“A new wallet address guarantees a clean break from old activity.”</summary><div class="detail-body"><p>A new address may reduce direct address reuse, but funding sources, counterparties, transaction patterns, timing, device or provider metadata and public disclosures may still link activity. Address separation is not a guarantee.</p></div></details>
+          <details><summary>“A VPN or Tor makes all activity anonymous.”</summary><div class="detail-body"><p>These tools can reduce exposure of some network identifiers to some observers. They do not erase public-chain records or prevent every form of browser, wallet, account, timing or behavioural correlation. Do not rely on them as a complete anonymity system.</p></div></details>
+          <details><summary>“Zero-knowledge proofs make the whole application private.”</summary><div class="detail-body"><p>A zero-knowledge proof can reveal only a specific verified statement instead of the underlying information. But the surrounding application may still expose addresses, timing, network requests, public inputs or user actions. Privacy must be assessed end to end.</p></div></details>
+          <details><summary>“A token with confidential transfers hides every detail.”</summary><div class="detail-body"><p>It depends on the exact token, mint, account setup and transfer method. Solana's Confidential Balances feature encrypts transfer amounts and balances for supported Token-2022 mints, while account addresses, mint, owners and transaction participation remain public. An optional auditor key may also decrypt transfer amounts. This is not the default for every SPL token. <a href="https://solana.com/docs/finance/privacy" target="_blank" rel="noopener noreferrer">See Solana's privacy comparison</a>.</p></div></details>
+          <details><summary>“Deleting my AstroCrown account erases my blockchain history.”</summary><div class="detail-body"><p>Off-chain data may be deleted or restricted according to the applicable policy and law. A confirmed public-chain transaction is generally not something AstroCrown can delete, rewrite or remove from independent copies and indexes.</p></div></details>
+          <details><summary>“Every USDT token and network is interchangeable for a payment.”</summary><div class="detail-body"><p>The token name alone is not enough. A receiving system must support the exact blockchain and token identifier. Sending to the wrong network or contract can result in an unrecoverable loss. Always compare the complete asset-and-network label with the wallet confirmation.</p></div></details>
+          <details><summary>“Stablecoins have the same privacy and control properties as cash.”</summary><div class="detail-body"><p>A stablecoin is a token issued under specific terms and contracts, not physical cash. Issuer policies, smart-contract design, public-chain visibility, wallet providers and applicable law all matter. Read the actual issuer terms for the exact asset; do not generalize one issuer's powers to every token.</p></div></details>
+        </section>
+
+        <section id="emerging-tech">
+          <span class="section-kicker">06 · Emerging developments</span>
+          <h2 class="section-title">New privacy technology is useful—but not magic</h2>
+          <h3>Solana Confidential Balances</h3>
+          <p>Solana's Confidential Balances is an optional Token-2022 extension. A mint must be created with the extension and accounts must be configured. The transfer amount and confidential balance can be encrypted, while the mint, token accounts, owners and transaction participation remain public. A mint may also configure an auditor key that can decrypt transfer amounts. <a href="https://solana.com/docs/tokens/extensions/confidential-transfer" target="_blank" rel="noopener noreferrer">Read the technical documentation</a>.</p>
+          <div class="callout warning">
+            <p><strong>AstroCrown does not claim that ACROWN or USD₮ transfers are confidential.</strong> No privacy feature is inherited automatically from the Solana network. Any future integration would require the exact mint, token program, wallet support, auditor model, compatibility and user experience to be independently qualified.</p>
+          </div>
+          <h3>Ethereum private reads, private writes and private proving</h3>
+          <p>Ethereum's current privacy roadmap separates three problems: hiding the data a wallet reads, protecting the privacy of submitted transactions, and proving facts without revealing all underlying personal information. The roadmap describes work in progress; it is not a guarantee that ordinary Ethereum wallets or transactions already provide these protections by default. <a href="https://ethereum.org/roadmap/privacy/" target="_blank" rel="noopener noreferrer">Review the current roadmap and its status</a>.</p>
+          <h3>Zero-knowledge and selective disclosure</h3>
+          <p>These techniques can help a person prove a narrowly defined fact—such as meeting an eligibility condition—without publishing all underlying details. The privacy claim must still state exactly what is proven, who verifies it, what metadata is visible, whether the proof can be linked across uses, and what happens if a verifier or issuer retains additional data.</p>
+          <h3>Threat models must keep evolving</h3>
+          <p>Public ledgers persist, and analysis tools can improve. Information that is difficult to associate with a person today may become easier to correlate later. Privacy guidance therefore needs dated sources, recurring review and correction when technology or provider practices change.</p>
+        </section>
+
+        <section id="current-status">
+          <span class="section-kicker">07 · Evidence, not marketing</span>
+          <h2 class="section-title">What the current AstroCrown project actually provides</h2>
+          <p>The following status is tied to the repository evidence reviewed on 14 November 2026. It distinguishes a working preview from locally tested components and future requirements.</p>
+          <div class="status-grid">
+            <div class="status-card"><span class="badge preview">Preview verified</span><strong>Homepage wallet menu</strong><p>The current public preview explicitly cannot connect a wallet, sign messages, submit orders or move assets. It is a visual demonstration only.</p></div>
+            <div class="status-card"><span class="badge local">Locally qualified</span><strong>Passkey-first account foundation</strong><p>The account foundation has been merged, and parts of its Worker/D1 lifecycle have local qualification evidence. Remote staging and real-user production deployment are not enabled.</p></div>
+            <div class="status-card"><span class="badge design">Draft / not operational</span><strong>Supporter programme</strong><p>Its page remains in draft pull request #176. It is not a live payment, wallet-receipt or treasury system.</p></div>
+            <div class="status-card"><span class="badge blocked">Not established</span><strong>Whole-system security status</strong><p>The repository's broad development security baseline still marks its review areas UNVERIFIED. No complete product security certification is claimed.</p></div>
+          </div>
+          <p>Evidence references: <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/141" target="_blank" rel="noopener noreferrer">Passkey-first foundation, merged PR #141</a> · <a href="https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/account-continuity/worker/README.md" target="_blank" rel="noopener noreferrer">Worker qualification and deployment boundary</a> · <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/176" target="_blank" rel="noopener noreferrer">Supporter programme draft PR #176</a> · <a href="https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/SECURITY-BASELINE.md" target="_blank" rel="noopener noreferrer">Development security baseline</a>.</p>
+          <div class="callout gold">
+            <p><strong>This page is not the formal Privacy Policy.</strong> The formal policy must identify the real data controller, purposes, data categories, providers, retention, rights, legal bases where applicable, cross-border flows, security measures and contact route for the service actually deployed. It must be reviewed against the actual operating jurisdictions and data flows before launch.</p>
+          </div>
+        </section>
+
+        <section id="user-checklist">
+          <span class="section-kicker">08 · Practical safety</span>
+          <h2 class="section-title">Before you connect, send or publish</h2>
+          <p>Use this checklist whenever an application asks you to connect a wallet, sign a message, submit a transaction or associate an address with a public profile.</p>
+          <ul class="checklist">
+            <li><strong>Check the destination.</strong> Verify the website address and the application you intended to open. A familiar logo is not proof that a site is authentic.</li>
+            <li><strong>Understand the connection.</strong> A connected application may learn your public wallet address. Read the requested permissions and disconnect unused sessions.</li>
+            <li><strong>Read every signature request.</strong> A message signature and a blockchain transaction are not the same action. Do not sign a request you cannot understand.</li>
+            <li><strong>Verify asset and network together.</strong> Confirm token, chain, contract or mint, destination, amount and fee before confirming a payment.</li>
+            <li><strong>Assume a public transaction can be analysed.</strong> Consider whether the amount, timing, source address or destination could expose information you did not intend to share.</li>
+            <li><strong>Keep recovery secrets private.</strong> Never send seed phrases, private keys or offline recovery secrets to a person, website, support agent or chat.</li>
+            <li><strong>Think before linking an address to a profile.</strong> Once a public address is associated with a name or pseudonym, copies, indexes and past transactions may preserve that link.</li>
+            <li><strong>Use only providers suitable for the information.</strong> Do not submit personal, confidential or sensitive information to a free AI, RPC or analytics route unless its exact handling terms have been reviewed and approved.</li>
+          </ul>
+          <p>If a screen does not clearly identify what will be public or which network and asset are being used, stop and seek clarification before proceeding.</p>
+        </section>
+
+        <section id="sources">
+          <span class="section-kicker">09 · Sources and review</span>
+          <h2 class="section-title">How this guide is maintained</h2>
+          <p>Technical statements are grounded in official protocol and provider documentation, not model-generated summaries or marketing assumptions. Links below are the primary references used for this review.</p>
+          <ul class="source-list">
+            <li><a href="https://ethereum.org/privacy/ethereum" target="_blank" rel="noopener noreferrer">Ethereum.org — Privacy on Ethereum</a>: pseudonymity and public transaction visibility.</li>
+            <li><a href="https://ethereum.org/roadmap/privacy/" target="_blank" rel="noopener noreferrer">Ethereum.org — The privacy roadmap</a>: private reads, writes, proving and current progress.</li>
+            <li><a href="https://solana.com/docs/finance/privacy" target="_blank" rel="noopener noreferrer">Solana — Privacy for financial applications</a>: comparison of privacy boundaries.</li>
+            <li><a href="https://solana.com/docs/tokens/extensions/confidential-transfer" target="_blank" rel="noopener noreferrer">Solana — Confidential Balances</a>: Token-2022 requirements and auditor option.</li>
+            <li><a href="https://tether.to/en/supported-protocols/" target="_blank" rel="noopener noreferrer">Tether — Supported protocols</a>: network-specific token identifiers and legacy protocol status.</li>
+            <li><a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Google — Gemini API Additional Terms</a>: unpaid-service data handling.</li>
+            <li><a href="https://console.groq.com/docs/your-data" target="_blank" rel="noopener noreferrer">Groq — Your Data in GroqCloud</a>: inference retention and data controls.</li>
+          </ul>
+          <p><strong>Review date:</strong> 14 November 2026. The date records when this source review was performed; it is not a guarantee that a provider policy, protocol feature or law will remain unchanged.</p>
+          <p><strong>Review triggers:</strong> a material blockchain or token-standard change; a new wallet or payment route; a new RPC, hosting, analytics or AI provider; a change in data retention or training terms; a privacy incident; or a change to the features actually deployed.</p>
+          <p><strong>Governance:</strong> any claim about implemented privacy controls must be supported by current tests and evidence. A proposal, mock, local test or roadmap does not establish production protection. Where the evidence is missing, the status must remain unknown or blocked.</p>
+        </section>
+      </article>
+    </div>
+
+    <footer class="footer">
+      <span>AstroCrown · Privacy &amp; Transparency Centre · Education preview</span>
+      <span><a href="index.html">Return to homepage</a> · <a href="https://github.com/ACROWN-System/AstroCrown-Web" target="_blank" rel="noopener noreferrer">Project repository</a></span>
+    </footer>
+  </main>
+</body>
+</html>
