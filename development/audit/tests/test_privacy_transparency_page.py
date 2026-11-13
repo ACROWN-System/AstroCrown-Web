@@ -100,7 +100,8 @@ class PrivacyTransparencyStaticSmoke(unittest.TestCase):
     def test_transparency_and_status_caveats_exist(self) -> None:
         required_phrases = (
             "pseudonymous", "public", "third parties", "not a Privacy Policy",
-            "not confidential", "not enabled", "14 November 2026"
+            "does not claim that ACROWN or USD₮ transfers are confidential",
+            "not enabled", "14 November 2026"
         )
         lowered = self.page_source.lower()
         for phrase in required_phrases:
@@ -125,7 +126,7 @@ class PrivacyTransparencyStaticSmoke(unittest.TestCase):
 
     def test_no_formal_anonymity_or_security_guarantee(self) -> None:
         self.assertIn("Do not promise absolute anonymity", self.page_source)
-        self.assertIn("No system-wide certification", self.page_source)
+        self.assertIn("No complete product security certification is claimed", self.page_source)
 
 
 if __name__ == "__main__":
