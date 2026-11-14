@@ -171,6 +171,23 @@ Do not entangle infrastructure provisioning with treasury signing. Compute/stora
 
 The provider never receives an unrestricted signing key or seed phrase.
 
+### 4.1.1 Payment route adapters and the no-friction boundary
+
+The payment layer must not assume that every infrastructure supplier accepts crypto directly. It must support separate, replaceable route adapters for:
+
+- crypto_direct — crypto is paid to the supplier's verified wallet/invoice;
+- crypto_to_fiat_invoice — crypto is paid to an intermediary which converts it and settles the supplier's fiat invoice;
+- crypto_funded_card — crypto funds a provider-issued payment instrument that pays the supplier;
+- crypto_voucher — crypto purchases a voucher/merchant credit accepted by the exact supplier.
+
+The payer-side chain must be mapped end to end, including the intermediary, exchange/conversion partner, card issuer/program manager, acquiring processor and relevant subprocessors. The presence of internal bank accounts or card-network relationships inside the intermediary does not automatically disqualify it. It is disqualified if AstroCrown, its authorized operators or beneficial owners must complete KYC/real-name verification, provide government identity documents, open/link/control a bank account, provide bank credentials, obtain a conventional card or bind a conventional fiat account at any stage (including signup, top-up, limits increase, continued use, refund or recovery). Moving these requirements from the supplier to an intermediary is still a failure of the original requirement.
+
+For fiat invoice settlement, the supplier may have to provide its own receiving bank details because it is the fiat beneficiary. Those are supplier-side payout details, not an AstroCrown bank account. Record this distinction explicitly. Never call such a flow entirely bank-free; the accurate description is **crypto-funded fiat settlement without AstroCrown needing its own bank account or card**, provided the intermediary does not impose payer-side KYC.
+
+Every route must expose machine-readable quote/fees/expiry, funding instructions, status, limits, refund/reversal handling and reconciliation. A crypto-to-fiat route additionally needs payout reference and final supplier-payment confirmation. A card route needs machine-readable funding, authorization/capture/refund, spending limits and freeze/revoke. A voucher route needs exact merchant/region/denomination, expiry, redemption status and remaining value. Manual bank transfers, routine human approvals, recurring CAPTCHA/OTP/3-D Secure, hidden spreads, overdraft, auto-top-up and fiat/card fallback are not acceptable for a core autonomous route.
+
+No route is qualified based only on marketing claims such as “crypto accepted” or “no KYC.” Verify the governing terms, onboarding and account conditions, every payer-side actor, API lifecycle, legal availability in the relevant jurisdiction, and a complete synthetic or otherwise separately authorized bounded reconciliation test. Do not attempt to evade legal identity or sanctions controls; classify a route as unavailable if it cannot lawfully serve the intended operation.
+
 ### 4.2 Council policy authorization envelope
 
 Before a payment intent is created, the operation must carry a signed/immutable internal authorization record containing:
@@ -251,7 +268,7 @@ Human governance is internal. External human action is not a normal dependency.
 - manual support ticket to renew a quota, restore access or approve a routine deployment;
 - manual billing-portal click to release a machine task;
 - recurring human CAPTCHA or interactive session;
-- a payment that can only be made by card/bank or a fiat processor;
+- a payment route that requires AstroCrown or its authorized payer-side operators to provide KYC, bank-account details, bank credentials, a conventional payment card or a fiat payment account. An intermediary may use its own bank/card settlement rails internally only if that does not shift any of those requirements onto AstroCrown;
 - manually confirming each machine's status or invoice;
 - no API to destroy a service that continues to accrue cost;
 - unexplained negative balance, auto-top-up or billable fallback.
@@ -263,8 +280,8 @@ One-time creation of a provider account and initial API key may be performed by 
 A provider adapter is not qualified by a successful login or “hello world”. Its contract test must include:
 
 ### Eligibility and legal-use tests
-- no identity/KYC/government document flow;
-- no card/bank/financial account requirement;
+- no identity/KYC/government document flow across the whole payer-side chain, including payment intermediary, conversion partner and card issuer;
+- no AstroCrown-side card, bank, bank-credential or conventional financial-account requirement; document supplier-side beneficiary bank details separately where fiat settlement needs them;
 - exact $0 plan entitlement, duration and region;
 - terms permit AstroCrown/NOVA development and future product use where relevant;
 - exact model/asset/service licence and upstream processor map.
@@ -281,7 +298,8 @@ A provider adapter is not qualified by a successful login or “hello world”. 
 - backup/export/restore and checksum parity.
 
 ### Financial safety tests
-- no automatic card/fiat fallback;
+- no automatic card/fiat fallback that charges AstroCrown or bypasses its crypto-funded policy;
+- no payer-side KYC, bank-account, bank-credential or conventional-card requirement anywhere in an intermediary route;
 - free quota exhaustion fails closed;
 - paid usage is impossible unless an authorization envelope exists;
 - provider quote and invoice match exact authorized terms;
@@ -332,6 +350,7 @@ No runtime code is authorized by this specification alone. The recommended imple
 | domain + DNS | 0xHost API candidate; ENS is non-DNS alias | Registrar accreditation/TLD registrant rules, no-KYC conditions, DNS API, renewal and expiration tests |
 | GPU paid crypto path | NoctHost/OVH GPU, Akash, Nosana candidates | Exact hardware/pricing, no-KYC, host isolation, crypto settlement and automated job lifecycle |
 | payment signer | Not implemented | Policy-limited wallet architecture, testnet conformance, key recovery and audit evidence |
+| crypto-funded fiat/card intermediary | No route qualified | Map payer-side KYC/bank/card requirements, fees/spreads, legal availability, machine settlement and final supplier-payment confirmation |
 | provider failover | NOVA health/routing exists but whole product failover not qualified | End-to-end provider-outage simulations, state fencing and recovery evidence |
 
 ## 9. Non-goals and safety boundaries
