@@ -108,7 +108,7 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 - [ ] Verify the new page has unique IDs and valid internal anchor targets.
 - [ ] Verify essential content, source references, preview status and implementation-status caveats.
 - [ ] Verify no scripts, trackers, external assets or unapproved dependencies were added.
-- [ ] Run static smoke tests and HTML structure checks.
+- [ ] Run the wired static smoke test and HTML structure checks.
 - [ ] Run the existing Chromium workflow against the account dialog, linked guide, desktop layout and 320px mobile layout.
 - [ ] Inspect the complete diff and backup.
 - [ ] Create a draft pull request; do not merge or promote to the production root without review.
