@@ -65,7 +65,7 @@ assert.match(accountJs, /read-only interface demonstration/);
 assert.match(supporterPage, /noindex, nofollow, noarchive/i);
 assert.match(supporterPage, /USDT contributions and ACROWN purchases are not enabled/i);
 assert.match(supporterPage, /DO NOT SEND FUNDS/i);
-assert.match(supporterPage, /ACROWN delivery remains on Solana/i);
+assert.match(supporterPage, /ACROWN delivery remains (?:on Solana|Solana-based)/i);
 assert.match(supporterPage, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/i);
 assert.match(supporterPage, /1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance/i);
 assert.match(supporterPage, /180-day purchase period begins at that operational activation/i);
