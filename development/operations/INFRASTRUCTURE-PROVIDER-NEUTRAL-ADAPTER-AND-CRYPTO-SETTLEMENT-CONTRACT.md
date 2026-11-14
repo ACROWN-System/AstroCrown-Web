@@ -281,11 +281,23 @@ Not every VPS host, domain registrar, GPU marketplace or merchant has implemente
 
 A browser-only flow is not automatically agent-compatible. If normal operation requires human-only CAPTCHA, identity review, interactive OTP/3-D Secure, manual bank transfer, support intervention or a forbidden financial instrument, the provider is not usable for autonomous routine operations. NOVA should continue to another candidate instead of attempting to evade that requirement.
 
-#### Standing mandate, not repeated per-payment consent
+#### Council vote once; preauthorize permitted recurrence
 
-AstroCrown should authorize NOVA through a standing, revocable mandate on its own trusted governance surface. The mandate can define allowed operational categories, policy version, aggregate and per-purchase ceilings, time period, renewal behavior, allowed asset/network risk class, maximum gas/conversion cost, data classification, permitted service regions, and conditions requiring Council escalation. The exact provider offer is bound to the mandate at runtime.
+A payment commitment must be authorized by a real Imperial Council vote in AstroCrown's own governance system. NOVA prepares the proposal from the discovered live offer and clearly identifies whether the request is one-time or includes recurring/session/subscription authority.
 
-Once the purchase is inside that mandate, NOVA must not ask the Council to approve every API call, routine renewal or small infrastructure expense. It records the reason and evidence. It escalates only when a purchase is outside the authorized envelope or the policy requires it. A signed mandate/receipt model such as AP2 is a useful interoperability reference for proving delegated agent authority, but AstroCrown's own mandate remains the governing authorization unless an external service requires a compatible credential.
+**For a recurring service, the initial payment and the explicitly described automatic renewal authority should be included in the same Council vote. After a valid passing vote, one versioned standing payment mandate authorizes the initial payment and every later renewal that remains within its approved terms. The Council does not vote again for each invoice, API call, billing cycle or routine renewal.**
+
+The Council may vote on a specific provider/plan or on a delegated service category with a budget ceiling and provider-substitution rules. In the category case, NOVA may discover and select a provider at runtime without a separate Council vote for each routine purchase, as long as the new commitment fits the approved scope. A one-time payment approval does not imply recurrence; auto-renew must be explicitly authorized.
+
+The standing mandate is created from the immutable proposal snapshot and the Council's valid vote record. It defines policy/governance version, service/provider scope, one-time or recurring model, recurrence frequency, per-cycle ceiling, total/period budget, maximum occurrences or expiry/review date, price/fee tolerance, permitted crypto rails/source-asset conversion, all-in gas/conversion ceiling, data/region/service boundaries, and escalation rules.
+
+Before each initial or recurring payment, NOVA checks the mandate and binds the current live provider offer to it. It proceeds autonomously when the mandate is active, recurrence is due, service remains required, provider/offer/recipient and terms remain in scope, and every cost remains within the remaining budget. External Router delegations are additional lower ceilings and never replace the Council decision.
+
+NOVA must stop automatic renewal and return to the Council only when the mandate expires/is revoked, a limit is exceeded, or provider/service/price/billing/data/payment terms change materially outside the approved tolerance. Routine renewals and harmless runtime quote variations within the voted ceiling are pre-approved. All executions remain visible in the Council dashboard and durable audit ledger; visibility does not create a new voting requirement.
+
+The detailed state, Council vote binding, mandate contents, renewal rules, revocation and interface requirements are defined in [COUNCIL-VOTED-STANDING-PAYMENT-MANDATE-SPECIFICATION.md](COUNCIL-VOTED-STANDING-PAYMENT-MANDATE-SPECIFICATION.md).
+
+A signed mandate/receipt model such as AP2 is a useful interoperability reference, but AstroCrown's own Council vote and mandate remain the governing authorization.
 
 ### 4.1.4 Reuse existing agent procurement and payment stacks before building equivalents
 
@@ -319,7 +331,7 @@ A read-only public discovery probe does not require a complete pre-qualification
 
 Before a payment intent is created, the operation must carry a signed/immutable internal authorization record containing:
 
-- policy version and approving Council decision/reference;
+- policy version, immutable Council proposal snapshot/reference and approving Council decision/vote identifier;
 - permitted supplier scope and service categories: this may be a named provider or a delegated category such as hosting, storage, inference, RPC or monitoring; NOVA may discover new providers at runtime if their live offer passes the mandate and hard rules, so a complete static provider list is not a prerequisite;
 - exact source chain/token identifier and treasury wallet, plus exact destination/payment chain/token identifier (canonical mint/contract/native asset, not just a symbol such as “USDT”);
 - optional swap/bridge route allowlist and contract/solver addresses, maximum source amount, minimum destination amount, maximum price impact/slippage, quote expiry, maximum gas/priority/relayer cost, maximum all-in conversion cost and required native gas reserve;
@@ -328,11 +340,29 @@ Before a payment intent is created, the operation must carry a signed/immutable 
 - max amount per transaction and total budget window;
 - permitted service/plan classes, regions and duration ranges; exact provider, plan and region may be resolved from the live offer when it falls within the delegated scope;
 - expiration time and nonce/idempotency key;
+- explicit authorization type: one-time only, one-time plus recurring renewals, metered/session, or subscription;
+- recurrence frequency/next eligible time, auto-renew enabled/disabled, per-cycle/per-call cap, cumulative/period budget, maximum occurrences or expiry/review date, and price/fee tolerance;
 - whether the authorization covers one payment or recurring automatic renewal;
 - required settlement confirmations and overage ceiling (must be zero unless specifically authorized);
-- revocation state and current governance authority.
+- Council vote validity under the current governance rules, mandate version/status, revocation/suspension authority, remaining cycle/occurrence count, reserved/settled budget and next renewal time.
 
 A mandate such as “NOVA may procure qualified hosting up to the authorized category and spend ceiling” can be sufficient for autonomous routine purchases when it also states recurrence, service/data scope, permitted payment methods, risk/gas limits and escalation rules. It need not enumerate every provider in advance. However, it is never a blank cheque: the live offer and exact payment destination/asset/amount are bound to the mandate and checked immediately before signing. The total paid transition budget currently recorded elsewhere is a planning ceiling of USDT 150; it is not an approved payment or proof that all launch requirements fit within the amount.
+
+### 4.2.1 Council-vote and standing-mandate lifecycle
+
+A payment mandate cannot become active merely because NOVA or an external Router created it. It must be derived from an approved Council decision:
+
+1. `COUNCIL_PROPOSAL_PREPARED` — NOVA has assembled the service need, live offer and one-time/recurring payment terms.
+2. `SUBMITTED_FOR_COUNCIL_VOTE` — the immutable proposal snapshot is displayed on AstroCrown's Council voting surface.
+3. `COUNCIL_VOTE_PENDING` — the Council's existing quorum and passage rules apply.
+4. `COUNCIL_APPROVED` or `COUNCIL_REJECTED` — the governance system returns a decision reference. A rejected, tied, incomplete or invalid vote grants no authority.
+5. `MANDATE_ISSUED` — the internal mandate issuer binds the vote, proposal snapshot, approved scope, recurring terms, ceilings and version into a durable record.
+6. `MANDATE_ACTIVE` — the signer can verify the mandate and NOVA may execute the approved initial payment/recurrence.
+7. `RENEWAL_DUE` → `RENEWAL_VALIDATED` → `AUTO_RENEWED` — NOVA rechecks the existing mandate and current offer; no new Council vote occurs while all conditions remain in scope.
+8. `NEEDS_COUNCIL_DECISION` — an amount, scope, service, provider, recurrence or term change exceeds the voted limits; pause new spending until a new/amended mandate is approved.
+9. `SUSPENDED`, `REVOKED`, `EXPIRED` or `COMPLETED` — signer rejects new spend, scheduled renewals stop and provider cancellation/reconciliation proceeds.
+
+The current Imperial Council governance rules determine who may vote, quorum and passage threshold. This payment specification does not create new voting weights or bypass those rules.
 
 ### 4.3 Payment state machine
 
