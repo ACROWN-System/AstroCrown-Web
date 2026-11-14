@@ -231,6 +231,62 @@ Token approvals must be exact-amount or permit-scoped where supported, never unl
 
 No wallet, private key or treasury seed phrase is supplied to a swap/bridge provider, MCP server or LLM. Agent/MCP support is an interface convenience only; it does not grant signing or spending authority. The NOVA process may request quotes and prepare a route; the AstroCrown-controlled signer enforces the Council envelope independently.
 
+### 4.1.3 Agent-native dynamic service discovery and payment
+
+**Provider-specific payment criteria do not have to be manually researched and frozen before NOVA can discover or evaluate a service.** Dynamic discovery, quote negotiation, payment-method selection and service procurement are part of NOVA's job as an autonomous operational agent. The fixed requirements are AstroCrown's standing policy and treasury safety boundaries; the specific provider offer, payment method, chain, token, amount, fees, expiry, fulfilment and receipt are discovered at runtime.
+
+The normal agent flow is:
+
+1. **Receive an operational need.** NOVA decomposes a requirement such as compute, storage, RPC, inference, domain, monitoring or a one-off API action into capability, quantity, region, duration, service level and data-handling needs.
+2. **Discover candidates dynamically.** Search machine-readable service catalogues, MCP discovery servers, APIs, OpenAPI documents, provider capability endpoints, A2A/agent registries and official provider documentation. For example, the MPP service directory exposes a public JSON catalogue and read-only MCP discovery surface. Discovery is advisory: the live service endpoint remains authoritative for its current offer.
+3. **Request the live offer.** Contact the candidate's documented endpoint or provisioning API. The offer may be a quote, invoice, checkout object, HTTP `402 Payment Required` challenge, MPP challenge, x402 payment requirement, session offer or subscription offer. Do not assume every provider uses the same protocol.
+4. **Interpret the payment challenge.** Read the current exact resource/plan, price, currency, accepted payment methods, token/network/recipient, amount, expiry, recurring or metered terms, usage limit, cancellation/refund behavior and service-fulfilment conditions. For MPP and x402, a runtime `402` challenge is the authoritative current payment request; catalogue metadata is discovery information, not a replacement for the challenge.
+5. **Check route compatibility at runtime.** Determine whether a permitted crypto payment method is supported directly. If the treasury does not hold the exact required asset/network, request a qualified conversion quote. If there is no compatible crypto path, mark that offer unavailable under the standing policy and continue searching. Do not fall back to card, bank, fiat account or KYC.
+6. **Apply the standing NOVA delegation.** If the exact offer, supplier, service category, asset/chain, total spend, recurrence, data class and route fit the active mandate and limits, NOVA may proceed without asking the Council for that individual routine payment. If it exceeds the mandate, pause and request an internal AstroCrown authorization. A provider-side human approval is not substituted for the Council.
+7. **Authorize and pay using a protocol adapter.** The protocol client formats the required payment credential/header/session/subscription request. The signing boundary independently checks the mandate and exact transaction. The agent/LLM never receives the treasury private key or unrestricted signing authority.
+8. **Retry the service request with payment proof.** Examples: x402 returns a `402` challenge; the agent signs the supported payment authorization, retries with the payment header and receives the paid response/receipt. MPP returns a challenge; the client answers with a method-specific credential and receives a receipt. One-time charge, metered session and subscription are separate intent types with different budget/renewal rules.
+9. **Verify fulfilment.** Validate the payment receipt/transaction reference and confirm the requested API result, service entitlement, resource creation, invoice credit or subscription activation. Payment acceptance alone is not proof that the service was delivered.
+10. **Record and monitor.** NOVA records source/destination assets, quote/challenge, authorization, payment receipt, chain transaction, total costs, fulfilment evidence and recurring obligations. It monitors usage and renewals, closes sessions, cancels unused services when authorized, and refuses renewal when the mandate or balance is no longer valid.
+
+#### Supported agent payment patterns
+
+- **HTTP 402 / x402 exact payment:** request a paid API/resource; receive a machine-readable payment requirement; sign the supported crypto payment; retry with proof; receive a receipt and resource response.
+- **MPP charge:** one payment for a defined request or resource.
+- **MPP session:** authorize a capped funded session and meter usage, potentially settling in the background; enforce the session's maximum deposit and close/reconcile it.
+- **MPP subscription:** authorize a merchant-scoped recurring plan with a fixed amount and billing period; renew only within the active recurring mandate and cancel/stop when revoked or over limit.
+- **Provider-native crypto checkout/API:** use the provider's documented wallet/invoice/order API when it is not using x402/MPP.
+- **Fiat invoice/card/voucher intermediary:** use only if the provider offers a machine-readable route compatible with the existing no-KYC/no-bank/no-card policy and the final supplier settlement can be verified.
+
+The MPP public services catalogue and its MCP surface can help NOVA discover and rank participating services, but the catalogue MCP is read-only and does not itself pay, sign, register services or execute API calls. The live endpoint's payment challenge must be re-read immediately before a transaction.
+
+#### Dynamic qualification states (not a manual pre-registration prerequisite)
+
+- `DISCOVERED` — public service metadata found; no payment permission.
+- `OFFER_PROBED` — public endpoint or no-funds request returned an offer/challenge; no payment permission.
+- `RUNTIME_POLICY_CHECKED` — NOVA resolved the offer against standing constraints; remaining unknowns are either immaterial or block the offer.
+- `MANDATE_AUTHORIZED` — the specific purchase fits a valid internal delegated mandate or obtains a new internal approval.
+- `PAYMENT_EXECUTED` — authorized protocol payment completed.
+- `FULFILMENT_VERIFIED` — service/resource/credit was actually delivered and reconciled.
+- `REJECTED_BY_POLICY` / `NEEDS_INTERNAL_APPROVAL` / `PROVIDER_NOT_AGENT_COMPATIBLE` — offer is outside policy, requires a forbidden payer-side step, or lacks a machine-operable path.
+
+This allows NOVA to discover, probe and classify new providers continuously without first creating a manually curated dossier for each one. A non-compatible offer is skipped; a compatible offer may proceed under the existing delegation. Identity, banking, conventional-card, prohibited-use and treasury safety boundaries are never bypassed.
+
+#### Provider compatibility fallback
+
+Not every VPS host, domain registrar, GPU marketplace or merchant has implemented x402 or MPP. NOVA should try progressively:
+1. native x402/MPP payment challenge;
+2. provider-native wallet/crypto checkout or machine-readable invoice API;
+3. a qualified crypto-funded invoice/card/voucher intermediary;
+4. documented API-driven checkout that remains fully within policy.
+
+A browser-only flow is not automatically agent-compatible. If normal operation requires human-only CAPTCHA, identity review, interactive OTP/3-D Secure, manual bank transfer, support intervention or a forbidden financial instrument, the provider is not usable for autonomous routine operations. NOVA should continue to another candidate instead of attempting to evade that requirement.
+
+#### Standing mandate, not repeated per-payment consent
+
+AstroCrown should authorize NOVA through a standing, revocable mandate on its own trusted governance surface. The mandate can define allowed operational categories, policy version, aggregate and per-purchase ceilings, time period, renewal behavior, allowed asset/network risk class, maximum gas/conversion cost, data classification, permitted service regions, and conditions requiring Council escalation. The exact provider offer is bound to the mandate at runtime.
+
+Once the purchase is inside that mandate, NOVA must not ask the Council to approve every API call, routine renewal or small infrastructure expense. It records the reason and evidence. It escalates only when a purchase is outside the authorized envelope or the policy requires it. A signed mandate/receipt model such as AP2 is a useful interoperability reference for proving delegated agent authority, but AstroCrown's own mandate remains the governing authorization unless an external service requires a compatible credential.
+
 ### 4.2 Council policy authorization envelope
 
 Before a payment intent is created, the operation must carry a signed/immutable internal authorization record containing:
@@ -259,14 +315,16 @@ Every payment intent must declare one exact route type:
 - `CRYPTO_FUNDED_CARD` — intermediary uses crypto funding to pay the supplier by card;
 - `CRYPTO_VOUCHER` — intermediary issues supplier-compatible merchant credit/voucher funded by crypto.
 
-Required common state machine:
+Required agent-native lifecycle (invoice fields are optional for API/HTTP payment challenges):
 
-1. `DRAFT` — NOVA proposes the exact service, supplier obligation, quote and route.
-2. `AWAITING_INTERNAL_AUTHORIZATION` — Council policy approval is checked inside AstroCrown/NOVA.
-3. `AUTHORIZED` — signed policy envelope, payer-side no-KYC/no-bank/no-card checks, caps and expiry are valid.
-4. `INVOICE_REQUESTED` — supplier invoice or intermediary payment intent retrieved through API.
-5. `INVOICE_VALIDATED` — exact supplier, service, invoice ID, fiat amount/currency (where relevant), crypto amount/asset/network, intermediary recipient, fees/spread, quote expiry, final beneficiary, payment reference and route limits match approved constraints.
-6. Optional asset-conversion phase, only when the held treasury asset differs from the recipient-required asset:
+1. `SERVICE_NEED_DEFINED` — NOVA converts the operational request into capability, quantity, region, duration, data class and service objective.
+2. `SERVICE_DISCOVERED` — catalogue/MCP/API/OpenAPI/official documentation finds candidates; this does not authorize payment.
+3. `OFFER_REQUESTED` — NOVA requests the live offer, quote, checkout or service endpoint.
+4. `PAYMENT_CHALLENGE_RECEIVED` — provider returns a machine-readable HTTP 402/x402/MPP challenge, quote, invoice or provider-native payment request.
+5. `OFFER_VALIDATED` — exact resource, merchant, service, price/usage, accepted payment methods, token/network/recipient, expiry, fees, recurring/metered terms, data handling and fulfillment semantics are resolved. Invoice/fiat fields are populated only where applicable.
+6. `MANDATE_CHECKED` — active standing AstroCrown mandate and hard no-KYC/no-bank/no-card/no-debt rules are checked against this specific purchase. The purchase proceeds without new human approval only when it fits that mandate; otherwise it enters `NEEDS_INTERNAL_APPROVAL`.
+7. `PAYMENT_METHOD_SELECTED` — select a permitted crypto method supported by the live challenge; if needed, start the separate conversion phase below.
+8. Optional asset-conversion phase, only when the held treasury asset differs from the recipient-required asset:
    - `CONVERSION_QUOTE_REQUESTED` — obtain an exact-input quote and route for the exact source asset, destination asset, source/destination networks and treasury wallet.
    - `CONVERSION_QUOTE_VALIDATED` — independently validate canonical assets, approved contracts/routes, output minimum, expiry, price impact, complete fee breakdown, gas on every leg, native gas reserve and the all-in Council ceiling.
    - `CONVERSION_PREPARED` — construct only the exact swap/wrap/bridge steps and exact token approvals required by the validated route.
@@ -274,19 +332,22 @@ Required common state machine:
    - `CONVERSION_SUBMITTED` — record each source-chain transaction and route/bridge identifier; query status before retrying.
    - `CONVERSION_SOURCE_CONFIRMED` — source-chain execution is independently confirmed; for cross-chain operations this is not destination settlement.
    - `CONVERSION_DESTINATION_CONFIRMED` — independently verify the exact destination token/network and minimum received amount in the treasury wallet before supplier payment. If no conversion is needed, record `CONVERSION_NOT_REQUIRED`.
-7. `FUNDING_PREPARED` — prepare the exact supplier/intermediary payment using the validated destination asset, amount and network; replay protection and remaining policy cap are checked.
-8. `FUNDING_AUTHORIZED` — isolated policy signer authorizes only the exact crypto funding transaction.
-9. `FUNDING_SUBMITTED` — chain signature/hash or equivalent crypto payment reference and submission endpoint are recorded.
-10. `CRYPTO_FUNDING_CONFIRMED` — chain data independently confirms the intended token/network/destination/amount, or the native payment protocol provides equivalent verifiable settlement evidence.
-11. `SUPPLIER_SETTLEMENT_PENDING` — downstream settlement begins; route-specific evidence is required:
+15. `FUNDING_PREPARED` — prepare the exact supplier/intermediary payment using the validated destination asset, amount and network; replay protection and remaining policy cap are checked.
+16. `FUNDING_AUTHORIZED` — isolated policy signer authorizes only the exact crypto funding transaction.
+17. `FUNDING_SUBMITTED` — chain signature/hash or equivalent crypto payment reference and submission endpoint are recorded.
+18. `CRYPTO_FUNDING_CONFIRMED` — chain data independently confirms the intended token/network/destination/amount, or the native payment protocol provides equivalent verifiable settlement evidence.
+19. `PROTOCOL_PAYMENT_ACCEPTED` — x402/MPP/provider confirms its payment credential/transaction and returns a receipt or equivalent verifiable payment result.
+20. `SERVICE_FULFILMENT_PENDING` — await the protected API response, provisioned resource, provider credit, subscription activation or invoice settlement.
+21. `FULFILMENT_VERIFIED` — independently verify the actual service/resource/entitlement and bind it to the payment receipt. For invoice/card/voucher routes, route-specific supplier settlement evidence is also required.
+22. `SUPPLIER_SETTLEMENT_PENDING` — where there is a distinct downstream supplier settlement leg, continue route-specific reconciliation:
     - `CRYPTO_DIRECT`: supplier's invoice/payment endpoint confirms the exact crypto obligation;
     - `CRYPTO_TO_FIAT_INVOICE`: intermediary reports the fiat payout, with payout reference, beneficiary, currency and amount;
     - `CRYPTO_FUNDED_CARD`: card transaction is authorized and then captured/settled against the exact supplier;
     - `CRYPTO_VOUCHER`: the voucher/merchant credit is accepted by the exact supplier and issuance/redemption or merchant balance is verifiably confirmed.
-12. `SUPPLIER_PAYMENT_CONFIRMED` — supplier-side payment or merchant-credit evidence is present. For a fiat transfer, an intermediary's “crypto received” status alone is not sufficient. Require a completed payout status and transfer reference, plus supplier/provider invoice acknowledgement or equivalent independently checkable evidence.
-13. `PROVIDER_CREDIT_PENDING` — the supplier's service/API is polled or its webhook is verified for the matching payment.
-14. `CREDITED` — supplier account reports the matching credited balance/order/service term.
-15. `RECONCILED` — crypto amount, conversion/fees, fiat amount/currency, downstream payment, invoice, provider credit and authorized intent match; immutable audit record is published.
+23. `SUPPLIER_PAYMENT_CONFIRMED` — supplier-side payment or merchant-credit evidence is present. For a fiat transfer, an intermediary's “crypto received” status alone is not sufficient. Require a completed payout status and transfer reference, plus supplier/provider invoice acknowledgement or equivalent independently checkable evidence.
+24. `PROVIDER_CREDIT_PENDING` — the supplier's service/API is polled or its webhook is verified for the matching payment.
+25. `CREDITED` — supplier account reports the matching credited balance/order/service term.
+26. `RECONCILED` — crypto amount, conversion/fees, fiat amount/currency, downstream payment, invoice, provider credit and authorized intent match; immutable audit record is published.
 
 Invoice PDFs, supplier contracts, beneficiary bank details and payment references must be treated as confidential payment data. Do not send their contents to an external AI/LLM extraction or processing service unless the exact processor, purpose, retention, training, region, subprocessors and deletion path have been qualified and explicitly approved for that data class.
 
