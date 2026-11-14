@@ -6,6 +6,7 @@ on:
       - "preview/**"
       - "_config.yml"
       - "development/audit/tests/homepage_browser_smoke.py"
+      - "development/audit/tests/supporter_page_browser_smoke.py"
       - ".github/workflows/homepage-browser-smoke.yml"
   push:
     branches: [main]
