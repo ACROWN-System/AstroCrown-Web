@@ -103,7 +103,8 @@ class PrivacyTransparencyStaticSmoke(unittest.TestCase):
         required_phrases = (
             "pseudonymous", "public", "third parties", "not a Privacy Policy",
             "does not claim that ACROWN or USD₮ transfers are confidential",
-            "not enabled", "14 November 2026", "heightened risk", "issuer-specific token controls",\n            "dedicated contact address or privacy-request mechanism", "fictional test details only"
+            "not enabled", "14 November 2026", "heightened risk", "issuer-specific token controls",
+            "dedicated contact address or privacy-request mechanism", "fictional test details only"
         )
         lowered = self.page_source.lower()
         for phrase in required_phrases:
