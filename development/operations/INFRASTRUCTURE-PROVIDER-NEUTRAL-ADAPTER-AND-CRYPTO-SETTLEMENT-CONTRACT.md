@@ -193,10 +193,11 @@ No route is qualified based only on marketing claims such as “crypto accepted�
 Before a payment intent is created, the operation must carry a signed/immutable internal authorization record containing:
 
 - policy version and approving Council decision/reference;
-- allowed provider and provider account;
+- allowed supplier, intermediary/route provider and provider account, with the exact route type;
 - exact network/chain (e.g., Solana mainnet, Tron, Ethereum, BSC);
 - exact token identifier (canonical mint or contract, not just “USDT”);
-- allowed recipient address or verified provider invoice address;
+- allowed crypto recipient address or verified provider invoice address, plus the final supplier/fiat beneficiary where the route is indirect;
+- allowed fiat currency, maximum conversion spread/fees, quote expiry and supplier invoice reference where applicable;
 - max amount per transaction and total budget window;
 - allowed service, plan, region and duration;
 - expiration time and nonce/idempotency key;
@@ -208,25 +209,39 @@ A broad authorization like “pay hosting up to $150” is not sufficient to aut
 
 ### 4.3 Payment state machine
 
-Required normalized state machine:
+Every payment intent must declare one exact route type:
 
-1. `DRAFT` — NOVA proposes the exact service/quote.
+- `CRYPTO_DIRECT` — direct supplier crypto settlement;
+- `CRYPTO_TO_FIAT_INVOICE` — intermediary converts crypto and pays the supplier's fiat invoice;
+- `CRYPTO_FUNDED_CARD` — intermediary uses crypto funding to pay the supplier by card;
+- `CRYPTO_VOUCHER` — intermediary issues supplier-compatible merchant credit/voucher funded by crypto.
+
+Required common state machine:
+
+1. `DRAFT` — NOVA proposes the exact service, supplier obligation, quote and route.
 2. `AWAITING_INTERNAL_AUTHORIZATION` — Council policy approval is checked inside AstroCrown/NOVA.
-3. `AUTHORIZED` — signed policy envelope, caps and expiry are valid.
-4. `INVOICE_REQUESTED` — provider invoice/payment intent retrieved through API.
-5. `INVOICE_VALIDATED` — exact amount, asset, network, recipient, expiry, provider order/service and invoice ID match approved constraints.
-6. `TRANSACTION_PREPARED` — wallet transaction is constructed and simulated; replay protection and policy cap checked.
-7. `TRANSACTION_SIGNED` — isolated policy signer approves the exact transaction only.
-8. `SUBMITTED` — transaction signature/hash and submission endpoint recorded.
-9. `SETTLEMENT_PENDING` — chain confirmations/finality observed.
-10. `SETTLED_ON_CHAIN` — chain data independently confirms the intended token/network/destination/amount.
-11. `PROVIDER_CREDIT_PENDING` — provider's invoice API is polled or webhook is verified.
-12. `CREDITED` — provider account reports the matching credited balance/order.
-13. `RECONCILED` — amount, fees, transaction, invoice, provider balance and authorized intent match; immutable audit record published.
+3. `AUTHORIZED` — signed policy envelope, payer-side no-KYC/no-bank/no-card checks, caps and expiry are valid.
+4. `INVOICE_REQUESTED` — supplier invoice or intermediary payment intent retrieved through API.
+5. `INVOICE_VALIDATED` — exact supplier, service, invoice ID, fiat amount/currency (where relevant), crypto amount/asset/network, intermediary recipient, fees/spread, quote expiry, final beneficiary, payment reference and route limits match approved constraints.
+6. `FUNDING_PREPARED` — route-specific crypto funding transaction/order is constructed; replay protection and policy cap are checked.
+7. `FUNDING_AUTHORIZED` — isolated policy signer authorizes only the exact crypto funding transaction.
+8. `FUNDING_SUBMITTED` — chain signature/hash or equivalent crypto payment reference and submission endpoint are recorded.
+9. `CRYPTO_FUNDING_CONFIRMED` — chain data independently confirms the intended token/network/destination/amount, or the native payment protocol provides equivalent verifiable settlement evidence.
+10. `SUPPLIER_SETTLEMENT_PENDING` — downstream settlement begins; route-specific evidence is required:
+    - `CRYPTO_DIRECT`: supplier's invoice/payment endpoint confirms the exact crypto obligation;
+    - `CRYPTO_TO_FIAT_INVOICE`: intermediary reports the fiat payout, with payout reference, beneficiary, currency and amount;
+    - `CRYPTO_FUNDED_CARD`: card transaction is authorized and then captured/settled against the exact supplier;
+    - `CRYPTO_VOUCHER`: the voucher/merchant credit is accepted by the exact supplier and issuance/redemption or merchant balance is verifiably confirmed.
+11. `SUPPLIER_PAYMENT_CONFIRMED` — supplier-side payment or merchant-credit evidence is present. For a fiat transfer, an intermediary's “crypto received” status alone is not sufficient. Require a completed payout status and transfer reference, plus supplier/provider invoice acknowledgement or equivalent independently checkable evidence.
+12. `PROVIDER_CREDIT_PENDING` — the supplier's service/API is polled or its webhook is verified for the matching payment.
+13. `CREDITED` — supplier account reports the matching credited balance/order/service term.
+14. `RECONCILED` — crypto amount, conversion/fees, fiat amount/currency, downstream payment, invoice, provider credit and authorized intent match; immutable audit record is published.
 
-Terminal/exception states include `REJECTED`, `EXPIRED`, `FAILED_BEFORE_SUBMISSION`, `FAILED_ON_CHAIN`, `UNDERPAID`, `OVERPAID`, `WRONG_ASSET`, `WRONG_NETWORK`, `WRONG_DESTINATION`, `DUPLICATE`, `PROVIDER_CREDIT_MISMATCH`, `REFUND_PENDING`, `REFUNDED` and `MANUAL_REVIEW_REQUIRED`.
+A route must not report `SUPPLIER_PAYMENT_CONFIRMED`, `CREDITED` or `RECONCILED` merely because the intermediary received crypto. If the intermediary cannot expose a reliable downstream payout/capture/redemption state or a supplier acknowledgement, that route is not qualified for autonomous core payments.
 
-After a transaction is submitted, do not blindly retry a payment because an HTTP request timed out. Query chain status and provider invoice state first. Every transition must be idempotent and append an audit event.
+Terminal/exception states include `REJECTED`, `EXPIRED`, `FAILED_BEFORE_SUBMISSION`, `FAILED_ON_CHAIN`, `UNDERPAID`, `OVERPAID`, `WRONG_ASSET`, `WRONG_NETWORK`, `WRONG_DESTINATION`, `DUPLICATE`, `INTERMEDIARY_PAYOUT_FAILED`, `SUPPLIER_PAYMENT_UNCONFIRMED`, `CARD_DECLINED`, `CARD_REVERSED`, `VOUCHER_UNREDEEMABLE`, `PROVIDER_CREDIT_MISMATCH`, `REFUND_PENDING`, `REFUNDED` and `MANUAL_REVIEW_REQUIRED`.
+
+After crypto funding is submitted, do not blindly retry because an HTTP request timed out. Query chain status, intermediary route status and supplier invoice state first. Every transition must be idempotent and append an audit event. Refunds and reversals must retain the linkage to the original payment intent and must never silently create reusable untracked credit.
 
 ### 4.4 Signing and wallet isolation
 
