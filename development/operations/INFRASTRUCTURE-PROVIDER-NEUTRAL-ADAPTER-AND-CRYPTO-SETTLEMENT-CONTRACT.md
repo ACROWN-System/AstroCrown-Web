@@ -292,19 +292,19 @@ Once the purchase is inside that mandate, NOVA must not ask the Council to appro
 Before a payment intent is created, the operation must carry a signed/immutable internal authorization record containing:
 
 - policy version and approving Council decision/reference;
-- allowed supplier, intermediary/route provider and provider account, with the exact route type;
+- permitted supplier scope and service categories: this may be a named provider or a delegated category such as hosting, storage, inference, RPC or monitoring; NOVA may discover new providers at runtime if their live offer passes the mandate and hard rules, so a complete static provider list is not a prerequisite;
 - exact source chain/token identifier and treasury wallet, plus exact destination/payment chain/token identifier (canonical mint/contract/native asset, not just a symbol such as “USDT”);
 - optional swap/bridge route allowlist and contract/solver addresses, maximum source amount, minimum destination amount, maximum price impact/slippage, quote expiry, maximum gas/priority/relayer cost, maximum all-in conversion cost and required native gas reserve;
 - allowed crypto recipient address or verified provider invoice address, plus the final supplier/fiat beneficiary where the route is indirect;
 - allowed fiat currency, maximum conversion spread/fees, quote expiry and supplier invoice reference where applicable;
 - max amount per transaction and total budget window;
-- allowed service, plan, region and duration;
+- permitted service/plan classes, regions and duration ranges; exact provider, plan and region may be resolved from the live offer when it falls within the delegated scope;
 - expiration time and nonce/idempotency key;
 - whether the authorization covers one payment or recurring automatic renewal;
 - required settlement confirmations and overage ceiling (must be zero unless specifically authorized);
 - revocation state and current governance authority.
 
-A broad authorization like “pay hosting up to $150” is not sufficient to authorize any arbitrary destination or asset. The total paid transition budget currently recorded elsewhere is a planning ceiling of USDT 150; it is not an approved payment or proof that all launch requirements fit within the amount.
+A mandate such as “NOVA may procure qualified hosting up to the authorized category and spend ceiling” can be sufficient for autonomous routine purchases when it also states recurrence, service/data scope, permitted payment methods, risk/gas limits and escalation rules. It need not enumerate every provider in advance. However, it is never a blank cheque: the live offer and exact payment destination/asset/amount are bound to the mandate and checked immediately before signing. The total paid transition budget currently recorded elsewhere is a planning ceiling of USDT 150; it is not an approved payment or proof that all launch requirements fit within the amount.
 
 ### 4.3 Payment state machine
 
@@ -326,28 +326,26 @@ Required agent-native lifecycle (invoice fields are optional for API/HTTP paymen
 7. `PAYMENT_METHOD_SELECTED` — select a permitted crypto method supported by the live challenge; if needed, start the separate conversion phase below.
 8. Optional asset-conversion phase, only when the held treasury asset differs from the recipient-required asset:
    - `CONVERSION_QUOTE_REQUESTED` — obtain an exact-input quote and route for the exact source asset, destination asset, source/destination networks and treasury wallet.
-   - `CONVERSION_QUOTE_VALIDATED` — independently validate canonical assets, approved contracts/routes, output minimum, expiry, price impact, complete fee breakdown, gas on every leg, native gas reserve and the all-in Council ceiling.
+   - `CONVERSION_QUOTE_VALIDATED` — independently validate canonical assets, supported route/contracts, output minimum, expiry, price impact, complete fee breakdown, gas on every leg, native gas reserve and the all-in mandate ceiling.
    - `CONVERSION_PREPARED` — construct only the exact swap/wrap/bridge steps and exact token approvals required by the validated route.
-   - `CONVERSION_AUTHORIZED` — isolated signer checks every spender/router/bridge/solver, token, amount, deadline, minimum output and policy nonce against the authorization envelope.
+   - `CONVERSION_AUTHORIZED` — isolated signer checks every spender/router/bridge/solver, token, amount, deadline, minimum output and mandate before signing.
    - `CONVERSION_SUBMITTED` — record each source-chain transaction and route/bridge identifier; query status before retrying.
    - `CONVERSION_SOURCE_CONFIRMED` — source-chain execution is independently confirmed; for cross-chain operations this is not destination settlement.
    - `CONVERSION_DESTINATION_CONFIRMED` — independently verify the exact destination token/network and minimum received amount in the treasury wallet before supplier payment. If no conversion is needed, record `CONVERSION_NOT_REQUIRED`.
-15. `FUNDING_PREPARED` — prepare the exact supplier/intermediary payment using the validated destination asset, amount and network; replay protection and remaining policy cap are checked.
-16. `FUNDING_AUTHORIZED` — isolated policy signer authorizes only the exact crypto funding transaction.
-17. `FUNDING_SUBMITTED` — chain signature/hash or equivalent crypto payment reference and submission endpoint are recorded.
-18. `CRYPTO_FUNDING_CONFIRMED` — chain data independently confirms the intended token/network/destination/amount, or the native payment protocol provides equivalent verifiable settlement evidence.
-19. `PROTOCOL_PAYMENT_ACCEPTED` — x402/MPP/provider confirms its payment credential/transaction and returns a receipt or equivalent verifiable payment result.
-20. `SERVICE_FULFILMENT_PENDING` — await the protected API response, provisioned resource, provider credit, subscription activation or invoice settlement.
-21. `FULFILMENT_VERIFIED` — independently verify the actual service/resource/entitlement and bind it to the payment receipt. For invoice/card/voucher routes, route-specific supplier settlement evidence is also required.
-22. `SUPPLIER_SETTLEMENT_PENDING` — where there is a distinct downstream supplier settlement leg, continue route-specific reconciliation:
-    - `CRYPTO_DIRECT`: supplier's invoice/payment endpoint confirms the exact crypto obligation;
-    - `CRYPTO_TO_FIAT_INVOICE`: intermediary reports the fiat payout, with payout reference, beneficiary, currency and amount;
-    - `CRYPTO_FUNDED_CARD`: card transaction is authorized and then captured/settled against the exact supplier;
-    - `CRYPTO_VOUCHER`: the voucher/merchant credit is accepted by the exact supplier and issuance/redemption or merchant balance is verifiably confirmed.
-23. `SUPPLIER_PAYMENT_CONFIRMED` — supplier-side payment or merchant-credit evidence is present. For a fiat transfer, an intermediary's “crypto received” status alone is not sufficient. Require a completed payout status and transfer reference, plus supplier/provider invoice acknowledgement or equivalent independently checkable evidence.
-24. `PROVIDER_CREDIT_PENDING` — the supplier's service/API is polled or its webhook is verified for the matching payment.
-25. `CREDITED` — supplier account reports the matching credited balance/order/service term.
-26. `RECONCILED` — crypto amount, conversion/fees, fiat amount/currency, downstream payment, invoice, provider credit and authorized intent match; immutable audit record is published.
+9. `FUNDING_PREPARED` — prepare the exact supplier/intermediary payment using the validated destination asset, amount and network; replay protection and remaining mandate cap are checked.
+10. `FUNDING_AUTHORIZED` — isolated signer authorizes only the exact protocol payment credential/transaction.
+11. `FUNDING_SUBMITTED` — record the chain signature/hash, protocol credential reference or provider payment ID.
+12. `CRYPTO_FUNDING_CONFIRMED` — independently confirm the exact asset/network/destination/amount or verify an equivalent signed payment-protocol receipt.
+13. `PROTOCOL_PAYMENT_ACCEPTED` — x402/MPP/provider confirms the payment credential and returns a receipt or verifiable payment result.
+14. `SERVICE_FULFILMENT_PENDING` — await the protected API response, resource provisioning, service entitlement, subscription activation or invoice settlement.
+15. `FULFILMENT_VERIFIED` — verify the requested API result, usable resource/entitlement or credited service and bind it to the payment receipt.
+16. Conditional downstream settlement for intermediary routes only:
+    - `SUPPLIER_SETTLEMENT_PENDING` — invoice intermediary/card/voucher downstream settlement begins;
+    - `SUPPLIER_PAYMENT_CONFIRMED` — final supplier payment, card capture or voucher redemption is independently evidenced;
+    - `PROVIDER_CREDIT_PENDING` / `CREDITED` — supplier account confirms the matching credit, plan or service term. These states are not required as separate hops for a direct x402/MPP service that has already returned the paid resource and receipt.
+17. `RECONCILED` — source asset, conversion, gas/fees, destination asset, payment receipt, provider response/fulfilment, any downstream settlement and mandate usage match; append the immutable audit record.
+
+The same system supports one-off charges, metered sessions and subscriptions. Session and subscription renewals must remain within the mandate's merchant/service scope, period, usage and cumulative spend ceiling. The mandate can be revoked; unused session funds and any protocol-specific refunds must be reconciled.
 
 Invoice PDFs, supplier contracts, beneficiary bank details and payment references must be treated as confidential payment data. Do not send their contents to an external AI/LLM extraction or processing service unless the exact processor, purpose, retention, training, region, subprocessors and deletion path have been qualified and explicitly approved for that data class.
 
