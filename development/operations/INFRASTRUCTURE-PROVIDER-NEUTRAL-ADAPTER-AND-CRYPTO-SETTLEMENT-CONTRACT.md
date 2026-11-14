@@ -460,20 +460,23 @@ A route that does not support a lifecycle operation must state it; NOVA must not
 
 ## 7. Current adapter implementation sequence
 
-No runtime code is authorized by this specification alone. The recommended implementation order is:
+No live wallet, provider account, production credential or mainnet payment is authorized by this specification alone. The implementation starts with agent-native discovery and deterministic simulation.
 
-The `asset_conversion_adapter` is independent from the supplier-payment adapter. It may quote and prepare same-chain swaps, wrapping/unwrapping and cross-chain swap/bridge plans, but cannot sign or submit without the separate bounded treasury authorization. Its destination balance and chain evidence must reconcile before payment continues.
+1. **Language-neutral contracts:** define JSON/OpenAPI schemas for ServiceDiscovery, ServiceOffer, PaymentChallenge, StandingMandate, PaymentCredential, PaymentReceipt, FulfilmentEvidence, Compute, Inference, RPC, ObjectStore, Database, Scheduler, SecretStore and AssetConversion.
+2. **Agent service discovery:** implement read-only clients for the MPP service catalogue/API and MPP Services MCP; add generic provider API/OpenAPI/official-document discovery. Discovery is dynamic and must not require a pre-curated provider list.
+3. **Payment protocol clients:** implement parsers/adapters for HTTP 402/x402 and MPP challenges, including charge, session and subscription intents. Parse live challenge requirements, payment methods, asset/network, amount, expiry, usage and receipt. No wallet signing or funds are involved at this stage.
+4. **Provider-native fallback discovery:** add read-only service capability/quote retrieval for providers that do not expose MPP/x402 but have a documented API/CLI or machine-readable checkout. Do not create billable resources.
+5. **Deterministic offline conformance harness:** test catalogue discovery, malformed/expired/replayed challenges, offers requiring prohibited KYC/fiat/card methods, standing mandate evaluation, amount/period limits, payment credentials, receipts, fulfillment and error/recovery paths.
+6. **Asset conversion simulation:** test canonical token/chain discovery, route quotes, minimum output, slippage, source/destination gas, complete route costs, exact approvals, bridge delay/refund/partial outcomes and transaction rejection using mocks only.
+7. **Current $0 adapters:** wrap existing GitHub Actions, Cloudflare Pages/Workers/D1/R2 and Solana Devnet/public RPC without changing the active NOVA controller.
+8. **Read-only infrastructure/payment probes:** after confirming public documentation permits them, request quotes, service offers and payment challenges from candidate providers. Keep signing, account creation and billable resource creation disabled.
+9. **Council/NOVA signer simulation:** simulate an internally delegated standing mandate and isolated signer with deterministic local fixtures/testnet. Exercise per-transaction and cumulative ceilings; never use mainnet funds during development qualification.
+10. **Bounded provider lifecycle test:** only after a separate explicit decision and exact cost/terms approval, perform a small non-production resource create/inspect/destroy test. Verify no leftover resource or billing accrual.
+11. **Shadow-mode controller:** replay discovery, quote, challenge, decision and fulfilment events without making changes; prove parity with the existing NOVA control plane.
+12. **Single-writer cutover:** only after all gates pass and a Council decision, move the active controller. The old NOVA workflow must be stopped/fenced first.
+13. **Paid transition:** only after complete $0 qualification, separately approved and within the user's authorized deployment budget. No purchase is authorized here.
 
-
-1. **Pure contracts and schemas:** define language-neutral JSON/OpenAPI contracts for Compute, Inference, RPC, ObjectStore, Database, Scheduler, SecretStore, Payment and the separate AssetConversion capability.
-2. **Mocks and conformance harness:** test payment and conversion state machines, token allowlists, idempotency, route bounds, gas accounting, minimum output, bridge status, budget checks and provider capability declarations with no external API calls.
-3. **Current $0 adapters:** wrap existing GitHub Actions, Cloudflare Pages/Workers/D1/R2 and Solana Devnet/public RPC without changing the live controller.
-4. **Read-only crypto-host adapters:** add provider discovery, quotes, balance and invoice inspection for NoctHost and EQVPS after permitted account/API qualification. Do not create billable resources.
-5. **Council wallet/payment simulation:** test payment intents using a local deterministic chain simulator or testnet and mock provider invoices; never use mainnet funds during development qualification.
-6. **Non-production provider lifecycle:** after separate authorization and exact cost/terms approval, perform one bounded resource create/inspect/destroy test funded only from an expressly authorized amount. Verify no leftover resource or billing accrual.
-7. **Shadow-mode controller:** replay operational events without making changes; establish parity with existing NOVA state and scheduler.
-8. **Single-writer cutover:** only after all gates pass and a Council decision, move the active controller. The old NOVA workflow must be stopped/fenced first.
-9. **Paid transition:** only after complete $0 qualification, separately approved, and within the user's stated deployment budget. No purchase is authorized here.
+The separate `asset_conversion_adapter` quotes and prepares same-chain swaps, wrapping/unwrapping and cross-chain swap/bridge plans. It cannot sign or submit independently. Conversion destination balance and chain evidence must reconcile before the payment protocol adapter proceeds.
 
 ## 8. Current known gaps and decisions
 
@@ -486,11 +489,12 @@ The `asset_conversion_adapter` is independent from the supplier-payment adapter.
 | persistent CPU compute | No qualified $0 VPS currently known | Continue only targeted searches for true recurring $0/no-KYC/no-card machine runtime |
 | GPU | No active provider in NOVA roster | Continue search; distinguish trial/shared notebook from persistent job-capable GPU |
 | private production Solana RPC | Not qualified | Find no-KYC crypto-pay RPC or qualify a self-hosted node economics/operations path |
-| paid VPS + USDT | NoctHost candidate; EQVPS candidate | No-card/no-KYC route, terms, API key scopes, full lifecycle, backups, usage, price and restore tests |
-| USDT Solana payment | EQVPS advertises this route | Exact token/mint/network, invoice semantics and automated Council-wallet payment test |
+| paid VPS + crypto | NoctHost candidate; EQVPS candidate | No-card/no-KYC route, terms, API key scopes, full lifecycle, backups, usage, price and restore tests |
+| provider crypto payment | EQVPS advertises this route | Exact token/mint/network, invoice semantics and automated Council-wallet payment test |
 | domain + DNS | 0xHost API candidate; ENS is non-DNS alias | Registrar accreditation/TLD registrant rules, no-KYC conditions, DNS API, renewal and expiration tests |
 | GPU paid crypto path | NoctHost/OVH GPU, Akash, Nosana candidates | Exact hardware/pricing, no-KYC, host isolation, crypto settlement and automated job lifecycle |
 | payment signer | Not implemented | Policy-limited wallet architecture, testnet conformance, key recovery and audit evidence |
+| agent-native discovery/payment protocols | Not implemented | MPP catalogue/MCP discovery, x402/MPP challenge parsing, standing mandate, crypto-only method selection, receipt and fulfilment verification |
 | crypto-funded fiat/card intermediary | No route qualified | Map payer-side KYC/bank/card requirements, fees/spreads, legal availability, machine settlement and final supplier-payment confirmation |
 | provider failover | NOVA health/routing exists but whole product failover not qualified | End-to-end provider-outage simulations, state fencing and recovery evidence |
 
