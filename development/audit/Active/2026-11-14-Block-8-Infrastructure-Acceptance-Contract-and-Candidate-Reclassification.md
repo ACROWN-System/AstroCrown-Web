@@ -95,6 +95,7 @@ A strategic paid-stage service must have a documented route that starts with cry
 **Mandatory route-wide checks:**
 - map every entity in the payer-side path: crypto wallet, intermediary, exchange/conversion partner, card issuer/program manager, acquiring/settlement processor and any subprocessor;
 - identify which entity receives AstroCrown's crypto, which entity converts it, which entity pays the supplier, and which entity confirms final settlement;
+- classify direction of flow explicitly: `payer_crypto_to_supplier_crypto`, `payer_crypto_to_supplier_fiat`, `payer_crypto_to_supplier_card`, `payer_crypto_to_supplier_voucher` or `customer_crypto_to_merchant`; a merchant crypto-acceptance gateway is the reverse direction and is not an invoice-payout intermediary;
 - verify no KYC, government identity, real-name, bank-account, bank-credential, conventional card or fiat-account requirement is imposed on AstroCrown, its operators or beneficial owners at any step, including onboarding, top-up, limits increases, continued use, refunds or account recovery;
 - verify the intermediary's own fiat/card rails are internal to its service and do not require AstroCrown to become the bank/card account holder or contractual cardholder;
 - require API/CLI or other reliable machine interface for quote, invoice/order creation, crypto funding details, exact amount/fees/expiry, payment status, payout/card/voucher status, refunds/reversals, limits and reconciliation;
@@ -111,6 +112,7 @@ A strategic paid-stage service must have a documented route that starts with cry
 - a gift-card route is not accepted by the exact supplier, is not available in the required country/currency, or cannot be machine-purchased/reconciled;
 - provider marketing says "no KYC" but terms reserve routine identity verification or account suspension for ordinary use and no workable compliant route is evidenced;
 - a manual wallet transfer has no reliable payment reference, API reconciliation or automated confirmation;
+- a merchant-facing crypto-acceptance gateway is presented as a payer-side crypto-to-fiat invoice-settlement solution, although it only accepts crypto from the supplier's customer;
 - material AML/sanctions screening, fraud controls or legally required restrictions make the route unusable for the intended lawful operation. Do not attempt to evade legal controls; classify such a route as unavailable rather than bypassing them.
 
 A provider may be used for $0 development without itself accepting crypto only as a non-strategic, replaceable component, if its use does not create lock-in and a fully qualified crypto-funded paid replacement route exists. It must not be elevated to a long-term strategic dependency merely because it is currently free.
