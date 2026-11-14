@@ -12,7 +12,7 @@ Replace the htmlpreview.github.io-only viewing method for the current AstroCrown
 ## Source provenance
 
 - Homepage: development/index.html from current main, source blob a2d2865e1a11fc047039e1bfd8b66a73a54cc6d4.
-- Supporter page and wallet display script: PR #176 branch feature/supporter-programme-page-2026-11-11.
+- Supporter page and wallet display script: initially supplied by PR #176, then copied into the Cloudflare Pages publication bundle by PR #179; corrected in PR #180 to match the owner's multichain mainnet exception and personal multiplier allowance.
 - Privacy Centre: PR #177 branch feature/privacy-transparency-centre-2026-11-14.
 - Homepage account UI assets: current main account-continuity prototype CSS, account UI JavaScript and administrator wallet UI.
 
@@ -24,7 +24,7 @@ Replace the htmlpreview.github.io-only viewing method for the current AstroCrown
 4. The account UI is forced into hosted browser-preview mode. It reports no authenticated account, disables account creation and real passkey operations, and does not connect to a live backend.
 5. The homepage development warning stays present. Its staging acknowledgement is explicitly configured as local-only in the static bundle.
 6. The Supporter Programme remains a preview. Public wallet addresses may be displayed only following a visitor-initiated wallet connection; no signing, transfer, payment, registration or entitlement activation is implemented.
-7. Supporter wording preserves the latest requirement: ACROWN delivery on Solana; future USDT payment acceptance must cover every supported USDT network an eligible wallet can use to pay. The actual chain/token allowlist is still a pre-launch requirement, not an implementation claim.
+7. The Supporter Programme is now specified as the isolated real-mainnet exception: USD₮ ERC-20 on Ethereum, TRC-20 on Tron and SPL on Solana, with the canonical token contracts/mint recorded in the architecture and D1 migration. ACROWN delivery remains on Solana. The payment interface is still disabled: treasury addresses, payment verifier, ownership proofs, live backend and activation gates are not present.
 8. One Pages project hosts /, /supporters/ and /privacy-transparency.html. A separate supporter domain is unnecessary for the first preview.
 9. The Git integration build uses only Node.js built-ins. It requires no Cloudflare API token, npm dependency install or Worker/D1 resource.
 
@@ -60,6 +60,19 @@ Scripts prepared:
 The GitHub workflow builds the same dist directory and checks the ten-file allowlist, required routes, local references, noindex controls, read-only account configuration and absence of supporter wallet signing/transaction calls.
 
 Cloudflare Pages project creation and first deployment are not accessible through the connected tools in this session. The existing Cloudflare staging workflow provisions an account-continuity Worker/D1 environment and is deliberately not used as a static Pages deployment mechanism.
+
+## Current architecture correction
+
+PR #180 adds the detailed mainnet payment and entitlement foundation, including:
+- personal multiplier-derived ACROWN purchase allowance (illustrative 1,000 USD₮ → 25,000 ACROWN at 25:1, pending approval);
+- a separately governed programme-wide cap, if adopted;
+- one immutable 180-day period from actual operational activation;
+- canonical Ethereum/Tron/Solana USD₮ identifiers;
+- username, chain wallet and delivery-wallet data model;
+- D1 schema, immutable financial-history triggers and deterministic BigInt entitlement tests;
+- TronLink public-address discovery only.
+
+This foundation does not change the static Pages publication boundary and does not enable payment/signing. See `development/supporter-programme/MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md`.
 
 ## Explicit non-actions
 
