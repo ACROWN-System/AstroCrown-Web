@@ -92,6 +92,12 @@ for (const relativePath of allowlist) {
         '<meta name="theme-color" content="#081426">\n  <meta name="astro-account-runtime" content="worker-staging">'
       );
     }
+    html = replaceExactlyOnce(
+      html,
+      '          <a href="#explore">Explore ecosystem</a>',
+      '          <a href="#explore">Explore ecosystem</a>' + String.fromCharCode(10) + '          <a href="./supporters/">Supporter Programme</a>',
+      "Supporter Programme footer navigation",
+    );
     if (!html.includes("astro-staging-banner")) {
       html = html.replace(
         /<body([^>]*)>/i,
@@ -157,6 +163,19 @@ for (const relativePath of allowlist) {
   } else {
     await cp(source, destination);
   }
+}
+
+// The Supporter Programme preview is a deliberate, narrowly scoped static
+// addition to the same site. Do not copy the preview directory wholesale.
+const supporterFiles = [
+  ["preview/supporters/index.html", "supporters/index.html"],
+  ["preview/supporters/supporters.js", "supporters/supporters.js"],
+];
+for (const [sourcePath, destinationPath] of supporterFiles) {
+  const source = join(repoRoot, sourcePath);
+  const destination = join(publicRoot, destinationPath);
+  await mkdir(dirname(destination), { recursive: true });
+  await cp(source, destination);
 }
 
 console.log("Built the allowlisted AstroCrown staging website asset set.");

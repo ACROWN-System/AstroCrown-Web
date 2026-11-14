@@ -12,7 +12,8 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 - One-time 256-bit offline recovery key; only a salted SHA-256 verifier is stored. Recovery requires a new passkey, consumes/rotates the key, deactivates old credentials, revokes prior sessions and records an audit event.
 - Session tokens stored only as SHA-256 hashes; HttpOnly, SameSite=Strict cookies; Secure on HTTPS.
 - Runtime diagnostics for the actual SimpleWebAuthn default algorithm list and native ML-DSA Web Crypto support.
-- Restricted static build copies only the homepage, account UI assets, and explicitly allowlisted account/legal pages from development. It does not publish repository documentation, audit records, backups, or source files.
+- Restricted static build copies only the homepage, account UI assets, explicitly allowlisted account/legal pages, and the two named static Supporter Programme preview files. It does not publish the rest of the repository, audit records, backups, or source files.
+- The Supporter Programme preview is served at the same origin under `/supporters/` and linked from the homepage footer. It shows the intended Ethereum/Tron/Solana USD₮ mainnet scope and the illustrative multiplier model, but remains a display-only development preview: no real contributions, member registration, entitlement activation, ACROWN purchase or payment API is enabled.
 - Existing homepage/account UI are reused. The generated staging homepage is clearly marked as a live public test environment. Its mandatory first-visit notice explains that public submissions are visible to anyone, that accounts/data are disposable, and that only enabled test functionality may be used. The notice must be acknowledged through a same-origin API request before account APIs accept requests.
 
 ## Account security lifecycle — local qualification passed; not deployed
