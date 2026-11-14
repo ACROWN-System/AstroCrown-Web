@@ -83,11 +83,11 @@ Reject or block services that require a person to approve routine requests, resp
 
 ### Gate 5 — Crypto-funded paid transition without relocating excluded friction
 
-A strategic paid-stage service must have a documented route that starts with cryptocurrency controlled by AstroCrown and completes payment to the supplier without requiring AstroCrown or its authorized operator to obtain KYC approval, a bank account, a conventional payment card or a fiat payment account. Direct crypto acceptance is preferred, but it is not the only acceptable settlement architecture.
+A strategic paid-stage service must have a documented route that starts with cryptocurrency controlled by AstroCrown and completes payment to the supplier without requiring AstroCrown or its authorized operator to obtain KYC approval, a bank account, a conventional payment card or a fiat payment account. Direct crypto acceptance is preferred, but it is not the only acceptable settlement architecture. The crypto-asset collected or held by AstroCrown does not have to match the asset demanded by the supplier/intermediary: NOVA may evaluate a qualified self-custody swap/bridge route from any eligible treasury asset into the exact destination asset/network, subject to asset allowlisting, gas reserve, minimum output, all-in fee ceiling and Council authorization. USDT is not mandatory; route quality, lawful eligibility, security and total execution cost determine the selected payment asset.
 
 **Permitted route classes to investigate:**
 
-1. **Direct crypto settlement:** AstroCrown pays the supplier's verified wallet/invoice in USDT (preferred), or USDC/another explicitly approved crypto asset where USDT is unavailable. Record the exact network, canonical token contract/mint, recipient and settlement semantics.
+1. **Direct crypto settlement:** AstroCrown pays the supplier's verified wallet/invoice in the exact asset/network accepted by that supplier. The source asset may be any eligible crypto asset held by AstroCrown; NOVA may convert it through a separately qualified swap/bridge route before payment. USDT may be convenient, but is not mandatory. Record canonical source and destination token contract/mint/native identifiers, network, recipient and settlement semantics.
 2. **Crypto-to-fiat invoice settlement:** AstroCrown sends crypto to a qualified intermediary; the intermediary converts it and pays the supplier's fiat invoice using the intermediary's own settlement arrangements. The supplier may provide its own beneficiary bank details where required. AstroCrown must not open or link a bank account, provide card/bank details, or complete KYC with the intermediary.
 3. **Crypto-funded payment card:** AstroCrown funds a payment provider in crypto and the provider makes a card payment to the supplier. The card must be issued/operated through the provider without requiring AstroCrown to obtain a conventional card account, provide card/bank details, or complete KYC. The route must support machine-readable funding, spending limits, transaction status, freeze/revoke and reconciliation. Issuer or regulator-triggered identity checks are a disqualifier if they apply to AstroCrown or its operators.
 4. **Crypto-funded voucher or merchant credit:** AstroCrown purchases a supplier-compatible voucher/credit using crypto. This is acceptable only for the exact merchant/service and only where the voucher route can be purchased, redeemed, monitored and reconciled without KYC, bank/card details or recurring manual action. It is not a general invoice-payment substitute.
@@ -101,6 +101,7 @@ A strategic paid-stage service must have a documented route that starts with cry
 - require API/CLI or other reliable machine interface for quote, invoice/order creation, crypto funding details, exact amount/fees/expiry, payment status, payout/card/voucher status, refunds/reversals, limits and reconciliation;
 - ensure no routine CAPTCHA, human support approval, manual bank transfer, manual card loading, per-payment identity review or interactive 3-D Secure/OTP dependency is needed for normal autonomous operation;
 - prohibit hidden exchange spreads, unbounded fees, automatic debt/overdraft, auto-top-up and fiat/card fallback;
+- for conversion, calculate all-in costs including source/destination gas, approvals, pool/DEX fees, aggregator/solver/bridge/relayer fees, price impact, slippage and final supplier-payment fees; enforce an explicit gas reserve and maximum total conversion-cost policy;
 - require independent validation of recipient, fiat currency, exchange rate, quote expiry, final amount, reference and supplier payment confirmation.
 
 **Not sufficient / fail conditions:**
@@ -116,6 +117,18 @@ A strategic paid-stage service must have a documented route that starts with cry
 - material AML/sanctions screening, fraud controls or legally required restrictions make the route unusable for the intended lawful operation. Do not attempt to evade legal controls; classify such a route as unavailable rather than bypassing them.
 
 A provider may be used for $0 development without itself accepting crypto only as a non-strategic, replaceable component, if its use does not create lock-in and a fully qualified crypto-funded paid replacement route exists. It must not be elevated to a long-term strategic dependency merely because it is currently free.
+
+
+
+### Gate 5A — Treasury asset conversion is permitted only under a bounded route
+
+AstroCrown does not have to hold the same asset a supplier or payment intermediary requires. A source asset may be converted from the self-custody treasury into the exact recipient-required asset/network through a qualified DEX/aggregator, wrap/unwrap, bridge or intent route. This removes USDT as a mandatory settlement or treasury asset.
+
+This does **not** mean that every token is automatically eligible. Source assets must be individually identifiable and risk-qualified, transferable from a controlled wallet, supported by a fresh executable route and sufficient liquidity, and free of disqualifying token controls or contract risk. Canonical contract/mint/native identifiers are mandatory; token symbols are not identifiers.
+
+The route must have a bounded source spend, minimum destination output, quote expiry, max slippage/price impact, approved router/bridge/solver contracts, max gas on each chain, a separately funded native-gas reserve (unless an exact sponsored route is verifiably available), and a maximum all-in cost. Include pool/DEX fees, aggregator/solver/bridge/relayer fees, token approvals, source and destination gas, priority/tip, account creation/rent, slippage and the supplier's final payment fee. If the conversion route is uneconomic, unavailable, unsafe or outside the approved cost ceiling, NOVA must not execute it; it may select another qualified path or pause.
+
+Same-chain swaps are preferred where comparable. Cross-chain routes are separate asynchronous legs: source-chain confirmation is not destination-chain settlement. Wrong-token, partial, failed, refunded or delayed bridge outcomes must not trigger supplier payment. Exact token approvals and policy-limited signing are mandatory. Centralized exchanges or custodial services that introduce payer-side KYC/KYB, bank, conventional card or routine human dependencies remain disqualified.
 
 ### Gate 6 — Commercial and intended-use rights
 
