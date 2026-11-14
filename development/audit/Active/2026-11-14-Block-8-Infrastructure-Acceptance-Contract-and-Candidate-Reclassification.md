@@ -130,6 +130,32 @@ The route must have a bounded source spend, minimum destination output, quote ex
 
 Same-chain swaps are preferred where comparable. Cross-chain routes are separate asynchronous legs: source-chain confirmation is not destination-chain settlement. Wrong-token, partial, failed, refunded or delayed bridge outcomes must not trigger supplier payment. Exact token approvals and policy-limited signing are mandatory. Centralized exchanges or custodial services that introduce payer-side KYC/KYB, bank, conventional card or routine human dependencies remain disqualified.
 
+### Gate 5B — Agent-native dynamic discovery and runtime payment negotiation
+
+Provider-specific documentation does **not** have to be exhaustively researched, approved and entered into a static catalogue before NOVA can discover or probe a service. NOVA is expected to operate as an autonomous agent and to use the agent-facing interfaces and payment protocols that providers expose.
+
+The standing requirements are fixed; provider offers and technical details are discovered dynamically:
+
+1. NOVA discovers potential services using service catalogues, registries, MCP discovery, A2A/agent directories, APIs, OpenAPI/service descriptions, and official provider endpoints.
+2. NOVA requests the current quote/offer or calls the service. It reads the live machine-readable payment challenge, for example an HTTP 402 response using x402 or MPP, or a provider-native invoice/order/checkout API.
+3. The challenge/offer identifies the current amount, payment method, asset/network, recipient, expiry, usage or subscription terms and proof required. Catalogue entries are advisory; the live offer is authoritative.
+4. NOVA dynamically checks the offer against the standing AstroCrown mandate and the hard no-KYC/no-bank/no-card/no-debt rules. It does not need a manually curated dossier for every provider before discovery.
+5. If the offer supports an allowed crypto payment, NOVA selects the most suitable held asset or obtains a quote to convert an eligible asset into the exact requested destination asset/network. It includes full gas and execution cost.
+6. If the purchase is within the standing mandate, NOVA can authorize and execute it autonomously. It records the protocol receipt and verifies that the resource, API result, entitlement or service credit was actually delivered.
+7. For metered sessions or subscriptions, NOVA monitors cumulative usage and renewal under the same mandate, and stops/does not renew when the mandate, funds, service need or policy no longer permits it.
+8. If a provider asks for a forbidden identity, bank, card or manual step, or if the live offer cannot be understood or verified, NOVA rejects that offer and continues discovery. It must not evade a legal or security control.
+
+**The key distinction is that policy is pre-established; the provider-specific process is learned at runtime.** NOVA may be authorized in advance to procure qualified services within delegated categories and spending limits without naming every provider. The exact provider, offer, recipient, asset and amount are bound to the mandate immediately before the transaction. The Council is not asked to approve every routine API request or recurring small charge; it is asked only when the transaction exceeds the standing authority or an exceptional policy decision is required.
+
+Relevant open agent-payment approaches include:
+- x402: request → HTTP 402 payment requirements → agent wallet payment proof → retry → service response/receipt.
+- Machine Payments Protocol (MPP): machine-readable payment challenge/credential/receipt; supports one-off charges, metered sessions and subscriptions.
+- AP2: signed mandates and action authorization as a reference for proving what an agent is delegated to do.
+
+The protocol is not itself a guarantee that a provider is no-KYC or that a particular token/network is accepted. The live provider terms and offer must be checked. Use crypto payment methods only; do not enable card or bank methods merely because a general protocol supports them.
+
+A service that does not support an agent-native payment protocol may still be considered through its own machine API or provider-native crypto checkout. Browser automation is a last-resort compatibility path, not a reason to accept recurring CAPTCHA, manual identity checks, bank/card entry or human payment approval.
+
 ### Gate 6 — Commercial and intended-use rights
 
 Terms must permit the actual intended activity, including commercial development for AstroCrown, development of a customer-facing platform, and future commercial operation where the provider is being considered for that stage.
