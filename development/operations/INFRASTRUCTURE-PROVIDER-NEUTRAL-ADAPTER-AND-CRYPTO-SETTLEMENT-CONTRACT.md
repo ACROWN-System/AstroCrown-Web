@@ -395,8 +395,11 @@ A route that does not support a lifecycle operation must state it; NOVA must not
 
 No runtime code is authorized by this specification alone. The recommended implementation order is:
 
-1. **Pure contracts and schemas:** define language-neutral JSON/OpenAPI contracts for Compute, Inference, RPC, ObjectStore, Database, Scheduler, SecretStore and Payment.
-2. **Mocks and conformance harness:** test state machines, idempotency, budget checks, failures and provider capability declarations with no external API calls.
+The `asset_conversion_adapter` is independent from the supplier-payment adapter. It may quote and prepare same-chain swaps, wrapping/unwrapping and cross-chain swap/bridge plans, but cannot sign or submit without the separate bounded treasury authorization. Its destination balance and chain evidence must reconcile before payment continues.
+
+
+1. **Pure contracts and schemas:** define language-neutral JSON/OpenAPI contracts for Compute, Inference, RPC, ObjectStore, Database, Scheduler, SecretStore, Payment and the separate AssetConversion capability.
+2. **Mocks and conformance harness:** test payment and conversion state machines, token allowlists, idempotency, route bounds, gas accounting, minimum output, bridge status, budget checks and provider capability declarations with no external API calls.
 3. **Current $0 adapters:** wrap existing GitHub Actions, Cloudflare Pages/Workers/D1/R2 and Solana Devnet/public RPC without changing the live controller.
 4. **Read-only crypto-host adapters:** add provider discovery, quotes, balance and invoice inspection for NoctHost and EQVPS after permitted account/API qualification. Do not create billable resources.
 5. **Council wallet/payment simulation:** test payment intents using a local deterministic chain simulator or testnet and mock provider invoices; never use mainnet funds during development qualification.
