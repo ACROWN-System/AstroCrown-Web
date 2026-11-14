@@ -287,6 +287,34 @@ AstroCrown should authorize NOVA through a standing, revocable mandate on its ow
 
 Once the purchase is inside that mandate, NOVA must not ask the Council to approve every API call, routine renewal or small infrastructure expense. It records the reason and evidence. It escalates only when a purchase is outside the authorized envelope or the policy requires it. A signed mandate/receipt model such as AP2 is a useful interoperability reference for proving delegated agent authority, but AstroCrown's own mandate remains the governing authorization unless an external service requires a compatible credential.
 
+### 4.1.4 Reuse existing agent procurement and payment stacks before building equivalents
+
+NOVA must follow an **integration-first / reuse-first** strategy. The existence of autonomous agent catalogues, agent-commerce marketplaces, payment routers, wallet tools and protocol clients means AstroCrown should not implement duplicate products merely to obtain those capabilities.
+
+The candidate stack is modular; it is not a single-vendor choice:
+- **Service discovery/catalogue sources:** existing MCP service directories, Nevermined Catalog, Coinbase CDP Bazaar, xPay's discovery sources and provider-native capability catalogues.
+- **Payment routers/clients:** Nevermined Router for combined x402+MPP, Coinbase Bazaar MCP for x402, and other maintained protocol clients as alternatives.
+- **Agent-to-agent service markets:** Virtuals ACP, Olas Mech and other qualified registries for hiring specialist agents with defined deliverables/escrow; these do not automatically pay ordinary cloud vendors.
+- **Agent identity/reputation:** ERC-8004 and marketplace-specific reputation/validation data as optional trust signals; identity/reputation standards are not payment rails.
+- **Asset conversion:** existing qualified DEX/aggregator/bridge adapters such as LI.FI/Jupiter or a provider-native route; do not create a new swap aggregator.
+- **Wallet/signing:** use an existing secure wallet/smart-account adapter only after it meets the custody, delegation and no-KYC policy. Do not pass a private key to an agent, MCP server or external Router.
+
+NOVA should discover and rank offers across the available directories. It may use one stack to discover a service and a different stack to pay it. For example, a directory can return an endpoint and schema; a payment Router can then process its live x402/MPP challenge. A task marketplace can instead supply a specialist agent that completes a bounded task and returns an auditable deliverable.
+
+**Do not assume one stack covers everything.** Nevermined Router is documented for public x402 and MPP endpoints, not conventional subscription invoices or arbitrary card-only suppliers. Coinbase Bazaar is x402-focused. An agent marketplace sells another agent's offering, not necessarily a VPS/GPU service. If the chosen provider is not supported by an existing stack, NOVA tries the provider's native machine API/crypto checkout or a compatible intermediary, then skips it if the standing policy cannot be met.
+
+The integration boundary should preserve:
+- the upstream source/provider identity and the exact tool/version used;
+- live offer/challenge, token/network/recipient, fees, expiry and route;
+- external stack's delegation/cap and AstroCrown's own standing mandate (the external cap is an additional lower ceiling);
+- signer isolation and the ability to revoke the external tool's authority;
+- payment and service-fulfilment receipts, including a locally retained canonical NOVA record;
+- a replaceable adapter so catalogue, router, wallet or marketplace can be changed without changing NOVA's operational objectives.
+
+Before reusing an open-source wallet package, inspect its key storage, actual custody adapter implementation, durable spend ledger, fail-closed defaults, recipient/program checks, dependency/security posture and network defaults. Marketing labels such as “custodial”, “self-custody”, “secure” or “agent-ready” are not evidence that the implementation has those properties.
+
+A read-only public discovery probe does not require a complete pre-qualification dossier or a Council decision. A paid action is checked at runtime against the standing mandate. If the exact account/onboarding route materially requires KYC, bank/card details, a human payment step, or an unknown condition that prevents lawful/policy-compatible operation, NOVA does not fund it and continues discovery. Do not attempt to bypass the provider's control.
+
 ### 4.2 Council policy authorization envelope
 
 Before a payment intent is created, the operation must carry a signed/immutable internal authorization record containing:
@@ -460,23 +488,23 @@ A route that does not support a lifecycle operation must state it; NOVA must not
 
 ## 7. Current adapter implementation sequence
 
-No live wallet, provider account, production credential or mainnet payment is authorized by this specification alone. The implementation starts with agent-native discovery and deterministic simulation.
+No live wallet, provider account, production credential or mainnet payment is authorized by this specification alone. Use existing agentic-commerce infrastructure first and implement only the missing AstroCrown integration boundary.
 
-1. **Language-neutral contracts:** define JSON/OpenAPI schemas for ServiceDiscovery, ServiceOffer, PaymentChallenge, StandingMandate, PaymentCredential, PaymentReceipt, FulfilmentEvidence, Compute, Inference, RPC, ObjectStore, Database, Scheduler, SecretStore and AssetConversion.
-2. **Agent service discovery:** implement read-only clients for the MPP service catalogue/API and MPP Services MCP; add generic provider API/OpenAPI/official-document discovery. Discovery is dynamic and must not require a pre-curated provider list.
-3. **Payment protocol clients:** implement parsers/adapters for HTTP 402/x402 and MPP challenges, including charge, session and subscription intents. Parse live challenge requirements, payment methods, asset/network, amount, expiry, usage and receipt. No wallet signing or funds are involved at this stage.
-4. **Provider-native fallback discovery:** add read-only service capability/quote retrieval for providers that do not expose MPP/x402 but have a documented API/CLI or machine-readable checkout. Do not create billable resources.
-5. **Deterministic offline conformance harness:** test catalogue discovery, malformed/expired/replayed challenges, offers requiring prohibited KYC/fiat/card methods, standing mandate evaluation, amount/period limits, payment credentials, receipts, fulfillment and error/recovery paths.
-6. **Asset conversion simulation:** test canonical token/chain discovery, route quotes, minimum output, slippage, source/destination gas, complete route costs, exact approvals, bridge delay/refund/partial outcomes and transaction rejection using mocks only.
-7. **Current $0 adapters:** wrap existing GitHub Actions, Cloudflare Pages/Workers/D1/R2 and Solana Devnet/public RPC without changing the active NOVA controller.
-8. **Read-only infrastructure/payment probes:** after confirming public documentation permits them, request quotes, service offers and payment challenges from candidate providers. Keep signing, account creation and billable resource creation disabled.
-9. **Council/NOVA signer simulation:** simulate an internally delegated standing mandate and isolated signer with deterministic local fixtures/testnet. Exercise per-transaction and cumulative ceilings; never use mainnet funds during development qualification.
-10. **Bounded provider lifecycle test:** only after a separate explicit decision and exact cost/terms approval, perform a small non-production resource create/inspect/destroy test. Verify no leftover resource or billing accrual.
-11. **Shadow-mode controller:** replay discovery, quote, challenge, decision and fulfilment events without making changes; prove parity with the existing NOVA control plane.
-12. **Single-writer cutover:** only after all gates pass and a Council decision, move the active controller. The old NOVA workflow must be stopped/fenced first.
-13. **Paid transition:** only after complete $0 qualification, separately approved and within the user's authorized deployment budget. No purchase is authorized here.
+1. **Read-only stack evaluation:** compare Nevermined Catalog MCP/Router, Coinbase Bazaar MCP and selected xPay discovery sources for service discovery, live challenge handling, payment routing, receipts, ledger, idempotency, cost and no-KYC/onboarding eligibility. Do not create accounts or supply identity data in this step.
+2. **Agent-marketplace evaluation:** inspect Virtuals ACP, Olas Mech, AgenC and any other relevant agent task markets for the specific specialist tasks NOVA cannot perform efficiently itself. Distinguish task hiring from ordinary infrastructure vendor checkout.
+3. **Reuse existing payment routers/clients:** prefer a maintained existing x402/MPP client or Router. Build our own protocol adapter only where the existing component is unsuitable, unmaintained or fails a hard requirement.
+4. **Reuse discovery sources:** query existing MCP catalogues, service directories, Bazaar, xPay sources and provider capability APIs; use a common thin normalizer only for the fields NOVA needs to rank offers. Do not create another global provider registry unless a proven gap remains.
+5. **Thin AstroCrown integration contracts:** define only the language-neutral ServiceOffer, StandingMandate binding, external-stack reference, PaymentReceipt and FulfilmentEvidence contracts needed to connect selected existing stacks with NOVA's own durable state. Preserve the native upstream schemas and receipts.
+6. **Offline integration simulations:** replay representative x402/MPP challenges, task-marketplace offers, caps, denied routes, duplicate requests, failed fulfilment, expired delegation, settlement/receipt mismatch and revocation without calling live payment APIs.
+7. **Asset-conversion integration:** evaluate existing qualified quote APIs such as LI.FI/Jupiter; simulate canonical token lookup, minimum output, slippage, source/destination gas, full fees, exact approvals and bridge failures. Do not create a new DEX or bridge.
+8. **Wallet/signing boundary:** select an existing wallet/smart-account signer only after source/terms/custody and no-KYC review. If no external signer meets policy, retain the AstroCrown-controlled isolated signer design; never give a key to an LLM or generic MCP tool.
+9. **Current $0 service adapters:** wrap existing GitHub Actions, Cloudflare Pages/Workers/D1/R2 and Solana Devnet/public RPC without changing the active NOVA controller.
+10. **Read-only live probes:** where public documentation allows, query real service directories, quotes and payment challenges. No funded delegation or billable resource creation.
+11. **Bounded testnet/dry-run conformance:** once the integration and no-KYC gates pass, simulate a standing mandate with deterministic local fixtures/testnet. No mainnet payment.
+12. **Provider lifecycle and shadow mode:** only after explicit authorization, test one bounded non-production provider resource; replay NOVA events in shadow mode and establish controller/state parity.
+13. **Single-writer cutover / paid transition:** only after full $0 qualification, independent review and an explicit Council decision. Do not duplicate active NOVA schedulers or initiate a purchase automatically.
 
-The separate `asset_conversion_adapter` quotes and prepares same-chain swaps, wrapping/unwrapping and cross-chain swap/bridge plans. It cannot sign or submit independently. Conversion destination balance and chain evidence must reconcile before the payment protocol adapter proceeds.
+The preferred first integrations are Nevermined Router/Catalog MCP (candidate for x402+MPP buyer-side procurement), Coinbase Bazaar MCP (alternate x402 discovery/payment path) and xPay's read-only discovery sources (broad x402/AgenC directory). ACP/Olas/AgenC are optional agent-task markets. None is approved for treasury or live payment until the actual payer onboarding and no-KYC path are proven.
 
 ## 8. Current known gaps and decisions
 
