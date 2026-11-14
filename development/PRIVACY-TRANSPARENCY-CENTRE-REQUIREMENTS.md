@@ -106,6 +106,14 @@ The page must present the following evidence distinctions as-of the review date 
 
 Before page promotion, compare these states with current main and PRs again.
 
+### Contact and reporting requirements
+
+The repository Security Policy is the current documented security-report route: `https://github.com/ACROWN-System/AstroCrown-Web/blob/main/SECURITY.md`. It points to GitHub private vulnerability reporting if the feature is enabled; otherwise, it asks for a minimal public issue requesting a private channel, without publishing technical details, exploit steps, secrets or evidence. Do not present this as a general privacy-request or customer-support channel.
+
+A dedicated product privacy-request/contact route is not currently established in the reviewed repository. The page must state that plainly and must not invent an email or encourage users to publish personal information. Before production, establish, verify and publish a suitable contact mechanism and a workflow for privacy/data-subject requests, security incidents and general product support. Define ownership, intake, identity verification proportional to the request, triage, response handling, secure evidence exchange and retention.
+
+The current homepage account modal is a browser-memory demo. The page must state that users should use invented values only and must not submit real identity information, wallet secrets, credentials or live assets.
+
 ## 7. Accessibility and technical implementation
 
 - Semantic HTML landmarks, logical heading order and one `h1`.

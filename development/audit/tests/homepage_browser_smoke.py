@@ -699,10 +699,16 @@ def main() -> int:
                 and guide_baseline["robots"] == "noindex, nofollow, noarchive"
                 and guide_baseline["scripts"] == 0
                 and not guide_baseline["externalResources"]
-                and guide_baseline["sectionCount"] >= 9
+                and guide_baseline["sectionCount"] >= 10
                 and guide_baseline["skipLink"]
-                and guide_baseline["localNavCount"] >= 9,
+                and guide_baseline["localNavCount"] >= 10,
                 guide_baseline,
+            )
+            check(
+                "help and reporting section discloses missing privacy contact",
+                guide_page.locator("#reporting").count() == 1
+                and "has not yet been published" in guide_page.locator("#reporting").inner_text(),
+                guide_page.locator("#reporting").inner_text()[:700],
             )
             guide_page.locator('nav[aria-label="On this page"] a[href="#public-blockchains"]').click()
             check(

@@ -39,7 +39,7 @@ Continue the preserved system reassessment at Block 8 without repeating complete
 1. Current `main` commit is `706f873e460f3c82f42659b43de79462146416b7`.
 2. Existing `preview/privacy-policy.html` is a development-only draft for a legacy account prototype, not a complete policy for current or future system data flows.
 3. The current preview Wallet menu explicitly states it cannot connect wallets, sign messages, submit orders or move assets.
-4. The account consent UI is a legacy preview dialog; the guide is linked separately and does not replace the legal-policy links.
+4. The account consent UI is a legacy preview dialog; the guide is linked separately and does not replace the legal-policy links. The account modal is a browser-memory demonstration and requires fictional details only.
 5. Passkey-first account foundation PR #141 is merged. The Worker/D1 account README still limits its qualification to local synthetic testing; remote staging and real-user production deployment are not enabled.
 6. Supporter programme PR #176 remains open/draft; its current preview is not a live payment or treasury feature.
 7. `development/SECURITY-BASELINE.md` has broad review areas marked UNVERIFIED. No overall security status may be inferred.
@@ -75,7 +75,7 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 8. Assess AI data handling per exact API route and plan: Gemini unpaid-service inputs/outputs may be used for product/model improvement and human review, with 18+ and non-consumer API-client conditions; Groq differentiates usage metadata from inference data and offers optional ZDR; Cloudflare Workers AI distinguishes stateless no-content-retention/no-training from operational metadata and stateful/logging exceptions.
 9. Use official primary sources for changing protocol/provider claims and date the review.
 10. Keep page static/no-dependency, accessible and self-contained; no external tracking, JavaScript framework or third-party assets.
-11. The current page is a noindex preview. Production promotion requires its own decision and a complete data-flow/legal/accessibility/security review.
+11. The current page is a noindex preview. Production promotion requires its own decision and a complete data-flow/legal/accessibility/security review.\n12. The repository Security Policy is a security-vulnerability route only; no product privacy-request contact is published yet. Production promotion remains blocked until a verified privacy/support route and handling workflow exist.
 
 ## Dependencies / source links
 
@@ -98,7 +98,7 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 ### If not modified
 
 - Users may incorrectly equate no-KYC with anonymity, self-custody with privacy, or passkeys with private payments.
-- Users may not realise that wallet/RPC/AI-provider activity can reveal metadata.
+- Users may not realise that wallet/RPC/AI-provider activity can reveal metadata or that a privacy-request contact is not yet published.
 - The project may appear to promise protections it has not implemented, or fail to explain the limitations of public-chain payments.
 - The old legacy Privacy Policy draft may be mistaken for a complete current privacy statement.
 
@@ -106,7 +106,7 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 
 - [ ] Back up the exact pre-change homepage and account consent script; verify both source SHAs.
 - [ ] Verify the new page has unique IDs and valid internal anchor targets.
-- [ ] Verify essential content, source references, preview status and implementation-status caveats.
+- [ ] Verify essential content, source references, preview status, account-demo limitations, security-report route and missing privacy contact disclosure.
 - [ ] Verify no scripts, trackers, external assets or unapproved dependencies were added.
 - [ ] Run the wired static smoke test and HTML structure checks.
 - [ ] Run the existing Chromium workflow against the account dialog, linked guide, desktop layout and 320px mobile layout.

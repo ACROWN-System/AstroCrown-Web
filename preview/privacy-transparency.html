@@ -290,6 +290,7 @@
           <li><a href="#emerging-tech">New privacy technologies</a></li>
           <li><a href="#current-status">What exists today</a></li>
           <li><a href="#user-checklist">Before you connect or send</a></li>
+          <li><a href="#reporting">Questions and reporting</a></li>
           <li><a href="#sources">Sources and review</a></li>
         </ol>
       </nav>
@@ -439,7 +440,7 @@
           <p>The following status is tied to the repository evidence reviewed on 14 November 2026. It distinguishes a working preview from locally tested components and future requirements.</p>
           <div class="status-grid">
             <div class="status-card"><span class="badge preview">Preview verified</span><strong>Homepage wallet menu</strong><p>The current public preview explicitly cannot connect a wallet, sign messages, submit orders or move assets. It is a visual demonstration only.</p></div>
-            <div class="status-card"><span class="badge local">Locally qualified</span><strong>Passkey-first account foundation</strong><p>The account foundation has been merged, and parts of its Worker/D1 lifecycle have local qualification evidence. Remote staging and real-user production deployment are not enabled.</p></div>
+            <div class="status-card"><span class="badge local">Local qualification only</span><strong>Passkey-first account foundation</strong><p>The account foundation has been merged, and parts of its Worker/D1 lifecycle have local qualification evidence. Remote staging and real-user production deployment are not enabled. The current homepage account modal is a separate browser-memory demo: use invented details only; its state does not persist after reload.</p></div>
             <div class="status-card"><span class="badge design">Draft / not operational</span><strong>Supporter programme</strong><p>Its page remains in draft pull request #176. It is not a live payment, wallet-receipt or treasury system.</p></div>
             <div class="status-card"><span class="badge blocked">Not established</span><strong>Whole-system security status</strong><p>The repository's broad development security baseline still marks its review areas UNVERIFIED. No complete product security certification is claimed.</p></div>
           </div>
@@ -466,8 +467,29 @@
           <p>If a screen does not clearly identify what will be public or which network and asset are being used, stop and seek clarification before proceeding.</p>
         </section>
 
+        <section id="reporting">
+          <span class="section-kicker">09 · Help and accountability</span>
+          <h2 class="section-title">Questions, privacy requests and security concerns</h2>
+          <p>A trustworthy privacy statement must also explain how a person can raise a concern. The current project has a repository security-reporting policy, but a dedicated product privacy-request contact route has not yet been published for this preview.</p>
+          <div class="two-col">
+            <div class="mini-card">
+              <h3>Security vulnerability reports</h3>
+              <p>Follow the repository's <a href="https://github.com/ACROWN-System/AstroCrown-Web/blob/main/SECURITY.md" target="_blank" rel="noopener noreferrer">Security Policy</a>. It directs researchers to use GitHub's private vulnerability reporting form if enabled. If private reporting is unavailable, it asks for a minimal public issue requesting a private channel—without vulnerability details, exploit steps, credentials or sensitive evidence.</p>
+              <p><a href="https://github.com/ACROWN-System/AstroCrown-Web/security/advisories/new" target="_blank" rel="noopener noreferrer">Open the private vulnerability reporting form</a> (availability depends on repository settings).</p>
+            </div>
+            <div class="mini-card">
+              <h3>Privacy questions and personal-data requests</h3>
+              <p>A dedicated contact address or privacy-request mechanism for the deployed AstroCrown service is not yet established in this preview. We will not invent one or direct people to post personal details publicly. A verified privacy contact and request-handling process must be published before production use.</p>
+            </div>
+          </div>
+          <div class="callout warning">
+            <p><strong>Do not put private information in public issues or comments.</strong> Do not publish wallet addresses you wish to keep unlinked, names, identity documents, private correspondence, passkeys, recovery keys, seed phrases, private keys, credentials or detailed vulnerability evidence. The preview has no verified production privacy-support channel.</p>
+          </div>
+          <p><strong>Current preview warning:</strong> the homepage account modal is a disposable browser-memory demonstration, not a real account service. Use fictional test details only. Do not submit real identity information, personal documents, wallet secrets or live asset information.</p>
+        </section>
+
         <section id="sources">
-          <span class="section-kicker">09 · Sources and review</span>
+          <span class="section-kicker">10 · Sources and review</span>
           <h2 class="section-title">How this guide is maintained</h2>
           <p>Technical statements are grounded in official protocol and provider documentation, not model-generated summaries or marketing assumptions. Links below are the primary references used for this review.</p>
           <ul class="source-list">

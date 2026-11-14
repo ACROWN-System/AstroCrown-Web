@@ -103,7 +103,7 @@ class PrivacyTransparencyStaticSmoke(unittest.TestCase):
         required_phrases = (
             "pseudonymous", "public", "third parties", "not a Privacy Policy",
             "does not claim that ACROWN or USD₮ transfers are confidential",
-            "not enabled", "14 November 2026", "heightened risk", "issuer-specific token controls"
+            "not enabled", "14 November 2026", "heightened risk", "issuer-specific token controls",\n            "dedicated contact address or privacy-request mechanism", "fictional test details only"
         )
         lowered = self.page_source.lower()
         for phrase in required_phrases:
@@ -135,8 +135,8 @@ class PrivacyTransparencyStaticSmoke(unittest.TestCase):
     def test_no_formal_anonymity_or_security_guarantee(self) -> None:
         self.assertIn("Do not promise absolute anonymity", self.page_source)
         self.assertIn("No complete product security certification is claimed", self.page_source)
-        self.assertIn("this current AstroCrown preview is not a production-secure environment", self.page_source)
-        self.assertIn("https://tether.to/en/legal/", self.page_source)
+        self.assertIn("this current AstroCrown preview is not a production-secure environment", self.page_source)\n        self.assertIn("its state does not persist after reload", self.page_source)
+        self.assertIn("https://tether.to/en/legal/", self.page_source)\n        self.assertIn("https://github.com/ACROWN-System/AstroCrown-Web/blob/main/SECURITY.md", self.page_source)\n        self.assertIn("https://github.com/ACROWN-System/AstroCrown-Web/security/advisories/new", self.page_source)
 
 
 if __name__ == "__main__":
