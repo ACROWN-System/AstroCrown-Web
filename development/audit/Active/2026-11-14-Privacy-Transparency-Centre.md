@@ -117,6 +117,6 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 
 The feature branch tree was reconstructed from the full verified `main` tree after an intermediate Git-tree update failed to preserve the base file set. Verification confirmed 2,236 entries before the latest account/browser integration commit; preserve the full tree on subsequent updates.
 
-The current work extends the existing pull-request-triggered Chromium smoke workflow (`preview/**`) to exercise the guide and account consent link. The workflow itself has not yet run; report CI results only after GitHub Actions returns them.
+The current work extends the existing pull-request-triggered Chromium smoke workflow (`preview/**`) to exercise the guide and account consent link. The run for commit `362e1f184b6899ac15724487db4ef2786e3b99e9` completed successfully: static checks passed, Chromium smoke passed 85 tests with 0 failures and 0 blocked tests, and screenshots/report were uploaded. Desktop screenshot scroll-reset was refined afterward, so the final capture still requires one rerun.
 
 To be completed after implementation and tests. Record commit, pull-request number, exact test commands, results and any remaining BLOCKED manual checks. Keep this work item ACTIVE until review requirements are settled.
