@@ -62,6 +62,22 @@ jobs:
           python development/audit/tests/homepage_browser_smoke.py \
             --output-dir "$RUNNER_TEMP/homepage-browser-smoke"
 
+      - name: Run Supporter Programme mock-wallet browser safety checks
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/supporter-browser-smoke"
+          python development/audit/tests/supporter_page_browser_smoke.py \\
+            --output-dir "$RUNNER_TEMP/supporter-browser-smoke"
+
+      - name: Upload supporter browser safety evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: supporter-browser-smoke-${{ github.run_id }}
+          path: ${{ runner.temp }}/supporter-browser-smoke/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Upload screenshots and machine-readable report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
