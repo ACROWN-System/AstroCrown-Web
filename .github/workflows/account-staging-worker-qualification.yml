@@ -9,6 +9,8 @@ on:
       - "development/account-continuity/prototype/admin-wallet-ui.js"
       - "development/account-continuity/prototype/account-prototype.css"
       - "development/index.html"
+      - "preview/supporters/**"
+      - "development/supporter-programme/**"
       - ".github/workflows/account-staging-worker-qualification.yml"
       - ".github/workflows/cloudflare-staging-deployment.yml"
   push:
@@ -19,6 +21,8 @@ on:
       - "development/account-continuity/prototype/admin-wallet-ui.js"
       - "development/account-continuity/prototype/account-prototype.css"
       - "development/index.html"
+      - "preview/supporters/**"
+      - "development/supporter-programme/**"
       - ".github/workflows/account-staging-worker-qualification.yml"
       - ".github/workflows/cloudflare-staging-deployment.yml"
 
