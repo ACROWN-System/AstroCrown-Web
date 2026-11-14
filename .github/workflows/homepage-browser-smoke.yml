@@ -6,12 +6,16 @@ on:
       - "preview/**"
       - "_config.yml"
       - "development/audit/tests/homepage_browser_smoke.py"
+      - "development/audit/tests/test_privacy_transparency_page.py"
+      - "development/PRIVACY-TRANSPARENCY-CENTRE-REQUIREMENTS.md"
       - ".github/workflows/homepage-browser-smoke.yml"
   push:
     branches: [main]
     paths:
       - "preview/**"
       - "development/audit/tests/homepage_browser_smoke.py"
+      - "development/audit/tests/test_privacy_transparency_page.py"
+      - "development/PRIVACY-TRANSPARENCY-CENTRE-REQUIREMENTS.md"
       - ".github/workflows/homepage-browser-smoke.yml"
 
 permissions:
@@ -54,6 +58,9 @@ jobs:
             echo "No runner-provided browser found; using the pinned Playwright Chromium fallback (maximum 5 minutes)."
             timeout --signal=TERM 5m python -m playwright install --with-deps --only-shell chromium
           fi
+
+      - name: Run Privacy & Transparency Centre static smoke checks
+        run: python development/audit/tests/test_privacy_transparency_page.py
 
       - name: Run homepage browser smoke checks
         run: |
