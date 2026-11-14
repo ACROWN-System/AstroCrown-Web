@@ -39,7 +39,7 @@ The page must include these independently navigable sections:
 2. Transparent public blockchain information: addresses, token identifiers, balances, transaction participants, amounts, timing, fees, contract activity and public associations, as applicable to the exact network.
 3. Third-party observations before and during interactions: wallet, dApp, RPC/node, indexer, hosting, analytics and AI inference.
 4. AstroCrown design commitments: minimization, separation of identifiers, secrets off-chain, pre-action disclosures, proportionate security, protection for sensitive people and provider qualification.
-5. Common misconceptions: crypto anonymity, no-KYC anonymity, self-custody, passkeys, address rotation, Tor/VPN, ZK proofs, confidential transfers, account deletion, network/token identity and stablecoin issuer controls.
+5. Common misconceptions: crypto anonymity, no-KYC anonymity, self-custody, passkeys, address rotation, Tor/VPN, ZK proofs, confidential transfers, account deletion, network/token identity, stablecoin issuer controls, AI gateway privacy and user-pays AI.
 6. Emerging technology with exact scope and limitations: Solana Token-2022 Confidential Balances; Ethereum private reads/writes/proving roadmap; selective disclosure and ZK.
 7. Accurate as-of status for current AstroCrown preview, account system, supporter programme and broad security baseline.
 8. A practical before-connect/sign/send/publish checklist.
