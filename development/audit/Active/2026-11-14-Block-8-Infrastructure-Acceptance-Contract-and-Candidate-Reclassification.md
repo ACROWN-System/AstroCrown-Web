@@ -233,7 +233,7 @@ For future paid providers, the payment adapter should be independent of inferenc
 
 For crypto-to-fiat routes, record the crypto asset/network and receiving address, conversion quote/spread, fiat currency, beneficiary, payout rail, transfer reference, payout status, returned-payment behaviour and supplier confirmation. For card routes, record issuer/program, card identifier (never full card secrets), authorization/capture/refund status, limits and merchant descriptor. For voucher routes, record merchant, SKU/denomination, expiry, region restrictions, redemption state and remaining value.
 
-USDT is preferred where available. Any alternative crypto route (for example, USDC/x402) must be recorded with exact token contract/mint, network, fee, payment calculation, refund/error behaviour and no-KYC conditions. A provider that accepts USDC only is a possible alternative, not evidence that it accepts USDT. A crypto-to-fiat provider is not qualified merely because it accepts crypto: the payer-side no-KYC/no-bank/no-card and end-to-end machine settlement gates still apply.
+Do not impose USDT as the mandatory source or settlement asset. Select among eligible treasury assets and provider-required destination assets by comparing the safest executable route and its complete all-in cost. Any direct or swapped payment route must record exact canonical source and destination token/native identifiers, chain, quote, min output, fee/gas calculation, refund/error behaviour, approvals and no-KYC conditions. A provider that accepts USDC, USDT or another token is eligible for assessment only after the exact required asset/network is proved. A crypto-to-fiat provider is not qualified merely because it accepts crypto: the payer-side no-KYC/no-bank/no-card and end-to-end machine settlement gates still apply.
 
 ### 5.4 Free-tier exhaustion and service continuity
 
@@ -256,7 +256,7 @@ Candidate Discovery 05 must not resume generic provider browsing. It must target
 
 1. live API/compute/storage/hosting without KYC, card, bank or fiat funding;
 2. documented recurring $0 entitlement and fail-closed usage;
-3. direct crypto (preferably USDT; otherwise precisely identified stablecoin) accepted for the same service's paid transition;
+3. direct crypto or qualified crypto-funded conversion into the exact provider-required payment asset/network, with route-level gas, slippage, liquidity and total-cost ceilings;
 4. API/CLI/IaC, machine-readable quota/usage/payment, and autonomous lifecycle;
 5. terms permitting the actual AstroCrown/NOVA commercial-development and future product use.
 
