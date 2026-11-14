@@ -206,8 +206,8 @@
       .toc li { break-inside: avoid; }
     }
     @media (max-width: 650px) {
-      .topbar { align-items: flex-start; }
-      .top-actions { flex-direction: column-reverse; align-items: flex-end; gap: 4px; }
+      .topbar { align-items: flex-start; flex-wrap: wrap; }
+      .top-actions { flex-direction: row; align-items: center; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
       .preview-chip { font-size: 8px; }
       .shell { width: min(100% - 24px, 1220px); padding-top: 17px; }
       .hero { border-radius: 16px; }

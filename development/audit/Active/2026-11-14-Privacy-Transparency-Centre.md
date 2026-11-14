@@ -108,9 +108,14 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 - [ ] Verify essential content, source references, preview status and implementation-status caveats.
 - [ ] Verify no scripts, trackers, external assets or unapproved dependencies were added.
 - [ ] Run static smoke tests and HTML structure checks.
+- [ ] Run the existing Chromium workflow against the account dialog, linked guide, desktop layout and 320px mobile layout.
 - [ ] Inspect the complete diff and backup.
 - [ ] Create a draft pull request; do not merge or promote to the production root without review.
 
 ## Outcome / evidence
+
+The feature branch tree was reconstructed from the full verified `main` tree after an intermediate Git-tree update failed to preserve the base file set. Verification confirmed 2,236 entries before the latest account/browser integration commit; preserve the full tree on subsequent updates.
+
+The current work extends the existing pull-request-triggered Chromium smoke workflow (`preview/**`) to exercise the guide and account consent link. The workflow itself has not yet run; report CI results only after GitHub Actions returns them.
 
 To be completed after implementation and tests. Record commit, pull-request number, exact test commands, results and any remaining BLOCKED manual checks. Keep this work item ACTIVE until review requirements are settled.

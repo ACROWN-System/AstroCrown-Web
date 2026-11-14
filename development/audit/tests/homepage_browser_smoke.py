@@ -552,6 +552,15 @@ def main() -> int:
                   {"warning": warning, "feedback": feedback})
 
             page.get_by_role("tab", name="Sign Up").click()
+            consent_guide = page.locator('#account-create-form a[href="./privacy-transparency.html"]')
+            consent_policy = page.locator('#account-create-form a[href="./privacy-policy.html"]')
+            check(
+                "account consent links the educational privacy guide separately from the draft legal policy",
+                consent_guide.count() == 1 and consent_policy.count() == 1
+                and "Privacy & Transparency Guide" in consent_guide.inner_text()
+                and "does not replace either policy" in page.locator("#account-create-form").inner_text(),
+                {"guide_links": consent_guide.count(), "policy_links": consent_policy.count()},
+            )
             form = page.locator("#account-create-form")
             blank_valid = form.evaluate("(f) => f.checkValidity()")
             fake_email = "github-actions-homepage-smoke@example.invalid"
@@ -657,6 +666,79 @@ def main() -> int:
             }""")
             page.wait_for_function("window.scrollY === 0")
             page.screenshot(path=str(out / "homepage-mobile-smoke-390x844.png"), full_page=False)
+
+            guide_page = context.new_page()
+            attach_diagnostics(guide_page)
+            guide_response = guide_page.goto(
+                f"{origin}/preview/privacy-transparency.html",
+                wait_until="load",
+                timeout=15000,
+            )
+            guide_page.wait_for_timeout(50)
+            check(
+                "Privacy & Transparency Centre preview route loads successfully",
+                guide_response is not None and guide_response.status == 200,
+                {"status": guide_response.status if guide_response else None, "title": guide_page.title()},
+            )
+            guide_baseline = guide_page.evaluate("""() => ({
+              title: document.title,
+              h1Count: document.querySelectorAll("h1").length,
+              robots: document.querySelector('meta[name="robots"]')?.content || null,
+              scripts: document.scripts.length,
+              externalResources: performance.getEntriesByType("resource")
+                .map(item => item.name)
+                .filter(name => /^https?:/i.test(name) && new URL(name).origin !== location.origin),
+              sectionCount: document.querySelectorAll("main section[id]").length,
+              skipLink: !!document.querySelector('a.skip-link[href="#main-content"]'),
+              localNavCount: document.querySelectorAll('nav[aria-label="On this page"] a[href^="#"]').length
+            })""")
+            check(
+                "Centre is a self-contained noindex education document with accessible navigation",
+                "Privacy & Transparency Centre" in guide_baseline["title"]
+                and guide_baseline["h1Count"] == 1
+                and guide_baseline["robots"] == "noindex, nofollow, noarchive"
+                and guide_baseline["scripts"] == 0
+                and not guide_baseline["externalResources"]
+                and guide_baseline["sectionCount"] >= 9
+                and guide_baseline["skipLink"]
+                and guide_baseline["localNavCount"] >= 9,
+                guide_baseline,
+            )
+            guide_page.locator('nav[aria-label="On this page"] a[href="#public-blockchains"]').click()
+            check(
+                "wallet education anchor resolves to public-blockchain disclosure section",
+                guide_page.locator("#public-blockchains").count() == 1
+                and guide_page.evaluate("location.hash") == "#public-blockchains",
+                {"hash": guide_page.evaluate("location.hash"), "target": guide_page.locator("#public-blockchains").count()},
+            )
+            for width, height in [(1440, 1000), (768, 900), (390, 844), (320, 780)]:
+                guide_page.set_viewport_size({"width": width, "height": height})
+                guide_metrics = guide_page.evaluate("""() => ({
+                  viewport: innerWidth,
+                  documentWidth: document.documentElement.scrollWidth,
+                  bodyWidth: document.body.scrollWidth,
+                  headingVisible: (() => {
+                    const r = document.querySelector("h1").getBoundingClientRect();
+                    return r.width > 0 && r.right <= innerWidth + 1 && r.left >= -1;
+                  })(),
+                  mainWidth: Math.round(document.querySelector("main").getBoundingClientRect().width),
+                  tableScrollContainers: [...document.querySelectorAll(".table-wrap")].every(
+                    el => getComputedStyle(el).overflowX === "auto"
+                  )
+                })""")
+                check(
+                    f"Privacy & Transparency Centre at {width}px has no page-level horizontal overflow",
+                    guide_metrics["documentWidth"] <= width and guide_metrics["bodyWidth"] <= width
+                    and guide_metrics["headingVisible"] and guide_metrics["tableScrollContainers"],
+                    guide_metrics,
+                )
+            guide_page.set_viewport_size({"width": 1440, "height": 1000})
+            guide_page.evaluate("window.scrollTo({top: 0, left: 0, behavior: 'instant'})")
+            guide_page.screenshot(path=str(out / "privacy-transparency-desktop-1440x1000.png"), full_page=False)
+            guide_page.set_viewport_size({"width": 390, "height": 844})
+            guide_page.evaluate("window.scrollTo({top: 0, left: 0, behavior: 'instant'})")
+            guide_page.screenshot(path=str(out / "privacy-transparency-mobile-390x844.png"), full_page=False)
+            guide_page.close()
 
             check("no page-level JavaScript exceptions", not PAGE_ERRORS, PAGE_ERRORS[:20])
             check("no browser console errors", not CONSOLE_ERRORS, CONSOLE_ERRORS[:20])
