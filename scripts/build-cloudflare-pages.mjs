@@ -69,7 +69,7 @@ write("index.html", homepage);
 
 // Copy only the three account assets referenced by the homepage. Force the
 // account UI into its in-memory, unauthenticated, read-only hosted demo mode.
-copy("development/account-continuity/prototype/account-prototype.css");
+copy("development/account-continuity/prototype/account-prototype.css", "account-continuity/prototype/account-prototype.css");
 let accountJs = read("development/account-continuity/prototype/account-ui.js");
 accountJs = replaceExactlyOnce(
   accountJs,
@@ -83,7 +83,7 @@ accountJs = accountJs
   .replaceAll("./account-continuity/prototype/terms-of-use.html", "./privacy-transparency.html")
   .replaceAll("./account-continuity/prototype/privacy-policy.html", "./privacy-transparency.html");
 write("account-continuity/prototype/account-ui.js", accountJs);
-copy("development/account-continuity/prototype/admin-wallet-ui.js");
+copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-continuity/prototype/admin-wallet-ui.js");
 
 // Self-contained education and supporter previews. The supporter JS is
 // limited to user-initiated public-address display; it does not sign/pay.
