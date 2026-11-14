@@ -43,7 +43,8 @@ The page must include these independently navigable sections:
 6. Emerging technology with exact scope and limitations: Solana Token-2022 Confidential Balances; Ethereum private reads/writes/proving roadmap; selective disclosure and ZK.
 7. Accurate as-of status for current AstroCrown preview, account system, supporter programme and broad security baseline.
 8. A practical before-connect/sign/send/publish checklist.
-9. Primary sources, review date and update triggers.
+9. Questions, privacy-request routing and security-vulnerability reporting, including an explicit statement if no product privacy contact is yet published.
+10. Primary sources, review date and update triggers.
 
 ### Account-dialog entry point
 
@@ -169,7 +170,8 @@ The preview page may be reviewed as a static educational preview after its tests
 - contextual notices exist in the actual features;
 - security/accessibility review has suitable evidence;
 - the formal privacy notice is separately reviewed for applicable jurisdictions;
-- claims on the page match actual deployed behaviour.
+- claims on the page match actual deployed behaviour;
+- the dedicated privacy-request/contact, general support and secure security-reporting routes are established and verified.
 
 ## 10. Known limitations
 

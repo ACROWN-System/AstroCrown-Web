@@ -75,7 +75,8 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 8. Assess AI data handling per exact API route and plan: Gemini unpaid-service inputs/outputs may be used for product/model improvement and human review, with 18+ and non-consumer API-client conditions; Groq differentiates usage metadata from inference data and offers optional ZDR; Cloudflare Workers AI distinguishes stateless no-content-retention/no-training from operational metadata and stateful/logging exceptions.
 9. Use official primary sources for changing protocol/provider claims and date the review.
 10. Keep page static/no-dependency, accessible and self-contained; no external tracking, JavaScript framework or third-party assets.
-11. The current page is a noindex preview. Production promotion requires its own decision and a complete data-flow/legal/accessibility/security review.\n12. The repository Security Policy is a security-vulnerability route only; no product privacy-request contact is published yet. Production promotion remains blocked until a verified privacy/support route and handling workflow exist.
+11. The current page is a noindex preview. Production promotion requires its own decision and a complete data-flow/legal/accessibility/security review.
+12. The repository Security Policy is a security-vulnerability route only; no product privacy-request contact is published yet. Production promotion remains blocked until a verified privacy/support route and handling workflow exist.
 
 ## Dependencies / source links
 
@@ -107,6 +108,7 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 - [ ] Back up the exact pre-change homepage and account consent script; verify both source SHAs.
 - [ ] Verify the new page has unique IDs and valid internal anchor targets.
 - [ ] Verify essential content, source references, preview status, account-demo limitations, security-report route and missing privacy contact disclosure.
+- [ ] Confirm privacy-request contact remains a production gate until an approved channel exists.
 - [ ] Verify no scripts, trackers, external assets or unapproved dependencies were added.
 - [ ] Run the wired static smoke test and HTML structure checks.
 - [ ] Run the existing Chromium workflow against the account dialog, linked guide, desktop layout and 320px mobile layout.

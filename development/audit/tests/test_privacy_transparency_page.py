@@ -95,7 +95,7 @@ class PrivacyTransparencyStaticSmoke(unittest.TestCase):
     def test_required_education_sections_exist(self) -> None:
         for required_id in (
             "meaning", "public-blockchains", "third-parties", "astro-protection",
-            "misconceptions", "emerging-tech", "current-status", "user-checklist", "sources"
+            "misconceptions", "emerging-tech", "current-status", "user-checklist", "reporting", "sources"
         ):
             self.assertIn(required_id, self.page.ids)
 
