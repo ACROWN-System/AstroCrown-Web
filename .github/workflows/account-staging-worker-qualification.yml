@@ -49,6 +49,11 @@ jobs:
         run: npm test
       - name: Build the restricted website asset set
         run: npm run build:site
+
+      - name: Verify the published supporter page and wallet script
+        run: |
+          node --check public/supporters/supporters.js
+          node scripts/test-staging-site-build.mjs
       - name: Validate browser code and Worker bundle without deploying
         run: |
           node --check src/index.js
@@ -106,6 +111,11 @@ jobs:
           NODE
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
           grep -q "LIVE PUBLIC TEST ENVIRONMENT" "$RUNNER_TEMP/home.html"
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/" -o "$RUNNER_TEMP/supporters.html"
+          grep -q "USDT CONTRIBUTIONS NOT OPEN" "$RUNNER_TEMP/supporters.html"
+          grep -q "DO NOT SEND FUNDS" "$RUNNER_TEMP/supporters.html"
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/supporters.js" -o "$RUNNER_TEMP/supporters.js"
+          grep -q "TIP6963:announceProvider" "$RUNNER_TEMP/supporters.js"
           code=$(curl --resolve localhost:8787:127.0.0.1 -sS -o "$RUNNER_TEMP/wrong-origin.json" -w "%{http_code}" -X POST "$base/api/passkeys/authentication/options" -H "Origin: https://untrusted.invalid" -H "Content-Type: application/json" --data "{}")
           test "$code" = "403"
           CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
