@@ -181,6 +181,8 @@ The payment layer must not assume that every infrastructure supplier accepts cry
 - crypto_funded_card — crypto funds a provider-issued payment instrument that pays the supplier;
 - crypto_voucher — crypto purchases a voucher/merchant credit accepted by the exact supplier.
 
+Asset conversion is a separate, composable capability, not a fifth supplier-payment route. The asset paid to the supplier or intermediary does not have to be the same asset collected or currently held in AstroCrown's treasury. A route may consume a qualified treasury asset and convert it into the exact asset/network required by the recipient, provided the complete swap/bridge path passes the same eligibility, safety, cost and authorization controls.
+
 The payer-side chain must be mapped end to end, including the intermediary, exchange/conversion partner, card issuer/program manager, acquiring processor and relevant subprocessors. The presence of internal bank accounts or card-network relationships inside the intermediary does not automatically disqualify it. It is disqualified if AstroCrown, its authorized operators or beneficial owners must complete KYC/real-name verification, provide government identity documents, open/link/control a bank account, provide bank credentials, obtain a conventional card or bind a conventional fiat account at any stage (including signup, top-up, limits increase, continued use, refund or recovery). Moving these requirements from the supplier to an intermediary is still a failure of the original requirement.
 
 For fiat invoice settlement, the supplier may have to provide its own receiving bank details because it is the fiat beneficiary. Those are supplier-side payout details, not an AstroCrown bank account. Record this distinction explicitly. Never call such a flow entirely bank-free; the accurate description is **crypto-funded fiat settlement without AstroCrown needing its own bank account or card**, provided the intermediary does not impose payer-side KYC.
@@ -191,14 +193,52 @@ Every candidate record must declare its exact direction of flow. A merchant acce
 
 No route is qualified based only on marketing claims such as “crypto accepted” or “no KYC.” Verify the governing terms, onboarding and account conditions, every payer-side actor, API lifecycle, legal availability in the relevant jurisdiction, and a complete synthetic or otherwise separately authorized bounded reconciliation test. Do not attempt to evade legal identity or sanctions controls; classify a route as unavailable if it cannot lawfully serve the intended operation.
 
+### 4.1.2 Treasury asset conversion and settlement-route selection
+
+AstroCrown may collect and hold multiple crypto-assets across multiple chains. **USDT is not a mandatory source asset or universal payment asset.** It may remain a preferred settlement option where cost, acceptance and reliability make it the best route, but NOVA must be able to evaluate any collected asset that has been separately qualified and can be safely converted into the exact asset/network required by a supplier or payment intermediary.
+
+Use this model:
+- `source_asset`: the exact token/native asset already held by an AstroCrown-controlled treasury wallet, identified by chain/network and canonical mint/contract/native identifier;
+- `destination_asset`: the exact token/native asset required by the supplier or intermediary, identified by its chain/network and canonical mint/contract/native identifier;
+- `conversion_route`: the exact on-chain swap, wrap/unwrap, bridge, intent or combination of steps, including every protocol/router/bridge/solver;
+- `payment_route`: the separate final supplier settlement type (`crypto_direct`, `crypto_to_fiat_invoice`, `crypto_funded_card` or `crypto_voucher`).
+
+Preferred execution order:
+1. Pay directly in an asset already accepted by the supplier where that route has the best safe all-in economics.
+2. Otherwise, use a qualified same-chain swap into the supplier-required asset.
+3. Use a cross-chain swap/bridge only when the required destination network cannot be reached safely and economically on the source chain.
+4. Do not use a centralized exchange, custodial conversion account or fiat on/off-ramp if it adds KYC/KYB, bank details, conventional card details, financial-account binding or routine human intervention. A DEX/aggregator API is not automatically qualified either; check its route, terms, contracts, token support and any account/API requirements.
+
+The eligible source set is not literally every token contract or asset. It is the subset of collected assets that passes an allowlist and risk policy: canonical identity verified, supported network, transferable balance controlled by the treasury, sufficient executable liquidity, acceptable price impact, no disqualifying transfer tax/rebase/blacklist/freeze behaviour, no known malicious or honeypot contract, and no unresolved sanctions/asset restrictions. NFTs, LP receipts, vault shares, bridged representations, wrapped assets and newly issued tokens require explicit classification; symbol similarity is never proof of asset identity.
+
+Before any conversion, NOVA must obtain and validate a fresh quote and an executable route. The approval envelope must bound:
+- exact source and destination chain/token identifiers and wallet;
+- maximum source amount and exact target amount or minimum received;
+- quote timestamp/expiry and route/solver/bridge/provider allowlist;
+- price impact, slippage tolerance and minimum output;
+- DEX/pool/aggregator/solver/bridge fees, including fees embedded in exchange rates where measurable;
+- gas for every approval, swap, bridge, destination execution and final supplier payment;
+- priority/tip/relayer fees, token-account creation/rent where relevant, and any destination-chain fee reserve;
+- a single all-in maximum cost and maximum source-asset spend.
+
+The all-in comparison must include source-chain gas, destination-chain gas, token approvals, DEX/pool fees, aggregator/solver fees, bridge fees, relayer/priority fees, price impact, slippage allowance, destination account creation/rent (where applicable), and any fee charged by the supplier/intermediary. Compare routes in a common accounting numeraire for internal costing, but execute only the exact crypto assets authorized in the transaction. Do not assume one advertised percentage is the total cost.
+
+Native gas is a separate balance requirement. The treasury must hold the native gas token on each chain where an approval, swap, bridge, claim or final payment must execute, unless the exact route supports independently verified gas sponsorship/paymaster/relayer payment. A gasless/sponsored quote is conditional, not a universal promise. If gas is unavailable or the total cost exceeds the policy ceiling, do not sweep another asset, borrow, incur debt, auto-top-up or fall back to a card; queue, select another already-qualified route, batch only under an approved policy, or pause.
+
+Prefer same-chain routes when they materially reduce bridge and execution risk. Cross-chain routes must be modelled as asynchronous multi-leg operations. Record source transaction, bridge/solver identifier, destination transaction, refund/recovery state and final destination amount. A source-chain confirmation is not proof that destination funds arrived. A partial fill, unexpected token, refunded leg, expired route, delayed bridge or destination amount below minimum must enter an explicit exception state and must not proceed to supplier payment.
+
+Token approvals must be exact-amount or permit-scoped where supported, never unlimited by default. The signer independently checks target contracts, chain IDs, selectors/instructions, token addresses, spender, allowance amount, recipient, amount, minimum output, deadline, fees and policy nonce. Revoke residual allowances when safe and supported. Never blindly sign arbitrary calldata returned by an aggregator or agent tool.
+
+No wallet, private key or treasury seed phrase is supplied to a swap/bridge provider, MCP server or LLM. Agent/MCP support is an interface convenience only; it does not grant signing or spending authority. The NOVA process may request quotes and prepare a route; the AstroCrown-controlled signer enforces the Council envelope independently.
+
 ### 4.2 Council policy authorization envelope
 
 Before a payment intent is created, the operation must carry a signed/immutable internal authorization record containing:
 
 - policy version and approving Council decision/reference;
 - allowed supplier, intermediary/route provider and provider account, with the exact route type;
-- exact network/chain (e.g., Solana mainnet, Tron, Ethereum, BSC);
-- exact token identifier (canonical mint or contract, not just “USDT”);
+- exact source chain/token identifier and treasury wallet, plus exact destination/payment chain/token identifier (canonical mint/contract/native asset, not just a symbol such as “USDT”);
+- optional swap/bridge route allowlist and contract/solver addresses, maximum source amount, minimum destination amount, maximum price impact/slippage, quote expiry, maximum gas/priority/relayer cost, maximum all-in conversion cost and required native gas reserve;
 - allowed crypto recipient address or verified provider invoice address, plus the final supplier/fiat beneficiary where the route is indirect;
 - allowed fiat currency, maximum conversion spread/fees, quote expiry and supplier invoice reference where applicable;
 - max amount per transaction and total budget window;
@@ -244,7 +284,7 @@ Invoice PDFs, supplier contracts, beneficiary bank details and payment reference
 
 A route must not report `SUPPLIER_PAYMENT_CONFIRMED`, `CREDITED` or `RECONCILED` merely because the intermediary received crypto. If the intermediary cannot expose a reliable downstream payout/capture/redemption state or a supplier acknowledgement, that route is not qualified for autonomous core payments.
 
-Terminal/exception states include `REJECTED`, `EXPIRED`, `FAILED_BEFORE_SUBMISSION`, `FAILED_ON_CHAIN`, `UNDERPAID`, `OVERPAID`, `WRONG_ASSET`, `WRONG_NETWORK`, `WRONG_DESTINATION`, `DUPLICATE`, `INTERMEDIARY_PAYOUT_FAILED`, `SUPPLIER_PAYMENT_UNCONFIRMED`, `CARD_DECLINED`, `CARD_REVERSED`, `VOUCHER_UNREDEEMABLE`, `PROVIDER_CREDIT_MISMATCH`, `REFUND_PENDING`, `REFUNDED` and `MANUAL_REVIEW_REQUIRED`.
+Terminal/exception states include `REJECTED`, `EXPIRED`, `FAILED_BEFORE_SUBMISSION`, `FAILED_ON_CHAIN`, `NO_CONVERSION_ROUTE`, `CONVERSION_SLIPPAGE_EXCEEDED`, `CONVERSION_MIN_OUTPUT_NOT_MET`, `CONVERSION_PARTIAL`, `BRIDGE_PENDING`, `BRIDGE_FAILED`, `BRIDGE_REFUNDED`, `WRONG_SOURCE_ASSET`, `WRONG_DESTINATION_ASSET`, `INSUFFICIENT_NATIVE_GAS`, `GAS_COST_EXCEEDED`, `TOKEN_NOT_QUALIFIED`, `DUPLICATE_CONVERSION`, `UNDERPAID`, `OVERPAID`, `WRONG_ASSET`, `WRONG_NETWORK`, `WRONG_DESTINATION`, `DUPLICATE`, `INTERMEDIARY_PAYOUT_FAILED`, `SUPPLIER_PAYMENT_UNCONFIRMED`, `CARD_DECLINED`, `CARD_REVERSED`, `VOUCHER_UNREDEEMABLE`, `PROVIDER_CREDIT_MISMATCH`, `REFUND_PENDING`, `REFUNDED` and `MANUAL_REVIEW_REQUIRED`.
 
 After crypto funding is submitted, do not blindly retry because an HTTP request timed out. Query chain status, intermediary route status and supplier invoice state first. Every transition must be idempotent and append an audit event. Refunds and reversals must retain the linkage to the original payment intent and must never silently create reusable untracked credit.
 
@@ -252,6 +292,7 @@ After crypto funding is submitted, do not blindly retry because an HTTP request 
 
 - The operational agent may prepare, validate and request signatures; only the authorized signer can sign.
 - The signer must independently validate chain/network, token contract/mint, recipient, exact amount, fee ceiling, instruction set/program and policy envelope.
+- For swaps/bridges, validate every target contract/router/solver, spender and allowance, exact-input amount, minimum output, destination chain/token/recipient, deadline, fee/tip and calldata/instruction selector. Never sign unrestricted approvals or arbitrary agent-generated calldata.
 - Never expose seed phrases/private keys to a provider, LLM prompt, GitHub artifact, workflow log or ordinary inference route.
 - Use least-privilege, purpose-specific accounts/wallets. Hosting/payment wallet funds must be separated from treasury, user custody and operational admin wallets.
 - Prefer policy-limited programmable signing and multisignature/threshold controls where supported. A human approval is not needed for each routine transaction once a correctly scoped, time-bound budget envelope has been authorized; an emergency halt or policy exception goes back to Council.
@@ -316,6 +357,16 @@ A provider adapter is not qualified by a successful login or “hello world”. 
 - machine-readable failures and recovery;
 - credential scope and rotation/revocation;
 - backup/export/restore and checksum parity.
+
+### Asset conversion tests
+- [ ] Source/destination canonical token identifiers are validated; symbols alone cannot authorize a swap.
+- [ ] Unsupported, unverified, restricted, frozen, malicious, low-liquidity or non-transferable tokens are rejected.
+- [ ] Quote expiry, exact source amount, minimum output, slippage, price impact and complete fee breakdown are enforced.
+- [ ] Source and destination gas are separately estimated and remain within policy; sponsored gas is accepted only when the quote proves the exact sponsor/route.
+- [ ] Same-chain swap and cross-chain bridge state are independently reconciled; source confirmation never masquerades as destination completion.
+- [ ] Partial fill, refund, wrong destination token, bridge delay, insufficient output and failed route pause the supplier payment.
+- [ ] Token approvals are limited to the exact required spend and arbitrary router calldata is rejected.
+- [ ] All-in route cost is compared to the direct-payment alternative and exceeds no Council ceiling.
 
 ### Financial safety tests
 - no automatic card/fiat fallback that charges AstroCrown or bypasses its crypto-funded policy;
