@@ -12,7 +12,7 @@
 
 The project is not looking for a collection of interesting free AI APIs, demos, trial credits, research showcases or disconnected tools.
 
-The objective is to build and qualify the **complete AstroCrown/NOVA system in a live, operational environment with a total $0 development budget**, while designing the system so it can later transition to sustainable service providers that accept cryptocurrency directly.
+The objective is to build and qualify the **complete AstroCrown/NOVA system in a live, operational environment with a total $0 development budget**, while designing the system so it can later transition to sustainable services payable with cryptocurrency, either directly or through a payment intermediary that converts crypto into the supplier's required fiat payment without transferring KYC, bank-account or card requirements to AstroCrown.
 
 The resulting system must allow NOVA to operate according to its intended role as the operational coordination, governance, organization, preservation, retrieval, evaluation, automation and evolution system. External services must not turn NOVA into a manually operated assistant that needs a human to resolve provider-side tasks during ordinary operations.
 
@@ -39,7 +39,7 @@ Disqualifying conditions:
 
 A recurring allowance is preferable. A one-time grant may support a bounded experiment but is never counted as sustained development capacity. A finite free quota can be used only if the real route remains operational within the allocation and exhaustion can be made to fail closed without a charge. The architecture must queue, degrade or fail over to another qualified route when quota is exhausted; it must never create debt or surprise expenditure.
 
-### Gate 2 — No KYC, no identity or conventional financial-account dependency
+### Gate 2 — No KYC, no identity or conventional financial-account dependency anywhere in the payer-side route
 
 The route must not require:
 - government-issued identity documents, government ID numbers, selfies/biometrics, proof of address, real-name authentication, identity-provider KYC or equivalent;
@@ -49,6 +49,10 @@ The route must not require:
 - a conventional payment processor account that requires financial identity verification to access the free service.
 
 A normal service login, email verification or a non-KYC OAuth login is not automatically KYC. However, mandatory phone/SMS verification, manual identity review, organization verification or an ambiguous "verified user" gate remains UNKNOWN/BLOCKED until its exact requirement is established and accepted. Never infer no-KYC merely because the public pricing page does not mention verification.
+
+This gate applies to the entire payer-side chain, not only the merchant or first crypto on-ramp. A crypto-to-fiat intermediary, payment facilitator, card issuer/program manager, acquiring processor, voucher marketplace or other agent must not require AstroCrown, its authorized operator or its beneficial owner to complete KYC/real-name identity verification, provide government documents, open or link a bank account, supply bank-account credentials, obtain a conventional card, or bind a conventional financial account. Moving those requirements from the infrastructure vendor to an intermediary does not remove the incompatibility; it merely relocates the same friction and dependency.
+
+The intermediary may use its own banking, card-network or fiat settlement relationships internally. That is not, by itself, an AstroCrown-side financial-account requirement. For an invoice payout, the supplier's own receiving bank account and ordinary beneficiary details may be necessary because the supplier is the fiat recipient; AstroCrown must not be required to own, open, control or link that receiving account. Record payer-side requirements separately from supplier-side receiving requirements, and never describe the overall route as bank-free when a fiat bank transfer is part of it.
 
 ### Gate 3 — Real, live and operational development environment
 
@@ -77,25 +81,39 @@ The provider must expose documented, automatable interfaces suitable for NOVA to
 
 Reject or block services that require a person to approve routine requests, respond to a provider's support ticket for ordinary operations, repeatedly complete CAPTCHAs, renew access manually, click through recurring consent forms, accept interactive billing popups, manually restart quota or manually reconcile each request. One-time initial account creation/configuration may be performed by an authorized maintainer only when it does not require KYC, bank/card details or ongoing human tasks. Ordinary operating decisions remain inside AstroCrown/NOVA governance.
 
-### Gate 5 — Crypto-native paid transition
+### Gate 5 — Crypto-funded paid transition without relocating excluded friction
 
-A service intended to remain a strategic provider or paid-stage replacement must have a documented path to direct cryptocurrency payment without requiring conventional cards, bank accounts or KYC.
+A strategic paid-stage service must have a documented route that starts with cryptocurrency controlled by AstroCrown and completes payment to the supplier without requiring AstroCrown or its authorized operator to obtain KYC approval, a bank account, a conventional payment card or a fiat payment account. Direct crypto acceptance is preferred, but it is not the only acceptable settlement architecture.
 
-Preferred:
-- direct payment in USDT, identifying the exact network and canonical token contract/mint;
-- USDC or another explicitly supported cryptocurrency may be considered where USDT is unavailable, with network and token details recorded;
-- on-chain payment, wallet settlement, x402 or an equivalent machine-readable crypto payment protocol;
-- API-generated invoice/payment intent, verifiable settlement, webhook/polling, reconciliation, refunds/crediting rules and machine-readable balances;
-- payment approval and budget authorization performed by AstroCrown's own Council/NOVA controls before the external transaction.
+**Permitted route classes to investigate:**
 
-Not sufficient:
-- a generic claim that "crypto is supported" without naming the token, network and payment method;
-- a payment processor that ultimately requires a credit/debit card or fiat bank settlement;
-- crypto payments accepted only after KYC/AML identity approval where this conflicts with the user's no-KYC rule;
-- a manual wallet transfer with no reliable payment reference, API reconciliation or automated crediting process;
-- an exchange account or bank account required to fund/settle the payment.
+1. **Direct crypto settlement:** AstroCrown pays the supplier's verified wallet/invoice in USDT (preferred), or USDC/another explicitly approved crypto asset where USDT is unavailable. Record the exact network, canonical token contract/mint, recipient and settlement semantics.
+2. **Crypto-to-fiat invoice settlement:** AstroCrown sends crypto to a qualified intermediary; the intermediary converts it and pays the supplier's fiat invoice using the intermediary's own settlement arrangements. The supplier may provide its own beneficiary bank details where required. AstroCrown must not open or link a bank account, provide card/bank details, or complete KYC with the intermediary.
+3. **Crypto-funded payment card:** AstroCrown funds a payment provider in crypto and the provider makes a card payment to the supplier. The card must be issued/operated through the provider without requiring AstroCrown to obtain a conventional card account, provide card/bank details, or complete KYC. The route must support machine-readable funding, spending limits, transaction status, freeze/revoke and reconciliation. Issuer or regulator-triggered identity checks are a disqualifier if they apply to AstroCrown or its operators.
+4. **Crypto-funded voucher or merchant credit:** AstroCrown purchases a supplier-compatible voucher/credit using crypto. This is acceptable only for the exact merchant/service and only where the voucher route can be purchased, redeemed, monitored and reconciled without KYC, bank/card details or recurring manual action. It is not a general invoice-payment substitute.
 
-A provider may be used for $0 development without itself accepting crypto only as a non-strategic, replaceable component, if its use does not create lock-in and a fully qualified crypto-payable replacement path exists. It must not be elevated to a long-term strategic dependency merely because it is currently free.
+**Mandatory route-wide checks:**
+- map every entity in the payer-side path: crypto wallet, intermediary, exchange/conversion partner, card issuer/program manager, acquiring/settlement processor and any subprocessor;
+- identify which entity receives AstroCrown's crypto, which entity converts it, which entity pays the supplier, and which entity confirms final settlement;
+- verify no KYC, government identity, real-name, bank-account, bank-credential, conventional card or fiat-account requirement is imposed on AstroCrown, its operators or beneficial owners at any step, including onboarding, top-up, limits increases, continued use, refunds or account recovery;
+- verify the intermediary's own fiat/card rails are internal to its service and do not require AstroCrown to become the bank/card account holder or contractual cardholder;
+- require API/CLI or other reliable machine interface for quote, invoice/order creation, crypto funding details, exact amount/fees/expiry, payment status, payout/card/voucher status, refunds/reversals, limits and reconciliation;
+- ensure no routine CAPTCHA, human support approval, manual bank transfer, manual card loading, per-payment identity review or interactive 3-D Secure/OTP dependency is needed for normal autonomous operation;
+- prohibit hidden exchange spreads, unbounded fees, automatic debt/overdraft, auto-top-up and fiat/card fallback;
+- require independent validation of recipient, fiat currency, exchange rate, quote expiry, final amount, reference and supplier payment confirmation.
+
+**Not sufficient / fail conditions:**
+- an intermediary accepts crypto but requires AstroCrown or its operator to submit KYC, proof of address, real-name/beneficial-owner documents or mandatory identity verification;
+- AstroCrown must provide, link or control a bank account, card, bank credentials, conventional payment account or fiat balance;
+- a crypto deposit is accepted only after opening/funding a conventional exchange or bank account;
+- a virtual card is marketed as crypto-funded but issuance or continued operation requires the user to pass identity checks or provide conventional payment details;
+- a supposed invoice intermediary requires AstroCrown to complete supplier-side banking onboarding or manually execute the fiat transfer;
+- a gift-card route is not accepted by the exact supplier, is not available in the required country/currency, or cannot be machine-purchased/reconciled;
+- provider marketing says "no KYC" but terms reserve routine identity verification or account suspension for ordinary use and no workable compliant route is evidenced;
+- a manual wallet transfer has no reliable payment reference, API reconciliation or automated confirmation;
+- material AML/sanctions screening, fraud controls or legally required restrictions make the route unusable for the intended lawful operation. Do not attempt to evade legal controls; classify such a route as unavailable rather than bypassing them.
+
+A provider may be used for $0 development without itself accepting crypto only as a non-strategic, replaceable component, if its use does not create lock-in and a fully qualified crypto-funded paid replacement route exists. It must not be elevated to a long-term strategic dependency merely because it is currently free.
 
 ### Gate 6 — Commercial and intended-use rights
 
@@ -125,7 +143,7 @@ A provider must be capable of being:
 Use the following status vocabulary. Do not use "promising", "high-interest" or "worth prioritizing" as if those words mean acceptance.
 
 - **QUALIFIED — $0 OPERATIONAL:** all hard gates needed for the present development workload have objective evidence; the exact service is live, no-card/no-KYC, $0, machine-operable and safe within stated workload limits.
-- **QUALIFIED — CRYPTO PAID TRANSITION:** the exact paid route accepts direct crypto with verified token/network, no KYC/bank/card, and machine-readable provisioning/settlement, but it is not a $0 development resource.
+- **QUALIFIED — CRYPTO-FUNDED PAID TRANSITION:** the exact paid route is funded from crypto without payer-side KYC/bank/card requirements and has machine-readable settlement. Record whether it is direct crypto, crypto-to-fiat invoice settlement, crypto-funded card or merchant voucher; it is not a $0 development resource.
 - **CONDITIONAL — NOT QUALIFIED:** one or more hard gates remain UNKNOWN or incomplete. Do not integrate as a core dependency.
 - **RESTRICTED / NON-CORE:** may be used only for a specifically permitted, replaceable and low-risk function; does not meet the complete system requirement.
 - **FAIL — HARD GATE:** a confirmed contractual/account/financial condition contradicts a non-negotiable requirement.
@@ -194,11 +212,13 @@ NOVA must be able to route tasks by capability, quality, cost, privacy class, qu
 
 Provider-side human support, manual invoice approval, recurring web-console maintenance, manual quota renewal, interactive CAPTCHA or manual per-job approval must not be part of normal operations. Use NOVA's own state machine, health checks, quotas, policy gates and failover. Escalate decisions to the Imperial Council/authorized human roles through AstroCrown's own website and internal system.
 
-### 5.3 Crypto payment must be machine-readable
+### 5.3 Crypto-funded payment must be machine-readable across both settlement legs
 
-For future paid providers, the payment adapter should be independent of inference/compute adapters. NOVA should receive a Council-approved budget/limit, create a payment intent, verify the exact chain/token/network/destination/amount, obtain authorized wallet execution, watch settlement, reconcile provider credit/usage and record an immutable audit event. No provider gets an unrestricted wallet key. No payment occurs merely because a free quota is exhausted.
+For future paid providers, the payment adapter should be independent of inference/compute adapters. It must support direct crypto settlement and, where qualified, crypto-funded intermediary settlement. NOVA should receive a Council-approved budget/limit, create a payment intent, validate the route and exact supplier obligation, obtain authorized wallet execution, observe crypto settlement, observe the downstream supplier payment/card capture/voucher redemption, reconcile the final service credit and record an immutable audit event. No provider or intermediary receives an unrestricted wallet key. No payment occurs merely because a free quota is exhausted.
 
-USDT is preferred where available. Any alternative crypto route (for example, USDC/x402) must be recorded with exact token contract/mint, network, fee, payment calculation, refund/error behaviour and no-KYC conditions. A provider that accepts USDC only is a possible alternative, not evidence that it accepts USDT.
+For crypto-to-fiat routes, record the crypto asset/network and receiving address, conversion quote/spread, fiat currency, beneficiary, payout rail, transfer reference, payout status, returned-payment behaviour and supplier confirmation. For card routes, record issuer/program, card identifier (never full card secrets), authorization/capture/refund status, limits and merchant descriptor. For voucher routes, record merchant, SKU/denomination, expiry, region restrictions, redemption state and remaining value.
+
+USDT is preferred where available. Any alternative crypto route (for example, USDC/x402) must be recorded with exact token contract/mint, network, fee, payment calculation, refund/error behaviour and no-KYC conditions. A provider that accepts USDC only is a possible alternative, not evidence that it accepts USDT. A crypto-to-fiat provider is not qualified merely because it accepts crypto: the payer-side no-KYC/no-bank/no-card and end-to-end machine settlement gates still apply.
 
 ### 5.4 Free-tier exhaustion and service continuity
 
@@ -225,7 +245,7 @@ Candidate Discovery 05 must not resume generic provider browsing. It must target
 4. API/CLI/IaC, machine-readable quota/usage/payment, and autonomous lifecycle;
 5. terms permitting the actual AstroCrown/NOVA commercial-development and future product use.
 
-Search for providers in infrastructure categories as well as AI APIs: compute and GPU marketplaces, serverless/container hosting, managed databases/object storage, RPC/indexing, monitoring, domains/DNS, inference, model hosting and payment rails. Free services need not all accept crypto themselves, but any non-crypto free component must be replaceable and must not become a strategic lock-in; a paid transition provider must have a qualified direct crypto payment path.
+Search for providers in infrastructure categories as well as AI APIs: compute and GPU marketplaces, serverless/container hosting, managed databases/object storage, RPC/indexing, monitoring, domains/DNS, inference, model hosting and payment rails. Payment-rail discovery must include direct crypto acceptance, crypto-to-fiat invoice settlement, crypto-funded cards and merchant-compatible crypto vouchers. Free services need not all accept crypto themselves, but any non-crypto free component must be replaceable and must not become a strategic lock-in; a paid transition provider must have a qualified crypto-funded route that passes the entire payer-side hard gate.
 
 For each category, maintain two distinct lists:
 - `$0 OPERATIONAL DEVELOPMENT` — usable now without financial/KYC prerequisites;
