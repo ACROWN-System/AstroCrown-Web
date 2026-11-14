@@ -74,8 +74,9 @@ Use official primary sources for changing technical claims. At initial implement
 - Tether supported protocols: `https://tether.to/en/supported-protocols/`
 - Gemini API Additional Terms: `https://ai.google.dev/gemini-api/terms`
 - Groq data handling: `https://console.groq.com/docs/your-data`
+- Cloudflare Workers AI data usage: `https://developers.cloudflare.com/workers-ai/platform/data-usage/`
 
-Each changing claim must identify the exact protocol, asset, provider, product, plan or API route and the date reviewed. A roadmap is not evidence of deployed capability. A protocol feature is not evidence that a particular token or wallet uses it.
+Each changing claim must identify the exact protocol, asset, provider, product, plan or API route and the date reviewed. For Gemini API, explicitly account for the current unpaid-service data-use terms and the separate 18+ / non-consumer API client eligibility conditions. For Workers AI, distinguish standard stateless inference from operational metadata and stateful/logging exceptions. For Groq, distinguish usage metadata retention from inference content-retention exceptions and account-level ZDR configuration. A roadmap is not evidence of deployed capability. A protocol feature is not evidence that a particular token or wallet uses it.
 
 ### Non-negotiable Solana disclosure
 
@@ -118,6 +119,14 @@ Before page promotion, compare these states with current main and PRs again.
 - External links use safe `rel` attributes.
 - Preview carries noindex/nofollow/noarchive until an explicit publication decision.
 - The page itself must load as a static local file and remain useful if scripts are disabled or external sources are unavailable.
+
+### AI provider-specific examples
+
+The page must not summarize provider data practices from a provider name alone. Current primary-source examples:
+
+- Gemini API unpaid services can use input/output content to improve/develop Google services and may involve human review; the API terms also have 18+ and API-client audience restrictions. Reassess the exact plan and route before use, especially for public-facing features.
+- Groq retains usage metadata and does not retain inference content by default, but its docs describe temporary content logs for reliability/abuse investigations (up to 30 days) and configurable ZDR; stateful features have distinct retention.
+- Cloudflare Workers AI says standard stateless inference content is not retained after processing and is not used to train models; operational metadata is retained, stateful/logging features can store content, and AI Gateway forwarding subjects content to the upstream provider's terms.
 
 ## 8. Maintenance procedure
 

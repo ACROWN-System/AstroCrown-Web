@@ -69,12 +69,13 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 2. Explain privacy, confidentiality, pseudonymity, anonymity, authentication and self-custody separately.
 3. Public-chain data, third-party metadata and issuer-specific stablecoin controls must be described without absolute guarantees.
 4. The current preview must explicitly warn high-risk users that it is not a production-secure operational environment; protection for sensitive users remains a design requirement, not a current guarantee.
-4. Protect journalists, human-rights defenders, whistleblowers, investigators, judges and other sensitive users through universal security/minimization; do not use occupation, politics or geography alone as an exclusion rule.
-5. Keep the Centre separate from the formal Privacy Policy. A legal policy must match real production data flows and be separately reviewed.
-6. Attribute issuer-level token controls to the exact issuer and current terms; do not generalize them to all stablecoins.
-7. Use official primary sources for changing protocol/provider claims and date the review.
-8. Keep page static/no-dependency, accessible and self-contained; no external tracking, JavaScript framework or third-party assets.
-9. The current page is a noindex preview. Production promotion requires its own decision and a complete data-flow/legal/accessibility/security review.
+5. Protect journalists, human-rights defenders, whistleblowers, investigators, judges and other sensitive users through universal security/minimization; do not use occupation, politics or geography alone as an exclusion rule.
+6. Keep the Centre separate from the formal Privacy Policy. A legal policy must match real production data flows and be separately reviewed.
+7. Attribute issuer-level token controls to the exact issuer and current terms; do not generalize them to all stablecoins.
+8. Assess AI data handling per exact API route and plan: Gemini unpaid-service inputs/outputs may be used for product/model improvement and human review, with 18+ and non-consumer API-client conditions; Groq differentiates usage metadata from inference data and offers optional ZDR; Cloudflare Workers AI distinguishes stateless no-content-retention/no-training from operational metadata and stateful/logging exceptions.
+9. Use official primary sources for changing protocol/provider claims and date the review.
+10. Keep page static/no-dependency, accessible and self-contained; no external tracking, JavaScript framework or third-party assets.
+11. The current page is a noindex preview. Production promotion requires its own decision and a complete data-flow/legal/accessibility/security review.
 
 ## Dependencies / source links
 
