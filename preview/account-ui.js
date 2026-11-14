@@ -310,7 +310,7 @@
         '</label>' +
         '<label class="account-consent account-terms-consent" for="account-terms-accepted">' +
           '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
-          '<span>By proceeding, you agree to AstroCrown’s <a href="./terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>. <small>Both policy pages are marked development drafts and are not approved for production.</small></span>' +
+          '<span>By proceeding, you agree to AstroCrown’s <a href="./terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>. You can also read our <a href="./privacy-transparency.html" target="_blank" rel="noopener noreferrer">Privacy &amp; Transparency Guide</a>. <small>The Terms of Use and Privacy Policy are development drafts and are not approved for production; the guide is educational and does not replace either policy.</small></span>' +
         '</label>' +
         '<button class="account-primary account-create-submit" type="submit">Create an account</button>' +
       '</form>' +
