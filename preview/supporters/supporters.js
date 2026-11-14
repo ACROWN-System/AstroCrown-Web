@@ -8,6 +8,13 @@
   var solanaAddress = document.getElementById("supporter-wallet-address");
   var solanaChain = document.getElementById("supporter-wallet-chain");
 
+  var tronSelect = document.getElementById("supporter-tron-wallet-choice");
+  var tronConnectButton = document.getElementById("supporter-tron-wallet-connect");
+  var tronClearButton = document.getElementById("supporter-tron-wallet-clear");
+  var tronFeedback = document.getElementById("supporter-tron-wallet-feedback");
+  var tronAddress = document.getElementById("supporter-tron-wallet-address");
+  var tronChain = document.getElementById("supporter-tron-wallet-chain");
+
   var evmSelect = document.getElementById("supporter-evm-wallet-choice");
   var evmConnectButton = document.getElementById("supporter-evm-wallet-connect");
   var evmClearButton = document.getElementById("supporter-evm-wallet-clear");
@@ -19,7 +26,7 @@
   var pseudonymDisplay = document.getElementById("member-display-name");
   var randomizeButton = document.getElementById("member-name-randomize");
 
-  if (!solanaSelect || !evmSelect || !pseudonymInput) return;
+  if (!solanaSelect || !evmSelect || !tronSelect || !pseudonymInput) return;
 
   var adjectives = [
     "Golden", "Silver", "Stellar", "Cosmic", "Radiant", "Quiet", "Noble",
@@ -453,8 +460,149 @@
     clearSolanaConnection(true);
   });
 
+
+  // Display-only TRON wallet discovery. It requests public account access only.
+  // No message signing, transaction signing, contract call or transfer occurs here.
+  var tronWallets = new Map();
+  var connectedTronProvider = null;
+  var connectedTronAddress = null;
+  var connectedTronChainId = null;
+  var tronWalletSequence = 0;
+
+  function isTronAddress(address) {
+    return typeof address === "string" && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address);
+  }
+
+  function tronNetworkLabel(chainId) {
+    var value = typeof chainId === "string" ? chainId.toLowerCase() : "";
+    if (value === "0x2b6653dc") return "Tron Mainnet (wallet-reported)";
+    if (value === "0x94a9059e") return "Shasta Testnet (wallet-reported)";
+    if (value === "0xcd8690dc") return "Nile Testnet (wallet-reported)";
+    return value ? "TRON chain " + value + " (wallet-reported)" : "Network not independently confirmed in this preview";
+  }
+
+  function supportedTronProvider(provider) {
+    return Boolean(provider && typeof provider.request === "function");
+  }
+
+  function renderTronChoices() {
+    var previous = tronSelect.value;
+    tronSelect.textContent = "";
+    var option = document.createElement("option");
+    option.value = "";
+    option.textContent = tronWallets.size ? "Select a TRON wallet" : "No compatible TRON wallet detected";
+    tronSelect.appendChild(option);
+    tronWallets.forEach(function (wallet, id) {
+      var item = document.createElement("option");
+      item.value = id;
+      item.textContent = wallet.name;
+      tronSelect.appendChild(item);
+    });
+    if (previous && tronWallets.has(previous)) tronSelect.value = previous;
+    tronSelect.disabled = tronWallets.size === 0;
+    tronConnectButton.disabled = tronWallets.size === 0 || Boolean(connectedTronAddress);
+    tronClearButton.disabled = !connectedTronAddress;
+  }
+
+  function registerTronProvider(info, provider) {
+    if (!supportedTronProvider(provider)) return;
+    var uuid = info && typeof info.uuid === "string" ? info.uuid : "";
+    var existing = Array.from(tronWallets.entries()).find(function (entry) {
+      return entry[1].provider === provider || (uuid && entry[1].uuid === uuid);
+    });
+    if (existing) return;
+    var id = uuid || "tron-wallet-" + (++tronWalletSequence);
+    tronWallets.set(id, {
+      uuid: uuid,
+      name: info && typeof info.name === "string" ? info.name : (provider.isTronLink ? "TronLink" : "TRON wallet"),
+      provider: provider
+    });
+    renderTronChoices();
+
+    if (typeof provider.on === "function") {
+      provider.on("accountsChanged", function (accounts) {
+        if (provider !== connectedTronProvider) return;
+        var address = Array.isArray(accounts) ? accounts.find(isTronAddress) : null;
+        if (!address) {
+          clearTronConnection(false);
+          return;
+        }
+        connectedTronAddress = address;
+        tronAddress.textContent = address;
+      });
+      provider.on("chainChanged", function (chainId) {
+        if (provider !== connectedTronProvider) return;
+        connectedTronChainId = chainId && typeof chainId === "object" ? chainId.chainId : chainId;
+        tronChain.textContent = tronNetworkLabel(connectedTronChainId);
+      });
+      provider.on("disconnect", function () {
+        if (provider === connectedTronProvider) clearTronConnection(false);
+      });
+    }
+  }
+
+  function clearTronConnection(showMessage) {
+    connectedTronProvider = null;
+    connectedTronAddress = null;
+    connectedTronChainId = null;
+    tronAddress.textContent = "Not connected";
+    tronChain.textContent = "Network not confirmed";
+    tronConnectButton.textContent = "Connect TRON wallet";
+    renderTronChoices();
+    if (showMessage) setFeedback(tronFeedback, "Local TRON wallet display cleared. No transaction or message was signed.", "neutral");
+  }
+
+  window.addEventListener("TIP6963:announceProvider", function (event) {
+    var detail = event && event.detail ? event.detail : {};
+    registerTronProvider(detail.info || {}, detail.provider);
+  });
+  window.dispatchEvent(new Event("TIP6963:requestProvider"));
+  if (supportedTronProvider(window.tron)) {
+    registerTronProvider({ name: window.tron.isTronLink ? "TronLink" : "TRON wallet" }, window.tron);
+  }
+
+  tronSelect.addEventListener("change", function () {
+    tronConnectButton.disabled = !tronWallets.has(tronSelect.value) || Boolean(connectedTronAddress);
+  });
+
+  tronConnectButton.addEventListener("click", async function () {
+    var wallet = tronWallets.get(tronSelect.value);
+    if (!wallet || !supportedTronProvider(wallet.provider)) {
+      setFeedback(tronFeedback, "Choose a compatible TRON wallet first.", "error");
+      return;
+    }
+    tronConnectButton.disabled = true;
+    tronConnectButton.textContent = "Connecting…";
+    setFeedback(tronFeedback, "Approve the wallet's account-access request to share your public TRON address. No signature or transfer is requested.", "neutral");
+    try {
+      var accounts = await wallet.provider.request({ method: "eth_requestAccounts" });
+      var address = Array.isArray(accounts) ? accounts.find(isTronAddress) : null;
+      var tronWeb = wallet.provider.tronWeb;
+      if (!address && tronWeb && tronWeb.defaultAddress) address = tronWeb.defaultAddress.base58;
+      if (!isTronAddress(address)) throw new Error("The selected wallet did not return a valid public TRON address.");
+      connectedTronProvider = wallet.provider;
+      connectedTronAddress = address;
+      tronAddress.textContent = address;
+      tronChain.textContent = connectedTronChainId
+        ? tronNetworkLabel(connectedTronChainId)
+        : "Wallet connected; active network not independently confirmed in this preview";
+      tronConnectButton.textContent = "TRON wallet connected";
+      renderTronChoices();
+      setFeedback(tronFeedback, "TRON wallet connected for address display only. The address is not registered and no entitlement is active.", "connected");
+    } catch (error) {
+      tronConnectButton.textContent = "Connect TRON wallet";
+      tronConnectButton.disabled = false;
+      setFeedback(tronFeedback, error && error.message ? error.message : "TRON connection was not completed. No funds were requested.", "error");
+    }
+  });
+
+  tronClearButton.addEventListener("click", function () {
+    clearTronConnection(true);
+  });
+
   // Never call personal_sign, eth_sign, eth_sendTransaction, signMessage,
-  // signTransaction, signAndSendTransaction, or any wallet payment method here.
+  // signTransaction, signAndSendTransaction, signMessageV2, or any wallet payment method here.
   renderEvmChoices();
   renderSolanaChoices();
+  renderTronChoices();
 }());

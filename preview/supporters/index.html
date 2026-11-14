@@ -235,14 +235,14 @@
             <p class="stat-note">Maximum programme planning target across all supporters; not a live funding counter.</p>
           </article>
           <article class="stat-card">
-            <div class="side-label">Reference multiplier</div>
-            <div class="stat-value">25×</div>
-            <p class="stat-note">Working scenario only. Final multiplier and programme terms remain unapproved.</p>
+            <div class="side-label">Illustrative multiplier rate</div>
+            <div class="stat-value">25 ACROWN / USDT</div>
+            <p class="stat-note">Example only. The final multiplier and programme terms require approval.</p>
           </article>
           <article class="stat-card">
-            <div class="side-label">Illustrative floor</div>
-            <div class="stat-value">USDT 1</div>
-            <p class="stat-note">Used only to demonstrate the entitlement calculation; not a live purchase quote.</p>
+            <div class="side-label">Purchase eligibility window</div>
+            <div class="stat-value">180 days</div>
+            <p class="stat-note">Starts only when real supporter payments are deliberately activated, not when this preview is deployed.</p>
           </article>
         </div>
       </div>
@@ -252,7 +252,7 @@
         <p class="side-copy">Three distinct stages. The contribution and any later ACROWN purchase must be separately recorded.</p>
         <div class="side-divider"></div>
         <div class="side-label">What the multiplier means</div>
-        <p class="side-copy">The first qualifying contribution unlocks the wallet's approved multiplier entitlement. The wallet may purchase up to the entire remaining programme-wide ACROWN allowance; the contribution amount does not create a separate per-wallet token ceiling.</p>
+        <p class="side-copy">A verified contribution establishes the member's personal multiplier-based ACROWN purchase allowance. Example only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance, subject to any remaining programme-wide cap.</p>
         <div class="side-divider"></div>
         <div class="side-label">ACS protection</div>
         <p class="side-copy">Any ACROWN purchase or distribution must follow the ACS accounting rules. The official floor must not be reduced by programme operations.</p>
@@ -263,7 +263,7 @@
       <div class="status-icon" aria-hidden="true">!</div>
       <div>
         <strong>Wallet connection is display-only in this preview. USDT contributions and ACROWN purchases are not enabled.</strong>
-        <p>You may inspect compatible EVM and Solana wallet interfaces separately. A wallet intended to qualify must support receiving ACROWN on Solana and sending USDT. AstroCrown's required network matrix must cover every supported USDT network that an eligible connected wallet can use to pay; the exact networks and canonical USDT token identifiers will be published before contributions open. This preview does not register or link addresses or activate entitlements. It will not request message signatures, transaction signatures or transfers. Do not send funds or sign any transaction here.</p>
+        <p>The operational Supporter Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. This preview does not register or link addresses, accept payments or activate entitlements; it will not request signatures or transfers. Do not send funds or sign any transaction here.</p>
       </div>
     </section>
 
@@ -294,7 +294,7 @@
             <button class="secondary-button" id="member-name-randomize" type="button">Generate another name</button>
             <span class="member-display-name" id="member-display-name" aria-live="polite"></span>
           </div>
-          <p class="wallet-instructions">Connect one or both wallet ecosystems. MetaMask and other multichain wallets may appear in both lists when they expose both standards. Connecting only shares public addresses; no message or transaction signature is requested.</p>
+          <p class="wallet-instructions">This preview can display compatible EVM, TronLink and Solana wallet addresses. TRON discovery uses the wallet's published TIP-6963 provider interface. Connection only shares a public address; no message or transaction signature is requested.</p>
           <div class="wallet-ecosystem-grid">
             <section class="wallet-ecosystem-card" aria-labelledby="evm-wallet-heading">
               <div class="ecosystem-heading">
@@ -316,6 +316,28 @@
                 <span class="side-label">EVM public address</span>
                 <strong id="supporter-evm-wallet-address">Not connected</strong>
                 <span id="supporter-evm-wallet-chain">No EVM network confirmed</span>
+              </div>
+            </section>
+            <section class="wallet-ecosystem-card" aria-labelledby="tron-wallet-heading">
+              <div class="ecosystem-heading">
+                <strong id="tron-wallet-heading">Tron</strong>
+                <span class="ecosystem-tag">TRON / TIP-6963</span>
+              </div>
+              <div class="field">
+                <label for="supporter-tron-wallet-choice">Choose your TRON wallet</label>
+                <select id="supporter-tron-wallet-choice" disabled>
+                  <option value="">Looking for TRON wallets…</option>
+                </select>
+              </div>
+              <div class="wallet-actions">
+                <button class="primary-button" id="supporter-tron-wallet-connect" type="button" disabled>Connect TRON wallet</button>
+                <button class="secondary-button" id="supporter-tron-wallet-clear" type="button" disabled>Clear</button>
+              </div>
+              <div class="wallet-feedback" id="supporter-tron-wallet-feedback" role="status" aria-live="polite">No TRON browser wallet detected.</div>
+              <div class="wallet-address-card">
+                <span class="side-label">TRON public address</span>
+                <strong id="supporter-tron-wallet-address">Not connected</strong>
+                <span id="supporter-tron-wallet-chain">Network not confirmed</span>
               </div>
             </section>
             <section class="wallet-ecosystem-card" aria-labelledby="solana-wallet-heading">
@@ -341,7 +363,7 @@
               </div>
             </section>
           </div>
-          <p class="fine-print">A multichain wallet may expose separate EVM and Solana addresses. ACROWN delivery remains on Solana. The supporter payment design is to accept USDT on every supported network an eligible wallet can use to send payment, with exact chain identifiers and canonical USDT token identifiers published before contributions open. This preview displays addresses independently; it does not prove, register or permanently link them to one supporter record. Browser extensions and wallet in-app browsers are discovered through their injected standards. Mobile app deep links and desktop QR pairing are not included in this preview.</p>
+          <p class="fine-print">A wallet may expose separate Ethereum/EVM, Tron and Solana addresses; the member must prove control of each independently before addresses are linked to one member record. The initial payment allowlist is USD₮ ERC-20 on Ethereum, USD₮ TRC-20 on Tron and USD₮ SPL on Solana. ACROWN delivery remains Solana-based. This preview displays public addresses only and does not prove, register or link them to a supporter record; payment, transaction signing and backend functions remain disabled.</p>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
@@ -353,9 +375,9 @@
             <span class="dashboard-state pending-state">Not activated</span>
           </div>
           <div class="entitlement-summary">
-            <span class="side-label">Maximum available to an eligible wallet</span>
-            <strong>All remaining programme allowance</strong>
-            <p>One shared ACROWN ceiling applies to every supporter. A single eligible wallet may purchase all of the remaining amount.</p>
+            <span class="side-label">Your personal purchase allowance</span>
+            <strong>Verified contribution × approved multiplier</strong>
+            <p>Example only: 1,000 USD₮ at 25 ACROWN per USD₮ = 25,000 ACROWN available to purchase at the applicable ACS floor, subject to any remaining programme-wide cap.</p>
           </div>
           <div class="result-list">
             <div class="result-row"><span class="result-label">First contribution threshold</span><strong class="result-value">Pending final terms</strong></div>
@@ -421,16 +443,16 @@
     <section class="section" id="calculator" aria-labelledby="calculator-title">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">Programme-wide purchase allowance</div>
-          <h2 id="calculator-title">One shared ACROWN allowance — no individual wallet ceiling</h2>
+          <div class="eyebrow">Multiplier-based purchase entitlement</div>
+          <h2 id="calculator-title">Personal allowance within a programme-wide limit</h2>
         </div>
-        <p>Every eligible wallet draws from the same approved programme-wide quantity. The live remaining amount will be shown in the wallet dashboard once the token allowance and purchase system are finalized.</p>
+        <p>Each verified supporter contribution creates a personal ACROWN purchase allowance using the approved multiplier. A separate programme-wide ceiling, if approved, limits the total amount all members may purchase.</p>
       </div>
       <div class="calculator-grid">
         <section class="panel" aria-label="Programme-wide purchase allowance">
           <span class="scenario-tag">Shared programme limit</span>
           <h3 style="margin-top:13px">The remaining programme amount sets the limit</h3>
-          <p class="panel-intro">The programme will have one approved maximum ACROWN purchase quantity. The amount must be finalized before launch and enforced across all eligible wallets.</p>
+          <p class="panel-intro">The programme-wide ACROWN cap is separate from each member's personal multiplier allowance. The cap, multiplier and qualification threshold must be approved before launch and enforced across all members.</p>
           <div class="result-list">
             <div class="result-row"><span class="result-label">Total authorized programme allowance</span><strong class="result-value">To be finalized</strong></div>
             <div class="result-row"><span class="result-label">Completed purchases</span><strong class="result-value">Live ledger required</strong></div>
@@ -440,14 +462,14 @@
         </section>
         <section class="panel" aria-label="Wallet purchase entitlement">
           <div class="side-label">What one eligible wallet may purchase</div>
-          <h3 style="margin-top:7px">Up to everything that remains</h3>
-          <p class="panel-intro">A single supporter may purchase the entire remaining programme allowance in one or more transactions, if they choose and the allowance is still available when the transaction is confirmed.</p>
+          <h3 style="margin-top:7px">Unused personal multiplier allowance</h3>
+          <p class="panel-intro">A member may purchase up to the unused personal allowance created by verified contributions, provided the programme-wide allowance also has enough capacity.</p>
           <div class="result-highlight">
             <div class="result-label">Maximum available to this wallet</div>
-            <div class="result-value">100% of remaining allowance</div>
+            <div class="result-value">Unused personal entitlement</div>
           </div>
-          <div class="formula">No separate contribution × multiplier wallet cap</div>
-          <p class="fine-print">Only the first qualifying contribution will have the programme's minimum activation threshold. The threshold and final multiplier terms remain pending approval. Subsequent purchases draw from the remaining shared allowance rather than receiving a separate per-wallet allocation.</p>
+          <div class="formula">Personal allowance = verified USD₮ × approved ACROWN-per-USD₮ rate</div>
+          <p class="fine-print">Illustration only: 1,000 USD₮ at 25 ACROWN per USD₮ creates a 25,000 ACROWN purchase allowance. The final rate, threshold, floor-price rules and programme-wide cap remain pending approval.</p>
         </section>
       </div>
       <div class="policy-highlight">
@@ -632,7 +654,7 @@
         </details>
         <details>
           <summary>What does the multiplier allow me to do?</summary>
-          <p>The first qualifying contribution activates the approved multiplier entitlement for the registered wallet. It does not create free tokens or a personal token quantity calculated as contribution × multiplier. An eligible wallet may purchase up to the entire remaining programme-wide ACROWN allowance at the applicable ACS floor. The final multiplier and first-contribution threshold must be published before launch.</p>
+          <p>A verified qualifying contribution establishes a personal ACROWN purchase allowance using the approved multiplier/rate. Illustration only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance. This is permission to make a later purchase at the applicable ACS floor, not free tokens or automatic issuance. Any programme-wide cap also applies. The final rate, threshold, floor-price rules and cap must be published before launch.</p>
         </details>
         <details>
           <summary>Can I send USDT now?</summary>
@@ -648,7 +670,7 @@
         </details>
         <details>
           <summary>Is the USDT 250,000 target the ACROWN purchase allowance?</summary>
-          <p>No. USDT 250,000 is the provisional aggregate contribution planning ceiling. The maximum ACROWN quantity available for purchase is a separate programme-wide limit that must be approved and published independently. Every eligible wallet shares that same ACROWN allowance, and one wallet may purchase all of what remains.</p>
+          <p>No. USDT 250,000 is the provisional aggregate contribution planning ceiling. A member's personal multiplier allowance is calculated separately from any programme-wide ACROWN cap. The programme-wide cap, if adopted, limits the aggregate purchase capacity of all supporters.</p>
         </details>
         <details>
           <summary>What happens if I send more USDT than the authorized amount?</summary>
@@ -665,7 +687,7 @@
       <div>
         <div class="eyebrow">Participation status</div>
         <h2 id="participate-title">The supporter programme is being prepared.</h2>
-        <p>Real participation will open only after the programme terms, supported USDT network, receiving wallet, on-chain confirmation, account association, operational controls and required reviews are complete.</p>
+        <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. The 180-day purchase period begins at that operational activation.</p>
       </div>
       <button class="disabled-button" type="button" disabled aria-disabled="true">USDT transfers not enabled</button>
     </section>
