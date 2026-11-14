@@ -115,20 +115,67 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 
 ## Verification plan
 
-- [ ] Back up the exact pre-change homepage and account consent script; verify both source SHAs.
-- [ ] Verify the new page has unique IDs and valid internal anchor targets.
-- [ ] Verify essential content, source references, preview status, account-demo limitations, security-report route and missing privacy contact disclosure.
-- [ ] Confirm privacy-request contact remains a production gate until an approved channel exists.
-- [ ] Verify no scripts, trackers, external assets or unapproved dependencies were added.
-- [ ] Run the wired static smoke test and HTML structure checks.
-- [ ] Run the existing Chromium workflow against the account dialog, linked guide, desktop layout and 320px mobile layout.
-- [ ] Inspect the complete diff and backup.
-- [ ] Create a draft pull request; do not merge or promote to the production root without review.
+- [x] Back up the exact pre-change homepage, account consent script, browser smoke script and CI workflow; verify recorded source SHAs.
+- [x] Verify the new page has unique IDs and valid internal anchor targets.
+- [x] Verify essential content, source references, preview status, account-demo limitations, security-report route and missing privacy contact disclosure.
+- [x] Confirm privacy-request contact remains a production gate until an approved channel exists.
+- [x] Verify no scripts, trackers, external assets or unapproved dependencies were added to the education page.
+- [x] Run the wired static smoke test and HTML structure checks.
+- [x] Run the existing Chromium workflow against the account dialog, linked guide, desktop layout and 320px mobile layout.
+- [x] Inspect the complete diff and backup.
+- [x] Create a draft pull request; do not merge or promote to the production root without review.
 
 ## Outcome / evidence
 
-The feature branch tree was reconstructed from the full verified `main` tree after an intermediate Git-tree update failed to preserve the base file set. Verification confirmed 2,236 entries before the latest account/browser integration commit; preserve the full tree on subsequent updates.
+### Preview implementation
 
-The current work extends the existing pull-request-triggered Chromium smoke workflow (`preview/**`) to exercise the guide and account consent link. The run for commit `362e1f184b6899ac15724487db4ef2786e3b99e9` completed successfully: static checks passed, Chromium smoke passed 85 tests with 0 failures and 0 blocked tests. The screenshot-reset refinement timed out after all content, account, route and responsive assertions passed; screenshot capture was changed to reload the guide at its clean URL before each capture. The corrected capture still requires a rerun.
+- Page: `preview/privacy-transparency.html` — 10 navigable sections, self-contained HTML/CSS, no JavaScript or external resource dependencies, `noindex, nofollow, noarchive`.
+- Entry points: homepage Wallet dropdown, homepage footer and account-creation consent dialog. The educational guide remains separately labelled and does not replace Terms of Use or Privacy Policy.
+- Existing account modal is expressly identified as a disposable browser-memory demo; fictional test data only.
+- Dedicated privacy-request contact is not established. Security reporting is routed only to the repository Security Policy; product privacy/support contact remains a production blocker.
+- Current preview expressly warns not to use it for sensitive operations or real identity/asset data.
 
-To be completed after implementation and tests. Record commit, pull-request number, exact test commands, results and any remaining BLOCKED manual checks. Keep this work item ACTIVE until review requirements are settled.
+### Verified commit and review
+
+- Feature branch: `feature/privacy-transparency-centre-2026-11-14`
+- Final verified source head: `ed89f11699ee508ebcd39b1f1950ad36e63abf5c`
+- Base/main remains: `706f873e460f3c82f42659b43de79462146416b7` (unchanged).
+- Draft PR: [#177 — Add AstroCrown Privacy & Transparency Centre](https://github.com/ACROWN-System/AstroCrown-Web/pull/177)
+- PR state: open, draft, unmerged; 13 files changed (3,695 additions, 2 deletions).
+- Modified existing files have exact pre-change copies under `backup/2026.11.14-05h24mn32sc-system/`: homepage, account UI script, browser smoke script and CI workflow. The backup manifest records original blob SHAs.
+
+### Automated verification — final verified head
+
+GitHub Actions completed successfully for all four PR checks on the verified head:
+
+- Homepage Browser Smoke: run `43533451671`, success.
+- NOVA RSI Engine CI: run `43533451736`, success. Repository-wide Python compile, RSI unit tests and Docker isolation-boundary exercise passed.
+- NOVA RSI CodeQL Security Analysis: run `43533451686`, success.
+- External Review Pipeline CI: run `43533451590`, success.
+
+The browser smoke report artifact `homepage-browser-smoke-43533451671` records **88 PASS / 0 FAIL / 0 BLOCKED**. It confirms:
+- education page route returns HTTP 200;
+- account consent links to the guide separately from the draft legal policy;
+- one `h1`, 10 sections and 10 local navigation links;
+- `noindex, nofollow, noarchive`;
+- zero page scripts and zero external resource loads;
+- no page JavaScript exceptions, browser console errors or non-loopback network requests;
+- no page-level horizontal overflow at 1440, 768, 390 and 320 CSS pixels;
+- public-blockchain anchor and missing privacy-contact disclosure resolve;
+- desktop and mobile screenshot captures start at the top of the page.
+
+Artifact ID: `14089110559`. Desktop/mobile captures and machine-readable report are retained in the GitHub Actions artifact (seven-day artifact retention at upload).
+
+### Remaining blockers and boundaries
+
+1. The page is an education preview, not a legal Privacy Policy or security certification.
+2. Actual production data-flow inventory, provider processor roles, purposes, retention/deletion, rights, transfers and incident handling remain to be documented against the deployed system.
+3. A verified privacy-request contact, general support route and secure evidence-handling process must be established before production.
+4. Manual screen-reader/keyboard usability review and formal accessibility review remain outstanding; automated smoke checks do not certify WCAG conformance.
+5. Remote account staging and production real-user account operations are not enabled.
+6. Wallet/payment/treasury integrations and all contextual disclosures must be qualified against their actual future endpoints before those flows go live.
+7. The current preview is not appropriate for sensitive operational use.
+8. Canonical `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` remain unavailable in the accessible repository trees. This task-specific record does not claim formal NAV protocol compliance.
+9. Block 8 AI-provider/gateway investigation continues. These provider observations and candidate gateway routes are evidence for continued assessment, not approved production integrations. Strong RSI remains suspended; Weak RSI remains report-only/human-in-loop.
+
+The Privacy & Transparency educational preview implementation has reached its draft-review milestone. Keep PR #177 unmerged and this work item ACTIVE until maintainers/user review and the outstanding production gates are resolved.
