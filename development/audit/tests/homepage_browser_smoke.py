@@ -733,32 +733,31 @@ def main() -> int:
                     guide_metrics,
                 )
             guide_page.set_viewport_size({"width": 1440, "height": 1000})
-            guide_page.evaluate("""() => {
-              document.documentElement.style.scrollBehavior = "auto";
-              history.scrollRestoration = "manual";
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
-              window.scrollTo(0, 0);
-            }""")
-            guide_page.wait_for_function("window.scrollY === 0")
+            guide_response = guide_page.goto(
+                f"{origin}/preview/privacy-transparency.html",
+                wait_until="load",
+                timeout=15000,
+            )
             check(
-                "desktop Centre screenshot starts at the top of the page",
-                guide_page.evaluate("window.scrollY") == 0,
-                {"scrollY": guide_page.evaluate("window.scrollY")},
+                "desktop Centre screenshot route reloads without an anchor",
+                guide_response is not None and guide_response.status == 200
+                and guide_page.evaluate("location.hash === '' && window.scrollY === 0"),
+                {"status": guide_response.status if guide_response else None,
+                 "hash": guide_page.evaluate("location.hash"), "scrollY": guide_page.evaluate("window.scrollY")},
             )
             guide_page.screenshot(path=str(out / "privacy-transparency-desktop-1440x1000.png"), full_page=False)
             guide_page.set_viewport_size({"width": 390, "height": 844})
-            guide_page.evaluate("""() => {
-              document.documentElement.style.scrollBehavior = "auto";
-              document.documentElement.scrollTop = 0;
-              document.body.scrollTop = 0;
-              window.scrollTo(0, 0);
-            }""")
-            guide_page.wait_for_function("window.scrollY === 0")
+            guide_response = guide_page.goto(
+                f"{origin}/preview/privacy-transparency.html",
+                wait_until="load",
+                timeout=15000,
+            )
             check(
-                "mobile Centre screenshot starts at the top of the page",
-                guide_page.evaluate("window.scrollY") == 0,
-                {"scrollY": guide_page.evaluate("window.scrollY")},
+                "mobile Centre screenshot route reloads without an anchor",
+                guide_response is not None and guide_response.status == 200
+                and guide_page.evaluate("location.hash === '' && window.scrollY === 0"),
+                {"status": guide_response.status if guide_response else None,
+                 "hash": guide_page.evaluate("location.hash"), "scrollY": guide_page.evaluate("window.scrollY")},
             )
             guide_page.screenshot(path=str(out / "privacy-transparency-mobile-390x844.png"), full_page=False)
             guide_page.close()
