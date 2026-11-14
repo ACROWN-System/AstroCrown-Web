@@ -266,19 +266,27 @@ Required common state machine:
 3. `AUTHORIZED` — signed policy envelope, payer-side no-KYC/no-bank/no-card checks, caps and expiry are valid.
 4. `INVOICE_REQUESTED` — supplier invoice or intermediary payment intent retrieved through API.
 5. `INVOICE_VALIDATED` — exact supplier, service, invoice ID, fiat amount/currency (where relevant), crypto amount/asset/network, intermediary recipient, fees/spread, quote expiry, final beneficiary, payment reference and route limits match approved constraints.
-6. `FUNDING_PREPARED` — route-specific crypto funding transaction/order is constructed; replay protection and policy cap are checked.
-7. `FUNDING_AUTHORIZED` — isolated policy signer authorizes only the exact crypto funding transaction.
-8. `FUNDING_SUBMITTED` — chain signature/hash or equivalent crypto payment reference and submission endpoint are recorded.
-9. `CRYPTO_FUNDING_CONFIRMED` — chain data independently confirms the intended token/network/destination/amount, or the native payment protocol provides equivalent verifiable settlement evidence.
-10. `SUPPLIER_SETTLEMENT_PENDING` — downstream settlement begins; route-specific evidence is required:
+6. Optional asset-conversion phase, only when the held treasury asset differs from the recipient-required asset:
+   - `CONVERSION_QUOTE_REQUESTED` — obtain an exact-input quote and route for the exact source asset, destination asset, source/destination networks and treasury wallet.
+   - `CONVERSION_QUOTE_VALIDATED` — independently validate canonical assets, approved contracts/routes, output minimum, expiry, price impact, complete fee breakdown, gas on every leg, native gas reserve and the all-in Council ceiling.
+   - `CONVERSION_PREPARED` — construct only the exact swap/wrap/bridge steps and exact token approvals required by the validated route.
+   - `CONVERSION_AUTHORIZED` — isolated signer checks every spender/router/bridge/solver, token, amount, deadline, minimum output and policy nonce against the authorization envelope.
+   - `CONVERSION_SUBMITTED` — record each source-chain transaction and route/bridge identifier; query status before retrying.
+   - `CONVERSION_SOURCE_CONFIRMED` — source-chain execution is independently confirmed; for cross-chain operations this is not destination settlement.
+   - `CONVERSION_DESTINATION_CONFIRMED` — independently verify the exact destination token/network and minimum received amount in the treasury wallet before supplier payment. If no conversion is needed, record `CONVERSION_NOT_REQUIRED`.
+7. `FUNDING_PREPARED` — prepare the exact supplier/intermediary payment using the validated destination asset, amount and network; replay protection and remaining policy cap are checked.
+8. `FUNDING_AUTHORIZED` — isolated policy signer authorizes only the exact crypto funding transaction.
+9. `FUNDING_SUBMITTED` — chain signature/hash or equivalent crypto payment reference and submission endpoint are recorded.
+10. `CRYPTO_FUNDING_CONFIRMED` — chain data independently confirms the intended token/network/destination/amount, or the native payment protocol provides equivalent verifiable settlement evidence.
+11. `SUPPLIER_SETTLEMENT_PENDING` — downstream settlement begins; route-specific evidence is required:
     - `CRYPTO_DIRECT`: supplier's invoice/payment endpoint confirms the exact crypto obligation;
     - `CRYPTO_TO_FIAT_INVOICE`: intermediary reports the fiat payout, with payout reference, beneficiary, currency and amount;
     - `CRYPTO_FUNDED_CARD`: card transaction is authorized and then captured/settled against the exact supplier;
     - `CRYPTO_VOUCHER`: the voucher/merchant credit is accepted by the exact supplier and issuance/redemption or merchant balance is verifiably confirmed.
-11. `SUPPLIER_PAYMENT_CONFIRMED` — supplier-side payment or merchant-credit evidence is present. For a fiat transfer, an intermediary's “crypto received” status alone is not sufficient. Require a completed payout status and transfer reference, plus supplier/provider invoice acknowledgement or equivalent independently checkable evidence.
-12. `PROVIDER_CREDIT_PENDING` — the supplier's service/API is polled or its webhook is verified for the matching payment.
-13. `CREDITED` — supplier account reports the matching credited balance/order/service term.
-14. `RECONCILED` — crypto amount, conversion/fees, fiat amount/currency, downstream payment, invoice, provider credit and authorized intent match; immutable audit record is published.
+12. `SUPPLIER_PAYMENT_CONFIRMED` — supplier-side payment or merchant-credit evidence is present. For a fiat transfer, an intermediary's “crypto received” status alone is not sufficient. Require a completed payout status and transfer reference, plus supplier/provider invoice acknowledgement or equivalent independently checkable evidence.
+13. `PROVIDER_CREDIT_PENDING` — the supplier's service/API is polled or its webhook is verified for the matching payment.
+14. `CREDITED` — supplier account reports the matching credited balance/order/service term.
+15. `RECONCILED` — crypto amount, conversion/fees, fiat amount/currency, downstream payment, invoice, provider credit and authorized intent match; immutable audit record is published.
 
 Invoice PDFs, supplier contracts, beneficiary bank details and payment references must be treated as confidential payment data. Do not send their contents to an external AI/LLM extraction or processing service unless the exact processor, purpose, retention, training, region, subprocessors and deletion path have been qualified and explicitly approved for that data class.
 
