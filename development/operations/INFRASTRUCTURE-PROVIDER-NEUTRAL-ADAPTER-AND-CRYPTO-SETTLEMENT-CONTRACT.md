@@ -71,6 +71,7 @@ Each adapter advertises its capabilities and limits in machine-readable form. A 
 Every adapter must declare:
 
 - provider identifier, legal operator, underlying infrastructure provider(s), service and region;
+- direction of payment flow, using a controlled value such as `payer_crypto_to_supplier_crypto`, `payer_crypto_to_supplier_fiat`, `payer_crypto_to_supplier_card`, `payer_crypto_to_supplier_voucher` or `customer_crypto_to_merchant` (reverse-direction merchant acceptance);
 - adapter name/version and supported API/schema version;
 - authentication mechanism and least-privilege permission scopes;
 - capabilities supported and those explicitly unsupported;
@@ -186,6 +187,8 @@ For fiat invoice settlement, the supplier may have to provide its own receiving 
 
 Every route must expose machine-readable quote/fees/expiry, funding instructions, status, limits, refund/reversal handling and reconciliation. A crypto-to-fiat route additionally needs payout reference and final supplier-payment confirmation. A card route needs machine-readable funding, authorization/capture/refund, spending limits and freeze/revoke. A voucher route needs exact merchant/region/denomination, expiry, redemption status and remaining value. Manual bank transfers, routine human approvals, recurring CAPTCHA/OTP/3-D Secure, hidden spreads, overdraft, auto-top-up and fiat/card fallback are not acceptable for a core autonomous route.
 
+Every candidate record must declare its exact direction of flow. A merchant acceptance gateway where a customer pays crypto to a merchant is `customer_crypto_to_merchant`; it is not proof of `payer_crypto_to_supplier_fiat` and cannot be counted as a supplier bill-payment intermediary.
+
 No route is qualified based only on marketing claims such as “crypto accepted” or “no KYC.” Verify the governing terms, onboarding and account conditions, every payer-side actor, API lifecycle, legal availability in the relevant jurisdiction, and a complete synthetic or otherwise separately authorized bounded reconciliation test. Do not attempt to evade legal identity or sanctions controls; classify a route as unavailable if it cannot lawfully serve the intended operation.
 
 ### 4.2 Council policy authorization envelope
@@ -236,6 +239,8 @@ Required common state machine:
 12. `PROVIDER_CREDIT_PENDING` — the supplier's service/API is polled or its webhook is verified for the matching payment.
 13. `CREDITED` — supplier account reports the matching credited balance/order/service term.
 14. `RECONCILED` — crypto amount, conversion/fees, fiat amount/currency, downstream payment, invoice, provider credit and authorized intent match; immutable audit record is published.
+
+Invoice PDFs, supplier contracts, beneficiary bank details and payment references must be treated as confidential payment data. Do not send their contents to an external AI/LLM extraction or processing service unless the exact processor, purpose, retention, training, region, subprocessors and deletion path have been qualified and explicitly approved for that data class.
 
 A route must not report `SUPPLIER_PAYMENT_CONFIRMED`, `CREDITED` or `RECONCILED` merely because the intermediary received crypto. If the intermediary cannot expose a reliable downstream payout/capture/redemption state or a supplier acknowledgement, that route is not qualified for autonomous core payments.
 
