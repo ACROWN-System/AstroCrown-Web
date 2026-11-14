@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "health_memory_path": "NOVA/health_state.json",
+  "operational_memory_path": "NOVA/health_state.json",
+  "latency": {
+    "max_samples_per_target": 24,
+    "degraded_multiplier": 2,
+    "minimum_samples_for_comparison": 4
+  },
+  "failure": {
+    "unacceptable_consecutive_failures": 3
+  },
+  "freshness": {
+    "principle": "A stale observation is not proof that the underlying state is false; it is evidence that current reality has not been freshly observed.",
+    "heart_observation_max_age_seconds": 21600,
+    "external_observations_default": "UNSPECIFIED"
+  },
+  "heartbeats": {
+    "llm": {
+      "schedule_hours": 6,
+      "probe_type": "deterministic_response_contract"
+    },
+    "gpu": {
+      "schedule_hours": 6,
+      "probe_type": "provider_api_and_optional_compute_probe"
+    }
+  },
+  "actions": {
+    "degraded": [
+      "record",
+      "increase_monitoring",
+      "deprioritize_routing",
+      "preserve_fallback"
+    ],
+    "unacceptable": [
+      "failover",
+      "deprioritize_routing",
+      "open_alert",
+      "preserve_evidence"
+    ],
+    "irreversible": {
+      "default": "HUMAN_GATE",
+      "never_autonomous_without_explicit_policy": [
+        "credential_creation",
+        "credential_rotation",
+        "ownership_transfer",
+        "irreversible_financial_action",
+        "destructive_data_deletion",
+        "security_boundary_relaxation"
+      ]
+    }
+  },
+  "scheduler": {
+    "interval_seconds": 21600,
+    "rolling_schedule": true,
+    "opportunistic_expiry_reallocation": true,
+    "required_work_only": true,
+    "preempt_only_when_normal_due_after_capacity_deadline": true,
+    "opportunistic_preemption_safety_margin_seconds": 60,
+    "scheduler_tick_seconds": 300,
+    "principle": "The 6-hour interval is the spacing between completed provider health checks, not an immutable wall-clock slot. A provider may be checked earlier when already-required health work can reuse capacity that would otherwise expire; after the check, the provider moves to the end of the rolling queue and the remaining providers retain the configured spacing."
+  }
+}

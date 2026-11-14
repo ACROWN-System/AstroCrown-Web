@@ -1,0 +1,60 @@
+name: NOVA Opportunistic Probe Scheduler
+
+on:
+  schedule:
+    # Lightweight decision tick. Provider health probes remain 6h apart unless
+    # an already-required probe can legitimately reuse capacity before expiry.
+    # Offset avoids the top-of-hour load peak noted by GitHub.
+    - cron: '2/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nova-heartbeat
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  decision:
+    runs-on: ubuntu-latest
+    outputs:
+      run_heartbeat: ${{ steps.gate.outputs.run_heartbeat }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Decide whether a probe is due or should be advanced
+        id: gate
+        run: python3 -m NOVA.probe_scheduler --should-run --github-output "$GITHUB_OUTPUT"
+
+  probe:
+    needs: decision
+    if: needs.decision.outputs.run_heartbeat == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Execute NOVA opportunistic health probe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GROQ_API_KEY_01: ${{ secrets.GROQ_API_KEY_01 }}
+          GEMINI_API_KEY_01: ${{ secrets.GEMINI_API_KEY_01 }}
+          CEREBRAS_API_KEY_01: ${{ secrets.CEREBRAS_API_KEY_01 }}
+          CLOUDFLARE_API_KEY_01: ${{ secrets.CLOUDFLARE_API_KEY_01 }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NOVA_ADVANCE_PROVIDER_ROTATION: 'true'
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_FROM_NUMBER: ${{ secrets.TWILIO_FROM_NUMBER }}
+          TWILIO_TO_NUMBER: ${{ secrets.TWILIO_TO_NUMBER }}
+        run: python3 -m NOVA.router
+
+      - name: Commit rolling probe state
+        run: |
+          git config --global user.name "NOVA Autonomous Engine"
+          git config --global user.email "nova@haan.system"
+          git add NOVA/roster.json NOVA/health_state.json
+          git diff --staged --quiet || (git commit -m "chore(nova): update rolling probe schedule [skip ci]" && git push)

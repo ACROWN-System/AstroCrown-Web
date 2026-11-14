@@ -1,0 +1,50 @@
+name: NOVA RSI Engine CI
+
+on:
+  push:
+    paths:
+      - "development/nova-recursive-self-improvement/**"
+      - ".github/workflows/nova-rsi-ci.yml"
+      - ".github/workflows/nova-rsi.yml"
+      - ".github/workflows/nova-rsi-codeql.yml"
+      - ".github/workflows/ossf-scorecard.yml"
+      - ".github/workflows/external-review-pipeline-ci.yml"
+      - ".github/codeql/nova-rsi-config.yml"
+      - ".github/dependabot.yml"
+      - "SECURITY.md"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Pull and verify immutable sandbox image
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
+
+      - name: Compile development Python
+        run: python -m compileall -q development
+
+      - name: Run RSI unit tests
+        run: python -m unittest discover -s development/nova-recursive-self-improvement/tests -p "test_*.py" -v
+
+      - name: Exercise Docker isolation boundaries
+        run: python development/nova-recursive-self-improvement/sandbox_runtime.py --self-test

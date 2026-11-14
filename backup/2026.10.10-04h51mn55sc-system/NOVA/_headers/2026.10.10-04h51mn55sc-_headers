@@ -1,0 +1,19 @@
+/*
+  # 1. Anti-Tracking: Never leak URL history to external sites or ISPs
+  Referrer-Policy: no-referrer
+
+  # 2. Hardware Privacy: Block unauthorized access to USB, Geolocation, & Hardware
+  Permissions-Policy: camera=(self), microphone=(self), display-capture=(self), geolocation=(), payment=(), usb=(), magnetometer=(), accelerometer=()
+
+  # 3. Anti-Eavesdropping: Force strict end-to-end HTTPS encryption (HSTS)
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+
+  # 4. Anti-Clickjacking: Prevent any third-party or state site from framing our portal
+  X-Frame-Options: DENY
+  X-Frame-Ancestors: 'none'
+
+  # 5. Anti-MIME Sniffing: Force browsers to strictly obey declared file types
+  X-Content-Type-Options: nosniff
+
+  # 6. Anti-Spyware & Content Security Policy (CSP): Block unauthorized scripts & tracking pixels
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; media-src 'self' blob: https:; connect-src 'self' https: wss:; frame-ancestors 'none';

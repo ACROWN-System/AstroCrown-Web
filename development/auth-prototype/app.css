@@ -1,0 +1,42 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #0b1020;
+  color: #edf2ff;
+  line-height: 1.55;
+  font-synthesis: none;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: radial-gradient(ellipse at top, #172643 0, #0b1020 58%); }
+.page { width: min(900px, 100% - 32px); margin: 0 auto; padding: 32px 0 48px; }
+.page-header { padding: 16px 0 24px; }
+.eyebrow { color: #9ebaff; font-size: .8rem; font-weight: 750; letter-spacing: .12em; }
+h1 { font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; margin: .2rem 0 .8rem; }
+h2 { margin-top: 0; font-size: 1.2rem; }
+.intro { max-width: 64ch; color: #ccd7ed; font-size: 1.05rem; }
+.panel, .warning { border: 1px solid #34425d; background: rgba(16, 26, 47, .92); border-radius: 14px; padding: 22px; margin: 16px 0; }
+.warning { border-color: #86652c; background: #241e14; }
+.warning h2 { color: #ffd994; }
+.warning li { margin: .4rem 0; }
+p { color: #d0daed; }
+button { appearance: none; border: 1px solid #9db7ff; border-radius: 9px; padding: 11px 16px; font: inherit; font-weight: 700; background: #dce6ff; color: #10182c; cursor: pointer; min-height: 44px; }
+button:hover:not(:disabled) { background: #fff; }
+button:focus-visible, pre:focus-visible { outline: 3px solid #ffcc73; outline-offset: 3px; }
+button:disabled { cursor: not-allowed; opacity: .45; }
+button.secondary { background: transparent; color: #e4ebff; border-color: #677995; }
+.button-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.wallet-details { margin: 18px 0 0; }
+.wallet-details > div { display: grid; grid-template-columns: minmax(130px, 180px) minmax(0, 1fr); gap: 12px; padding: 9px 0; border-top: 1px solid #2c3a54; }
+dt { color: #b9c9e4; }
+dd { margin: 0; overflow-wrap: anywhere; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.message { white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid #3d4e6c; border-radius: 9px; background: #070b15; color: #f2f5ff; padding: 16px; max-height: 360px; overflow: auto; font-size: .9rem; }
+.small { font-size: .85rem; color: #aebdda; }
+#status[data-state="error"] { color: #ffb4ae; }
+#status[data-state="success"] { color: #9ce6b3; }
+footer { border-top: 1px solid #26344c; margin-top: 28px; padding-top: 12px; color: #aebdda; font-size: .85rem; }
+footer p { color: inherit; }
+@media (max-width: 520px) {
+  .page { width: min(100% - 20px, 900px); padding-top: 20px; }
+  .panel, .warning { padding: 16px; }
+  .wallet-details > div { grid-template-columns: 1fr; gap: 4px; }
+}

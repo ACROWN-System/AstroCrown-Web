@@ -1,0 +1,469 @@
+## SUSPENDED WORKFLOW TEMPLATE — NOT AN ACTIVE GITHUB ACTION
+## Stored outside .github/workflows intentionally. Do not move back until the reactivation criteria in ../STRONG-RSI-STATUS.md are met.
+## The schedule and all provider-call jobs below are retained for future review only.
+
+name: NOVA Strong RSI — Monthly Autonomous Evaluation (Gated)
+
+on:
+  schedule:
+    - cron: "17 3 1 * *"
+
+concurrency:
+  group: nova-rsi
+  cancel-in-progress: false
+
+# Default all jobs to read-only; the candidate-retention job declares its
+# narrow write permissions explicitly below.
+permissions:
+  contents: read
+
+jobs:
+  implementation-readiness:
+    # The monthly schedule is intended only for the protected main branch;
+    # this workflow deliberately has no manual-dispatch trigger.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout protected policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Diagnose repeated RSI source states
+        id: cycle-diagnosis
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python development/nova-recursive-self-improvement/cycle_detector.py \
+            --repo-root . \
+            --max-prior-runs 10 \
+            --output "$RUNNER_TEMP/rsi-cycle-state.json"
+
+      - name: Preserve report when an exact state repeats
+        if: always() && steps.cycle-diagnosis.outputs.repeated == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nova-rsi-repeat-state-${{ github.run_id }}
+          path: ${{ runner.temp }}/rsi-cycle-state.json
+          if-no-files-found: error
+          retention-days: 14
+        continue-on-error: true
+
+      - name: Record monthly Strong RSI gate status
+        if: always()
+        env:
+          REPORT_PATH: ${{ runner.temp }}/strong-rsi-gate.json
+          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+          RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          policy = json.loads(Path("development/nova-recursive-self-improvement/rsi_policy.json").read_text(encoding="utf-8"))
+          readiness = policy.get("implementation_readiness", {})
+          budget = policy.get("budget", {})
+          gates = {
+              "implementation_ready": readiness.get("status") == "READY"
+                  and readiness.get("require_explicit_ready") is True
+                  and readiness.get("promotion_blocked_until_ready") is True,
+              "commercial_data_use_eligibility_pass": os.environ.get("RSI_AI_COMMERCIAL_ELIGIBILITY", "").strip() == "PASS",
+              "task_matched_benchmark_configured": bool(os.environ.get("RSI_BENCHMARK_COMMAND", "").strip()),
+              "no_direct_main_promotion": policy.get("promotion", {}).get("allow_main") is False,
+          }
+          report = {
+              "observed_at": datetime.now(timezone.utc).isoformat(),
+              "mode": "STRONG_RSI_MONTHLY_GATED",
+              "scheduled_cadence": "17 3 1 * * (UTC)",
+              "monthly_cycle_budget": budget.get("max_cycles_per_utc_month"),
+              "readiness_status": readiness.get("status", "UNKNOWN"),
+              "gates": gates,
+              "decision": "READY_TO_CONTINUE" if all(gates.values()) else "BLOCKED",
+              "provider_call_allowed_by_this_report": False,
+              "production_change_made": False,
+              "global_optimality_proven": False,
+              "notes": [
+                  "This is a gate report, not a capability result.",
+                  "A monthly schedule does not imply the Strong RSI lifecycle is operational.",
+                  "No-change means no justified candidate within the evaluated scope, not proof of global optimality.",
+              ],
+          }
+          report_path = Path(os.environ["REPORT_PATH"])
+          report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+          print("# Strong RSI — monthly gate report")
+          print()
+          print(f"- Cadence: {report['scheduled_cadence']}")
+          print(f"- Readiness: {report['readiness_status']}")
+          print(f"- Monthly cycle budget: {report['monthly_cycle_budget']}")
+          print(f"- Gate result: {report['decision']}")
+          print(f"- Direct main promotion: {'BLOCKED' if gates['no_direct_main_promotion'] else 'POLICY CHECK FAILED'}")
+          print("- No provider call or production change is authorized by this report.")
+          print("- Missing or inconclusive evidence blocks the cycle.")
+          PY
+
+      - name: Block RSI until implementation is explicitly ready
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          policy = json.loads(
+              Path("development/nova-recursive-self-improvement/rsi_policy.json")
+              .read_text(encoding="utf-8")
+          )
+          readiness = policy.get("implementation_readiness", {})
+          status = readiness.get("status")
+          required = readiness.get("require_explicit_ready")
+          promotion_blocked = readiness.get("promotion_blocked_until_ready")
+
+          print(f"RSI implementation readiness: {status}")
+          if not (
+              status == "READY"
+              and required is True
+              and promotion_blocked is True
+          ):
+              raise SystemExit(
+                  "RSI implementation is incomplete; autonomous proposal/evaluation/promotion is blocked."
+              )
+          PY
+
+      - name: Upload monthly Strong RSI gate evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nova-strong-rsi-gate-${{ github.run_id }}
+          path: ${{ runner.temp }}/strong-rsi-gate.json
+          if-no-files-found: warn
+          retention-days: 90
+
+  budget-gate:
+    needs: implementation-readiness
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Enforce monthly Strong RSI cycle budget
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          MONTH_LIMIT="$(python - <<'PY'
+          import json
+          with open("development/nova-recursive-self-improvement/rsi_policy.json", encoding="utf-8") as handle:
+              print(json.load(handle)["budget"]["max_cycles_per_utc_month"])
+          PY
+          )"
+
+          MONTH_START="$(date -u +%Y-%m-01)"
+          PRIOR_MONTH_RUNS="$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow nova-rsi.yml \
+            --branch main \
+            --created "$MONTH_START.." \
+            --limit 100 \
+            --json databaseId \
+            --jq '.[].databaseId' | grep -vx "$GITHUB_RUN_ID" | grep -c . || true)"
+
+          echo "Protected monthly Strong RSI budget: $MONTH_LIMIT"
+          echo "Prior main-branch Strong RSI runs this month: $PRIOR_MONTH_RUNS"
+
+          if [ "$MONTH_LIMIT" -lt 1 ] || [ "$PRIOR_MONTH_RUNS" -ge "$MONTH_LIMIT" ]; then
+            echo "Monthly Strong RSI budget exhausted or invalid; refusing another proposer cycle."
+            exit 1
+          fi
+
+  configuration-preflight:
+    needs: budget-gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
+      RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
+      RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+      RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+
+    steps:
+      - name: Checkout protected configuration
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Validate non-secret configuration
+        run: |
+          python development/nova-recursive-self-improvement/preflight.py --repo . --check-non-secret
+
+  sandbox-image-readiness:
+    needs: configuration-preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Pull and verify immutable sandbox image without credentials
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          echo "Verified immutable RSI sandbox image identity."
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
+
+  provider-secret-boundary:
+    needs: sandbox-image-readiness
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GROQ_API_KEY_01: ${{ secrets.GROQ_API_KEY_01 }}
+
+    steps:
+      - name: Validate Groq provider secret is configured
+        run: |
+          set -euo pipefail
+          if [ -z "${GROQ_API_KEY_01:-}" ]; then
+            echo "GROQ_API_KEY_01 is not configured. Add the approved Groq key as an AstroCrown-Web Actions secret before the provider boundary can pass."
+            exit 2
+          fi
+          echo "GROQ_API_KEY_01 is configured; the value is not printed."
+
+  rsi-cycle:
+    needs: provider-secret-boundary
+    outputs:
+      decision: ${{ steps.rsi-decision.outputs.decision }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Pull and verify immutable sandbox image before candidate execution
+        run: |
+          set -euo pipefail
+          IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
+          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          docker pull --platform linux/amd64 "$IMAGE"
+          ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          test "$ACTUAL_ID" = "$EXPECTED_ID"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Initialize per-run sandbox cleanup identifier
+        run: |
+          set -euo pipefail
+          python -c 'import uuid; print("RSI_SANDBOX_EVALUATION_ID=" + uuid.uuid4().hex)' >> "$GITHUB_ENV"
+
+      - name: Run bounded autonomous RSI cycle
+        timeout-minutes: 21
+        env:
+          RSI_AI_BASE_URL: ${{ vars.RSI_AI_BASE_URL }}
+          RSI_AI_MODEL: ${{ vars.RSI_AI_MODEL }}
+          RSI_AI_COMMERCIAL_ELIGIBILITY: ${{ vars.RSI_AI_COMMERCIAL_ELIGIBILITY }}
+          GROQ_API_KEY_01: ${{ secrets.GROQ_API_KEY_01 }}
+          RSI_BENCHMARK_COMMAND: ${{ vars.RSI_BENCHMARK_COMMAND }}
+        run: |
+          python development/nova-recursive-self-improvement/rsi_engine.py cycle             --repo .             --evidence-dir .rsi-evidence
+
+      - name: Expose protected RSI decision
+        id: rsi-decision
+        if: always()
+        run: |
+          set -euo pipefail
+          DECISION="BLOCKED"
+          if [[ -f .rsi-evidence/cycle.json ]]; then
+            DECISION="$(python - <<'PY'
+          import json
+          from pathlib import Path
+          try:
+              result = json.loads(Path(".rsi-evidence/cycle.json").read_text(encoding="utf-8"))
+              value = result.get("decision", "BLOCKED")
+          except (OSError, json.JSONDecodeError):
+              value = "BLOCKED"
+          print(value if value in {"PASS", "NO_CHANGE", "FAIL", "BLOCKED"} else "BLOCKED")
+          PY
+          )"
+          fi
+          echo "decision=$DECISION" >> "$GITHUB_OUTPUT"
+          echo "Strong RSI decision: $DECISION" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up evaluation-labelled sandbox containers
+        if: always()
+        timeout-minutes: 3
+        run: |
+          set -euo pipefail
+          if [ -z "${RSI_SANDBOX_EVALUATION_ID:-}" ]; then
+            echo "No evaluation ID was initialized; the RSI cycle could not have launched its sandbox."
+            exit 0
+          fi
+          python development/nova-recursive-self-improvement/sandbox_runtime.py --cleanup-evaluation-id "$RSI_SANDBOX_EVALUATION_ID"
+
+      - name: Upload RSI evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: nova-rsi-evidence-${{ github.run_id }}
+          path: .rsi-evidence/
+          if-no-files-found: warn
+
+  retain-qualified-candidate:
+    needs: rsi-cycle
+    if: needs.rsi-cycle.result == 'success' && needs.rsi-cycle.outputs.decision == 'PASS'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: read
+
+    steps:
+      - name: Require GitHub App automation credentials
+        env:
+          NOVA_RSI_APP_CLIENT_ID: ${{ vars.NOVA_RSI_APP_CLIENT_ID }}
+          NOVA_RSI_APP_PRIVATE_KEY: ${{ secrets.NOVA_RSI_APP_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${NOVA_RSI_APP_CLIENT_ID:-}" || -z "${NOVA_RSI_APP_PRIVATE_KEY:-}" ]]; then
+            echo "::error title=GitHub App not configured::Configure repository variable NOVA_RSI_APP_CLIENT_ID and repository secret NOVA_RSI_APP_PRIVATE_KEY before the protected RSI workflow is enabled."
+            exit 2
+          fi
+          echo "GitHub App credential presence verified; private key content was not printed."
+
+      - name: Mint repository-scoped GitHub App token
+        id: rsi-app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.NOVA_RSI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.NOVA_RSI_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: AstroCrown-Web
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout baseline
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.rsi-app-token.outputs.token }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download RSI evidence
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: nova-rsi-evidence-${{ github.run_id }}
+          path: .rsi-evidence
+
+      - name: Verify evidence before write-capable retention
+        run: |
+          set -euo pipefail
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA"
+
+      - name: Retain qualified candidate
+        env:
+          GH_TOKEN: ${{ steps.rsi-app-token.outputs.token }}
+          NOVA_RSI_AUTOMERGE_ENABLED: ${{ vars.NOVA_RSI_AUTOMERGE_ENABLED }}
+        run: |
+          set -euo pipefail
+
+          BRANCH="rsi/candidate-$GITHUB_RUN_ID"
+          if git remote get-url origin >/dev/null 2>&1; then
+            git remote set-url origin "https://github.com/$GITHUB_REPOSITORY.git"
+          else
+            git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          fi
+          gh auth setup-git
+          git fetch origin main
+          git switch -c "$BRANCH" "$GITHUB_SHA"
+          git apply --check .rsi-evidence/candidate.patch
+          git apply .rsi-evidence/candidate.patch
+          git diff --check
+          git config user.name "NOVA RSI"
+          git config user.email "nova-rsi@localhost"
+          git add development/
+          git diff --cached --check
+          # The index must reproduce the exact tree independently evaluated.
+          python development/nova-recursive-self-improvement/evidence_verifier.py --repo . --evidence-dir .rsi-evidence --expected-baseline "$GITHUB_SHA" --check-applied
+          git commit -m "rsi: retain verified candidate $GITHUB_RUN_ID"
+          git push --set-upstream origin "$BRANCH"
+          PR_URL="$(gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "NOVA RSI candidate $GITHUB_RUN_ID" \
+            --body "Automated NOVA RSI candidate retained after protected evaluation. See the workflow artifact for the evidence package.")"
+          echo "Created qualified candidate pull request: $PR_URL"
+
+          # Default-off: auto-merge may be enabled only after branch rules and
+          # every required check are configured. This runtime preflight fails
+          # closed if those administrative controls are missing or unreadable.
+          if [[ "${NOVA_RSI_AUTOMERGE_ENABLED:-false}" =~ ^([Tt][Rr][Uu][Ee])$ ]]; then
+            gh api "repos/$GITHUB_REPOSITORY/rules/branches/main" > "$RUNNER_TEMP/main-branch-rules.json"
+            python - "$RUNNER_TEMP/main-branch-rules.json" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          rules = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          if not isinstance(rules, list):
+              raise SystemExit("BLOCKED: branch-rule API did not return a rule list.")
+
+          types = {rule.get("type") for rule in rules if isinstance(rule, dict)}
+          if "pull_request" not in types:
+              raise SystemExit("BLOCKED: main has no active pull-request requirement.")
+
+          required_checks = {
+              "NOVA RSI Engine CI / test",
+              "External Review Pipeline CI / test",
+              "NOVA RSI CodeQL Security Analysis / CodeQL analysis (Python)",
+          }
+          configured_checks = set()
+          for rule in rules:
+              if not isinstance(rule, dict) or rule.get("type") != "required_status_checks":
+                  continue
+              parameters = rule.get("parameters") or {}
+              for check in parameters.get("required_status_checks", []):
+                  if isinstance(check, dict):
+                      context = check.get("context") or check.get("name")
+                      if isinstance(context, str):
+                          configured_checks.add(context)
+
+          missing = sorted(required_checks - configured_checks)
+          if missing:
+              raise SystemExit(
+                  "BLOCKED: main is missing mandatory required status checks: "
+                  + ", ".join(missing)
+              )
+          print("Main-branch pull-request rule and all mandatory CI checks are active.")
+          PY
+            gh pr merge "$PR_URL" --auto --squash --delete-branch
+            echo "Auto-merge requested; GitHub will merge only after branch protection requirements pass."
+          else
+            echo "Auto-merge is disabled by NOVA_RSI_AUTOMERGE_ENABLED; PR remains open for verification."
+          fi

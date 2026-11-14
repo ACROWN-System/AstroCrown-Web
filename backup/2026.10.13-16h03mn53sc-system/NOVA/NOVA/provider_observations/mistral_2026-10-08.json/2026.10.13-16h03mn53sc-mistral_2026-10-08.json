@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "provider": "mistral",
+  "resource": "Studio API key activation",
+  "scope": "workspace_or_organization",
+  "source": "Mistral Studio > API Keys",
+  "observed_at": "2026-10-08T04:00:00+05:30",
+  "plan_displayed": "Free",
+  "measurement_state": "BLOCKED",
+  "observed_state": "Upgrade required to activate API keys",
+  "api_key_count": 0,
+  "action": "DO_NOT_UPGRADE_FOR_DEVELOPMENT",
+  "notes": [
+    "This is an account/workspace-specific observation.",
+    "Mistral public documentation separately describes Free mode API access; NOVA should preserve the actual workspace state until verified through a successful key creation.",
+    "Keep Mistral as an unconfigured fallback candidate rather than treating the provider as permanently unavailable."
+  ]
+}

@@ -1,0 +1,34 @@
+name: NOVA Health Tests
+
+on:
+  push:
+    paths:
+      - 'NOVA/**'
+      - '.github/workflows/nova_*heartbeat.yml'
+      - '.github/workflows/nova_health_tests.yml'
+  pull_request:
+    paths:
+      - 'NOVA/**'
+      - '.github/workflows/nova_*heartbeat.yml'
+      - '.github/workflows/nova_health_tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: Compile NOVA Python
+        run: python -m compileall -q NOVA
+
+      - name: Test NOVA health architecture
+        run: python -m unittest discover -s NOVA/tests -p 'test_*.py' -v

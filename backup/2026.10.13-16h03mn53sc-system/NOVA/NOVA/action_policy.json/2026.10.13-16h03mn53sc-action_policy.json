@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "_comment": "NOVA autonomy boundary. Protective reversible actions may be autonomous; irreversible or security/financial actions remain human-gated until explicit evidence changes this policy.",
+  "health_actions": {
+    "HEALTHY": [
+      "maintain"
+    ],
+    "DEGRADED": [
+      "record",
+      "deprioritize",
+      "increase_monitoring",
+      "preserve_fallback"
+    ],
+    "UNACCEPTABLE": [
+      "failover",
+      "deprioritize",
+      "alert",
+      "preserve_evidence"
+    ]
+  },
+  "external_event_actions": {
+    "LOW": [
+      "record",
+      "reuse_prior_analysis_when_valid"
+    ],
+    "MEDIUM": [
+      "analyze",
+      "create_issue_if_actionable",
+      "do_not_mutate_production_directly"
+    ],
+    "HIGH": [
+      "analyze",
+      "create_issue",
+      "require_change_verification"
+    ],
+    "CRITICAL": [
+      "analyze",
+      "urgent_alert",
+      "human_gate_for_irreversible_action"
+    ]
+  },
+  "autonomy_levels": {
+    "L0_OBSERVE": "No mutation.",
+    "L1_ANALYZE": "Read, compare, benchmark, simulate, and reason.",
+    "L2_REVERSIBLE_PROTECT": "Routing, retry, failover, demotion, alerts, candidate creation.",
+    "L3_CONTROLLED_CHANGE": "Tested change in protected branch or equivalent controlled boundary.",
+    "L4_HIGH_IMPACT": "Production/security/payment changes require stronger explicit authorization.",
+    "L5_IRREVERSIBLE": "Human gate by default."
+  },
+  "financial_actions": {
+    "observe_capacity": "AUTONOMOUS",
+    "record_revenue_and_cost": "AUTONOMOUS",
+    "create_payment_intent": "AUTONOMOUS",
+    "submit_crypto_payment": "HUMAN_GATE",
+    "irreversible_transfer": "HUMAN_GATE",
+    "change_public_price": "HUMAN_GATE",
+    "change_public_price_due_only_to_backend_provider_switch": "FORBIDDEN",
+    "replenish_provider_before_quota_exhaustion": "RECOMMEND_AND_ALERT"
+  },
+  "public_pricing_rules": {
+    "service_based_not_provider_based": true,
+    "provider_switch_preserves_user_price": true,
+    "free_capacity_does_not_reduce_user_price": true,
+    "paid_backend_cost_is_absorbed_by_operating_pool": true
+  }
+}

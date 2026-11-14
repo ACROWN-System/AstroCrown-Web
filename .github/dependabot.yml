@@ -1,0 +1,64 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # Source requirements remain the reviewed version pins. CI will reject a
+  # Dependabot update until the corresponding platform wheel hashes are
+  # regenerated with generate_ci_dependency_locks.py and included in that PR.
+  - package-ecosystem: pip
+    directory: /development/auth-prototype
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      python-wallet-auth-compatible:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      python-wallet-auth-major:
+        patterns:
+          - "*"
+        update-types:
+          - major
+
+  - package-ecosystem: pip
+    directory: /development/account-continuity/prototype
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      python-account-continuity-compatible:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+      python-account-continuity-major:
+        patterns:
+          - "*"
+        update-types:
+          - major
+
+  - package-ecosystem: pip
+    directory: /development/dependencies
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      python-audit-tool-compatible:
+        patterns:
+          - "pip-audit"
+        update-types:
+          - minor
+          - patch
+      python-audit-tool-major:
+        patterns:
+          - "pip-audit"
+        update-types:
+          - major
