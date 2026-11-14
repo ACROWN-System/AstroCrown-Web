@@ -45,10 +45,15 @@ The page must include these independently navigable sections:
 8. A practical before-connect/sign/send/publish checklist.
 9. Primary sources, review date and update triggers.
 
+### Account-dialog entry point
+
+The preview account consent dialog may link to the Privacy & Transparency Guide as a separate educational resource. The Terms of Use and Privacy Policy links must remain distinct and labelled as legal-policy documents. The guide must not be represented as consent text, a contractual term or a substitute for either policy.
+
 ## 4. Contextual navigation and disclosure
 
 - The Wallet dropdown on the preview homepage must link directly to the public-chain explanation at `privacy-transparency.html#public-blockchains`.
 - The preview footer must link to the Centre.
+- The preview account consent dialog must provide a distinct link to the guide, while clearly retaining the development-draft status of the Terms of Use and Privacy Policy.
 - Before any future real wallet connection, transaction, payment, profile/address publication or sensitive AI submission, the corresponding feature must provide an in-context disclosure explaining:
   - exact network and token/mint/contract where relevant;
   - which details become public;

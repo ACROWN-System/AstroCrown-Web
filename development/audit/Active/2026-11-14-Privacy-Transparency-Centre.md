@@ -16,9 +16,10 @@ Continue the preserved system reassessment at Block 8 without repeating complete
 
 - Continue Block 8 AI provider and data-handling assessment from current NOVA repository evidence.
 - Add `preview/privacy-transparency.html` as a static, self-contained education page.
+- Add a separate educational guide link to the preview account consent dialog without conflating it with either legal policy.
 - Link it from the preview Wallet dropdown and footer.
 - Add requirements/maintenance documentation and a deterministic, dependency-free static smoke test.
-- Preserve the current homepage before changing its navigation links.
+- Preserve the current homepage and account consent UI before changing their navigation links.
 - Keep the page in preview only; no production-root promotion.
 
 ## Explicit exclusions
@@ -28,6 +29,7 @@ Continue the preserved system reassessment at Block 8 without repeating complete
 - Do not activate provider/GPU candidates.
 - Do not enable real wallet, payment, treasury or account operations.
 - Do not modify the old `preview/privacy-policy.html` or `preview/terms-of-use.html`.
+- Do not turn the guide into an account consent or legal agreement.
 - Do not modify PR #176 or claim it is live.
 - Do not alter production root, authentication backend, NOVA code or current security controls.
 - Do not claim legal review, certification, anonymity or production readiness.
@@ -37,10 +39,11 @@ Continue the preserved system reassessment at Block 8 without repeating complete
 1. Current `main` commit is `706f873e460f3c82f42659b43de79462146416b7`.
 2. Existing `preview/privacy-policy.html` is a development-only draft for a legacy account prototype, not a complete policy for current or future system data flows.
 3. The current preview Wallet menu explicitly states it cannot connect wallets, sign messages, submit orders or move assets.
-4. Passkey-first account foundation PR #141 is merged. The Worker/D1 account README still limits its qualification to local synthetic testing; remote staging and real-user production deployment are not enabled.
-5. Supporter programme PR #176 remains open/draft; its current preview is not a live payment or treasury feature.
-6. `development/SECURITY-BASELINE.md` has broad review areas marked UNVERIFIED. No overall security status may be inferred.
-7. Canonical Navigation Protocol/template were not located in the accessible active repository trees. Formal Navigation Protocol compliance is therefore UNKNOWN/BLOCKED, not PASS.
+4. The account consent UI is a legacy preview dialog; the guide is linked separately and does not replace the legal-policy links.
+5. Passkey-first account foundation PR #141 is merged. The Worker/D1 account README still limits its qualification to local synthetic testing; remote staging and real-user production deployment are not enabled.
+6. Supporter programme PR #176 remains open/draft; its current preview is not a live payment or treasury feature.
+7. `development/SECURITY-BASELINE.md` has broad review areas marked UNVERIFIED. No overall security status may be inferred.
+8. Canonical Navigation Protocol/template were not located in the accessible active repository trees. Formal Navigation Protocol compliance is therefore UNKNOWN/BLOCKED, not PASS.
 
 ## Block 8 — current provider evidence
 
@@ -100,7 +103,7 @@ Latest operational observation set reviewed: 2026-11-13 23:00:32 UTC.
 
 ## Verification plan
 
-- [ ] Back up the exact pre-change homepage and verify source SHA.
+- [ ] Back up the exact pre-change homepage and account consent script; verify both source SHAs.
 - [ ] Verify the new page has unique IDs and valid internal anchor targets.
 - [ ] Verify essential content, source references, preview status and implementation-status caveats.
 - [ ] Verify no scripts, trackers, external assets or unapproved dependencies were added.

@@ -12,6 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 PAGE = ROOT / "preview" / "privacy-transparency.html"
 HOME = ROOT / "preview" / "index.html"
+ACCOUNT = ROOT / "preview" / "account-ui.js"
 
 
 class DocumentInspector(HTMLParser):
@@ -63,10 +64,11 @@ class DocumentInspector(HTMLParser):
 class PrivacyTransparencyStaticSmoke(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        if not PAGE.is_file() or not HOME.is_file():
+        if not PAGE.is_file() or not HOME.is_file() or not ACCOUNT.is_file():
             raise AssertionError("Run from the repository checkout containing preview/ files.")
         cls.page_source = PAGE.read_text(encoding="utf-8")
         cls.home_source = HOME.read_text(encoding="utf-8")
+        cls.account_source = ACCOUNT.read_text(encoding="utf-8")
         cls.page = DocumentInspector()
         cls.page.feed(cls.page_source)
         cls.page.close()
@@ -117,6 +119,12 @@ class PrivacyTransparencyStaticSmoke(unittest.TestCase):
     def test_homepage_links_to_centre_from_wallet_and_footer(self) -> None:
         self.assertIn('href="privacy-transparency.html#public-blockchains"', self.home_source)
         self.assertIn('href="privacy-transparency.html"', self.home_source)
+
+    def test_account_consent_links_guide_separately_from_legal_policies(self) -> None:
+        self.assertIn('href="./terms-of-use.html"', self.account_source)
+        self.assertIn('href="./privacy-policy.html"', self.account_source)
+        self.assertIn('href="./privacy-transparency.html"', self.account_source)
+        self.assertIn("does not replace either policy", self.account_source)
 
     def test_reduced_motion_and_keyboard_accessibility_hooks_exist(self) -> None:
         self.assertIn("prefers-reduced-motion", self.page_source)
