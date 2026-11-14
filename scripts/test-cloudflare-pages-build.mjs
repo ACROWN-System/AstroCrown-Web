@@ -69,6 +69,9 @@ assert.match(supporterPage, /ACROWN delivery remains (?:on Solana|Solana-based)/
 assert.match(supporterPage, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/i);
 assert.match(supporterPage, /1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance/i);
 assert.match(supporterPage, /180-day purchase period begins at that operational activation/i);
+assert.match(supporterPage, /unused personal allowance/i);
+assert.match(supporterPage, /Any approved global ceiling applies to everyone/i);
+assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wallet may purchase up to the entire remaining programme allowance/i);
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
 assert.doesNotMatch(supporterJs, /signMessageV2\s*\(/i);
