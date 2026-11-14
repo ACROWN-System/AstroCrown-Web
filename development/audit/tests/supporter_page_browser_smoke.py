@@ -260,8 +260,7 @@ def main() -> int:
         print(json.dumps({"results":RESULTS}, indent=2))
         return 1
     finally:
-        if browser is not None:
-            browser.close()
+        # The sync_playwright context manager already closes Chromium on exit.
         server.shutdown()
         server.server_close()
 
