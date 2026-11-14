@@ -40,6 +40,8 @@ What it does:
 - Its terms explicitly permit a request for proof of funds. The public portal says the user may be contacted to verify bill details, identity or source of funds. Therefore the service cannot be certified as permanently no-KYC/no-proof-of-funds.
 - The portal's invoice upload consent currently says the document is stored for administrative verification and its contents are sent to OpenAI for payment-detail extraction. This would need a separate data-protection assessment before any supplier invoice is uploaded.
 
+Source-currency note: the linked Bill Pay PDF terms are stamped 23 May 2024. The currently served Bill Pay portal/FAQ still describes the NZ/Australia approved-payee flow and states that identity or source-of-funds verification may be requested, but the older PDF should be treated as a dated source rather than silently assumed to be the latest contract. A live provider confirmation of current terms would be required before any consideration.
+
 Automation and operational limits:
 - The documented public flow is a website wizard: enter contact email, upload invoice, identify payee, set amount and payment method, supply refund wallet address, confirm terms and generate a payment address.
 - No public outgoing Bill Pay API, SDK, webhook contract, machine-readable invoice submission or programmatic settlement-reconciliation endpoint was found in this review.
