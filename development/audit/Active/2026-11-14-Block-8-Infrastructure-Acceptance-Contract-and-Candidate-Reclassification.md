@@ -276,6 +276,22 @@ Every free service must be constrained so that:
 
 Provider discovery, qualification, route changes, quota threshold, payments and credential rotation should be documented as machine-readable contracts and NOVA workflows. The Imperial Council approves policies, provider tiers, risk and budget envelopes; NOVA executes authorized operations and reports evidence. External providers are execution resources, not governance authorities.
 
+### 5.6 Reuse existing agent procurement and payment infrastructure
+
+AstroCrown must prefer integrating existing, maintained agent service catalogues, MCP discovery interfaces, x402/MPP payment routers, wallet/smart-account adapters and agent-to-agent marketplaces over building duplicate systems.
+
+NOVA remains the orchestrator and the owner of the standing policy, but it does not need to own every catalogue, payment protocol, agent marketplace or wallet implementation. It can discover an offer through one existing service directory, pay it through another compatible Router and hire a specialist agent through a task marketplace when that is the most suitable route.
+
+This is a reuse-first requirement, not a single-vendor lock-in:
+- keep discovery sources, payment routers, agent marketplaces and wallet/signers as separate replaceable adapter classes;
+- use multiple sources/routers where they improve coverage, cost or resilience;
+- preserve NOVA's own durable standing mandate, audit ledger, provider/resource state and fulfilment verification;
+- treat an external delegation cap as an additional lower limit, never as a substitute for AstroCrown's mandate;
+- do not duplicate an existing x402/MPP router, generic paid-service catalogue or agent marketplace unless a documented gap makes a thin internal component necessary;
+- perform source-code/custody review before an open-source wallet or MCP server receives signing authority.
+
+Provider-specific facts remain runtime-discovered. Public read-only discovery and no-funds probing must not be blocked by a demand to pre-qualify every possible provider. Only the actual payment/credential/funding step must fit the standing mandate and applicable hard rules. If an external stack requires payer-side KYC/KYB, bank/card information, an unauthorized financial account or a recurring human payment action, NOVA rejects that route and searches another.
+
 ## 6. Next work order
 
 Candidate Discovery 05 must not resume generic provider browsing. It must target routes capable of satisfying the hard gates, especially:
