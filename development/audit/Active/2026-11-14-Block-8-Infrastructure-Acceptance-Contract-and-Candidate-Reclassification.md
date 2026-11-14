@@ -156,6 +156,22 @@ The protocol is not itself a guarantee that a provider is no-KYC or that a parti
 
 A service that does not support an agent-native payment protocol may still be considered through its own machine API or provider-native crypto checkout. Browser automation is a last-resort compatibility path, not a reason to accept recurring CAPTCHA, manual identity checks, bank/card entry or human payment approval.
 
+### Gate 5C — Council-voted standing authorization for recurring payments
+
+Every payment commitment must be connected to an actual decision by the Imperial Council through AstroCrown's own governance system. NOVA prepares the proposal; it does not approve its own spending authority.
+
+For an ongoing service, the Council vote must explicitly cover the initial payment and recurring authority in the **same vote**. Once the vote validly passes, a versioned standing mandate preauthorizes every routine billing cycle, renewal, metered charge or subscription payment that stays within the approved terms. **The Council must not be asked to vote again for each recurrence.**
+
+A mandate may authorize a named service/plan or a service category and provider-discovery scope. It must set the recurrence frequency, maximum amount per cycle/call, cumulative and period budgets, maximum occurrences or expiry/review date, price/fee tolerance, permitted crypto payment/conversion routes, all-in gas/fee ceiling, service/data/region scope, provider substitution rules and revocation conditions. A one-time approval never silently grants automatic renewal.
+
+Before each initial or recurring payment, NOVA rechecks the active Council decision, mandate version, service need, recurrence schedule, provider and payment challenge, recipient, costs, remaining budget and no-KYC/no-bank/no-card/no-debt constraints. If all remain inside the vote, NOVA pays autonomously and records the transaction. It does not request another ballot.
+
+NOVA stops renewal and returns to the Council only when the mandate is expired/revoked, a ceiling is exceeded, or a material provider/service/price/billing/data/payment-term change falls outside the approved tolerance. The Council dashboard displays all payments and renewals; routine visibility and reporting do not mean individual payment approval.
+
+The vote's quorum, eligibility and passage threshold remain governed by the existing Imperial Council rules. The payment provider, external Router, wallet or MCP tool cannot create, modify, renew or override a Council mandate. A signed AP2-style recurrence/budget structure may be reused as an interoperability pattern, but the AstroCrown Council vote remains authoritative.
+
+See [COUNCIL-VOTED-STANDING-PAYMENT-MANDATE-SPECIFICATION.md](../operations/COUNCIL-VOTED-STANDING-PAYMENT-MANDATE-SPECIFICATION.md) for the canonical mandate, lifecycle, renewal and revocation requirements.
+
 ### Gate 6 — Commercial and intended-use rights
 
 Terms must permit the actual intended activity, including commercial development for AstroCrown, development of a customer-facing platform, and future commercial operation where the provider is being considered for that stage.
