@@ -76,8 +76,12 @@ Use official primary sources for changing technical claims. At initial implement
 - Gemini API Additional Terms: `https://ai.google.dev/gemini-api/terms`
 - Groq data handling: `https://console.groq.com/docs/your-data`
 - Cloudflare Workers AI data usage: `https://developers.cloudflare.com/workers-ai/platform/data-usage/`
+- OpenRouter privacy policy: `https://openrouter.ai/privacy/`
+- Requesty terms: `https://www.requesty.ai/terms`
+- Puter user-pays model: `https://docs.puter.com/user-pays-model/`
+- Puter privacy policy and terms: `https://puter.com/privacy`, `https://puter.com/terms`
 
-Each changing claim must identify the exact protocol, asset, provider, product, plan or API route and the date reviewed. For Gemini API, explicitly account for the current unpaid-service data-use terms and the separate 18+ / non-consumer API client eligibility conditions. For Workers AI, distinguish standard stateless inference from operational metadata and stateful/logging exceptions. For Groq, distinguish usage metadata retention from inference content-retention exceptions and account-level ZDR configuration. A roadmap is not evidence of deployed capability. A protocol feature is not evidence that a particular token or wallet uses it.
+Each changing claim must identify the exact protocol, asset, provider, product, plan or API route and the date reviewed. For Gemini API, explicitly account for the current unpaid-service data-use terms and the separate 18+ / non-consumer API client eligibility conditions. For OpenRouter, make clear that input is forwarded to chosen model providers and that its free tier has no data-policy-based routing. For Requesty, identify free-plan Training Permitted model flags, Requesty's own licence and the upstream provider's policy. For Puter, disclose the user-account/allowance model and date of the published Privacy Policy before any integration. For Workers AI, distinguish standard stateless inference from operational metadata and stateful/logging exceptions. For Groq, distinguish usage metadata retention from inference content-retention exceptions and account-level ZDR configuration. A roadmap is not evidence of deployed capability. A protocol feature is not evidence that a particular token or wallet uses it.
 
 ### Non-negotiable Solana disclosure
 
@@ -90,6 +94,12 @@ Confidential Balances is a Token-2022 extension and is not automatically enabled
 ### Issuer-specific stablecoin controls
 
 The page must explain that self-custody does not remove issuer-level powers attached to an issued token. The current example is Tether's Terms of Sale and Service, last updated 26 February 2026, which state that Tether may freeze Tether Tokens, blacklist digital-token addresses and suspend services in circumstances described in those terms. Attribute this example only to Tether; do not generalize it to all stablecoins or all blockchain networks.
+
+### Gateway and user-pays evidence rules
+
+- OpenRouter forwards inputs to the chosen or automatically selected model provider. The provider's own data practices may include retention or training; OpenRouter's free plan currently does not include data-policy-based routing.
+- Requesty Free currently allows 200 requests/day without a payment method. Its 14 August 2026 Terms distinguish Requesty's own data use from free-plan Training Permitted model exceptions and upstream provider practices. These labels, request/response rights, content restrictions and model-provider policy must be verified for each route.
+- Puter.js User-Pays requires each user to sign into their own Puter account and use their own monthly allowance; it is not central free API access. Its public Privacy Policy displays an effective date of 18 July 2022 and its Terms state that it accesses, processes, stores and scans User Data. Treat this evidence as insufficient for confidential use until current AI-route terms and safeguards are verified.
 
 ### Heightened-risk user disclosure and scoped restrictions
 
