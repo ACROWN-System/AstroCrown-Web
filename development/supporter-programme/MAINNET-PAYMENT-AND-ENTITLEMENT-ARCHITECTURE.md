@@ -35,10 +35,10 @@ Requirements:
 
 ## 3. Multiplier and programme-wide contribution/purchase ceilings
 
-The owner has approved a **USDT 1,000,000 aggregate contribution ceiling** and a **25:1 multiplier**, meaning 25 ACROWN of purchase allowance for each 1 USDT of verified contribution.
+The owner has approved a **USDT 1,000,000 aggregate contribution ceiling** and a **25:1 multiplier**, meaning 25 ACROWN of purchase allowance for each 1 USDT of verified contribution. The multiplier controls purchase quantity only; it is not a token grant and is not credit toward the separate ACROWN purchase price.
 
 - USDT decimals are six. The aggregate contribution ceiling is therefore `1,000,000,000,000` USDT base units.
-- A verified USDT 1 contribution creates the right to purchase up to 25 ACROWN at the approved ACS floor price. The contribution itself is not the ACROWN purchase and does not issue or deliver tokens.
+- A verified USDT 1 contribution creates the right to purchase up to 25 ACROWN at the approved ACS floor price. The supporter must separately pay the full floor-price consideration for each ACROWN purchase, plus network gas and/or Paymaster fees. The contribution itself is not the ACROWN purchase and does not issue or deliver tokens.
 - At the USDT 1,000,000 aggregate contribution ceiling, the maximum aggregate purchase allowance is 25,000,000 whole ACROWN.
 - Each member's earned allowance is calculated from that member's verified contributions using 25:1. The member's remaining allowance is earned allowance minus completed programme purchases.
 - The programme-wide remaining purchase capacity is 25,000,000 ACROWN minus all completed programme purchases. A member may buy no more than the lesser of personal remaining allowance and programme-wide remaining capacity.
@@ -46,26 +46,56 @@ The owner has approved a **USDT 1,000,000 aggregate contribution ceiling** and a
 - Total confirmed contributions across Ethereum, Tron and Solana must never exceed USDT 1,000,000. A final partial contribution must be limited to the exact remaining contribution capacity; excess transfers cannot create extra allowance.
 - Quantities are integer base-unit strings with rational arithmetic, never floating point. Convert 25,000,000 whole ACROWN to base units only after ACROWN decimals have been finalized and verified.
 
-The earlier sentence suggesting USDT 1 creates a 1-ACROWN allowance is inconsistent with the approved 25:1 rule. The governing rule is USDT 1 = 25 ACROWN of purchase allowance. The contribution remains distinct from a later purchase at the floor price; it is not a free-token allocation or automatic issuance.
+Owner confirmation on 2026-11-16 resolves the earlier wording ambiguity: USDT 1 of verified contribution creates purchase allowance for up to 25 ACROWN, not 1 ACROWN. This multiplier is only a quantity allowance; it does not pay for the 25 ACROWN. The supporter must later pay the separate ACS floor consideration plus gas/Paymaster fees.
 
-Before activation, the final ACS floor calculation/version, ACROWN decimal precision, rounding rule, qualification threshold, and purchase settlement details still require owner approval.
+The supporter contribution treasury remains separate from the ACS reserve. The contribution does not automatically enter `V`; any later treasury-to-reserve transfer must be separately approved, traceable and reconciled.
+
+### 3.1 ACS floor-price and fee accounting
+
+The owner has specified the governing ACS formula:
+
+`F = V / C`
+
+where `V` is the reserve vault containing reserve funds used to rebuy ACROWN at the floor, `C` is circulating ACROWN, and `F` is the ACS floor price. The formula is owner-approved; reserve valuation, denomination, measurement source, settlement snapshot, decimal precision and rounding/atomicity still require technical qualification.
+
+For a purchase of `q` ACROWN:
+
+- Floor-price consideration is `q × F`.
+- The full `q × F` must be credited to the ACS reserve `V`.
+- The supporter pays `q × F` **plus** separately itemized network gas and/or Paymaster fees. Fees are additional, not a deduction from the consideration credited to `V`.
+- If circulating supply increases by `q` and the full `F × q` is added to `V`, then, all else equal, `(V + Fq)/(C + q) = F`; the floor is preserved.
+- If fees are withheld from the consideration before it reaches `V`, the reserve increment is insufficient and `V/C` is diluted. The ACS reserve must not subsidize or absorb gas/Paymaster costs.
+- The exact fee, fee currency, recipient and any maximum fee must be itemized and disclosed before wallet approval. If a payment route cannot collect the fee separately while crediting the full floor consideration, that route must fail closed.
+- Do not use contributor funds as a silent fee source and do not presume contribution funds are part of `V`. Each treasury movement must be separately approved and publicly accounted for.
 
 ## 4. Wallet-registration cutoff, public-deployment event and programme close
 
 The wallet-registration period closes exactly 24 hours before the official public-deployment event.
 
-- Let `T_public` be the official public-deployment timestamp. The wallet-registration cutoff is `T_cutoff = T_public - 86,400 seconds`.
-- Publish the exact event timestamp in ISO 8601 UTC, including time and timezone. A date without an exact time is insufficient for a 24-hour cutoff.
-- The event name is not yet approved. "Genesis Day", "Launch Day", "Deployment Day" and "New Big-Bang Event" are candidate names only.
-- At the cutoff, freeze the set of successfully registered and ownership-verified supporter wallets. A wallet that is merely connected, but not registered and signature-verified, is not eligible.
-- After the public-deployment event, only wallets in the frozen registration set may use the programme's purchase allowances. No new member or wallet may be added to the eligible set after the cutoff.
-- A post-cutoff lost-wallet replacement must follow a separately reviewed recovery process and cannot be used to introduce a new, previously unregistered wallet into the eligible set.
-- This wallet-registration deadline is not itself a separate contribution-acceptance deadline. Contributions from already registered wallets may continue only while the programme is OPEN, the aggregate USDT 1,000,000 ceiling is not exceeded, and the programme close has not occurred. No unregistered wallet may create an eligible contribution.
+- Let `T_public` be `00:00:00 UTC` (`00:00:00Z`) at the beginning of the selected public-deployment event date. The wallet-registration cutoff is `T_cutoff = T_public - 86,400 seconds`, exactly `00:00:00Z` on the preceding UTC calendar date.
+- The event date remains undecided until security/readiness, development speed, adoption and funding-growth conditions justify fixing it. Once approved, publish the exact ISO 8601 UTC timestamp ending `T00:00:00Z`. Until then, do not invent or display an active cutoff.
+- The event name is also undecided. Near the readiness decision, assess the related project conversations and current adoption/branding trends; prioritize familiar wording, adoption potential and cost efficiency. "Genesis Day", "Launch Day", "Deployment Day" and "New Big-Bang Event" remain candidates only.
+- At cutoff, freeze the set of supporter wallets successfully registered and ownership-verified before the deadline. A merely connected or unverified wallet is not in the frozen set.
+- After cutoff, no previously unregistered wallet may register, join the eligibility set, contribute, purchase or invoke member-level programme actions. Public read-only programme information may remain viewable. The exception is a verified successor wallet replacing an already eligible wallet through the controlled recovery process; this preserves, rather than adds, one eligibility record.
+- Only frozen wallets or verified successor wallets attached to the same frozen records may use programme purchase allowances after the event.
+- A replacement is a migration of the old wallet's existing entitlement lineage: prove control of the replacement address, deactivate the old wallet for programme actions, carry contribution/purchase history and balances forward exactly once, preserve append-only evidence, and prohibit duplicate or increased allowance/capacity.
+- Intended UX: when a wallet is connected, match its verified address server-side and automatically show the dashboard for that exact recognized wallet. For loss/replacement, provide one guided recovery path, but require separately approved strong recovery proof. The fallback method when the former wallet cannot sign is not yet decided.
+- The cutoff is a wallet-registration/member-interaction cutoff, not a contribution cutoff for frozen wallets. Already registered wallets may continue qualifying contributions while the programme is OPEN, within the USDT 1,000,000 ceiling and programme-close rules. No unregistered wallet may interact with member-level programme functions after cutoff.
 - "Buy the remaining multipliers" means redeem the unused personal ACROWN purchase allowance by making the separate ACROWN purchase at the published ACS floor price.
 
 The previously approved global 180-day maximum window remains provisionally in force. It begins only when the owner-approved programme service is deliberately activated, not when a code is merged, preview is deployed, Worker is deployed or D1 is created. Purchases close at the earlier of the 180-day window closing or exhaustion of the shared 25,000,000-ACROWN purchase capacity. A sell-out closes the programme purchase path early; an unused time window does not add capacity.
 
-Store the official public-deployment timestamp and derived registration cutoff as authoritative programme data. If either is unset, do not invent a deadline or describe the registration cutoff as active. The exact public event schedule and whether the 180-day maximum is retained beyond this provisional rule must be published before activation.
+Store the selected public-event date as an immutable UTC-midnight timestamp and derive the preceding-day UTC-midnight cutoff server-side. If the date is unset, do not invent a deadline or describe registration cutoff as active. The event name remains a separate owner decision. The 180-day maximum remains provisional and must be confirmed before activation.
+
+### 4.1 Supporter dashboard display and purchase readiness
+
+The dashboard must separate programme-wide figures from the connected wallet's figures, and each figure must have a distinct label, numeric value and visually distinguishable progress line. Color must not be the sole way to communicate meaning.
+
+**Programme-wide 25,000,000-ACROWN capacity:** show purchase allowance earned/granted from verified contributions, ACROWN actually purchased/settled, and remaining sale capacity (`25,000,000 - completed purchases`).
+
+**Connected wallet:** show total allowance earned through that wallet's verified contributions at 25:1, ACROWN actually purchased by that wallet at the floor, and its remaining personal purchase allowance. Clearly label allowance as a right to buy, not tokens owned.
+
+The OFF/ON button is a server-derived readiness state, not a user-editable permission toggle. OFF is matte when the wallet is not eligible, the programme is not open, the personal allowance is exhausted, global capacity is exhausted or the purchase route/fee collection is not ready. ON uses the specified sparkly presentation only when all server-side eligibility, window, personal/global balance and fee-safe payment checks pass. The client cannot turn OFF into ON.
 
 ## 5. Member and wallet identity
 
@@ -107,6 +137,12 @@ Sessions use an HttpOnly, Secure-on-HTTPS, SameSite=Strict cookie. The database 
 
 This staging identity feature does not create a treasury, accept USDT, create payment intents, broadcast transactions or credit entitlements. Real payment and entitlement paths remain unavailable until the owner supplies public receiving addresses, treasury ownership and configuration are independently verified, dual RPC evidence and finality checks are in place, and the programme terms/security gates are approved.
 
+### 5.1 Secondary-market use and liquidity risk
+
+The owner is considering a model in which supporters who have purchased ACROWN at the ACS floor may resell through external exchanges or swaps, potentially using realized proceeds for further qualifying participation. A completed resale does not restore the purchase allowance already consumed; a new verified contribution from an already eligible wallet may create additional allowance only while contributions remain open and within the global ceiling.
+
+This is a conditional market hypothesis, not a promise of profit or a guaranteed liquidity mechanism. It requires an executable external market price above total acquisition cost, sufficient market depth, continuing demand and fees/slippage that do not eliminate the margin. Resales may distribute ACROWN and increase trade activity, but may also create sell pressure. Trading volume is not the same as liquidity depth. The external market may trade below the ACS floor, and `F` does not guarantee an exchange/swap execution price. The programme must not promise profit, appreciation, listing, liquidity or adoption outcomes and must disclose these risks before contribution or purchase.
+
 ## 6. Payment intent and finality
 
 The server creates an exact payment intent before a wallet signs a transfer. Each intent binds the member, independently verified source wallet, network, canonical token, exact treasury destination, exact base-unit amount, single-use intent ID, expiry and rules version. The client must construct only that authorized transfer.
@@ -125,14 +161,15 @@ The D1 migration creates:
 - one mainnet programme activation record with immutable 180-day timestamps;
 - the approved USDT 1,000,000 aggregate contribution ceiling and the 25:1 multiplier/rules version;
 - the 25,000,000-ACROWN shared purchase-capacity ceiling and current remaining capacity;
-- the official public-deployment timestamp, the derived 24-hour wallet-registration cutoff and a frozen registration eligibility record;
+- the selected public-deployment event date at `00:00:00Z` and derived registration cutoff at `00:00:00Z` on the previous UTC date;
+- an immutable record of frozen eligible wallets and append-only wallet-replacement/successor events preserving one entitlement lineage;
 - members and unique usernames;
 - independently verified chain wallets and short-lived challenges;
 - network-specific contribution intents;
 - finalized contributions unique by network + transaction hash + transfer/event index;
 - personal entitlement balances and append-only entitlement events;
 - separately recorded ACROWN purchases;
-- append-only public accounting events.
+- append-only public accounting events, including gross ACS floor consideration credited to `V` and separately itemized network/Paymaster fees.
 
 A contribution record preserves network, token identity, source wallet, treasury, amount/base units, transaction reference, event/instruction index, block/slot, finality evidence, provider agreement digest, timestamp and rules/multiplier version. Every entitlement calculation must be reproducible from stored inputs.
 
@@ -156,18 +193,18 @@ This foundation does not add payment endpoints or alter that boundary.
 
 All gates below must pass before real payment acceptance:
 
-1. The owner-approved multiplier is 25:1, the aggregate verified-contribution ceiling is USDT 1,000,000, and the maximum programme-wide purchase allowance is 25,000,000 whole ACROWN. The floor-price calculation/version, ACROWN decimals, rounding rules, minimum first-contribution threshold and purchase sequence still require final approval.
+1. The owner-approved multiplier is 25:1, the aggregate verified-contribution ceiling is USDT 1,000,000, and the maximum programme-wide purchase allowance is 25,000,000 whole ACROWN. The owner-specified ACS floor formula is `F = V/C`; the operational reserve valuation, circulating-supply measurement, ACROWN decimals, rounding rules, minimum first-contribution threshold, fee denominations and purchase settlement sequence still require qualification/approval.
 2. Owner supplies and independently verifies the three public receiving treasury addresses. No private key is needed in source code or chat.
 3. Treasury custody/signing, recovery, spending approvals, incident response and segregation from ACS reserve/prize funds are documented.
 4. Canonical token contracts/mints and decimals are independently checked against mainnet state.
-5. EVM, Tron and Solana wallet-control challenge verification is implemented and tested; username persistence and Solana delivery-wallet linking are operational. The wallet-registration cutoff is bound to the official public-deployment timestamp, and only the frozen verified-wallet set can use programme purchase rights after the event.
+5. EVM, Tron and Solana wallet-control challenge verification is implemented and tested; username persistence and Solana delivery-wallet linking are operational. The UTC-midnight event date and preceding-day cutoff are enforced; the frozen eligible-wallet set is enforced; replacement-wallet migration preserves the original eligibility/entitlement lineage; and the dashboard presents server-derived global and wallet-specific rights, purchases and remaining capacity.
 6. Exact payment intent construction, expiry, and amount enforcement are implemented and tested.
 7. Chain-specific transfer parsers, finality, independent RPC agreement, failover, replay/duplicate prevention and controlled testnet fixture tests pass.
 8. D1 migration, immutable activation, uniqueness, atomic accounting, backup and restore are qualified.
 9. Public ledger, redacted expense evidence, reconciliation, quota monitoring, rate limits, abuse controls and automatic fail-closed pause are operational.
 10. Privacy notices, final terms, support/contact route, applicable legal/jurisdictional review and independent security review are complete.
 11. Cloudflare account Free/no-card state and actual Pages/Functions/D1 bindings are verified. Each RPC provider passes real no-card, commercial-use and provider-independence qualification. No paid automatic fallback.
-12. Public page, treasury addresses, API origin and first activation timestamp are reviewed before the first real payment is possible.
+12. Public page, treasury addresses, API origin, first activation timestamp, exact `F = V/C` purchase arithmetic and separately charged network/Paymaster fee path are reviewed before the first real payment is possible.
 
 Until all gates are evidenced, `SUPPORTER_MAINNET_ENABLED` remains false, no treasury address appears publicly, and any payment route fails closed.
 
@@ -175,10 +212,11 @@ Until all gates are evidenced, `SUPPORTER_MAINNET_ENABLED` remains false, no tre
 
 These values cannot safely be invented:
 - the three treasury receiving addresses;
-- first-contribution threshold;
-- final floor-price/rounding/version rules and final ACROWN decimal precision;
-- official public-deployment event name, exact UTC timestamp and derived 24-hour wallet-registration cutoff;
-- exact post-cutoff wallet replacement/recovery procedure;
+- first-contribution threshold and evidence-based rationale;
+- reserve/circulating-supply operational data sources, settlement snapshot, rounding/version rules and final ACROWN decimal precision;
+- network gas/Paymaster fee currencies, quoting and capped-authorization rules, and exact collection path;
+- official public-deployment event name and date (event begins at `00:00:00Z`; cutoff is previous UTC day `00:00:00Z`);
+- exact post-cutoff recovery proof method when the former wallet cannot sign (while retaining automatic recognition and a simple guided replacement experience);
 - whether later contributions add to unused personal allowance;
 - final terms and applicable jurisdictional conditions;
 - Cloudflare account 02 access/state and explicit authorization for Pages/Functions/D1 creation and deployment.
