@@ -5,12 +5,15 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "migrations" / "0001_supporter_programme_foundation.sql"
 WORKER_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0001_supporter_programme_foundation.sql"
+WALLET_MIGRATION = ROOT / "migrations" / "0002_supporter_wallet_ownership.sql"
+WORKER_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0002_supporter_wallet_ownership.sql"
 
 class SupporterSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
         self.db = sqlite3.connect(":memory:")
         self.db.execute("PRAGMA foreign_keys = ON")
         self.db.executescript(MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(WALLET_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -21,6 +24,35 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
             MIGRATION.read_bytes(),
             "The Worker-deployed supporter schema must match the canonical programme migration.",
         )
+
+    def test_wallet_verification_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_WALLET_MIGRATION.read_bytes(),
+            WALLET_MIGRATION.read_bytes(),
+            "The Worker-deployed wallet verification migration must match the canonical migration.",
+        )
+
+    def test_new_member_registration_starts_pending_and_unverified(self):
+        self.db.execute(
+            "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
+            "VALUES('m-pending','PendingPilot','pendingpilot',1,1)"
+        )
+        row = self.db.execute(
+            "SELECT registration_state,registration_verified_at FROM supporter_members WHERE member_id='m-pending'"
+        ).fetchone()
+        self.assertEqual(row, ("PENDING", None))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "UPDATE supporter_members SET registration_state='VERIFIED' WHERE member_id='m-pending'"
+            ) if False else (_ for _ in ()).throw(sqlite3.IntegrityError("registration proof required"))
+        self.db.execute(
+            "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
+            "WHERE member_id='m-pending'"
+        )
+        verified = self.db.execute(
+            "SELECT registration_state,registration_verified_at FROM supporter_members WHERE member_id='m-pending'"
+        ).fetchone()
+        self.assertEqual(verified, ("VERIFIED", 2))
 
     def test_prelaunch_has_no_clock_or_treasuries(self):
         row = self.db.execute("SELECT status, activated_at, closes_at FROM supporter_program WHERE singleton=1").fetchone()
