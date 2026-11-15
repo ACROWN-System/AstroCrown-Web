@@ -44,6 +44,37 @@ CREATE TABLE IF NOT EXISTS supporter_rate_limits (
 CREATE INDEX IF NOT EXISTS supporter_rate_limits_cleanup_idx
   ON supporter_rate_limits(updated_at);
 
+CREATE TRIGGER IF NOT EXISTS supporter_member_registration_verified_requires_wallet
+BEFORE UPDATE OF registration_state ON supporter_members
+WHEN NEW.registration_state = 'VERIFIED'
+ AND NOT EXISTS (
+   SELECT 1 FROM supporter_wallets w
+   WHERE w.member_id = NEW.member_id
+     AND w.ownership_verified_at IS NOT NULL
+ )
+BEGIN SELECT RAISE(ABORT, 'A verified supporter requires a wallet ownership proof'); END;
+
+CREATE TRIGGER IF NOT EXISTS supporter_member_session_requires_verified_member
+BEFORE INSERT ON supporter_member_sessions
+WHEN NOT EXISTS (
+  SELECT 1 FROM supporter_members m
+  WHERE m.member_id = NEW.member_id
+    AND m.status = 'ACTIVE'
+    AND m.registration_state = 'VERIFIED'
+)
+BEGIN SELECT RAISE(ABORT, 'A supporter session requires a verified active member'); END;
+
+CREATE TRIGGER IF NOT EXISTS supporter_delivery_wallet_must_be_solana
+BEFORE INSERT ON supporter_wallets
+WHEN NEW.wallet_role IN ('ACROWN_DELIVERY', 'PAYMENT_AND_DELIVERY')
+ AND NEW.network != 'solana'
+BEGIN SELECT RAISE(ABORT, 'ACROWN delivery wallets must use Solana mainnet'); END;
+
+CREATE UNIQUE INDEX IF NOT EXISTS supporter_one_delivery_wallet_per_member
+  ON supporter_wallets(member_id)
+  WHERE wallet_role IN ('ACROWN_DELIVERY', 'PAYMENT_AND_DELIVERY');
+
+
 CREATE TRIGGER IF NOT EXISTS supporter_session_digest_no_update
 BEFORE UPDATE OF secret_digest, member_id, created_at, expires_at ON supporter_member_sessions
 BEGIN SELECT RAISE(ABORT, 'Supporter session identity is immutable'); END;
