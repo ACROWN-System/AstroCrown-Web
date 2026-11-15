@@ -138,7 +138,7 @@ This specification records the target and the current local implementation state
 - Exact RP ID/origin enforcement, fresh one-use challenges, replay rejection, user verification and credential revocation are proven by tests.
 - Multiple authenticator enrollment, loss, removal, replacement and recovery behavior are tested end to end.
 - Recovery secret entropy, one-time display, hashed storage, throttling, one-time consumption, invalidation and reissue are tested.
-- Account role and dashboard behavior remain unchanged; wallet proof cannot create an account or self-appoint an administrator.
+- Key-only account creation and login remain read-only. Wallet proof may register/authenticate a wallet-based account under the separate identity method, but cannot self-appoint an administrator or bypass server-enforced role governance.
 - No email/SMS/provider dependency is invoked during account creation, login or recovery. A network trace confirms only first-party AstroCrown API traffic and the browser/authenticator ceremony for the selected device configuration.
 - A documented passkey-synchronization disclosure distinguishes device-bound and synced credentials.
 - Dependency, threat-model, accessibility, browser-compatibility and independent security reviews are complete.
