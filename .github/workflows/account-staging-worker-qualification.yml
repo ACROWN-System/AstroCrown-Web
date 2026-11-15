@@ -155,7 +155,7 @@ jobs:
               'payment-method or billing-profile endpoints',
               'report["token_authentication"]',
               'USAGE_MODEL_REPORTED_FOR_AUDIT_ONLY',
-              'The account-settings endpoint reports a usage-model setting; it does not report subscription status or payment methods.',
+              'The Workers account-settings API reports the default usage-model setting, not the account subscription or payment-method state.',
           ]
           for value in required:
               if value not in source:
