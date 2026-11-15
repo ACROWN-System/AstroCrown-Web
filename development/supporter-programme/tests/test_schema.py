@@ -7,6 +7,8 @@ MIGRATION = ROOT / "migrations" / "0001_supporter_programme_foundation.sql"
 WORKER_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0001_supporter_programme_foundation.sql"
 WALLET_MIGRATION = ROOT / "migrations" / "0002_supporter_wallet_ownership.sql"
 WORKER_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0002_supporter_wallet_ownership.sql"
+ENTITLEMENT_MIGRATION = ROOT / "migrations" / "0003_wallet_scoped_entitlements_no_fixed_expiry.sql"
+WORKER_ENTITLEMENT_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0003_wallet_scoped_entitlements_no_fixed_expiry.sql"
 
 class SupporterSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
@@ -14,6 +16,7 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
         self.db.execute("PRAGMA foreign_keys = ON")
         self.db.executescript(MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(WALLET_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(ENTITLEMENT_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -30,6 +33,13 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
             WORKER_WALLET_MIGRATION.read_bytes(),
             WALLET_MIGRATION.read_bytes(),
             "The Worker-deployed wallet verification migration must match the canonical migration.",
+        )
+
+    def test_wallet_scoped_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_ENTITLEMENT_MIGRATION.read_bytes(),
+            ENTITLEMENT_MIGRATION.read_bytes(),
+            "The Worker-deployed no-expiry, wallet-scoped migration must match the canonical migration.",
         )
 
     def test_new_member_registration_starts_pending_and_unverified(self):
