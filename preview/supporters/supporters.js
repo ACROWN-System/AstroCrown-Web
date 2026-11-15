@@ -1,6 +1,116 @@
 (function () {
   "use strict";
 
+  function initializePublicEventCountdown() {
+    var countdown = document.getElementById("public-event-countdown");
+    if (!countdown) return;
+    var publicAtText = String(countdown.getAttribute("data-public-deployment-at") || "").trim();
+    var registrationStage = document.getElementById("registration-countdown-stage");
+    var launchStage = document.getElementById("launch-countdown-stage");
+    var registrationDigits = document.getElementById("registration-countdown");
+    var launchDigits = document.getElementById("launch-countdown");
+    var registrationState = registrationStage && registrationStage.querySelector(".countdown-stage-state");
+    var launchState = launchStage && launchStage.querySelector(".countdown-stage-state");
+    var registrationCaption = document.getElementById("registration-countdown-caption");
+    var launchCaption = document.getElementById("launch-countdown-caption");
+    var daySeconds = 24 * 60 * 60;
+    var publicAt = new Date(publicAtText);
+    var validTimestamp = /^\\d{4}-\\d{2}-\\d{2}T00:00:00(?:\\.000)?Z$/.test(publicAtText) &&
+      Number.isFinite(publicAt.getTime()) &&
+      publicAt.toISOString().slice(0, 10) === publicAtText.slice(0, 10) &&
+      publicAt.getUTCHours() === 0 && publicAt.getUTCMinutes() === 0 &&
+      publicAt.getUTCSeconds() === 0 && publicAt.getUTCMilliseconds() === 0;
+
+    function setDigits(container, values, labels) {
+      if (!container) return;
+      container.replaceChildren();
+      values.forEach(function (value, index) {
+        var span = document.createElement("span");
+        var strong = document.createElement("strong");
+        var small = document.createElement("small");
+        strong.textContent = String(value).padStart(2, "0");
+        small.textContent = labels[index];
+        span.append(strong, small);
+        container.appendChild(span);
+      });
+    }
+
+    function resetNotAnnounced() {
+      setDigits(registrationDigits, ["—", "—", "—", "—"], ["Days", "Hours", "Minutes", "Seconds"]);
+      setDigits(launchDigits, ["—", "—", "—"], ["Hours", "Minutes", "Seconds"]);
+      if (registrationState) registrationState.textContent = "Not announced";
+      if (launchState) launchState.textContent = "Starts at cutoff";
+      if (registrationCaption) registrationCaption.textContent = "Waiting for the official UTC event timestamp.";
+      if (launchCaption) launchCaption.textContent = "Wallet eligibility has not yet been frozen.";
+      if (registrationStage) registrationStage.classList.add("active");
+      if (launchStage) launchStage.classList.remove("active", "complete");
+    }
+
+    if (!validTimestamp) {
+      resetNotAnnounced();
+      return;
+    }
+
+    var publicAtMs = publicAt.getTime();
+    var cutoffAtMs = publicAtMs - daySeconds * 1000;
+
+    function parts(milliseconds) {
+      var remaining = Math.max(0, Math.floor(milliseconds / 1000));
+      var days = Math.floor(remaining / 86400);
+      var hours = Math.floor((remaining % 86400) / 3600);
+      var minutes = Math.floor((remaining % 3600) / 60);
+      var seconds = remaining % 60;
+      return { days: days, hours: hours, minutes: minutes, seconds: seconds };
+    }
+
+    function tick() {
+      var now = Date.now();
+      if (now < cutoffAtMs) {
+        var beforeCutoff = parts(cutoffAtMs - now);
+        setDigits(registrationDigits,
+          [beforeCutoff.days, beforeCutoff.hours, beforeCutoff.minutes, beforeCutoff.seconds],
+          ["Days", "Hours", "Minutes", "Seconds"]);
+        setDigits(launchDigits, ["—", "—", "—"], ["Hours", "Minutes", "Seconds"]);
+        if (registrationState) registrationState.textContent = "Registration open";
+        if (launchState) launchState.textContent = "Starts at cutoff";
+        if (registrationCaption) registrationCaption.textContent = "Wallet registration closes at " + new Date(cutoffAtMs).toISOString() + ".";
+        if (launchCaption) launchCaption.textContent = "The 24-hour launch phase begins when registration closes.";
+        if (registrationStage) registrationStage.classList.add("active");
+        if (launchStage) launchStage.classList.remove("active", "complete");
+        return;
+      }
+
+      if (now < publicAtMs) {
+        var beforeLaunch = parts(publicAtMs - now);
+        setDigits(registrationDigits, ["00", "00", "00", "00"], ["Days", "Hours", "Minutes", "Seconds"]);
+        setDigits(launchDigits,
+          [beforeLaunch.hours + (beforeLaunch.days * 24), beforeLaunch.minutes, beforeLaunch.seconds],
+          ["Hours", "Minutes", "Seconds"]);
+        if (registrationState) registrationState.textContent = "Registration closed";
+        if (launchState) launchState.textContent = "Final 24 hours";
+        if (registrationCaption) registrationCaption.textContent = "The verified-wallet eligibility set is frozen.";
+        if (launchCaption) launchCaption.textContent = "Public deployment begins at " + publicAt.toISOString() + ".";
+        if (registrationStage) registrationStage.classList.remove("active");
+        if (launchStage) launchStage.classList.add("active");
+        return;
+      }
+
+      setDigits(registrationDigits, ["00", "00", "00", "00"], ["Days", "Hours", "Minutes", "Seconds"]);
+      setDigits(launchDigits, ["00", "00", "00"], ["Hours", "Minutes", "Seconds"]);
+      if (registrationState) registrationState.textContent = "Closed";
+      if (launchState) launchState.textContent = "Event time reached";
+      if (registrationCaption) registrationCaption.textContent = "The eligible-wallet set remains frozen.";
+      if (launchCaption) launchCaption.textContent = "The scheduled public-deployment timestamp has arrived.";
+      if (registrationStage) registrationStage.classList.remove("active");
+      if (launchStage) launchStage.classList.add("complete");
+    }
+
+    tick();
+    window.setInterval(tick, 1000);
+  }
+
+  initializePublicEventCountdown();
+
   var solanaSelect = document.getElementById("supporter-wallet-choice");
   var solanaConnectButton = document.getElementById("supporter-wallet-connect");
   var solanaClearButton = document.getElementById("supporter-wallet-clear");
