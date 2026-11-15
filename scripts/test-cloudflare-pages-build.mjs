@@ -84,8 +84,6 @@ assert.match(supporterJs, /does not provide wallet recovery or replacement/i);
 assert.match(supporterPage, /unused personal allowance/i);
 assert.match(supporterPage, /The 25,000,000-ACROWN programme ceiling applies to everyone/i);
 assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wallet may purchase up to the entire remaining programme allowance/i);
-assert.match(supporterJs, /initializePublicEventCountdown/);
-assert.match(supporterJs, /does not provide wallet recovery or replacement/i);
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
 assert.match(supporterJs, /standard:connect/);
