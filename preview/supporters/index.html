@@ -541,7 +541,7 @@
             <div class="result-value">Unused personal entitlement</div>
           </div>
           <div class="formula">Personal allowance = verified USD₮ × approved ACROWN-per-USD₮ rate</div>
-          <p class="fine-print">Example: 1,000 USD₮ of verified contribution creates a right to purchase up to 25,000 ACROWN at the approved ACS floor. The contribution itself does not purchase or issue ACROWN. The multiplier is 25:1 and the programme-wide maximum purchase allowance is 25,000,000 ACROWN. The minimum first-contribution threshold and final floor-price/rounding rules remain subject to approval.</p>
+          <p class="fine-print">Example: 1,000 USD₮ of verified contribution creates a right to purchase up to 25,000 ACROWN at the approved ACS floor. The contribution itself does not purchase or issue ACROWN. The multiplier is 25:1 and the programme-wide maximum purchase allowance is 25,000,000 ACROWN. Each further verified contribution from an already eligible wallet adds allowance while the programme remains open; a completed purchase remains consumed after resale. The minimum first-contribution threshold and final floor implementation/rounding rules remain subject to approval.</p>
         </section>
       </div>
       <div class="policy-highlight">
@@ -751,6 +751,14 @@
         <details>
           <summary>What happens if I send more USDT than the authorized amount?</summary>
           <p>Do not do this. Excess funds are not credited with extra entitlement and are not promised to be returned, refunded or compensated. A direct or excess transfer may be permanently unrecoverable. Even a failed or rejected blockchain transaction can still consume network fees. Never assume AstroCrown can recover or return excess funds.</p>
+        </details>
+        <details>
+          <summary>Are gas and Paymaster fees included in the ACS floor price?</summary>
+          <p>No. For a purchase of q ACROWN, the full q × F floor-price consideration must be credited to the ACS reserve V. Network gas and/or Paymaster fees are additional buyer costs and must be itemized separately. They must never be deducted from the reserve credit. A route that cannot collect the fees separately must not enable the purchase.</p>
+        </details>
+        <details>
+          <summary>Can I resell ACROWN after buying it?</summary>
+          <p>Purchased ACROWN may be resold through an available external exchange or swap venue, subject to applicable terms and law. Resale does not restore the purchase allowance already consumed. A higher external price may create an opportunity only if it is executable after fees and slippage; the ACS floor does not guarantee an external market price, profit, listing or liquidity. Selling can also create market sell pressure.</p>
         </details>
         <details>
           <summary>Does the ACS guarantee the external market price?</summary>
