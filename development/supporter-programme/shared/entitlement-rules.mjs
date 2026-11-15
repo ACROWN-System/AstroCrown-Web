@@ -2,8 +2,6 @@
  * Dependency-free, deterministic entitlement arithmetic.
  * This module never reads RPC data, signs transactions or enables payments.
  */
-export const PROGRAMME_WINDOW_SECONDS = 180 * 24 * 60 * 60;
-
 export const PROGRAMME_USDT_DECIMALS = 6;
 export const PROGRAMME_MULTIPLIER_NUMERATOR = "25";
 export const PROGRAMME_MULTIPLIER_DENOMINATOR = "1";
@@ -48,19 +46,6 @@ function integer(value, label) {
     throw new TypeError(label + " must be a non-negative canonical integer string.");
   }
   return BigInt(stringValue);
-}
-
-export function programmeClosesAt(activatedAtSeconds) {
-  if (!Number.isSafeInteger(activatedAtSeconds) || activatedAtSeconds <= 0) {
-    throw new TypeError("Activation must be a positive safe Unix timestamp in seconds.");
-  }
-  return activatedAtSeconds + PROGRAMME_WINDOW_SECONDS;
-}
-
-export function isWithinProgrammeWindow(now, activatedAt, closesAt) {
-  if (![now, activatedAt, closesAt].every(Number.isSafeInteger)) return false;
-  return activatedAt > 0 && closesAt === activatedAt + PROGRAMME_WINDOW_SECONDS
-    && now >= activatedAt && now < closesAt;
 }
 
 /** Rate means whole ACROWN per one whole USD₮. Returns ACROWN base units. */
