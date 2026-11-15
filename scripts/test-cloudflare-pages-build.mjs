@@ -72,7 +72,7 @@ assert.match(supporterPage, /USDT 1,000,000/i);
 assert.match(supporterPage, /25,000,000 ACROWN/i);
 assert.match(supporterPage, /wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event/i);
 assert.match(supporterPage, /full floor-price consideration must reach the ACS reserve/i);
-assert.match(supporterPage, /gas and/or Paymaster fees are additional buyer costs/i);
+assert.match(supporterPage, /gas and\\/or Paymaster fees are additional buyer costs/i);
 assert.match(supporterPage, /180-day purchase period begins at that operational activation/i);
 assert.match(supporterPage, /unused personal allowance/i);
 assert.match(supporterPage, /The 25,000,000-ACROWN programme ceiling applies to everyone/i);
