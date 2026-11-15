@@ -74,16 +74,22 @@ assert.match(supporterPage, /Any approved global ceiling applies to everyone/i);
 assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wallet may purchase up to the entire remaining programme allowance/i);
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
-assert.doesNotMatch(supporterJs, /signMessageV2\s*\(/i);
+assert.match(supporterJs, /standard:connect/);
 assert.match(supporterPage, /No supporter contributions accepted in this development preview/i);
 assert.match(supporterPage, /USDT transfers not enabled/i);
-assert.match(supporterJs, /eth_requestAccounts/);
-assert.match(supporterJs, /standard:connect/);
-assert.match(supporterJs, /connected for display only/i);
-assert.doesNotMatch(supporterJs, /method\s*:\s*["'](?:personal_sign|eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
-assert.doesNotMatch(supporterJs, /signMessage\s*\(/);
+// The standalone Pages preview has no Worker runtime marker, so member registration,
+// wallet signatures and all supporter API writes remain unavailable there. The same
+// source script is used by the staging Worker, where off-chain ownership proofs are enabled.
+assert.doesNotMatch(supporterPage, /name=["']astro-supporter-runtime["']/i);
+assert.match(supporterJs, /function supporterRuntimeMarkerPresent\(\)/);
+assert.match(supporterJs, /if \(!supporterRuntimeMarkerPresent\(\) \|\| !wallet \|\| !wallet\.mainnet \|\| supporterMember\) return/);
+assert.match(supporterJs, /personal_sign/);
+assert.match(supporterJs, /signMessageV2/);
+assert.match(supporterJs, /solana:signMessage/);
+assert.doesNotMatch(supporterJs, /method\s*:\s*["'](?:eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
 assert.doesNotMatch(supporterJs, /signTransaction\s*\(/);
 assert.doesNotMatch(supporterJs, /signAndSendTransaction\s*\(/);
+assert.doesNotMatch(supporterJs, /eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls/);
 
 assert.match(privacy, /Privacy &amp; Transparency Centre/);
 assert.match(privacy, /noindex, nofollow, noarchive/i);
@@ -112,4 +118,4 @@ for (const [pagePath, html] of [
 
 console.log("Cloudflare Pages static-preview tests passed.");
 console.log("Published allowlist: " + actualFiles.length + " files.");
-console.log("No account backend, payment, signing, transaction, Worker or D1 capability is published.");
+console.log("The standalone Pages build has no Worker runtime marker or account API; registration/signing controls remain disabled and no transaction/payment method is present.");
