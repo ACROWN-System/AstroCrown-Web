@@ -60,6 +60,34 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
         ).fetchone()
         self.assertEqual(verified, ("VERIFIED", 2))
 
+    def test_supporter_sessions_require_verified_active_member(self):
+        self.db.execute(
+            "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
+            "VALUES('m-session','SessionPilot','sessionpilot',1,1)"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "INSERT INTO supporter_member_sessions(session_id,member_id,secret_digest,created_at,expires_at,last_used_at) "
+                "VALUES('s-pending','m-session','digest-pending',1,100,1)"
+            )
+        self.db.execute(
+            "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role,"
+            "ownership_verified_at,proof_method,created_at) "
+            "VALUES('w-session','m-session','ethereum','0x111','0x111','PAYMENT',2,'OFFCHAIN_MESSAGE',2)"
+        )
+        self.db.execute(
+            "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
+            "WHERE member_id='m-session'"
+        )
+        self.db.execute(
+            "INSERT INTO supporter_member_sessions(session_id,member_id,secret_digest,created_at,expires_at,last_used_at) "
+            "VALUES('s-verified','m-session','digest-verified',3,100,3)"
+        )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM supporter_member_sessions WHERE session_id='s-verified'").fetchone()[0],
+            1,
+        )
+
     def test_delivery_wallets_are_solana_only_and_unique_per_member(self):
         self.db.execute(
             "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
