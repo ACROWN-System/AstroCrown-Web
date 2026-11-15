@@ -198,6 +198,11 @@
     .entitlement-summary strong{display:block;margin-top:5px;color:var(--gold-soft);font-size:20px;line-height:1.2;letter-spacing:-.025em}
     .entitlement-summary p{margin:7px 0 0;color:var(--muted);font-size:10px;line-height:1.65}
     .dashboard-purchase-button{width:100%;margin-top:12px}
+    .purchase-readiness{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:88px;min-height:36px;margin-top:10px;padding:0 15px;border:1px solid rgba(153,178,213,.22);border-radius:999px;font-size:10px;font-weight:950;letter-spacing:.15em}
+    .purchase-readiness.off{background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.018));color:#8795aa;border-color:rgba(153,178,213,.2);box-shadow:inset 0 1px rgba(255,255,255,.035)}
+    .purchase-readiness.on{background:linear-gradient(110deg,#fff1a8,#ffd700 45%,#fff5bd);border-color:#fff0a1;color:#161923;box-shadow:0 0 12px rgba(255,215,0,.36),0 0 26px rgba(255,215,0,.17),inset 0 1px rgba(255,255,255,.7)}
+    .purchase-readiness.on::before{content:"✦";font-size:12px}
+    
     @media(max-width:820px){.dashboard-grid{grid-template-columns:1fr}.wallet-ecosystem-grid{grid-template-columns:1fr}}
     @media(max-width:560px){.wallet-actions{display:grid;grid-template-columns:1fr}.wallet-actions button,.profile-actions button{width:100%}.profile-actions{align-items:stretch}.member-display-name{width:100%}}
 
@@ -227,7 +232,7 @@
       <div class="hero-main">
         <div class="eyebrow">AstroCrown · Early supporter programme</div>
         <h1>Help build AstroCrown.<br><span>Priority access, not free tokens.</span></h1>
-        <p class="hero-copy">The proposed programme is designed to recognise early supporters through a priority opportunity to make a separate ACROWN purchase at the applicable ACS floor price. A supporter contribution is not itself a token purchase, does not issue ACROWN, and does not automatically enter the ACS reserve.</p>
+        <p class="hero-copy">The proposed programme recognises early supporters through a right to make a separate ACROWN purchase at the ACS floor price. A USDT 1 verified contribution creates purchase allowance for up to 25 ACROWN; it does not pay for those tokens. Any purchase costs the full floor-price consideration plus separately itemized network gas and/or Paymaster fees. The full floor-price consideration must reach the ACS reserve; fees must never be deducted from it. A supporter contribution is not itself a token purchase and does not automatically enter the ACS reserve.</p>
         <div class="stat-grid">
           <article class="stat-card">
             <div class="side-label">Aggregate contribution ceiling</div>
@@ -237,7 +242,7 @@
           <article class="stat-card">
             <div class="side-label">Approved multiplier</div>
             <div class="stat-value">25 ACROWN / USDT</div>
-            <p class="stat-note">USDT 1 of verified contribution creates the right to purchase 25 ACROWN at the approved floor.</p>
+            <p class="stat-note">USDT 1 of verified contribution creates allowance to purchase up to 25 ACROWN; the later purchase price and network/Paymaster fees are paid separately.</p>
           </article>
           <article class="stat-card">
             <div class="side-label">Maximum purchase allowance</div>
@@ -252,13 +257,13 @@
         <p class="side-copy">Three distinct stages. The contribution and any later ACROWN purchase must be separately recorded.</p>
         <div class="side-divider"></div>
         <div class="side-label">What the multiplier means</div>
-        <p class="side-copy">The approved rule is 25 ACROWN of purchase allowance for each 1 USD₮ of verified contribution. USDT 1,000,000 can create at most 25,000,000 ACROWN of aggregate purchase allowance. Contribution and later purchase remain separate transactions.</p>
+        <p class="side-copy">The approved rule is 25 ACROWN of purchase allowance for each 1 USD₮ of verified contribution. That contribution does not pay the purchase price: a later purchase requires the full ACS floor consideration plus gas/Paymaster fees. USDT 1,000,000 can create at most 25,000,000 ACROWN of aggregate purchase allowance. Contribution and later purchase remain separate transactions.</p>
         <div class="side-divider"></div>
         <div class="side-label">Purchase period</div>
         <p class="side-copy">The existing maximum is 180 days after deliberate activation, but purchases close sooner if the 25,000,000-ACROWN programme capacity is exhausted.</p>
         <div class="side-divider"></div>
         <div class="side-label">ACS protection</div>
-        <p class="side-copy">Any ACROWN purchase or distribution must follow the ACS accounting rules. The official floor must not be reduced by programme operations.</p>
+        <p class="side-copy">The ACS floor is F = V/C. The full floor consideration for a purchase must be credited to V; gas and Paymaster fees are additional buyer costs and must never be deducted from the reserve credit.</p>
       </aside>
     </section>
 
@@ -273,8 +278,8 @@
     <section class="status-banner" role="note">
       <div class="status-icon" aria-hidden="true">24h</div>
       <div>
-        <strong>Wallet registration closes 24 hours before the official public-deployment event.</strong>
-        <p>Only wallets successfully registered and ownership-verified before the published cutoff will be eligible to use the Supporter Programme purchase allowance after the event. The event name and exact UTC timestamp have not yet been announced. This is the approved programme rule; the preview does not enforce the cutoff and must not be treated as an active registration deadline. After the event, eligible wallets may use their remaining personal allowance while shared programme purchase capacity remains, subject to programme close.</p>
+        <strong>Wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event.</strong>
+        <p>The event begins at 00:00:00 UTC on its selected date; the cutoff is exactly 24 hours earlier, at 00:00:00 UTC on the preceding calendar day. The event name and date remain undecided until system readiness, development speed, adoption and funding growth justify the decision. No cutoff is active until that date is approved. Only frozen, ownership-verified wallets may use member-level programme functions after cutoff; existing eligible wallets may continue qualifying contributions while the programme is OPEN. A verified replacement wallet may inherit an existing eligible record through a controlled recovery process, but no new participant wallet may join. This preview does not enforce the cutoff.</p>
       </div>
     </section>
 
@@ -284,7 +289,7 @@
           <div class="eyebrow">Wallet membership</div>
           <h2 id="member-dashboard-title">Your supporter dashboard</h2>
         </div>
-        <p>AstroCrown generates a member name for you, and you can customize it. The staging service now supports wallet-verified member registration and separately verified wallet linking. Payment and ACROWN purchase functions remain disabled.</p>
+        <p>AstroCrown generates a member name for you, and you can customize it. The staging service supports wallet-verified member registration and separately verified wallet linking. The dashboard design distinguishes programme-wide purchase capacity from this wallet's earned allowance, ACROWN actually purchased and remaining allowance. Purchase actions remain disabled in this preview.</p>
       </div>
       <div class="dashboard-grid">
         <section class="panel member-profile-panel" aria-labelledby="member-profile-title">
@@ -416,21 +421,23 @@
           <div class="entitlement-summary">
             <span class="side-label">Your personal purchase allowance</span>
             <strong>Verified contribution × approved multiplier</strong>
-            <p>Example only: 1,000 USD₮ at 25 ACROWN per USD₮ = 25,000 ACROWN available to purchase at the applicable ACS floor, subject to any remaining programme-wide cap.</p>
+            <p>Example only: 1,000 USD₮ of verified contribution creates allowance to purchase up to 25,000 ACROWN. The supporter must separately pay the full floor-price consideration `q × F` plus gas/Paymaster fees. The contribution is not the purchase price.</p>
           </div>
           <div class="result-list">
             <div class="result-row"><span class="result-label">First contribution threshold</span><strong class="result-value">Pending final terms</strong></div>
-            <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
-            <div class="result-row"><span class="result-label">Total ACROWN programme allowance</span><strong class="result-value">Pending approval</strong></div>
-            <div class="result-row"><span class="result-label">Remaining ACROWN allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
-            <div class="result-row"><span class="result-label">Purchases completed by this wallet</span><strong class="result-value">No purchase records</strong></div>
+            <div class="result-row"><span class="result-label">ACROWN purchase allowance earned by this wallet</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
+            <div class="result-row"><span class="result-label">ACROWN purchased at the ACS floor</span><strong class="result-value">No purchase records</strong></div>
+            <div class="result-row"><span class="result-label">This wallet's remaining purchase allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
+            <div class="result-row"><span class="result-label">Programme-wide sale capacity remaining</span><strong class="result-value">Awaiting live ledger</strong></div>
           </div>
+          <button class="purchase-readiness off" id="supporter-purchase-readiness" type="button" disabled aria-disabled="true">OFF</button>
           <button class="disabled-button dashboard-purchase-button" id="supporter-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
+          <p class="fine-print">OFF is the current server/preview-safe state. ON may appear only when the wallet is eligible, the programme is open, personal allowance and global capacity remain, and a purchase route can pay the full floor consideration plus fees. This indicator cannot be switched ON by the user.</p>
           <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No contribution or purchase balance is created by registration; payment and entitlement accounting remain closed.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. Verified wallet control will be required for contributions and purchases when those services are activated. AstroCrown will never ask for your seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. The connected, verified wallet selects its own server-side supporter record. A valid replacement must inherit the old eligible record and its exact balances; it cannot create a second entitlement. After cutoff, unregistered wallets cannot use member-level programme functions. AstroCrown will never ask for your seed phrase or private key.
       </div>
     </section>
 
@@ -611,8 +618,12 @@
           <p>A reserved purchase opportunity is not a completed sale. Unsold tokens remain platform inventory and do not enter circulating supply merely because an entitlement exists.</p>
         </article>
         <article class="rule-card">
-          <h3>The ACS floor is a protocol constraint</h3>
-          <p>Programme operations must preserve the ACS-defined floor, F = V/C. External market prices may differ from the ACS floor and are not guaranteed by this page.</p>
+          <h3>The ACS floor is protected from fees</h3>
+          <p>The governing formula is F = V/C, where V is the reserve vault and C is circulating ACROWN. A purchase of q ACROWN must credit the full q × F to V. The buyer pays gas and/or Paymaster fees on top; those fees cannot be deducted from the reserve credit. External market prices may differ from F.</p>
+        </article>
+        <article class="rule-card">
+          <h3>Resale can support distribution, not guarantee liquidity</h3>
+          <p>A supporter may resell purchased ACROWN on an available market and may use realized proceeds for further qualifying participation while the programme remains open. Resale does not restore used purchase allowance. Trading activity is not the same as market depth: resales may create volume but can also create sell pressure, and profit or liquidity is never guaranteed.</p>
         </article>
         <article class="rule-card">
           <h3>The qualification threshold and purchase cap</h3>
