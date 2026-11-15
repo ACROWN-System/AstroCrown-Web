@@ -91,6 +91,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID_02 }}
           ASTROCROWN_RATE_LIMIT_HMAC_KEY: ${{ secrets.ASTROCROWN_RATE_LIMIT_HMAC_KEY }}
           ASTROCROWN_STAGING_D1_DATABASE_ID: ${{ vars.ASTROCROWN_STAGING_D1_DATABASE_ID }}
+          ASTROCROWN_SUPPORTERS_D1_DATABASE_ID: ${{ vars.ASTROCROWN_SUPPORTERS_D1_DATABASE_ID }}
           ASTROCROWN_CONFIRM_WORKERS_FREE_NO_CARD: ${{ inputs.free_no_card_confirmation == 'I_CONFIRMED_WORKERS_FREE_NO_CARD' && 'I_CONFIRMED_WORKERS_FREE_NO_CARD' || '' }}
           ASTROCROWN_CONFIRM_REMOTE_STAGING_DEPLOY: ${{ inputs.staging_deployment_authorization == 'I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY' && 'I_AUTHORIZE_ASTROCROWN_STAGING_DEPLOY' || '' }}
         run: |
@@ -106,6 +107,7 @@ jobs:
           DEPLOY_OUTCOME: ${{ steps.deploy.outcome }}
           STAGING_ORIGIN: ${{ steps.deploy.outputs.staging_origin }}
           STAGING_D1_DATABASE_ID: ${{ steps.deploy.outputs.staging_d1_database_id }}
+          SUPPORTERS_D1_DATABASE_ID: ${{ steps.deploy.outputs.supporters_d1_database_id }}
         run: |
           {
             echo "## Cloudflare staging workflow"
@@ -115,8 +117,11 @@ jobs:
               echo "- Staging origin: $STAGING_ORIGIN"
             fi
             if [ -n "$STAGING_D1_DATABASE_ID" ]; then
-              echo "- D1 database ID (non-secret): $STAGING_D1_DATABASE_ID"
-              echo "- Before future runs, add this as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment."
+              echo "- Account D1 database ID (non-secret): $STAGING_D1_DATABASE_ID"
+            fi
+            if [ -n "$SUPPORTERS_D1_DATABASE_ID" ]; then
+              echo "- Dedicated Supporter Programme D1 database ID (non-secret): $SUPPORTERS_D1_DATABASE_ID"
+              echo "- Before future runs, add this as the ASTROCROWN_SUPPORTERS_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment."
             fi
             echo "- No production deployment, paid upgrade, billing change, or automatic resource deletion is performed by this workflow."
           } >> "$GITHUB_STEP_SUMMARY"

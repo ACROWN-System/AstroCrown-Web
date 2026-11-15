@@ -175,7 +175,18 @@ for (const [sourcePath, destinationPath] of supporterFiles) {
   const source = join(repoRoot, sourcePath);
   const destination = join(publicRoot, destinationPath);
   await mkdir(dirname(destination), { recursive: true });
-  await cp(source, destination);
+  if (destinationPath === "supporters/index.html") {
+    let html = await readFile(source, "utf8");
+    if (!html.includes('name="astro-supporter-runtime"')) {
+      html = html.replace(
+        /<head([^>]*)>/i,
+        '<head$1>\n  <meta name="astro-supporter-runtime" content="worker-staging">'
+      );
+    }
+    await writeFile(destination, html, "utf8");
+  } else {
+    await cp(source, destination);
+  }
 }
 
 console.log("Built the allowlisted AstroCrown staging website asset set.");

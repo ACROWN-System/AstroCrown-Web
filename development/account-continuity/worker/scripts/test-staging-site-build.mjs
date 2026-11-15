@@ -26,6 +26,8 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance/);
   assert.match(html, /180-day purchase period begins at that operational activation/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
+  assert.match(html, /id="supporter-runtime-status"/);
+  assert.match(html, /name="astro-supporter-runtime" content="worker-staging"/);
   assert.match(html, /separate empty disposable wallet/);
   assert.match(html, /Never connect a wallet holding real assets/);
 });
@@ -37,6 +39,8 @@ test("published supporter wallet script is display-only and has no signing or tr
   assert.match(js, /wallet-standard:app-ready/);
   assert.match(js, /eth_requestAccounts/);
   assert.match(js, /standard:connect/);
+  assert.ok(js.includes("/api/supporters/status"));
+  assert.match(js, /contributions remain closed/i);
   assert.doesNotMatch(
     js,
     /\b(?:personal_sign|eth_sign|eth_sendTransaction|sendTransaction|signAndSendTransaction|signMessage)\s*\(/i

@@ -4,6 +4,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "migrations" / "0001_supporter_programme_foundation.sql"
+WORKER_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0001_supporter_programme_foundation.sql"
 
 class SupporterSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
@@ -13,6 +14,13 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
 
     def tearDown(self):
         self.db.close()
+
+    def test_worker_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_MIGRATION.read_bytes(),
+            MIGRATION.read_bytes(),
+            "The Worker-deployed supporter schema must match the canonical programme migration.",
+        )
 
     def test_prelaunch_has_no_clock_or_treasuries(self):
         row = self.db.execute("SELECT status, activated_at, closes_at FROM supporter_program WHERE singleton=1").fetchone()

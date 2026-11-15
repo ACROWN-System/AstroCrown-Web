@@ -18,6 +18,7 @@ const statePath = join(localStateDir, "remote-staging-state.json");
 const rateKeyPath = join(localStateDir, "rate-limit-hmac-key.txt");
 const workerBaseApi = "https://api.cloudflare.com/client/v4";
 const databaseName = "acrown-account-staging";
+const supportersDatabaseName = "acrown-supporters-mainnet";
 
 function fail(message) {
   const error = new Error(message);
@@ -62,7 +63,11 @@ function validateEnv() {
   if (suppliedDatabaseId && !/^[a-f0-9-]{36}$/i.test(suppliedDatabaseId)) {
     fail("ASTROCROWN_STAGING_D1_DATABASE_ID must be a valid 36-character D1 database UUID.");
   }
-  return { token, accountId };
+  const supportersDatabaseId = process.env.ASTROCROWN_SUPPORTERS_D1_DATABASE_ID || "";
+  if (supportersDatabaseId && !/^[a-f0-9-]{36}$/i.test(supportersDatabaseId)) {
+    fail("ASTROCROWN_SUPPORTERS_D1_DATABASE_ID must be a valid 36-character D1 database UUID.");
+  }
+  return { token, accountId, supportersDatabaseId };
 }
 
 async function cloudflare(method, path, body) {
@@ -156,8 +161,8 @@ async function loadOrCreateLocalSecret(path, bytes = 32, environmentVariableName
 
 function assertSentinelConfig(config) {
   const stage = config?.env?.staging;
-  if (!stage || !Array.isArray(stage.d1_databases) || stage.d1_databases.length !== 1) {
-    fail("The staging Wrangler configuration shape changed; refusing remote deployment.");
+  if (!stage || !Array.isArray(stage.d1_databases) || stage.d1_databases.length !== 2) {
+    fail("The staging Wrangler configuration must contain separate account and Supporter Programme D1 bindings.");
   }
   if (stage.vars?.ENVIRONMENT !== "staging") fail("The staging environment marker is not exact.");
   if (stage.vars?.STAGING_ACCESS_MODE !== "public") fail("Staging must explicitly select the qualified public-access mode.");
@@ -166,7 +171,14 @@ function assertSentinelConfig(config) {
   if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") {
     fail("The checked-in staging D1 ID is not the expected sentinel. Review the configuration manually.");
   }
-  if (stage.d1_databases[0].database_name !== databaseName) fail("The staging D1 database name changed unexpectedly.");
+  if (stage.d1_databases[0].database_name !== databaseName || stage.d1_databases[0].binding !== "DB") fail("The account staging D1 binding changed unexpectedly.");
+  const supportersBinding = stage.d1_databases[1];
+  if (
+    supportersBinding.binding !== "SUPPORTERS_DB" ||
+    supportersBinding.database_name !== supportersDatabaseName ||
+    supportersBinding.database_id !== "00000000-0000-0000-0000-000000000000" ||
+    supportersBinding.migrations_dir !== "migrations/supporters"
+  ) fail("The isolated Supporter Programme D1 sentinel or binding changed unexpectedly.");
   if (!/^astrocrown-account-staging-staging$/.test(stage.name || "")) {
     fail("The staging Worker script name changed unexpectedly; refusing to infer a hostname.");
   }
@@ -179,10 +191,10 @@ function validateSubdomain(value) {
   return value.toLowerCase();
 }
 
-async function getDatabase(accountId, databaseId) {
+async function getDatabase(accountId, databaseId, expectedName = databaseName) {
   const result = await cloudflare("GET", "/accounts/" + accountId + "/d1/database/" + encodeURIComponent(databaseId));
-  if (!result || result.name !== databaseName || result.uuid !== databaseId) {
-    fail("The saved staging D1 database identity does not match this project.");
+  if (!result || result.name !== expectedName || result.uuid !== databaseId) {
+    fail("The saved D1 database identity does not match the expected AstroCrown resource: " + expectedName + ".");
   }
   return result;
 }
@@ -278,6 +290,49 @@ async function resolveDatabase(accountId) {
   return createdState;
 }
 
+async function resolveSupportersDatabase(accountId, suppliedDatabaseId) {
+  if (suppliedDatabaseId) {
+    await getDatabase(accountId, suppliedDatabaseId, supportersDatabaseName);
+    return {
+      accountId,
+      databaseName: supportersDatabaseName,
+      databaseId: suppliedDatabaseId,
+      createdAt: "identity-supplied-by-protected-github-environment-variable",
+    };
+  }
+
+  const query = "?name=" + encodeURIComponent(supportersDatabaseName) + "&per_page=100&page=1";
+  const listed = await cloudflare("GET", "/accounts/" + accountId + "/d1/database" + query);
+  if (!Array.isArray(listed) || listed.length !== 0) {
+    fail(
+      "A Supporter Programme D1 database named " + supportersDatabaseName + " already exists, but its exact UUID was not supplied. " +
+      "No database will be adopted by name. Pin its verified UUID as ASTROCROWN_SUPPORTERS_D1_DATABASE_ID."
+    );
+  }
+
+  const allDatabases = await cloudflare("GET", "/accounts/" + accountId + "/d1/database?per_page=100&page=1");
+  if (!Array.isArray(allDatabases)) fail("Cloudflare did not return the D1 database inventory for the Supporter Programme.");
+  const totalDatabases = allDatabases.length;
+  if (totalDatabases >= 10) {
+    fail(
+      "The Cloudflare Free allowance is 10 D1 databases and this account already reports " + totalDatabases +
+      ". No Supporter Programme database was created and no plan upgrade will be attempted."
+    );
+  }
+
+  console.log("Creating the separate prelaunch Supporter Programme D1 database. Account and supporter records remain isolated.");
+  const created = await cloudflare("POST", "/accounts/" + accountId + "/d1/database", { name: supportersDatabaseName });
+  if (!created?.uuid || created.name !== supportersDatabaseName) {
+    fail("Cloudflare did not return the expected Supporter Programme D1 identity.");
+  }
+  return {
+    accountId,
+    databaseName: supportersDatabaseName,
+    databaseId: created.uuid,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 async function publishGithubD1Identity(state) {
   if (process.env.GITHUB_ACTIONS !== "true") return;
 
@@ -305,7 +360,34 @@ async function publishGithubD1Identity(state) {
   }
 }
 
-async function publishGithubDeploymentMetadata(state, configInfo) {
+async function publishGithubSupportersD1Identity(state) {
+  if (process.env.GITHUB_ACTIONS !== "true") return;
+
+  const outputPath = process.env.GITHUB_OUTPUT;
+  if (outputPath) {
+    await appendFile(outputPath, "supporters_d1_database_id=" + state.databaseId + "\n", "utf8");
+  }
+
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+  if (summaryPath) {
+    await appendFile(
+      summaryPath,
+      [
+        "## AstroCrown Supporter Programme D1 identity",
+        "",
+        "- Dedicated database: " + supportersDatabaseName,
+        "- Database ID (non-secret): " + state.databaseId,
+        "- Purpose: isolated supporter membership, wallet and financial-entitlement records; not the test-account database",
+        "",
+        "Pin this exact UUID as ASTROCROWN_SUPPORTERS_D1_DATABASE_ID in the protected cloudflare-staging GitHub environment before any later deployment. Preserve it if migration or deployment fails; never adopt another database by name.",
+        "",
+      ].join("\n") + "\n",
+      "utf8",
+    );
+  }
+}
+
+async function publishGithubDeploymentMetadata(state, supportersState, configInfo) {
   if (process.env.GITHUB_ACTIONS !== "true") return;
 
   const outputPath = process.env.GITHUB_OUTPUT;
@@ -323,12 +405,14 @@ async function publishGithubDeploymentMetadata(state, configInfo) {
         "- Result: initial deployment smoke checks only",
         "- Worker: " + configInfo.scriptName,
         "- Staging origin: " + configInfo.origin,
-        "- D1 database name: " + databaseName,
-        "- D1 database ID (non-secret): " + state.databaseId,
+        "- Account D1 database name: " + databaseName,
+        "- Account D1 database ID (non-secret): " + state.databaseId,
+        "- Dedicated Supporter Programme D1 database: " + supportersDatabaseName,
+        "- Supporter Programme D1 database ID (non-secret): " + supportersState.databaseId,
         "- Access mode: public staging; no shared Basic Authentication prompt",
         "- Full remote browser and credential qualification: still required",
         "",
-        "The D1 UUID is stored as the ASTROCROWN_STAGING_D1_DATABASE_ID variable in the cloudflare-staging GitHub environment for subsequent runs.",
+        "The account D1 UUID is pinned as ASTROCROWN_STAGING_D1_DATABASE_ID; the separate supporter D1 UUID must also be pinned as ASTROCROWN_SUPPORTERS_D1_DATABASE_ID before subsequent runs.",
         "",
       ].join("\n") + "\n",
       "utf8",
@@ -336,7 +420,7 @@ async function publishGithubDeploymentMetadata(state, configInfo) {
   }
 }
 
-function writeRemoteConfig(sourceConfig, subdomain, databaseId) {
+function writeRemoteConfig(sourceConfig, subdomain, databaseId, supportersDatabaseId) {
   const config = structuredClone(sourceConfig);
   const stage = config.env.staging;
   const scriptName = stage.name;
@@ -345,6 +429,7 @@ function writeRemoteConfig(sourceConfig, subdomain, databaseId) {
   stage.vars.RP_ID = host;
   stage.vars.EXPECTED_ORIGIN = origin;
   stage.d1_databases[0].database_id = databaseId;
+  stage.d1_databases[1].database_id = supportersDatabaseId;
   return writeFile(remoteConfigPath, JSON.stringify(config, null, 2) + "\n", "utf8").then(() => ({ host, origin, scriptName }));
 }
 
@@ -366,6 +451,19 @@ async function smokeTest(origin) {
     !homepage.includes("AstroCrown is live for public testing") ||
     !homepage.includes("openly available to anyone on the internet")
   ) fail("Public staging homepage is missing the live-environment marker or public safety notice.");
+
+  const publicSupportersStatus = await fetch(origin + "/api/supporters/status", { signal: AbortSignal.timeout(30000) });
+  if (publicSupportersStatus.status !== 200) {
+    fail("The read-only public Supporter Programme status endpoint must be available without account acknowledgement (HTTP " + publicSupportersStatus.status + ").");
+  }
+  const publicSupportersPayload = await publicSupportersStatus.json();
+  if (
+    publicSupportersPayload.programme?.status !== "PRELAUNCH" ||
+    publicSupportersPayload.paymentAcceptance?.enabled !== false ||
+    publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false
+  ) {
+    fail("The public Supporter Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
+  }
 
   const beforeAcknowledgement = await fetch(origin + "/api/account/status", { signal: AbortSignal.timeout(30000) });
   if (beforeAcknowledgement.status !== 428) {
@@ -405,6 +503,27 @@ async function smokeTest(origin) {
     fail("Remote Worker does not support and advertise ML-DSA-44 as required. Keep staging closed and investigate; do not fall back silently.");
   }
 
+  const supportersResponse = await fetch(origin + "/api/supporters/status", {
+    headers,
+    signal: AbortSignal.timeout(30000),
+  });
+  if (supportersResponse.status !== 200) {
+    fail("The isolated Supporter Programme status endpoint failed (HTTP " + supportersResponse.status + ").");
+  }
+  const supporters = await supportersResponse.json();
+  if (
+    supporters.environment !== "MAINNET" ||
+    supporters.programme?.status !== "PRELAUNCH" ||
+    supporters.paymentAcceptance?.enabled !== false ||
+    supporters.paymentAcceptance?.contributionsAccepted !== false ||
+    supporters.purchaseAllowance?.automaticTokenIssuance !== false ||
+    !Array.isArray(supporters.networks) ||
+    supporters.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
+    supporters.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== false)
+  ) {
+    fail("The isolated Supporter Programme status must report three-network PRELAUNCH with all payment intake disabled.");
+  }
+
   const negative = await fetch(origin + "/api/passkeys/authentication/options", {
     method: "POST",
     headers: {
@@ -415,7 +534,7 @@ async function smokeTest(origin) {
     signal: AbortSignal.timeout(30000),
   });
   if (negative.status !== 403) fail("Remote staging did not reject a wrong-Origin account request with HTTP 403.");
-  return { status, diagnostics };
+  return { status, diagnostics, supporters };
 }
 
 async function reportWorkersUsageModel(accountId) {
@@ -456,7 +575,7 @@ async function requireExistingStagingWorker(accountId, workerName) {
 }
 
 async function main() {
-  const { accountId } = validateEnv();
+  const { accountId, supportersDatabaseId } = validateEnv();
   const sourceConfig = JSON.parse(await readFile(sourceConfigPath, "utf8"));
   assertSentinelConfig(sourceConfig);
 
@@ -475,13 +594,15 @@ async function main() {
   await reportWorkersUsageModel(accountId);
 
   const state = await resolveDatabase(accountId);
-  // Publish the non-secret D1 UUID immediately: a later migration or deploy
-  // failure must not leave an ephemeral runner's newly created database orphaned.
+  // Publish both non-secret D1 UUIDs immediately so later failures do not
+  // leave resources without protected identity records.
   await publishGithubD1Identity(state);
+  const supportersState = await resolveSupportersDatabase(accountId, supportersDatabaseId);
+  await publishGithubSupportersD1Identity(supportersState);
   if (state.subdomain && state.subdomain !== subdomain) {
     fail("The Cloudflare workers.dev subdomain differs from the saved staging state. Review the account/domain change manually.");
   }
-  const configInfo = await writeRemoteConfig(sourceConfig, subdomain, state.databaseId);
+  const configInfo = await writeRemoteConfig(sourceConfig, subdomain, state.databaseId, supportersState.databaseId);
   const completeState = {
     ...state,
     subdomain,
@@ -500,11 +621,17 @@ async function main() {
     32,
     "ASTROCROWN_RATE_LIMIT_HMAC_KEY",
   );
-  await publishGithubDeploymentMetadata(completeState, configInfo);
+  await publishGithubDeploymentMetadata(completeState, supportersState, configInfo);
 
   console.log("Applying the staging D1 migration to the isolated remote database.");
   runNpx(
     ["wrangler", "d1", "migrations", "apply", databaseName, "--remote", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"],
+    { input: "y\n", allowCloudflareCredentials: true },
+  );
+
+  console.log("Applying the separate Supporter Programme schema to its isolated remote database.");
+  runNpx(
+    ["wrangler", "d1", "migrations", "apply", supportersDatabaseName, "--remote", "--env", "staging", "--config", ".wrangler.remote-staging.jsonc"],
     { input: "y\n", allowCloudflareCredentials: true },
   );
 
@@ -522,8 +649,11 @@ async function main() {
   console.log("Staging URL: " + configInfo.origin + "/");
   console.log("Access mode: public live test environment; visitors see the mandatory safety notice before account services.");
   console.log("Account API: server-enforced staging acknowledgement and per-IP passkey/recovery rate limits are active.");
-  console.log("Remote D1 database name: " + databaseName);
-  console.log("Remote D1 database ID: " + state.databaseId);
+  console.log("Account D1 database name: " + databaseName);
+  console.log("Account D1 database ID: " + state.databaseId);
+  console.log("Supporter Programme D1 database name: " + supportersDatabaseName);
+  console.log("Supporter Programme D1 database ID: " + supportersState.databaseId);
+  console.log("Supporter Programme status: PRELAUNCH; mainnet payment acceptance remains disabled.");
   console.log("ML-DSA-44 sign: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].sign);
   console.log("ML-DSA-44 verify: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].verify);
   console.log("ML-DSA-44 algorithm -48 advertised first: " + evidence.diagnostics.pqcRegistrationAlgorithmAdvertised);

@@ -600,6 +600,43 @@
     clearTronConnection(true);
   });
 
+  async function refreshProgrammeStatus() {
+    var statusElement = document.getElementById("supporter-runtime-status");
+    if (!statusElement) return;
+    var runtimeMarker = document.querySelector('meta[name="astro-supporter-runtime"]');
+    if (!runtimeMarker || runtimeMarker.content !== "worker-staging" || window.location.protocol !== "https:") {
+      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Contributions remain closed. Do not send funds.";
+      statusElement.dataset.state = "closed";
+      return;
+    }
+    try {
+      var response = await fetch("/api/supporters/status", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { "Accept": "application/json" }
+      });
+      if (!response.ok) throw new Error("The programme status service is not available.");
+      var payload = await response.json();
+      var prelaunch = payload &&
+        payload.environment === "MAINNET" &&
+        payload.programme &&
+        payload.programme.status === "PRELAUNCH" &&
+        payload.paymentAcceptance &&
+        payload.paymentAcceptance.enabled === false &&
+        payload.paymentAcceptance.contributionsAccepted === false &&
+        Array.isArray(payload.networks) &&
+        payload.networks.length === 3;
+      if (!prelaunch) throw new Error("The programme status could not be qualified.");
+      statusElement.textContent = "Programme service connected · PRELAUNCH · Ethereum, Tron and Solana USDT intake is disabled. Do not send funds.";
+      statusElement.dataset.state = "closed";
+    } catch (_) {
+      statusElement.textContent = "Programme service status unavailable · Contributions remain closed. Do not send funds.";
+      statusElement.dataset.state = "closed";
+    }
+  }
+
+  refreshProgrammeStatus();
+
   // Never call personal_sign, eth_sign, eth_sendTransaction, signMessage,
   // signTransaction, signAndSendTransaction, signMessageV2, or any wallet payment method here.
   renderEvmChoices();
