@@ -198,7 +198,7 @@ jobs:
           ])
           summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
           with summary_path.open("a", encoding="utf-8") as handle:
-              handle.write("\\n".join(summary) + "\\n")
+              handle.write("\n".join(summary) + "\n")
           print(json.dumps(report, indent=2, sort_keys=True))
           if failures:
               print("::error::Required read-only Cloudflare API checks failed: " + ", ".join(failures))
