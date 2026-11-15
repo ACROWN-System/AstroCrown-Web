@@ -33,7 +33,7 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /unused personal allowance does not expire merely through non-use/i);
   assert.match(html, /180 consecutive days after launch/i);
   assert.match(html, /all unused wallet-specific allowances cease to be usable/i);
-  assert.match(html, /public supporter purchases remain disabled until the official ACROWN launch/i);
+  assert.match(html, /all ordinary\/public ACROWN purchase routes operated or authorized by AstroCrown remain disabled until the official ACROWN launch/i);
   assert.match(html, /registration-countdown-stage/);
   assert.match(html, /launch-countdown-stage/);
   assert.match(html, /data-public-deployment-at=""/);
