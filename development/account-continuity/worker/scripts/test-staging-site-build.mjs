@@ -27,7 +27,8 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /180-day purchase period begins at that operational activation/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
-  assert.match(html, /name="astro-supporter-runtime" content="worker-staging"/);
+  assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
+  assert.match(html, /Never share your seed phrase or private key/);
   assert.match(html, /separate empty disposable wallet/);
   assert.match(html, /Never connect a wallet holding real assets/);
 });
