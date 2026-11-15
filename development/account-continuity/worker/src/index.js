@@ -2038,6 +2038,7 @@ export default {
         if (
           env.ENVIRONMENT === "staging" &&
           pathname !== "/api/staging/acknowledge" &&
+          pathname !== "/api/supporters/status" &&
           !(await hasStagingAcknowledgement(request, env))
         ) {
           return json(428, { error: "Acknowledge the current AstroCrown public-staging safety notice before using account services." });
