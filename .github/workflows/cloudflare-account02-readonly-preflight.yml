@@ -74,13 +74,6 @@ jobs:
                       failures.append(label)
                   return None
 
-          token_state = api_get("/user/tokens/verify", "token_verification")
-          if isinstance(token_state, dict):
-              report["token_verification"]["token_status"] = token_state.get("status", "UNREPORTED")
-              report["token_verification"]["active"] = token_state.get("status") == "active"
-              if token_state.get("status") != "active":
-                  failures.append("token_verification")
-
           subdomain = api_get(
               "/accounts/" + account_id + "/workers/subdomain",
               "workers_dev_subdomain",
@@ -134,9 +127,29 @@ jobs:
               required=False,
           )
           if isinstance(worker_settings, dict):
-              report["workers_account_settings"]["default_usage_model"] = worker_settings.get(
-                  "default_usage_model", "NOT_REPORTED"
-              )
+              usage_model = worker_settings.get("default_usage_model", "NOT_REPORTED")
+              report["workers_account_settings"]["default_usage_model"] = usage_model
+              if usage_model == "standard":
+                  report["workers_account_settings"]["billing_warning"] = (
+                      "STANDARD_USAGE_MODEL_REQUIRES_OWNER_PLAN_CONFIRMATION"
+                  )
+                  report.setdefault("warnings", []).append(
+                      "Cloudflare documents Standard as available to Workers Paid accounts, while Enterprise accounts may use contract-defined models. "
+                      "This is a billing warning, not definitive proof of the account plan; confirm Workers Free "
+                      "and absence of a payment method in the dashboard before deployment."
+                  )
+
+          # A user-scoped verification endpoint does not apply to this account-scoped
+          # credential. Successful authenticated Worker and D1 account GETs validate it.
+          worker_api_ok = report.get("worker_inventory", {}).get("status") == "OK"
+          d1_api_ok = report.get("d1_inventory", {}).get("status") == "OK"
+          report["token_authentication"] = {
+              "status": "CONFIRMED_BY_ACCOUNT_GETS" if worker_api_ok and d1_api_ok else "NOT_CONFIRMED",
+              "worker_api_ok": worker_api_ok,
+              "d1_api_ok": d1_api_ok,
+          }
+          if not worker_api_ok or not d1_api_ok:
+              failures.append("account_scoped_token_authentication")
 
           # The deployment token is intentionally limited to Workers Editor and D1
           # read/edit. This preflight does not request Billing Read and never calls
@@ -171,14 +184,14 @@ jobs:
           def row(name, value):
               summary.append("| " + name + " | " + str(value).replace("|", "\\|") + " |")
 
-          row("API token verification", report.get("token_verification", {}).get("token_status", report.get("token_verification", {}).get("status", "UNAVAILABLE")))
+          row("Account-scoped token (Worker/D1 GET)", report.get("token_authentication", {}).get("status", "NOT_CONFIRMED"))
           row("workers.dev subdomain", report.get("workers_dev_subdomain", {}).get("subdomain", "NOT CONFIGURED / UNAVAILABLE"))
           row("Existing Worker count", report.get("worker_inventory", {}).get("count_returned", "UNAVAILABLE"))
           row("Required staging Worker exists", report.get("worker_inventory", {}).get("expected_staging_worker_exists", "UNAVAILABLE"))
           row("D1 database count", report.get("d1_inventory", {}).get("count_returned", "UNAVAILABLE"))
           row("D1 free slots (10-database Free allowance)", report.get("d1_inventory", {}).get("free_slots_by_returned_count", "UNAVAILABLE"))
           row("Reserved account staging database exists", report.get("d1_inventory", {}).get("reserved_staging_database_exists", "UNAVAILABLE"))
-          row("Workers default usage model", report.get("workers_account_settings", {}).get("default_usage_model", "UNAVAILABLE"))
+          row("Workers usage model / billing signal", report.get("workers_account_settings", {}).get("billing_warning", report.get("workers_account_settings", {}).get("default_usage_model", "UNAVAILABLE")))
           row("Workers Free plan / payment method", "NOT VERIFIED — owner dashboard check required")
           summary.extend([
               "",
@@ -188,6 +201,7 @@ jobs:
               "- The deployment script must not create the staging D1 database until the Workers Free/no-card state is confirmed and the target Worker/subdomain prerequisites are satisfied.",
               "- Free D1 supports at most 10 databases, 500 MB per database and 5 GB total storage; free daily query limits apply. The inventory count alone does not prove remaining storage or usage quota.",
               "- This preflight does not check billing or payment methods. No Billing Read permission is requested or used.",
+              "- If the account reports the Standard usage model, treat it as a potential Workers Paid or contract-defined Enterprise signal and stop until the owner confirms the exact plan and no-card/payment-method condition in the dashboard.",
               "",
               "## Sanitized machine-readable findings",
               "",
