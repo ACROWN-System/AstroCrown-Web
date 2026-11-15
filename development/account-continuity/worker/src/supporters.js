@@ -509,7 +509,7 @@ async function registrationChallenge(db, env, request, payload, config) {
   const existingWallet = await db.prepare(
     "SELECT 1 AS found FROM supporter_wallets WHERE network=? AND address_normalized=? LIMIT 1"
   ).bind(network, address.normalized).first();
-  if (existingWallet) throw httpError(409, "That wallet already belongs to a supporter. Sign in or use the account recovery process.");
+  if (existingWallet) throw httpError(409, "That wallet already belongs to a supporter. Sign in with the original wallet; this programme does not provide wallet recovery or replacement.");
   const memberId = newId("mem");
   const reserveUntil = now + CHALLENGE_SECONDS;
   const challengeId = newId("wch");
@@ -817,7 +817,7 @@ export async function supporterStatusResponse(env) {
   try {
     const [program, result] = await Promise.all([
       db.prepare(
-        "SELECT environment,status,activated_at,closes_at,rules_version " +
+        "SELECT environment,status,activated_at,rules_version " +
         "FROM supporter_program WHERE singleton = 1"
       ).first(),
       db.prepare(
@@ -869,7 +869,6 @@ function buildSupporterStatus(program, networkRows) {
     programme: {
       status: String(program.status),
       activatedAt: Number(program.activated_at) > 0 ? new Date(Number(program.activated_at) * 1000).toISOString() : null,
-      closesAt: Number(program.closes_at) > 0 ? new Date(Number(program.closes_at) * 1000).toISOString() : null,
       rulesVersion: program.rules_version || null,
     },
     networks,
