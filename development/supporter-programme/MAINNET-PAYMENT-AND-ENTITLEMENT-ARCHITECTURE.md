@@ -1,7 +1,7 @@
 # Supporter Programme — Mainnet Payment and Entitlement Foundation
 
 **Date:** 14 November 2026  
-**Status:** Architecture/schema foundation only — payment acceptance is NOT enabled.  
+**Status:** Architecture/schema foundation plus a read-only, isolated staging status API — payment acceptance is NOT enabled.  
 **Scope:** Supporter Programme real-USDT exception; not the rest of AstroCrown.
 
 ## 1. Deployment split
@@ -116,7 +116,9 @@ Pages Functions can use the repository's `functions/` directory and D1 bindings.
 
 Current published Workers Free limits include 100,000 requests/day, 10 ms CPU/request, 128 MB memory, 50 subrequests/request and six simultaneous outgoing connections. D1 Free publishes 5 million rows read/day, 100,000 rows written/day and 5 GB total storage; daily quota exhaustion causes D1 queries to fail. These are technical quotas, not an SLA or proof of financial-service suitability.
 
-The already merged static Pages package remains a no-payment, no-backend preview and must keep its explicit publication allowlist. This foundation does not add payment endpoints or alter that boundary.
+The already merged static Pages package remains a no-payment, no-backend preview and must keep its explicit publication allowlist. The staging Worker now has a separate `SUPPORTERS_DB` binding, independent from the account/test D1, and a read-only `GET /api/supporters/status` endpoint. It reports the mainnet programme as `PRELAUNCH`, validates the canonical Ethereum/Tron/Solana USD₮ token identifiers and six-decimal precision, and exposes only whether a treasury has been configured (never the treasury address itself). This status endpoint is publicly readable because it returns no account or member data. It cannot create members, wallet challenges, payment intents, transfers, contributions or entitlements; mainnet payment acceptance is hard-coded disabled in this release. The Supporter Programme page displays this live status. The dedicated D1 remains separate from all test-account identity and session data.
+
+This foundation does not add payment endpoints or alter that boundary.
 
 ## 9. Activation gates
 
