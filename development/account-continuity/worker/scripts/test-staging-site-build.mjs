@@ -30,7 +30,7 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /full floor-price consideration must reach the ACS reserve/i);
   assert.match(html, /one all-inclusive ACROWN-denominated Paymaster fee/i);
   assert.match(html, /only when this exact wallet is eligible/i);
-  assert.match(html, /unused personal allowance does not expire merely through non-use/i);
+  assert.match(html, /Individual wallet allowances do not expire merely through non-use/i);
   assert.match(html, /180 consecutive days after launch/i);
   assert.match(html, /all unused wallet-specific allowances cease to be usable/i);
   assert.match(html, /all ordinary\/public ACROWN purchase routes operated or authorized by AstroCrown remain disabled until the official ACROWN launch/i);
