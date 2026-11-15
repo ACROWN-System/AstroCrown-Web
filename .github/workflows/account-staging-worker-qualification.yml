@@ -155,7 +155,7 @@ jobs:
               'payment-method or billing-profile endpoints',
               'report["token_authentication"]',
               'STANDARD_USAGE_MODEL_REQUIRES_OWNER_PLAN_CONFIRMATION',
-              'Workers documents the Standard usage model as available to Workers Paid accounts.',
+              'Cloudflare documents the Standard usage model as available to Workers Paid accounts.',
           ]
           for value in required:
               if value not in source:
