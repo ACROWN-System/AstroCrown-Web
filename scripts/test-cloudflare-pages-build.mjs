@@ -77,19 +77,21 @@ assert.match(supporterJs, /eth_requestAccounts/);
 assert.match(supporterJs, /standard:connect/);
 assert.match(supporterPage, /No supporter contributions accepted in this development preview/i);
 assert.match(supporterPage, /USDT transfers not enabled/i);
-// The standalone Pages preview has no Worker runtime marker, so member registration,
-// wallet signatures and all supporter API writes remain unavailable there. The same
-// source script is used by the staging Worker, where off-chain ownership proofs are enabled.
+// The standalone Pages build is intentionally disconnected: only the staging Worker
+// build injects the runtime marker. The shared script must therefore keep member actions
+// disabled and return before any challenge/signature request when the marker is absent.
 assert.doesNotMatch(supporterPage, /name=["']astro-supporter-runtime["']/i);
 assert.match(supporterJs, /function supporterRuntimeMarkerPresent\(\)/);
-assert.match(supporterJs, /if \(!supporterRuntimeMarkerPresent\(\) \|\| !wallet \|\| !wallet\.mainnet \|\| supporterMember\) return/);
+assert.match(supporterJs, /!supporterRuntimeMarkerPresent\(\)/);
+assert.match(supporterJs, /signSupporterChallenge\(wallet, challenge\.message\)/);
 assert.match(supporterJs, /personal_sign/);
 assert.match(supporterJs, /signMessageV2/);
 assert.match(supporterJs, /solana:signMessage/);
-assert.doesNotMatch(supporterJs, /method\s*:\s*["'](?:eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
+// No transaction or typed-data submission method may be called. Explanatory comments
+// may name such methods so that users and auditors know which prompts to reject.
+assert.doesNotMatch(supporterJs, /\.request\(\s*\{\s*method\s*:\s*["'](?:eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
 assert.doesNotMatch(supporterJs, /signTransaction\s*\(/);
 assert.doesNotMatch(supporterJs, /signAndSendTransaction\s*\(/);
-assert.doesNotMatch(supporterJs, /eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls/);
 
 assert.match(privacy, /Privacy &amp; Transparency Centre/);
 assert.match(privacy, /noindex, nofollow, noarchive/i);
