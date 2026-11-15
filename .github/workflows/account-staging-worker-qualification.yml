@@ -114,7 +114,11 @@ jobs:
           if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Supporter Programme must expose the exact three-network allowlist.");
           if (status.networks.some(x => x.networkConfigured || x.treasuryConfigured)) throw new Error("No supporter network may be configured before treasury approval.");
           NODE
-          ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-supporter-wallet-e2e.mjs
+          if ! ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-supporter-wallet-e2e.mjs; then
+            echo "Local-only supporter diagnostics (synthetic credentials only):"
+            grep "\\[LOCAL SUPPORTER TEST ONLY\\]" "$RUNNER_TEMP/acrown-worker.log" || true
+            exit 1
+          fi
                     curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/diagnostics/runtime" -o "$RUNNER_TEMP/runtime.json"
           node --input-type=module - "$RUNNER_TEMP/runtime.json" <<'NODE'
           import fs from "node:fs";
