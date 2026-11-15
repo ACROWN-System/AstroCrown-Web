@@ -793,6 +793,9 @@ export async function handleSupporterApi(request, env, config) {
     return json(404, { error: "The Supporter Programme endpoint does not exist." });
   } catch (error) {
     const status = Number(error?.status) || 500;
+    if (env?.ENVIRONMENT === "local") {
+      console.error("[LOCAL SUPPORTER TEST ONLY]", String(error?.message || "unknown error"));
+    }
     return json(status, { error: status < 500 ? error.message : "The Supporter Programme service encountered an unexpected error." });
   }
 }
