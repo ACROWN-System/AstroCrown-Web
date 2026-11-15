@@ -44,6 +44,8 @@ The owner has approved a **USDT 1,000,000 aggregate contribution ceiling** and a
 - The programme-wide remaining purchase capacity is 25,000,000 ACROWN minus all completed programme purchases. A member may buy no more than the lesser of personal remaining allowance and programme-wide remaining capacity.
 - Both the personal allowance and programme-wide purchase capacity must be consumed atomically at settlement. Concurrent purchases cannot exceed either limit. When the programme-wide 25,000,000-ACROWN capacity is exhausted, further programme purchases are blocked even if personal allowances remain.
 - Total confirmed contributions across Ethereum, Tron and Solana must never exceed USDT 1,000,000. A final partial contribution must be limited to the exact remaining contribution capacity; excess transfers cannot create extra allowance.
+- Each further verified contribution from a wallet already in the frozen eligible set adds another 25:1 allowance to that wallet's cumulative earned allowance, even if earlier allowance was partly or fully used. A completed ACROWN purchase remains consumed; resale does not restore it.
+- Accept contributions only while the programme is OPEN, contribution capacity remains, and unused shared 25,000,000-ACROWN purchase capacity remains. Once the shared sale cap is exhausted or the programme closes, stop new contributions as well as purchases; do not accept funds for allowance that cannot be redeemed.
 - Quantities are integer base-unit strings with rational arithmetic, never floating point. Convert 25,000,000 whole ACROWN to base units only after ACROWN decimals have been finalized and verified.
 
 Owner confirmation on 2026-11-16 resolves the earlier wording ambiguity: USDT 1 of verified contribution creates purchase allowance for up to 25 ACROWN, not 1 ACROWN. This multiplier is only a quantity allowance; it does not pay for the 25 ACROWN. The supporter must later pay the separate ACS floor consideration plus gas/Paymaster fees.
@@ -83,7 +85,7 @@ The wallet-registration period closes exactly 24 hours before the official publi
 - The cutoff is a wallet-registration/member-interaction cutoff, not a contribution cutoff for frozen wallets. Already registered wallets may continue qualifying contributions while the programme is OPEN, within the USDT 1,000,000 ceiling and programme-close rules. No unregistered wallet may interact with member-level programme functions after cutoff.
 - "Buy the remaining multipliers" means redeem the unused personal ACROWN purchase allowance by making the separate ACROWN purchase at the published ACS floor price.
 
-The previously approved global 180-day maximum window remains provisionally in force. It begins only when the owner-approved programme service is deliberately activated, not when a code is merged, preview is deployed, Worker is deployed or D1 is created. Purchases close at the earlier of the 180-day window closing or exhaustion of the shared 25,000,000-ACROWN purchase capacity. A sell-out closes the programme purchase path early; an unused time window does not add capacity.
+The previously approved global 180-day maximum window remains provisionally in force. It begins only when the owner-approved programme service is deliberately activated, not when a code is merged, preview is deployed, Worker is deployed or D1 is created. New contributions and ACROWN purchases close at the earlier of the 180-day window closing or exhaustion of the shared 25,000,000-ACROWN sale capacity. A sell-out closes the programme to both purchases and new contributions early; an unused time window does not add capacity and cannot justify accepting funds for unredeemable allowance.
 
 Store the selected public-event date as an immutable UTC-midnight timestamp and derive the preceding-day UTC-midnight cutoff server-side. If the date is unset, do not invent a deadline or describe registration cutoff as active. The event name remains a separate owner decision. The 180-day maximum remains provisional and must be confirmed before activation.
 
@@ -217,7 +219,6 @@ These values cannot safely be invented:
 - network gas/Paymaster fee currencies, quoting and capped-authorization rules, and exact collection path;
 - official public-deployment event name and date (event begins at `00:00:00Z`; cutoff is previous UTC day `00:00:00Z`);
 - exact post-cutoff recovery proof method when the former wallet cannot sign (while retaining automatic recognition and a simple guided replacement experience);
-- whether later contributions add to unused personal allowance;
 - final terms and applicable jurisdictional conditions;
 - Cloudflare account 02 access/state and explicit authorization for Pages/Functions/D1 creation and deployment.
 
