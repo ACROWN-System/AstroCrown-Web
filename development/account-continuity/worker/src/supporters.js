@@ -1,4 +1,18 @@
 const NETWORK_ORDER = ["ethereum", "tron", "solana"];
+const CANONICAL_NETWORKS = Object.freeze({
+  ethereum: {
+    networkIdentifier: "eip155:1",
+    tokenIdentifier: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+  },
+  tron: {
+    networkIdentifier: "tron:mainnet",
+    tokenIdentifier: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+  },
+  solana: {
+    networkIdentifier: "solana:mainnet",
+    tokenIdentifier: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+  },
+});
 
 function json(status, body) {
   return new Response(JSON.stringify(body), {
@@ -27,6 +41,7 @@ export function buildSupporterStatus(program, networkRows) {
 
   const byNetwork = new Map(networkRows.map((row) => [row.network, row]));
   if (
+    networkRows.length !== NETWORK_ORDER.length ||
     byNetwork.size !== NETWORK_ORDER.length ||
     NETWORK_ORDER.some((network) => !byNetwork.has(network))
   ) {
@@ -35,13 +50,18 @@ export function buildSupporterStatus(program, networkRows) {
 
   const networks = NETWORK_ORDER.map((network) => {
     const row = byNetwork.get(network);
-    if (Number(row.token_decimals) !== 6) {
-      throw new Error("The configured USD₮ decimal precision does not match the reviewed six-decimal requirement.");
+    const canonical = CANONICAL_NETWORKS[network];
+    if (
+      Number(row.token_decimals) !== 6 ||
+      row.network_identifier !== canonical.networkIdentifier ||
+      row.token_identifier !== canonical.tokenIdentifier
+    ) {
+      throw new Error("The configured network/token identity or USD₮ precision does not match the canonical allowlist.");
     }
     return {
       network,
-      networkIdentifier: row.network_identifier,
-      tokenIdentifier: row.token_identifier,
+      networkIdentifier: canonical.networkIdentifier,
+      tokenIdentifier: canonical.tokenIdentifier,
       tokenDecimals: 6,
       networkConfigured: Number(row.enabled) === 1,
       treasuryConfigured: Number(row.treasury_configured) === 1,
