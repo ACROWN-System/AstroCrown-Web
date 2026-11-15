@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildSupporterStatus, supporterStatusResponse } from "../src/supporters.js";
+import { buildSupporterStatus, supporterStatusResponse, normalizeWalletAddress, createWalletMessage, verifyWalletSignature, base58Encode, handleSupporterApi } from "../src/supporters.js";
+import { privateKeyToAccount } from "viem/accounts";
+import { keccak256, toBytes } from "viem";
+import { generateKeyPairSync, webcrypto } from "node:crypto";
 
 const networks = [
   { network: "ethereum", network_identifier: "eip155:1", token_identifier: "0xdAC17F958D2ee523a2206206994597C13D831ec7", token_decimals: 6, enabled: 0, treasury_configured: 0 },
@@ -70,4 +73,121 @@ test("Supporter status fails closed if a network is missing, duplicated, non-can
     { environment: "MAINNET", status: "PRELAUNCH" },
     [...networks, networks[0]]
   ));
+});
+
+
+function base64url(bytes) {
+  return Buffer.from(bytes).toString("base64url");
+}
+
+async function sha256(bytes) {
+  return new Uint8Array(await webcrypto.subtle.digest("SHA-256", bytes));
+}
+
+async function tronAddressFromEvm(address) {
+  const payload = new Uint8Array([0x41, ...toBytes(address)]);
+  const checksum = (await sha256(await sha256(payload))).slice(0, 4);
+  return base58Encode(new Uint8Array([...payload, ...checksum]));
+}
+
+function challengeFor({ network, address, message }) {
+  return {
+    network,
+    address_normalized: network === "ethereum" ? address.toLowerCase() : address,
+    message,
+  };
+}
+
+test("Ethereum wallet challenge uses a domain-bound off-chain message and recovers its owner", async () => {
+  const account = privateKeyToAccount("0x" + "0".repeat(63) + "1");
+  const message = createWalletMessage({
+    origin: "https://astrocrown.example",
+    address: account.address,
+    network: "ethereum",
+    purpose: "REGISTER",
+    challengeId: "wch_abcdefghijklmnopqrstuvwx",
+    nonce: "abcdefghijkmnopqrstuvwxyz",
+    issuedAt: "2026-11-15T10:00:00.000Z",
+    expiresAt: "2026-11-15T10:10:00.000Z",
+  });
+  assert.match(message, /Chain ID: 1/);
+  assert.match(message, /off-chain message signature only/i);
+  assert.match(message, /urn:astrocrown:supporter:purpose:register/);
+  const signature = await account.signMessage({ message });
+  assert.equal(await verifyWalletSignature(challengeFor({ network: "ethereum", address: account.address, message }), signature), true);
+  assert.equal(await verifyWalletSignature(challengeFor({ network: "ethereum", address: "0x0000000000000000000000000000000000000002", message }), signature), false);
+});
+
+test("Tron wallet challenge verifies TIP-191 signatures and canonical Base58Check address", async () => {
+  const account = privateKeyToAccount("0x" + "0".repeat(63) + "2");
+  const address = await tronAddressFromEvm(account.address);
+  const normalized = await normalizeWalletAddress("tron", address);
+  assert.equal(normalized.address, address);
+  const message = createWalletMessage({
+    origin: "https://astrocrown.example",
+    address,
+    network: "tron",
+    purpose: "REGISTER",
+    challengeId: "wch_abcdefghijklmnopqrstuvwx",
+    nonce: "abcdefghijkmnopqrstuvwxyz",
+    issuedAt: "2026-11-15T10:00:00.000Z",
+    expiresAt: "2026-11-15T10:10:00.000Z",
+  });
+  const prefix = "\x19TRON Signed Message:\n" + new TextEncoder().encode(message).length;
+  const hash = keccak256(new Uint8Array([...toBytes(prefix), ...toBytes(message)]));
+  const signature = await account.sign({ hash });
+  assert.equal(await verifyWalletSignature(challengeFor({ network: "tron", address, message }), signature), true);
+  assert.equal(await verifyWalletSignature(challengeFor({ network: "tron", address: await tronAddressFromEvm(privateKeyToAccount("0x" + "0".repeat(63) + "3").address), message }), signature), false);
+  await assert.rejects(() => normalizeWalletAddress("tron", address.slice(0, -1) + (address.endsWith("1") ? "2" : "1")));
+});
+
+test("Solana wallet challenge verifies an Ed25519 off-chain signature", async () => {
+  const pair = generateKeyPairSync("ed25519");
+  const publicDer = new Uint8Array(pair.publicKey.export({ format: "der", type: "spki" }));
+  const publicKey = publicDer.slice(-32);
+  const address = base58Encode(publicKey);
+  const message = createWalletMessage({
+    origin: "https://astrocrown.example",
+    address,
+    network: "solana",
+    purpose: "DELIVERY",
+    challengeId: "wch_abcdefghijklmnopqrstuvwx",
+    nonce: "abcdefghijkmnopqrstuvwxyz",
+    issuedAt: "2026-11-15T10:00:00.000Z",
+    expiresAt: "2026-11-15T10:10:00.000Z",
+  });
+  const privateDer = new Uint8Array(pair.privateKey.export({ format: "der", type: "pkcs8" }));
+  const signingKey = await webcrypto.subtle.importKey("pkcs8", privateDer, { name: "Ed25519" }, false, ["sign"]);
+  const signature = base64url(new Uint8Array(await webcrypto.subtle.sign("Ed25519", signingKey, new TextEncoder().encode(message))));
+  assert.equal(await verifyWalletSignature(challengeFor({ network: "solana", address, message }), signature), true);
+  const altered = message + "\nchanged";
+  assert.equal(await verifyWalletSignature(challengeFor({ network: "solana", address, message: altered }), signature), false);
+});
+
+test("Supporter API keeps all payment and transfer endpoints unavailable", async () => {
+  const db = { prepare() { throw new Error("Unsupported routes must not query the database."); } };
+  const env = { SUPPORTERS_DB: db, ENVIRONMENT: "staging" };
+  for (const pathname of [
+    "/api/supporters/contributions",
+    "/api/supporters/payment-intents",
+    "/api/supporters/transfers",
+    "/api/supporters/entitlements/credit",
+  ]) {
+    const response = await handleSupporterApi(
+      new Request("https://astrocrown.example" + pathname, { method: "GET" }),
+      env,
+      { origin: "https://astrocrown.example" },
+    );
+    assert.equal(response.status, 404);
+    assert.match((await response.json()).error, /does not exist/i);
+  }
+});
+
+test("Supporter current-member endpoint requires a verified session cookie", async () => {
+  const response = await handleSupporterApi(
+    new Request("https://astrocrown.example/api/supporters/me", { method: "GET" }),
+    { SUPPORTERS_DB: {}, ENVIRONMENT: "staging" },
+    { origin: "https://astrocrown.example" },
+  );
+  assert.equal(response.status, 401);
 });
