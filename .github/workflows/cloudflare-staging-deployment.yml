@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       free_no_card_confirmation:
-        description: Confirm that Workers Free and D1 Free are active, no payment method is required or attached, and no paid product will be enabled.
+        description: Owner confirms Workers Free/D1 Free, no active Workers Paid subscription or payment method, and no paid product will be enabled.
         required: true
         type: choice
         options:
