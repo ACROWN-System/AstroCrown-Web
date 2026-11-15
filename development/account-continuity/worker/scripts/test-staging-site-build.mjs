@@ -28,9 +28,14 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /25,000,000 ACROWN/i);
   assert.match(html, /wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event/i);
   assert.match(html, /full floor-price consideration must reach the ACS reserve/i);
-  assert.match(html, /gas and\/or Paymaster fees are additional buyer costs/i);
-  assert.match(html, /only when the wallet is eligible/i);
-  assert.match(html, /180-day purchase period begins at that operational activation/);
+  assert.match(html, /one all-inclusive ACROWN-denominated Paymaster fee/i);
+  assert.match(html, /only when this exact wallet is eligible/i);
+  assert.match(html, /No fixed-duration expiry applies/i);
+  assert.match(html, /registration-countdown-stage/);
+  assert.match(html, /launch-countdown-stage/);
+  assert.match(html, /data-public-deployment-at=""/);
+  assert.match(html, /Wallet loss receives no recovery, replacement, allowance transfer or refund/i);
+  assert.match(html, /Each linked wallet has its own allowance and purchase history/i);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
