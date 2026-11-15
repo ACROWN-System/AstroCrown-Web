@@ -263,7 +263,7 @@
       <div class="status-icon" aria-hidden="true">!</div>
       <div>
         <strong>Wallet connection is display-only in this preview. USDT contributions and ACROWN purchases are not enabled.</strong>
-        <p>The operational Supporter Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. This preview does not register or link addresses, accept payments or activate entitlements; it will not request signatures or transfers. Do not send funds or sign any transaction here.</p>
+        <p>The operational Supporter Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. The official staging Worker can register wallet ownership with off-chain message signatures after the homepage safety notice is acknowledged. The standalone repository preview is display-only. Neither environment accepts contributions or enables transfers. Do not send funds or sign a transaction here.</p>
       </div>
     </section>
 
@@ -273,7 +273,7 @@
           <div class="eyebrow">Wallet membership</div>
           <h2 id="member-dashboard-title">Your supporter dashboard</h2>
         </div>
-        <p>AstroCrown generates a member name for you, and you can customize it. Before the programme opens, each payment wallet and the Solana ACROWN delivery wallet will need separate ownership verification. This preview does not register wallets or establish entitlement ownership.</p>
+        <p>AstroCrown generates a member name for you, and you can customize it. The staging service now supports wallet-verified member registration and separately verified wallet linking. Payment and ACROWN purchase functions remain disabled.</p>
       </div>
       <div class="dashboard-grid">
         <section class="panel member-profile-panel" aria-labelledby="member-profile-title">
@@ -288,13 +288,13 @@
           <div class="field">
             <label for="member-pseudonym">Member pseudonym</label>
             <input id="member-pseudonym" type="text" maxlength="28" autocomplete="off" spellcheck="false" aria-describedby="pseudonym-help">
-            <small id="pseudonym-help">A random name is generated automatically. Customize it whenever you like. In this preview, the name is not saved to a permanent member record.</small>
+            <small id="pseudonym-help">A random name is generated automatically. Customize it before registration. On the official staging service, it is saved only after the connected wallet proves ownership.</small>
           </div>
           <div class="profile-actions">
             <button class="secondary-button" id="member-name-randomize" type="button">Generate another name</button>
             <span class="member-display-name" id="member-display-name" aria-live="polite"></span>
           </div>
-          <p class="wallet-instructions"><strong>Preview safety:</strong> use only a separate empty disposable wallet for address-display testing. Never connect a wallet holding real assets. This preview can display compatible EVM, TronLink and Solana public addresses; it does not prove ownership or register the address. TRON discovery uses the wallet's published TIP-6963 provider interface. No message or transaction signature is requested.</p>
+          <p class="wallet-instructions"><strong>Wallet ownership:</strong> connect a wallet you control. On the official staging Worker, you can register it by signing a domain-bound text message. The wallet should display the exact message; it proves address control only and does not create a transaction, transfer tokens, grant an allowance or pay a network fee. Never sign a prompt that asks you to approve, transfer or send funds. The standalone repository preview remains display-only.</p>
           <div class="wallet-ecosystem-grid">
             <section class="wallet-ecosystem-card" aria-labelledby="evm-wallet-heading">
               <div class="ecosystem-heading">
@@ -363,7 +363,35 @@
               </div>
             </section>
           </div>
-          <p class="fine-print">A wallet may expose separate Ethereum/EVM, Tron and Solana addresses; the member must prove control of each independently before addresses are linked to one member record. The initial payment allowlist is USD₮ ERC-20 on Ethereum, USD₮ TRC-20 on Tron and USD₮ SPL on Solana. ACROWN delivery remains Solana-based. This preview displays public addresses only and does not prove, register or link them to a supporter record; payment, transaction signing and backend functions remain disabled.</p>
+          <section class="wallet-ecosystem-card" aria-labelledby="member-registration-heading">
+            <div class="ecosystem-heading">
+              <strong id="member-registration-heading">Member registration and wallet ownership</strong>
+              <span class="ecosystem-tag" id="supporter-member-mode">Staging service required</span>
+            </div>
+            <p class="panel-intro">Register with one payment wallet first. After signing in, link other payment wallets and add your Solana ACROWN delivery wallet. Each address is verified separately.</p>
+            <div class="field">
+              <label for="supporter-wallet-purpose">Purpose for the connected wallet when linking</label>
+              <select id="supporter-wallet-purpose">
+                <option value="PAYMENT">Payment wallet</option>
+                <option value="ACROWN_DELIVERY">Solana ACROWN delivery wallet</option>
+                <option value="PAYMENT_AND_DELIVERY">Solana payment and ACROWN delivery wallet</option>
+              </select>
+              <small>Delivery-only and combined payment/delivery roles are accepted only for Solana wallets.</small>
+            </div>
+            <div class="wallet-actions">
+              <button class="primary-button" id="supporter-register-wallet" type="button" disabled>Verify wallet and register</button>
+              <button class="secondary-button" id="supporter-login-wallet" type="button" disabled>Sign in with this wallet</button>
+              <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link wallet</button>
+              <button class="secondary-button" id="supporter-logout" type="button" disabled>Sign out</button>
+            </div>
+            <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Connect an Ethereum, Tron or Solana mainnet wallet to begin. Registration becomes available after the homepage staging notice is acknowledged.</div>
+            <div class="wallet-address-card">
+              <span class="side-label">Verified supporter identity</span>
+              <strong id="supporter-member-summary">Not signed in</strong>
+              <span id="supporter-member-wallet-list">No wallets linked.</span>
+            </div>
+          </section>
+          <p class="fine-print">A wallet may expose separate Ethereum/EVM, Tron and Solana addresses; prove control of each independently. The initial payment allowlist is USD₮ ERC-20 on Ethereum, USD₮ TRC-20 on Tron and USD₮ SPL on Solana. ACROWN delivery remains Solana-based. Registration records only public addresses, a member pseudonym, verification timestamps and session digests. AstroCrown never receives private keys or recovery phrases. Contributions, payment intents and token purchases remain disabled.</p>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
@@ -387,11 +415,11 @@
             <div class="result-row"><span class="result-label">Purchases completed by this wallet</span><strong class="result-value">No purchase records</strong></div>
           </div>
           <button class="disabled-button dashboard-purchase-button" id="supporter-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
-          <p class="fine-print">This preview does not register the wallet, activate an entitlement, store the pseudonym, or display a live programme balance. These require the supporter backend and authoritative programme configuration.</p>
+          <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No contribution or purchase balance is created by registration; payment and entitlement accounting remain closed.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. The registered wallet will control the multiplier entitlement and authorize purchases. AstroCrown will never ask for your seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. Verified wallet control will be required for contributions and purchases when those services are activated. AstroCrown will never ask for your seed phrase or private key.
       </div>
     </section>
 
@@ -495,8 +523,8 @@
         <article class="step-card">
           <div class="step-number">02</div>
           <h3>Register your wallet and member name</h3>
-          <p>Connect the wallet that you control. AstroCrown generates a random member pseudonym by default, which you may customize. No legal name or identity document is required by this programme design.</p>
-          <span class="pending">Production account not enabled</span>
+          <p>Connect the wallet that you control and sign the off-chain ownership challenge on the official staging service. AstroCrown generates a random member pseudonym by default, which you may customize. No legal name or identity document is collected by this programme flow.</p>
+          <span class="pending">Staging registration available; production pending</span>
         </article>
         <article class="step-card">
           <div class="step-number">03</div>
@@ -524,7 +552,7 @@
           <div class="eyebrow">Wallet and member profile</div>
           <h2 id="wallet-records-title">Your wallet is your membership and entitlement</h2>
         </div>
-        <p>The supporter controls the registered wallet. The wallet address is the public identifier that owns the multiplier entitlement and authorizes purchases; the member pseudonym is only a customizable display name.</p>
+        <p>The supporter controls each registered wallet. The member pseudonym groups independently verified public addresses into one supporter profile; it does not prove legal identity or create a financial entitlement by itself.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
