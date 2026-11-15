@@ -67,10 +67,13 @@ assert.match(supporterPage, /USDT contributions and ACROWN purchases are not ena
 assert.match(supporterPage, /DO NOT SEND FUNDS/i);
 assert.match(supporterPage, /ACROWN delivery remains (?:on Solana|Solana-based)/i);
 assert.match(supporterPage, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/i);
-assert.match(supporterPage, /1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance/i);
+assert.match(supporterPage, /25 ACROWN per USDT 1/i);
+assert.match(supporterPage, /USDT 1,000,000/i);
+assert.match(supporterPage, /25,000,000 ACROWN/i);
+assert.match(supporterPage, /wallet registration closes 24 hours before the official public-deployment event/i);
 assert.match(supporterPage, /180-day purchase period begins at that operational activation/i);
 assert.match(supporterPage, /unused personal allowance/i);
-assert.match(supporterPage, /Any approved global ceiling applies to everyone/i);
+assert.match(supporterPage, /The 25,000,000-ACROWN programme ceiling applies to everyone/i);
 assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wallet may purchase up to the entire remaining programme allowance/i);
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
