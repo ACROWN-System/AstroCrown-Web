@@ -74,14 +74,22 @@ assert.match(supporterPage, /Any approved global ceiling applies to everyone/i);
 assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wallet may purchase up to the entire remaining programme allowance/i);
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
-assert.doesNotMatch(supporterJs, /signMessageV2\s*\(/i);
+assert.match(supporterJs, /standard:connect/);
 assert.match(supporterPage, /No supporter contributions accepted in this development preview/i);
 assert.match(supporterPage, /USDT transfers not enabled/i);
-assert.match(supporterJs, /eth_requestAccounts/);
-assert.match(supporterJs, /standard:connect/);
-assert.match(supporterJs, /connected for display only/i);
-assert.doesNotMatch(supporterJs, /method\s*:\s*["'](?:personal_sign|eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
-assert.doesNotMatch(supporterJs, /signMessage\s*\(/);
+// The standalone Pages build is intentionally disconnected: only the staging Worker
+// build injects the runtime marker. The shared script must therefore keep member actions
+// disabled and return before any challenge/signature request when the marker is absent.
+assert.doesNotMatch(supporterPage, /name=["']astro-supporter-runtime["']/i);
+assert.match(supporterJs, /function supporterRuntimeMarkerPresent\(\)/);
+assert.match(supporterJs, /!supporterRuntimeMarkerPresent\(\)/);
+assert.match(supporterJs, /signSupporterChallenge\(wallet, challenge\.message\)/);
+assert.match(supporterJs, /personal_sign/);
+assert.match(supporterJs, /signMessageV2/);
+assert.match(supporterJs, /solana:signMessage/);
+// No transaction or typed-data submission method may be called. Explanatory comments
+// may name such methods so that users and auditors know which prompts to reject.
+assert.doesNotMatch(supporterJs, /\.request\(\s*\{\s*method\s*:\s*["'](?:eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
 assert.doesNotMatch(supporterJs, /signTransaction\s*\(/);
 assert.doesNotMatch(supporterJs, /signAndSendTransaction\s*\(/);
 
@@ -112,4 +120,4 @@ for (const [pagePath, html] of [
 
 console.log("Cloudflare Pages static-preview tests passed.");
 console.log("Published allowlist: " + actualFiles.length + " files.");
-console.log("No account backend, payment, signing, transaction, Worker or D1 capability is published.");
+console.log("The standalone Pages build has no Worker runtime marker or account API; registration/signing controls remain disabled and no transaction/payment method is present.");

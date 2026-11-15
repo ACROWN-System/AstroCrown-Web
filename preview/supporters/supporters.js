@@ -25,6 +25,19 @@
   var pseudonymInput = document.getElementById("member-pseudonym");
   var pseudonymDisplay = document.getElementById("member-display-name");
   var randomizeButton = document.getElementById("member-name-randomize");
+  var memberProfileState = document.getElementById("member-profile-state");
+  var memberMode = document.getElementById("supporter-member-mode");
+  var registerWalletButton = document.getElementById("supporter-register-wallet");
+  var loginWalletButton = document.getElementById("supporter-login-wallet");
+  var linkWalletButton = document.getElementById("supporter-link-wallet");
+  var logoutButton = document.getElementById("supporter-logout");
+  var walletPurposeSelect = document.getElementById("supporter-wallet-purpose");
+  var memberFeedback = document.getElementById("supporter-member-feedback");
+  var memberSummary = document.getElementById("supporter-member-summary");
+  var memberWalletList = document.getElementById("supporter-member-wallet-list");
+  var supporterRuntimeEnabled = false;
+  var supporterMember = null;
+  var lastConnectedNetwork = null;
 
   if (!solanaSelect || !evmSelect || !tronSelect || !pseudonymInput) return;
 
@@ -152,7 +165,9 @@
       return;
     }
     connectedEvmAddress = account;
+    lastConnectedNetwork = "ethereum";
     evmAddress.textContent = account;
+    updateSupporterActionButtons();
     setFeedback(
       evmFeedback,
       "EVM wallet connected for display only. The address is not registered with the programme and no entitlement is activated.",
@@ -182,6 +197,7 @@
       if (connectedEvm && connectedEvm.provider === provider) {
         connectedEvmChainId = String(chainId);
         evmChain.textContent = chainName(chainId) + " (" + String(chainId) + ")";
+        updateSupporterActionButtons();
       }
     });
     provider.on("disconnect", function () {
@@ -247,11 +263,13 @@
     connectedEvm = null;
     connectedEvmAddress = null;
     connectedEvmChainId = null;
+    if (lastConnectedNetwork === "ethereum") lastConnectedNetwork = null;
     evmAddress.textContent = "Not connected";
     evmChain.textContent = "No EVM network confirmed";
     evmConnectButton.textContent = "Connect EVM wallet";
     renderEvmChoices();
     setFeedback(evmFeedback, "Local EVM wallet display cleared. No signing or transaction was requested.", "neutral");
+    updateSupporterActionButtons();
   }
 
   evmSelect.addEventListener("change", renderEvmChoices);
@@ -273,6 +291,7 @@
 
       connectedEvm = entry;
       connectedEvmAddress = account;
+      lastConnectedNetwork = "ethereum";
       evmAddress.textContent = account;
       await refreshConnectedEvmChain();
       evmConnectButton.textContent = "EVM wallet connected";
@@ -280,9 +299,10 @@
       evmConnectButton.disabled = true;
       setFeedback(
         evmFeedback,
-        "EVM wallet connected for display only. Its address has not been registered with the programme backend, and no entitlement has been activated.",
+        "EVM wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
+      updateSupporterActionButtons();
     } catch (error) {
       evmConnectButton.textContent = "Connect EVM wallet";
       evmConnectButton.disabled = false;
@@ -350,11 +370,13 @@
 
     connectedSolana = null;
     connectedSolanaAccount = null;
+    if (lastConnectedNetwork === "solana") lastConnectedNetwork = null;
     solanaAddress.textContent = "Not connected";
     solanaChain.textContent = "No Solana cluster confirmed";
     solanaConnectButton.textContent = "Connect Solana wallet";
     renderSolanaChoices();
     setFeedback(solanaFeedback, "Local Solana wallet display cleared. No transaction or message was signed.", "neutral");
+    updateSupporterActionButtons();
   }
 
   function registerSolanaWallets() {
@@ -433,6 +455,7 @@
 
       connectedSolana = { wallet: wallet };
       connectedSolanaAccount = account;
+      lastConnectedNetwork = "solana";
       solanaAddress.textContent = account.address;
       solanaChain.textContent = "Wallet-reported network(s): " + account.chains
         .filter(function (chain) { return typeof chain === "string" && chain.indexOf("solana:") === 0; })
@@ -442,9 +465,10 @@
       solanaConnectButton.disabled = true;
       setFeedback(
         solanaFeedback,
-        "Solana wallet connected for display only. Its address has not been registered with the programme backend, and no entitlement has been activated.",
+        "Solana wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
+      updateSupporterActionButtons();
     } catch (error) {
       solanaConnectButton.textContent = "Connect Solana wallet";
       solanaConnectButton.disabled = false;
@@ -534,6 +558,7 @@
         if (provider !== connectedTronProvider) return;
         connectedTronChainId = chainId && typeof chainId === "object" ? chainId.chainId : chainId;
         tronChain.textContent = tronNetworkLabel(connectedTronChainId);
+        updateSupporterActionButtons();
       });
       provider.on("disconnect", function () {
         if (provider === connectedTronProvider) clearTronConnection(false);
@@ -545,11 +570,13 @@
     connectedTronProvider = null;
     connectedTronAddress = null;
     connectedTronChainId = null;
+    if (lastConnectedNetwork === "tron") lastConnectedNetwork = null;
     tronAddress.textContent = "Not connected";
     tronChain.textContent = "Network not confirmed";
     tronConnectButton.textContent = "Connect TRON wallet";
     renderTronChoices();
     if (showMessage) setFeedback(tronFeedback, "Local TRON wallet display cleared. No transaction or message was signed.", "neutral");
+    updateSupporterActionButtons();
   }
 
   window.addEventListener("TIP6963:announceProvider", function (event) {
@@ -582,13 +609,20 @@
       if (!isTronAddress(address)) throw new Error("The selected wallet did not return a valid public TRON address.");
       connectedTronProvider = wallet.provider;
       connectedTronAddress = address;
+      try {
+        connectedTronChainId = await wallet.provider.request({ method: "eth_chainId" });
+      } catch (_) {
+        connectedTronChainId = null;
+      }
+      lastConnectedNetwork = "tron";
       tronAddress.textContent = address;
       tronChain.textContent = connectedTronChainId
         ? tronNetworkLabel(connectedTronChainId)
         : "Wallet connected; active network not independently confirmed in this preview";
       tronConnectButton.textContent = "TRON wallet connected";
       renderTronChoices();
-      setFeedback(tronFeedback, "TRON wallet connected for address display only. The address is not registered and no entitlement is active.", "connected");
+      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.", "connected");
+      updateSupporterActionButtons();
     } catch (error) {
       tronConnectButton.textContent = "Connect TRON wallet";
       tronConnectButton.disabled = false;
@@ -599,6 +633,281 @@
   tronClearButton.addEventListener("click", function () {
     clearTronConnection(true);
   });
+
+  function supporterRuntimeMarkerPresent() {
+    var marker = document.querySelector('meta[name="astro-supporter-runtime"]');
+    return Boolean(marker && marker.content === "worker-staging" && window.location.protocol === "https:");
+  }
+
+  function activeConnectedWallet() {
+    if (lastConnectedNetwork === "ethereum" && connectedEvm && connectedEvmAddress) {
+      return {
+        network: "ethereum",
+        address: connectedEvmAddress,
+        mainnet: String(connectedEvmChainId || "").toLowerCase() === "0x1",
+        sign: async function (message) {
+          return providerRequest(connectedEvm.provider, "personal_sign", [message, connectedEvmAddress]);
+        }
+      };
+    }
+    if (lastConnectedNetwork === "tron" && connectedTronProvider && connectedTronAddress) {
+      var tronWeb = connectedTronProvider.tronWeb ||
+        (window.tron && window.tron.tronWeb) || null;
+      return {
+        network: "tron",
+        address: connectedTronAddress,
+        mainnet: String(connectedTronChainId || "").toLowerCase() === "0x2b6653dc",
+        sign: async function (message) {
+          if (!tronWeb || !tronWeb.trx || typeof tronWeb.trx.signMessageV2 !== "function") {
+            throw new Error("This TRON wallet does not expose TronLink signMessageV2 message signing.");
+          }
+          return tronWeb.trx.signMessageV2(message);
+        }
+      };
+    }
+    if (lastConnectedNetwork === "solana" && connectedSolana && connectedSolanaAccount) {
+      var chains = Array.isArray(connectedSolanaAccount.chains) ? connectedSolanaAccount.chains : [];
+      return {
+        network: "solana",
+        address: connectedSolanaAccount.address,
+        mainnet: chains.indexOf("solana:mainnet") !== -1,
+        sign: async function (message) {
+          var wallet = connectedSolana.wallet;
+          var feature = wallet && wallet.features && wallet.features["solana:signMessage"];
+          if (!feature || typeof feature.signMessage !== "function") {
+            throw new Error("This Solana wallet does not support off-chain message signing.");
+          }
+          var output = await feature.signMessage({
+            account: connectedSolanaAccount,
+            message: new TextEncoder().encode(message)
+          });
+          var signature = output && output[0] && output[0].signature;
+          if (!(signature instanceof Uint8Array) || signature.length !== 64) {
+            throw new Error("The Solana wallet returned an invalid Ed25519 signature.");
+          }
+          var binary = "";
+          signature.forEach(function (byte) { binary += String.fromCharCode(byte); });
+          return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+        }
+      };
+    }
+    return null;
+  }
+
+  function updateSupporterActionButtons() {
+    supporterRuntimeEnabled = supporterRuntimeMarkerPresent();
+    var wallet = activeConnectedWallet();
+    var ready = Boolean(supporterRuntimeEnabled && wallet && wallet.mainnet);
+    if (memberMode) {
+      memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
+    }
+    if (registerWalletButton) registerWalletButton.disabled = !ready || Boolean(supporterMember);
+    if (loginWalletButton) loginWalletButton.disabled = !ready || Boolean(supporterMember);
+    if (linkWalletButton) linkWalletButton.disabled = !ready || !supporterMember;
+    if (logoutButton) logoutButton.disabled = !supporterRuntimeEnabled || !supporterMember;
+    if (walletPurposeSelect) walletPurposeSelect.disabled = !supporterRuntimeEnabled || !supporterMember;
+    if (pseudonymInput) pseudonymInput.disabled = Boolean(supporterMember);
+    if (randomizeButton) randomizeButton.disabled = Boolean(supporterMember);
+    if (memberProfileState) {
+      memberProfileState.textContent = supporterMember ? "Wallet verified" :
+        supporterRuntimeEnabled ? "Not registered" : "Preview only";
+    }
+    if (!supporterRuntimeEnabled) {
+      if (memberFeedback) {
+        setFeedback(memberFeedback, "Standalone preview only. Wallet addresses can be displayed, but registration and wallet linking require the official staging Worker.", "neutral");
+      }
+      return;
+    }
+    if (supporterMember) {
+      if (memberSummary) memberSummary.textContent = supporterMember.member.username + " · verified supporter";
+      return;
+    }
+    if (!wallet) {
+      if (memberFeedback) setFeedback(memberFeedback, "Connect an Ethereum, Tron or Solana wallet to continue. No funds are requested.", "neutral");
+    } else if (!wallet.mainnet) {
+      var expected = wallet.network === "ethereum" ? "Ethereum Mainnet (chain ID 1)" :
+        wallet.network === "tron" ? "TRON Mainnet" : "Solana Mainnet";
+      if (memberFeedback) setFeedback(memberFeedback, "The connected wallet is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
+    } else if (memberFeedback && memberFeedback.dataset.state === "neutral") {
+      setFeedback(memberFeedback, wallet.network.toUpperCase() + " mainnet wallet connected. Register or sign in below using an off-chain ownership message.", "neutral");
+    }
+  }
+
+  async function supporterApiPost(pathname, payload) {
+    var response = await fetch(pathname, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify(payload || {})
+    });
+    var data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      if (response.status === 428) {
+        throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage, then return here.");
+      }
+      throw new Error(data && data.error ? data.error : "The supporter service returned HTTP " + response.status + ".");
+    }
+    return data;
+  }
+
+  async function signSupporterChallenge(wallet, message) {
+    setFeedback(memberFeedback, "Your wallet will now display a message asking you to prove ownership. Read the full text. It must say this is an off-chain wallet-ownership proof, not a transaction.", "neutral");
+    var signature = await wallet.sign(message);
+    if (wallet.network === "solana") {
+      if (typeof signature !== "string" || !/^[A-Za-z0-9_-]{80,100}$/.test(signature)) {
+        throw new Error("The Solana wallet signature could not be encoded safely.");
+      }
+    } else if (typeof signature !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(signature)) {
+      throw new Error("The wallet returned a signature in an unsupported format.");
+    }
+    return signature;
+  }
+
+  function applySupporterProfile(data) {
+    if (!data || !data.member || typeof data.member.username !== "string" || !Array.isArray(data.wallets)) {
+      throw new Error("The supporter service returned an incomplete member profile.");
+    }
+    supporterMember = data;
+    pseudonymInput.value = data.member.username;
+    updatePseudonym();
+    if (memberSummary) memberSummary.textContent = data.member.username + " · verified supporter";
+    if (memberWalletList) {
+      memberWalletList.textContent = data.wallets.length
+        ? data.wallets.map(function (wallet) {
+            return wallet.network.toUpperCase() + " · " + wallet.role.replace(/_/g, " ") + " · " + wallet.address;
+          }).join("  |  ")
+        : "No verified wallets linked.";
+    }
+    if (memberProfileState) memberProfileState.textContent = "Wallet verified";
+    if (memberFeedback) {
+      setFeedback(memberFeedback, "Signed in as " + data.member.username + ". " + data.wallets.length +
+        " wallet address(es) have independently verified ownership. Contributions and purchases remain disabled.", "connected");
+    }
+    updateSupporterActionButtons();
+  }
+
+  async function refreshSupporterMember() {
+    if (!supporterRuntimeMarkerPresent()) return;
+    try {
+      var response = await fetch("/api/supporters/me", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { "Accept": "application/json" }
+      });
+      if (response.ok) {
+        applySupporterProfile(await response.json());
+      } else if (response.status === 428) {
+        setFeedback(memberFeedback, "Acknowledge the public staging notice on the AstroCrown homepage before registering or signing in.", "neutral");
+      } else if (response.status !== 401) {
+        setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+      }
+    } catch (_) {
+      setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+    }
+  }
+
+  async function runSupporterRegistration() {
+    var wallet = activeConnectedWallet();
+    if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;
+    registerWalletButton.disabled = true;
+    loginWalletButton.disabled = true;
+    try {
+      var username = pseudonymInput.value.trim();
+      var challenge = await supporterApiPost("/api/supporters/registration/challenge", {
+        username: username,
+        network: wallet.network,
+        address: wallet.address
+      });
+      setFeedback(memberFeedback, "Registration challenge created. Confirm the off-chain message in your wallet; this does not transfer funds or pay gas.", "neutral");
+      var signature = await signSupporterChallenge(wallet, challenge.message);
+      var profile = await supporterApiPost("/api/supporters/registration/verify", {
+        challengeId: challenge.challengeId,
+        signature: signature
+      });
+      applySupporterProfile(profile);
+    } catch (error) {
+      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Registration was not completed."), "error");
+    } finally {
+      updateSupporterActionButtons();
+    }
+  }
+
+  async function runSupporterLogin() {
+    var wallet = activeConnectedWallet();
+    if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;
+    registerWalletButton.disabled = true;
+    loginWalletButton.disabled = true;
+    try {
+      var challenge = await supporterApiPost("/api/supporters/login/challenge", {
+        network: wallet.network,
+        address: wallet.address
+      });
+      var signature = await signSupporterChallenge(wallet, challenge.message);
+      var profile = await supporterApiPost("/api/supporters/login/verify", {
+        challengeId: challenge.challengeId,
+        signature: signature
+      });
+      applySupporterProfile(profile);
+    } catch (error) {
+      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet sign-in was not completed."), "error");
+    } finally {
+      updateSupporterActionButtons();
+    }
+  }
+
+  async function runSupporterWalletLink() {
+    var wallet = activeConnectedWallet();
+    if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || !supporterMember) return;
+    linkWalletButton.disabled = true;
+    try {
+      var role = walletPurposeSelect.value || "PAYMENT";
+      if (role !== "PAYMENT" && wallet.network !== "solana") {
+        throw new Error("Only a Solana wallet can be used as an ACROWN delivery wallet.");
+      }
+      var challenge = await supporterApiPost("/api/supporters/wallet-challenge", {
+        network: wallet.network,
+        address: wallet.address,
+        walletRole: role
+      });
+      var signature = await signSupporterChallenge(wallet, challenge.message);
+      var profile = await supporterApiPost("/api/supporters/wallet-verify", {
+        challengeId: challenge.challengeId,
+        signature: signature,
+        purpose: challenge.purpose
+      });
+      applySupporterProfile(profile);
+    } catch (error) {
+      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet linking was not completed."), "error");
+    } finally {
+      updateSupporterActionButtons();
+    }
+  }
+
+  async function runSupporterLogout() {
+    if (!supporterMember) return;
+    logoutButton.disabled = true;
+    try {
+      await supporterApiPost("/api/supporters/logout", {});
+      supporterMember = null;
+      if (memberSummary) memberSummary.textContent = "Not signed in";
+      if (memberWalletList) memberWalletList.textContent = "No verified wallets linked.";
+      pseudonymInput.disabled = false;
+      randomizeButton.disabled = false;
+      pseudonymInput.value = generatePseudonym();
+      updatePseudonym();
+      setFeedback(memberFeedback, "You have signed out. The supporter session has been revoked.", "neutral");
+    } catch (error) {
+      setFeedback(memberFeedback, error && error.message ? error.message : "Sign out could not be completed.", "error");
+    } finally {
+      updateSupporterActionButtons();
+    }
+  }
+
+  if (registerWalletButton) registerWalletButton.addEventListener("click", runSupporterRegistration);
+  if (loginWalletButton) loginWalletButton.addEventListener("click", runSupporterLogin);
+  if (linkWalletButton) linkWalletButton.addEventListener("click", runSupporterWalletLink);
+  if (logoutButton) logoutButton.addEventListener("click", runSupporterLogout);
 
   async function refreshProgrammeStatus() {
     var statusElement = document.getElementById("supporter-runtime-status");
@@ -636,8 +945,10 @@
   }
 
   refreshProgrammeStatus();
+  updateSupporterActionButtons();
+  refreshSupporterMember();
 
-  // Never call personal_sign, eth_sign, eth_sendTransaction, signMessage,
+  // Never call eth_sign, eth_sendTransaction, signAndSendTransaction,
   // signTransaction, signAndSendTransaction, signMessageV2, or any wallet payment method here.
   renderEvmChoices();
   renderSolanaChoices();

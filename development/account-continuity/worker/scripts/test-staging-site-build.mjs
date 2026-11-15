@@ -27,22 +27,29 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /180-day purchase period begins at that operational activation/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
-  assert.match(html, /name="astro-supporter-runtime" content="worker-staging"/);
-  assert.match(html, /separate empty disposable wallet/);
-  assert.match(html, /Never connect a wallet holding real assets/);
+  assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
+  assert.match(html, /Never share your seed phrase or private key/);
 });
 
-test("published supporter wallet script is display-only and has no signing or transfer calls", async () => {
+test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
   const js = await readPublic("supporters/supporters.js");
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
   assert.match(js, /wallet-standard:app-ready/);
   assert.match(js, /eth_requestAccounts/);
   assert.match(js, /standard:connect/);
+  assert.match(js, /personal_sign/);
+  assert.match(js, /signMessageV2/);
+  assert.match(js, /solana:signMessage/);
+  assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
+  assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
   assert.ok(js.includes("/api/supporters/status"));
   assert.match(js, /contributions remain closed/i);
-  assert.doesNotMatch(
-    js,
-    /\b(?:personal_sign|eth_sign|eth_sendTransaction|sendTransaction|signAndSendTransaction|signMessage)\s*\(/i
-  );
+  assert.equal(js.includes('method: "eth_sign"'), false);
+  assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
+  assert.equal(js.includes('method: "eth_sendTransaction"'), false);
+  assert.equal(js.includes('method: "eth_sendRawTransaction"'), false);
+  assert.equal(js.includes('method: "wallet_sendCalls"'), false);
+  assert.equal(js.includes(".signTransaction("), false);
+  assert.equal(js.includes(".signAndSendTransaction("), false);
 });

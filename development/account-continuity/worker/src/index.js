@@ -7,7 +7,7 @@ import {
 } from "@simplewebauthn/server";
 import { decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
-import { supporterStatusResponse } from "./supporters.js";
+import { handleSupporterApi, supporterStatusResponse } from "./supporters.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -1950,7 +1950,7 @@ async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
   if (url.pathname === "/api/supporters/status" && request.method === "GET") return supporterStatusResponse(env);
-  if (url.pathname.startsWith("/api/supporters/")) throw fail(404, "The public Supporter Programme endpoint does not exist.");
+  if (url.pathname.startsWith("/api/supporters/")) return handleSupporterApi(request, env, config);
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);

@@ -78,6 +78,33 @@ A member has a unique pseudonym/username and one or more independently verified 
 - A wallet address may map to only one active member per network unless an explicit recovery/reassignment process is reviewed.
 - Before registration, disclose that wallet addresses, pseudonym and programme transactions may be publicly linked.
 
+### Implemented staging member and wallet API
+
+The isolated staging Worker now implements supporter identity without opening payment acceptance:
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/supporters/registration/challenge` | POST | Reserve a pseudonym and issue a short-lived wallet ownership challenge |
+| `/api/supporters/registration/verify` | POST | Verify the first payment wallet signature and atomically create the supporter session |
+| `/api/supporters/login/challenge` | POST | Issue a fresh challenge for an already verified wallet |
+| `/api/supporters/login/verify` | POST | Verify wallet control and create a new session |
+| `/api/supporters/wallet-challenge` | POST | Issue a challenge for a linked payment or Solana delivery wallet |
+| `/api/supporters/wallet-verify` | POST | Verify the challenge and store the additional public wallet address |
+| `/api/supporters/me` | GET | Return the current verified member profile and verified wallet list |
+| `/api/supporters/logout` | POST | Revoke the current supporter session |
+
+Each challenge is bound to the exact site domain, address, network, purpose, nonce and expiry; its message and nonce are stored as digests and the challenge is single-use. The backend verifies signatures rather than trusting the wallet provider's name, icon or claimed address. A registration is pending until a wallet proof has succeeded. Database triggers require a verified wallet before the member can become verified and require a verified active member before a session can be created.
+
+Wallet-signature formats:
+
+- **Ethereum:** EIP-191 `personal_sign`, verified by recovering the signer from the exact message. See [viem's EIP-191 message-signing documentation](https://viem.sh/docs/actions/wallet/signMessage).
+- **Tron:** TronLink `tronWeb.trx.signMessageV2` (TIP-191), verified with the TRON message prefix and Base58Check address. TronLink's current [message-signing specification](https://docs.tronlink.org/dapp/message-signing/) describes its UTF-8 text and TIP-191 prefix.
+- **Solana:** Wallet Standard `solana:signMessage`, verified as an Ed25519 signature over the exact UTF-8 challenge bytes. The current [Solana message-signing guidance](https://solana.com/docs/frontend/messages-and-auth) recommends its standardized off-chain envelope when supported; this first implementation uses the widely supported raw `signMessage` fallback and does not request a transaction.
+
+Sessions use an HttpOnly, Secure-on-HTTPS, SameSite=Strict cookie. The database stores only a one-way digest of the random session token. Registration, login and linking endpoints are rate-limited; the public identity store is isolated from ordinary account/test D1 data.
+
+This staging identity feature does not create a treasury, accept USDT, create payment intents, broadcast transactions or credit entitlements. Real payment and entitlement paths remain unavailable until the owner supplies public receiving addresses, treasury ownership and configuration are independently verified, dual RPC evidence and finality checks are in place, and the programme terms/security gates are approved.
+
 ## 6. Payment intent and finality
 
 The server creates an exact payment intent before a wallet signs a transfer. Each intent binds the member, independently verified source wallet, network, canonical token, exact treasury destination, exact base-unit amount, single-use intent ID, expiry and rules version. The client must construct only that authorized transfer.

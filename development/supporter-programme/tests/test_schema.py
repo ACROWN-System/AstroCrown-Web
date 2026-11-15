@@ -5,12 +5,15 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "migrations" / "0001_supporter_programme_foundation.sql"
 WORKER_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0001_supporter_programme_foundation.sql"
+WALLET_MIGRATION = ROOT / "migrations" / "0002_supporter_wallet_ownership.sql"
+WORKER_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0002_supporter_wallet_ownership.sql"
 
 class SupporterSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
         self.db = sqlite3.connect(":memory:")
         self.db.execute("PRAGMA foreign_keys = ON")
         self.db.executescript(MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(WALLET_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -21,6 +24,103 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
             MIGRATION.read_bytes(),
             "The Worker-deployed supporter schema must match the canonical programme migration.",
         )
+
+    def test_wallet_verification_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_WALLET_MIGRATION.read_bytes(),
+            WALLET_MIGRATION.read_bytes(),
+            "The Worker-deployed wallet verification migration must match the canonical migration.",
+        )
+
+    def test_new_member_registration_starts_pending_and_unverified(self):
+        self.db.execute(
+            "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
+            "VALUES('m-pending','PendingPilot','pendingpilot',1,1)"
+        )
+        row = self.db.execute(
+            "SELECT registration_state,registration_verified_at FROM supporter_members WHERE member_id='m-pending'"
+        ).fetchone()
+        self.assertEqual(row, ("PENDING", None))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
+                "WHERE member_id='m-pending'"
+            )
+        self.db.execute(
+            "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role,"
+            "ownership_verified_at,proof_method,created_at) "
+            "VALUES('w-pending','m-pending','ethereum','0x111','0x111','PAYMENT',2,'OFFCHAIN_MESSAGE',2)"
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "independently verified wallet"):
+            self.db.execute(
+                "UPDATE supporter_members SET registration_state='VERIFIED' "
+                "WHERE member_id='m-pending'"
+            )
+        self.db.execute(
+            "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
+            "WHERE member_id='m-pending'"
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "cannot be downgraded"):
+            self.db.execute(
+                "UPDATE supporter_members SET registration_state='PENDING' WHERE member_id='m-pending'"
+            )
+        verified = self.db.execute(
+            "SELECT registration_state,registration_verified_at FROM supporter_members WHERE member_id='m-pending'"
+        ).fetchone()
+        self.assertEqual(verified, ("VERIFIED", 2))
+
+    def test_supporter_sessions_require_verified_active_member(self):
+        self.db.execute(
+            "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
+            "VALUES('m-session','SessionPilot','sessionpilot',1,1)"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "INSERT INTO supporter_member_sessions(session_id,member_id,secret_digest,created_at,expires_at,last_used_at) "
+                "VALUES('s-pending','m-session','digest-pending',1,100,1)"
+            )
+        self.db.execute(
+            "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role,"
+            "ownership_verified_at,proof_method,created_at) "
+            "VALUES('w-session','m-session','ethereum','0x111','0x111','PAYMENT',2,'OFFCHAIN_MESSAGE',2)"
+        )
+        self.db.execute(
+            "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
+            "WHERE member_id='m-session'"
+        )
+        self.db.execute(
+            "INSERT INTO supporter_member_sessions(session_id,member_id,secret_digest,created_at,expires_at,last_used_at) "
+            "VALUES('s-verified','m-session','digest-verified',3,100,3)"
+        )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM supporter_member_sessions WHERE session_id='s-verified'").fetchone()[0],
+            1,
+        )
+
+    def test_delivery_wallets_are_solana_only_and_unique_per_member(self):
+        self.db.execute(
+            "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
+            "VALUES('m-delivery','DeliveryPilot','deliverypilot',1,1)"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role,"
+                "ownership_verified_at,proof_method,created_at) "
+                "VALUES('w-eth-delivery','m-delivery','ethereum','0x111','0x111','ACROWN_DELIVERY',2,'OFFCHAIN_MESSAGE',2)"
+            )
+        self.db.execute(
+            "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role,"
+            "ownership_verified_at,proof_method,created_at) "
+            "VALUES('w-sol-delivery','m-delivery','solana','So11111111111111111111111111111111111111112',"
+            "'So11111111111111111111111111111111111111112','ACROWN_DELIVERY',2,'OFFCHAIN_MESSAGE',2)"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role,"
+                "ownership_verified_at,proof_method,created_at) "
+                "VALUES('w-sol-delivery-2','m-delivery','solana','11111111111111111111111111111111',"
+                "'11111111111111111111111111111111','PAYMENT_AND_DELIVERY',3,'OFFCHAIN_MESSAGE',3)"
+            )
 
     def test_prelaunch_has_no_clock_or_treasuries(self):
         row = self.db.execute("SELECT status, activated_at, closes_at FROM supporter_program WHERE singleton=1").fetchone()
