@@ -165,7 +165,9 @@
       return;
     }
     connectedEvmAddress = account;
+    lastConnectedNetwork = "ethereum";
     evmAddress.textContent = account;
+    updateSupporterActionButtons();
     setFeedback(
       evmFeedback,
       "EVM wallet connected for display only. The address is not registered with the programme and no entitlement is activated.",
@@ -195,6 +197,7 @@
       if (connectedEvm && connectedEvm.provider === provider) {
         connectedEvmChainId = String(chainId);
         evmChain.textContent = chainName(chainId) + " (" + String(chainId) + ")";
+        updateSupporterActionButtons();
       }
     });
     provider.on("disconnect", function () {
@@ -260,11 +263,13 @@
     connectedEvm = null;
     connectedEvmAddress = null;
     connectedEvmChainId = null;
+    if (lastConnectedNetwork === "ethereum") lastConnectedNetwork = null;
     evmAddress.textContent = "Not connected";
     evmChain.textContent = "No EVM network confirmed";
     evmConnectButton.textContent = "Connect EVM wallet";
     renderEvmChoices();
     setFeedback(evmFeedback, "Local EVM wallet display cleared. No signing or transaction was requested.", "neutral");
+    updateSupporterActionButtons();
   }
 
   evmSelect.addEventListener("change", renderEvmChoices);
@@ -286,6 +291,7 @@
 
       connectedEvm = entry;
       connectedEvmAddress = account;
+      lastConnectedNetwork = "ethereum";
       evmAddress.textContent = account;
       await refreshConnectedEvmChain();
       evmConnectButton.textContent = "EVM wallet connected";
@@ -293,9 +299,10 @@
       evmConnectButton.disabled = true;
       setFeedback(
         evmFeedback,
-        "EVM wallet connected for display only. Its address has not been registered with the programme backend, and no entitlement has been activated.",
+        "EVM wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
+      updateSupporterActionButtons();
     } catch (error) {
       evmConnectButton.textContent = "Connect EVM wallet";
       evmConnectButton.disabled = false;
@@ -363,11 +370,13 @@
 
     connectedSolana = null;
     connectedSolanaAccount = null;
+    if (lastConnectedNetwork === "solana") lastConnectedNetwork = null;
     solanaAddress.textContent = "Not connected";
     solanaChain.textContent = "No Solana cluster confirmed";
     solanaConnectButton.textContent = "Connect Solana wallet";
     renderSolanaChoices();
     setFeedback(solanaFeedback, "Local Solana wallet display cleared. No transaction or message was signed.", "neutral");
+    updateSupporterActionButtons();
   }
 
   function registerSolanaWallets() {
@@ -446,6 +455,7 @@
 
       connectedSolana = { wallet: wallet };
       connectedSolanaAccount = account;
+      lastConnectedNetwork = "solana";
       solanaAddress.textContent = account.address;
       solanaChain.textContent = "Wallet-reported network(s): " + account.chains
         .filter(function (chain) { return typeof chain === "string" && chain.indexOf("solana:") === 0; })
@@ -455,9 +465,10 @@
       solanaConnectButton.disabled = true;
       setFeedback(
         solanaFeedback,
-        "Solana wallet connected for display only. Its address has not been registered with the programme backend, and no entitlement has been activated.",
+        "Solana wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
+      updateSupporterActionButtons();
     } catch (error) {
       solanaConnectButton.textContent = "Connect Solana wallet";
       solanaConnectButton.disabled = false;
@@ -547,6 +558,7 @@
         if (provider !== connectedTronProvider) return;
         connectedTronChainId = chainId && typeof chainId === "object" ? chainId.chainId : chainId;
         tronChain.textContent = tronNetworkLabel(connectedTronChainId);
+        updateSupporterActionButtons();
       });
       provider.on("disconnect", function () {
         if (provider === connectedTronProvider) clearTronConnection(false);
@@ -558,11 +570,13 @@
     connectedTronProvider = null;
     connectedTronAddress = null;
     connectedTronChainId = null;
+    if (lastConnectedNetwork === "tron") lastConnectedNetwork = null;
     tronAddress.textContent = "Not connected";
     tronChain.textContent = "Network not confirmed";
     tronConnectButton.textContent = "Connect TRON wallet";
     renderTronChoices();
     if (showMessage) setFeedback(tronFeedback, "Local TRON wallet display cleared. No transaction or message was signed.", "neutral");
+    updateSupporterActionButtons();
   }
 
   window.addEventListener("TIP6963:announceProvider", function (event) {
@@ -595,13 +609,20 @@
       if (!isTronAddress(address)) throw new Error("The selected wallet did not return a valid public TRON address.");
       connectedTronProvider = wallet.provider;
       connectedTronAddress = address;
+      try {
+        connectedTronChainId = await wallet.provider.request({ method: "eth_chainId" });
+      } catch (_) {
+        connectedTronChainId = null;
+      }
+      lastConnectedNetwork = "tron";
       tronAddress.textContent = address;
       tronChain.textContent = connectedTronChainId
         ? tronNetworkLabel(connectedTronChainId)
         : "Wallet connected; active network not independently confirmed in this preview";
       tronConnectButton.textContent = "TRON wallet connected";
       renderTronChoices();
-      setFeedback(tronFeedback, "TRON wallet connected for address display only. The address is not registered and no entitlement is active.", "connected");
+      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.", "connected");
+      updateSupporterActionButtons();
     } catch (error) {
       tronConnectButton.textContent = "Connect TRON wallet";
       tronConnectButton.disabled = false;
