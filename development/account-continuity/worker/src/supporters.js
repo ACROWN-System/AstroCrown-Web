@@ -376,7 +376,7 @@ async function verifyWalletSignature(challenge, signature) {
   return false;
 }
 
-async function consumeChallenge(db, challengeId, purpose) {
+async function consumeChallenge(db, challengeId, purpose, config) {
   if (typeof challengeId !== "string" || !/^wch_[A-Za-z0-9_-]{20,40}$/.test(challengeId)) {
     throw httpError(400, "The wallet challenge identifier is invalid.");
   }
@@ -403,6 +403,13 @@ async function consumeChallenge(db, challengeId, purpose) {
   }
   if (!constantTimeEqual(await hashText(challenge.message), challenge.message_digest)) {
     throw httpError(409, "The stored wallet challenge has failed its integrity check.");
+  }
+  const nonceMatch = challenge.message.match(/^Nonce: ([A-Za-z0-9_-]{20,})$/m);
+  if (!nonceMatch || !constantTimeEqual(await hashText(nonceMatch[1]), challenge.nonce_digest)) {
+    throw httpError(409, "The stored wallet challenge nonce has failed its integrity check.");
+  }
+  if (config && challenge.domain !== new URL(config.origin).host) {
+    throw httpError(409, "The wallet challenge was issued for a different website domain.");
   }
   return challenge;
 }
@@ -546,66 +553,6 @@ async function registrationChallenge(db, env, request, payload, config) {
   });
 }
 
-async function verifyRegistration(db, request, payload, config) {
-  await applyRateLimit(db, request.env || {}, request, "registration-verify", 12, 3600);
-  const challenge = await consumeChallenge(db, payload.challengeId, "REGISTER");
-  if (challenge.member_status !== "ACTIVE" || challenge.registration_state !== "PENDING") {
-    throw httpError(409, "This registration is no longer pending.");
-  }
-  if (!(await verifyWalletSignature(challenge, payload.signature))) {
-    throw httpError(401, "The signature did not prove control of the submitted wallet.");
-  }
-  const walletId = newId("wal");
-  const now = Math.floor(Date.now() / 1000);
-  const { token, expiresAt } = await createSessionWithBatch(db, [
-    db.prepare(
-      "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role," +
-      "ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,'PAYMENT',?,'OFFCHAIN_MESSAGE',?)"
-    ).bind(walletId, challenge.member_id, challenge.network, await displayAddress(challenge), challenge.address_normalized, now, now),
-    db.prepare(
-      "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=?,registration_expires_at=NULL,updated_at=? " +
-      "WHERE member_id=? AND registration_state='PENDING'"
-    ).bind(now, now, challenge.member_id),
-  ]);
-  const member = await db.prepare(
-    "SELECT member_id,username,status,created_at FROM supporter_members WHERE member_id=? AND registration_state='VERIFIED'"
-  ).bind(challenge.member_id).first();
-  if (!member) throw httpError(409, "The supporter member record could not be verified.");
-  const response = json(200, await memberProfile(db, member), {
-    "Set-Cookie": sessionCookie(token, config.origin),
-  });
-  return response;
-}
-
-async function displayAddress(challenge) {
-  if (challenge.network === "ethereum") return getAddress(challenge.address_normalized);
-  return challenge.address_normalized;
-}
-
-async function createSessionWithBatch(db, statements) {
-  const token = base64url(randomBytes(32));
-  const sessionId = newId("ses");
-  const now = Math.floor(Date.now() / 1000);
-  const expiresAt = now + SESSION_SECONDS;
-  const secretDigest = await hashText(token);
-  const sessionStatement = db.prepare(
-    "INSERT INTO supporter_member_sessions(session_id,member_id,secret_digest,created_at,expires_at,last_used_at) " +
-    "VALUES(?,?,?,?,?,?)"
-  ).bind(sessionId, null, secretDigest, now, expiresAt, now);
-  // Replace the placeholder member ID with the member ID from the verified challenge.
-  const sessionIndex = statements.length;
-  const memberId = statements[0].__supporterMemberId;
-  const prepared = statements.concat([]);
-  prepared.push(db.prepare(
-    "INSERT INTO supporter_member_sessions(session_id,member_id,secret_digest,created_at,expires_at,last_used_at) " +
-    "VALUES(?,?,?,?,?,?)"
-  ).bind(sessionId, memberId, secretDigest, now, expiresAt, now));
-  await db.batch(prepared);
-  void sessionStatement;
-  void sessionIndex;
-  return { token, expiresAt };
-}
-
 async function loginChallenge(db, env, request, payload, config) {
   await applyRateLimit(db, env, request, "login-challenge", 12, 3600);
   const network = payload.network;
@@ -631,7 +578,7 @@ async function loginChallenge(db, env, request, payload, config) {
 
 async function loginVerify(db, env, request, payload, config) {
   await applyRateLimit(db, env, request, "login-verify", 16, 3600);
-  const challenge = await consumeChallenge(db, payload.challengeId, "LOGIN");
+  const challenge = await consumeChallenge(db, payload.challengeId, "LOGIN", config);
   if (challenge.member_status !== "ACTIVE" || challenge.registration_state !== "VERIFIED") {
     throw httpError(401, "The supporter account is not available.");
   }
@@ -673,9 +620,10 @@ async function linkWalletChallenge(db, env, request, payload, config, member) {
   return json(200, challenge);
 }
 
-async function linkWalletVerify(db, request, payload, config, member) {
+async function linkWalletVerify(db, env, request, payload, config, member) {
+  await applyRateLimit(db, env, request, "link-wallet-verify", 16, 3600);
   const purpose = payload.purpose === "DELIVERY" ? "DELIVERY" : "LINK_WALLET";
-  const challenge = await consumeChallenge(db, payload.challengeId, purpose);
+  const challenge = await consumeChallenge(db, payload.challengeId, purpose, config);
   if (challenge.member_id !== member.member_id || challenge.member_status !== "ACTIVE" ||
       challenge.registration_state !== "VERIFIED") {
     throw httpError(403, "This wallet challenge does not belong to the current supporter.");
@@ -757,7 +705,7 @@ export async function handleSupporterApi(request, env, config) {
     }
     if (url.pathname === "/api/supporters/registration/verify") {
       await applyRateLimit(db, env, request, "registration-verify", 12, 3600);
-      const challenge = await consumeChallenge(db, payload.challengeId, "REGISTER");
+      const challenge = await consumeChallenge(db, payload.challengeId, "REGISTER", config);
       if (challenge.member_status !== "ACTIVE" || challenge.registration_state !== "PENDING") {
         throw httpError(409, "This registration is no longer pending.");
       }
@@ -787,7 +735,10 @@ export async function handleSupporterApi(request, env, config) {
           "VALUES(?,?,?,?,?,?)"
         ).bind(sessionId, challenge.member_id, secretDigest, now, expiresAt, now),
       ]);
-      if (results.length !== 3) throw httpError(503, "The supporter registration could not be completed.");
+      if (results.length !== 3 || Number(results[0]?.meta?.changes || 0) !== 1 ||
+      Number(results[1]?.meta?.changes || 0) !== 1 || Number(results[2]?.meta?.changes || 0) !== 1) {
+    throw httpError(409, "The supporter registration transaction could not be committed exactly once.");
+  }
       const member = await db.prepare(
         "SELECT member_id,username,status,created_at FROM supporter_members WHERE member_id=? AND registration_state='VERIFIED'"
       ).bind(challenge.member_id).first();
@@ -810,7 +761,7 @@ export async function handleSupporterApi(request, env, config) {
     if (url.pathname === "/api/supporters/wallet-verify") {
       const member = await currentMember(db, request);
       if (!member) throw httpError(401, "Sign in before linking another wallet.");
-      return await linkWalletVerify(db, request, payload, config, member);
+      return await linkWalletVerify(db, env, request, payload, config, member);
     }
     if (url.pathname === "/api/supporters/logout") return await supporterLogout(db, request, config);
     return json(404, { error: "The Supporter Programme endpoint does not exist." });
