@@ -89,6 +89,16 @@ A local checkout may be used when a specific device, browser, physical authentic
 
 When a local diagnostic is justified, use a supported Node.js LTS and a preinstalled Chrome/Chromium browser. From this directory, run `npm install`, `npm run build:site`, `npx wrangler d1 migrations apply acrown-account-staging --local`, and `npx wrangler dev --local`. Wrangler displays a local URL and uses the localhost RP ID; it is not the remote staging URL. Do not treat local diagnostic output as remote integration evidence.
 
+## Account 02 read-only preflight
+
+Workflow: `.github/workflows/cloudflare-account02-readonly-preflight.yml`
+
+Before any remote staging deployment, run this manually dispatched workflow on `main`. It reuses the existing `CLOUDFLARE_API_TOKEN_02` and `CLOUDFLARE_ACCOUNT_ID_02` settings and performs only HTTP GET requests. It reports token validity, the `workers.dev` subdomain, existing Worker names, the reserved staging Worker presence, D1 database names/count, and the Workers account default usage model when available. It does not read payment methods, billing profiles, secret values, or modify any Cloudflare resource.
+
+The deployment script repeats the critical Worker-existence check before D1 provisioning. Cloudflare's Workers Editor role can deploy to an existing Worker but cannot create a new Worker. If `astrocrown-account-staging-staging` does not already exist, create an empty Worker with that exact name through the Cloudflare dashboard before rerunning deployment. Do not broaden the existing token to account-level Workers Admin merely to bypass this prerequisite.
+
+The preflight deliberately does not determine whether Workers Free is selected or whether a payment method is attached. Confirm both in the Cloudflare dashboard before selecting the deployment workflow's Free/no-card confirmation. The read-only deployment token is not granted Billing Read and does not query billing endpoints.
+
 ## GitHub-hosted remote staging — prepared, not deployed or authorized
 
 The preferred operating path is GitHub Actions on GitHub-hosted Ubuntu runners. A developer workstation is not required for dependency installation, tests, site builds, Worker dry-runs or the guarded remote deployment. The local script path remains available for exceptional diagnostics only.
