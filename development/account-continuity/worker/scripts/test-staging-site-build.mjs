@@ -28,7 +28,7 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /25,000,000 ACROWN/i);
   assert.match(html, /wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event/i);
   assert.match(html, /full floor-price consideration must reach the ACS reserve/i);
-  assert.match(html, /gas and/or Paymaster fees are additional buyer costs/i);
+  assert.match(html, /gas and\\/or Paymaster fees are additional buyer costs/i);
   assert.match(html, /only when the wallet is eligible/i);
   assert.match(html, /180-day purchase period begins at that operational activation/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
