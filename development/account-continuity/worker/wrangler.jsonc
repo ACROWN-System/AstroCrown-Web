@@ -3,7 +3,10 @@
   "name": "astrocrown-account-staging",
   "main": "src/index.js",
   "compatibility_date": "2026-11-03",
-  "compatibility_flags": ["nodejs_compat", "webcrypto_modern_algorithms"],
+  "compatibility_flags": [
+    "nodejs_compat",
+    "webcrypto_modern_algorithms"
+  ],
   "workers_dev": true,
   "assets": {
     "directory": "./public",
@@ -16,6 +19,12 @@
       "database_name": "acrown-account-staging",
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
+    },
+    {
+      "binding": "SUPPORTERS_DB",
+      "database_name": "acrown-supporters-mainnet",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations/supporters"
     }
   ],
   "vars": {
@@ -41,6 +50,12 @@
           "database_name": "acrown-account-staging",
           "database_id": "00000000-0000-0000-0000-000000000000",
           "migrations_dir": "migrations"
+        },
+        {
+          "binding": "SUPPORTERS_DB",
+          "database_name": "acrown-supporters-mainnet",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "migrations/supporters"
         }
       ]
     }
