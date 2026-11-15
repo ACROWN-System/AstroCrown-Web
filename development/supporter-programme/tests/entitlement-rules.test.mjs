@@ -82,16 +82,20 @@ test("owner-approved programme multiplier and aggregate ceilings are exact", () 
   }), "25000000");
 });
 
-test("wallet registration closes exactly 24 hours before public deployment", () => {
-  const publicDeployment = 1_900_000_000;
+test("wallet registration closes at 00:00 UTC exactly 24 hours before public deployment", () => {
+  const publicDeployment = 1_900_022_400; // UTC midnight (Unix timestamp divisible by 86,400).
   const cutoff = publicDeployment - 86_400;
   assert.equal(WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS, 86_400);
+  assert.equal(publicDeployment % 86_400, 0);
+  assert.equal(cutoff % 86_400, 0);
   assert.equal(walletRegistrationClosesAt(publicDeployment), cutoff);
   assert.equal(isWalletRegistrationOpen(cutoff - 1, publicDeployment), true);
   assert.equal(isWalletRegistrationOpen(cutoff, publicDeployment), false);
   assert.equal(isWalletRegistrationOpen(publicDeployment, publicDeployment), false);
   assert.equal(isWalletRegistrationOpen(1, null), false);
   assert.throws(() => walletRegistrationClosesAt(80_000), /valid timestamp/);
+  assert.throws(() => walletRegistrationClosesAt(1_900_000_000), /00:00:00 UTC/);
+  assert.equal(isWalletRegistrationOpen(cutoff - 1, 1_900_000_000), false);
 });
 
 test("remaining aggregate contribution capacity respects the one-million-USDT ceiling", () => {
