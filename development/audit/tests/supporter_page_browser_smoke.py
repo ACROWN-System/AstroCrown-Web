@@ -108,6 +108,7 @@ def main() -> int:
         request: async ({method}) => {
           record("tron", method);
           if (method === "eth_requestAccounts") return [tronAddress];
+          if (method === "eth_chainId") return "0x2b6653dc";
           return unexpected(method);
         }
       };
@@ -188,8 +189,8 @@ def main() -> int:
             )
             evm_display = page.locator("#supporter-evm-wallet-address").inner_text()
             evm_feedback = page.locator("#supporter-evm-wallet-feedback").inner_text()
-            record("EVM address is displayed as unregistered and display-only",
-                   evm_display == EVM_ADDRESS and "display only" in evm_feedback.lower(),
+            record("EVM address is displayed as unregistered pending off-chain ownership proof",
+                   evm_display == EVM_ADDRESS and "not registered yet" in evm_feedback.lower(),
                    {"address": evm_display, "feedback": evm_feedback})
 
             page.select_option("#supporter-tron-wallet-choice", label="Mock TronLink")
@@ -199,8 +200,8 @@ def main() -> int:
             )
             tron_display = page.locator("#supporter-tron-wallet-address").inner_text()
             tron_feedback = page.locator("#supporter-tron-wallet-feedback").inner_text()
-            record("TronLink address is displayed as unregistered and display-only",
-                   tron_display == TRON_ADDRESS and "display only" in tron_feedback.lower(),
+            record("TronLink address is displayed as unregistered pending off-chain ownership proof",
+                   tron_display == TRON_ADDRESS and "not registered yet" in tron_feedback.lower(),
                    {"address": tron_display, "feedback": tron_feedback})
 
             page.select_option("#supporter-wallet-choice", label="Mock Solana Wallet")
@@ -210,15 +211,15 @@ def main() -> int:
             )
             solana_display = page.locator("#supporter-wallet-address").inner_text()
             solana_feedback = page.locator("#supporter-wallet-feedback").inner_text()
-            record("Solana address is displayed as unregistered and display-only",
-                   solana_display == SOLANA_ADDRESS and "display only" in solana_feedback.lower(),
+            record("Solana address is displayed as unregistered pending off-chain ownership proof",
+                   solana_display == SOLANA_ADDRESS and "not registered yet" in solana_feedback.lower(),
                    {"address": solana_display, "feedback": solana_feedback})
 
             wallet_calls = page.evaluate("window.__walletCalls")
             forbidden_calls = page.evaluate("window.__forbiddenWalletCalls")
             allowed_calls = {
                 "evm:eth_requestAccounts", "evm:eth_chainId",
-                "tron:eth_requestAccounts", "solana:standard:connect"
+                "tron:eth_requestAccounts", "tron:eth_chainId", "solana:standard:connect"
             }
             record("only wallet account/connection methods were called",
                    set(wallet_calls) == allowed_calls and not forbidden_calls,
