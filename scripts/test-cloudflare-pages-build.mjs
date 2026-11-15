@@ -76,7 +76,7 @@ assert.match(supporterPage, /one all-inclusive ACROWN-denominated Paymaster fee/
 assert.match(supporterPage, /unused personal allowance does not expire merely through non-use/i);
 assert.match(supporterPage, /180 consecutive days after launch/i);
 assert.match(supporterPage, /all unused wallet-specific allowances cease to be usable/i);
-assert.match(supporterPage, /public supporter purchases remain disabled until the official ACROWN launch/i);
+assert.match(supporterPage, /all ordinary\/public ACROWN purchase routes operated or authorized by AstroCrown remain disabled until the official ACROWN launch/i);
 assert.match(supporterPage, /registration-countdown-stage/);
 assert.match(supporterPage, /launch-countdown-stage/);
 assert.match(supporterPage, /data-public-deployment-at=""/);
