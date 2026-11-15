@@ -84,3 +84,22 @@ BEFORE UPDATE OF member_id, network, address_normalized, nonce_digest, domain,
   message_digest, created_at, expires_at, challenge_purpose, wallet_role, message
 ON supporter_wallet_challenges
 BEGIN SELECT RAISE(ABORT, 'Supporter wallet challenge content is immutable'); END;
+
+CREATE TRIGGER IF NOT EXISTS supporter_member_verification_requires_wallet_proof
+BEFORE UPDATE OF registration_state ON supporter_members
+WHEN NEW.registration_state = 'VERIFIED'
+ AND (
+   NEW.registration_verified_at IS NULL
+   OR NOT EXISTS (
+     SELECT 1 FROM supporter_wallets
+     WHERE supporter_wallets.member_id = NEW.member_id
+       AND supporter_wallets.ownership_verified_at IS NOT NULL
+   )
+ )
+BEGIN SELECT RAISE(ABORT, 'Supporter registration requires an independently verified wallet'); END;
+
+CREATE TRIGGER IF NOT EXISTS supporter_member_verified_state_immutable
+BEFORE UPDATE OF registration_state ON supporter_members
+WHEN OLD.registration_state = 'VERIFIED' AND NEW.registration_state != 'VERIFIED'
+BEGIN SELECT RAISE(ABORT, 'Verified supporter registration state cannot be downgraded in place'); END;
+
