@@ -452,6 +452,19 @@ async function smokeTest(origin) {
     !homepage.includes("openly available to anyone on the internet")
   ) fail("Public staging homepage is missing the live-environment marker or public safety notice.");
 
+  const publicSupportersStatus = await fetch(origin + "/api/supporters/status", { signal: AbortSignal.timeout(30000) });
+  if (publicSupportersStatus.status !== 200) {
+    fail("The read-only public Supporter Programme status endpoint must be available without account acknowledgement (HTTP " + publicSupportersStatus.status + ").");
+  }
+  const publicSupportersPayload = await publicSupportersStatus.json();
+  if (
+    publicSupportersPayload.programme?.status !== "PRELAUNCH" ||
+    publicSupportersPayload.paymentAcceptance?.enabled !== false ||
+    publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false
+  ) {
+    fail("The public Supporter Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
+  }
+
   const beforeAcknowledgement = await fetch(origin + "/api/account/status", { signal: AbortSignal.timeout(30000) });
   if (beforeAcknowledgement.status !== 428) {
     fail("Remote account API did not require acknowledgement of the public-staging notice (expected HTTP 428).");
