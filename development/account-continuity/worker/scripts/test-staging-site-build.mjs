@@ -27,6 +27,7 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /180-day purchase period begins at that operational activation/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
+  assert.match(html, /name="astro-supporter-runtime" content="worker-staging"/);
   assert.match(html, /separate empty disposable wallet/);
   assert.match(html, /Never connect a wallet holding real assets/);
 });
@@ -38,7 +39,7 @@ test("published supporter wallet script is display-only and has no signing or tr
   assert.match(js, /wallet-standard:app-ready/);
   assert.match(js, /eth_requestAccounts/);
   assert.match(js, /standard:connect/);
-  assert.match(js, /api\\/supporters\\/status/);
+  assert.ok(js.includes("/api/supporters/status"));
   assert.match(js, /contributions remain closed/i);
   assert.doesNotMatch(
     js,
