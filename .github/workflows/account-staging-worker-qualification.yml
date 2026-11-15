@@ -196,6 +196,21 @@ jobs:
           const config = JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"));
           const stage = config.env.staging;
           const deployScript = fs.readFileSync("scripts/deploy-staging.mjs", "utf8");
+          if (!Array.isArray(stage.d1_databases) || stage.d1_databases.length !== 2) {
+            throw new Error("Staging must have separate account and Supporter Programme D1 bindings.");
+          }
+          const supporterDb = stage.d1_databases[1];
+          if (
+            supporterDb.binding !== "SUPPORTERS_DB" ||
+            supporterDb.database_name !== "acrown-supporters-mainnet" ||
+            supporterDb.database_id !== "00000000-0000-0000-0000-000000000000" ||
+            supporterDb.migrations_dir !== "migrations/supporters"
+          ) {
+            throw new Error("The dedicated Supporter Programme D1 binding must retain its separate non-deployable sentinel.");
+          }
+          if (!deployScript.includes("resolveSupportersDatabase") || !deployScript.includes("ASTROCROWN_SUPPORTERS_D1_DATABASE_ID")) {
+            throw new Error("Staging deployment must identity-pin the dedicated Supporter Programme D1 database.");
+          }
           const workerGuard = deployScript.indexOf("await requireExistingStagingWorker(accountId, sourceConfig.env.staging.name)");
           const usageModelReport = deployScript.indexOf("await reportWorkersUsageModel(accountId)");
           const d1Provision = deployScript.indexOf("const state = await resolveDatabase(accountId)");
