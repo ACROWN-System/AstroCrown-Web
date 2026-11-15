@@ -48,7 +48,7 @@ The owner has approved a **USDT 1,000,000 aggregate contribution ceiling** and a
 - Accept contributions only while the programme is OPEN, contribution capacity remains, and unused shared 25,000,000-ACROWN purchase capacity remains. Once the shared sale cap is exhausted or the programme closes, stop new contributions as well as purchases; do not accept funds for allowance that cannot be redeemed.
 - Quantities are integer base-unit strings with rational arithmetic, never floating point. Convert 25,000,000 whole ACROWN to base units only after ACROWN decimals have been finalized and verified.
 
-Owner confirmation on 2026-11-16 resolves the earlier wording ambiguity: USDT 1 of verified contribution creates purchase allowance for up to 25 ACROWN, not 1 ACROWN. This multiplier is only a quantity allowance; it does not pay for the 25 ACROWN. The supporter must later pay the separate ACS floor consideration plus gas/Paymaster fees.
+Owner confirmation on 2026-11-16 resolves the earlier wording ambiguity: USDT 1 of verified contribution creates purchase allowance for that same source wallet to buy up to 25 ACROWN, not 1 ACROWN. This multiplier is only a quantity allowance; it does not pay for the 25 ACROWN. The supporter must later pay the separate ACS floor consideration. If Paymaster is active, one ACROWN-denominated all-inclusive Paymaster fee includes network execution/gas; there is no second network-fee line. If Paymaster is inactive, the wallet pays native network gas through the direct-wallet route.
 
 The supporter contribution treasury remains separate from the ACS reserve. The contribution does not automatically enter `V`; any later treasury-to-reserve transfer must be separately approved, traceable and reconciled.
 
