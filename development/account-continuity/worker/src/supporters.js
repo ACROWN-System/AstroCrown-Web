@@ -445,6 +445,12 @@ async function currentMember(db, request) {
   return row;
 }
 
+async function displayAddress(challenge) {
+  return challenge.network === "ethereum"
+    ? getAddress(challenge.address_normalized)
+    : challenge.address_normalized;
+}
+
 async function memberProfile(db, member) {
   const wallets = await db.prepare(
     "SELECT wallet_id,network,address,wallet_role,ownership_verified_at,proof_method,created_at " +
