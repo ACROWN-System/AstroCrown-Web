@@ -153,11 +153,14 @@ jobs:
               '/d1/database?per_page=100&page=1',
               '::add-mask::',
               'payment-method or billing-profile endpoints',
+              'report["token_authentication"]',
+              'STANDARD_USAGE_MODEL_REQUIRES_OWNER_PLAN_CONFIRMATION',
+              'Workers documents the Standard usage model as available to Workers Paid accounts.',
           ]
           for value in required:
               if value not in source:
                   raise SystemExit("Preflight workflow missing required safe behavior: " + value)
-          for forbidden in ['method="POST"', 'method="PUT"', 'method="PATCH"', 'method="DELETE"', 'wrangler deploy', 'wrangler d1']:
+          for forbidden in ['method="POST"', 'method="PUT"', 'method="PATCH"', 'method="DELETE"', 'wrangler deploy', 'wrangler d1', '/user/tokens/verify']:
               if forbidden in source:
                   raise SystemExit("Preflight workflow contains a forbidden mutating operation: " + forbidden)
           if any(fragment in source for fragment in [
