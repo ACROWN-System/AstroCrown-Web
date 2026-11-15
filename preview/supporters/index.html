@@ -214,8 +214,23 @@
 
     .purchase-readiness.on{background:linear-gradient(110deg,#fff1a8,#ffd700 45%,#fff5bd);border-color:#fff0a1;color:#161923;box-shadow:0 0 12px rgba(255,215,0,.36),0 0 26px rgba(255,215,0,.17),inset 0 1px rgba(255,255,255,.7)}
     .purchase-readiness.on::before{content:"✦";font-size:12px}
+    .countdown-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+    .countdown-stage{padding:18px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,rgba(13,29,50,.92),rgba(7,17,31,.96))}
+    .countdown-stage.active{border-color:rgba(255,215,0,.35);box-shadow:0 12px 32px rgba(0,0,0,.16)}
+    .countdown-stage-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .countdown-stage h3{margin:13px 0 6px;color:#edf2fa;font-size:14px}
+    .countdown-stage p{color:var(--muted);font-size:10px;line-height:1.65}
+    .countdown-stage-state{color:var(--warning);font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+    .countdown-digits{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:15px 0 7px}
+    .countdown-digits span{display:grid;gap:3px;justify-items:center;padding:12px 5px;border:1px solid rgba(153,178,213,.14);border-radius:9px;background:rgba(0,0,0,.16)}
+    .countdown-digits strong{color:var(--gold-soft);font-size:20px;font-variant-numeric:tabular-nums}
+    .countdown-digits small{color:var(--quiet);font-size:8px;text-transform:uppercase;letter-spacing:.08em}
+    .countdown-foot{margin:9px 0 0!important;color:var(--quiet)!important;font-size:9px!important}
+    .countdown-stage.complete{border-color:rgba(32,200,120,.28)}
+    .countdown-stage.complete .countdown-stage-state{color:#8fe2b9}
+
     
-    @media(max-width:820px){.dashboard-grid{grid-template-columns:1fr}.wallet-ecosystem-grid{grid-template-columns:1fr}}
+    @media(max-width:820px){.dashboard-grid{grid-template-columns:1fr}.wallet-ecosystem-grid{grid-template-columns:1fr}.countdown-grid{grid-template-columns:1fr}}
     @media(max-width:560px){.wallet-actions{display:grid;grid-template-columns:1fr}.wallet-actions button,.profile-actions button{width:100%}.profile-actions{align-items:stretch}.member-display-name{width:100%}}
 
   </style>
@@ -244,7 +259,7 @@
       <div class="hero-main">
         <div class="eyebrow">AstroCrown · Early supporter programme</div>
         <h1>Help build AstroCrown.<br><span>Priority access, not free tokens.</span></h1>
-        <p class="hero-copy">The proposed programme recognises early supporters through a right to make a separate ACROWN purchase at the ACS floor price. A USDT 1 verified contribution creates purchase allowance for up to 25 ACROWN; it does not pay for those tokens. Any purchase costs the full floor-price consideration plus separately itemized network gas and/or Paymaster fees. The full floor-price consideration must reach the ACS reserve; fees must never be deducted from it. A supporter contribution is not itself a token purchase and does not automatically enter the ACS reserve.</p>
+        <p class="hero-copy">The proposed programme recognises early supporters through a right to make a separate ACROWN purchase at the ACS floor price. A USDT 1 verified contribution creates purchase allowance for up to 25 ACROWN; it does not pay for those tokens. The full floor-price consideration must reach the ACS reserve. When Paymaster is active, one all-inclusive ACROWN-denominated Paymaster fee includes the underlying network execution cost; it is not charged again as a separate network fee. Without Paymaster, the wallet pays native network gas through the direct-wallet route. A supporter contribution is not itself a token purchase and does not automatically enter the ACS reserve.</p>
         <div class="stat-grid">
           <article class="stat-card">
             <div class="side-label">Aggregate contribution ceiling</div>
@@ -269,13 +284,13 @@
         <p class="side-copy">Three distinct stages. The contribution and any later ACROWN purchase must be separately recorded.</p>
         <div class="side-divider"></div>
         <div class="side-label">What the multiplier means</div>
-        <p class="side-copy">The approved rule is 25 ACROWN of purchase allowance for each 1 USD₮ of verified contribution. That contribution does not pay the purchase price: a later purchase requires the full ACS floor consideration plus gas/Paymaster fees. USDT 1,000,000 can create at most 25,000,000 ACROWN of aggregate purchase allowance. Contribution and later purchase remain separate transactions.</p>
+        <p class="side-copy">The approved rule is 25 ACROWN of purchase allowance for each 1 USD₮ of verified contribution. That contribution does not pay the purchase price. The full ACS floor consideration must reach V. If Paymaster is active, its single ACROWN-denominated fee already includes network execution costs; there is no second network-fee charge. USDT 1,000,000 can create at most 25,000,000 ACROWN of aggregate purchase allowance.</p>
         <div class="side-divider"></div>
         <div class="side-label">Purchase period</div>
-        <p class="side-copy">The existing maximum is 180 days after deliberate activation, but purchases close sooner if the 25,000,000-ACROWN programme capacity is exhausted.</p>
+        <p class="side-copy">There is no fixed 180-day expiry. The programme remains open under its approved lifecycle rules until the shared 25,000,000-ACROWN sale capacity is exhausted or a separate owner-approved closure is published.</p>
         <div class="side-divider"></div>
         <div class="side-label">ACS protection</div>
-        <p class="side-copy">The ACS floor is F = V/C and may never decrease. The full floor consideration must be credited to V; gas and Paymaster fees are charged on top and never deducted from the reserve credit. A floor-price sale preserves F, all else equal.</p>
+        <p class="side-copy">The ACS floor is F = V/C and may never decrease. The full floor consideration is credited to V. An active Paymaster displays one all-inclusive fee in ACROWN, including network execution cost; it is not duplicated as another gas line. A floor-price sale preserves F, all else equal.</p>
       </aside>
     </section>
 
@@ -291,8 +306,51 @@
       <div class="status-icon" aria-hidden="true">24h</div>
       <div>
         <strong>Wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event.</strong>
-        <p>The event begins at 00:00:00 UTC on its selected date; the cutoff is exactly 24 hours earlier, at 00:00:00 UTC on the preceding calendar day. The event name and date remain undecided until system readiness, development speed, adoption and funding growth justify the decision. No cutoff is active until that date is approved. Only frozen, ownership-verified wallets may use member-level programme functions after cutoff; existing eligible wallets may continue qualifying contributions while the programme is OPEN. A verified replacement wallet may inherit an existing eligible record through a controlled recovery process, but no new participant wallet may join. This preview does not enforce the cutoff.</p>
+        <p>The event begins at 00:00:00 UTC on its selected date; the cutoff is exactly 24 hours earlier, at 00:00:00 UTC on the preceding UTC calendar day. Only frozen, ownership-verified wallets may use member-level programme functions after cutoff. Already registered wallets may continue qualifying contributions while the programme is OPEN. Wallet loss receives no recovery, replacement, allowance transfer or refund under this programme; one of a member's other linked wallets does not inherit the lost wallet's record. This preview does not enforce the cutoff.</p>
       </div>
+    </section>
+
+
+    <section class="section countdown-panel" id="public-event-countdown" data-public-deployment-at="" aria-labelledby="public-event-countdown-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Public deployment schedule</div>
+          <h2 id="public-event-countdown-title">Two-stage countdown to the event</h2>
+        </div>
+        <p>The event name and exact UTC date will be announced only when readiness, adoption, funding and development progress justify the decision. No countdown is active yet.</p>
+      </div>
+      <div class="countdown-grid">
+        <article class="countdown-stage active" id="registration-countdown-stage" aria-live="polite">
+          <div class="countdown-stage-head">
+            <span class="step-number">01</span>
+            <span class="countdown-stage-state">Not announced</span>
+          </div>
+          <h3>Wallet registration countdown</h3>
+          <p>Counts down from the official event announcement to the registration cutoff at 00:00:00 UTC on the preceding day.</p>
+          <div class="countdown-digits" id="registration-countdown" aria-label="Time remaining to wallet registration cutoff">
+            <span><strong>—</strong><small>Days</small></span>
+            <span><strong>—</strong><small>Hours</small></span>
+            <span><strong>—</strong><small>Minutes</small></span>
+            <span><strong>—</strong><small>Seconds</small></span>
+          </div>
+          <p class="countdown-foot" id="registration-countdown-caption">Waiting for the official event date.</p>
+        </article>
+        <article class="countdown-stage" id="launch-countdown-stage" aria-live="polite">
+          <div class="countdown-stage-head">
+            <span class="step-number">02</span>
+            <span class="countdown-stage-state">Starts at cutoff</span>
+          </div>
+          <h3>Final 24-hour launch countdown</h3>
+          <p>Begins automatically when registration closes and counts down the final 24 hours to the public-deployment event.</p>
+          <div class="countdown-digits" id="launch-countdown" aria-label="Time remaining to public deployment">
+            <span><strong>—</strong><small>Hours</small></span>
+            <span><strong>—</strong><small>Minutes</small></span>
+            <span><strong>—</strong><small>Seconds</small></span>
+          </div>
+          <p class="countdown-foot" id="launch-countdown-caption">Wallet eligibility has not yet been frozen.</p>
+        </article>
+      </div>
+      <p class="fine-print">Both timers use the same officially published UTC timestamp. They are informational displays; the server-enforced cutoff and frozen wallet list are authoritative. A missing event timestamp never produces an active or guessed deadline.</p>
     </section>
 
     <section class="section" id="member-dashboard" aria-labelledby="member-dashboard-title">
@@ -301,7 +359,7 @@
           <div class="eyebrow">Wallet membership</div>
           <h2 id="member-dashboard-title">Your supporter dashboard</h2>
         </div>
-        <p>AstroCrown generates a member name for you, and you can customize it. The staging service supports wallet-verified member registration and separately verified wallet linking. The dashboard design distinguishes programme-wide purchase capacity from this wallet's earned allowance, ACROWN actually purchased and remaining allowance. Purchase actions remain disabled in this preview.</p>
+        <p>AstroCrown generates a member name for you, and you can customize it. The staging service supports wallet-verified member registration and separately verified wallet linking. Each linked wallet has its own allowance and purchase history. The dashboard design distinguishes programme-wide capacity from the exact connected wallet's earned allowance, ACROWN purchased and remaining allowance. Purchase actions remain disabled in this preview.</p>
       </div>
       <div class="dashboard-grid">
         <section class="panel member-profile-panel" aria-labelledby="member-profile-title">
@@ -433,7 +491,7 @@
           <div class="entitlement-summary">
             <span class="side-label">Your personal purchase allowance</span>
             <strong>Verified contribution × approved multiplier</strong>
-            <p>Example only: 1,000 USD₮ of verified contribution creates allowance to purchase up to 25,000 ACROWN. The supporter must separately pay the full floor-price consideration `q × F` plus gas/Paymaster fees. The contribution is not the purchase price.</p>
+            <p>Example only: 1,000 USD₮ contributed by this exact wallet creates an allowance to purchase up to 25,000 ACROWN against this wallet's record. The full ACS floor-price consideration is separate. If Paymaster is active, one ACROWN-denominated Paymaster fee includes network execution cost; do not add a separate network fee again.</p>
           </div>
           <div class="dashboard-metrics" aria-label="Supporter purchase progress preview">
             <section class="dashboard-metric-group" aria-labelledby="programme-progress-title">
@@ -458,12 +516,12 @@
           </div>
           <button class="purchase-readiness off" id="supporter-purchase-readiness" type="button" disabled aria-disabled="true">OFF</button>
           <button class="disabled-button dashboard-purchase-button" id="supporter-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
-          <p class="fine-print">OFF is the current server/preview-safe state. ON may appear only when the wallet is eligible, the programme is open, personal allowance and global capacity remain, and a purchase route can pay the full floor consideration plus fees. This indicator cannot be switched ON by the user.</p>
-          <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No contribution or purchase balance is created by registration; payment and entitlement accounting remain closed.</p>
+          <p class="fine-print">OFF is the current preview-safe state. ON may appear only when this exact wallet is eligible, the programme is open, its own allowance and global capacity remain, and the applicable fee route preserves full ACS floor consideration. With Paymaster active, the single ACROWN Paymaster fee includes network execution; there is no duplicate gas charge. This indicator cannot be switched ON by the user.</p>
+          <p class="fine-print">Your member profile may link multiple wallets, but their purchase allowances are always separate. Wallet A cannot spend, inherit or pool wallet B's allowance. No contribution or purchase balance is created by registration; payment and entitlement accounting remain closed.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. The connected, verified wallet selects its own server-side supporter record. A valid replacement must inherit the old eligible record and its exact balances; it cannot create a second entitlement. After cutoff, unregistered wallets cannot use member-level programme functions. AstroCrown will never ask for your seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The pseudonym groups the member profile only. Each connected, verified wallet selects its own separate supporter allowance and purchase history. Another wallet linked to the same member cannot inherit a lost wallet's record. Wallet loss is not recoverable or refundable through this programme; AstroCrown will never ask for your seed phrase or private key.
       </div>
     </section>
 
@@ -645,11 +703,11 @@
         </article>
         <article class="rule-card">
           <h3>The ACS floor is protected from fees</h3>
-          <p>The governing formula is F = V/C, where V is the reserve vault and C is circulating ACROWN. A purchase of q ACROWN must credit the full q × F to V. The buyer pays gas and/or Paymaster fees on top; those fees cannot be deducted from the reserve credit. External market prices may differ from F.</p>
+          <p>The governing formula is F = V/C, where V is the reserve vault and C is circulating ACROWN. A purchase of q ACROWN must credit the full q × F to V. When Paymaster is active, one all-inclusive ACROWN-denominated fee includes network execution cost; no separate network-fee line is added. External market prices may differ from F.</p>
         </article>
         <article class="rule-card">
-          <h3>Resale can support distribution, not guarantee liquidity</h3>
-          <p>A supporter may resell purchased ACROWN on an available market and may use realized proceeds for further qualifying participation while the programme remains open. Resale does not restore used purchase allowance. Trading activity is not the same as market depth: resales may create volume but can also create sell pressure, and profit or liquidity is never guaranteed.</p>
+          <h3>ACS and Paymaster apply protocol economics</h3>
+          <p>AstroCrown is designed to apply the same floor/roof and Paymaster economics to circular or self-directed trading as to every other transaction, rather than policing a holder's trading intent. The intended outcome is that round-trip costs make extraction unattractive and may benefit the community through the published fee design; this must be proven from the final mechanics, not assumed.</p>
         </article>
         <article class="rule-card">
           <h3>The qualification threshold and purchase cap</h3>
@@ -754,11 +812,11 @@
         </details>
         <details>
           <summary>Are gas and Paymaster fees included in the ACS floor price?</summary>
-          <p>No. For a purchase of q ACROWN, the full q × F floor-price consideration must be credited to the ACS reserve V. Network gas and/or Paymaster fees are additional buyer costs and must be itemized separately. They must never be deducted from the reserve credit. A route that cannot collect the fees separately must not enable the purchase.</p>
+          <p>No. For a purchase of q ACROWN, the full q × F floor-price consideration must be credited to the ACS reserve V. When Paymaster is active, the user pays one all-inclusive Paymaster fee denominated in ACROWN; that fee already includes network execution cost and must not be duplicated as a separate network fee. Without Paymaster, native network gas is paid through the direct-wallet route. Neither route may reduce the floor-price credit to V.</p>
         </details>
         <details>
           <summary>Can I resell ACROWN after buying it?</summary>
-          <p>Purchased ACROWN may be resold through an available external exchange or swap venue, subject to applicable terms and law. Resale does not restore the purchase allowance already consumed. A higher external price may create an opportunity only if it is executable after fees and slippage; the ACS floor does not guarantee an external market price, profit, listing or liquidity. Selling can also create market sell pressure. AstroCrown must not reward wash trading, self-trading, fake volume or coordinated price manipulation.</p>
+          <p>Purchased ACROWN may be resold through an available external exchange or swap venue, subject to applicable terms and law. Resale does not restore the purchase allowance already consumed. A higher external price may create an opportunity only if it is executable after fees and slippage; the ACS floor does not guarantee an external market price, profit, listing or liquidity. Selling can also create market sell pressure. The native ACS floor/roof and Paymaster rules are intended to make circular activity costly to the trader and potentially value-accretive to the community under the approved fee allocation; AstroCrown does not police holder trading intent. This outcome requires formal economic proof and does not control third-party venues.</p>
         </details>
         <details>
           <summary>Does the ACS guarantee the external market price?</summary>
@@ -771,7 +829,7 @@
       <div>
         <div class="eyebrow">Participation status</div>
         <h2 id="participate-title">The supporter programme is being prepared.</h2>
-        <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. The 180-day purchase period begins at that operational activation.</p>
+        <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. There is no fixed 180-day maximum; purchase availability follows the approved programme lifecycle and closes when shared sale capacity is exhausted or an explicit closure is published.</p>
         <p id="supporter-runtime-status" role="status" aria-live="polite">Checking the isolated Supporter Programme service. Contributions remain closed.</p>
       </div>
       <button class="disabled-button" type="button" disabled aria-disabled="true">USDT transfers not enabled</button>
