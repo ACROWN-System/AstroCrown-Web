@@ -3,6 +3,8 @@
 -- one-way digests, pseudonyms and short-lived session digests.
 -- No seed phrases, private keys, raw session tokens or payment secrets are stored.
 
+ALTER TABLE supporter_members ADD COLUMN registration_state TEXT NOT NULL DEFAULT 'PENDING'
+  CHECK (registration_state IN ('PENDING', 'VERIFIED', 'EXPIRED'));
 ALTER TABLE supporter_members ADD COLUMN registration_verified_at INTEGER;
 ALTER TABLE supporter_members ADD COLUMN registration_expires_at INTEGER;
 
