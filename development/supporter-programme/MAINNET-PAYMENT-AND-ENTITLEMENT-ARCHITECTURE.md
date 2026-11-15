@@ -147,6 +147,8 @@ The owner is considering a model in which supporters who have purchased ACROWN a
 
 This is a conditional market hypothesis, not a promise of profit or a guaranteed liquidity mechanism. It requires an executable external market price above total acquisition cost, sufficient market depth, continuing demand and fees/slippage that do not eliminate the margin. Resales may distribute ACROWN and increase trade activity, but may also create sell pressure. Trading volume is not the same as liquidity depth. The external market may trade below the ACS floor, and `F` does not guarantee an exchange/swap execution price. The programme must not promise profit, appreciation, listing, liquidity or adoption outcomes and must disclose these risks before contribution or purchase.
 
+AstroCrown must not reward or facilitate wash trading, self-trading, circular wallet transfers presented as independent demand, spoofing, fabricated volume, coordinated price manipulation or misleading market-price displays. Transfer activity alone is not proof of genuine demand or durable liquidity. Any later programme to incentivize liquidity provision must be separately designed, explicitly funded, independently accounted for and risk-disclosed; it must not silently use supporter contributions or ACS reserve funds.
+
 ## 6. Payment intent and finality
 
 The server creates an exact payment intent before a wallet signs a transfer. Each intent binds the member, independently verified source wallet, network, canonical token, exact treasury destination, exact base-unit amount, single-use intent ID, expiry and rules version. The client must construct only that authorized transfer.
