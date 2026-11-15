@@ -154,8 +154,8 @@ jobs:
               '::add-mask::',
               'payment-method or billing-profile endpoints',
               'report["token_authentication"]',
-              'STANDARD_USAGE_MODEL_REQUIRES_OWNER_PLAN_CONFIRMATION',
-              'Cloudflare documents Standard as available to Workers Paid accounts, while Enterprise accounts may use contract-defined models.',
+              'USAGE_MODEL_REPORTED_FOR_AUDIT_ONLY',
+              'The account-settings endpoint reports a usage-model setting; it does not report subscription status or payment methods.',
           ]
           for value in required:
               if value not in source:
@@ -183,16 +183,19 @@ jobs:
           const stage = config.env.staging;
           const deployScript = fs.readFileSync("scripts/deploy-staging.mjs", "utf8");
           const workerGuard = deployScript.indexOf("await requireExistingStagingWorker(accountId, sourceConfig.env.staging.name)");
-          const billingGuard = deployScript.indexOf("await assertWorkersUsageModelIsNotStandard(accountId)");
+          const usageModelReport = deployScript.indexOf("await reportWorkersUsageModel(accountId)");
           const d1Provision = deployScript.indexOf("const state = await resolveDatabase(accountId)");
-          if (workerGuard < 0 || billingGuard < 0 || d1Provision < 0 || workerGuard > d1Provision || billingGuard > d1Provision) {
-            throw new Error("Worker existence and usage-model checks must run before any D1 provisioning.");
+          if (workerGuard < 0 || usageModelReport < 0 || d1Provision < 0 || workerGuard > d1Provision || usageModelReport > d1Provision) {
+            throw new Error("Worker-existence and informational usage-model checks must run before D1 provisioning.");
           }
           if (!deployScript.includes("does not already exist") || !deployScript.includes("cannot create a new Worker")) {
             throw new Error("The deployment script must explain the Workers Editor create-permission boundary.");
           }
-          if (!deployScript.includes('usageModel === "standard"') || !deployScript.includes("STOPPED BEFORE D1 PROVISIONING")) {
-            throw new Error("The deployment script must fail closed on the Standard Workers usage model before creating D1.");
+          if (!deployScript.includes("does not report subscription status or payment methods") || !deployScript.includes("not treated as proof of an active paid subscription")) {
+            throw new Error("The deployment script must keep usage-model reporting separate from subscription/payment-method verification.");
+          }
+          if (deployScript.includes("assertWorkersUsageModelIsNotStandard") || deployScript.includes("STOPPED BEFORE D1 PROVISIONING")) {
+            throw new Error("A usage-model label alone must not block the explicitly owner-authorized Free/no-card deployment.");
           }
           if (stage.vars.RP_ID !== "SET_BEFORE_DEPLOY") throw new Error("Staging RP sentinel missing.");
           if (stage.vars.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") throw new Error("Staging origin sentinel missing.");
