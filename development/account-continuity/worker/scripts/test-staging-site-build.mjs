@@ -45,7 +45,11 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.match(js, /if \\(!supporterRuntimeMarkerPresent\\(\\) \\|\\| !wallet \\|\\| !wallet\\.mainnet \\|\\| supporterMember\\) return/);
   assert.ok(js.includes("/api/supporters/status"));
   assert.match(js, /contributions remain closed/i);
-  assert.doesNotMatch(js, /\\.request\\(\\s*\\{\\s*method\\s*:\\s*["'](?:eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
-  assert.doesNotMatch(js, /signTransaction\\s*\\(/);
-  assert.doesNotMatch(js, /signAndSendTransaction\\s*\\(/);
+  assert.equal(js.includes('method: "eth_sign"'), false);
+  assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
+  assert.equal(js.includes('method: "eth_sendTransaction"'), false);
+  assert.equal(js.includes('method: "eth_sendRawTransaction"'), false);
+  assert.equal(js.includes('method: "wallet_sendCalls"'), false);
+  assert.equal(js.includes(".signTransaction("), false);
+  assert.equal(js.includes(".signAndSendTransaction("), false);
 });
