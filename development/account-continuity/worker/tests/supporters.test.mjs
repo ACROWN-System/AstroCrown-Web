@@ -53,7 +53,7 @@ test("Supporter status fails closed when the dedicated database binding is absen
   assert.match(payload.error, /not bound/i);
 });
 
-test("Supporter status fails closed if a network is missing or has unexpected precision", () => {
+test("Supporter status fails closed if a network is missing, duplicated, non-canonical or has unexpected precision", () => {
   assert.throws(() => buildSupporterStatus(
     { environment: "MAINNET", status: "PRELAUNCH" },
     networks.slice(0, 2)
@@ -61,5 +61,13 @@ test("Supporter status fails closed if a network is missing or has unexpected pr
   assert.throws(() => buildSupporterStatus(
     { environment: "MAINNET", status: "PRELAUNCH" },
     networks.map((row, index) => index === 0 ? { ...row, token_decimals: 18 } : row)
+  ));
+  assert.throws(() => buildSupporterStatus(
+    { environment: "MAINNET", status: "PRELAUNCH" },
+    networks.map((row, index) => index === 0 ? { ...row, token_identifier: "0xmalicious" } : row)
+  ));
+  assert.throws(() => buildSupporterStatus(
+    { environment: "MAINNET", status: "PRELAUNCH" },
+    [...networks, networks[0]]
   ));
 });
