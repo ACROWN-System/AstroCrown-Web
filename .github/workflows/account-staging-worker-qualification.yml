@@ -13,6 +13,7 @@ on:
       - "development/supporter-programme/**"
       - ".github/workflows/account-staging-worker-qualification.yml"
       - ".github/workflows/cloudflare-staging-deployment.yml"
+      - ".github/workflows/cloudflare-account02-readonly-preflight.yml"
   push:
     branches: [docs/provider-independent-wallet-auth-plan-2026-10-20]
     paths:
@@ -135,6 +136,39 @@ jobs:
       - name: Parse the manual Cloudflare deployment workflow
         run: |
           ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-staging-deployment.yml"); puts "Cloudflare deployment workflow YAML parsed successfully."'
+
+      - name: Verify the Account 02 preflight is read-only and bound to existing credentials
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("../../../.github/workflows/cloudflare-account02-readonly-preflight.yml")
+          source = path.read_text(encoding="utf-8")
+          required = [
+              'CLOUDFLARE_API_TOKEN_02',
+              'CLOUDFLARE_ACCOUNT_ID_02',
+              'method="GET"',
+              'expected_worker = "astrocrown-account-staging-staging"',
+              '/workers/scripts?per_page=100&page=1',
+              '/d1/database?per_page=100&page=1',
+              '::add-mask::',
+              'payment-method or billing-profile endpoints',
+          ]
+          for value in required:
+              if value not in source:
+                  raise SystemExit("Preflight workflow missing required safe behavior: " + value)
+          for forbidden in ['method="POST"', 'method="PUT"', 'method="PATCH"', 'method="DELETE"', 'wrangler deploy', 'wrangler d1']:
+              if forbidden in source:
+                  raise SystemExit("Preflight workflow contains a forbidden mutating operation: " + forbidden)
+          if re.search(r'Authorization[^\\n]*print|print\\([^)]*token', source, re.IGNORECASE):
+              raise SystemExit("Preflight workflow appears to expose credential material.")
+          print("Account 02 preflight uses only GET requests, existing repository credentials, and sanitized inventory reporting.")
+          PY
+
+      - name: Parse the read-only Cloudflare preflight workflow
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-account02-readonly-preflight.yml"); puts "Cloudflare read-only preflight workflow YAML parsed successfully."'
 
       - name: Verify remote environment is still fail-closed
         run: |
