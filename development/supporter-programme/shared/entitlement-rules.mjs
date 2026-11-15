@@ -17,13 +17,17 @@ export function walletRegistrationClosesAt(publicDeploymentAtSeconds) {
       || publicDeploymentAtSeconds <= WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS) {
     throw new TypeError("Public deployment must be a valid timestamp later than the 24-hour registration lead.");
   }
+  if (publicDeploymentAtSeconds % WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS !== 0) {
+    throw new TypeError("Public deployment must be scheduled at 00:00:00 UTC.");
+  }
   return publicDeploymentAtSeconds - WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS;
 }
 
 export function isWalletRegistrationOpen(nowSeconds, publicDeploymentAtSeconds) {
   if (!Number.isSafeInteger(nowSeconds) || nowSeconds <= 0
       || !Number.isSafeInteger(publicDeploymentAtSeconds)
-      || publicDeploymentAtSeconds <= WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS) {
+      || publicDeploymentAtSeconds <= WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS
+      || publicDeploymentAtSeconds % WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS !== 0) {
     return false;
   }
   return nowSeconds < walletRegistrationClosesAt(publicDeploymentAtSeconds);
