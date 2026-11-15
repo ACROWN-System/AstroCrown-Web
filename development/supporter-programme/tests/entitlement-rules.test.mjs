@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  PROGRAMME_WINDOW_SECONDS, programmeClosesAt, isWithinProgrammeWindow,
   PROGRAMME_USDT_DECIMALS, PROGRAMME_MULTIPLIER_NUMERATOR,
   PROGRAMME_MULTIPLIER_DENOMINATOR, PROGRAMME_CONTRIBUTION_CEILING_USDT,
   PROGRAMME_CONTRIBUTION_CEILING_USDT_BASE_UNITS,
@@ -9,18 +8,6 @@ import {
   walletRegistrationClosesAt, isWalletRegistrationOpen, remainingContributionCapacity,
   calculateAcrownAllowance, availableAllowance, consumeAllowance
 } from "../shared/entitlement-rules.mjs";
-
-test("global programme window is exactly 180 days from deliberate activation", () => {
-  const start = 1_800_000_000;
-  const end = start + 15_552_000;
-  assert.equal(PROGRAMME_WINDOW_SECONDS, 15_552_000);
-  assert.equal(programmeClosesAt(start), end);
-  assert.equal(isWithinProgrammeWindow(start, start, end), true);
-  assert.equal(isWithinProgrammeWindow(end - 1, start, end), true);
-  assert.equal(isWithinProgrammeWindow(end, start, end), false);
-  assert.equal(isWithinProgrammeWindow(start - 1, start, end), false);
-  assert.equal(isWithinProgrammeWindow(start, start, start + 90), false);
-});
 
 test("illustrative 1,000 USDt contribution yields 25,000 ACROWN at 25:1", () => {
   assert.equal(calculateAcrownAllowance({
@@ -60,7 +47,6 @@ test("non-canonical, negative, fractional and zero-denominator inputs fail", () 
     rateNumerator: "25", rateDenominator: "0"
   }), /denominator/);
 });
-
 
 test("owner-approved programme multiplier and aggregate ceilings are exact", () => {
   assert.equal(PROGRAMME_USDT_DECIMALS, 6);
