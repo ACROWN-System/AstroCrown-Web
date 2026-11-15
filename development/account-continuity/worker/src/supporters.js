@@ -877,6 +877,7 @@ function buildSupporterStatus(program, networkRows) {
 }
 
 export {
+  buildSupporterStatus,
   normalizeWalletAddress,
   createWalletMessage,
   verifyWalletSignature,
