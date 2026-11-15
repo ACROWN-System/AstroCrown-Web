@@ -97,7 +97,7 @@ Workflow: `.github/workflows/cloudflare-staging-deployment.yml`
 
 The workflow is deliberately manual and restricted to the reviewed `main` branch. It has two separate confirmation inputs: one confirms the Workers Free/D1 Free and no-card conditions, and the other explicitly authorizes creation/use of the isolated staging database and deployment of the public staging Worker. Pushes, pull requests and CI runs never deploy remotely. A concurrency lock prevents overlapping staging deployments.
 
-**Activation boundary:** `workflow_dispatch` is available only after this workflow file is present on the repository's default branch. PR #141 remains a draft and this workflow does not merge it, publish the account implementation, or authorize production deployment. Until the reviewed branch is merged by an authorized maintainer, the workflow is prepared but cannot be used for remote deployment.
+**Activation boundary:** this workflow file is already present on the repository's default `main` branch and is manually dispatchable there. It always checks out `main`, not a pull-request branch. The current PR #180 adds the corrected Account 02 variable binding and integrates the Supporter Programme at `/supporters/`; until PR #180 is reviewed and merged, a deployment from `main` will not include that latest same-origin integration and the current `main` workflow still uses the missing unsuffixed account variable. Merge PR #180 before attempting the integrated staging deployment. This workflow never deploys production and does not authorize the Supporter Programme's real-money payment activation.
 
 ### Existing GitHub credential configuration — inspected 15 November 2026
 
