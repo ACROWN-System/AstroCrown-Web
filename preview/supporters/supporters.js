@@ -25,6 +25,19 @@
   var pseudonymInput = document.getElementById("member-pseudonym");
   var pseudonymDisplay = document.getElementById("member-display-name");
   var randomizeButton = document.getElementById("member-name-randomize");
+  var memberProfileState = document.getElementById("member-profile-state");
+  var memberMode = document.getElementById("supporter-member-mode");
+  var registerWalletButton = document.getElementById("supporter-register-wallet");
+  var loginWalletButton = document.getElementById("supporter-login-wallet");
+  var linkWalletButton = document.getElementById("supporter-link-wallet");
+  var logoutButton = document.getElementById("supporter-logout");
+  var walletPurposeSelect = document.getElementById("supporter-wallet-purpose");
+  var memberFeedback = document.getElementById("supporter-member-feedback");
+  var memberSummary = document.getElementById("supporter-member-summary");
+  var memberWalletList = document.getElementById("supporter-member-wallet-list");
+  var supporterRuntimeEnabled = false;
+  var supporterMember = null;
+  var lastConnectedNetwork = null;
 
   if (!solanaSelect || !evmSelect || !tronSelect || !pseudonymInput) return;
 
