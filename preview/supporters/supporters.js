@@ -603,6 +603,12 @@
   async function refreshProgrammeStatus() {
     var statusElement = document.getElementById("supporter-runtime-status");
     if (!statusElement) return;
+    var runtimeMarker = document.querySelector('meta[name="astro-supporter-runtime"]');
+    if (!runtimeMarker || runtimeMarker.content !== "worker-staging" || window.location.protocol !== "https:") {
+      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Contributions remain closed. Do not send funds.";
+      statusElement.dataset.state = "closed";
+      return;
+    }
     try {
       var response = await fetch("/api/supporters/status", {
         method: "GET",
