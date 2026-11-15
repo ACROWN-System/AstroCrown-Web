@@ -269,7 +269,7 @@
           <article class="stat-card">
             <div class="side-label">Approved multiplier</div>
             <div class="stat-value">25 ACROWN / USDT</div>
-            <p class="stat-note">USDT 1 of verified contribution creates allowance to purchase up to 25 ACROWN; the later purchase price and network/Paymaster fees are paid separately.</p>
+            <p class="stat-note">USDT 1 of verified contribution creates allowance to purchase up to 25 ACROWN; the later floor-price consideration and the applicable fee route are separate. An active Paymaster has one all-inclusive ACROWN fee that includes network execution.</p>
           </article>
           <article class="stat-card">
             <div class="side-label">Maximum purchase allowance</div>
@@ -287,7 +287,7 @@
         <p class="side-copy">The approved rule is 25 ACROWN of purchase allowance for each 1 USD₮ of verified contribution. That contribution does not pay the purchase price. The full ACS floor consideration must reach V. If Paymaster is active, its single ACROWN-denominated fee already includes network execution costs; there is no second network-fee charge. USDT 1,000,000 can create at most 25,000,000 ACROWN of aggregate purchase allowance.</p>
         <div class="side-divider"></div>
         <div class="side-label">Purchase period</div>
-        <p class="side-copy">There is no fixed 180-day expiry. The programme remains open under its approved lifecycle rules until the shared 25,000,000-ACROWN sale capacity is exhausted or a separate owner-approved closure is published.</p>
+        <p class="side-copy">There is no fixed time-based expiry. The programme follows its approved lifecycle rules until the shared 25,000,000-ACROWN sale capacity is exhausted or a separate owner-approved closure is published.</p>
         <div class="side-divider"></div>
         <div class="side-label">ACS protection</div>
         <p class="side-copy">The ACS floor is F = V/C and may never decrease. The full floor consideration is credited to V. An active Paymaster displays one all-inclusive fee in ACROWN, including network execution cost; it is not duplicated as another gas line. A floor-price sale preserves F, all else equal.</p>
@@ -306,7 +306,7 @@
       <div class="status-icon" aria-hidden="true">24h</div>
       <div>
         <strong>Wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event.</strong>
-        <p>The event begins at 00:00:00 UTC on its selected date; the cutoff is exactly 24 hours earlier, at 00:00:00 UTC on the preceding UTC calendar day. Only frozen, ownership-verified wallets may use member-level programme functions after cutoff. Already registered wallets may continue qualifying contributions while the programme is OPEN. Wallet loss receives no recovery, replacement, allowance transfer or refund under this programme; one of a member's other linked wallets does not inherit the lost wallet's record. This preview does not enforce the cutoff.</p>
+        <p>The event begins at 00:00:00 UTC on its selected date; the cutoff is exactly 24 hours earlier, at 00:00:00 UTC on the preceding UTC calendar day. Only frozen, ownership-verified wallets may use member-level programme functions after cutoff. Already registered wallets may continue qualifying contributions while the programme is OPEN. Wallet loss receives no recovery, replacement, allowance transfer or refund under this programme; another wallet linked to the same member does not inherit the lost wallet's record. This preview does not enforce the cutoff.</p>
       </div>
     </section>
 
@@ -320,7 +320,7 @@
         <p>The event name and exact UTC date will be announced only when readiness, adoption, funding and development progress justify the decision. No countdown is active yet.</p>
       </div>
       <div class="countdown-grid">
-        <article class="countdown-stage active" id="registration-countdown-stage" aria-live="polite">
+        <article class="countdown-stage active" id="registration-countdown-stage" aria-live="off">
           <div class="countdown-stage-head">
             <span class="step-number">01</span>
             <span class="countdown-stage-state">Not announced</span>
@@ -335,7 +335,7 @@
           </div>
           <p class="countdown-foot" id="registration-countdown-caption">Waiting for the official event date.</p>
         </article>
-        <article class="countdown-stage" id="launch-countdown-stage" aria-live="polite">
+        <article class="countdown-stage" id="launch-countdown-stage" aria-live="off">
           <div class="countdown-stage-head">
             <span class="step-number">02</span>
             <span class="countdown-stage-state">Starts at cutoff</span>
@@ -820,7 +820,7 @@
         </details>
         <details>
           <summary>Does the ACS guarantee the external market price?</summary>
-          <p>No. The ACS floor is an internally defined reserve-to-circulation measure, F = V/C, and the protocol must never allow it to decrease. A sale at F that credits the full consideration to V preserves the floor, all else equal; gas and Paymaster fees are charged separately. The ACS floor is distinct from the price at which ACROWN might trade on an external venue.</p>
+          <p>No. The ACS floor is an internally defined reserve-to-circulation measure, F = V/C, and the protocol must never allow it to decrease. A sale at F that credits the full consideration to V preserves the floor, all else equal. When Paymaster is active, its single ACROWN-denominated fee includes network execution cost; without Paymaster, direct native gas applies. The ACS floor is distinct from the price at which ACROWN might trade on an external venue.</p>
         </details>
       </div>
     </section>
@@ -829,7 +829,7 @@
       <div>
         <div class="eyebrow">Participation status</div>
         <h2 id="participate-title">The supporter programme is being prepared.</h2>
-        <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. There is no fixed 180-day maximum; purchase availability follows the approved programme lifecycle and closes when shared sale capacity is exhausted or an explicit closure is published.</p>
+        <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. No fixed-duration expiry applies; purchase availability follows the approved programme lifecycle and closes when shared sale capacity is exhausted or an explicit closure is published.</p>
         <p id="supporter-runtime-status" role="status" aria-live="polite">Checking the isolated Supporter Programme service. Contributions remain closed.</p>
       </div>
       <button class="disabled-button" type="button" disabled aria-disabled="true">USDT transfers not enabled</button>
