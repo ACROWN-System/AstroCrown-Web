@@ -1,10 +1,11 @@
-# Passkey-First Account Authentication and Recovery Requirements
+# Account Key and Wallet Identity — Authentication and Recovery Requirements
 
 **Decision date:** 2026-11-03  
 **Status:** OWNER-ACCEPTED DESIGN DIRECTION / PARTIALLY IMPLEMENTED IN LOCAL LOOPBACK PROTOTYPE / NOT PRODUCTION  
 **Scope:** AstroCrown ordinary-user and administrator account authentication  
 **Parent:** [PR #141 — account foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
-**Related requirements:** [User and Administrator Account Requirements](USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md)
+**Related requirements:** [User and Administrator Account Requirements](USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md)  
+**Controlling owner clarification (2026-11-15):** [Owner Identity and Supporter Programme Rules](OWNER-IDENTITY-AND-SUPPORTER-PROGRAMME-RULES-2026-11-15.md). Where this record differs from older text below, the 2026-11-15 owner decision controls.
 
 ## 1. Adopted principle
 
@@ -29,16 +30,21 @@ Each AstroCrown account receives a stable, random internal account ID. Account i
 - Use an exact, narrowly scoped WebAuthn Relying Party ID and exact HTTPS-origin allowlist. WebAuthn registration and sign-in require a secure context; localhost is permitted for local development.
 - Prefer discoverable credentials so an email address or username need not be submitted as an authentication secret. Any optional public account label must not become an authenticator or recovery factor.
 - Default to privacy-preserving/minimal attestation. Do not collect device identity or globally identifying authenticator details without a separately justified and reviewed need.
+- A session authenticated only by this key/passkey method is classified as KEY_ONLY: provisional, non-permanent and read-only. The backend must enforce read-only authorization even if the same account has a separately linked wallet identity. A key-only session cannot create, edit, publish, vote, transact, contribute, purchase, change entitlement state or enter privileged administration.
 
-### 2.2 Optional wallet authenticator — user-selected backup
+### 2.2 Wallet-based account identification — separate identity method
 
-- Users may choose to register a separately controlled cryptocurrency wallet as an additional account authenticator/recovery method. A wallet is optional; users do not need crypto to create or use an AstroCrown account.
-- A wallet backup is not automatically independent merely because it has a different address or wallet-app name. Explain common-mode risk where credentials share a seed, device, cloud account or recovery channel.
-- Wallet proof must use a fresh, purpose-bound, origin/domain-bound, expiring, single-use off-chain challenge. The signature must never be accepted as a blockchain transaction.
-- No minimum balance, deposit, stake, proof-of-funds check, balance query or network transaction is allowed for authentication or recovery.
-- Qualify each wallet-family signing protocol independently. The current local wallet verifier is EVM EOA / EIP-4361 (SIWE) only. Bitcoin/BIP-322, Solana/SIWS and contract-wallet verification are not implied or implemented by this decision.
-- Wallet account recovery, ordinary account authentication and administrator step-up are distinct challenge purposes. A signature for one purpose must not be replayable or accepted for another.
-- An administrator still needs an ordinary authenticated account session and the separately required fresh wallet step-up for privileged access. Wallet ownership does not create an account, grant a role or bypass permission checks.
+- Wallet identification is a second account registration and sign-in method, not merely an optional backup authenticator to WebAuthn.
+- A user may register/sign in by proving control of a cryptocurrency wallet through a fresh, purpose-bound, origin/domain-bound, expiring, single-use off-chain challenge.
+- A wallet-authenticated session may receive more rights than a KEY_ONLY session, but only the rights explicitly assigned by the relevant feature policy. The server, not the client, enforces the resulting authorization tier.
+- A wallet-authenticated session may be permanent for a named feature or programme only where its published policy explicitly says so. The Supporter Programme is intended to create a durable programme membership record for wallets verified before its registration cutoff.
+- "Permanent" means a persistent feature-specific membership/eligibility record. It does not mean perpetual sessions, immunity from suspension, guaranteed token delivery, ownership of ACROWN, or universal permanent access across AstroCrown.
+- A key-only account may later link a wallet to its existing account only after both existing-account control and wallet control are proven. Do not merge identities based on a username, display name or client-supplied address.
+- When both methods are linked, a key-authenticated session remains read-only. Higher rights require wallet authentication or an expressly permitted fresh wallet-verification step-up.
+- Wallet proof must never be accepted as a blockchain transaction. No minimum balance, deposit, stake, proof-of-funds check, balance query, transaction or network fee is allowed merely for authentication or recovery.
+- Qualify each wallet-family signing protocol independently. The current Supporter Programme wallet verifier supports Ethereum EIP-191, Tron TIP-191 and Solana Ed25519 message signatures; that does not prove the general account wallet-login flow is implemented.
+- Wallet account login, wallet linking, Supporter Programme registration, account recovery and administrator step-up are distinct challenge purposes. A signature for one purpose must not be replayable or accepted for another.
+- Wallet ownership never creates an administrator role, grants permissions or bypasses the established role-governance process.
 
 ### 2.3 Offline one-time recovery key
 
@@ -100,12 +106,15 @@ Any stronger "not even the operator can access or impersonate" guarantee would r
 
 Similarly, authentication does not eliminate the need for secure backend authorization, server-side role checks, least privilege, audit controls, session protection, secure deployment, vulnerability management or independent review.
 
-## 6. Account and administrator boundaries
+## 6. Account identity, authorization and administrator boundaries
 
-- The same passkey-first account identity is used for the ordinary User dashboard and, when separately authorized, the Administrator dashboard.
-- The User dashboard remains available to administrators with the same member-facing capabilities as ordinary users.
-- Administrator appointment and revocation remain server-enforced, separately permissioned operations addressed by the existing member's stable public AstroCrown Account Identifier (`AC-` plus 10 hexadecimal characters). The identifier is only a reference to an existing account record; it is not an authenticator, credential, recovery secret or authority. Email is not required and must not be the role-management key. No passkey or wallet alone grants an administrator role.
-- Privileged access requires a valid ordinary account session and the existing separately defined administrator step-up. Wallet signatures are purpose-bound and cannot replace the WebAuthn account-authentication flow unless a future, explicit policy decision defines that use.
+- AstroCrown has two account identification methods: WebAuthn/passkey key-based identification and wallet-based identification.
+- A session authenticated only with the key/passkey method is KEY_ONLY, provisional/non-permanent and read-only.
+- A wallet-authenticated session may perform additional actions only where the backend's feature-specific policy explicitly grants them. Linking a wallet to an account does not elevate a key-authenticated session.
+- The same stable account record may support both methods, but linking requires proof of the existing account and wallet. Do not derive an account ID from a wallet address or passkey credential ID.
+- Feature-specific permanence must be expressly stated. The Supporter Programme may retain a permanent wallet membership/eligibility record for wallets verified by its published cutoff; that does not make ordinary account sessions permanent or create automatic token entitlements.
+- Administrator appointment and revocation remain server-enforced, separately permissioned operations addressed by the existing member's stable public AstroCrown Account Identifier (`AC-` plus 10 hexadecimal characters). The identifier is only a reference to an existing account record; it is not an authenticator, credential, recovery secret or authority. Email is not required and must not be the role-management key.
+- No passkey or wallet alone grants an administrator role. A wallet-authenticated account still requires a separate authorized role grant and the applicable purpose-bound administrator step-up before privileged functions.
 - The owner/bootstrap and exceptional recovery authorities cannot silently impersonate users, mint credentials or override a user's recovery key.
 - Account deletion, termination, member transactions and administrative operations remain separate from authenticator lifecycle and must be handled by their own explicit policies.
 
@@ -118,7 +127,7 @@ This specification records the target and the current local implementation state
 1. Add WebAuthn registration, sign-in, credential lifecycle and recovery to the local prototype using a maintained library.
 2. Add offline recovery-key generation, hashed storage, throttling, single-use enforcement and replacement tests.
 3. Preserve stable account IDs, roles, permissions, sessions and dashboards while replacing email/password as the primary authenticator.
-4. Keep the optional EVM/SIWE wallet verifier isolated and add wallet recovery only after purpose-specific tests. Do not refactor the current EVM-only disposable schema into a multichain schema as part of this first pass.
+4. Treat wallet-based account identification as a separate registration/login method with its own purpose-bound, multichain verification and authorization-tier tests. Keep Supporter Programme identity isolated from general account identity until an explicit account-linking design is qualified.
 5. Remove or disable email/password login, email ownership verification and password-reset routes after WebAuthn acceptance tests pass. Do not leave two competing recovery systems active by accident.
 6. Retain an email address only if a separate, explicitly optional contact/communications feature later needs it. It must not be an account identifier, login factor, recovery authority or way to bypass key proof.
 7. Do not enable any provider, external API, paid service, production deployment or real-user onboarding as part of this local implementation step.
