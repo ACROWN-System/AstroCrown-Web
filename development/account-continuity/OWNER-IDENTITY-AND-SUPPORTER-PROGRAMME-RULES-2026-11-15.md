@@ -117,6 +117,8 @@ The intended economic hypothesis is that a supporter may purchase at the ACS flo
 
 Trading activity and liquidity depth are not the same thing. Supporter resales can distribute tokens and create trading volume, but can also create sell pressure. Durable liquidity depends on real depth at executable prices and committed counterparties/liquidity providers; an arbitrage opportunity alone does not create that depth. External market price may be below the ACS floor; the ACS floor is not a promise that an exchange or swap venue will trade ACROWN at or above `F`. No profit, market listing, liquidity level, market appreciation or adoption outcome may be promised. Public terms must explain those limits and disclose transaction costs and market risks before participation.
 
+AstroCrown must not reward or facilitate wash trading, self-trading, circular wallet transfers presented as independent demand, spoofing, fabricated volume, coordinated price manipulation or misleading market-price displays. Transfer activity alone is not proof of genuine demand or durable liquidity. Any later programme to incentivize liquidity provision must be separately designed, explicitly funded, independently accounted for and risk-disclosed; it must not silently use supporter contributions or ACS reserve funds.
+
 ## 5. Implementation and release boundaries
 
 These are owner-approved product rules, not evidence that the current code or staging Worker implements them.
