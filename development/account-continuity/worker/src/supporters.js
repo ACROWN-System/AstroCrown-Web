@@ -39,6 +39,10 @@ export function buildSupporterStatus(program, networkRows) {
     throw new Error("The isolated Supporter Programme database is not initialized correctly.");
   }
 
+  if (!["PRELAUNCH", "OPEN", "PAUSED", "CLOSED"].includes(program.status)) {
+    throw new Error("The Supporter Programme has an unrecognized lifecycle state.");
+  }
+
   const byNetwork = new Map(networkRows.map((row) => [row.network, row]));
   if (
     networkRows.length !== NETWORK_ORDER.length ||
