@@ -52,6 +52,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run Worker invariant tests
         run: npm test
+      - name: Run canonical and Worker-mirrored Supporter Programme schema tests
+        run: python -m unittest discover -s ../../supporter-programme/tests -p 'test_schema.py'
       - name: Build the restricted website asset set
         run: npm run build:site
 
@@ -66,8 +68,10 @@ jobs:
           node --check public/account-continuity/prototype/account-ui.js
           node --check tests/worker_browser_smoke.mjs
           npm run check:worker
-      - name: Apply local D1 schema
-        run: printf 'y\n' | npx wrangler d1 migrations apply acrown-account-staging --local
+      - name: Apply local account and isolated Supporter Programme D1 schemas
+        run: |
+          printf 'y\n' | npx wrangler d1 migrations apply acrown-account-staging --local
+          printf 'y\n' | npx wrangler d1 migrations apply acrown-supporters-mainnet --local
       - name: Smoke-test the local Worker HTTP API and homepage
         shell: bash
         run: |
@@ -99,7 +103,17 @@ jobs:
           if (status.scope !== "staging-test-account-only") throw new Error("The account scope marker is missing.");
           if (status.passkeyAvailable !== true) throw new Error("The Worker did not report its passkey service.");
           NODE
-          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/diagnostics/runtime" -o "$RUNNER_TEMP/runtime.json"
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/supporters/status" -o "$RUNNER_TEMP/supporters-status.json"
+          node --input-type=module - "$RUNNER_TEMP/supporters-status.json" <<'NODE'
+          import fs from "node:fs";
+          const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (status.environment !== "MAINNET" || status.programme?.status !== "PRELAUNCH") throw new Error("Supporter Programme must report MAINNET PRELAUNCH.");
+          if (status.paymentAcceptance?.enabled !== false || status.paymentAcceptance?.contributionsAccepted !== false) throw new Error("Mainnet payment acceptance must remain disabled.");
+          if (status.purchaseAllowance?.automaticTokenIssuance !== false) throw new Error("A contribution must not automatically issue ACROWN.");
+          if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Supporter Programme must expose the exact three-network allowlist.");
+          if (status.networks.some(x => x.networkConfigured || x.treasuryConfigured)) throw new Error("No supporter network may be configured before treasury approval.");
+          NODE
+                    curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/diagnostics/runtime" -o "$RUNNER_TEMP/runtime.json"
           node --input-type=module - "$RUNNER_TEMP/runtime.json" <<'NODE'
           import fs from "node:fs";
           const runtime = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
