@@ -582,7 +582,7 @@
         <section class="panel" aria-label="Programme-wide purchase allowance">
           <span class="scenario-tag">Shared programme limit</span>
           <h3 style="margin-top:13px">The remaining programme amount sets the limit</h3>
-          <p class="panel-intro">The programme-wide ACROWN cap is separate from each member's personal multiplier allowance. The cap, multiplier and qualification threshold must be approved before launch and enforced across all members.</p>
+          <p class="panel-intro">The programme-wide ACROWN cap is separate from each source wallet's personal multiplier allowance. Wallets linked to one member remain independent: their allowances are never pooled, transferred or shared. The cap is enforced across all wallets.</p>
           <div class="result-list">
             <div class="result-row"><span class="result-label">Total authorized programme allowance</span><strong class="result-value">To be finalized</strong></div>
             <div class="result-row"><span class="result-label">Completed purchases</span><strong class="result-value">Live ledger required</strong></div>
@@ -603,7 +603,7 @@
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>The 25,000,000-ACROWN programme ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot increase the total ACROWN quantity available under this programme. The purchase system must update the shared remaining capacity atomically so simultaneous purchases cannot exceed the fixed cap. Each member's personal multiplier allowance remains a separate limit.
+        <strong>The 25,000,000-ACROWN programme ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot increase the total ACROWN quantity available under this programme. The purchase system must update the shared remaining capacity atomically so simultaneous purchases cannot exceed the fixed cap. Each wallet's personal multiplier allowance remains a separate limit; wallets linked to the same member never pool or transfer allowance.
       </div>
     </section>
 
@@ -711,7 +711,7 @@
         </article>
         <article class="rule-card">
           <h3>The qualification threshold and purchase cap</h3>
-          <p>The multiplier is fixed at 25 ACROWN per USDT 1 of verified contribution, with an aggregate contribution ceiling of USDT 1,000,000 and a maximum programme-wide purchase allowance of 25,000,000 ACROWN. The minimum first contribution, floor-price calculation/version, rounding rules, purchase-window terms and applicable cancellation/refund terms must be published before contributions open. Each member's personal allowance is calculated from verified contributions; the shared global cap is an additional limit.</p>
+          <p>The multiplier is fixed at 25 ACROWN per USDT 1 of verified contribution, with an aggregate contribution ceiling of USDT 1,000,000 and a maximum programme-wide purchase allowance of 25,000,000 ACROWN. The minimum first contribution, floor-price calculation/version, rounding rules, programme duration/closure terms and applicable cancellation/refund terms must be published before contributions open. Each wallet's personal allowance is calculated only from verified contributions sent by that same wallet; the shared global cap is an additional limit.</p>
         </article>
       </div>
     </section>
@@ -804,7 +804,7 @@
         </details>
         <details>
           <summary>What does the USDT 1,000,000 contribution ceiling represent?</summary>
-          <p>It is the maximum aggregate verified contribution across Ethereum, Tron and Solana. At the approved 25:1 multiplier, it can create no more than 25,000,000 ACROWN of programme purchase allowance. Each member's personal allowance is calculated separately, and the shared purchase ceiling limits the aggregate ACROWN quantity all supporters may buy at the approved floor price.</p>
+          <p>It is the maximum aggregate verified contribution across Ethereum, Tron and Solana. At the approved 25:1 multiplier, it can create no more than 25,000,000 ACROWN of programme purchase allowance. Each wallet's personal allowance is calculated separately from its own verified contributions; wallets linked to one member do not pool balances. The shared purchase ceiling limits the aggregate ACROWN quantity all eligible wallets may buy at the approved floor price.</p>
         </details>
         <details>
           <summary>What happens if I send more USDT than the authorized amount?</summary>
