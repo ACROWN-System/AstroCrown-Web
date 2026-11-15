@@ -67,6 +67,8 @@ For a purchase of `q` ACROWN:
 - The supporter pays `q × F` **plus** separately itemized network gas and/or Paymaster fees. Fees are additional, not a deduction from the consideration credited to `V`.
 - If circulating supply increases by `q` and the full `F × q` is added to `V`, then, all else equal, `(V + Fq)/(C + q) = F`; the floor is preserved.
 - If fees are withheld from the consideration before it reaches `V`, the reserve increment is insufficient and `V/C` is diluted. The ACS reserve must not subsidize or absorb gas/Paymaster costs.
+- The ACS floor is monotonic: every operation affecting reserve `V` or circulating supply `C` must satisfy `F_after >= F_before`, using consistent, approved, auditable pre/post valuation and supply snapshots. If the inequality would fail, reject the operation or pause the affected route. A sale at exactly `F` with full `F × q` reserve credit preserves `F`; it does not itself raise it. The floor rises only when the resulting reserve-to-circulation ratio rises.
+- Version the valuation denomination/source and `C` measurement method. A change of measurement convention must not be used to disguise an economic decline in `F`.
 - The exact fee, fee currency, recipient and any maximum fee must be itemized and disclosed before wallet approval. If a payment route cannot collect the fee separately while crediting the full floor consideration, that route must fail closed.
 - Do not use contributor funds as a silent fee source and do not presume contribution funds are part of `V`. Each treasury movement must be separately approved and publicly accounted for.
 
