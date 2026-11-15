@@ -180,7 +180,7 @@ for (const [sourcePath, destinationPath] of supporterFiles) {
     if (!html.includes('name="astro-supporter-runtime"')) {
       html = html.replace(
         /<head([^>]*)>/i,
-        '<head$1>\\n  <meta name="astro-supporter-runtime" content="worker-staging">'
+        '<head$1>\n  <meta name="astro-supporter-runtime" content="worker-staging">'
       );
     }
     await writeFile(destination, html, "utf8");
