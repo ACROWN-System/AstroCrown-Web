@@ -11,7 +11,7 @@ const networks = [
   { network: "solana", network_identifier: "solana:mainnet", token_identifier: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", token_decimals: 6, enabled: 0, treasury_configured: 0 },
 ];
 
-function mockDb(program = { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, closes_at: null, rules_version: null }, rows = networks) {
+function mockDb(program = { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, rules_version: null }, rows = networks) {
   return {
     prepare(sql) {
       return {
@@ -35,12 +35,12 @@ test("Supporter status reads the dedicated D1 and exposes exactly the canonical 
   assert.deepEqual(payload.networks.map((item) => item.network), ["ethereum", "tron", "solana"]);
   assert.equal(payload.programme.status, "PRELAUNCH");
   assert.equal(payload.programme.activatedAt, null);
-  assert.equal(payload.programme.closesAt, null);
+  assert.equal("closesAt" in payload.programme, false);
 });
 
 test("Supporter status never exposes a treasury address or claims that a transfer can be made", () => {
   const payload = buildSupporterStatus(
-    { environment: "MAINNET", status: "OPEN", activated_at: 1_800_000_000, closes_at: 1_815_552_000, rules_version: "v1" },
+    { environment: "MAINNET", status: "OPEN", activated_at: 1_800_000_000, rules_version: "v1" },
     networks.map((row) => ({ ...row, enabled: 1, treasury_configured: 1 }))
   );
   assert.equal(payload.paymentAcceptance.enabled, false);
