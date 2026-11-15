@@ -41,8 +41,8 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.match(js, /personal_sign/);
   assert.match(js, /signMessageV2/);
   assert.match(js, /solana:signMessage/);
-  assert.match(js, /function supporterRuntimeMarkerPresent\\(\\)/);
-  assert.match(js, /if \\(!supporterRuntimeMarkerPresent\\(\\) \\|\\| !wallet \\|\\| !wallet\\.mainnet \\|\\| supporterMember\\) return/);
+  assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
+  assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
   assert.ok(js.includes("/api/supporters/status"));
   assert.match(js, /contributions remain closed/i);
   assert.equal(js.includes('method: "eth_sign"'), false);
