@@ -99,20 +99,28 @@ The workflow is deliberately manual and restricted to the reviewed `main` branch
 
 **Activation boundary:** `workflow_dispatch` is available only after this workflow file is present on the repository's default branch. PR #141 remains a draft and this workflow does not merge it, publish the account implementation, or authorize production deployment. Until the reviewed branch is merged by an authorized maintainer, the workflow is prepared but cannot be used for remote deployment.
 
-### One-time GitHub environment setup
+### Existing GitHub credential configuration — inspected 15 November 2026
 
-After the workflow is present on `main`, create a GitHub Actions environment named `cloudflare-staging` under repository Settings → Environments. Restrict allowed deployment branches to `main`. Add the following environment secrets:
+The repository and `cloudflare-staging` environment already exist. The current configuration was inspected through GitHub settings without revealing any secret values:
 
-- `CLOUDFLARE_API_TOKEN_02` — the account-scoped Cloudflare token created for this account (D1 Read/Edit and Workers Editor only).
-- `ASTROCROWN_RATE_LIMIT_HMAC_KEY` — a separate password-manager-generated random value of at least 32 characters.
+| Location | Existing item | Status |
+|---|---|---|
+| Repository Actions secret | `CLOUDFLARE_API_TOKEN_02` | Present; reused by the staging workflow |
+| Repository Actions variable | `CLOUDFLARE_ACCOUNT_ID_02` | Present; referenced by the staging workflow |
+| `cloudflare-staging` environment secret | `ASTROCROWN_RATE_LIMIT_HMAC_KEY` | Present |
+| `cloudflare-staging` environment variable | `ASTROCROWN_STAGING_D1_DATABASE_ID` | Absent before the first D1 deployment; added after the workflow reports the created/verified UUID |
+| `cloudflare-staging` environment reviewers | Required reviewers | None configured at inspection time |
+| `cloudflare-staging` environment branch policy | Deployment branch restriction | One branch restriction is configured; it must continue to limit deployment to `main` |
 
-Add this environment variable:
+The workflow deliberately reuses the existing `CLOUDFLARE_API_TOKEN_02` repository secret; no new Cloudflare API token is required. It reads the already-present account identifier from `vars.CLOUDFLARE_ACCOUNT_ID_02`. This avoids copying the account ID into another setting or asking the owner to disclose it in chat.
 
-- `CLOUDFLARE_ACCOUNT_ID` — the 32-character Cloudflare account identifier.
+**Credential scope note:** a repository-level secret has a wider GitHub workflow visibility boundary than an environment-only secret. At the time of inspection, this exact token name was referenced by the Cloudflare staging workflow only. Keep references to it limited to this reviewed, manually gated workflow. A stricter environment-only arrangement can be adopted later by adding the same existing token value to the `cloudflare-staging` environment and removing the repository-level copy after verifying the migration; this is a scope migration, not a request to generate a new token. The actual Cloudflare token permission scopes and Account 02 billing/plan state cannot be verified from GitHub settings.
 
-Do not create these as repository-wide secrets. The workflow references the Cloudflare token and rate-limit/acknowledgement-signing secret only from its final deployment step after explicit authorization. The deployment script removes sensitive values from local test/build subprocess environments, masks secrets in GitHub Actions, sends the key to Wrangler through standard input, and never prints it. There is no shared Basic Authentication password for public visitors.
+The existing `ASTROCROWN_RATE_LIMIT_HMAC_KEY` stays in the protected `cloudflare-staging` environment. Do not add credentials or account identifiers to source files, logs, artifacts, or chat. The deployment script masks the HMAC value in Actions and supplies it to Wrangler through standard input.
 
-For additional review, configure an environment required reviewer if a separate authorized reviewer is available. Environment branch restrictions are mandatory; a manual workflow trigger alone is not a substitute for controlling who can modify the deployment workflow.
+No `ASTROCROWN_STAGING_D1_DATABASE_ID` is required for a genuinely first deployment. After the workflow creates the isolated database and reports its non-secret UUID, add that exact UUID as an environment variable in `cloudflare-staging` before any later deployment. If the reserved database already exists without a matching identity record, the script stops rather than adopting it by name.
+
+Before an actual deployment, the owner must independently confirm in Cloudflare that the intended Account 02 is on Workers Free / D1 Free, that the action requires and attaches no payment method, and that no paid product will be enabled. GitHub configuration does not prove those Cloudflare account conditions.
 
 ### First deployment and persistent D1 identity
 
