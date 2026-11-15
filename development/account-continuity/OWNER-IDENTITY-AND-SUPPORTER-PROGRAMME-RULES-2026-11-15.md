@@ -47,6 +47,8 @@ The multiplier is **25 ACROWN of purchase allowance per 1 USDT of verified contr
 - The programme-wide maximum purchase allowance is **25,000,000 whole ACROWN**. Personal allowance is calculated from each member's verified contributions; the shared programme remainder is an independent limit.
 - A purchase may use no more than the lesser of the member's unused personal allowance and the remaining programme-wide purchase capacity. Purchases consume both balances atomically. When the shared 25,000,000-ACROWN purchase capacity has been fully consumed, the programme cannot accept further purchases under this programme, even if an individual account retains unused personal allowance.
 - Aggregate verified contributions must never exceed the USDT 1,000,000 ceiling. A partial final contribution must be capped to the exact remaining contribution capacity; overpayment or excess transfer must not create extra allowance.
+- Each additional verified contribution from a wallet already in the frozen eligible set adds a further 25:1 purchase allowance to that wallet's cumulative earned allowance, including after its earlier allowance has been partly or fully used. A completed purchase remains consumed; resale does not restore it. New contributions can create additional allowance only while the programme is OPEN, contribution capacity remains, and global ACROWN sale capacity remains available.
+- Stop accepting new contributions when the programme closes or the 25,000,000-ACROWN sale capacity is exhausted; accepting funds after no purchase capacity remains would create an allowance the programme cannot honour.
 - Amounts and calculations must use integer base units and explicit decimal/rational arithmetic, never floating point. Convert the whole-ACROWN ceiling to base units only after the ACROWN decimal precision is finalized and verified.
 
 **Arithmetic wording clarification — owner-confirmed 2026-11-16:** the controlling multiplier is 25:1. USDT 1 of verified contribution creates the right to buy up to 25 ACROWN, not 1 ACROWN. The multiplier grants purchase quantity only; the supporter must separately pay the full ACS floor-price consideration for any ACROWN purchased, plus the applicable network gas and/or Paymaster fees.
@@ -83,7 +85,7 @@ For a purchase of `q` ACROWN at floor price `F`:
 - After the public-deployment event, only wallets in the frozen set—or verified successor wallets attached to those same frozen records—may use programme purchase allowances to buy ACROWN at the published ACS floor price.
 - A wallet replacement is a migration of one existing wallet's identity/entitlement lineage, not a new registration. The old wallet must be deactivated for programme actions, the replacement wallet must prove control, all contribution/purchase history and balances must carry forward exactly once, and the operation must be append-only and auditable. The replacement must not duplicate or increase the wallet's multiplier allowance or the programme-wide cap.
 - Intended user experience: when a wallet is connected, the service automatically matches its verified address against the supporter registry and opens the dashboard for that exact wallet. If it is a recognized eligible wallet, the dashboard shows that wallet's own supporter record. A recovery flow may guide a supporter through replacing a lost wallet, but it must require a separately approved strong proof-of-recovery method. The exact fallback method when the old wallet cannot sign remains unapproved.
-- The cutoff applies to wallet registration, not to contributions from wallets already in the frozen set. Those wallets may continue qualifying contributions while the programme is OPEN and within the USDT 1,000,000 aggregate ceiling, the 25:1 multiplier and programme close controls. No fresh, unregistered wallet may interact with member-level programme functions after cutoff.
+- The cutoff applies to wallet registration, not to contributions from wallets already in the frozen set. Those wallets may continue qualifying contributions while the programme is OPEN, within the USDT 1,000,000 aggregate ceiling and while the shared 25,000,000-ACROWN sale capacity remains. Each additional verified contribution adds further allowance at 25:1, including after earlier allowance has been used; completed purchases remain consumed and are not restored by resale. No fresh, unregistered wallet may interact with member-level programme functions after cutoff.
 - In ordinary language, "buy the remaining multipliers" means **use/redeem the unused personal ACROWN purchase allowance**. Users do not buy a multiplier as a separate product.
 
 ### 3.1 Supporter dashboard and wallet-specific progress
@@ -99,11 +101,11 @@ The supporter dashboard must distinguish programme-wide capacity from the connec
 
 The previously adopted 180-day maximum programme window remains provisionally in force unless the owner explicitly replaces it. It begins only at deliberate, owner-approved programme activation, not at a code merge, preview deployment, Worker deployment or database creation.
 
-Purchases close at the earlier of:
+New contributions and ACROWN purchases close at the earlier of:
 1. the approved programme window's close; or
-2. exhaustion of the 25,000,000-ACROWN programme-wide purchase capacity.
+2. exhaustion of the 25,000,000-ACROWN programme-wide sale capacity.
 
-A sell-out closes further programme purchases even if the 180-day window has time remaining. A remaining time window does not create additional ACROWN capacity. The programme must expose the authoritative remaining aggregate capacity and reconcile it against completed purchases.
+A sell-out closes the programme to both further purchases and new contributions even if the 180-day window has time remaining. A remaining time window does not create additional ACROWN capacity or justify accepting contributions that cannot earn a usable purchase allowance. The programme must expose the authoritative remaining aggregate capacity and reconcile it against completed purchases.
 
 ## 4.1 Secondary-market resale, arbitrage and liquidity expectations
 
