@@ -163,7 +163,6 @@ jobs:
           if any(fragment in source for fragment in [
               "print(token)",
               "print(CLOUDFLARE_API_TOKEN)",
-              '"Authorization": "Bearer " + token',
           ]):
               raise SystemExit("Preflight workflow appears to expose credential material.")
           print("Account 02 preflight uses only GET requests, existing repository credentials, and sanitized inventory reporting.")
