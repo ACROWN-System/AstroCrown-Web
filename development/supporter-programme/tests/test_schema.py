@@ -51,10 +51,19 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
             "ownership_verified_at,proof_method,created_at) "
             "VALUES('w-pending','m-pending','ethereum','0x111','0x111','PAYMENT',2,'OFFCHAIN_MESSAGE',2)"
         )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "independently verified wallet"):
+            self.db.execute(
+                "UPDATE supporter_members SET registration_state='VERIFIED' "
+                "WHERE member_id='m-pending'"
+            )
         self.db.execute(
             "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
             "WHERE member_id='m-pending'"
         )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "cannot be downgraded"):
+            self.db.execute(
+                "UPDATE supporter_members SET registration_state='PENDING' WHERE member_id='m-pending'"
+            )
         verified = self.db.execute(
             "SELECT registration_state,registration_verified_at FROM supporter_members WHERE member_id='m-pending'"
         ).fetchone()
