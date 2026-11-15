@@ -13,6 +13,7 @@ on:
       - "development/supporter-programme/**"
       - ".github/workflows/account-staging-worker-qualification.yml"
       - ".github/workflows/cloudflare-staging-deployment.yml"
+      - ".github/workflows/cloudflare-account02-readonly-preflight.yml"
   push:
     branches: [docs/provider-independent-wallet-auth-plan-2026-10-20]
     paths:
@@ -136,12 +137,56 @@ jobs:
         run: |
           ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-staging-deployment.yml"); puts "Cloudflare deployment workflow YAML parsed successfully."'
 
+      - name: Verify the Account 02 preflight is read-only and bound to existing credentials
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("../../../.github/workflows/cloudflare-account02-readonly-preflight.yml")
+          source = path.read_text(encoding="utf-8")
+          required = [
+              'CLOUDFLARE_API_TOKEN_02',
+              'CLOUDFLARE_ACCOUNT_ID_02',
+              'method="GET"',
+              'expected_worker = "astrocrown-account-staging-staging"',
+              '/workers/scripts?per_page=100&page=1',
+              '/d1/database?per_page=100&page=1',
+              '::add-mask::',
+              'payment-method or billing-profile endpoints',
+          ]
+          for value in required:
+              if value not in source:
+                  raise SystemExit("Preflight workflow missing required safe behavior: " + value)
+          for forbidden in ['method="POST"', 'method="PUT"', 'method="PATCH"', 'method="DELETE"', 'wrangler deploy', 'wrangler d1']:
+              if forbidden in source:
+                  raise SystemExit("Preflight workflow contains a forbidden mutating operation: " + forbidden)
+          if any(fragment in source for fragment in [
+              "print(token)",
+              "print(CLOUDFLARE_API_TOKEN)",
+          ]):
+              raise SystemExit("Preflight workflow appears to expose credential material.")
+          print("Account 02 preflight uses only GET requests, existing repository credentials, and sanitized inventory reporting.")
+          PY
+
+      - name: Parse the read-only Cloudflare preflight workflow
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-account02-readonly-preflight.yml"); puts "Cloudflare read-only preflight workflow YAML parsed successfully."'
+
       - name: Verify remote environment is still fail-closed
         run: |
           node --input-type=module - <<'NODE'
           import fs from "node:fs";
           const config = JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"));
           const stage = config.env.staging;
+          const deployScript = fs.readFileSync("scripts/deploy-staging.mjs", "utf8");
+          const workerGuard = deployScript.indexOf("await requireExistingStagingWorker(accountId, sourceConfig.env.staging.name)");
+          const d1Provision = deployScript.indexOf("const state = await resolveDatabase(accountId)");
+          if (workerGuard < 0 || d1Provision < 0 || workerGuard > d1Provision) {
+            throw new Error("The existing-Worker permission check must run before any D1 provisioning.");
+          }
+          if (!deployScript.includes("does not already exist") || !deployScript.includes("cannot create a new Worker")) {
+            throw new Error("The deployment script must explain the Workers Editor create-permission boundary.");
+          }
           if (stage.vars.RP_ID !== "SET_BEFORE_DEPLOY") throw new Error("Staging RP sentinel missing.");
           if (stage.vars.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") throw new Error("Staging origin sentinel missing.");
           if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") throw new Error("Staging D1 sentinel missing.");

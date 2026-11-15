@@ -418,6 +418,24 @@ async function smokeTest(origin) {
   return { status, diagnostics };
 }
 
+async function requireExistingStagingWorker(accountId, workerName) {
+  const scripts = await cloudflare(
+    "GET",
+    "/accounts/" + accountId + "/workers/scripts?per_page=100&page=1",
+  );
+  if (!Array.isArray(scripts)) {
+    fail("Cloudflare did not return the existing Worker inventory. No D1 resource was created.");
+  }
+  if (!scripts.some((script) => script && script.id === workerName)) {
+    fail(
+      "The staging Worker " + workerName + " does not already exist. The configured Workers Editor token can deploy to an existing Worker but cannot create a new Worker. " +
+      "Create an empty Worker with this exact name in the Cloudflare dashboard, then rerun. " +
+      "This check runs before D1 provisioning, so no database was created."
+    );
+  }
+  console.log("The pre-existing staging Worker was found; the existing Workers Editor token can update/deploy it.");
+}
+
 async function main() {
   const { accountId } = validateEnv();
   const sourceConfig = JSON.parse(await readFile(sourceConfigPath, "utf8"));
@@ -430,6 +448,11 @@ async function main() {
 
   const subdomainResponse = await cloudflare("GET", "/accounts/" + accountId + "/workers/subdomain");
   const subdomain = validateSubdomain(subdomainResponse?.subdomain);
+
+  // Workers Editor can deploy an existing Worker but cannot create one. Verify
+  // the target before D1 provisioning so missing Worker permissions/resources
+  // cannot leave an unused remote database behind.
+  await requireExistingStagingWorker(accountId, sourceConfig.env.staging.name);
 
   const state = await resolveDatabase(accountId);
   // Publish the non-secret D1 UUID immediately: a later migration or deploy
