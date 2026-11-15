@@ -418,26 +418,23 @@ async function smokeTest(origin) {
   return { status, diagnostics };
 }
 
-async function assertWorkersUsageModelIsNotStandard(accountId) {
+async function reportWorkersUsageModel(accountId) {
   const settings = await cloudflare(
     "GET",
     "/accounts/" + accountId + "/workers/account-settings",
   );
-  const usageModel = settings?.default_usage_model;
-  if (usageModel === "standard") {
-    fail(
-      "STOPPED BEFORE D1 PROVISIONING. Cloudflare reports the Standard Workers usage model. " +
-      "Cloudflare documents Standard as available to Workers Paid accounts and contract-defined Enterprise accounts. " +
-      "Confirm the exact account plan and payment-method state in the Cloudflare dashboard; do not proceed under the $0/no-card policy."
-    );
-  }
-  if (usageModel !== "bundled" && usageModel !== "unbound") {
-    fail(
-      "STOPPED BEFORE D1 PROVISIONING. Cloudflare did not report a recognized legacy usage model (bundled/unbound); " +
-      "the account's Workers billing mode could not be qualified safely."
-    );
-  }
-  console.log("Cloudflare account Workers usage model is " + usageModel + "; owner Free/no-card confirmation is still required.");
+  const usageModel = typeof settings?.default_usage_model === "string"
+    ? settings.default_usage_model
+    : "not-reported";
+  console.log("Cloudflare account default Workers usage model: " + usageModel + ".");
+  console.log(
+    "The account-settings endpoint reports a usage-model setting; it does not report subscription status or payment methods. " +
+    "This value is retained as deployment evidence only and is not treated as proof of an active paid subscription."
+  );
+  console.log(
+    "The no-paid-subscription/no-payment-method condition is supplied by the owner's explicit workflow confirmation. " +
+    "This deployment does not change billing settings, add payment methods, or enable paid products."
+  );
 }
 
 async function requireExistingStagingWorker(accountId, workerName) {
@@ -475,7 +472,7 @@ async function main() {
   // the target before D1 provisioning so missing Worker permissions/resources
   // cannot leave an unused remote database behind.
   await requireExistingStagingWorker(accountId, sourceConfig.env.staging.name);
-  await assertWorkersUsageModelIsNotStandard(accountId);
+  await reportWorkersUsageModel(accountId);
 
   const state = await resolveDatabase(accountId);
   // Publish the non-secret D1 UUID immediately: a later migration or deploy
