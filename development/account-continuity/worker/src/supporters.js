@@ -280,7 +280,7 @@ function createWalletMessage({ origin, address, network, purpose, challengeId, n
     "Domain: " + url.host,
     "URI: " + uri,
     "Address: " + address,
-    "Network: " + network + (network === "tron" ? ":mainnet" : ":mainnet"),
+    "Network: " + network + ":mainnet",
     "Purpose: " + purpose,
     "Nonce: " + nonce,
     "Issued At: " + issuedAt,
@@ -559,7 +559,7 @@ async function loginChallenge(db, env, request, payload, config) {
   if (!NETWORK_ORDER.includes(network)) throw httpError(400, "Choose Ethereum, Tron or Solana.");
   const address = await normalizeWalletAddress(network, payload.address);
   const existing = await db.prepare(
-    "SELECT w.wallet_id,w.member_id,m.username FROM supporter_wallets w " +
+    "SELECT w.wallet_id,w.member_id,w.wallet_role,m.username FROM supporter_wallets w " +
     "JOIN supporter_members m ON m.member_id=w.member_id " +
     "WHERE w.network=? AND w.address_normalized=? AND w.ownership_verified_at IS NOT NULL " +
     "AND m.status='ACTIVE' AND m.registration_state='VERIFIED' LIMIT 1"
@@ -570,7 +570,7 @@ async function loginChallenge(db, env, request, payload, config) {
     memberId: existing.member_id,
     network,
     address: address.address,
-    walletRole: "PAYMENT",
+    walletRole: existing.wallet_role,
     walletId: existing.wallet_id,
   });
   return json(200, challenge);
@@ -601,21 +601,37 @@ async function linkWalletChallenge(db, env, request, payload, config, member) {
   const address = await normalizeWalletAddress(network, payload.address);
   const role = normalizeRole(network, payload.walletRole || "PAYMENT");
   const owner = await db.prepare(
-    "SELECT member_id FROM supporter_wallets WHERE network=? AND address_normalized=? LIMIT 1"
+    "SELECT wallet_id,member_id,wallet_role FROM supporter_wallets WHERE network=? AND address_normalized=? LIMIT 1"
   ).bind(network, address.normalized).first();
   if (owner && owner.member_id !== member.member_id) {
     throw httpError(409, "That wallet is already associated with another supporter.");
   }
-  if (owner && owner.member_id === member.member_id) {
-    throw httpError(409, "That wallet is already linked to this supporter.");
+
+  let purpose = "LINK_WALLET";
+  let challengeRole = role;
+  let walletId = null;
+  if (owner) {
+    const currentRole = owner.wallet_role;
+    const isDelivery = currentRole === "ACROWN_DELIVERY" || currentRole === "PAYMENT_AND_DELIVERY";
+    if (network !== "solana" || role === "PAYMENT" || isDelivery) {
+      throw httpError(409, "That wallet is already linked to this supporter with the requested purpose.");
+    }
+    // A Solana payment wallet can be designated as the ACROWN delivery wallet
+    // only after a separate, explicit second signature challenge.
+    purpose = "DELIVERY";
+    challengeRole = "PAYMENT_AND_DELIVERY";
+    walletId = owner.wallet_id;
+  } else if (role === "ACROWN_DELIVERY") {
+    purpose = "DELIVERY";
   }
-  const purpose = role === "ACROWN_DELIVERY" ? "DELIVERY" : "LINK_WALLET";
+
   const challenge = await createChallenge(db, env, request, config, {
     purpose,
     memberId: member.member_id,
     network,
     address: address.address,
-    walletRole: role,
+    walletRole: challengeRole,
+    walletId,
   });
   return json(200, challenge);
 }
@@ -632,17 +648,27 @@ async function linkWalletVerify(db, env, request, payload, config, member) {
     throw httpError(401, "The signature did not prove control of the new wallet.");
   }
   const now = Math.floor(Date.now() / 1000);
-  const walletId = newId("wal");
   try {
-    await db.prepare(
-      "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role," +
-      "ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,?,?,?,?)"
-    ).bind(
-      walletId, member.member_id, challenge.network, await displayAddress(challenge), challenge.address_normalized,
-      challenge.wallet_role, now, "OFFCHAIN_MESSAGE", now,
-    ).run();
-  } catch {
-    throw httpError(409, "That wallet is already linked to a supporter.");
+    if (purpose === "DELIVERY" && challenge.wallet_id) {
+      const updated = await db.prepare(
+        "UPDATE supporter_wallets SET wallet_role='PAYMENT_AND_DELIVERY',ownership_verified_at=?,proof_method='OFFCHAIN_MESSAGE' " +
+        "WHERE wallet_id=? AND member_id=? AND network='solana' AND wallet_role='PAYMENT'"
+      ).bind(now, challenge.wallet_id, member.member_id).run();
+      if (Number(updated.meta?.changes || 0) !== 1) {
+        throw httpError(409, "The existing Solana payment wallet could not be separately verified for ACROWN delivery.");
+      }
+    } else {
+      await db.prepare(
+        "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role," +
+        "ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,?,?,?,?)"
+      ).bind(
+        newId("wal"), member.member_id, challenge.network, await displayAddress(challenge), challenge.address_normalized,
+        challenge.wallet_role, now, "OFFCHAIN_MESSAGE", now,
+      ).run();
+    }
+  } catch (error) {
+    if (Number(error?.status) === 409) throw error;
+    throw httpError(409, "That wallet is already linked or the member already has a verified Solana delivery wallet.");
   }
   const refreshed = await db.prepare(
     "SELECT member_id,username,status,created_at FROM supporter_members WHERE member_id=?"
