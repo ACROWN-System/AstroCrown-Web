@@ -1,0 +1,206 @@
+name: Cloudflare Account 02 Read-only Preflight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-account02-readonly-preflight
+  cancel-in-progress: true
+
+jobs:
+  inspect:
+    name: Inspect Cloudflare resources without changing them
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN_02 }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID_02 }}
+    steps:
+      - name: Read account, Worker and D1 state
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo "::error::Missing repository secret CLOUDFLARE_API_TOKEN_02."; exit 1; }
+          test -n "$CLOUDFLARE_ACCOUNT_ID" || { echo "::error::Missing repository variable CLOUDFLARE_ACCOUNT_ID_02."; exit 1; }
+          [[ "$CLOUDFLARE_ACCOUNT_ID" =~ ^[a-fA-F0-9]{32}$ ]] || { echo "::error::Account ID variable is not a 32-character Cloudflare account identifier."; exit 1; }
+          echo "::add-mask::$CLOUDFLARE_API_TOKEN"
+          python - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.error
+          import urllib.request
+          from pathlib import Path
+
+          token = os.environ["CLOUDFLARE_API_TOKEN"]
+          account_id = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+          base = "https://api.cloudflare.com/client/v4"
+          expected_worker = "astrocrown-account-staging-staging"
+          report = {}
+          failures = []
+
+          def api_get(path, label, required=True):
+              request = urllib.request.Request(
+                  base + path,
+                  headers={
+                      "Authorization": "Bearer " + token,
+                      "Accept": "application/json",
+                  },
+                  method="GET",
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=25) as response:
+                      payload = json.loads(response.read().decode("utf-8"))
+                      if not payload.get("success"):
+                          report[label] = {"status": "API_REPORTED_UNSUCCESSFUL"}
+                          if required:
+                              failures.append(label)
+                          return None
+                      report[label] = {"status": "OK"}
+                      return payload.get("result")
+              except urllib.error.HTTPError as error:
+                  # Do not print response bodies: API errors can include account metadata.
+                  report[label] = {"status": "HTTP_" + str(error.code)}
+                  if required:
+                      failures.append(label)
+                  return None
+              except Exception as error:
+                  report[label] = {"status": "REQUEST_ERROR_" + type(error).__name__}
+                  if required:
+                      failures.append(label)
+                  return None
+
+          token_state = api_get("/user/tokens/verify", "token_verification")
+          if isinstance(token_state, dict):
+              report["token_verification"]["token_status"] = token_state.get("status", "UNREPORTED")
+              report["token_verification"]["active"] = token_state.get("status") == "active"
+              if token_state.get("status") != "active":
+                  failures.append("token_verification")
+
+          subdomain = api_get(
+              "/accounts/" + account_id + "/workers/subdomain",
+              "workers_dev_subdomain",
+              required=False,
+          )
+          if isinstance(subdomain, dict):
+              value = subdomain.get("subdomain")
+              report["workers_dev_subdomain"].update({
+                  "configured": bool(value),
+                  "subdomain": value if value else None,
+              })
+          else:
+              report["workers_dev_subdomain"].update({"configured": False, "subdomain": None})
+
+          scripts = api_get(
+              "/accounts/" + account_id + "/workers/scripts?per_page=100&page=1",
+              "worker_inventory",
+          )
+          if isinstance(scripts, list):
+              names = sorted(
+                  item.get("id") for item in scripts
+                  if isinstance(item, dict) and isinstance(item.get("id"), str)
+              )
+              report["worker_inventory"].update({
+                  "count_returned": len(names),
+                  "names": names,
+                  "expected_staging_worker_exists": expected_worker in names,
+                  "expected_staging_worker": expected_worker,
+              })
+
+          databases = api_get(
+              "/accounts/" + account_id + "/d1/database?per_page=100&page=1",
+              "d1_inventory",
+          )
+          if isinstance(databases, list):
+              names = sorted(
+                  item.get("name") for item in databases
+                  if isinstance(item, dict) and isinstance(item.get("name"), str)
+              )
+              report["d1_inventory"].update({
+                  "count_returned": len(names),
+                  "names": names,
+                  "free_database_limit": 10,
+                  "free_slots_by_returned_count": max(0, 10 - len(names)),
+                  "reserved_staging_database_exists": "acrown-account-staging" in names,
+              })
+
+          worker_settings = api_get(
+              "/accounts/" + account_id + "/workers/account-settings",
+              "workers_account_settings",
+              required=False,
+          )
+          if isinstance(worker_settings, dict):
+              report["workers_account_settings"]["default_usage_model"] = worker_settings.get(
+                  "default_usage_model", "NOT_REPORTED"
+              )
+
+          # The deployment token is intentionally limited to Workers Editor and D1
+          # read/edit. This preflight does not request Billing Read and never calls
+          # payment-method or billing-profile endpoints.
+          report["billing_and_payment"] = {
+              "workers_plan": "NOT_VERIFIED_BY_THIS_TOKEN",
+              "payment_methods": "NOT_CHECKED",
+              "reason": "Read-only deployment token is not being used to access billing data; owner must verify Workers Free and no payment method in the Cloudflare dashboard.",
+          }
+
+          target_exists = report.get("worker_inventory", {}).get("expected_staging_worker_exists")
+          subdomain_ready = report.get("workers_dev_subdomain", {}).get("configured")
+          database_count = report.get("d1_inventory", {}).get("count_returned")
+          d1_capacity = isinstance(database_count, int) and database_count < 10
+          report["deployment_readiness"] = {
+              "target_worker_exists": target_exists,
+              "workers_dev_subdomain_configured": subdomain_ready,
+              "d1_free_database_slot_available_by_inventory": d1_capacity,
+              "billing_and_no_card_verified": False,
+              "deployment_allowed_by_this_report": False,
+              "note": "This workflow is read-only. It never provisions, migrates, deploys, edits settings, or changes billing.",
+          }
+
+          summary = [
+              "# Cloudflare Account 02 — read-only preflight",
+              "",
+              "No Cloudflare resource or account setting was changed.",
+              "",
+              "| Check | Result |",
+              "|---|---|",
+          ]
+          def row(name, value):
+              summary.append("| " + name + " | " + str(value).replace("|", "\\|") + " |")
+
+          row("API token verification", report.get("token_verification", {}).get("token_status", report.get("token_verification", {}).get("status", "UNAVAILABLE")))
+          row("workers.dev subdomain", report.get("workers_dev_subdomain", {}).get("subdomain", "NOT CONFIGURED / UNAVAILABLE"))
+          row("Existing Worker count", report.get("worker_inventory", {}).get("count_returned", "UNAVAILABLE"))
+          row("Required staging Worker exists", report.get("worker_inventory", {}).get("expected_staging_worker_exists", "UNAVAILABLE"))
+          row("D1 database count", report.get("d1_inventory", {}).get("count_returned", "UNAVAILABLE"))
+          row("D1 free slots (10-database Free allowance)", report.get("d1_inventory", {}).get("free_slots_by_returned_count", "UNAVAILABLE"))
+          row("Reserved account staging database exists", report.get("d1_inventory", {}).get("reserved_staging_database_exists", "UNAVAILABLE"))
+          row("Workers default usage model", report.get("workers_account_settings", {}).get("default_usage_model", "UNAVAILABLE"))
+          row("Workers Free plan / payment method", "NOT VERIFIED — owner dashboard check required")
+          summary.extend([
+              "",
+              "## Deployment blockers and boundaries",
+              "",
+              "- A Workers Editor token can deploy to an existing Worker but cannot create a new Worker. If the target Worker is absent, create the named empty staging Worker in the Cloudflare dashboard before using this token; do not broaden the token automatically.",
+              "- The deployment script must not create the staging D1 database until the Workers Free/no-card state is confirmed and the target Worker/subdomain prerequisites are satisfied.",
+              "- Free D1 supports at most 10 databases, 500 MB per database and 5 GB total storage; free daily query limits apply. The inventory count alone does not prove remaining storage or usage quota.",
+              "- This preflight does not check billing or payment methods. No Billing Read permission is requested or used.",
+              "",
+              "## Sanitized machine-readable findings",
+              "",
+              "```json",
+              json.dumps(report, indent=2, sort_keys=True),
+              "```",
+              "",
+          ])
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          with summary_path.open("a", encoding="utf-8") as handle:
+              handle.write("\\n".join(summary) + "\\n")
+          print(json.dumps(report, indent=2, sort_keys=True))
+          if failures:
+              print("::error::Required read-only Cloudflare API checks failed: " + ", ".join(failures))
+              sys.exit(1)
+          PY
