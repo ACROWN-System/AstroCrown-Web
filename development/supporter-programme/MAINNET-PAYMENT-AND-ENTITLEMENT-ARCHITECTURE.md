@@ -2,7 +2,8 @@
 
 **Date:** 14 November 2026  
 **Status:** Architecture/schema foundation plus a read-only, isolated staging status API — payment acceptance is NOT enabled.  
-**Scope:** Supporter Programme real-USDT exception; not the rest of AstroCrown.
+**Scope:** Supporter Programme real-USDT exception; not the rest of AstroCrown.  
+**Owner policy:** [Owner Identity and Supporter Programme Rules](../account-continuity/OWNER-IDENTITY-AND-SUPPORTER-PROGRAMME-RULES-2026-11-15.md) is controlling for account tiers, multiplier, programme ceiling and wallet-registration cutoff.
 
 ## 1. Deployment split
 
@@ -32,42 +33,43 @@ Requirements:
 - ACROWN delivery remains Solana-based. The member must separately prove control of the Solana delivery wallet.
 - Only these three networks are in initial scope. An extra network needs an independent review and explicit approval.
 
-## 3. Multiplier and personal purchase allowance
+## 3. Multiplier and programme-wide contribution/purchase ceilings
 
-The owner's illustration establishes the intended direction: the verified contribution determines a personal ACROWN purchase allowance using an approved multiplier/rate.
+The owner has approved a **USDT 1,000,000 aggregate contribution ceiling** and a **25:1 multiplier**, meaning 25 ACROWN of purchase allowance for each 1 USDT of verified contribution.
 
-**Illustration only:** 1,000 USD₮ verified contribution × 25 ACROWN per USD₮ = **25,000 ACROWN purchase allowance**.
+- USDT decimals are six. The aggregate contribution ceiling is therefore `1,000,000,000,000` USDT base units.
+- A verified USDT 1 contribution creates the right to purchase up to 25 ACROWN at the approved ACS floor price. The contribution itself is not the ACROWN purchase and does not issue or deliver tokens.
+- At the USDT 1,000,000 aggregate contribution ceiling, the maximum aggregate purchase allowance is 25,000,000 whole ACROWN.
+- Each member's earned allowance is calculated from that member's verified contributions using 25:1. The member's remaining allowance is earned allowance minus completed programme purchases.
+- The programme-wide remaining purchase capacity is 25,000,000 ACROWN minus all completed programme purchases. A member may buy no more than the lesser of personal remaining allowance and programme-wide remaining capacity.
+- Both the personal allowance and programme-wide purchase capacity must be consumed atomically at settlement. Concurrent purchases cannot exceed either limit. When the programme-wide 25,000,000-ACROWN capacity is exhausted, further programme purchases are blocked even if personal allowances remain.
+- Total confirmed contributions across Ethereum, Tron and Solana must never exceed USDT 1,000,000. A final partial contribution must be limited to the exact remaining contribution capacity; excess transfers cannot create extra allowance.
+- Quantities are integer base-unit strings with rational arithmetic, never floating point. Convert 25,000,000 whole ACROWN to base units only after ACROWN decimals have been finalized and verified.
 
-The 25:1 rate is not silently treated as a final term. Before payments open, the owner must approve and publish:
-- exact multiplier/rate and units;
-- fractional-amount and base-unit rounding rules;
-- ACS floor-price calculation, version and purchase-time snapshot;
-- first-contribution qualification threshold;
-- programme-wide ACROWN cap, or an explicit decision not to impose one;
-- whether later contributions add to the same member's unused personal allowance;
-- purchase and settlement sequence.
+The earlier sentence suggesting USDT 1 creates a 1-ACROWN allowance is inconsistent with the approved 25:1 rule. The governing rule is USDT 1 = 25 ACROWN of purchase allowance. The contribution remains distinct from a later purchase at the floor price; it is not a free-token allocation or automatic issuance.
 
-Store all token and payment quantities as integer base-unit strings, never floating-point numbers. The general formula is:
+Before activation, the final ACS floor calculation/version, ACROWN decimal precision, rounding rule, qualification threshold, and purchase settlement details still require owner approval.
 
-`allowance_base = floor(verified_USDT_base × rate_numerator × 10^ACROWN_decimals / (10^USDT_decimals × rate_denominator))`
+## 4. Wallet-registration cutoff, public-deployment event and programme close
 
-The available amount at purchase time is the smaller of the unused personal allowance and any remaining approved programme-wide ACROWN cap. A global cap is a separate limit; it does not replace the personal multiplier calculation. Purchases must consume both balances atomically. Reselling purchased tokens does not replenish consumed allowance.
+The wallet-registration period closes exactly 24 hours before the official public-deployment event.
 
-A contribution activates purchase eligibility; it does not itself issue, transfer or purchase ACROWN. A later ACROWN acquisition is a separate, separately recorded transaction at the approved ACS floor. An allowance must never be represented as tokens already owned or delivered.
+- Let `T_public` be the official public-deployment timestamp. The wallet-registration cutoff is `T_cutoff = T_public - 86,400 seconds`.
+- Publish the exact event timestamp in ISO 8601 UTC, including time and timezone. A date without an exact time is insufficient for a 24-hour cutoff.
+- The event name is not yet approved. "Genesis Day", "Launch Day", "Deployment Day" and "New Big-Bang Event" are candidate names only.
+- At the cutoff, freeze the set of successfully registered and ownership-verified supporter wallets. A wallet that is merely connected, but not registered and signature-verified, is not eligible.
+- After the public-deployment event, only wallets in the frozen registration set may use the programme's purchase allowances. No new member or wallet may be added to the eligible set after the cutoff.
+- A post-cutoff lost-wallet replacement must follow a separately reviewed recovery process and cannot be used to introduce a new, previously unregistered wallet into the eligible set.
+- This wallet-registration deadline is not itself a separate contribution-acceptance deadline. Contributions from already registered wallets may continue only while the programme is OPEN, the aggregate USDT 1,000,000 ceiling is not exceeded, and the programme close has not occurred. No unregistered wallet may create an eligible contribution.
+- "Buy the remaining multipliers" means redeem the unused personal ACROWN purchase allowance by making the separate ACROWN purchase at the published ACS floor price.
 
-## 4. One global 180-day window
+The previously approved global 180-day maximum window remains provisionally in force. It begins only when the owner-approved programme service is deliberately activated, not when a code is merged, preview is deployed, Worker is deployed or D1 is created. Purchases close at the earlier of the 180-day window closing or exhaustion of the shared 25,000,000-ACROWN purchase capacity. A sell-out closes the programme purchase path early; an unused time window does not add capacity.
 
-- `activated_at` is set once when the owner deliberately opens the real contribution service after all activation gates pass.
-- `closes_at = activated_at + 180 days` (15,552,000 seconds).
-- Static preview deployment, Git commit, PR merge, Worker deployment or database creation does not start the period.
-- The authoritative database stores both timestamps; the public page and ledger disclose them.
-- No contribution/purchase is eligible before activation. Purchases must settle before the global close.
-- Pausing service does not reset or extend the window. Reopening or extending requires a separate approved and publicly recorded decision.
-- The activation timestamp is immutable.
+Store the official public-deployment timestamp and derived registration cutoff as authoritative programme data. If either is unset, do not invent a deadline or describe the registration cutoff as active. The exact public event schedule and whether the 180-day maximum is retained beyond this provisional rule must be published before activation.
 
 ## 5. Member and wallet identity
 
-A member has a unique pseudonym/username and one or more independently verified wallet addresses.
+A member has a unique pseudonym/username and one or more independently verified wallet addresses. Supporter Programme membership is the explicit wallet-based, feature-specific identity case: the wallet ownership proof creates the programme membership record, and membership is durable under the published programme rules. Key-only AstroCrown access alone does not register a supporter or create supporter eligibility. The wallet set eligible for programme purchases is frozen at the 24-hour-before-public-deployment cutoff.
 
 - Generate a random name by default; permit customization subject to uniqueness and safe-character rules.
 - A username is a display identity, not proof of wallet ownership.
@@ -121,6 +123,9 @@ At least two independently operated RPC sources are required per enabled chain. 
 
 The D1 migration creates:
 - one mainnet programme activation record with immutable 180-day timestamps;
+- the approved USDT 1,000,000 aggregate contribution ceiling and the 25:1 multiplier/rules version;
+- the 25,000,000-ACROWN shared purchase-capacity ceiling and current remaining capacity;
+- the official public-deployment timestamp, the derived 24-hour wallet-registration cutoff and a frozen registration eligibility record;
 - members and unique usernames;
 - independently verified chain wallets and short-lived challenges;
 - network-specific contribution intents;
@@ -151,11 +156,11 @@ This foundation does not add payment endpoints or alter that boundary.
 
 All gates below must pass before real payment acceptance:
 
-1. Owner approves multiplier/rate, threshold, floor-price calculation/version, purchase sequence, purchase window terms and programme-wide cap decision.
+1. The owner-approved multiplier is 25:1, the aggregate verified-contribution ceiling is USDT 1,000,000, and the maximum programme-wide purchase allowance is 25,000,000 whole ACROWN. The floor-price calculation/version, ACROWN decimals, rounding rules, minimum first-contribution threshold and purchase sequence still require final approval.
 2. Owner supplies and independently verifies the three public receiving treasury addresses. No private key is needed in source code or chat.
 3. Treasury custody/signing, recovery, spending approvals, incident response and segregation from ACS reserve/prize funds are documented.
 4. Canonical token contracts/mints and decimals are independently checked against mainnet state.
-5. EVM, Tron and Solana wallet-control challenge verification is implemented and tested; username persistence and Solana delivery-wallet linking are operational.
+5. EVM, Tron and Solana wallet-control challenge verification is implemented and tested; username persistence and Solana delivery-wallet linking are operational. The wallet-registration cutoff is bound to the official public-deployment timestamp, and only the frozen verified-wallet set can use programme purchase rights after the event.
 6. Exact payment intent construction, expiry, and amount enforcement are implemented and tested.
 7. Chain-specific transfer parsers, finality, independent RPC agreement, failover, replay/duplicate prevention and controlled testnet fixture tests pass.
 8. D1 migration, immutable activation, uniqueness, atomic accounting, backup and restore are qualified.
@@ -170,9 +175,10 @@ Until all gates are evidenced, `SUPPORTER_MAINNET_ENABLED` remains false, no tre
 
 These values cannot safely be invented:
 - the three treasury receiving addresses;
-- final multiplier/rate and first-contribution threshold;
-- final floor-price/rounding/version rules;
-- global ACROWN cap or explicit no-cap decision;
+- first-contribution threshold;
+- final floor-price/rounding/version rules and final ACROWN decimal precision;
+- official public-deployment event name, exact UTC timestamp and derived 24-hour wallet-registration cutoff;
+- exact post-cutoff wallet replacement/recovery procedure;
 - whether later contributions add to unused personal allowance;
 - final terms and applicable jurisdictional conditions;
 - Cloudflare account 02 access/state and explicit authorization for Pages/Functions/D1 creation and deployment.
