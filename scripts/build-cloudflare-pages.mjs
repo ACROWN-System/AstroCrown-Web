@@ -47,7 +47,7 @@ homepage = replaceExactlyOnce(
   homepage,
   footerMarker,
   footerMarker +
-    '\n          <a href="./supporters/">Supporter Programme</a>' +
+    '\n          <a href="./supporters/">ACROWN Genesis Programme</a>' +
     '\n          <a href="./privacy-transparency.html">Privacy &amp; Transparency Centre</a>',
   "homepage footer navigation"
 );
