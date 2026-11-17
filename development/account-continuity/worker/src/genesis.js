@@ -363,12 +363,14 @@ export async function handleGenesisWalletApi(request, env, config) {
   const url = new URL(request.url);
   try {
     if (url.pathname === "/api/genesis/name-availability" && request.method === "GET") {
+      await rateLimit(db, env, request, "name-availability", 60, 3600);
       const name = url.searchParams.get("name") || "";
       const identity = await currentIdentity(db, request);
       const checked = await nameAvailability(db, name, identity?.identity_id || null);
       return response(200, { available: checked.available, displayName: checked.name, message: checked.available ? "Display name available." : "Display name is already in use." });
     }
     if (url.pathname === "/api/genesis/directory" && request.method === "GET") {
+      await rateLimit(db, env, request, "public-directory", 120, 3600);
       return response(200, { items: await directory(db), publicLedger: true });
     }
     if (url.pathname === "/api/genesis/me" && request.method === "GET") {
