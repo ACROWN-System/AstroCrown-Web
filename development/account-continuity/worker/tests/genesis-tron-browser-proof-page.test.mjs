@@ -26,9 +26,9 @@ test("Genesis TRON proof requires TronLink, address match, and the documented Ma
 });
 
 test("Genesis TRON proof uses TIP-191 message signing and local address recovery", () => {
-  assert.match(html, /trx\.signMessageV2\(challenge\.message\)/);
-  assert.match(html, /trx\.verifyMessageV2\(challenge\.message, signature\)/);
-  assert.match(html, /recoveredAddress !== challenge\.connectedAddress/);
+  assert.match(html, /trx\.signMessageV2\(signingChallenge\.message\)/);
+  assert.match(html, /trx\.verifyMessageV2\(signingChallenge\.message, signature\)/);
+  assert.match(html, /recoveredAddress !== signingChallenge\.connectedAddress/);
   assert.match(html, /browserSignatureVerified: true/);
   assert.match(html, /method: "TRON TIP-191 signMessageV2"/);
 });
