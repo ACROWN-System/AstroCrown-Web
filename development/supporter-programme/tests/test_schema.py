@@ -10,7 +10,7 @@ WORKER_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migra
 TREASURY_MIGRATION = ROOT / "migrations" / "0003_genesis_usdt_treasury_addresses.sql"
 WORKER_TREASURY_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0003_genesis_usdt_treasury_addresses.sql"
 
-class SupporterSchemaSmokeTests(unittest.TestCase):
+class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
         self.db = sqlite3.connect(":memory:")
         self.db.execute("PRAGMA foreign_keys = ON")
@@ -79,7 +79,7 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
         ).fetchone()
         self.assertEqual(verified, ("VERIFIED", 2))
 
-    def test_supporter_sessions_require_verified_active_member(self):
+    def test_genesis_member_sessions_require_verified_active_member(self):
         self.db.execute(
             "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
             "VALUES('m-session','SessionPilot','sessionpilot',1,1)"
