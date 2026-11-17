@@ -3,7 +3,6 @@ import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import {
   createEthereumTreasuryChallenge,
-  getEthereumTreasuryProofRuntime,
   verifyEthereumTreasurySignature
 } from "../scripts/genesis-ethereum-treasury-proof.mjs";
 
@@ -16,38 +15,6 @@ const fixed = {
   origin: "http://127.0.0.1:8765"
 };
 
-test("runtime defaults to loopback on a local computer", () => {
-  const runtime = getEthereumTreasuryProofRuntime({});
-  assert.equal(runtime.mode, "local");
-  assert.equal(runtime.host, "127.0.0.1");
-  assert.equal(runtime.origin, "http://127.0.0.1:8765");
-  assert.equal(runtime.expectedHost, "127.0.0.1:8765");
-});
-
-test("GitHub Codespaces runtime uses the exact HTTPS forwarded hostname", () => {
-  const runtime = getEthereumTreasuryProofRuntime({
-    CODESPACES: "true",
-    CODESPACE_NAME: "cosmic-workbench-123",
-    GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: "app.github.dev",
-  });
-  assert.equal(runtime.mode, "github-codespaces");
-  assert.equal(runtime.host, "0.0.0.0");
-  assert.equal(runtime.origin, "https://cosmic-workbench-123-8765.app.github.dev");
-  assert.equal(runtime.expectedHost, "cosmic-workbench-123-8765.app.github.dev");
-});
-
-test("GitHub Codespaces runtime fails closed when forwarding identity is incomplete", () => {
-  assert.throws(() => getEthereumTreasuryProofRuntime({
-    CODESPACES: "true",
-    CODESPACE_NAME: "cosmic-workbench-123",
-  }), /identity is incomplete or invalid/);
-  assert.throws(() => getEthereumTreasuryProofRuntime({
-    CODESPACES: "true",
-    CODESPACE_NAME: "cosmic-workbench-123",
-    GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN: "attacker.example",
-  }), /identity is incomplete or invalid/);
-});
-
 test("challenge binds the local origin, Ethereum Mainnet, wallet, nonce, expiry and no-transaction scope", () => {
   const message = createEthereumTreasuryChallenge(fixed);
   assert.match(message, /^127\.0\.0\.1:8765 wants you to sign in with your Ethereum account:/);
@@ -59,19 +26,8 @@ test("challenge binds the local origin, Ethereum Mainnet, wallet, nonce, expiry 
   assert.ok(message.includes("does not authorize a transaction, token approval, transfer"));
 });
 
-test("challenge can bind to an exact HTTPS GitHub Codespaces forwarded origin", () => {
-  const origin = "https://cosmic-workbench-123-8765.app.github.dev";
-  const message = createEthereumTreasuryChallenge({
-    ...fixed,
-    origin,
-    expectedOrigin: origin,
-  });
-  assert.match(message, /^cosmic-workbench-123-8765\.app\.github\.dev wants you to sign in with your Ethereum account:/);
-  assert.ok(message.includes(`URI: ${origin}/`));
-});
-
 test("challenge rejects an origin other than the fixed loopback origin", () => {
-  assert.throws(() => createEthereumTreasuryChallenge({ ...fixed, origin: "https://example.com" }), /exactly match the configured proof origin/);
+  assert.throws(() => createEthereumTreasuryChallenge({ ...fixed, origin: "https://example.com" }), /loopback origin/);
 });
 
 test("challenge rejects an invalid nonce", () => {
