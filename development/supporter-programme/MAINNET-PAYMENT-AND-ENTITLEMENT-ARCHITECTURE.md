@@ -204,3 +204,14 @@ The schema, static disclosures and deterministic arithmetic tests can be prepare
 - Cloudflare Pages Functions bindings: https://developers.cloudflare.com/pages/functions/bindings/
 - Cloudflare Workers limits: https://developers.cloudflare.com/workers/platform/limits/
 - Cloudflare D1 pricing/limits: https://developers.cloudflare.com/d1/platform/pricing/
+
+## ACS floor-price purchase and multi-network USDT implementation
+
+The initial Genesis payment rails are USDT on Ethereum ERC-20, TRON TRC-20 and Solana SPL. This is one asset across three canonical mainnet token implementations; it does not implicitly support native coins or arbitrary tokens.
+
+The participant lifecycle has two separate payments: a finalized Genesis contribution credits a personal ACROWN purchase allowance; a later, separately confirmed USDT purchase consumes that allowance at the approved contemporaneous ACS pure floor and delivers ACROWN only to the independently verified Solana delivery wallet. The contribution itself never automatically issues ACROWN.
+
+The ACS core convention located for this integration is F_pure = V_reserves / Q_defended, with circulating supply as the defended quantity and fees excluded from the official floor. The ACS core currently expresses reserve value in BTC, so the Genesis USDT quote requires an approved BTC/USDT price snapshot. Genesis must not apply the provisional 35% roof uplift to participant purchases or substitute fee-adjusted external execution triggers for the official floor. The ACS source basis, quote snapshot requirements, chain verification, purchase settlement, ACROWN delivery and all activation gates are specified in [GENESIS-USDT-AND-ACS-FLOOR-PURCHASE-IMPLEMENTATION.md](GENESIS-USDT-AND-ACS-FLOOR-PURCHASE-IMPLEMENTATION.md).
+
+This is a design specification only. All three payment networks remain disabled, contribution acceptance remains false, and no live floor quote or ACROWN delivery is enabled. A renewed qualified ACS release, verified treasury control on all chains, live RPC/token checks, approved programme terms and verified ACROWN mint/inventory/signing authority are still required.
+
