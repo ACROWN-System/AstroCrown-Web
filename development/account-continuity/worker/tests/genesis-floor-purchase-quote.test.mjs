@@ -32,18 +32,18 @@ test("ACS pure floor quote converts BTC reserve backing to an exact USDT purchas
 test("purchase cost uses explicit integer rounding at the USDT base-unit boundary", () => {
   const fractional = {
     ...common,
-    reserveValueBtcSatoshis: "1",
+    reserveValueBtcSatoshis: "100000000",
     defendedSupplyAcrownBaseUnits: "3",
     purchaseQuantityAcrownBaseUnits: "1",
     acrownDecimals: 0,
     btcUsdtPriceNumerator: "1",
     btcUsdtPriceDenominator: "1",
   };
-  assert.equal(calculateGenesisFloorPurchaseQuote(fractional).usdtDueBaseUnits, "3334");
+  assert.equal(calculateGenesisFloorPurchaseQuote(fractional).usdtDueBaseUnits, "333334");
   assert.equal(calculateGenesisFloorPurchaseQuote({
     ...fractional,
     roundingMode: "FLOOR",
-  }).usdtDueBaseUnits, "3333");
+  }).usdtDueBaseUnits, "333333");
 });
 
 test("arithmetic remains exact for amounts larger than JavaScript safe integers", () => {
