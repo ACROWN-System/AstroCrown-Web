@@ -153,6 +153,21 @@ CREATE TABLE IF NOT EXISTS genesis_rate_limits (
 );
 CREATE INDEX IF NOT EXISTS genesis_rate_limits_cleanup_idx ON genesis_rate_limits(updated_at);
 
+CREATE TRIGGER IF NOT EXISTS genesis_wallet_identity_activation_requires_qualifying_payment
+BEFORE UPDATE OF genesis_member_status, genesis_member_awarded_at ON genesis_wallet_identities
+WHEN NEW.genesis_member_status = 'ACTIVE'
+ AND (
+   NEW.genesis_member_awarded_at IS NULL
+   OR NOT EXISTS (
+     SELECT 1 FROM genesis_public_payments p
+     WHERE p.identity_id = NEW.identity_id
+       AND p.payment_kind = 'QUALIFYING_PAYMENT'
+       AND p.finality_status = 'FINALIZED'
+       AND p.confirmed_at = NEW.genesis_member_awarded_at
+   )
+ )
+BEGIN SELECT RAISE(ABORT, 'Genesis Member status requires this wallet identity own finalized qualifying payment'); END;
+
 CREATE TRIGGER IF NOT EXISTS genesis_public_payment_source_wallet_must_match
 BEFORE INSERT ON genesis_public_payments
 WHEN NOT EXISTS (
