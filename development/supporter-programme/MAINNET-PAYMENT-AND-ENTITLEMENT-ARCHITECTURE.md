@@ -4,6 +4,8 @@
 **Status:** Architecture/schema foundation plus a read-only, isolated staging status API — payment acceptance is NOT enabled.  
 **Scope:** Genesis Programme real-USDT contribution and entitlement system; not the rest of AstroCrown.
 
+**Official product name:** Genesis Programme. Existing `supporter_*` database objects, `/api/supporters/*` endpoints, `SUPPORTERS_DB` binding, migration filenames and the current `/supporters/` preview path are legacy technical identifiers retained for compatibility and migration-history integrity. They are not the programme's official name. New user-facing text and new architectural descriptions must use **Genesis Programme** and **Genesis participants**.
+
 ## 1. Deployment split
 
 The general AstroCrown website and platform functionality remain in Devnet/Testnet with valueless assets during development. The Genesis Programme is the deliberate exception: after separate activation gates pass, it is intended to accept real mainnet USD₮ from its first operational opening on Ethereum, Tron and Solana.
