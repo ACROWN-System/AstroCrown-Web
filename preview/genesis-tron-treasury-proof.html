@@ -163,8 +163,8 @@
 
   function attachWalletListeners(walletProvider) {
     if (typeof walletProvider.on !== "function") return;
-    walletProvider.on("chainChanged", chainId => {
-      activeChainId = typeof chainId === "string" ? chainId.toLowerCase() : "";
+    walletProvider.on("chainChanged", ({ chainId } = {}) => {
+      activeChainId = typeof chainId === "string" ? chainId : "";
       if (activeChainId !== MAINNET_CHAIN_ID) {
         invalidateChallenge("TronLink network changed away from TRON Mainnet.");
       }
