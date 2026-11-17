@@ -202,6 +202,22 @@
     @media(max-width:560px){.wallet-actions{display:grid;grid-template-columns:1fr}.wallet-actions button,.profile-actions button{width:100%}.profile-actions{align-items:stretch}.member-display-name{width:100%}}
 
   </style>
+
+  <style>
+    .genesis-member-badge-image { display:block; width:min(180px,58%); height:auto; margin:10px auto 4px; object-fit:contain; filter:drop-shadow(0 4px 14px rgba(196,145,44,.22)); }
+    .genesis-member-badge-image[hidden] { display:none !important; }
+    .badge-qualification-note { color:var(--muted,#aeb9c8); font-size:.82rem; text-align:center; max-width:34rem; margin:8px auto 18px; }
+    .name-availability { font-size:.86rem; margin:.35rem 0 .8rem; min-height:1.3em; }
+    .name-availability[data-state="available"] { color:#279b65; }
+    .name-availability[data-state="unavailable"] { color:#d34c4c; }
+    .name-availability[data-state="checking"] { color:var(--muted,#aeb9c8); }
+    .genesis-directory-list { display:grid; gap:10px; }
+    .genesis-directory-row { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:14px; padding:12px 14px; border:1px solid rgba(190,156,88,.22); border-radius:12px; }
+    .genesis-directory-row span { color:var(--muted,#aeb9c8); font-size:.9rem; }
+    .genesis-directory-row a { color:#d9b35a; text-decoration:underline; font-weight:600; }
+    @media(max-width:700px) { .genesis-directory-row { grid-template-columns:1fr; gap:6px; } }
+  </style>
+
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -227,7 +243,7 @@
       <div class="hero-main">
         <div class="eyebrow">AstroCrown · Genesis Programme</div>
         <h1>Help build AstroCrown.<br><span>Priority access, not free tokens.</span></h1>
-        <p class="hero-copy">The Genesis Programme is designed to recognise early participants through a priority opportunity to make a separate ACROWN purchase at the applicable ACS floor price. A contribution to the Genesis Programme is not itself a token purchase, does not issue ACROWN, and does not automatically enter the ACS reserve.</p>
+        <p class="hero-copy">The Genesis Programme is designed to recognise early participants through a priority opportunity to make a separate ACROWN purchase at the applicable ACS floor price. A qualifying payment to the Genesis Programme is not itself a token purchase, does not issue ACROWN, and does not automatically enter the ACS reserve.</p>
         <div class="stat-grid">
           <article class="stat-card">
             <div class="side-label">Planned aggregate target</div>
@@ -242,17 +258,17 @@
           <article class="stat-card">
             <div class="side-label">Purchase eligibility window</div>
             <div class="stat-value">180 days</div>
-            <p class="stat-note">Starts only when real supporter payments are deliberately activated, not when this preview is deployed.</p>
+            <p class="stat-note">Starts only when real wallet identity payments are deliberately activated, not when this preview is deployed.</p>
           </article>
         </div>
       </div>
       <aside class="hero-side" aria-label="How the programme is intended to work">
         <div class="side-label">The participation model</div>
         <div class="side-stat">Contribute → qualify → purchase</div>
-        <p class="side-copy">Three distinct stages. The contribution and any later ACROWN purchase must be separately recorded.</p>
+        <p class="side-copy">Three distinct stages. The qualifying payment and any later ACROWN purchase must be separately recorded.</p>
         <div class="side-divider"></div>
         <div class="side-label">What the multiplier means</div>
-        <p class="side-copy">A verified contribution establishes the member's personal multiplier-based ACROWN purchase allowance. Example only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance, subject to any remaining programme-wide cap.</p>
+        <p class="side-copy">A verified qualifying payment establishes the member's personal multiplier-based ACROWN purchase allowance. Example only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance, subject to any remaining programme-wide cap.</p>
         <div class="side-divider"></div>
         <div class="side-label">ACS protection</div>
         <p class="side-copy">Any ACROWN purchase or distribution must follow the ACS accounting rules. The official floor must not be reduced by programme operations.</p>
@@ -262,8 +278,8 @@
     <section class="status-banner" role="status" aria-live="polite">
       <div class="status-icon" aria-hidden="true">!</div>
       <div>
-        <strong>Wallet connection is display-only in this preview. USDT contributions and ACROWN purchases are not enabled.</strong>
-        <p>The Genesis Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. The official staging Worker can register wallet ownership with off-chain message signatures after the homepage safety notice is acknowledged. The standalone repository preview is display-only. Neither environment accepts contributions or enables transfers. Do not send funds or sign a transaction here.</p>
+        <strong>Wallet connection is display-only in this preview. USDT qualifying payments and ACROWN purchases are not enabled.</strong>
+        <p>The Genesis Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. The official staging Worker can register wallet ownership with off-chain message signatures after the homepage safety notice is acknowledged. The standalone repository preview is display-only. Neither environment accepts qualifying payments or enables transfers. Do not send funds or sign a transaction here.</p>
       </div>
     </section>
 
@@ -271,10 +287,21 @@
       <div class="section-heading">
         <div>
           <div class="eyebrow">Wallet membership</div>
-          <h2 id="member-dashboard-title">Your supporter dashboard</h2>
+          <h2 id="member-dashboard-title">Your Genesis wallet identity</h2>
         </div>
-        <p>AstroCrown generates a member name for you, and you can customize it. The staging service now supports wallet-verified member registration and separately verified wallet linking. Payment and ACROWN purchase functions remain disabled.</p>
+        <p>Your primary wallet is your Genesis identity and the sole recovery anchor. A random unique public display name is assigned automatically and can be customized after wallet verification. Additional Ethereum, TRON or Solana addresses can be linked only after separate ownership proofs. Payment and floor-price purchase functions remain disabled.</p>
       </div>
+      <section class="panel genesis-directory-panel" aria-labelledby="genesis-directory-title">
+        <div class="dashboard-panel-head">
+          <div>
+            <span class="scenario-tag">Public on-chain verification</span>
+            <h3 id="genesis-directory-title" style="margin-top:12px">Genesis qualifying payments</h3>
+          </div>
+          <span class="dashboard-state">Public ledger</span>
+        </div>
+        <p class="panel-intro">The public directory displays the unique wallet name, verified payment amount and network. Each explorer link opens public blockchain data and exposes the complete source wallet address and its associated on-chain history. This transparency is inherent to public blockchains, even when the address is not printed in the directory.</p>
+        <div class="genesis-directory-list" id="genesis-public-directory-list" aria-live="polite">No qualifying payments have been published. Genesis payment acceptance is currently disabled.</div>
+      </section>
       <div class="dashboard-grid">
         <section class="panel member-profile-panel" aria-labelledby="member-profile-title">
           <div class="dashboard-panel-head">
@@ -285,16 +312,20 @@
             <span class="dashboard-state" id="member-profile-state">Preview only</span>
           </div>
           <div class="member-avatar" aria-hidden="true">✦</div>
+          <img id="genesis-member-badge-image" class="genesis-member-badge-image" src="../assets/genesis-member-dna.svg" alt="" hidden>
+          <p class="badge-qualification-note">The gold DNA Genesis Member badge is awarded only after the wallet completes the qualifying requirements and its payment is independently verified.</p>
           <div class="field">
-            <label for="member-pseudonym">Member pseudonym</label>
+            <label for="member-pseudonym">Public display name</label>
             <input id="member-pseudonym" type="text" maxlength="28" autocomplete="off" spellcheck="false" aria-describedby="pseudonym-help">
-            <small id="pseudonym-help">A random name is generated automatically. Customize it before registration. On the official staging service, it is saved only after the connected wallet proves ownership.</small>
+            <small id="pseudonym-help">A random unique name is assigned automatically after primary-wallet verification. You may customize it later; names must be globally unique. Losing the primary wallet and its recovery capability means losing access to this Genesis identity and its wallet-bound entitlements.</small>
           </div>
           <div class="profile-actions">
             <button class="secondary-button" id="member-name-randomize" type="button">Generate another name</button>
+            <button class="primary-button" id="member-name-save" type="button" disabled>Save unique display name</button>
             <span class="member-display-name" id="member-display-name" aria-live="polite"></span>
           </div>
-          <p class="wallet-instructions"><strong>Wallet ownership:</strong> connect a wallet you control. On the official staging Worker, you can register it by signing a domain-bound text message. The wallet should display the exact message; it proves address control only and does not create a transaction, transfer tokens, grant an allowance or pay a network fee. Never sign a prompt that asks you to approve, transfer or send funds. The standalone repository preview remains display-only.</p>
+          <p class="name-availability" id="member-name-availability" data-state="checking" aria-live="polite">Connect and verify the primary wallet to reserve a unique name.</p>
+          <p class="wallet-instructions"><strong>Wallet ownership:</strong> connect a wallet you control. On the official staging Worker, you can prove control by signing a domain-bound text message. The wallet must display the exact domain-bound message. It proves address control only and does not create a transaction, approve a token, transfer funds, grant an entitlement or pay a network fee. Never sign a prompt asking you to approve, transfer or send funds. The primary wallet remains the only identity and recovery anchor; linked addresses cannot independently recover it.</p>
           <div class="wallet-ecosystem-grid">
             <section class="wallet-ecosystem-card" aria-labelledby="evm-wallet-heading">
               <div class="ecosystem-heading">
@@ -302,20 +333,20 @@
                 <span class="ecosystem-tag">EIP-6963 / EIP-1193</span>
               </div>
               <div class="field">
-                <label for="supporter-evm-wallet-choice">Choose your EVM wallet</label>
-                <select id="supporter-evm-wallet-choice" disabled>
+                <label for="wallet identity-evm-wallet-choice">Choose your EVM wallet</label>
+                <select id="wallet identity-evm-wallet-choice" disabled>
                   <option value="">Looking for EVM wallets…</option>
                 </select>
               </div>
               <div class="wallet-actions">
-                <button class="primary-button" id="supporter-evm-wallet-connect" type="button" disabled>Connect EVM wallet</button>
-                <button class="secondary-button" id="supporter-evm-wallet-clear" type="button" disabled>Clear</button>
+                <button class="primary-button" id="wallet identity-evm-wallet-connect" type="button" disabled>Connect EVM wallet</button>
+                <button class="secondary-button" id="wallet identity-evm-wallet-clear" type="button" disabled>Clear</button>
               </div>
-              <div class="wallet-feedback" id="supporter-evm-wallet-feedback" role="status" aria-live="polite">No EVM wallet connected.</div>
+              <div class="wallet-feedback" id="wallet identity-evm-wallet-feedback" role="status" aria-live="polite">No EVM wallet connected.</div>
               <div class="wallet-address-card">
                 <span class="side-label">EVM public address</span>
-                <strong id="supporter-evm-wallet-address">Not connected</strong>
-                <span id="supporter-evm-wallet-chain">No EVM network confirmed</span>
+                <strong id="wallet identity-evm-wallet-address">Not connected</strong>
+                <span id="wallet identity-evm-wallet-chain">No EVM network confirmed</span>
               </div>
             </section>
             <section class="wallet-ecosystem-card" aria-labelledby="tron-wallet-heading">
@@ -324,20 +355,20 @@
                 <span class="ecosystem-tag">TRON / TIP-6963</span>
               </div>
               <div class="field">
-                <label for="supporter-tron-wallet-choice">Choose your TRON wallet</label>
-                <select id="supporter-tron-wallet-choice" disabled>
+                <label for="wallet identity-tron-wallet-choice">Choose your TRON wallet</label>
+                <select id="wallet identity-tron-wallet-choice" disabled>
                   <option value="">Looking for TRON wallets…</option>
                 </select>
               </div>
               <div class="wallet-actions">
-                <button class="primary-button" id="supporter-tron-wallet-connect" type="button" disabled>Connect TRON wallet</button>
-                <button class="secondary-button" id="supporter-tron-wallet-clear" type="button" disabled>Clear</button>
+                <button class="primary-button" id="wallet identity-tron-wallet-connect" type="button" disabled>Connect TRON wallet</button>
+                <button class="secondary-button" id="wallet identity-tron-wallet-clear" type="button" disabled>Clear</button>
               </div>
-              <div class="wallet-feedback" id="supporter-tron-wallet-feedback" role="status" aria-live="polite">No TRON browser wallet detected.</div>
+              <div class="wallet-feedback" id="wallet identity-tron-wallet-feedback" role="status" aria-live="polite">No TRON browser wallet detected.</div>
               <div class="wallet-address-card">
                 <span class="side-label">TRON public address</span>
-                <strong id="supporter-tron-wallet-address">Not connected</strong>
-                <span id="supporter-tron-wallet-chain">Network not confirmed</span>
+                <strong id="wallet identity-tron-wallet-address">Not connected</strong>
+                <span id="wallet identity-tron-wallet-chain">Network not confirmed</span>
               </div>
             </section>
             <section class="wallet-ecosystem-card" aria-labelledby="solana-wallet-heading">
@@ -346,52 +377,52 @@
                 <span class="ecosystem-tag">Solana Wallet Standard</span>
               </div>
               <div class="field">
-                <label for="supporter-wallet-choice">Choose your Solana wallet</label>
-                <select id="supporter-wallet-choice" disabled>
+                <label for="wallet identity-wallet-choice">Choose your Solana wallet</label>
+                <select id="wallet identity-wallet-choice" disabled>
                   <option value="">Looking for Solana wallets…</option>
                 </select>
               </div>
               <div class="wallet-actions">
-                <button class="primary-button" id="supporter-wallet-connect" type="button" disabled>Connect Solana wallet</button>
-                <button class="secondary-button" id="supporter-wallet-clear" type="button" disabled>Clear</button>
+                <button class="primary-button" id="wallet identity-wallet-connect" type="button" disabled>Connect Solana wallet</button>
+                <button class="secondary-button" id="wallet identity-wallet-clear" type="button" disabled>Clear</button>
               </div>
-              <div class="wallet-feedback" id="supporter-wallet-feedback" role="status" aria-live="polite">No Solana wallet connected.</div>
+              <div class="wallet-feedback" id="wallet identity-wallet-feedback" role="status" aria-live="polite">No Solana wallet connected.</div>
               <div class="wallet-address-card">
                 <span class="side-label">Solana public address</span>
-                <strong id="supporter-wallet-address">Not connected</strong>
-                <span id="supporter-wallet-chain">No Solana cluster confirmed</span>
+                <strong id="wallet identity-wallet-address">Not connected</strong>
+                <span id="wallet identity-wallet-chain">No Solana cluster confirmed</span>
               </div>
             </section>
           </div>
-          <section class="wallet-ecosystem-card" aria-labelledby="member-registration-heading">
+          <section class="wallet-ecosystem-card" aria-labelledby="member-wallet verification-heading">
             <div class="ecosystem-heading">
-              <strong id="member-registration-heading">Member registration and wallet ownership</strong>
-              <span class="ecosystem-tag" id="supporter-member-mode">Staging service required</span>
+              <strong id="member-wallet verification-heading">Wallet identity and linked network addresses</strong>
+              <span class="ecosystem-tag" id="wallet identity-member-mode">Staging service required</span>
             </div>
-            <p class="panel-intro">Register with one payment wallet first. After signing in, link other payment wallets and add your Solana ACROWN delivery wallet. Each address is verified separately.</p>
+            <p class="panel-intro">Connect the primary wallet once to establish or access its wallet-native Genesis identity. There is no separate user wallet verification, email, username or password. Then link each additional network address by signing a separate off-chain ownership proof. Only the primary wallet can authenticate this Genesis identity.</p>
             <div class="field">
-              <label for="supporter-wallet-purpose">Purpose for the connected wallet when linking</label>
-              <select id="supporter-wallet-purpose">
+              <label for="wallet identity-wallet-purpose">Purpose of the additional address</label>
+              <select id="wallet identity-wallet-purpose">
                 <option value="PAYMENT">Payment wallet</option>
-                <option value="ACROWN_DELIVERY">Solana ACROWN delivery wallet</option>
+                <option value="DELIVERY">Solana ACROWN delivery wallet</option>
                 <option value="PAYMENT_AND_DELIVERY">Solana payment and ACROWN delivery wallet</option>
               </select>
               <small>Delivery-only and combined payment/delivery roles are accepted only for Solana wallets.</small>
             </div>
             <div class="wallet-actions">
-              <button class="primary-button" id="supporter-register-wallet" type="button" disabled>Verify wallet and register</button>
-              <button class="secondary-button" id="supporter-login-wallet" type="button" disabled>Sign in with this wallet</button>
-              <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link wallet</button>
-              <button class="secondary-button" id="supporter-logout" type="button" disabled>Sign out</button>
+              <button class="primary-button" id="wallet identity-register-wallet" type="button" disabled>Continue with this primary wallet</button>
+              <button class="secondary-button" id="wallet identity-login-wallet" type="button" hidden disabled>Legacy sign-in unavailable</button>
+              <button class="secondary-button" id="wallet identity-link-wallet" type="button" disabled>Verify and link wallet</button>
+              <button class="secondary-button" id="wallet identity-logout" type="button" disabled>Disconnect wallet session</button>
             </div>
-            <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Connect an Ethereum, Tron or Solana mainnet wallet to begin. Registration becomes available after the homepage staging notice is acknowledged.</div>
+            <div class="wallet-feedback" id="wallet identity-member-feedback" role="status" aria-live="polite">Connect your primary Ethereum, TRON or Solana mainnet wallet. A signed off-chain proof establishes its wallet identity; no separate user account is created.</div>
             <div class="wallet-address-card">
-              <span class="side-label">Verified supporter identity</span>
-              <strong id="supporter-member-summary">Not signed in</strong>
-              <span id="supporter-member-wallet-list">No wallets linked.</span>
+              <span class="side-label">Primary wallet identity</span>
+              <strong id="wallet identity-member-summary">Not signed in</strong>
+              <span id="wallet identity-member-wallet-list">No additional network addresses linked.</span>
             </div>
           </section>
-          <p class="fine-print">A wallet may expose separate Ethereum/EVM, Tron and Solana addresses; prove control of each independently. The initial payment allowlist is USD₮ ERC-20 on Ethereum, USD₮ TRC-20 on Tron and USD₮ SPL on Solana. ACROWN delivery remains Solana-based. Registration records only public addresses, a member pseudonym, verification timestamps and session digests. AstroCrown never receives private keys or recovery phrases. Contributions, payment intents and token purchases remain disabled.</p>
+          <p class="fine-print">A multi-chain wallet exposes different public addresses on Ethereum, TRON and Solana; each address must be independently verified and linked to the primary wallet identity. The initial payment asset is USDT on Ethereum ERC-20, TRON TRC-20 and Solana SPL. ACROWN delivery remains Solana-based. Genesis stores only public addresses, unique display names, proof metadata and session digests. AstroCrown never receives private keys or recovery phrases. Qualifying payments and floor-price purchases remain disabled.</p>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
@@ -404,22 +435,22 @@
           </div>
           <div class="entitlement-summary">
             <span class="side-label">Your personal purchase allowance</span>
-            <strong>Verified contribution × approved multiplier</strong>
-            <p>Example only: 1,000 USD₮ at 25 ACROWN per USD₮ = 25,000 ACROWN available to purchase at the applicable ACS floor, subject to any remaining programme-wide cap.</p>
+            <strong>Verified qualifying payment × approved programme terms</strong>
+            <p>Illustrative only: the final acquisition terms, qualifying threshold and entitlement formula remain subject to approval. A verified qualifying payment may establish a wallet-bound right to acquire ACROWN at the qualified ACS pure floor. This is not a guarantee of profit, resale value or market-price premium.</p>
           </div>
           <div class="result-list">
-            <div class="result-row"><span class="result-label">First contribution threshold</span><strong class="result-value">Pending final terms</strong></div>
-            <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
+            <div class="result-row"><span class="result-label">First qualifying payment threshold</span><strong class="result-value">Pending final terms</strong></div>
+            <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="wallet identity-multiplier-state">Not activated</strong></div>
             <div class="result-row"><span class="result-label">Total ACROWN programme allowance</span><strong class="result-value">Pending approval</strong></div>
-            <div class="result-row"><span class="result-label">Remaining ACROWN allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
+            <div class="result-row"><span class="result-label">Remaining ACROWN allowance</span><strong class="result-value" id="wallet identity-remaining-allowance">Not yet available</strong></div>
             <div class="result-row"><span class="result-label">Purchases completed by this wallet</span><strong class="result-value">No purchase records</strong></div>
           </div>
-          <button class="disabled-button dashboard-purchase-button" id="supporter-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
-          <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No contribution or purchase balance is created by registration; payment and entitlement accounting remain closed.</p>
+          <button class="disabled-button dashboard-purchase-button" id="wallet identity-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
+          <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No qualifying payment or purchase balance is created by wallet verification; payment and entitlement accounting remain closed.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. Verified wallet control will be required for contributions and purchases when those services are activated. AstroCrown will never ask for your seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. Verified wallet control will be required for qualifying payments and purchases when those services are activated. AstroCrown will never ask for your seed phrase or private key.
       </div>
     </section>
 
@@ -445,13 +476,13 @@
         <article class="stat-card">
           <div class="side-label">How the target could be reached</div>
           <div class="stat-value">1 or 2</div>
-          <p class="stat-note">Illustratively, one USDT 150 contribution or two USDT 75 contributions would reach the aggregate target. These are examples, not individual contribution minimums.</p>
+          <p class="stat-note">Illustratively, one USDT 150 qualifying payment or two USDT 75 qualifying payments would reach the aggregate target. These are examples, not individual qualifying payment minimums.</p>
         </article>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
           <strong>What the reserve is meant to cover</strong>
-          <p>Initial VPS/hosting prepayment, domain registration, essential independent backup, required network or conversion fees, minimum gas, migration and restore testing, and a modest contingency.</p>
+          <p>Initial VPS/hosting prepayment, domain wallet verification, essential independent backup, required network or conversion fees, minimum gas, migration and restore testing, and a modest contingency.</p>
         </article>
         <article class="transparency-card">
           <strong>When the reserve can be spent</strong>
@@ -459,13 +490,13 @@
         </article>
         <article class="transparency-card">
           <strong>What happens if the quote is higher</strong>
-          <p>The transition does not begin. The budget and threshold must be revised transparently before contributions open; the programme must not quietly rely on an unfunded balance or a paid fallback.</p>
+          <p>The transition does not begin. The budget and threshold must be revised transparently before qualifying payments open; the programme must not quietly rely on an unfunded balance or a paid fallback.</p>
         </article>
       </div>
       <div class="policy-highlight">
-        <strong>Funding gate, not a promise of zero risk.</strong> Reaching USDT 150 would be a proposed minimum aggregate migration reserve, not proof that every provider or future operating cost is funded. It materially reduces the risk of starting migration without enough money for known initial costs, but it cannot eliminate vendor, security, availability, legal, renewal or future operating risks. Funds remain in the separate supporter treasury until the approved activation conditions are met.
+        <strong>Funding gate, not a promise of zero risk.</strong> Reaching USDT 150 would be a proposed minimum aggregate migration reserve, not proof that every provider or future operating cost is funded. It materially reduces the risk of starting migration without enough money for known initial costs, but it cannot eliminate vendor, security, availability, legal, renewal or future operating risks. Funds remain in the separate wallet identity treasury until the approved activation conditions are met.
       </div>
-      <p class="fine-print">The USDT 150 figure is provisional. Before contributions are enabled, the exact provider, accepted USDT network, domain price, backup plan, required fees and first three months of hosting must be verified from checkout/order quotes. If those costs plus contingency exceed USDT 150, the threshold must be increased before launch. Final terms must also explain how the segregated reserve is handled if the threshold is never reached, subject to mandatory legal rights.</p>
+      <p class="fine-print">The USDT 150 figure is provisional. Before qualifying payments are enabled, the exact provider, accepted USDT network, domain price, backup plan, required fees and first three months of hosting must be verified from checkout/order quotes. If those costs plus contingency exceed USDT 150, the threshold must be increased before launch. Final terms must also explain how the segregated reserve is handled if the threshold is never reached, subject to mandatory legal rights.</p>
     </section>
 
     <section class="section" id="calculator" aria-labelledby="calculator-title">
@@ -474,7 +505,7 @@
           <div class="eyebrow">Multiplier-based purchase entitlement</div>
           <h2 id="calculator-title">Personal allowance within a programme-wide limit</h2>
         </div>
-        <p>Each verified Genesis Programme contribution creates a personal ACROWN purchase allowance using the approved multiplier. A separate programme-wide ceiling, if approved, limits the total amount all members may purchase.</p>
+        <p>Each verified Genesis Programme qualifying payment creates a personal ACROWN purchase allowance using the approved multiplier. A separate programme-wide ceiling, if approved, limits the total amount all members may purchase.</p>
       </div>
       <div class="calculator-grid">
         <section class="panel" aria-label="Programme-wide purchase allowance">
@@ -491,7 +522,7 @@
         <section class="panel" aria-label="Wallet purchase entitlement">
           <div class="side-label">What one eligible wallet may purchase</div>
           <h3 style="margin-top:7px">Unused personal multiplier allowance</h3>
-          <p class="panel-intro">A member may purchase up to the unused personal allowance created by verified contributions, provided the programme-wide allowance also has enough capacity.</p>
+          <p class="panel-intro">A member may purchase up to the unused personal allowance created by verified qualifying payments, provided the programme-wide allowance also has enough capacity.</p>
           <div class="result-highlight">
             <div class="result-label">Maximum available to this wallet</div>
             <div class="result-value">Unused personal entitlement</div>
@@ -511,31 +542,31 @@
           <div class="eyebrow">Participation journey</div>
           <h2 id="steps-title">How participation is intended to work</h2>
         </div>
-        <p>The page is designed around a traceable contribution-to-entitlement process. Each step must be operational before real contributions open.</p>
+        <p>The page is designed around a traceable qualifying payment-to-entitlement process. Each step must be operational before real qualifying payments open.</p>
       </div>
       <div class="step-grid">
         <article class="step-card">
           <div class="step-number">01</div>
           <h3>Review the final terms</h3>
-          <p>Read the approved contribution rules, eligibility, period, non-cancellable / no-voluntary-refund policy, purchase entitlement and applicable jurisdictional conditions.</p>
+          <p>Read the approved qualifying payment rules, eligibility, period, non-cancellable / no-voluntary-refund policy, purchase entitlement and applicable jurisdictional conditions.</p>
           <span class="pending">Terms pending approval</span>
         </article>
         <article class="step-card">
           <div class="step-number">02</div>
           <h3>Register your wallet and member name</h3>
           <p>Connect the wallet that you control and sign the off-chain ownership challenge on the official staging service. AstroCrown generates a random member pseudonym by default, which you may customize. No legal name or identity document is collected by this programme flow.</p>
-          <span class="pending">Staging registration available; production pending</span>
+          <span class="pending">Staging wallet verification available; production pending</span>
         </article>
         <article class="step-card">
           <div class="step-number">03</div>
-          <h3>Authorize the exact USDT contribution</h3>
-          <p>The wallet dashboard will display the exact authorized amount, network, token and destination. Review them carefully and authorize the transaction from your registered wallet.</p>
+          <h3>Authorize the exact USDT qualifying payment</h3>
+          <p>The wallet dashboard will display the exact authorized amount, network, token and destination. Review them carefully and authorize the transaction from your wallet-verified wallet.</p>
           <span class="pending">Payment route not configured</span>
         </article>
         <article class="step-card">
           <div class="step-number">04</div>
           <h3>Verify and record</h3>
-          <p>On-chain confirmation and reconciliation will create a contribution record and, if the approved rules permit, establish the unused purchase entitlement.</p>
+          <p>On-chain confirmation and reconciliation will create a qualifying payment record and, if the approved rules permit, establish the unused purchase entitlement.</p>
           <span class="pending">Verification service not implemented</span>
         </article>
       </div>
@@ -552,24 +583,24 @@
           <div class="eyebrow">Wallet and member profile</div>
           <h2 id="wallet-records-title">Your wallet is your membership and entitlement</h2>
         </div>
-        <p>The supporter controls each registered wallet. The member pseudonym groups independently verified public addresses into one supporter profile; it does not prove legal identity or create a financial entitlement by itself.</p>
+        <p>The wallet identity controls each wallet-verified wallet. The member pseudonym groups independently verified public addresses into one wallet identity profile; it does not prove legal identity or create a financial entitlement by itself.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
           <strong>1. Random member name by default</strong>
-          <p>Registration generates a random pseudonym automatically. The supporter may customize it. No legal name, government ID, email identity or other legal-identity registration is required by this programme design.</p>
+          <p>Registration generates a random pseudonym automatically. The wallet identity may customize it. No legal name, government ID, email identity or other legal-identity wallet verification is required by this programme design.</p>
         </article>
         <article class="transparency-card">
           <strong>2. The wallet controls the entitlement</strong>
-          <p>The multiplier entitlement is attached to the registered wallet, not to the display name. The supporter uses that wallet to authorize the contribution and later ACROWN purchases. AstroCrown never asks for or stores the wallet's seed phrase or private key.</p>
+          <p>The multiplier entitlement is attached to the wallet-verified wallet, not to the display name. The wallet identity uses that wallet to authorize the qualifying payment and later ACROWN purchases. AstroCrown never asks for or stores the wallet's seed phrase or private key.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Public GitHub records and backups</strong>
-          <p>The public audit record may show the wallet address, member pseudonym, verified contribution transaction, multiplier eligibility, completed purchases and remaining programme allowance. Dated, append-only snapshots should include checksums and reconciliation totals.</p>
+          <p>The public audit record may show the wallet address, member pseudonym, verified qualifying payment transaction, multiplier eligibility, completed purchases and remaining programme allowance. Dated, append-only snapshots should include checksums and reconciliation totals.</p>
         </article>
         <article class="transparency-card">
           <strong>4. No identity-document collection</strong>
-          <p>The programme identifies the entitlement through wallet control and a pseudonym. It does not claim to verify the legal identity of the wallet controller. The public wallet-to-pseudonym association is visible by design and must be explained before registration.</p>
+          <p>The programme identifies the entitlement through wallet control and a pseudonym. It does not claim to verify the legal identity of the wallet controller. The public wallet-to-pseudonym association is visible by design and must be explained before wallet verification.</p>
         </article>
       </div>
       <p class="fine-print">The wallet owner remains responsible for wallet security and transaction approvals. Never share a seed phrase, private key or recovery phrase with AstroCrown or anyone claiming to represent it. The repository is public, so only the expressly public wallet, pseudonym and audit fields described by the programme may be published; credentials and signing secrets must never be included.</p>
@@ -584,12 +615,12 @@
       </div>
       <div class="rule-grid">
         <article class="rule-card">
-          <h3>Contribution is not a token purchase</h3>
+          <h3>Qualifying payment is not a token purchase</h3>
           <p>USDT contributed to the programme does not itself purchase ACROWN, enter circulation or automatically increase the ACS reserve. Any later token purchase is a separate transaction.</p>
         </article>
         <article class="rule-card">
           <h3>The multiplier is purchase eligibility, not free tokens</h3>
-          <p>A verified qualifying contribution creates a personal ACROWN purchase allowance using the approved multiplier/rate. This is not an airdrop or bonus token issuance. The member may purchase up to their unused personal allowance at the applicable ACS floor, subject to any approved programme-wide cap.</p>
+          <p>A verified qualifying qualifying payment creates a personal ACROWN purchase allowance using the approved multiplier/rate. This is not an airdrop or bonus token issuance. The member may purchase up to their unused personal allowance at the applicable ACS floor, subject to any approved programme-wide cap.</p>
         </article>
         <article class="rule-card">
           <h3>Used entitlement is not replenished by resale</h3>
@@ -605,7 +636,7 @@
         </article>
         <article class="rule-card">
           <h3>The first qualification threshold and global cap must be clear</h3>
-          <p>The minimum first contribution, approved multiplier/rate, any programme-wide ACROWN cap, purchase window and applicable cancellation/refund terms must be published before contributions open. Each member's personal allowance is calculated from verified contributions and the approved multiplier; an approved global cap is an additional aggregate limit.</p>
+          <p>The minimum first qualifying payment, approved multiplier/rate, any programme-wide ACROWN cap, purchase window and applicable cancellation/refund terms must be published before qualifying payments open. Each member's personal allowance is calculated from verified qualifying payments and the approved multiplier; an approved global cap is an additional aggregate limit.</p>
         </article>
       </div>
     </section>
@@ -616,17 +647,17 @@
           <div class="eyebrow">Public accountability</div>
           <h2 id="transparency-title">Every use of Genesis Programme funds, publicly accounted for</h2>
         </div>
-        <p>Genesis participants and the public should be able to follow contributions into the programme treasury and trace every subsequent use of those funds.</p>
+        <p>Genesis participants and the public should be able to follow qualifying payments into the programme treasury and trace every subsequent use of those funds.</p>
       </div>
-      <p class="transparency-intro">The programme should use a dedicated, separately accounted-for supporter treasury. Its funds must remain distinguishable from the ACS reserve and the separately designated competition-prize allocation. The public record is intended to cover every confirmed contribution, outgoing payment, treasury-to-treasury transfer, network fee and off-chain expenditure attributable to the programme. Public accounting entries will be paired with independently checkable evidence wherever the underlying activity permits it.</p>
+      <p class="transparency-intro">The programme should use a dedicated, separately accounted-for wallet identity treasury. Its funds must remain distinguishable from the ACS reserve and the separately designated competition-prize allocation. The public record is intended to cover every confirmed qualifying payment, outgoing payment, treasury-to-treasury transfer, network fee and off-chain expenditure attributable to the programme. Public accounting entries will be paired with independently checkable evidence wherever the underlying activity permits it.</p>
       <div class="transparency-grid">
         <article class="transparency-card">
-          <strong>1. Segregated supporter treasury</strong>
+          <strong>1. Segregated wallet identity treasury</strong>
           <p>Genesis Programme funds will be separately accounted for and kept distinguishable from the ACS reserve and competition-prize allocation. Any transfer to another wallet or account must remain traceable.</p>
         </article>
         <article class="transparency-card">
-          <strong>2. Public contribution record</strong>
-          <p>Each confirmed USDT contribution will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The registered supporter wallet, observed transaction source and account association will be stored as separate fields with an explicit verification status.</p>
+          <strong>2. Public qualifying payment record</strong>
+          <p>Each confirmed USDT qualifying payment will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The wallet-verified wallet identity wallet, observed transaction source and account association will be stored as separate fields with an explicit verification status.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Every use of funds</strong>
@@ -644,10 +675,10 @@
           <span>Not yet live</span>
         </div>
         <div class="ledger-empty">
-          <strong>No Genesis Programme contributions accepted in this development preview.</strong>
+          <strong>No Genesis Programme qualifying payments accepted in this development preview.</strong>
           <p>No programme inflows or expenditures are being represented here as actual transactions. Once the programme is activated, this area is intended to show the live reconciled ledger and historical records rather than illustrative or fabricated entries.</p>
           <div class="ledger-fields">
-            <div class="ledger-field"><b>Contribution inflows</b><span>Timestamp · amount · USDT token/network · sender/treasury references · transaction hash</span></div>
+            <div class="ledger-field"><b>Qualifying payment inflows</b><span>Timestamp · amount · USDT token/network · sender/treasury references · transaction hash</span></div>
             <div class="ledger-field"><b>Expenditure outflows</b><span>Timestamp · amount · destination · purpose · transaction hash or off-chain evidence</span></div>
             <div class="ledger-field"><b>Treasury movements</b><span>Source and destination wallets · amount · reason · linked transaction records</span></div>
             <div class="ledger-field"><b>Reconciliation</b><span>Opening and closing balances · receipts · expenditures · fees · unexplained difference, if any</span></div>
@@ -669,20 +700,20 @@
       </div>
       <div class="faq">
         <details>
-          <summary>Can I cancel a confirmed contribution or request a refund?</summary>
-          <p>The programme is designed to be non-cancellable and to offer no voluntary refunds once a contribution has been confirmed and recorded. Review the final terms carefully before sending any funds. This policy does not remove a remedy or right that applicable law makes mandatory.</p>
+          <summary>Can I cancel a confirmed qualifying payment or request a refund?</summary>
+          <p>The programme is designed to be non-cancellable and to offer no voluntary refunds once a qualifying payment has been confirmed and recorded. Review the final terms carefully before sending any funds. This policy does not remove a remedy or right that applicable law makes mandatory.</p>
         </details>
         <details>
           <summary>How can I verify how AstroCrown accounts for Genesis Programme funds?</summary>
-          <p>The public ledger is intended to disclose every contribution and every use of programme funds. On-chain transactions will link to the correct network explorer; off-chain payments will be supported by accounting evidence such as receipts, invoices or reconciled records. An explorer link proves the on-chain movement, not by itself the purpose of the expenditure.</p>
+          <p>The public ledger is intended to disclose every qualifying payment and every use of programme funds. On-chain transactions will link to the correct network explorer; off-chain payments will be supported by accounting evidence such as receipts, invoices or reconciled records. An explorer link proves the on-chain movement, not by itself the purpose of the expenditure.</p>
         </details>
         <details>
-          <summary>Does my USDT contribution buy ACROWN?</summary>
-          <p>No. The Genesis Programme separates a contribution from a later ACROWN purchase. The contribution does not itself issue tokens or automatically increase the ACS reserve. Any later purchase would be a separate transaction under final approved terms.</p>
+          <summary>Does my USDT qualifying payment buy ACROWN?</summary>
+          <p>No. The Genesis Programme separates a qualifying payment from a later ACROWN purchase. The qualifying payment does not itself issue tokens or automatically increase the ACS reserve. Any later purchase would be a separate transaction under final approved terms.</p>
         </details>
         <details>
           <summary>What does the multiplier allow me to do?</summary>
-          <p>A verified qualifying contribution establishes a personal ACROWN purchase allowance using the approved multiplier/rate. Illustration only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance. This is permission to make a later purchase at the applicable ACS floor, not free tokens or automatic issuance. Any programme-wide cap also applies. The final rate, threshold, floor-price rules and cap must be published before launch.</p>
+          <p>A verified qualifying qualifying payment establishes a personal ACROWN purchase allowance using the approved multiplier/rate. Illustration only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance. This is permission to make a later purchase at the applicable ACS floor, not free tokens or automatic issuance. Any programme-wide cap also applies. The final rate, threshold, floor-price rules and cap must be published before launch.</p>
         </details>
         <details>
           <summary>Can I send USDT now?</summary>
@@ -690,15 +721,15 @@
         </details>
         <details>
           <summary>What is the USDT 150 transition threshold?</summary>
-          <p>It is a provisional aggregate funding gate intended to cover the initial move from $0 qualification to paid hosting, including at least three months of hosting, the domain, essential backup and required migration/network costs. It is not a provider quote. The final amount must be checked against actual order costs before contributions open; if those costs exceed USDT 150, the target must be raised.</p>
+          <p>It is a provisional aggregate funding gate intended to cover the initial move from $0 qualification to paid hosting, including at least three months of hosting, the domain, essential backup and required migration/network costs. It is not a provider quote. The final amount must be checked against actual order costs before qualifying payments open; if those costs exceed USDT 150, the target must be raised.</p>
         </details>
         <details>
-          <summary>How does my member name and wallet registration work?</summary>
+          <summary>How does my member name and wallet wallet verification work?</summary>
           <p>A random member pseudonym is generated when you register and you may customize it. Your connected wallet address is the public identifier that controls the entitlement and authorizes purchases. No legal name or identity document is required by the programme design. The public GitHub audit snapshot may link your pseudonym, wallet address and programme transactions. Never share your seed phrase or private key.</p>
         </details>
         <details>
           <summary>Is the USDT 250,000 target the ACROWN purchase allowance?</summary>
-          <p>No. USDT 250,000 is the provisional aggregate contribution planning ceiling. A member's personal multiplier allowance is calculated separately from any programme-wide ACROWN cap. The programme-wide cap, if adopted, limits the aggregate purchase capacity of all Genesis Programme participants.</p>
+          <p>No. USDT 250,000 is the provisional aggregate qualifying payment planning ceiling. A member's personal multiplier allowance is calculated separately from any programme-wide ACROWN cap. The programme-wide cap, if adopted, limits the aggregate purchase capacity of all Genesis Programme participants.</p>
         </details>
         <details>
           <summary>What happens if I send more USDT than the authorized amount?</summary>
@@ -716,19 +747,19 @@
         <div class="eyebrow">Participation status</div>
         <h2 id="participate-title">The Genesis Programme is being prepared.</h2>
         <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. The 180-day purchase period begins at that operational activation.</p>
-        <p id="supporter-runtime-status" role="status" aria-live="polite">Checking the isolated Genesis Programme service. Contributions remain closed.</p>
+        <p id="wallet identity-runtime-status" role="status" aria-live="polite">Checking the isolated Genesis Programme service. Qualifying payments remain closed.</p>
       </div>
       <button class="disabled-button" type="button" disabled aria-disabled="true">USDT transfers not enabled</button>
     </section>
 
     <footer class="site-footer">
-      <span>© AstroCrown project · Genesis Programme development preview · Not open for contributions.</span>
+      <span>© AstroCrown project · Genesis Programme development preview · Not open for qualifying payments.</span>
       <nav aria-label="Footer navigation">
         <a href="../index.html">AstroCrown homepage</a>
         <a href="https://github.com/ACROWN-System/AstroCrown-Web" target="_blank" rel="noreferrer">Project repository ↗</a>
       </nav>
     </footer>
   </main>
-  <script src="./supporters.js" defer></script>
+  <script src="./wallet identitys.js" defer></script>
 </body>
 </html>
