@@ -79,7 +79,7 @@
   randomizeButton.addEventListener("click", function () {
     pseudonymInput.value = generatePseudonym();
     updatePseudonym();
-    solanaFeedback.textContent = "A new preview pseudonym has been generated. It is not saved to a member record.";
+    solanaFeedback.textContent = "A different display-name suggestion has been generated. It will be reserved only after the primary wallet verifies ownership and the name is confirmed available.";
     solanaFeedback.dataset.state = "neutral";
   });
 
@@ -174,7 +174,7 @@
     updateSupporterActionButtons();
     setFeedback(
       evmFeedback,
-      "EVM wallet connected for display only. The address is not registered with the programme and no entitlement is activated.",
+      "EVM wallet connected for display only. The address is not yet verified as a Genesis primary wallet and no entitlement is activated.",
       "connected"
     );
   }
@@ -303,7 +303,7 @@
       evmConnectButton.disabled = true;
       setFeedback(
         evmFeedback,
-        "EVM wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "EVM wallet connected. It is not yet verified as the primary Genesis wallet. Use the wallet-identity control below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -469,7 +469,7 @@
       solanaConnectButton.disabled = true;
       setFeedback(
         solanaFeedback,
-        "Solana wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "Solana wallet connected. It is not yet verified as the primary Genesis wallet. Use the wallet-identity control below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -625,7 +625,7 @@
         : "Wallet connected; active network not independently confirmed in this preview";
       tronConnectButton.textContent = "TRON wallet connected";
       renderTronChoices();
-      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.", "connected");
+      setFeedback(tronFeedback, "TRON wallet connected. It is not yet verified as the primary Genesis wallet. Use the wallet-identity control below to prove ownership with an off-chain message signature.", "connected");
       updateSupporterActionButtons();
     } catch (error) {
       tronConnectButton.textContent = "Connect TRON wallet";
@@ -933,7 +933,10 @@
         address: supporterMember.walletIdentity.primaryAddress
       };
       var active = activeConnectedWallet();
-      if (active.network !== primaryWallet.network || active.address.toLowerCase() !== primaryWallet.address.toLowerCase()) {
+      var addressesMatch = active.network === "ethereum"
+        ? active.address.toLowerCase() === primaryWallet.address.toLowerCase()
+        : active.address === primaryWallet.address;
+      if (active.network !== primaryWallet.network || !addressesMatch) {
         throw new Error("Reconnect the primary wallet before changing its public name.");
       }
       var signature = await signSupporterChallenge(active, challenge.message);
@@ -984,11 +987,18 @@
       data.items.forEach(function (item) {
         var row = document.createElement("article");
         row.className = "genesis-directory-row";
+        var identityGroup = document.createElement("div");
+        identityGroup.className = "genesis-directory-identity";
+        var badge = document.createElement("img");
+        badge.src = "../assets/genesis-member-dna.svg";
+        badge.alt = "Genesis Member";
+        badge.className = "genesis-directory-badge";
         var identity = document.createElement("strong");
-        identity.textContent = item.displayName + " · Genesis Member";
+        identity.textContent = item.displayName;
+        identityGroup.append(badge, identity);
         var detail = document.createElement("span");
         detail.textContent = item.amount + " USDT · " + item.network.toUpperCase();
-        row.append(identity, detail);
+        row.append(identityGroup, detail);
         if (item.explorerUrl) {
           var link = document.createElement("a");
           link.href = item.explorerUrl;
