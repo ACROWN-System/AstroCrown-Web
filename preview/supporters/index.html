@@ -591,10 +591,10 @@
     <section class="section" id="wallet-records" aria-labelledby="wallet-records-title">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">Wallet and member profile</div>
-          <h2 id="wallet-records-title">Your wallet is your membership and entitlement</h2>
+          <div class="eyebrow">Wallet identity and Genesis Member status</div>
+          <h2 id="wallet-records-title">Your wallet is your Genesis identity and entitlement</h2>
         </div>
-        <p>The primary wallet controls the Genesis identity and purchase entitlement. Additional Ethereum, TRON and Solana addresses are different chain-specific addresses and must each prove control before being linked. A display name is only a public label; it is not proof of wallet ownership or an entitlement.</p>
+        <p>The primary wallet is the sole Genesis identity, recovery anchor and owner of its ACROWN purchase entitlement. Additional Ethereum, TRON and Solana addresses are distinct chain-specific addresses; each must independently prove control before being linked. The display name and avatar are public labels only, not identity credentials or entitlements.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
@@ -603,7 +603,7 @@
         </article>
         <article class="transparency-card">
           <strong>2. The wallet controls the entitlement</strong>
-          <p>The multiplier entitlement is attached to the wallet-verified wallet, not to the display name. The wallet identity uses that wallet to authorize the qualifying payment and later ACROWN purchases. AstroCrown never asks for or stores the wallet's seed phrase or private key.</p>
+          <p>The ACROWN purchase entitlement belongs to the primary wallet, never to its display name or avatar. The primary wallet proves control of the identity and authorizes its qualifying payment and later separate floor-price purchases. AstroCrown never asks for or stores a seed phrase or private key.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Public GitHub records and backups</strong>
@@ -668,7 +668,7 @@
         </article>
         <article class="transparency-card">
           <strong>2. Public qualifying payment record</strong>
-          <p>Each confirmed USDT qualifying payment will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The wallet-verified wallet identity wallet, observed transaction source and account association will be stored as separate fields with an explicit verification status.</p>
+          <p>Each confirmed USDT qualifying payment will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The primary Genesis wallet, observed source address and independently verified address-link proof will be recorded as distinct fields. A payment is not attributed to the primary wallet until its source address and transaction have both passed verification.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Every use of funds</strong>
