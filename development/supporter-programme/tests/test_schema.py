@@ -8,7 +8,9 @@ WORKER_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" 
 WALLET_MIGRATION = ROOT / "migrations" / "0002_supporter_wallet_ownership.sql"
 WORKER_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0002_supporter_wallet_ownership.sql"
 TREASURY_MIGRATION = ROOT / "migrations" / "0003_genesis_usdt_treasury_addresses.sql"
+GENESIS_WALLET_MIGRATION = ROOT / "migrations" / "0004_genesis_wallet_native_identity.sql"
 WORKER_TREASURY_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0003_genesis_usdt_treasury_addresses.sql"
+WORKER_GENESIS_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0004_genesis_wallet_native_identity.sql"
 
 class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
@@ -17,6 +19,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.db.executescript(MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(WALLET_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(TREASURY_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(GENESIS_WALLET_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -40,6 +43,117 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             WORKER_TREASURY_MIGRATION.read_bytes(),
             TREASURY_MIGRATION.read_bytes(),
             "The Worker-deployed Genesis treasury migration must match the canonical migration.",
+        )
+
+    def test_wallet_native_genesis_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_GENESIS_WALLET_MIGRATION.read_bytes(),
+            GENESIS_WALLET_MIGRATION.read_bytes(),
+            "The Worker-deployed wallet-native Genesis migration must match the canonical migration.",
+        )
+
+    def test_wallet_native_schema_has_primary_wallet_identity_unique_name_and_separate_entitlement(self):
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,avatar_key,created_at,updated_at) "
+            "VALUES('gid-primary','ethereum','0x111','0x111','SilverComet 4821','silvercomet 4821','orbit',1,1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-primary','gid-primary','ethereum','0x111','0x111','PRIMARY',1,'EIP-191',1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_entitlements(identity_id,updated_at) VALUES('gid-primary',1)"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+                "display_name,display_name_normalized,created_at,updated_at) "
+                "VALUES('gid-other','solana','So111','So111','SILVERCOMET 4821','silvercomet 4821',1,1)"
+            )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT primary_network,primary_address,display_name FROM genesis_wallet_identities WHERE identity_id='gid-primary'"
+            ).fetchone(),
+            ("ethereum", "0x111", "SilverComet 4821"),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT earned_acrown_base_units,consumed_acrown_base_units FROM genesis_wallet_entitlements WHERE identity_id='gid-primary'"
+            ).fetchone(),
+            ("0", "0"),
+        )
+
+    def test_genesis_wallet_addresses_are_unique_per_network_and_can_link_other_chains(self):
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,created_at,updated_at) "
+            "VALUES('gid-links','ethereum','0x111','0x111','AzureVoyager 2001','azurevoyager 2001',1,1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-eth','gid-links','ethereum','0x111','0x111','PRIMARY',1,'EIP-191',1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-tron','gid-links','tron','TAddress','TAddress','PAYMENT',2,'TIP-191',2)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-sol','gid-links','solana','So111','So111','DELIVERY',3,'SOLANA_SIGN_MESSAGE',3)"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+                "wallet_role,ownership_verified_at,proof_method,created_at) "
+                "VALUES('gwa-duplicate','gid-links','tron','TAddress','TAddress','PAYMENT',4,'TIP-191',4)"
+            )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM genesis_wallet_addresses WHERE identity_id='gid-links'").fetchone()[0],
+            3,
+        )
+
+    def test_genesis_badge_requires_qualified_wallet_and_public_payment_is_immutable(self):
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,created_at,updated_at) "
+            "VALUES('gid-badge','ethereum','0x222','0x222','GoldenOrion 3001','goldenorion 3001',1,1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-badge','gid-badge','ethereum','0x222','0x222','PRIMARY',1,'EIP-191',1)"
+        )
+        tx = "0x" + ("a" * 64)
+        self.db.execute(
+            "INSERT INTO genesis_public_payments(payment_record_id,identity_id,source_wallet_address_id,payment_kind,network,"
+            "asset_identifier,amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,rules_version,"
+            "explorer_reference,confirmed_at) "
+            "VALUES('gp-1','gid-badge','gwa-badge','QUALIFYING_PAYMENT','ethereum','USDT','1000000','1.00',?,'0',"
+            "'FINALIZED','rules-v1',?,2)",
+            (tx, "https://etherscan.io/tx/" + tx),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "active qualified wallet identity"):
+            self.db.execute(
+                "INSERT INTO genesis_member_badges(badge_id,identity_id,badge_code,qualifying_payment_record_id,rules_version,awarded_at) "
+                "VALUES('gb-1','gid-badge','GENESIS_MEMBER_DNA_GOLD','gp-1','rules-v1',3)"
+            )
+        self.db.execute(
+            "UPDATE genesis_wallet_identities SET genesis_member_status='ACTIVE',genesis_member_awarded_at=3 WHERE identity_id='gid-badge'"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_member_badges(badge_id,identity_id,badge_code,qualifying_payment_record_id,rules_version,awarded_at) "
+            "VALUES('gb-1','gid-badge','GENESIS_MEMBER_DNA_GOLD','gp-1','rules-v1',3)"
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable"):
+            self.db.execute("UPDATE genesis_public_payments SET amount_display='2.00' WHERE payment_record_id='gp-1'")
+        self.assertEqual(
+            self.db.execute("SELECT badge_code,status FROM genesis_member_badges WHERE identity_id='gid-badge'").fetchone(),
+            ("GENESIS_MEMBER_DNA_GOLD", "ACTIVE"),
         )
 
     def test_new_member_registration_starts_pending_and_unverified(self):
