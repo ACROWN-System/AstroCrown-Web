@@ -14,6 +14,7 @@ test("Worker staging build publishes the Genesis Programme at the shared origin"
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
   await access(resolve(publicRoot, "assets/genesis-member-dna.svg"));
+  await access(resolve(publicRoot, "assets/genesis-member-dna.svg"));
   const homepage = await readPublic("index.html");
   assert.match(homepage, /href="\.\/supporters\/">Genesis Programme/);
 });
@@ -29,6 +30,10 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
+  assert.match(html, /The primary wallet is the identity, recovery anchor and entitlement holder/);
+  assert.match(html, /Genesis Member distinction/);
+  assert.match(html, /gold DNA Genesis Member badge/);
+  assert.match(html, /Explorer links reveal the full wallet address and associated public transaction history/);
   assert.match(html, /The primary wallet is the identity, recovery anchor and entitlement holder/);
   assert.match(html, /Genesis Member distinction/);
   assert.match(html, /gold DNA Genesis Member badge/);
