@@ -32,7 +32,7 @@ test("wallet candidates are not silently promoted to production-approved provide
 test("MetaMask TRON dApp limitation remains a blocking qualification item", () => {
   const metamask = policy.candidates.find((item) => item.walletId === "metamask");
   assert.ok(metamask);
-  assert.ok(metamask.notes.some((note) => /TRON asset management.*direct TRON dApp connection is not available/i.test(note)));
+  assert.ok(metamask.notes.some((note) => /TRON asset management.*direct TRON dApp connection is not currently available/i.test(note)));
   assert.ok(metamask.blockingGates.includes("tron_primary_wallet_message_signature_or_approved_transaction_proof"));
 });
 
