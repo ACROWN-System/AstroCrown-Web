@@ -24,6 +24,18 @@ Tether's official [Supported Protocols and Integration Guidelines](https://tethe
 
 These are token contracts/mints, **not** AstroCrown treasury addresses.
 
+### Owner-supplied Genesis USD₮ receiving addresses
+
+The owner has supplied the following public, network-specific Genesis treasury addresses:
+
+| Network | Genesis receiving address | Configuration status |
+|---|---|---|
+| Ethereum Mainnet | `0xbbb77071149a5F113Df15E78c58518917afa950A` | Recorded; ownership proof pending |
+| TRON Mainnet | `TAKHQcuJ3RLsZZxCorWc3rav6M28dS6VTR` | Recorded; ownership proof pending |
+| Solana Mainnet | `AWyq9E7Wsdjv9VyoTs84XGiubQGZM7fETnZ8ddfArwkG` | Recorded; ownership proof pending |
+
+These values are public receiving addresses, not private keys. The shared mainnet configuration and a new D1 migration record them. All three network rows remain disabled; recording an address does not prove custody, verify live token decimals, create a payment route, or enable payment acceptance. Ethereum comparisons are case-insensitive after checksum validation; TRON and Solana addresses are exact network-specific values.
+
 Requirements:
 - Match the complete network identity and exact token contract/mint. Never trust ticker, token name, icon or a user-provided token identifier.
 - Verify USD₮ decimals on-chain and against reviewed configuration before enabling a chain. Expected precision is six decimals; disagreement is a hard stop.
@@ -152,7 +164,7 @@ This foundation does not add payment endpoints or alter that boundary.
 All gates below must pass before real payment acceptance:
 
 1. Owner approves multiplier/rate, threshold, floor-price calculation/version, purchase sequence, purchase window terms and programme-wide cap decision.
-2. Owner supplies and independently verifies the three public receiving treasury addresses. No private key is needed in source code or chat.
+2. The three owner-supplied public receiving addresses are fixed in the reviewed configuration. Independently prove control of each address and verify the matching mainnet destination before enabling any network. No private key is needed in source code or chat.
 3. Treasury custody/signing, recovery, spending approvals, incident response and segregation from ACS reserve/prize funds are documented.
 4. Canonical token contracts/mints and decimals are independently checked against mainnet state.
 5. EVM, Tron and Solana wallet-control challenge verification is implemented and tested; username persistence and Solana delivery-wallet linking are operational.
@@ -169,7 +181,7 @@ Until all gates are evidenced, `SUPPORTER_MAINNET_ENABLED` remains false, no tre
 ## 10. Owner-only inputs still required
 
 These values cannot safely be invented:
-- the three treasury receiving addresses;
+- independent wallet-control proof and custody verification for the three already-supplied treasury receiving addresses;
 - final multiplier/rate and first-contribution threshold;
 - final floor-price/rounding/version rules;
 - global ACROWN cap or explicit no-cap decision;
