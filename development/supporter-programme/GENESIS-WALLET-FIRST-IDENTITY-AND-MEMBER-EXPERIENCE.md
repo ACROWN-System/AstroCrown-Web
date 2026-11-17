@@ -153,7 +153,11 @@ Historical database names such as `supporter_*`, the `SUPPORTERS_DB` binding, ol
 
 The public directory reads finalized, immutable records only. No public endpoint accepts or creates a payment, issues entitlement, changes badge status, authorizes a transfer, or performs token delivery in this staging build.
 
-## 9. Current hard stop
+## 9. Wallet application qualification
+
+The curated wallet application candidates and qualification gates are maintained in [GENESIS-WALLET-COMPATIBILITY.md](./GENESIS-WALLET-COMPATIBILITY.md) and [genesis-wallet-compatibility.json](./genesis-wallet-compatibility.json). MetaMask, Trust Wallet and OKX Wallet are candidates only; none is production-qualified. MetaMask's TRON dApp-connection limitation is a specific unresolved proof/attribution gate. The staging page may discover providers for isolated tests, but discovery is not approval. Payment acceptance must remain disabled until the wallet application proves the required USDT asset flows, primary identity proof, additional-address attribution and restoration across all three networks.
+
+## 10. Current hard stop
 
 This implementation direction does not open Genesis payments. The development preview is display-only; all three mainnet network rows remain disabled. No live payment intent, entitlement credit, floor quote service, treasury transfer, ACROWN purchase, mint or delivery is activated by the schema, preview or API work described here.
 
