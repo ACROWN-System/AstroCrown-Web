@@ -10,14 +10,14 @@ async function readPublic(path) {
   return readFile(resolve(publicRoot, path), "utf8");
 }
 
-test("Worker staging build publishes the Supporter Programme at the shared origin", async () => {
+test("Worker staging build publishes the ACROWN Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
   const homepage = await readPublic("index.html");
-  assert.match(homepage, /href="\.\/supporters\/">Supporter Programme/);
+  assert.match(homepage, /href="\.\/supporters\/">ACROWN Genesis Programme/);
 });
 
-test("published Supporter Programme states that contributions are not open", async () => {
+test("published ACROWN Genesis Programme states that contributions are not open", async () => {
   const html = await readPublic("supporters/index.html");
   assert.match(html, /DEVELOPMENT PREVIEW/);
   assert.match(html, /USDT CONTRIBUTIONS NOT OPEN/);
@@ -31,21 +31,26 @@ test("published Supporter Programme states that contributions are not open", asy
   assert.match(html, /one all-inclusive ACROWN-denominated Paymaster fee/i);
   assert.match(html, /only when this exact wallet is eligible/i);
   assert.match(html, /Individual wallet allowances do not expire merely through non-use/i);
-  assert.match(html, /180 consecutive days after launch/i);
-  assert.match(html, /all unused wallet-specific allowances cease to be usable/i);
+  assert.match(html, /final programme duration and closure policy will be published before contributions open/i);
+  assert.doesNotMatch(html, /180 consecutive days|180-day|USDT 150/i);
   assert.match(html, /all ordinary\/public ACROWN purchase routes operated or authorized by AstroCrown remain disabled until the official ACROWN launch/i);
   assert.match(html, /registration-countdown-stage/);
   assert.match(html, /launch-countdown-stage/);
   assert.match(html, /data-public-deployment-at=""/);
   assert.match(html, /Wallet loss receives no recovery, replacement, allowance transfer or refund/i);
   assert.match(html, /Each linked wallet has its own allowance and purchase history/i);
+  assert.match(html, /Genesis Programme Participants/);
+  assert.match(html, /data-feed-state="empty"/);
+  assert.match(html, /No verified participant events are being displayed/i);
+  assert.match(html, /Live Programme Activity/);
+  assert.match(html, /Replay Verified Programme Activity/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
   assert.match(html, /Never share your seed phrase or private key/);
 });
 
-test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
+test("Genesis Programme wallet script supports off-chain ownership proofs but no transaction submission", async () => {
   const js = await readPublic("supporters/supporters.js");
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
