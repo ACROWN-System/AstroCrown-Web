@@ -117,6 +117,18 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             3,
         )
 
+    def test_genesis_member_status_cannot_activate_without_a_finalized_qualifying_payment(self):
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,created_at,updated_at) "
+            "VALUES('gid-unqualified','ethereum','0x333','0x333','AzureAquila 4001','azureaquila 4001',1,1)"
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "finalized qualifying payment"):
+            self.db.execute(
+                "UPDATE genesis_wallet_identities SET genesis_member_status='ACTIVE',genesis_member_awarded_at=2 "
+                "WHERE identity_id='gid-unqualified'"
+            )
+
     def test_genesis_badge_requires_qualified_wallet_and_public_payment_is_immutable(self):
         self.db.execute(
             "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
