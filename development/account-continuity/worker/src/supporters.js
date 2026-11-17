@@ -1,3 +1,4 @@
+import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
 import {
   getAddress,
   isAddress,
@@ -8,20 +9,7 @@ import {
 } from "viem";
 
 const NETWORK_ORDER = ["ethereum", "tron", "solana"];
-const CANONICAL_NETWORKS = Object.freeze({
-  ethereum: {
-    networkIdentifier: "eip155:1",
-    tokenIdentifier: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-  },
-  tron: {
-    networkIdentifier: "tron:mainnet",
-    tokenIdentifier: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-  },
-  solana: {
-    networkIdentifier: "solana:mainnet",
-    tokenIdentifier: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-  },
-});
+const CANONICAL_NETWORKS = MAINNET_USDT_CONFIG;
 const SESSION_COOKIE = "acrown_supporter_session";
 const SESSION_SECONDS = 12 * 60 * 60;
 const CHALLENGE_SECONDS = 10 * 60;
@@ -821,8 +809,7 @@ export async function supporterStatusResponse(env) {
         "FROM supporter_program WHERE singleton = 1"
       ).first(),
       db.prepare(
-        "SELECT network,network_identifier,token_identifier,token_decimals,enabled," +
-        "CASE WHEN treasury_address IS NULL OR length(trim(treasury_address)) = 0 THEN 0 ELSE 1 END AS treasury_configured " +
+        "SELECT network,network_identifier,token_identifier,token_decimals,treasury_address,enabled " +
         "FROM supporter_network_config ORDER BY network"
       ).all(),
     ]);
@@ -851,17 +838,32 @@ function buildSupporterStatus(program, networkRows) {
   const networks = NETWORK_ORDER.map((network) => {
     const row = byNetwork.get(network);
     const canonical = CANONICAL_NETWORKS[network];
-    if (Number(row.token_decimals) !== 6 || row.network_identifier !== canonical.networkIdentifier ||
+    if (Number(row.token_decimals) !== canonical.tokenDecimals || row.network_identifier !== canonical.networkIdentifier ||
         row.token_identifier !== canonical.tokenIdentifier) {
       throw new Error("The configured network/token identity or USD₮ precision does not match the canonical allowlist.");
+    }
+    const configuredTreasury = typeof row.treasury_address === "string" ? row.treasury_address.trim() : "";
+    const expectedTreasury = network === "ethereum"
+      ? canonical.treasuryAddress.toLowerCase()
+      : canonical.treasuryAddress;
+    const normalizedTreasury = network === "ethereum"
+      ? configuredTreasury.toLowerCase()
+      : configuredTreasury;
+    if (configuredTreasury && normalizedTreasury !== expectedTreasury) {
+      throw new Error("The configured Genesis treasury address does not match the owner-approved network configuration.");
+    }
+    const treasuryConfigured = Boolean(configuredTreasury);
+    const networkConfigured = Number(row.enabled) === 1;
+    if (networkConfigured && !treasuryConfigured) {
+      throw new Error("A network cannot be enabled without its configured Genesis treasury address.");
     }
     return {
       network,
       networkIdentifier: canonical.networkIdentifier,
       tokenIdentifier: canonical.tokenIdentifier,
-      tokenDecimals: 6,
-      networkConfigured: Number(row.enabled) === 1,
-      treasuryConfigured: Number(row.treasury_configured) === 1,
+      tokenDecimals: canonical.tokenDecimals,
+      networkConfigured,
+      treasuryConfigured,
     };
   });
   return {
