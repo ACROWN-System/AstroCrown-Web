@@ -1,6 +1,10 @@
 (function () {
   "use strict";
 
+  // Public brand: ACROWN Genesis Programme. Existing supporter-prefixed DOM IDs,
+  // API paths and internal variables remain compatibility identifiers only; they
+  // do not define an account role, programme authority or administrator permission.
+
   function initializePublicEventCountdown() {
     var countdown = document.getElementById("public-event-countdown");
     if (!countdown) return;
@@ -176,7 +180,7 @@
 
   function updatePseudonym() {
     var name = pseudonymInput.value.trim();
-    pseudonymDisplay.textContent = name || "Choose a member name";
+    pseudonymDisplay.textContent = name || "Choose a participant display name";
   }
 
   pseudonymInput.value = generatePseudonym();
@@ -185,7 +189,7 @@
   randomizeButton.addEventListener("click", function () {
     pseudonymInput.value = generatePseudonym();
     updatePseudonym();
-    solanaFeedback.textContent = "A new preview pseudonym has been generated. It is not saved to a member record.";
+    solanaFeedback.textContent = "A new preview display name has been generated. It is not saved to a participant record.";
     solanaFeedback.dataset.state = "neutral";
   });
 
@@ -829,7 +833,7 @@
       return;
     }
     if (supporterMember) {
-      if (memberSummary) memberSummary.textContent = supporterMember.member.username + " · verified supporter";
+      if (memberSummary) memberSummary.textContent = supporterMember.member.username + " · verified Genesis Programme participant";
       return;
     }
     if (!wallet) {
@@ -856,7 +860,7 @@
       if (response.status === 428) {
         throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage, then return here.");
       }
-      throw new Error(data && data.error ? data.error : "The supporter service returned HTTP " + response.status + ".");
+      throw new Error(data && data.error ? data.error : "The Genesis Programme service returned HTTP " + response.status + ".");
     }
     return data;
   }
@@ -876,12 +880,12 @@
 
   function applySupporterProfile(data) {
     if (!data || !data.member || typeof data.member.username !== "string" || !Array.isArray(data.wallets)) {
-      throw new Error("The supporter service returned an incomplete member profile.");
+      throw new Error("The Genesis Programme service returned an incomplete member profile.");
     }
     supporterMember = data;
     pseudonymInput.value = data.member.username;
     updatePseudonym();
-    if (memberSummary) memberSummary.textContent = data.member.username + " · verified supporter";
+    if (memberSummary) memberSummary.textContent = data.member.username + " · verified Genesis Programme participant";
     if (memberWalletList) {
       memberWalletList.textContent = data.wallets.length
         ? data.wallets.map(function (wallet) {
@@ -910,10 +914,10 @@
       } else if (response.status === 428) {
         setFeedback(memberFeedback, "Acknowledge the public staging notice on the AstroCrown homepage before registering or signing in.", "neutral");
       } else if (response.status !== 401) {
-        setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+        setFeedback(memberFeedback, "The participant session could not be checked. Contributions remain disabled.", "error");
       }
     } catch (_) {
-      setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+      setFeedback(memberFeedback, "The participant session could not be checked. Contributions remain disabled.", "error");
     }
   }
 
@@ -1006,7 +1010,7 @@
       randomizeButton.disabled = false;
       pseudonymInput.value = generatePseudonym();
       updatePseudonym();
-      setFeedback(memberFeedback, "You have signed out. The supporter session has been revoked.", "neutral");
+      setFeedback(memberFeedback, "You have signed out. The programme session has been revoked.", "neutral");
     } catch (error) {
       setFeedback(memberFeedback, error && error.message ? error.message : "Sign out could not be completed.", "error");
     } finally {
