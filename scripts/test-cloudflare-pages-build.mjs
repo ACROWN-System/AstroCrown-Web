@@ -34,6 +34,7 @@ const expectedFiles = [
   "account-continuity/prototype/account-prototype.css",
   "account-continuity/prototype/account-ui.js",
   "account-continuity/prototype/admin-wallet-ui.js",
+  "assets/genesis-member-dna.svg",
   "index.html",
   "privacy-transparency.html",
   "robots.txt",
@@ -64,7 +65,7 @@ assert.match(accountJs, /hosted-preview-no-authentication/);
 assert.match(accountJs, /read-only interface demonstration/);
 
 assert.match(supporterPage, /noindex, nofollow, noarchive/i);
-assert.match(supporterPage, /USDT contributions and ACROWN purchases are not enabled/i);
+assert.match(supporterPage, /USDT qualifying payments and ACROWN purchases are not enabled/i);
 assert.match(supporterPage, /DO NOT SEND FUNDS/i);
 assert.match(supporterPage, /ACROWN delivery remains (?:on Solana|Solana-based)/i);
 assert.match(supporterPage, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/i);
@@ -76,9 +77,15 @@ assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wal
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
 assert.match(supporterJs, /standard:connect/);
-assert.match(supporterPage, /No Genesis Programme contributions accepted in this development preview/i);
+assert.match(supporterPage, /No qualifying payments have been published/i);
 assert.doesNotMatch(supporterPage, /Supporter Programme|early supporter programme|supporter contribution|supporter funds/i);
 assert.match(supporterPage, /USDT transfers not enabled/i);
+assert.match(supporterPage, /The primary wallet is the identity, recovery anchor and entitlement holder/i);
+assert.match(supporterPage, /Explorer links reveal the full public address and its on-chain history/i);
+assert.match(supporterPage, /Genesis Member distinction/i);
+assert.match(supporterPage, /gold DNA Genesis Member badge/i);
+assert.doesNotMatch(supporterPage, /contribution|donation|charity|fundraising|supporter funds/i);
+assert.match(read("assets/genesis-member-dna.svg"), /<svg[^>]+viewBox=/i);
 // The standalone Pages build is intentionally disconnected: only the staging Worker
 // build injects the runtime marker. The shared script must therefore keep member actions
 // disabled and return before any challenge/signature request when the marker is absent.
