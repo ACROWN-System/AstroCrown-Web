@@ -51,7 +51,7 @@ const headers = read("_headers");
 const robots = read("robots.txt");
 
 assert.match(homepage, /name="robots" content="noindex, nofollow, noarchive"/i);
-assert.match(homepage, /Supporter Programme/);
+assert.match(homepage, /ACROWN Genesis Programme/);
 assert.match(homepage, /Privacy &amp; Transparency Centre/);
 assert.match(homepage, /illustrative market values/i);
 assert.match(homepage, /no live services connected/i);
@@ -63,6 +63,9 @@ assert.match(accountJs, /hosted-preview-no-authentication/);
 assert.match(accountJs, /read-only interface demonstration/);
 
 assert.match(supporterPage, /noindex, nofollow, noarchive/i);
+assert.match(supporterPage, /ACROWN Genesis Programme/);
+assert.match(supporterPage, /Genesis Programme Participants/);
+assert.match(supporterPage, /Take part in AstroCrown.s beginning/i);
 assert.match(supporterPage, /USDT contributions and ACROWN purchases are not enabled/i);
 assert.match(supporterPage, /DO NOT SEND FUNDS/i);
 assert.match(supporterPage, /ACROWN delivery remains (?:on Solana|Solana-based)/i);
@@ -74,8 +77,8 @@ assert.match(supporterPage, /wallet registration closes at 00:00:00 UTC on the d
 assert.match(supporterPage, /full floor-price consideration must reach the ACS reserve/i);
 assert.match(supporterPage, /one all-inclusive ACROWN-denominated Paymaster fee/i);
 assert.match(supporterPage, /Individual wallet allowances do not expire merely through non-use/i);
-assert.match(supporterPage, /180 consecutive days after launch/i);
-assert.match(supporterPage, /all unused wallet-specific allowances cease to be usable/i);
+assert.match(supporterPage, /final programme duration and closure policy will be published before contributions open/i);
+assert.doesNotMatch(supporterPage, /180 consecutive days|180-day|USDT 150/i);
 assert.match(supporterPage, /all ordinary\/public ACROWN purchase routes operated or authorized by AstroCrown remain disabled until the official ACROWN launch/i);
 assert.match(supporterPage, /registration-countdown-stage/);
 assert.match(supporterPage, /launch-countdown-stage/);
@@ -85,11 +88,16 @@ assert.match(supporterPage, /Each linked wallet has its own allowance and purcha
 assert.match(supporterJs, /initializePublicEventCountdown/);
 assert.match(supporterPage, /unused personal allowance/i);
 assert.match(supporterPage, /The 25,000,000-ACROWN programme ceiling applies to everyone/i);
+assert.match(supporterPage, /data-feed-state="empty"/);
+assert.match(supporterPage, /No verified participant events are being displayed/i);
+assert.match(supporterPage, /Live Programme Activity/);
+assert.match(supporterPage, /Replay Verified Programme Activity/);
+assert.match(supporterPage, /Are ACS corridor settings and performance claims final/i);
 assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wallet may purchase up to the entire remaining programme allowance/i);
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
 assert.match(supporterJs, /standard:connect/);
-assert.match(supporterPage, /No supporter contributions accepted in this development preview/i);
+assert.match(supporterPage, /No Genesis Programme contributions accepted in this development preview/i);
 assert.match(supporterPage, /USDT transfers not enabled/i);
 // The standalone Pages build is intentionally disconnected: only the staging Worker
 // build injects the runtime marker. The shared script must therefore keep member actions
