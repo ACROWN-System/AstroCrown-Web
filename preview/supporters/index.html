@@ -221,7 +221,7 @@
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>DEVELOPMENT PREVIEW · USDT CONTRIBUTIONS NOT OPEN · DO NOT SEND FUNDS</div>
+  <div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>DEVELOPMENT PREVIEW · USDT QUALIFYING PAYMENTS NOT OPEN · DO NOT SEND FUNDS</div>
   <header class="site-header">
     <a class="brand" href="../index.html" aria-label="AstroCrown homepage">
       <svg class="brand-mark" viewBox="0 0 48 48" aria-hidden="true">
@@ -279,7 +279,7 @@
       <div class="status-icon" aria-hidden="true">!</div>
       <div>
         <strong>Wallet connection is display-only in this preview. USDT qualifying payments and ACROWN purchases are not enabled.</strong>
-        <p>The Genesis Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. The official staging Worker can register wallet ownership with off-chain message signatures after the homepage safety notice is acknowledged. The standalone repository preview is display-only. Neither environment accepts qualifying payments or enables transfers. Do not send funds or sign a transaction here.</p>
+        <p>The Genesis Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. The official staging Worker can verify primary-wallet ownership with an off-chain message signature after the homepage safety notice is acknowledged. The standalone repository preview is display-only. Neither environment accepts qualifying payments or enables transfers. Do not send funds or sign a transaction here.</p>
       </div>
     </section>
 
@@ -333,20 +333,20 @@
                 <span class="ecosystem-tag">EIP-6963 / EIP-1193</span>
               </div>
               <div class="field">
-                <label for="wallet identity-evm-wallet-choice">Choose your EVM wallet</label>
-                <select id="wallet identity-evm-wallet-choice" disabled>
+                <label for="supporter-evm-wallet-choice">Choose your EVM wallet</label>
+                <select id="supporter-evm-wallet-choice" disabled>
                   <option value="">Looking for EVM wallets…</option>
                 </select>
               </div>
               <div class="wallet-actions">
-                <button class="primary-button" id="wallet identity-evm-wallet-connect" type="button" disabled>Connect EVM wallet</button>
-                <button class="secondary-button" id="wallet identity-evm-wallet-clear" type="button" disabled>Clear</button>
+                <button class="primary-button" id="supporter-evm-wallet-connect" type="button" disabled>Connect EVM wallet</button>
+                <button class="secondary-button" id="supporter-evm-wallet-clear" type="button" disabled>Clear</button>
               </div>
-              <div class="wallet-feedback" id="wallet identity-evm-wallet-feedback" role="status" aria-live="polite">No EVM wallet connected.</div>
+              <div class="wallet-feedback" id="supporter-evm-wallet-feedback" role="status" aria-live="polite">No EVM wallet connected.</div>
               <div class="wallet-address-card">
                 <span class="side-label">EVM public address</span>
-                <strong id="wallet identity-evm-wallet-address">Not connected</strong>
-                <span id="wallet identity-evm-wallet-chain">No EVM network confirmed</span>
+                <strong id="supporter-evm-wallet-address">Not connected</strong>
+                <span id="supporter-evm-wallet-chain">No EVM network confirmed</span>
               </div>
             </section>
             <section class="wallet-ecosystem-card" aria-labelledby="tron-wallet-heading">
@@ -355,20 +355,20 @@
                 <span class="ecosystem-tag">TRON / TIP-6963</span>
               </div>
               <div class="field">
-                <label for="wallet identity-tron-wallet-choice">Choose your TRON wallet</label>
-                <select id="wallet identity-tron-wallet-choice" disabled>
+                <label for="supporter-tron-wallet-choice">Choose your TRON wallet</label>
+                <select id="supporter-tron-wallet-choice" disabled>
                   <option value="">Looking for TRON wallets…</option>
                 </select>
               </div>
               <div class="wallet-actions">
-                <button class="primary-button" id="wallet identity-tron-wallet-connect" type="button" disabled>Connect TRON wallet</button>
-                <button class="secondary-button" id="wallet identity-tron-wallet-clear" type="button" disabled>Clear</button>
+                <button class="primary-button" id="supporter-tron-wallet-connect" type="button" disabled>Connect TRON wallet</button>
+                <button class="secondary-button" id="supporter-tron-wallet-clear" type="button" disabled>Clear</button>
               </div>
-              <div class="wallet-feedback" id="wallet identity-tron-wallet-feedback" role="status" aria-live="polite">No TRON browser wallet detected.</div>
+              <div class="wallet-feedback" id="supporter-tron-wallet-feedback" role="status" aria-live="polite">No TRON browser wallet detected.</div>
               <div class="wallet-address-card">
                 <span class="side-label">TRON public address</span>
-                <strong id="wallet identity-tron-wallet-address">Not connected</strong>
-                <span id="wallet identity-tron-wallet-chain">Network not confirmed</span>
+                <strong id="supporter-tron-wallet-address">Not connected</strong>
+                <span id="supporter-tron-wallet-chain">Network not confirmed</span>
               </div>
             </section>
             <section class="wallet-ecosystem-card" aria-labelledby="solana-wallet-heading">
@@ -377,32 +377,32 @@
                 <span class="ecosystem-tag">Solana Wallet Standard</span>
               </div>
               <div class="field">
-                <label for="wallet identity-wallet-choice">Choose your Solana wallet</label>
-                <select id="wallet identity-wallet-choice" disabled>
+                <label for="supporter-wallet-choice">Choose your Solana wallet</label>
+                <select id="supporter-wallet-choice" disabled>
                   <option value="">Looking for Solana wallets…</option>
                 </select>
               </div>
               <div class="wallet-actions">
-                <button class="primary-button" id="wallet identity-wallet-connect" type="button" disabled>Connect Solana wallet</button>
-                <button class="secondary-button" id="wallet identity-wallet-clear" type="button" disabled>Clear</button>
+                <button class="primary-button" id="supporter-wallet-connect" type="button" disabled>Connect Solana wallet</button>
+                <button class="secondary-button" id="supporter-wallet-clear" type="button" disabled>Clear</button>
               </div>
-              <div class="wallet-feedback" id="wallet identity-wallet-feedback" role="status" aria-live="polite">No Solana wallet connected.</div>
+              <div class="wallet-feedback" id="supporter-wallet-feedback" role="status" aria-live="polite">No Solana wallet connected.</div>
               <div class="wallet-address-card">
                 <span class="side-label">Solana public address</span>
-                <strong id="wallet identity-wallet-address">Not connected</strong>
-                <span id="wallet identity-wallet-chain">No Solana cluster confirmed</span>
+                <strong id="supporter-wallet-address">Not connected</strong>
+                <span id="supporter-wallet-chain">No Solana cluster confirmed</span>
               </div>
             </section>
           </div>
           <section class="wallet-ecosystem-card" aria-labelledby="member-wallet verification-heading">
             <div class="ecosystem-heading">
               <strong id="member-wallet verification-heading">Wallet identity and linked network addresses</strong>
-              <span class="ecosystem-tag" id="wallet identity-member-mode">Staging service required</span>
+              <span class="ecosystem-tag" id="supporter-member-mode">Staging service required</span>
             </div>
-            <p class="panel-intro">Connect the primary wallet once to establish or access its wallet-native Genesis identity. There is no separate user wallet verification, email, username or password. Then link each additional network address by signing a separate off-chain ownership proof. Only the primary wallet can authenticate this Genesis identity.</p>
+            <p class="panel-intro">Connect the primary wallet once to establish or access its wallet-native Genesis identity. There is no separate user account, email, username or password. Then link each additional network address by signing a separate off-chain ownership proof. Only the primary wallet can authenticate this Genesis identity.</p>
             <div class="field">
-              <label for="wallet identity-wallet-purpose">Purpose of the additional address</label>
-              <select id="wallet identity-wallet-purpose">
+              <label for="supporter-wallet-purpose">Purpose of the additional address</label>
+              <select id="supporter-wallet-purpose">
                 <option value="PAYMENT">Payment wallet</option>
                 <option value="DELIVERY">Solana ACROWN delivery wallet</option>
                 <option value="PAYMENT_AND_DELIVERY">Solana payment and ACROWN delivery wallet</option>
@@ -410,16 +410,16 @@
               <small>Delivery-only and combined payment/delivery roles are accepted only for Solana wallets.</small>
             </div>
             <div class="wallet-actions">
-              <button class="primary-button" id="wallet identity-register-wallet" type="button" disabled>Continue with this primary wallet</button>
-              <button class="secondary-button" id="wallet identity-login-wallet" type="button" hidden disabled>Legacy sign-in unavailable</button>
-              <button class="secondary-button" id="wallet identity-link-wallet" type="button" disabled>Verify and link wallet</button>
-              <button class="secondary-button" id="wallet identity-logout" type="button" disabled>Disconnect wallet session</button>
+              <button class="primary-button" id="supporter-register-wallet" type="button" disabled>Continue with this primary wallet</button>
+              <button class="secondary-button" id="supporter-login-wallet" type="button" hidden disabled>Legacy sign-in unavailable</button>
+              <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link wallet</button>
+              <button class="secondary-button" id="supporter-logout" type="button" disabled>Disconnect wallet session</button>
             </div>
-            <div class="wallet-feedback" id="wallet identity-member-feedback" role="status" aria-live="polite">Connect your primary Ethereum, TRON or Solana mainnet wallet. A signed off-chain proof establishes its wallet identity; no separate user account is created.</div>
+            <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Connect your primary Ethereum, TRON or Solana mainnet wallet. A signed off-chain proof establishes its wallet identity; no separate user account is created.</div>
             <div class="wallet-address-card">
               <span class="side-label">Primary wallet identity</span>
-              <strong id="wallet identity-member-summary">Not signed in</strong>
-              <span id="wallet identity-member-wallet-list">No additional network addresses linked.</span>
+              <strong id="supporter-member-summary">Not signed in</strong>
+              <span id="supporter-member-wallet-list">No additional network addresses linked.</span>
             </div>
           </section>
           <p class="fine-print">A multi-chain wallet exposes different public addresses on Ethereum, TRON and Solana; each address must be independently verified and linked to the primary wallet identity. The initial payment asset is USDT on Ethereum ERC-20, TRON TRC-20 and Solana SPL. ACROWN delivery remains Solana-based. Genesis stores only public addresses, unique display names, proof metadata and session digests. AstroCrown never receives private keys or recovery phrases. Qualifying payments and floor-price purchases remain disabled.</p>
@@ -440,12 +440,12 @@
           </div>
           <div class="result-list">
             <div class="result-row"><span class="result-label">First qualifying payment threshold</span><strong class="result-value">Pending final terms</strong></div>
-            <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="wallet identity-multiplier-state">Not activated</strong></div>
+            <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
             <div class="result-row"><span class="result-label">Total ACROWN programme allowance</span><strong class="result-value">Pending approval</strong></div>
-            <div class="result-row"><span class="result-label">Remaining ACROWN allowance</span><strong class="result-value" id="wallet identity-remaining-allowance">Not yet available</strong></div>
+            <div class="result-row"><span class="result-label">Remaining ACROWN allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
             <div class="result-row"><span class="result-label">Purchases completed by this wallet</span><strong class="result-value">No purchase records</strong></div>
           </div>
-          <button class="disabled-button dashboard-purchase-button" id="wallet identity-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
+          <button class="disabled-button dashboard-purchase-button" id="supporter-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
           <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No qualifying payment or purchase balance is created by wallet verification; payment and entitlement accounting remain closed.</p>
         </section>
       </div>
@@ -553,7 +553,7 @@
         </article>
         <article class="step-card">
           <div class="step-number">02</div>
-          <h3>Register your wallet and member name</h3>
+          <h3>Connect your primary wallet and establish its unique display name</h3>
           <p>Connect the wallet that you control and sign the off-chain ownership challenge on the official staging service. AstroCrown generates a random member pseudonym by default, which you may customize. No legal name or identity document is collected by this programme flow.</p>
           <span class="pending">Staging wallet verification available; production pending</span>
         </article>
@@ -725,7 +725,7 @@
         </details>
         <details>
           <summary>How does my member name and wallet wallet verification work?</summary>
-          <p>A random member pseudonym is generated when you register and you may customize it. Your connected wallet address is the public identifier that controls the entitlement and authorizes purchases. No legal name or identity document is required by the programme design. The public GitHub audit snapshot may link your pseudonym, wallet address and programme transactions. Never share your seed phrase or private key.</p>
+          <p>A random unique public name is generated when the primary wallet is first verified. It can be customized only when no other Genesis wallet is using that name. The primary wallet address controls the identity and wallet-bound purchase entitlement. No legal name or identity document is required by the programme design. The public GitHub audit snapshot may link your pseudonym, wallet address and programme transactions. Never share your seed phrase or private key.</p>
         </details>
         <details>
           <summary>Is the USDT 250,000 target the ACROWN purchase allowance?</summary>
@@ -747,7 +747,7 @@
         <div class="eyebrow">Participation status</div>
         <h2 id="participate-title">The Genesis Programme is being prepared.</h2>
         <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. The 180-day purchase period begins at that operational activation.</p>
-        <p id="wallet identity-runtime-status" role="status" aria-live="polite">Checking the isolated Genesis Programme service. Qualifying payments remain closed.</p>
+        <p id="supporter-runtime-status" role="status" aria-live="polite">Checking the isolated Genesis Programme service. Qualifying payments remain closed.</p>
       </div>
       <button class="disabled-button" type="button" disabled aria-disabled="true">USDT transfers not enabled</button>
     </section>
