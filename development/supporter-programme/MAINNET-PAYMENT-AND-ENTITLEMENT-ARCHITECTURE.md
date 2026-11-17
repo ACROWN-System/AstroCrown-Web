@@ -6,6 +6,10 @@
 
 **Official product name:** Genesis Programme. Existing `supporter_*` database objects, `/api/supporters/*` endpoints, `SUPPORTERS_DB` binding, migration filenames and the current `/supporters/` preview path are legacy technical identifiers retained for compatibility and migration-history integrity. They are not the programme's official name. New user-facing text and new architectural descriptions must use **Genesis Programme** and **Genesis participants**.
 
+
+> **Authoritative owner amendment — 18 November 2026:** The identity/entitlement design below is superseded by [GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md](./GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md). The primary wallet—not a user/member account—is the identity, recovery anchor and entitlement holder. No conventional Genesis registration or separate account recovery exists. The new `/api/genesis/*` API is the product-facing identity path; former registration/login endpoints under `/api/supporters/*` are retired with HTTP 410 (the status alias is kept only for migration compatibility). Public terminology is qualifying payment / acquisition payment, ACROWN purchase entitlement, floor-price purchase and Genesis Member; charitable/contribution/supporter language is not appropriate for the public product. The gold DNA badge follows verified Genesis qualification, and explorer links reveal the full source address and on-chain history. Future privileges are planned only until individually approved. Historical schema and endpoint identifiers below remain compatibility details, not product terminology.
+
+
 ## 1. Deployment split
 
 The general AstroCrown website and platform functionality remain in Devnet/Testnet with valueless assets during development. The Genesis Programme is the deliberate exception: after separate activation gates pass, it is intended to accept real mainnet USD₮ from its first operational opening on Ethereum, Tron and Solana.
