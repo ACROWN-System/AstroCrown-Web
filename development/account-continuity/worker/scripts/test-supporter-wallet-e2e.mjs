@@ -91,6 +91,18 @@ async function profile(cookie) {
   return result.data;
 }
 
+const foreignOriginResponse = await fetch(origin + "/api/genesis/identity/challenge", {
+  method: "POST",
+  headers: {
+    Origin: "https://untrusted.example",
+    "CF-Connecting-IP": rateIp,
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+  body: JSON.stringify({ network: "ethereum", address: "0x0000000000000000000000000000000000000001" }),
+});
+assert.equal(foreignOriginResponse.status, 403, "Third-party origins must not use Genesis as a wallet-signature challenge relay.");
+
 const evm = privateKeyToAccount("0x" + "0".repeat(63) + "1");
 const secondEvm = privateKeyToAccount("0x" + "0".repeat(63) + "3");
 const tron = privateKeyToAccount("0x" + "0".repeat(63) + "2");
@@ -244,6 +256,7 @@ console.log(JSON.stringify({
     "primary Ethereum wallet establishes identity without a registered user account",
     "wallet-bound random public name and avatar are generated",
     "off-chain primary-wallet challenge is single-use",
+    "foreign origins cannot use Genesis as a wallet-signature challenge relay",
     "custom display name is included in the signed challenge and saved by the primary wallet",
     "case-insensitive public-name collision is rejected",
     "TRON payment address is linked only after TIP-191 proof",
