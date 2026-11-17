@@ -362,7 +362,20 @@ if __name__ == "__main__":
         with self.assertRaisesRegex(sqlite3.IntegrityError, "explicit authorized decision"):
             self.db.execute(
                 "UPDATE supporter_program SET status='CLOSED',closed_at=?,"
-                "closure_reason='INACTIVITY_TERMINATION',closure_authorized_by='owner',"
-                "closure_notice_reference='notice:genesis-closure' WHERE singleton=1",
+                "closure_reason='INACTIVITY_TERMINATION' WHERE singleton=1",
                 (due_at,),
-            ) if False else (_ for _ in ()).throw(AssertionError("placeholder"))
+            )
+        self.db.execute(
+            "UPDATE supporter_program SET status='CLOSED',closed_at=?,"
+            "closure_reason='INACTIVITY_TERMINATION',closure_authorized_by='owner:approved',"
+            "closure_notice_reference='notice:genesis-closure-001' WHERE singleton=1",
+            (due_at,),
+        )
+        self.assertEqual(
+            self.db.execute("SELECT status,closed_at,closure_reason FROM supporter_program WHERE singleton=1").fetchone(),
+            ("CLOSED", due_at, "INACTIVITY_TERMINATION"),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "closure evidence is immutable"):
+            self.db.execute(
+                "UPDATE supporter_program SET closure_notice_reference='notice:changed' WHERE singleton=1"
+            )
