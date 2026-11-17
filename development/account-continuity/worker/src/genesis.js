@@ -274,7 +274,10 @@ async function getOrCreateIdentity(db, challenge) {
   let identity = await db.prepare(
     "SELECT * FROM genesis_wallet_identities WHERE primary_network=? AND primary_address_normalized=?"
   ).bind(challenge.network, challenge.address_normalized).first();
-  if (identity) return identity;
+  if (identity) {
+    if (identity.identity_status !== "ACTIVE") throw error(403, "This Genesis wallet identity is suspended or retired.");
+    return identity;
+  }
 
   const linked = await db.prepare(
     "SELECT identity_id,wallet_role FROM genesis_wallet_addresses WHERE network=? AND address_normalized=?"
@@ -351,6 +354,8 @@ async function directory(db) {
     transferIndex: row.transfer_index
   })).filter((row) => row.explorerUrl);
 }
+
+export { normalizeDisplayName, randomDisplayName, explorerUrl, createMessage };
 
 export async function handleGenesisWalletApi(request, env, config) {
   const db = env?.SUPPORTERS_DB;
