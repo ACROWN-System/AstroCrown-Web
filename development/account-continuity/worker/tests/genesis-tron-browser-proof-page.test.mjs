@@ -33,10 +33,11 @@ test("Genesis TRON proof uses TIP-191 message signing and local address recovery
   assert.match(html, /method: "TRON TIP-191 signMessageV2"/);
 });
 
-test("Genesis TRON proof invalidates challenge after chain or account changes", () => {
-  assert.match(html, /walletProvider\.on\("chainChanged"/);
-  assert.match(html, /walletProvider\.on\("accountsChanged"/);
-  assert.match(html, /invalidateChallenge\(/);
+test("Genesis TRON proof reads the documented chainChanged payload and invalidates on network changes", () => {
+  assert.match(html, /walletProvider\\.on\\("chainChanged", \\(\\{ chainId \\} = \\) =>/);
+  assert.match(html, /activeChainId = typeof chainId === "string" \\? chainId : ""/);
+  assert.match(html, /walletProvider\\.on\\("accountsChanged"/);
+  assert.match(html, /invalidateChallenge\\(/);
   assert.match(html, /activeChainId !== MAINNET_CHAIN_ID/);
 });
 
