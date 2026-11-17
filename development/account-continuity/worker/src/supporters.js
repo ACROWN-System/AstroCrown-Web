@@ -462,7 +462,7 @@ async function memberProfile(db, member) {
       proofMethod: wallet.proof_method,
     })),
     paymentStatus: "DISABLED",
-    contributionsAccepted: false,
+    qualifyingPaymentsAccepted: false,
   };
 }
 
@@ -818,7 +818,7 @@ export async function supporterStatusResponse(env) {
     return json(200, payload);
   } catch {
     return json(503, {
-      error: "The isolated Genesis Programme database could not be qualified. Contributions remain disabled.",
+      error: "The isolated Genesis Programme database could not be qualified. Qualifying payments remain disabled.",
     });
   }
 }
@@ -877,11 +877,11 @@ function buildSupporterStatus(program, networkRows) {
     networks,
     paymentAcceptance: {
       enabled: false,
-      contributionsAccepted: false,
+      qualifyingPaymentsAccepted: false,
       reason: "Mainnet payment intake is not enabled. No payment intent or transfer request can be created.",
     },
     purchaseAllowance: {
-      separateFromContribution: true,
+      separateFromQualifyingPayment: true,
       automaticTokenIssuance: false,
     },
   };
