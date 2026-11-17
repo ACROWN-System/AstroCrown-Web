@@ -15,7 +15,7 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const MAX_BODY_BYTES = 4096;
 const PROOF_DIRECTORY = join(homedir(), "Documents", "AstroCrown", "Genesis", "TreasuryProofs");
 
-const PAGE = String.raw`<!doctype html>
+const PAGE = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
