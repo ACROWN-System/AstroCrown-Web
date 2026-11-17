@@ -70,7 +70,7 @@
 
   function updatePseudonym() {
     var name = pseudonymInput.value.trim();
-    pseudonymDisplay.textContent = name || "Choose a member name";
+    pseudonymDisplay.textContent = name || "Choose a public name";
   }
 
   pseudonymInput.value = generatePseudonym();
@@ -81,6 +81,11 @@
     updatePseudonym();
     solanaFeedback.textContent = "A different display-name suggestion has been generated. It will be reserved only after the primary wallet verifies ownership and the name is confirmed available.";
     solanaFeedback.dataset.state = "neutral";
+    if (supporterMember && nameAvailability) {
+      nameAvailability.textContent = "Checking availability…";
+      nameAvailability.dataset.state = "checking";
+      checkDisplayNameAvailability();
+    }
   });
 
   function setFeedback(element, message, state) {
