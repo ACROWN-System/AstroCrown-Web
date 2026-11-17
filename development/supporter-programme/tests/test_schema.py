@@ -9,6 +9,8 @@ WALLET_MIGRATION = ROOT / "migrations" / "0002_supporter_wallet_ownership.sql"
 WORKER_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0002_supporter_wallet_ownership.sql"
 ENTITLEMENT_MIGRATION = ROOT / "migrations" / "0003_wallet_scoped_entitlements_no_fixed_expiry.sql"
 WORKER_ENTITLEMENT_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0003_wallet_scoped_entitlements_no_fixed_expiry.sql"
+ACTIVITY_MIGRATION = ROOT / "migrations" / "0004_programme_inactivity_and_closure_evidence.sql"
+WORKER_ACTIVITY_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0004_programme_inactivity_and_closure_evidence.sql"
 
 class SupporterSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
@@ -17,6 +19,7 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
         self.db.executescript(MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(WALLET_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(ENTITLEMENT_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(ACTIVITY_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -262,3 +265,104 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_programme_activity_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_ACTIVITY_MIGRATION.read_bytes(),
+            ACTIVITY_MIGRATION.read_bytes(),
+            "The Worker-deployed inactivity and closure migration must match the canonical migration.",
+        )
+
+    def test_global_inactivity_clock_resets_only_from_verified_activity_and_closure_is_explicit(self):
+        launch = 1_900_022_400  # UTC midnight.
+        self.db.execute(
+            "UPDATE supporter_program SET public_launch_at=? WHERE singleton=1",
+            (launch,),
+        )
+        self.db.execute(
+            "UPDATE supporter_program SET status='OPEN', activated_at=?, multiplier_numerator='25', "
+            "multiplier_denominator='1', usdt_decimals=6, acrown_decimals=9, "
+            "floor_price_version='acs-v1', rules_version='supporter-v2' WHERE singleton=1",
+            (launch,),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT COALESCE(last_qualifying_activity_at, public_launch_at) + 15552000 "
+                "FROM supporter_program WHERE singleton=1"
+            ).fetchone()[0],
+            launch + 15552000,
+        )
+
+        self.db.execute(
+            "INSERT INTO supporter_members(member_id,username,username_normalized,created_at,updated_at) "
+            "VALUES('m-activity','ActivityPilot','activitypilot',1,1)"
+        )
+        self.db.execute(
+            "INSERT INTO supporter_wallets(wallet_id,member_id,network,address,address_normalized,wallet_role,"
+            "ownership_verified_at,proof_method,created_at) "
+            "VALUES('w-activity','m-activity','ethereum','0x111','0x111','PAYMENT',2,'OFFCHAIN_MESSAGE',2)"
+        )
+        self.db.execute(
+            "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
+            "WHERE member_id='m-activity'"
+        )
+        activity_at = launch + 100
+        self.db.execute(
+            "INSERT INTO supporter_contribution_intents(intent_id,member_id,wallet_id,network,token_identifier,"
+            "treasury_address,amount_base_units,status,rules_version,created_at,expires_at) "
+            "VALUES('i-activity','m-activity','w-activity','ethereum','usdt-eth','treasury','100',"
+            "'CONFIRMED','v1',3,9999999999)"
+        )
+        self.db.execute(
+            "INSERT INTO supporter_contributions(contribution_id,intent_id,member_id,wallet_id,network,"
+            "token_identifier,sender_address,treasury_address,transaction_hash,transfer_index,amount_base_units,"
+            "block_or_slot,finality_status,provider_agreement_digest,multiplier_numerator,multiplier_denominator,"
+            "acrown_allowance_base_units,rules_version,confirmed_at) "
+            "VALUES('c-activity','i-activity','m-activity','w-activity','ethereum','usdt-eth','sender',"
+            "'treasury','0xactivity','0','100','100','FINALIZED','provider-agreement','25','1','2500','v1',?)",
+            (activity_at,),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "finalized verified contribution"):
+            self.db.execute(
+                "INSERT INTO supporter_program_activity_events(activity_id,activity_type,contribution_id,"
+                "activity_at,recorded_at) VALUES('a-invalid','CONTRIBUTION','c-activity',?,?)",
+                (activity_at - 1, activity_at + 1),
+            )
+        self.db.execute(
+            "INSERT INTO supporter_program_activity_events(activity_id,activity_type,contribution_id,"
+            "activity_at,recorded_at) VALUES('a-activity','CONTRIBUTION','c-activity',?,?)",
+            (activity_at, activity_at + 1),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT last_qualifying_activity_at FROM supporter_program WHERE singleton=1"
+            ).fetchone()[0],
+            activity_at,
+        )
+        due_at = activity_at + 15552000
+        self.assertEqual(
+            self.db.execute(
+                "SELECT COALESCE(last_qualifying_activity_at, public_launch_at) + 15552000 "
+                "FROM supporter_program WHERE singleton=1"
+            ).fetchone()[0],
+            due_at,
+        )
+        # Passing the threshold does not close the programme automatically.
+        self.assertEqual(
+            self.db.execute("SELECT status FROM supporter_program WHERE singleton=1").fetchone()[0],
+            "OPEN",
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "explicit authorized decision"):
+            self.db.execute(
+                "UPDATE supporter_program SET status='CLOSED',closed_at=?,"
+                "closure_reason='INACTIVITY_TERMINATION',closure_authorized_by='owner',"
+                "closure_notice_reference='notice:genesis-closure' WHERE singleton=1",
+                (due_at - 1,),
+            )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "explicit authorized decision"):
+            self.db.execute(
+                "UPDATE supporter_program SET status='CLOSED',closed_at=?,"
+                "closure_reason='INACTIVITY_TERMINATION',closure_authorized_by='owner',"
+                "closure_notice_reference='notice:genesis-closure' WHERE singleton=1",
+                (due_at,),
+            ) if False else (_ for _ in ()).throw(AssertionError("placeholder"))
