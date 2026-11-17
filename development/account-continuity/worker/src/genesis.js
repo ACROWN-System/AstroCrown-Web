@@ -336,7 +336,7 @@ async function directory(db) {
     "p.asset_identifier,p.transaction_hash,p.transfer_index,p.confirmed_at " +
     "FROM genesis_public_payments p JOIN genesis_wallet_identities i ON i.identity_id=p.identity_id " +
     "JOIN genesis_member_badges b ON b.identity_id=i.identity_id AND b.status='ACTIVE' " +
-    "WHERE p.public_visible=1 AND p.finality_status='FINALIZED' AND i.identity_status='ACTIVE' " +
+    "WHERE p.public_visible=1 AND p.finality_status='FINALIZED' AND i.identity_status='ACTIVE' AND i.genesis_member_status='ACTIVE' " +
     "ORDER BY p.confirmed_at DESC LIMIT 200"
   ).all();
   return (rows.results || []).map((row) => ({
