@@ -383,6 +383,15 @@ export async function handleGenesisWalletApi(request, env, config) {
       return response(200, await identityProfile(db, identity));
     }
     if (request.method !== "POST") return response(405, { error: "This Genesis wallet endpoint requires POST." });
+    let expectedOrigin;
+    try {
+      expectedOrigin = new URL(config.origin).origin;
+    } catch {
+      throw error(503, "The Genesis wallet service origin is not configured safely.");
+    }
+    if (request.headers.get("Origin") !== expectedOrigin) {
+      throw error(403, "Genesis wallet challenges and wallet changes are accepted only from the official AstroCrown origin.");
+    }
     const payload = await readJson(request);
 
     if (url.pathname === "/api/genesis/identity/challenge") {
