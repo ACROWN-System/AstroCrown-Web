@@ -10,6 +10,7 @@ on:
       - "development/account-continuity/prototype/account-prototype.css"
       - "development/index.html"
       - "preview/supporters/**"
+      - "preview/genesis-ethereum-treasury-proof.html"
       - "development/supporter-programme/**"
       - ".github/workflows/account-staging-worker-qualification.yml"
       - ".github/workflows/cloudflare-staging-deployment.yml"
