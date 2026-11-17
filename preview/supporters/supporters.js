@@ -1028,7 +1028,7 @@
     if (!statusElement) return;
     var runtimeMarker = document.querySelector('meta[name="astro-supporter-runtime"]');
     if (!runtimeMarker || runtimeMarker.content !== "worker-staging" || window.location.protocol !== "https:") {
-      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
       return;
     }
@@ -1050,10 +1050,25 @@
         Array.isArray(payload.networks) &&
         payload.networks.length === 3;
       if (!prelaunch) throw new Error("The programme status could not be qualified.");
-      statusElement.textContent = "Programme service connected · PRELAUNCH · Ethereum, Tron and Solana USDT intake is disabled. Do not send funds.";
+      var networkNames = { ethereum: "Ethereum", tron: "Tron", solana: "Solana" };
+      var destinationStatus = payload.networks.map(function (network) {
+        var label = networkNames[network.network] || "Unknown network";
+        if (network.networkConfigured && network.treasuryAddressFormatValid) {
+          return label + " destination configuration enabled";
+        }
+        if (network.treasuryAddressFormatValid) {
+          return label + " address format valid; activation pending";
+        }
+        if (network.treasuryConfigured) {
+          return label + " address format invalid; review required";
+        }
+        return label + " receiving address not configured";
+      }).join(" · ");
+      statusElement.textContent = "Programme service connected · PRELAUNCH · " + destinationStatus +
+        " · Payment acceptance disabled. Do not send funds.";
       statusElement.dataset.state = "closed";
     } catch (_) {
-      statusElement.textContent = "Programme service status unavailable · Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Programme service status unavailable · Payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
     }
   }
