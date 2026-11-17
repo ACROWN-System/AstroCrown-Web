@@ -48,7 +48,7 @@ test("wallet proof messages bind domain, chain, address, purpose and irrecoverab
     issuedAt: "2026-11-18T00:00:00.000Z",
     expiresAt: "2026-11-18T00:10:00.000Z"
   });
-  assert.match(message, /Domain: astrocrown\\.example/);
+  assert.match(message, /Domain: astrocrown\.example/);
   assert.match(message, /Network: ethereum:mainnet/);
   assert.match(message, /Purpose: IDENTIFY/);
   assert.match(message, /Nonce: nonce-/);
