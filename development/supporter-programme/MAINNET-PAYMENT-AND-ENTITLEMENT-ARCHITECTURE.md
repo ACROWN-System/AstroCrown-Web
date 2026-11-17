@@ -221,6 +221,14 @@ The already merged static Pages package remains a no-payment, no-backend preview
 
 This foundation does not add payment endpoints or alter that boundary.
 
+### 8.1 Treasury-address staging integration
+
+The Worker branch adds a read-only format check for the three configured receiving addresses. It validates Ethereum EIP-55-compatible address syntax, Tron mainnet Base58Check syntax, and Solana canonical 32-byte Base58 public-key syntax. The public status response reports configuration/format booleans only; it never returns the receiving address and never enables payment acceptance.
+
+The offline `development/account-continuity/worker/scripts/prepare-genesis-treasuries.mjs` utility accepts the three public addresses and emits SQL for the dedicated `acrown-supporters-mainnet` D1 database. The generated SQL stages the public addresses, explicitly keeps every network disabled, and clears earlier decimal/configuration verification markers so that changing an address cannot inherit stale verification. It performs no RPC call and cannot prove wallet control or live token state.
+
+Detailed operator instructions and current limitations are recorded in [Treasury Address Onboarding](TREASURY-ADDRESS-ONBOARDING.md). No address has been supplied or configured in this branch. The payment-intent service, chain monitors, finality/quorum verification and entitlement crediting remain unimplemented.
+
 ## 9. Activation gates
 
 All gates below must pass before real payment acceptance:
