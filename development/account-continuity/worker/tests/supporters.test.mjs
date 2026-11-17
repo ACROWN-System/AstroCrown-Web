@@ -4,11 +4,12 @@ import { buildSupporterStatus, supporterStatusResponse, normalizeWalletAddress, 
 import { privateKeyToAccount } from "viem/accounts";
 import { keccak256, toBytes } from "viem";
 import { generateKeyPairSync, webcrypto } from "node:crypto";
+import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
 
 const networks = [
-  { network: "ethereum", network_identifier: "eip155:1", token_identifier: "0xdAC17F958D2ee523a2206206994597C13D831ec7", token_decimals: 6, enabled: 0, treasury_configured: 0 },
-  { network: "tron", network_identifier: "tron:mainnet", token_identifier: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", token_decimals: 6, enabled: 0, treasury_configured: 0 },
-  { network: "solana", network_identifier: "solana:mainnet", token_identifier: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", token_decimals: 6, enabled: 0, treasury_configured: 0 },
+  { network: "ethereum", network_identifier: MAINNET_USDT_CONFIG.ethereum.networkIdentifier, token_identifier: MAINNET_USDT_CONFIG.ethereum.tokenIdentifier, token_decimals: 6, treasury_address: MAINNET_USDT_CONFIG.ethereum.treasuryAddress, enabled: 0 },
+  { network: "tron", network_identifier: MAINNET_USDT_CONFIG.tron.networkIdentifier, token_identifier: MAINNET_USDT_CONFIG.tron.tokenIdentifier, token_decimals: 6, treasury_address: MAINNET_USDT_CONFIG.tron.treasuryAddress, enabled: 0 },
+  { network: "solana", network_identifier: MAINNET_USDT_CONFIG.solana.networkIdentifier, token_identifier: MAINNET_USDT_CONFIG.solana.tokenIdentifier, token_decimals: 6, treasury_address: MAINNET_USDT_CONFIG.solana.treasuryAddress, enabled: 0 },
 ];
 
 function mockDb(program = { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, closes_at: null, rules_version: null }, rows = networks) {
@@ -36,6 +37,15 @@ test("Supporter status reads the dedicated D1 and exposes exactly the canonical 
   assert.equal(payload.programme.status, "PRELAUNCH");
   assert.equal(payload.programme.activatedAt, null);
   assert.equal(payload.programme.closesAt, null);
+});
+
+test("Genesis mainnet USD₮ configuration contains valid owner-supplied public treasury addresses", async () => {
+  for (const network of ["ethereum", "tron", "solana"]) {
+    const configured = MAINNET_USDT_CONFIG[network];
+    const normalized = await normalizeWalletAddress(network, configured.treasuryAddress);
+    assert.equal(normalized.address, configured.treasuryAddress);
+    assert.equal(configured.tokenDecimals, 6);
+  }
 });
 
 test("Supporter status never exposes a treasury address or claims that a transfer can be made", () => {
@@ -72,6 +82,10 @@ test("Supporter status fails closed if a network is missing, duplicated, non-can
   assert.throws(() => buildSupporterStatus(
     { environment: "MAINNET", status: "PRELAUNCH" },
     [...networks, networks[0]]
+  ));
+  assert.throws(() => buildSupporterStatus(
+    { environment: "MAINNET", status: "PRELAUNCH" },
+    networks.map((row, index) => index === 1 ? { ...row, treasury_address: "TWrongGenesisAddress" } : row)
   ));
 });
 
