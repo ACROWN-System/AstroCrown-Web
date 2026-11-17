@@ -7,7 +7,8 @@ import {
 } from "@simplewebauthn/server";
 import { decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
-import { handleSupporterApi, supporterStatusResponse } from "./supporters.js";
+import { supporterStatusResponse } from "./supporters.js";
+import { handleGenesisWalletApi } from "./genesis.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -1949,8 +1950,9 @@ async function communications(db, request) {
 async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
-  if (url.pathname === "/api/supporters/status" && request.method === "GET") return supporterStatusResponse(env);
-  if (url.pathname.startsWith("/api/supporters/")) return handleSupporterApi(request, env, config);
+  if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
+  if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
+  if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
@@ -2039,6 +2041,8 @@ export default {
           env.ENVIRONMENT === "staging" &&
           pathname !== "/api/staging/acknowledge" &&
           pathname !== "/api/supporters/status" &&
+          pathname !== "/api/genesis/status" &&
+          pathname !== "/api/genesis/directory" &&
           !(await hasStagingAcknowledgement(request, env))
         ) {
           return json(428, { error: "Acknowledge the current AstroCrown public-staging safety notice before using account services." });
