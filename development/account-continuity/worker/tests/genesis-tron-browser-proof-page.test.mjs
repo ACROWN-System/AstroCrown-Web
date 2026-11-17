@@ -58,6 +58,26 @@ test("TRON proof is pending offline verification and never submitted to a server
   assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|localStorage|sessionStorage|indexedDB/i);
 });
 
+
+test("TRON proof rejects a signature or recovery that completes after expiry or challenge invalidation", () => {
+  const source = inlineScripts(html)[0];
+  const start = source.indexOf('elements.sign.addEventListener("click"');
+  const end = source.indexOf('elements.download.addEventListener("click"', start);
+  assert.ok(start >= 0 && end > start, "signing handler must exist");
+  const handler = source.slice(start, end);
+  const signCall = handler.indexOf("await tronWeb.trx.signMessageV2(signingChallenge.message)");
+  const verifyCall = handler.indexOf("await tronWeb.trx.verifyMessageV2(signingChallenge.message, signature)", signCall);
+  const evidence = handler.indexOf("const evidence = {", verifyCall);
+  assert.ok(signCall >= 0 && verifyCall > signCall && evidence > verifyCall);
+  const afterSignExpiry = handler.indexOf("Date.now() > Date.parse(signingChallenge.expirationTime)", signCall);
+  const afterVerifyExpiry = handler.indexOf("Date.now() > Date.parse(signingChallenge.expirationTime)", verifyCall);
+  assert.ok(afterSignExpiry > signCall, "expiry must be rechecked after the wallet signing prompt resolves");
+  assert.ok(afterVerifyExpiry > verifyCall && afterVerifyExpiry < evidence, "expiry must be rechecked after recovery and before evidence creation");
+  const invalidationChecks = [...handler.matchAll(/challenge !== signingChallenge/g)].map(match => match.index);
+  assert.ok(invalidationChecks.length >= 2 && invalidationChecks[0] > signCall && invalidationChecks[1] > verifyCall,
+    "account/network invalidation must be checked after both asynchronous operations");
+});
+
 test("TRON page requests only connection and network-switch methods, not transactions", () => {
   const scripts = inlineScripts(html);
   assert.equal(scripts.length, 1);
