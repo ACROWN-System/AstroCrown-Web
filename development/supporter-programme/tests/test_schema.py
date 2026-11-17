@@ -7,6 +7,8 @@ MIGRATION = ROOT / "migrations" / "0001_supporter_programme_foundation.sql"
 WORKER_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0001_supporter_programme_foundation.sql"
 WALLET_MIGRATION = ROOT / "migrations" / "0002_supporter_wallet_ownership.sql"
 WORKER_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0002_supporter_wallet_ownership.sql"
+TREASURY_MIGRATION = ROOT / "migrations" / "0003_genesis_usdt_treasury_addresses.sql"
+WORKER_TREASURY_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0003_genesis_usdt_treasury_addresses.sql"
 
 class SupporterSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
@@ -14,6 +16,7 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
         self.db.execute("PRAGMA foreign_keys = ON")
         self.db.executescript(MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(WALLET_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(TREASURY_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -30,6 +33,13 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
             WORKER_WALLET_MIGRATION.read_bytes(),
             WALLET_MIGRATION.read_bytes(),
             "The Worker-deployed wallet verification migration must match the canonical migration.",
+        )
+
+    def test_genesis_treasury_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_TREASURY_MIGRATION.read_bytes(),
+            TREASURY_MIGRATION.read_bytes(),
+            "The Worker-deployed Genesis treasury migration must match the canonical migration.",
         )
 
     def test_new_member_registration_starts_pending_and_unverified(self):
@@ -122,12 +132,17 @@ class SupporterSchemaSmokeTests(unittest.TestCase):
                 "'11111111111111111111111111111111','PAYMENT_AND_DELIVERY',3,'OFFCHAIN_MESSAGE',3)"
             )
 
-    def test_prelaunch_has_no_clock_or_treasuries(self):
+    def test_prelaunch_has_no_clock_and_records_genesis_treasuries_without_enabling_networks(self):
         row = self.db.execute("SELECT status, activated_at, closes_at FROM supporter_program WHERE singleton=1").fetchone()
         self.assertEqual(row, ("PRELAUNCH", None, None))
-        networks = self.db.execute("SELECT network, treasury_address, enabled FROM supporter_network_config").fetchall()
-        self.assertEqual({r[0] for r in networks}, {"ethereum", "tron", "solana"})
-        self.assertTrue(all(r[1] is None and r[2] == 0 for r in networks))
+        networks = dict(self.db.execute("SELECT network, treasury_address FROM supporter_network_config"))
+        self.assertEqual(networks, {
+            "ethereum": "0xbbb77071149a5F113Df15E78c58518917afa950A",
+            "tron": "TAKHQcuJ3RLsZZxCorWc3rav6M28dS6VTR",
+            "solana": "AWyq9E7Wsdjv9VyoTs84XGiubQGZM7fETnZ8ddfArwkG",
+        })
+        enabled = self.db.execute("SELECT COUNT(*) FROM supporter_network_config WHERE enabled != 0").fetchone()[0]
+        self.assertEqual(enabled, 0)
 
     def test_canonical_token_allowlist(self):
         actual = dict(self.db.execute("SELECT network, token_identifier FROM supporter_network_config"))
