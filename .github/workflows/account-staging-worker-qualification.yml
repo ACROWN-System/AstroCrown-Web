@@ -114,7 +114,7 @@ jobs:
           if (status.paymentAcceptance?.enabled !== false || status.paymentAcceptance?.contributionsAccepted !== false) throw new Error("Mainnet payment acceptance must remain disabled.");
           if (status.purchaseAllowance?.automaticTokenIssuance !== false) throw new Error("A contribution must not automatically issue ACROWN.");
           if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Supporter Programme must expose the exact three-network allowlist.");
-          if (status.networks.some(x => x.networkConfigured || x.treasuryConfigured)) throw new Error("No supporter network may be configured before treasury approval.");
+          if (status.networks.some(x => x.networkConfigured || !x.treasuryConfigured)) throw new Error("All three owner-approved Genesis treasuries must be recorded while every payment network remains disabled.");
           NODE
           if ! ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-supporter-wallet-e2e.mjs; then
             echo "Local-only supporter diagnostics (synthetic credentials only):"
