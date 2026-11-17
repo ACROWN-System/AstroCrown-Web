@@ -163,7 +163,6 @@ WHEN NEW.genesis_member_status = 'ACTIVE'
      WHERE p.identity_id = NEW.identity_id
        AND p.payment_kind = 'QUALIFYING_PAYMENT'
        AND p.finality_status = 'FINALIZED'
-       AND p.confirmed_at = NEW.genesis_member_awarded_at
    )
  )
 BEGIN SELECT RAISE(ABORT, 'Genesis Member status requires this wallet identity own finalized qualifying payment'); END;
