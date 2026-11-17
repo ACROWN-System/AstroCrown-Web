@@ -475,11 +475,19 @@ export async function handleGenesisWalletApi(request, env, config) {
       }
       await authenticateSignature(challenge, payload.signature);
       const name = normalizeDisplayName(challenge.requested_display_name);
-      const updated = await db.prepare(
-        "UPDATE genesis_wallet_identities SET display_name=?,display_name_normalized=?,updated_at=? " +
-        "WHERE identity_id=? AND NOT EXISTS (SELECT 1 FROM genesis_wallet_identities other " +
-        "WHERE other.display_name_normalized=? AND other.identity_id!=?)"
-      ).bind(name.name, name.normalized, Math.floor(Date.now() / 1000), identity.identity_id, name.normalized, identity.identity_id).run();
+      let updated;
+      try {
+        updated = await db.prepare(
+          "UPDATE genesis_wallet_identities SET display_name=?,display_name_normalized=?,updated_at=? " +
+          "WHERE identity_id=? AND NOT EXISTS (SELECT 1 FROM genesis_wallet_identities other " +
+          "WHERE other.display_name_normalized=? AND other.identity_id!=?)"
+        ).bind(name.name, name.normalized, Math.floor(Date.now() / 1000), identity.identity_id, name.normalized, identity.identity_id).run();
+      } catch (cause) {
+        if (/unique constraint|display_name_normalized/i.test(String(cause?.message || cause))) {
+          throw error(409, "This display name has just been claimed by another wallet. Choose another name.");
+        }
+        throw cause;
+      }
       if (Number(updated.meta?.changes || 0) !== 1) throw error(409, "This display name has just been claimed by another wallet. Choose another name.");
       const refreshed = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identity.identity_id).first();
       return response(200, await identityProfile(db, refreshed));
