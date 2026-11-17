@@ -66,7 +66,7 @@ test("challenge can bind to an exact HTTPS GitHub Codespaces forwarded origin", 
     origin,
     expectedOrigin: origin,
   });
-  assert.match(message, /^cosmic-workbench-123-8765\\.app\\.github\\.dev wants you to sign in with your Ethereum account:/);
+  assert.match(message, /^cosmic-workbench-123-8765\.app\.github\.dev wants you to sign in with your Ethereum account:/);
   assert.ok(message.includes(`URI: ${origin}/`));
 });
 
