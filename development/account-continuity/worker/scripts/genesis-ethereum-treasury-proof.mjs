@@ -260,7 +260,7 @@ async function main() {
 
   const server = createServer(async (request, response) => {
     try {
-      if (request.headers.host !== `${HOST}:${PORT}`) return sendJson(response, 403, { error: "Unexpected Host header." });
+      if (request.headers.host !== RUNTIME.expectedHost) return sendJson(response, 403, { error: "Unexpected Host header." });
       const url = new URL(request.url || "/", RUNTIME.origin);
       if (request.method === "GET" && url.pathname === "/") {
         response.writeHead(200, {
