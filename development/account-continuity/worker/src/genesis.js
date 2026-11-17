@@ -34,7 +34,7 @@ function randomBytes(length) {
 function base64url(bytes) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 async function digest(value) {
@@ -53,7 +53,7 @@ function randomId(prefix) {
 
 function normalizeDisplayName(value) {
   if (typeof value !== "string") throw error(400, "Enter a display name.");
-  const name = value.normalize("NFKC").trim().replace(/\\s+/g, " ");
+  const name = value.normalize("NFKC").trim().replace(/\s+/g, " ");
   if (!/^[A-Za-z0-9][A-Za-z0-9 _-]{2,27}$/.test(name)) {
     throw error(400, "Display names must be 3–28 characters and use basic Latin letters, numbers, spaces, hyphens or underscores.");
   }
@@ -124,7 +124,7 @@ function signatureMethod(network) {
 
 function createMessage({ origin, network, address, purpose, challengeId, nonce, issuedAt, expiresAt, identityId = null }) {
   const host = new URL(origin).host;
-  const identityLine = identityId ? "Genesis wallet identity: " + identityId + "\\n" : "";
+  const identityLine = identityId ? "Genesis wallet identity: " + identityId + "\n" : "";
   return [
     "AstroCrown Genesis wallet proof",
     "Domain: " + host,
@@ -140,7 +140,7 @@ function createMessage({ origin, network, address, purpose, challengeId, nonce, 
     "",
     "This is an off-chain message signature only. It does not authorize a transaction, token approval, transfer, payment or gas expenditure.",
     "The primary wallet is the sole Genesis identity and recovery anchor. Genesis cannot restore a wallet or move its entitlements to another wallet."
-  ].filter(Boolean).join("\\n");
+  ].filter(Boolean).join("\n");
 }
 
 async function issueChallenge(db, config, { identityId = null, network, address, purpose, walletRole = null, requestedDisplayName = null }) {
