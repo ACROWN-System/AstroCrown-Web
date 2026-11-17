@@ -8,10 +8,38 @@ import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
 
-const HOST = "127.0.0.1";
+const LOCAL_HOST = "127.0.0.1";
 const PORT = 8765;
-const ORIGIN = `http://${HOST}:${PORT}`;
+const LOCAL_ORIGIN = `http://${LOCAL_HOST}:${PORT}`;
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+export function getEthereumTreasuryProofRuntime(env = process.env) {
+  if (env.CODESPACES === "true") {
+    const name = String(env.CODESPACE_NAME || "");
+    const forwardingDomain = String(env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || "");
+    if (!/^[a-z0-9-]{3,80}$/i.test(name) ||
+        !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/i.test(forwardingDomain)) {
+      throw new Error("GitHub Codespaces forwarding identity is incomplete or invalid; refusing to expose the proof server.");
+    }
+    const expectedHost = `${name}-${PORT}.${forwardingDomain}`.toLowerCase();
+    return Object.freeze({
+      mode: "github-codespaces",
+      host: "0.0.0.0",
+      port: PORT,
+      origin: `https://${expectedHost}`,
+      expectedHost,
+    });
+  }
+  return Object.freeze({
+    mode: "local",
+    host: LOCAL_HOST,
+    port: PORT,
+    origin: LOCAL_ORIGIN,
+    expectedHost: `${LOCAL_HOST}:${PORT}`,
+  });
+}
+
+const RUNTIME = getEthereumTreasuryProofRuntime();
 const MAX_BODY_BYTES = 4096;
 const PROOF_DIRECTORY = join(homedir(), "Documents", "AstroCrown", "Genesis", "TreasuryProofs");
 
@@ -38,7 +66,7 @@ code{overflow-wrap:anywhere}
 <body>
 <main>
 <h1>Genesis Programme — Ethereum Treasury Control Proof</h1>
-<p>This local tool checks control of the supplied public Ethereum address using one short-lived, off-chain <code>personal_sign</code> challenge.</p>
+<p>This tool checks control of the supplied public Ethereum address using one short-lived, off-chain <code>personal_sign</code> challenge.</p>
 <div class="warning">
 <strong>Safety boundary</strong>
 <p>It must request only a readable message signature. It must not request a transaction, token approval, transfer, spending permission, seed phrase or private key. Reject any prompt that asks for anything other than signing the displayed message.</p>
@@ -48,7 +76,7 @@ code{overflow-wrap:anywhere}
 <button id="connect">Connect and prepare proof</button>
 <button id="sign" disabled>Sign displayed proof message</button>
 <pre id="message">No challenge has been issued.</pre>
-<p id="status" role="status">This page is served only from 127.0.0.1 on this computer. It does not contact an external service.</p>
+<p id="status" role="status">The proof server is restricted to loopback or a private, authenticated GitHub Codespaces forwarded port. It does not contact an external service.</p>
 </main>
 <script>
 "use strict";
@@ -124,7 +152,7 @@ signButton.addEventListener("click", async () => {
       params: [toHexUtf8(challengeMessage), selectedAddress]
     });
     const result = await postJson("/api/verify", { signature });
-    setStatus("VERIFIED — " + result.recoveredAddress + "\nEvidence saved locally: " + result.evidenceFile + "\nNo blockchain transaction was sent.");
+    setStatus("VERIFIED — " + result.recoveredAddress + "\nEvidence saved in the proof environment: " + result.evidenceFile + "\nNo blockchain transaction was sent.");
     messageElement.textContent = challengeMessage + "\n\nSignature:\n" + signature;
   } catch (error) {
     setStatus(error && error.message ? error.message : String(error));
@@ -139,7 +167,7 @@ signButton.addEventListener("click", async () => {
     const info = await response.json();
     expectedAddress = info.expectedAddress;
     targetElement.textContent = expectedAddress;
-    setStatus("Ready. The tool is local-only and will reject any address other than the expected Genesis Ethereum address.");
+    setStatus("Ready. The tool will reject any address other than the expected Genesis Ethereum address.");
   } catch (error) {
     setStatus(error.message || String(error));
     connectButton.disabled = true;
@@ -149,12 +177,18 @@ signButton.addEventListener("click", async () => {
 </body>
 </html>`;
 
-export function createEthereumTreasuryChallenge({ address, nonce, issuedAt, expirationTime, origin = ORIGIN }) {
+export function createEthereumTreasuryChallenge({ address, nonce, issuedAt, expirationTime, origin = RUNTIME.origin, expectedOrigin = RUNTIME.origin }) {
   if (!isAddress(address)) throw new TypeError("A valid Ethereum address is required.");
   const normalized = getAddress(address);
-  const parsedOrigin = new URL(origin);
-  if (parsedOrigin.protocol !== "http:" || parsedOrigin.hostname !== HOST || parsedOrigin.port !== String(PORT)) {
-    throw new TypeError("The challenge origin must be the configured loopback origin.");
+  let parsedOrigin;
+  try {
+    parsedOrigin = new URL(origin);
+  } catch {
+    throw new TypeError("The challenge origin is invalid.");
+  }
+  if (parsedOrigin.origin !== expectedOrigin || parsedOrigin.username || parsedOrigin.password ||
+      parsedOrigin.pathname !== "/" || parsedOrigin.search || parsedOrigin.hash) {
+    throw new TypeError("The challenge origin must exactly match the configured proof origin.");
   }
   if (typeof nonce !== "string" || !/^[a-f0-9]{32}$/.test(nonce)) {
     throw new TypeError("The challenge nonce must be 16 random bytes encoded as lowercase hex.");
@@ -227,7 +261,7 @@ async function main() {
   const server = createServer(async (request, response) => {
     try {
       if (request.headers.host !== `${HOST}:${PORT}`) return sendJson(response, 403, { error: "Unexpected Host header." });
-      const url = new URL(request.url || "/", ORIGIN);
+      const url = new URL(request.url || "/", RUNTIME.origin);
       if (request.method === "GET" && url.pathname === "/") {
         response.writeHead(200, {
           "Content-Type": "text/html; charset=utf-8",
@@ -240,9 +274,9 @@ async function main() {
         return;
       }
       if (request.method === "GET" && url.pathname === "/api/info") {
-        return sendJson(response, 200, { expectedAddress, chainId: "0x1", origin: ORIGIN });
+        return sendJson(response, 200, { expectedAddress, chainId: "0x1", origin: RUNTIME.origin });
       }
-      if (request.headers.origin !== ORIGIN) return sendJson(response, 403, { error: "Request origin did not match the local proof page." });
+      if (request.headers.origin !== RUNTIME.origin) return sendJson(response, 403, { error: "Request origin did not match the configured proof page." });
       if (request.method === "POST" && url.pathname === "/api/challenge") {
         if (challenge || consumed) return sendJson(response, 409, { error: "A challenge has already been issued in this session. Restart the local tool for a fresh challenge." });
         const body = await readJson(request);
@@ -257,7 +291,9 @@ async function main() {
           address: expectedAddress,
           nonce,
           issuedAt,
-          expirationTime
+          expirationTime,
+          origin: RUNTIME.origin,
+          expectedOrigin: RUNTIME.origin
         });
         challenge = { message, issuedAt, expirationTime, nonce };
         return sendJson(response, 200, { message, expectedAddress, chainId: "0x1", expiresAt: expirationTime.toISOString() });
@@ -283,7 +319,7 @@ async function main() {
           expectedAddress,
           recoveredAddress: verification.recoveredAddress,
           chainId: "0x1",
-          domain: ORIGIN,
+          domain: RUNTIME.origin,
           nonce: challenge.nonce,
           issuedAt: challenge.issuedAt.toISOString(),
           expirationTime: challenge.expirationTime.toISOString(),
@@ -304,12 +340,20 @@ async function main() {
     }
   });
 
-  server.listen(PORT, HOST, () => {
-    stdout.write("\nLocal-only Ethereum treasury proof tool is ready.\n");
+  server.listen(RUNTIME.port, RUNTIME.host, () => {
+    stdout.write("\nGenesis Ethereum treasury proof tool is ready.\n");
+    stdout.write(`Mode: ${RUNTIME.mode}\n`);
     stdout.write(`Expected address: ${expectedAddress}\n`);
-    stdout.write(`Open this URL in the Edge profile that contains the Genesis MetaMask wallet: ${ORIGIN}\n`);
-    stdout.write("The tool listens only on 127.0.0.1. It does not use RPC, send transactions or contact Cloudflare.\n");
-    stdout.write("Press Ctrl+C to stop the local server.\n");
+    if (RUNTIME.mode === "github-codespaces") {
+      stdout.write(`Open this HTTPS URL in the Edge profile containing the Genesis MetaMask wallet: ${RUNTIME.origin}\n`);
+      stdout.write("In GitHub Codespaces, keep forwarded port 8765 PRIVATE. Never change it to Public.\n");
+      stdout.write("The server is bound for the Codespaces proxy but accepts only this exact HTTPS host and origin.\n");
+    } else {
+      stdout.write(`Open this URL in the Edge profile containing the Genesis MetaMask wallet: ${RUNTIME.origin}\n`);
+      stdout.write("The tool listens only on 127.0.0.1.\n");
+    }
+    stdout.write("No RPC, transaction, token approval or external treasury service is used.\n");
+    stdout.write("Press Ctrl+C to stop the proof server.\n");
   });
 }
 
