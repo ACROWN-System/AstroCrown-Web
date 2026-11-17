@@ -746,7 +746,7 @@
       if (response.status === 428) {
         throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage, then return here.");
       }
-      throw new Error(data && data.error ? data.error : "The supporter service returned HTTP " + response.status + ".");
+      throw new Error(data && data.error ? data.error : "The Genesis Programme service returned HTTP " + response.status + ".");
     }
     return data;
   }
@@ -766,7 +766,7 @@
 
   function applySupporterProfile(data) {
     if (!data || !data.member || typeof data.member.username !== "string" || !Array.isArray(data.wallets)) {
-      throw new Error("The supporter service returned an incomplete member profile.");
+      throw new Error("The Genesis Programme service returned an incomplete member profile.");
     }
     supporterMember = data;
     pseudonymInput.value = data.member.username;
