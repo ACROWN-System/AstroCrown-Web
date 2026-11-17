@@ -847,7 +847,7 @@ async function buildSupporterStatus(program, networkRows) {
       NETWORK_ORDER.some((network) => !byNetwork.has(network))) {
     throw new Error("The Supporter Programme database does not contain the exact three-network allowlist.");
   }
-  const networks = NETWORK_ORDER.map((network) => {
+  const networks = await Promise.all(NETWORK_ORDER.map(async (network) => {
     const row = byNetwork.get(network);
     const canonical = CANONICAL_NETWORKS[network];
     if (Number(row.token_decimals) !== 6 || row.network_identifier !== canonical.networkIdentifier ||
@@ -874,7 +874,7 @@ async function buildSupporterStatus(program, networkRows) {
       treasuryConfigured,
       treasuryAddressFormatValid,
     };
-  });
+  }));
   return {
     environment: "MAINNET",
     programme: {
