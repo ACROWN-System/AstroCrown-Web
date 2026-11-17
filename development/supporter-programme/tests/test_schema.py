@@ -273,6 +273,23 @@ if __name__ == "__main__":
             "The Worker-deployed inactivity and closure migration must match the canonical migration.",
         )
 
+    def test_public_launch_timestamp_must_be_utc_midnight_and_is_immutable(self):
+        launch = 1_900_022_400
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "UTC midnight"):
+            self.db.execute(
+                "UPDATE supporter_program SET public_launch_at=? WHERE singleton=1",
+                (launch + 1,),
+            )
+        self.db.execute(
+            "UPDATE supporter_program SET public_launch_at=? WHERE singleton=1",
+            (launch,),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable once set"):
+            self.db.execute(
+                "UPDATE supporter_program SET public_launch_at=? WHERE singleton=1",
+                (launch + 86400,),
+            )
+
     def test_global_inactivity_clock_resets_only_from_verified_activity_and_closure_is_explicit(self):
         launch = 1_900_022_400  # UTC midnight.
         self.db.execute(
