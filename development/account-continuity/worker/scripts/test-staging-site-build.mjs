@@ -13,14 +13,15 @@ async function readPublic(path) {
 test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
+  await access(resolve(publicRoot, "assets/genesis-member-dna.svg"));
   const homepage = await readPublic("index.html");
   assert.match(homepage, /href="\.\/supporters\/">Genesis Programme/);
 });
 
-test("published Genesis Programme states that contributions are not open", async () => {
+test("published Genesis Programme states that qualifying payments are not open and shows wallet-first identity", async () => {
   const html = await readPublic("supporters/index.html");
   assert.match(html, /DEVELOPMENT PREVIEW/);
-  assert.match(html, /USDT CONTRIBUTIONS NOT OPEN/);
+  assert.match(html, /USDT QUALIFYING PAYMENTS NOT OPEN/);
   assert.match(html, /DO NOT SEND FUNDS/);
   assert.match(html, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/);
   assert.match(html, /1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance/);
@@ -28,6 +29,11 @@ test("published Genesis Programme states that contributions are not open", async
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
+  assert.match(html, /The primary wallet is the identity, recovery anchor and entitlement holder/);
+  assert.match(html, /Genesis Member distinction/);
+  assert.match(html, /gold DNA Genesis Member badge/);
+  assert.match(html, /Explorer links reveal the full wallet address and associated public transaction history/);
+  assert.match(html, /The random unique public name/);
   assert.match(html, /Never share your seed phrase or private key/);
 });
 
@@ -43,8 +49,14 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.match(js, /solana:signMessage/);
   assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
   assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
-  assert.ok(js.includes("/api/supporters/status"));
-  assert.match(js, /contributions remain closed/i);
+  assert.ok(js.includes("/api/genesis/status"));
+  assert.ok(js.includes("/api/genesis/identity/challenge"));
+  assert.ok(js.includes("/api/genesis/identity/verify"));
+  assert.ok(js.includes("/api/genesis/display-name/challenge"));
+  assert.ok(js.includes("/api/genesis/wallet-link/challenge"));
+  assert.ok(!js.includes("/api/supporters/registration/"));
+  assert.ok(!js.includes("/api/supporters/login/"));
+  assert.match(js, /qualifying payments remain closed/i);
   assert.equal(js.includes('method: "eth_sign"'), false);
   assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
   assert.equal(js.includes('method: "eth_sendTransaction"'), false);
