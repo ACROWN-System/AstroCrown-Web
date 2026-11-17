@@ -23,7 +23,7 @@ The application may issue a short-lived, server-side session after a fresh signe
 
 Ethereum, TRON and Solana addresses are distinct network-specific public addresses, even when derived or managed by the same multi-chain wallet application.
 
-The first wallet address that proves control becomes the **primary wallet**. Additional Ethereum, TRON or Solana addresses must each prove control through a separate domain-bound off-chain message challenge before they may be linked to that primary identity. The primary wallet alone may authenticate the identity and authorize name changes or further address links.
+The first wallet address that proves control becomes the **primary wallet**. Additional Ethereum, TRON or Solana addresses must each prove control through a separate domain-bound off-chain message challenge before they may be linked to that primary identity. The primary wallet alone may authenticate the identity and authorize name changes or further address links. The Worker also rejects state-changing requests unless the HTTP `Origin` exactly matches the configured official AstroCrown origin; an off-site page must not be able to use Genesis as a signing-challenge relay.
 
 A linked address is a payment or delivery address, not a recovery wallet. It cannot independently log in to, recover or transfer the primary wallet identity.
 
@@ -138,6 +138,8 @@ The intended sequence is:
 10. A later, separate floor-price purchase consumes the wallet's entitlement; the subsequent Solana delivery is independently verified and receipted.
 
 There is no conventional registration step, separate login identity, or independent recovery account in this sequence. Reconnecting the primary wallet proves the same identity.
+
+The staging environment must provide a randomly generated secret of at least 32 characters as `GENESIS_RATE_LIMIT_HMAC_KEY` or `RATE_LIMIT_HMAC_KEY`; the local-only development fallback is never suitable for staging or production.
 
 ## 8. Technical implementation and compatibility boundary
 
