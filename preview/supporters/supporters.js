@@ -38,6 +38,7 @@
   var saveNameButton = document.getElementById("member-name-save");
   var nameAvailability = document.getElementById("member-name-availability");
   var genesisBadgeImage = document.getElementById("genesis-member-badge-image");
+  var memberAvatar = document.getElementById("member-avatar");
   var publicDirectoryList = document.getElementById("genesis-public-directory-list");
   var supporterRuntimeEnabled = false;
   var supporterMember = null;
@@ -800,6 +801,8 @@
           }).join("  |  ")
         : "No additional network addresses linked.";
     }
+    var avatarGlyphs = { person: "●", crown: "♛", star: "★", moon: "☾", orbit: "◎", shield: "⬡" };
+    if (memberAvatar) memberAvatar.textContent = avatarGlyphs[data.walletIdentity.avatarKey] || "✦";
     var genesisMember = data.genesisMember && data.genesisMember.status === "ACTIVE";
     if (genesisBadgeImage) {
       genesisBadgeImage.hidden = !genesisMember;
@@ -998,9 +1001,13 @@
         badge.src = "../assets/genesis-member-dna.svg";
         badge.alt = "Genesis Member";
         badge.className = "genesis-directory-badge";
+        var avatar = document.createElement("span");
+        avatar.className = "genesis-directory-avatar";
+        var glyphs = { person: "●", crown: "♛", star: "★", moon: "☾", orbit: "◎", shield: "⬡" };
+        avatar.textContent = glyphs[item.avatarKey] || "✦";
         var identity = document.createElement("strong");
         identity.textContent = item.displayName;
-        identityGroup.append(badge, identity);
+        identityGroup.append(avatar, identity, badge);
         var detail = document.createElement("span");
         detail.textContent = item.amount + " USDT · " + item.network.toUpperCase();
         row.append(identityGroup, detail);
