@@ -54,35 +54,29 @@ The utility prints SQL that stages the addresses in the existing `supporter_netw
 
 The SQL does not enable intake, create a payment intent, broadcast a transfer, verify custody, prove control of the address, or verify live token decimals. The utility performs no RPC/network call and does not contact Cloudflare. Its address checks are format checks only.
 
-## 2.1 Ethereum treasury ownership proof (local or GitHub Codespaces)
+## 2.1 Local Ethereum treasury ownership proof
 
-A preliminary Ethereum proof utility is provided at:
+A preliminary local-only Ethereum proof utility is provided at:
 
 `development/account-continuity/worker/scripts/genesis-ethereum-treasury-proof.mjs`
 
-It supports two execution modes:
-
-- **Local computer:** the server binds only to `127.0.0.1:8765`.
-- **GitHub Codespaces:** the server uses the Codespaces-provided name and forwarding-domain environment variables to derive one exact HTTPS origin, binds for the Codespaces proxy, and accepts requests only when the HTTP Host and browser Origin match that exact derived hostname. The forwarded port must remain **Private** (the GitHub default); never make it Public.
-
-For a browser-based GitHub environment, create a Codespace from the existing Genesis PR branch. In its integrated terminal, from `development/account-continuity/worker`, install the existing package dependencies and run the proof tool:
+From `development/account-continuity/worker`, run:
 
 ```sh
-npm install --no-save --no-package-lock --no-audit --no-fund
 npm run genesis:treasury-proof:ethereum
 ```
 
-Open the forwarded HTTPS port in the Edge profile containing the Genesis MetaMask wallet. The tool asks only for the public Ethereum receiving address. It checks that the connected account matches that exact address and that MetaMask reports Ethereum Mainnet (chain ID 1). If either check fails, it does not request a signature.
+The tool asks only for the public Ethereum receiving address, then starts a server bound to `127.0.0.1:8765`. Open the exact printed URL in the Edge profile containing the Genesis MetaMask wallet. It checks that the connected account matches the supplied address and that MetaMask reports Ethereum Mainnet (chain ID 1). If either check fails, it does not request a signature.
 
-The challenge uses a random one-use nonce, a five-minute expiry, the exact wallet address, Ethereum Mainnet chain ID, the exact configured proof origin and an explicit statement that the signature authorizes no transaction, token approval, transfer, payment or spending. The tool requests EIP-191 `personal_sign` only, then independently recovers and compares the signer using the existing `viem` dependency.
+The challenge is generated locally with a random one-use nonce, a five-minute expiry, the exact wallet address, Ethereum Mainnet chain ID, the loopback origin and an explicit statement that the signature authorizes no transaction, token approval, transfer, payment or spending. The tool requests EIP-191 `personal_sign` only, then independently recovers and compares the signer using the existing `viem` dependency.
 
-A successful result is saved as a JSON evidence file under `Documents/AstroCrown/Genesis/TreasuryProofs/` in the environment running the tool. In Codespaces this is inside the Codespace home directory, not automatically on the operator's Windows computer. Keep it outside the repository; do not commit or publish it. The evidence file contains the public address, challenge, message signature and verification metadata.
+A successful result is saved as a local JSON evidence file under:
 
-This proves control of the address at the recorded time only. It is a preliminary custody attestation, not proof of legal ownership, continuing control, operational payment readiness or a production-domain authentication flow. The tool does not contact an RPC provider or Cloudflare, and it sends no transaction. GitHub Codespaces port forwarding is a transport path to the browser-based development server; keep it private and close/stop the Codespace after saving evidence securely.
+`Documents/AstroCrown/Genesis/TreasuryProofs/`
 
-**Stop and reject the prompt** if MetaMask displays a transaction, token approval, spending permission or any request other than signing the exact readable message shown by the page. Do not sign a message you have not reviewed.
+The evidence file contains the public address, challenge, message signature and verification metadata. Keep it locally; do not commit it to GitHub. This proves control of the address at the recorded time only. It is a preliminary local custody attestation, not proof of legal ownership, continuing control, operational payment readiness or a production-domain authentication flow. The tool does not contact an RPC provider, Cloudflare, a website backend or any external service. It sends no transaction.
 
-This tool covers Ethereum only. Solana and TRON require separate proof paths. The TRON process must account for MetaMask's documented lack of extension dapp-connectivity for TRON; do not assume the Ethereum `personal_sign` flow works for TRON.
+**Stop and reject the prompt** if MetaMask displays a transaction, token approval, spending permission or any request other than signing the exact readable message shown by the local page. Do not sign a message you have not reviewed.
 
 ## 3. Where the generated SQL may be applied
 
