@@ -153,15 +153,31 @@ CREATE TABLE IF NOT EXISTS genesis_rate_limits (
 );
 CREATE INDEX IF NOT EXISTS genesis_rate_limits_cleanup_idx ON genesis_rate_limits(updated_at);
 
+CREATE TRIGGER IF NOT EXISTS genesis_public_payment_source_wallet_must_match
+BEFORE INSERT ON genesis_public_payments
+WHEN NOT EXISTS (
+  SELECT 1 FROM genesis_wallet_addresses w
+  WHERE w.wallet_address_id = NEW.source_wallet_address_id
+    AND w.identity_id = NEW.identity_id
+    AND w.network = NEW.network
+    AND w.wallet_role IN ('PRIMARY', 'PAYMENT', 'PAYMENT_AND_DELIVERY')
+)
+BEGIN SELECT RAISE(ABORT, 'Genesis payment source must be a verified payment address of the same wallet identity and network'); END;
+
 CREATE TRIGGER IF NOT EXISTS genesis_member_badge_requires_qualified_identity
 BEFORE INSERT ON genesis_member_badges
 WHEN NOT EXISTS (
-  SELECT 1 FROM genesis_wallet_identities i
+  SELECT 1
+  FROM genesis_wallet_identities i
+  JOIN genesis_public_payments p ON p.payment_record_id = NEW.qualifying_payment_record_id
   WHERE i.identity_id = NEW.identity_id
     AND i.genesis_member_status = 'ACTIVE'
     AND i.genesis_member_awarded_at = NEW.awarded_at
+    AND p.identity_id = i.identity_id
+    AND p.payment_kind = 'QUALIFYING_PAYMENT'
+    AND p.finality_status = 'FINALIZED'
 )
-BEGIN SELECT RAISE(ABORT, 'Genesis Member badge requires an active qualified wallet identity'); END;
+BEGIN SELECT RAISE(ABORT, 'Genesis Member badge requires an active wallet identity and its own finalized qualifying payment'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_public_payments_no_update
 BEFORE UPDATE ON genesis_public_payments
