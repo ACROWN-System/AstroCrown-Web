@@ -54,6 +54,32 @@ The utility prints SQL that stages the addresses in the existing `supporter_netw
 
 The SQL does not enable intake, create a payment intent, broadcast a transfer, verify custody, prove control of the address, or verify live token decimals. The utility performs no RPC/network call and does not contact Cloudflare. Its address checks are format checks only.
 
+## 2.1 Local Ethereum treasury ownership proof
+
+A preliminary local-only Ethereum proof utility is provided at:
+
+`development/account-continuity/worker/scripts/genesis-ethereum-treasury-proof.mjs`
+
+From `development/account-continuity/worker`, run:
+
+```sh
+npm run genesis:treasury-proof:ethereum
+```
+
+The tool asks only for the public Ethereum receiving address, then starts a server bound to `127.0.0.1:8765`. Open the exact printed URL in the Edge profile containing the Genesis MetaMask wallet. It checks that the connected account matches the supplied address and that MetaMask reports Ethereum Mainnet (chain ID 1). If either check fails, it does not request a signature.
+
+The challenge is generated locally with a random one-use nonce, a five-minute expiry, the exact wallet address, Ethereum Mainnet chain ID, the loopback origin and an explicit statement that the signature authorizes no transaction, token approval, transfer, payment or spending. The tool requests EIP-191 `personal_sign` only, then independently recovers and compares the signer using the existing `viem` dependency.
+
+A successful result is saved as a local JSON evidence file under:
+
+`Documents/AstroCrown/Genesis/TreasuryProofs/`
+
+The evidence file contains the public address, challenge, message signature and verification metadata. Keep it locally; do not commit it to GitHub. This proves control of the address at the recorded time only. It is a preliminary local custody attestation, not proof of legal ownership, continuing control, operational payment readiness or a production-domain authentication flow. The tool does not contact an RPC provider, Cloudflare, a website backend or any external service. It sends no transaction.
+
+**Stop and reject the prompt** if MetaMask displays a transaction, token approval, spending permission or any request other than signing the exact readable message shown by the local page. Do not sign a message you have not reviewed.
+
+This tool covers Ethereum only. Solana and TRON require separate proof paths. The TRON process must account for MetaMask's documented lack of extension dapp-connectivity for TRON; do not assume the Ethereum `personal_sign` flow works for TRON.
+
 ## 3. Where the generated SQL may be applied
 
 Apply the generated SQL only after the dedicated mainnet D1 database has been separately provisioned and its exact database identity has been verified. The intended database name is `acrown-supporters-mainnet`; never apply this file to `acrown-account-staging`, the ordinary account database, or a test database.
@@ -64,7 +90,7 @@ The public status endpoint deliberately never returns an address. It reports onl
 
 ## 4. Required work after address staging
 
-**Current owner-input state — 17 November 2026:** One public address for each of the three networks has now been supplied outside the repository. Each passes the same network-specific format criteria implemented by the offline utility. The address values are intentionally not reproduced in this guide or committed to GitHub. No generated SQL has been applied, no address has been configured in D1, and independent custody/control and live token-state verification remain outstanding.
+**Current owner-input state — 17 November 2026:** One public address for each of the three networks has now been supplied outside the repository. Each passes the same network-specific format criteria implemented by the offline utility. The address values are intentionally not reproduced in this guide or committed to GitHub. A local Ethereum proof utility is now available but has not been run; no proof evidence has yet been created. No generated SQL has been applied, no address has been configured in D1, and independent custody/control and live token-state verification remain outstanding.
 
 Address staging is not proof that AstroCrown controls the wallet. Before a network can be enabled, the operator must complete and preserve evidence for all of the following:
 
