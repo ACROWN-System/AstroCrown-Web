@@ -346,6 +346,7 @@ async function main() {
     stdout.write(`Expected address: ${expectedAddress}\n`);
     if (RUNTIME.mode === "github-codespaces") {
       stdout.write(`Open this HTTPS URL in the Edge profile containing the Genesis MetaMask wallet: ${RUNTIME.origin}\n`);
+      stdout.write(`Codespaces port-forward detection hint: http://127.0.0.1:${PORT}\n`);
       stdout.write("In GitHub Codespaces, keep forwarded port 8765 PRIVATE. Never change it to Public.\n");
       stdout.write("The server is bound for the Codespaces proxy but accepts only this exact HTTPS host and origin.\n");
     } else {
