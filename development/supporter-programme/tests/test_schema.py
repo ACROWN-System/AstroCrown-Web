@@ -137,7 +137,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "'FINALIZED','rules-v1',?,2)",
             (tx, "https://etherscan.io/tx/" + tx),
         )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "active qualified wallet identity"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "active wallet identity and its own finalized qualifying payment"):
             self.db.execute(
                 "INSERT INTO genesis_member_badges(badge_id,identity_id,badge_code,qualifying_payment_record_id,rules_version,awarded_at) "
                 "VALUES('gb-1','gid-badge','GENESIS_MEMBER_DNA_GOLD','gp-1','rules-v1',3)"
