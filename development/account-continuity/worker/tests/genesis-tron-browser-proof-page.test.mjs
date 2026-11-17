@@ -7,17 +7,17 @@ const pageUrl = new URL("../../../../preview/genesis-tron-treasury-proof.html", 
 const html = await readFile(pageUrl, "utf8");
 
 function inlineScripts(source) {
-  return [...source.matchAll(/<script\\b[^>]*>([\\s\\S]*?)<\\/script>/gi)].map(match => match[1]);
+  return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(match => match[1]);
 }
 
 test("Genesis TRON browser proof is pinned to its exact no-index HTTPS URL", () => {
   assert.match(html, /<meta name="robots" content="noindex, nofollow, noarchive">/);
-  assert.match(html, /const APPROVED_ORIGIN = "https:\\/\\/acrown-system\\.github\\.io"/);
-  assert.match(html, /const APPROVED_PATH = "\\/AstroCrown-Web\\/preview\\/genesis-tron-treasury-proof\\.html"/);
+  assert.match(html, /const APPROVED_ORIGIN = "https:\/\/acrown-system\.github\.io"/);
+  assert.match(html, /const APPROVED_PATH = "\/AstroCrown-Web\/preview\/genesis-tron-treasury-proof\.html"/);
 });
 
 test("Genesis TRON proof requires TronLink, address match, and the documented Mainnet network switch", () => {
-  assert.match(html, /window\\.tron\\.isTronLink !== true/);
+  assert.match(html, /window\.tron\.isTronLink !== true/);
   assert.match(html, /method: "eth_requestAccounts"/);
   assert.match(html, /connectedAddress !== targetAddress/);
   assert.match(html, /method: "wallet_switchEthereumChain"/);
@@ -26,23 +26,23 @@ test("Genesis TRON proof requires TronLink, address match, and the documented Ma
 });
 
 test("Genesis TRON proof uses TIP-191 message signing and local address recovery", () => {
-  assert.match(html, /trx\\.signMessageV2\\(challenge\\.message\\)/);
-  assert.match(html, /trx\\.verifyMessageV2\\(challenge\\.message, signature\\)/);
-  assert.match(html, /recoveredAddress !== challenge\\.connectedAddress/);
+  assert.match(html, /trx\.signMessageV2\(challenge\.message\)/);
+  assert.match(html, /trx\.verifyMessageV2\(challenge\.message, signature\)/);
+  assert.match(html, /recoveredAddress !== challenge\.connectedAddress/);
   assert.match(html, /browserSignatureVerified: true/);
   assert.match(html, /method: "TRON TIP-191 signMessageV2"/);
 });
 
 test("Genesis TRON proof invalidates challenge after chain or account changes", () => {
-  assert.match(html, /walletProvider\\.on\\("chainChanged"/);
-  assert.match(html, /walletProvider\\.on\\("accountsChanged"/);
-  assert.match(html, /invalidateChallenge\\(/);
+  assert.match(html, /walletProvider\.on\("chainChanged"/);
+  assert.match(html, /walletProvider\.on\("accountsChanged"/);
+  assert.match(html, /invalidateChallenge\(/);
   assert.match(html, /activeChainId !== MAINNET_CHAIN_ID/);
 });
 
 test("Genesis TRON proof uses a random nonce and five-minute challenge", () => {
-  assert.match(html, /crypto\\.getRandomValues\\(new Uint8Array\\(16\\)\\)/);
-  assert.match(html, /CHALLENGE_LIFETIME_MS = 5 \\* 60 \\* 1000/);
+  assert.match(html, /crypto\.getRandomValues\(new Uint8Array\(16\)\)/);
+  assert.match(html, /CHALLENGE_LIFETIME_MS = 5 \* 60 \* 1000/);
   assert.match(html, /Nonce: /);
   assert.match(html, /Expiration Time: /);
 });
@@ -53,9 +53,9 @@ test("TRON proof is pending offline verification and never submitted to a server
   assert.match(html, /transactionSent: false/);
   assert.match(html, /tokenApprovalRequested: false/);
   assert.match(html, /externalSubmission: false/);
-  assert.match(html, /new Blob\\(\\[proofJson\\]/);
-  assert.match(html, /link\\.download = "astrocrown-genesis-tron-proof-/);
-  assert.doesNotMatch(html, /fetch\\s*\\(|XMLHttpRequest|WebSocket|sendBeacon|localStorage|sessionStorage|indexedDB/i);
+  assert.match(html, /new Blob\(\[proofJson\]/);
+  assert.match(html, /link\.download = "astrocrown-genesis-tron-proof-/);
+  assert.doesNotMatch(html, /fetch\s*\(|XMLHttpRequest|WebSocket|sendBeacon|localStorage|sessionStorage|indexedDB/i);
 });
 
 test("TRON page requests only connection and network-switch methods, not transactions", () => {
@@ -63,7 +63,7 @@ test("TRON page requests only connection and network-switch methods, not transac
   assert.equal(scripts.length, 1);
   const source = scripts[0];
   new Script(source, { filename: pageUrl.pathname });
-  const methods = [...source.matchAll(/request\\(\\{\\s*method:\\s*"([^"]+)"/g)].map(match => match[1]);
+  const methods = [...source.matchAll(/request\(\{\s*method:\s*"([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual([...new Set(methods)].sort(), ["eth_requestAccounts", "wallet_switchEthereumChain"]);
   for (const forbidden of ["eth_sendTransaction", "eth_signTransaction", "eth_sendRawTransaction", "wallet_sendCalls", "sendRawTransaction"]) {
     assert.equal(source.includes(forbidden), false, "unexpected transaction capability: " + forbidden);
@@ -72,8 +72,8 @@ test("TRON page requests only connection and network-switch methods, not transac
 });
 
 test("TRON page uses no remote scripts, stylesheets, images, or font services", () => {
-  assert.doesNotMatch(html, /<script\\b[^>]*\\bsrc=/i);
-  assert.doesNotMatch(html, /<link\\b[^>]*\\brel=["']stylesheet["']/i);
-  assert.doesNotMatch(html, /https?:\\/\\/(?!acrown-system\\.github\\.io)/i);
+  assert.doesNotMatch(html, /<script\b[^>]*\bsrc=/i);
+  assert.doesNotMatch(html, /<link\b[^>]*\brel=["']stylesheet["']/i);
+  assert.doesNotMatch(html, /https?:\/\/(?!acrown-system\.github\.io)/i);
   assert.doesNotMatch(html, /TAKHQcuJ3RLsZZxCorWc3rav6M28dS6VTR/);
 });
