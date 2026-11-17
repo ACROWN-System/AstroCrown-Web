@@ -60,6 +60,7 @@ The former page's **USDT 150 production-transition target** has been removed. It
 
 - [x] Owner supplied one dedicated public receiving address for Ethereum ERC-20 USD₮, one for Tron TRC-20 USD₮ and one for Solana SPL USD₮ on 2026-11-17. All three passed address-format checks using the existing offline utility's network-specific rules. The addresses are not reproduced in this repository and have not been staged or configured in D1. Never provide private keys or recovery phrases.
 - [x] Add an offline address-staging utility and Worker status-format checks in the current PR branch. This validates address syntax only, does not establish custody/control or live token state, and keeps every network disabled. See [Treasury Address Onboarding](TREASURY-ADDRESS-ONBOARDING.md).
+- [x] Add a local-only Ethereum Mainnet `personal_sign` proof utility that checks the Genesis public address and chain ID, generates a one-use five-minute challenge and verifies the recovered signer locally. The tool is implemented but has not yet been run; no proof evidence has been created.
 - [ ] Independently prove control/custody of all three supplied treasury addresses and preserve the approved evidence.
 - [ ] Verify each live mainnet token contract/mint, program identity and six-decimal precision against independent sources before enabling any network.
 - [ ] Verify the canonical USD₮ contract/mint identity on each network and the exact network configuration displayed to participants.
