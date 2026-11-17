@@ -18,7 +18,7 @@ export function getEthereumTreasuryProofRuntime(env = process.env) {
     const name = String(env.CODESPACE_NAME || "");
     const forwardingDomain = String(env.GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN || "");
     if (!/^[a-z0-9-]{3,80}$/i.test(name) ||
-        !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,63}$/i.test(forwardingDomain)) {
+        !/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/i.test(forwardingDomain) || !forwardingDomain.toLowerCase().endsWith(".github.dev")) {
       throw new Error("GitHub Codespaces forwarding identity is incomplete or invalid; refusing to expose the proof server.");
     }
     const expectedHost = `${name}-${PORT}.${forwardingDomain}`.toLowerCase();
