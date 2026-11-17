@@ -1,12 +1,12 @@
-# Supporter Programme — Mainnet Payment and Entitlement Foundation
+# Genesis Programme — Mainnet Payment and Entitlement Foundation
 
 **Date:** 14 November 2026  
 **Status:** Architecture/schema foundation plus a read-only, isolated staging status API — payment acceptance is NOT enabled.  
-**Scope:** Supporter Programme real-USDT exception; not the rest of AstroCrown.
+**Scope:** Genesis Programme real-USDT contribution and entitlement system; not the rest of AstroCrown.
 
 ## 1. Deployment split
 
-The general AstroCrown website and platform functionality remain in Devnet/Testnet with valueless assets during development. The Supporter Programme is the deliberate exception: after separate activation gates pass, it is intended to accept real mainnet USD₮ from its first operational opening on Ethereum, Tron and Solana.
+The general AstroCrown website and platform functionality remain in Devnet/Testnet with valueless assets during development. The Genesis Programme is the deliberate exception: after separate activation gates pass, it is intended to accept real mainnet USD₮ from its first operational opening on Ethereum, Tron and Solana.
 
 Publishing a static Pages preview, merging a PR, deploying a Worker or creating a D1 database does not open the programme and does not start its 180-day clock. The clock begins only when the owner-approved payment service is deliberately activated and ready to accept real contributions.
 
@@ -97,7 +97,7 @@ The isolated staging Worker now implements supporter identity without opening pa
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `/api/supporters/registration/challenge` | POST | Reserve a pseudonym and issue a short-lived wallet ownership challenge |
-| `/api/supporters/registration/verify` | POST | Verify the first payment wallet signature and atomically create the supporter session |
+| `/api/supporters/registration/verify` | POST | Verify the first payment wallet signature and atomically create the Genesis Programme member session |
 | `/api/supporters/login/challenge` | POST | Issue a fresh challenge for an already verified wallet |
 | `/api/supporters/login/verify` | POST | Verify wallet control and create a new session |
 | `/api/supporters/wallet-challenge` | POST | Issue a challenge for a linked payment or Solana delivery wallet |
@@ -115,7 +115,7 @@ Wallet-signature formats:
 
 Sessions use an HttpOnly, Secure-on-HTTPS, SameSite=Strict cookie. The database stores only a one-way digest of the random session token. Registration, login and linking endpoints are rate-limited; the public identity store is isolated from ordinary account/test D1 data.
 
-This staging identity feature does not create a treasury, accept USDT, create payment intents, broadcast transactions or credit entitlements. Real payment and entitlement paths remain unavailable until the owner supplies public receiving addresses, treasury ownership and configuration are independently verified, dual RPC evidence and finality checks are in place, and the programme terms/security gates are approved.
+This Genesis Programme staging identity feature does not create a treasury, accept USDT, create payment intents, broadcast transactions or credit entitlements. Real payment and entitlement paths remain unavailable until the owner supplies public receiving addresses, treasury ownership and configuration are independently verified, dual RPC evidence and finality checks are in place, and the programme terms/security gates are approved.
 
 ## 6. Payment intent and finality
 
@@ -149,13 +149,13 @@ Public snapshots are dated, append-only, hashed and reconciled. GitHub may store
 
 ## 8. Cloudflare architecture boundary
 
-Use one Pages project and one public hostname for the homepage and `/supporters/`. Backend endpoints, once implemented, use same-origin `/api/supporters/*` paths. Do not expose a `workers.dev` staging URL as the public supporter address.
+Use one Pages project and one public hostname for the homepage and the Genesis Programme preview (currently served at the legacy `/supporters/` path). Backend endpoints currently retain the same-origin `/api/supporters/*` legacy route namespace for compatibility. Do not expose a `workers.dev` staging URL as the public Genesis Programme address.
 
 Pages Functions can use the repository's `functions/` directory and D1 bindings. Once Functions are present, a build-output `_routes.json` must route only API paths and exclude static assets. Cloudflare documents that otherwise all requests may invoke Functions and consume quota, including static asset requests.
 
 Current published Workers Free limits include 100,000 requests/day, 10 ms CPU/request, 128 MB memory, 50 subrequests/request and six simultaneous outgoing connections. D1 Free publishes 5 million rows read/day, 100,000 rows written/day and 5 GB total storage; daily quota exhaustion causes D1 queries to fail. These are technical quotas, not an SLA or proof of financial-service suitability.
 
-The already merged static Pages package remains a no-payment, no-backend preview and must keep its explicit publication allowlist. The staging Worker now has a separate `SUPPORTERS_DB` binding, independent from the account/test D1, and a read-only `GET /api/supporters/status` endpoint. It reports the mainnet programme as `PRELAUNCH`, validates the canonical Ethereum/Tron/Solana USD₮ token identifiers and six-decimal precision, and exposes only whether a treasury has been configured (never the treasury address itself). This status endpoint is publicly readable because it returns no account or member data. It cannot create members, wallet challenges, payment intents, transfers, contributions or entitlements; mainnet payment acceptance is hard-coded disabled in this release. The Supporter Programme page displays this live status. The dedicated D1 remains separate from all test-account identity and session data.
+The already merged static Pages package remains a no-payment, no-backend preview and must keep its explicit publication allowlist. The staging Worker now has a separate `SUPPORTERS_DB` binding (a legacy technical identifier), independent from the account/test D1, and a read-only `GET /api/supporters/status` endpoint. It reports the mainnet programme as `PRELAUNCH`, validates the canonical Ethereum/Tron/Solana USD₮ token identifiers and six-decimal precision, and exposes only whether a treasury has been configured (never the treasury address itself). This status endpoint is publicly readable because it returns no account or member data. It cannot create members, wallet challenges, payment intents, transfers, contributions or entitlements; mainnet payment acceptance is hard-coded disabled in this release. The Genesis Programme page displays this live status. The dedicated D1 remains separate from all test-account identity and session data.
 
 This foundation does not add payment endpoints or alter that boundary.
 
