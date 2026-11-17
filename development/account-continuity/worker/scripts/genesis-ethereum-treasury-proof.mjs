@@ -2,7 +2,8 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
@@ -312,7 +313,7 @@ async function main() {
   });
 }
 
-const invoked = process.argv[1] && new URL(`file://${process.argv[1]}`).href === import.meta.url;
+const invoked = process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
 if (invoked) {
   main().catch((error) => {
     console.error("Genesis Ethereum proof tool stopped:", error && error.message ? error.message : error);
