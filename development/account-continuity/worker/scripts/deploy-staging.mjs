@@ -454,7 +454,7 @@ async function smokeTest(origin) {
 
   const publicSupportersStatus = await fetch(origin + "/api/supporters/status", { signal: AbortSignal.timeout(30000) });
   if (publicSupportersStatus.status !== 200) {
-    fail("The read-only public Supporter Programme status endpoint must be available without account acknowledgement (HTTP " + publicSupportersStatus.status + ").");
+    fail("The read-only public Genesis Programme status endpoint must be available without account acknowledgement (HTTP " + publicSupportersStatus.status + ").");
   }
   const publicSupportersPayload = await publicSupportersStatus.json();
   if (
@@ -462,7 +462,7 @@ async function smokeTest(origin) {
     publicSupportersPayload.paymentAcceptance?.enabled !== false ||
     publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false
   ) {
-    fail("The public Supporter Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
+    fail("The public Genesis Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
   }
 
   const beforeAcknowledgement = await fetch(origin + "/api/account/status", { signal: AbortSignal.timeout(30000) });
@@ -508,7 +508,7 @@ async function smokeTest(origin) {
     signal: AbortSignal.timeout(30000),
   });
   if (supportersResponse.status !== 200) {
-    fail("The isolated Supporter Programme status endpoint failed (HTTP " + supportersResponse.status + ").");
+    fail("The isolated Genesis Programme status endpoint failed (HTTP " + supportersResponse.status + ").");
   }
   const supporters = await supportersResponse.json();
   if (
@@ -519,9 +519,9 @@ async function smokeTest(origin) {
     supporters.purchaseAllowance?.automaticTokenIssuance !== false ||
     !Array.isArray(supporters.networks) ||
     supporters.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
-    supporters.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== false)
+    supporters.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== true)
   ) {
-    fail("The isolated Supporter Programme status must report three-network PRELAUNCH with all payment intake disabled.");
+    fail("The isolated Genesis Programme status must report three-network PRELAUNCH with all payment intake disabled.");
   }
 
   const negative = await fetch(origin + "/api/passkeys/authentication/options", {
