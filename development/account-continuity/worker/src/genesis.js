@@ -122,9 +122,11 @@ function signatureMethod(network) {
   return network === "ethereum" ? "EIP-191" : network === "tron" ? "TIP-191" : "SOLANA_SIGN_MESSAGE";
 }
 
-function createMessage({ origin, network, address, purpose, challengeId, nonce, issuedAt, expiresAt, identityId = null }) {
+function createMessage({ origin, network, address, purpose, challengeId, nonce, issuedAt, expiresAt, identityId = null, walletRole = null, requestedDisplayName = null }) {
   const host = new URL(origin).host;
-  const identityLine = identityId ? "Genesis wallet identity: " + identityId + "\n" : "";
+  const identityLine = identityId ? "Genesis wallet identity: " + identityId : "";
+  const walletRoleLine = walletRole ? "Address purpose: " + walletRole : "";
+  const displayNameLine = requestedDisplayName ? "Requested public display name: " + requestedDisplayName : "";
   return [
     "AstroCrown Genesis wallet proof",
     "Domain: " + host,
@@ -132,7 +134,9 @@ function createMessage({ origin, network, address, purpose, challengeId, nonce, 
     "Network: " + network + ":mainnet",
     "Address: " + address,
     "Purpose: " + purpose,
-    identityLine.trimEnd(),
+    identityLine,
+    walletRoleLine,
+    displayNameLine,
     "Nonce: " + nonce,
     "Issued At: " + issuedAt,
     "Expiration Time: " + expiresAt,
@@ -154,7 +158,7 @@ async function issueChallenge(db, config, { identityId = null, network, address,
   const expiresAt = new Date(expires * 1000).toISOString();
   const message = createMessage({
     origin: config.origin, network, address: normalized.address, purpose, challengeId, nonce,
-    issuedAt, expiresAt, identityId
+    issuedAt, expiresAt, identityId, walletRole, requestedDisplayName
   });
   await db.prepare(
     "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,challenge_purpose," +
