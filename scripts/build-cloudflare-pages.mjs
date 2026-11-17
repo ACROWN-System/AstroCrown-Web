@@ -90,6 +90,7 @@ copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-con
 write("privacy-transparency.html", read("preview/privacy-transparency.html"));
 write("supporters/index.html", read("preview/supporters/index.html"));
 copy("preview/supporters/supporters.js", "supporters/supporters.js");
+copy("preview/assets/genesis-member-dna.svg", "assets/genesis-member-dna.svg");
 
 // Security/indexing controls for an unlaunched preview.
 write("robots.txt", "User-agent: *\nDisallow: /\n");
