@@ -52,6 +52,6 @@ test("wallet proof messages bind domain, chain, address, purpose and irrecoverab
   assert.match(message, /Network: ethereum:mainnet/);
   assert.match(message, /Purpose: IDENTIFY/);
   assert.match(message, /Nonce: nonce-/);
-  assert.match(message, /primary wallet is the sole identity and recovery anchor/);
+  assert.match(message, /primary wallet is the sole Genesis identity and recovery anchor/);
   assert.match(message, /does not authorize a transaction/);
 });
