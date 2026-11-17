@@ -1,6 +1,6 @@
 # ACROWN Genesis Programme — Treasury Address Onboarding
 
-**Status:** Address-format staging utility implemented; no treasury addresses configured; no payments accepted.  
+**Status:** Three owner-supplied public addresses passed format checks; custody verification and treasury staging remain pending; no payments accepted.  
 **Last reviewed:** 17 November 2026  
 **Applies to:** The isolated `acrown-supporters-mainnet` D1 database only.
 
@@ -64,10 +64,14 @@ The public status endpoint deliberately never returns an address. It reports onl
 
 ## 4. Required work after address staging
 
+**Current owner-input state — 17 November 2026:** One public address for each of the three networks has now been supplied outside the repository. Each passes the same network-specific format criteria implemented by the offline utility. The address values are intentionally not reproduced in this guide or committed to GitHub. No generated SQL has been applied, no address has been configured in D1, and independent custody/control and live token-state verification remain outstanding.
+
 Address staging is not proof that AstroCrown controls the wallet. Before a network can be enabled, the operator must complete and preserve evidence for all of the following:
 
 1. **Custody/control verification:** independently demonstrate control of each receiving address using an approved, domain-bound off-chain signing challenge or an equivalent custody attestation. No transfer of funds is required merely to prove message-signing control.
+   - MetaMask Connect currently documents off-chain message signing for EVM and Solana. MetaMask's current TRON help page says TRON dapp connectivity is not yet available in the Extension; therefore, do not assume the same MetaMask dapp-signing flow can prove control of the TRON address. Use a separately reviewed TRON-compatible signing or custody-attestation route. See the official [MetaMask Connect multichain message-signing guide](https://docs.metamask.io/metamask-connect/multichain/guides/sign-transactions/) and [MetaMask TRON guide](https://support.metamask.io/configure/networks/tron/).
 2. **Live token verification:** query the intended mainnet and independently verify the canonical USD₮ token contract/mint, token-program identity where applicable, and six-decimal precision.
+   - MetaMask's current TRON guidance also says newly created TRON accounts must be activated before use, and that receiving USDT does not activate an account. Define and qualify the activation method and who supplies any required TRX/TRC-10 before TRON payment intake can be enabled. Do not perform an activation transfer as part of this address-format stage.
 3. **Independent RPC quorum:** qualify at least two independently operated RPC sources per network; compare normalized transaction/account evidence and define provider disagreement, outage, quota and failover behaviour.
 4. **Receiving and reconciliation tests:** implement and qualify transaction discovery, exact sender/destination/token/amount parsing, finality, reorganisation handling, duplicate/event-index prevention, underpayment, overpayment, incorrect-token and wrong-network handling.
 5. **Custody and operations:** document offline backups, signing separation, approval thresholds, incident handling, expense controls, treasury segregation and reconciliation.
@@ -87,4 +91,4 @@ As of 17 November 2026:
 - payment acceptance remains disabled;
 - the programme page remains a prelaunch information and wallet-ownership prototype. Visitors must not send funds.
 
-The next owner input required for address staging is the three public receiving addresses, or an explicit decision to create/establish those addresses first. No private key or recovery phrase should be shared.
+The three public receiving addresses have now been supplied. The remaining prerequisites are independent custody/control proof, live mainnet token and decimal verification, and provision plus identity verification of the dedicated D1 database. No private key or recovery phrase should be shared.
