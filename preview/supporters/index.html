@@ -178,6 +178,11 @@
     .dashboard-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
     .dashboard-state{display:inline-flex;align-items:center;min-height:24px;padding:4px 9px;border:1px solid rgba(153,178,213,.22);border-radius:999px;color:#bac7d9;background:rgba(255,255,255,.035);font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
     .pending-state{border-color:rgba(255,210,74,.29);color:#ffe8a0;background:rgba(255,210,74,.06)}
+    .genesis-profile-identity{display:flex;align-items:center;gap:14px;margin:14px 0 8px}
+    .genesis-profile-label{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0}
+    .genesis-profile-label .genesis-member-badge-image{width:88px;height:auto;margin:0}
+    .genesis-directory-identity{display:flex;align-items:center;gap:10px;min-width:0}
+    .genesis-directory-badge{width:36px;height:36px;object-fit:contain;flex:0 0 36px}
     .member-avatar{display:grid;place-items:center;width:52px;height:52px;margin:14px 0 8px;border:1px solid rgba(255,215,0,.34);border-radius:16px;background:radial-gradient(circle at 35% 30%,rgba(255,215,0,.2),rgba(255,215,0,.035) 68%);color:var(--gold-soft);font-size:25px}
     .profile-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-top:10px}
     .member-display-name{color:var(--gold-soft);font-size:11px;font-weight:800}
@@ -311,9 +316,14 @@
             </div>
             <span class="dashboard-state" id="member-profile-state">Preview only</span>
           </div>
-          <div class="member-avatar" aria-hidden="true">✦</div>
-          <img id="genesis-member-badge-image" class="genesis-member-badge-image" src="../assets/genesis-member-dna.svg" alt="" hidden>
-          <p class="badge-qualification-note">The gold DNA Genesis Member badge is awarded only after the wallet completes the qualifying requirements and its payment is independently verified.</p>
+          <div class="genesis-profile-identity">
+            <div class="member-avatar" id="member-avatar" aria-hidden="true">✦</div>
+            <div class="genesis-profile-label">
+              <strong class="member-display-name" id="member-display-name" aria-live="polite">Connect primary wallet</strong>
+              <img id="genesis-member-badge-image" class="genesis-member-badge-image" src="../assets/genesis-member-dna.svg" alt="" hidden>
+            </div>
+          </div>
+          <p class="badge-qualification-note">The gold DNA Genesis Member badge is awarded only after the wallet fulfils the qualifying requirements and its qualifying payment is independently verified.</p>
           <div class="field">
             <label for="member-pseudonym">Public display name</label>
             <input id="member-pseudonym" type="text" maxlength="28" autocomplete="off" spellcheck="false" aria-describedby="pseudonym-help">
@@ -322,7 +332,6 @@
           <div class="profile-actions">
             <button class="secondary-button" id="member-name-randomize" type="button">Generate another name</button>
             <button class="primary-button" id="member-name-save" type="button" disabled>Save unique display name</button>
-            <span class="member-display-name" id="member-display-name" aria-live="polite"></span>
           </div>
           <p class="name-availability" id="member-name-availability" data-state="checking" aria-live="polite">Connect and verify the primary wallet to reserve a unique name.</p>
           <p class="wallet-instructions"><strong>Wallet ownership:</strong> connect a wallet you control. On the official staging Worker, you can prove control by signing a domain-bound text message. The wallet must display the exact domain-bound message. It proves address control only and does not create a transaction, approve a token, transfer funds, grant an entitlement or pay a network fee. Never sign a prompt asking you to approve, transfer or send funds. The primary wallet remains the only identity and recovery anchor; linked addresses cannot independently recover it.</p>
@@ -450,7 +459,7 @@
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. Verified wallet control will be required for qualifying payments and purchases when those services are activated. AstroCrown will never ask for your seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The public display name and avatar are labels only. The primary wallet controls identity, access and the purchase entitlement. Each additional network address must separately prove ownership. AstroCrown will never ask for a seed phrase or private key.
       </div>
     </section>
 
@@ -554,7 +563,7 @@
         <article class="step-card">
           <div class="step-number">02</div>
           <h3>Connect your primary wallet and establish its unique display name</h3>
-          <p>Connect the wallet that you control and sign the off-chain ownership challenge on the official staging service. AstroCrown generates a random member pseudonym by default, which you may customize. No legal name or identity document is collected by this programme flow.</p>
+          <p>Connect the wallet that you control and sign its off-chain ownership challenge. AstroCrown assigns a random unique public name, which the wallet holder may customize when the name is available. No legal name or identity document is collected.</p>
           <span class="pending">Staging wallet verification available; production pending</span>
         </article>
         <article class="step-card">
@@ -600,7 +609,7 @@
         </article>
         <article class="transparency-card">
           <strong>4. No identity-document collection</strong>
-          <p>The programme identifies the entitlement through wallet control and a pseudonym. It does not claim to verify the legal identity of the wallet controller. The public wallet-to-pseudonym association is visible by design and must be explained before wallet verification.</p>
+          <p>The programme identifies the entitlement through primary-wallet control and a public display name. It does not claim to verify the legal identity of the wallet controller. The public name is unique and cannot be used by a second wallet. Explorer links expose the full wallet address and associated public transaction history.</p>
         </article>
       </div>
       <p class="fine-print">The wallet owner remains responsible for wallet security and transaction approvals. Never share a seed phrase, private key or recovery phrase with AstroCrown or anyone claiming to represent it. The repository is public, so only the expressly public wallet, pseudonym and audit fields described by the programme may be published; credentials and signing secrets must never be included.</p>
@@ -620,7 +629,7 @@
         </article>
         <article class="rule-card">
           <h3>The multiplier is purchase eligibility, not free tokens</h3>
-          <p>A verified qualifying qualifying payment creates a personal ACROWN purchase allowance using the approved multiplier/rate. This is not an airdrop or bonus token issuance. The member may purchase up to their unused personal allowance at the applicable ACS floor, subject to any approved programme-wide cap.</p>
+          <p>A verified qualifying payment creates a personal ACROWN purchase entitlement under the approved multiplier and programme terms. This is not an airdrop or bonus token issuance. The member may purchase up to their unused personal allowance at the applicable ACS floor, subject to any approved programme-wide cap.</p>
         </article>
         <article class="rule-card">
           <h3>Used entitlement is not replenished by resale</h3>
