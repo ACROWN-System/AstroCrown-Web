@@ -227,7 +227,7 @@ The Worker branch adds a read-only format check for the three configured receivi
 
 The offline `development/account-continuity/worker/scripts/prepare-genesis-treasuries.mjs` utility accepts the three public addresses and emits SQL for the dedicated `acrown-supporters-mainnet` D1 database. The generated SQL stages the public addresses, explicitly keeps every network disabled, and clears earlier decimal/configuration verification markers so that changing an address cannot inherit stale verification. It performs no RPC call and cannot prove wallet control or live token state.
 
-Detailed operator instructions and current limitations are recorded in [Treasury Address Onboarding](TREASURY-ADDRESS-ONBOARDING.md). No address has been supplied or configured in this branch. The payment-intent service, chain monitors, finality/quorum verification and entitlement crediting remain unimplemented.
+Detailed operator instructions and current limitations are recorded in [Treasury Address Onboarding](TREASURY-ADDRESS-ONBOARDING.md). The owner supplied the three public address inputs separately on 2026-11-17; they are intentionally not reproduced in this document or repository. Their address formats pass the current checks, but they have not been staged or configured, and custody/control plus live token-state verification remain outstanding. The payment-intent service, chain monitors, finality/quorum verification and entitlement crediting remain unimplemented.
 
 ## 9. Activation gates
 
