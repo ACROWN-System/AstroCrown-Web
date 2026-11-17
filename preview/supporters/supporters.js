@@ -1009,7 +1009,8 @@
         identity.textContent = item.displayName;
         identityGroup.append(avatar, identity, badge);
         var detail = document.createElement("span");
-        detail.textContent = item.amount + " USDT · " + item.network.toUpperCase();
+        var paymentLabel = item.paymentKind === "QUALIFYING_PAYMENT" ? "Qualifying payment" : "ACROWN floor-price purchase";
+        detail.textContent = paymentLabel + " · " + item.amount + " USDT · " + item.network.toUpperCase();
         row.append(identityGroup, detail);
         if (item.explorerUrl) {
           var link = document.createElement("a");
