@@ -283,40 +283,63 @@
   elements.sign.addEventListener("click", async () => {
     elements.sign.disabled = true;
     try {
-      if (!challenge || !provider || !tronWeb) throw new Error("Prepare a fresh challenge first.");
-      if (Date.now() > Date.parse(challenge.expirationTime)) {
+      const signingChallenge = challenge;
+      if (!signingChallenge || !provider || !tronWeb) throw new Error("Prepare a fresh challenge first.");
+      if (Date.now() > Date.parse(signingChallenge.expirationTime)) {
         challenge = null;
         throw new Error("The five-minute challenge has expired. Start again to create a fresh one.");
       }
-      if (activeChainId !== MAINNET_CHAIN_ID || tronWeb.defaultAddress.base58 !== challenge.connectedAddress) {
+      if (activeChainId !== MAINNET_CHAIN_ID || tronWeb.defaultAddress.base58 !== signingChallenge.connectedAddress) {
         throw new Error("The selected TRON network or account has changed. No signature was requested.");
       }
-      const signature = await tronWeb.trx.signMessageV2(challenge.message);
+      const signature = await tronWeb.trx.signMessageV2(signingChallenge.message);
+      if (challenge !== signingChallenge) {
+        throw new Error("The challenge was invalidated while TronLink was open. Start again.");
+      }
+      if (Date.now() > Date.parse(signingChallenge.expirationTime)) {
+        challenge = null;
+        throw new Error("The five-minute challenge expired while TronLink was open. Start again to create a fresh one.");
+      }
+      if (activeChainId !== MAINNET_CHAIN_ID || tronWeb.defaultAddress.base58 !== signingChallenge.connectedAddress) {
+        challenge = null;
+        throw new Error("The selected TRON network or account changed while TronLink was open. The signature will not be accepted.");
+      }
       if (typeof signature !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(signature)) {
         throw new Error("TronLink returned an unexpected TIP-191 signature format. No proof file was prepared.");
       }
-      const recoveredAddress = await tronWeb.trx.verifyMessageV2(challenge.message, signature);
-      if (recoveredAddress !== challenge.connectedAddress) {
+      const recoveredAddress = await tronWeb.trx.verifyMessageV2(signingChallenge.message, signature);
+      if (challenge !== signingChallenge) {
+        throw new Error("The challenge was invalidated during local signature recovery. Start again.");
+      }
+      if (Date.now() > Date.parse(signingChallenge.expirationTime)) {
+        challenge = null;
+        throw new Error("The five-minute challenge expired during local signature recovery. Start again to create a fresh one.");
+      }
+      if (activeChainId !== MAINNET_CHAIN_ID || tronWeb.defaultAddress.base58 !== signingChallenge.connectedAddress) {
+        challenge = null;
+        throw new Error("The selected TRON network or account changed during local signature recovery. The proof will not be accepted.");
+      }
+      if (recoveredAddress !== signingChallenge.connectedAddress) {
         throw new Error("Local signature recovery did not match the connected Genesis address. The proof will not be accepted.");
       }
       const evidence = {
         schemaVersion: "1.0",
         proofType: "ASTROCROWN_GENESIS_TRON_TREASURY_CONTROL_V1",
         proofStatus: "PENDING_OFFLINE_VERIFICATION",
-        expectedAddress: challenge.targetAddress,
-        signingAddress: challenge.connectedAddress,
+        expectedAddress: signingChallenge.targetAddress,
+        signingAddress: signingChallenge.connectedAddress,
         recoveredAddress,
         browserSignatureVerified: true,
-        network: challenge.network,
-        chainId: challenge.chainId,
+        network: signingChallenge.network,
+        chainId: signingChallenge.chainId,
         networkSwitchMethod: "wallet_switchEthereumChain",
         networkSwitchConfirmedByWallet: true,
-        domain: challenge.domain,
-        uri: challenge.uri,
-        nonce: challenge.nonce,
-        issuedAt: challenge.issuedAt,
-        expirationTime: challenge.expirationTime,
-        message: challenge.message,
+        domain: signingChallenge.domain,
+        uri: signingChallenge.uri,
+        nonce: signingChallenge.nonce,
+        issuedAt: signingChallenge.issuedAt,
+        expirationTime: signingChallenge.expirationTime,
+        message: signingChallenge.message,
         signature,
         method: "TRON TIP-191 signMessageV2",
         transactionSent: false,
