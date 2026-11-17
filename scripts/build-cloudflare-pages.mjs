@@ -47,7 +47,7 @@ homepage = replaceExactlyOnce(
   homepage,
   footerMarker,
   footerMarker +
-    '\n          <a href="./supporters/">Supporter Programme</a>' +
+    '\n          <a href="./supporters/">Genesis Programme</a>' +
     '\n          <a href="./privacy-transparency.html">Privacy &amp; Transparency Centre</a>',
   "homepage footer navigation"
 );
@@ -85,7 +85,7 @@ accountJs = accountJs
 write("account-continuity/prototype/account-ui.js", accountJs);
 copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-continuity/prototype/admin-wallet-ui.js");
 
-// Self-contained education and supporter previews. The supporter JS is
+// Self-contained education and Genesis Programme previews. Its wallet JS is
 // limited to user-initiated public-address display; it does not sign/pay.
 write("privacy-transparency.html", read("preview/privacy-transparency.html"));
 write("supporters/index.html", read("preview/supporters/index.html"));
