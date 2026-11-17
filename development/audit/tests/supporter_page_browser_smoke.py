@@ -1,4 +1,4 @@
-"""Isolated browser smoke for the Supporter Programme's display-only wallet paths.
+"""Isolated browser smoke for Genesis wallet-first identity and display-only wallet paths.
 
 Uses mock providers injected into Chromium, serves only loopback files, blocks external
 network access, and fails if an unexpected wallet method is requested. No real wallet,
@@ -45,7 +45,7 @@ def record(name: str, passed: bool, detail=None) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", type=Path, default=Path("/tmp/supporter-browser-smoke"))
+    parser.add_argument("--output-dir", type=Path, default=Path("/tmp/genesis-browser-smoke"))
     args = parser.parse_args()
     output = args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=True)
@@ -53,7 +53,7 @@ def main() -> int:
     html = ROOT / "preview" / "supporters" / "index.html"
     js = ROOT / "preview" / "supporters" / "supporters.js"
     if not html.is_file() or not js.is_file():
-        print("ERROR: supporter page source or wallet script is missing.")
+        print("ERROR: Genesis Programme page source or wallet script is missing.")
         return 2
 
     server = ThreadingHTTPServer(
@@ -172,7 +172,7 @@ def main() -> int:
             page.on("pageerror", lambda error: PAGE_ERRORS.append(str(error)))
             page.on("console", lambda message: CONSOLE_ERRORS.append(message.text) if message.type == "error" else None)
             response = page.goto(f"{origin}/supporters/", wait_until="load", timeout=15000)
-            record("supporter preview responds successfully", bool(response and response.status == 200),
+            record("Genesis preview responds successfully", bool(response and response.status == 200),
                    {"status": response.status if response else None, "title": page.title()})
 
             page.wait_for_function("""() => {
@@ -189,8 +189,8 @@ def main() -> int:
             )
             evm_display = page.locator("#supporter-evm-wallet-address").inner_text()
             evm_feedback = page.locator("#supporter-evm-wallet-feedback").inner_text()
-            record("EVM address is displayed as unregistered pending off-chain ownership proof",
-                   evm_display == EVM_ADDRESS and "not registered yet" in evm_feedback.lower(),
+            record("EVM address is displayed pending primary-wallet identity proof",
+                   evm_display == EVM_ADDRESS and "not yet verified as the primary genesis wallet" in evm_feedback.lower(),
                    {"address": evm_display, "feedback": evm_feedback})
 
             page.select_option("#supporter-tron-wallet-choice", label="Mock TronLink")
@@ -200,8 +200,8 @@ def main() -> int:
             )
             tron_display = page.locator("#supporter-tron-wallet-address").inner_text()
             tron_feedback = page.locator("#supporter-tron-wallet-feedback").inner_text()
-            record("TronLink address is displayed as unregistered pending off-chain ownership proof",
-                   tron_display == TRON_ADDRESS and "not registered yet" in tron_feedback.lower(),
+            record("TRON address is displayed pending primary-wallet identity proof",
+                   tron_display == TRON_ADDRESS and "not yet verified as the primary genesis wallet" in tron_feedback.lower(),
                    {"address": tron_display, "feedback": tron_feedback})
 
             page.select_option("#supporter-wallet-choice", label="Mock Solana Wallet")
@@ -211,8 +211,8 @@ def main() -> int:
             )
             solana_display = page.locator("#supporter-wallet-address").inner_text()
             solana_feedback = page.locator("#supporter-wallet-feedback").inner_text()
-            record("Solana address is displayed as unregistered pending off-chain ownership proof",
-                   solana_display == SOLANA_ADDRESS and "not registered yet" in solana_feedback.lower(),
+            record("Solana address is displayed pending primary-wallet identity proof",
+                   solana_display == SOLANA_ADDRESS and "not yet verified as the primary genesis wallet" in solana_feedback.lower(),
                    {"address": solana_display, "feedback": solana_feedback})
 
             wallet_calls = page.evaluate("window.__walletCalls")
@@ -229,9 +229,9 @@ def main() -> int:
                    not PAGE_ERRORS and not CONSOLE_ERRORS,
                    {"page_errors": PAGE_ERRORS, "console_errors": CONSOLE_ERRORS})
 
-            page.screenshot(path=str(output / "supporters-desktop-1440x1000.png"), full_page=False)
+            page.screenshot(path=str(output / "genesis-desktop-1440x1000.png"), full_page=False)
             page.set_viewport_size({"width": 390, "height": 844})
-            page.screenshot(path=str(output / "supporters-mobile-390x844.png"), full_page=False)
+            page.screenshot(path=str(output / "genesis-mobile-390x844.png"), full_page=False)
 
             report = {
                 "scope": "Mock-wallet browser test on loopback; no real wallet, RPC, signing or transfer.",
@@ -250,7 +250,7 @@ def main() -> int:
                     "forbidden_wallet_calls": forbidden_calls,
                 }
             }
-            (output / "supporter-browser-smoke-report.json").write_text(
+            (output / "genesis-browser-smoke-report.json").write_text(
                 json.dumps(report, indent=2), encoding="utf-8"
             )
             print(json.dumps(report, indent=2))
