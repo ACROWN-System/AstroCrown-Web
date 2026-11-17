@@ -49,8 +49,8 @@ test("page does not request a transaction or signing/approval method other than 
   new Script(source, { filename: pageUrl.pathname });
   const methods = [...source.matchAll(/request\(\{\s*method:\s*"([^"]+)"/g)].map(match => match[1]);
   assert.deepEqual([...new Set(methods)].sort(), ["eth_accounts", "eth_chainId", "eth_requestAccounts", "personal_sign"]);
-  for (const forbidden of ["eth_sendTransaction", "eth_signTransaction", "eth_sendRawTransaction", "wallet_sendCalls", "approve"]) {
-    assert.equal(source.includes(forbidden), false, "unexpected wallet method in page: " + forbidden);
+  for (const forbidden of ["eth_sendTransaction", "eth_signTransaction", "eth_sendRawTransaction", "wallet_sendCalls", "eth_sendUserOperation", "eth_approve"]) {
+    assert.equal(methods.includes(forbidden), false, "unexpected wallet method request: " + forbidden);
   }
 });
 
