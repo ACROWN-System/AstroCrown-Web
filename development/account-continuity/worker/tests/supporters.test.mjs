@@ -54,7 +54,7 @@ test("Supporter status never exposes a treasury address or claims that a transfe
     networks.map((row) => ({ ...row, enabled: 1, treasury_configured: 1 }))
   );
   assert.equal(payload.paymentAcceptance.enabled, false);
-  assert.equal(payload.paymentAcceptance.contributionsAccepted, false);
+  assert.equal(payload.paymentAcceptance.qualifyingPaymentsAccepted, false);
   assert.equal(payload.purchaseAllowance.automaticTokenIssuance, false);
   assert.ok(payload.networks.every((row) => !("treasuryAddress" in row)));
 });
