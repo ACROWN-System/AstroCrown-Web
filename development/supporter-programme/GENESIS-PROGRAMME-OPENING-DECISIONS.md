@@ -58,7 +58,10 @@ The former page's **USDT 150 production-transition target** has been removed. It
 
 ### 3.3 Receiving wallets, token identities and verification
 
-- [ ] Establish and independently verify one dedicated receiving address for Ethereum ERC-20 USD₮, one for Tron TRC-20 USD₮ and one for Solana SPL USD₮.
+- [ ] Supply or establish one dedicated public receiving address for Ethereum ERC-20 USD₮, one for Tron TRC-20 USD₮ and one for Solana SPL USD₮. Never provide private keys or recovery phrases.
+- [x] Add an offline address-staging utility and Worker status-format checks in the current PR branch. This validates address syntax only, does not establish custody/control or live token state, and keeps every network disabled. See [Treasury Address Onboarding](TREASURY-ADDRESS-ONBOARDING.md).
+- [ ] Independently prove control/custody of all three configured treasury addresses and preserve the approved evidence.
+- [ ] Verify each live mainnet token contract/mint, program identity and six-decimal precision against independent sources before enabling any network.
 - [ ] Verify the canonical USD₮ contract/mint identity on each network and the exact network configuration displayed to participants.
 - [ ] Qualify treasury custody, key creation, offline backup/recovery, access separation, signing environment, spending limits, incident response and independent checks before addresses are published.
 - [ ] Select and qualify RPC providers and independent verification sources; define confirmation/finality thresholds, reorganisation handling, duplicate detection, idempotency, reconciliation and fail-closed behaviour.
