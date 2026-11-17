@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "1.0",
+  "programme": "Genesis Programme",
+  "policy": "Only wallet applications that pass every required three-network capability and recovery test may be enabled for qualifying payments. Wallet provider metadata is discovery information, not proof of ownership or security.",
+  "paymentAsset": "USDT",
+  "requiredNetworks": [
+    {
+      "network": "ethereum",
+      "assetStandard": "ERC-20",
+      "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "requiredCapabilities": ["receive", "send", "connect_or_verified_payment_proof", "sign_primary_identity_challenge", "restore"]
+    },
+    {
+      "network": "tron",
+      "assetStandard": "TRC-20",
+      "token": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      "requiredCapabilities": ["receive", "send", "connect_or_verified_payment_proof", "sign_primary_identity_challenge", "restore"]
+    },
+    {
+      "network": "solana",
+      "assetStandard": "SPL",
+      "token": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+      "requiredCapabilities": ["receive", "send", "connect_or_verified_payment_proof", "sign_primary_identity_challenge", "restore"]
+    }
+  ],
+  "globalQualificationGates": [
+    "official_asset_and_network_verified",
+    "receive_and_send_test_on_each_network",
+    "primary_wallet_message_signature_verified",
+    "additional_address_link_signature_verified_or_separately_approved_transaction_proof",
+    "source_address_and_transaction_attribution_verified",
+    "mainnet_and_testnet_switching_verified",
+    "wallet_restore_and_address_derivation_verified",
+    "chain_specific_fee_requirements_disclosed",
+    "provider_and_mobile_or_extension_build_versions_recorded",
+    "end_to_end_tests_passed_on_all_three_networks"
+  ],
+  "candidates": [
+    {
+      "walletId": "metamask",
+      "displayName": "MetaMask",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "notes": [
+        "Ethereum and Solana wallet integration are candidates for testing.",
+        "TRON asset management is documented, but the currently reviewed MetaMask TRON guide says direct TRON dApp connection is not available.",
+        "A secure, tested method is still required to prove and associate a MetaMask TRON sending address with the primary Genesis wallet. A manual transfer and explorer link alone do not establish that cross-chain identity link."
+      ],
+      "blockingGates": ["tron_primary_wallet_message_signature_or_approved_transaction_proof", "three_network_end_to_end_tests", "wallet_restore_test"]
+    },
+    {
+      "walletId": "trust-wallet",
+      "displayName": "Trust Wallet",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "notes": [
+        "Candidate for a unified three-network browser-wallet workflow.",
+        "The actual extension/mobile provider, asset send/receive paths, signatures, address derivation and restoration must be tested before approval."
+      ],
+      "blockingGates": ["three_network_end_to_end_tests", "wallet_restore_test", "provider_build_version_record"]
+    },
+    {
+      "walletId": "okx-wallet",
+      "displayName": "OKX Wallet",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "notes": [
+        "Candidate for a unified three-network browser-wallet workflow.",
+        "The actual extension/mobile provider, asset send/receive paths, signatures, address derivation and restoration must be tested before approval."
+      ],
+      "blockingGates": ["three_network_end_to_end_tests", "wallet_restore_test", "provider_build_version_record"]
+    }
+  ],
+  "productionAcceptance": {
+    "enabled": false,
+    "qualifiedWalletIds": [],
+    "reason": "No candidate has passed the complete three-network and wallet-recovery qualification suite."
+  }
+}
