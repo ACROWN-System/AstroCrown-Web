@@ -13,7 +13,7 @@ function inlineScripts(source) {
 test("Genesis browser proof page is pinned to the approved no-index HTTPS URL", () => {
   assert.match(html, /<meta name="robots" content="noindex, nofollow, noarchive">/);
   assert.match(html, /const APPROVED_ORIGIN = "https:\/\/acrown-system\.github\.io"/);
-  assert.match(html, /const APPROVED_PATH = "\/AstroCrown-Web\/preview\/genesis-ethereum-proof-page\.html"/);
+  assert.match(html, /const APPROVED_PATH = "\/AstroCrown-Web\/preview\/genesis-ethereum-treasury-proof\.html"/);
 });
 
 test("Genesis browser proof uses MetaMask account and Ethereum Mainnet checks before signing", () => {
