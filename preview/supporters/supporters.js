@@ -413,7 +413,7 @@
       evmConnectButton.disabled = true;
       setFeedback(
         evmFeedback,
-        "EVM wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "EVM wallet connected. It is not registered yet; use the participant controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -579,7 +579,7 @@
       solanaConnectButton.disabled = true;
       setFeedback(
         solanaFeedback,
-        "Solana wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "Solana wallet connected. It is not registered yet; use the participant controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -735,7 +735,7 @@
         : "Wallet connected; active network not independently confirmed in this preview";
       tronConnectButton.textContent = "TRON wallet connected";
       renderTronChoices();
-      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.", "connected");
+      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the participant controls below to prove ownership with an off-chain message signature.", "connected");
       updateSupporterActionButtons();
     } catch (error) {
       tronConnectButton.textContent = "Connect TRON wallet";
