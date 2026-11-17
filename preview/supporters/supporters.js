@@ -35,6 +35,10 @@
   var memberFeedback = document.getElementById("supporter-member-feedback");
   var memberSummary = document.getElementById("supporter-member-summary");
   var memberWalletList = document.getElementById("supporter-member-wallet-list");
+  var saveNameButton = document.getElementById("member-name-save");
+  var nameAvailability = document.getElementById("member-name-availability");
+  var genesisBadgeImage = document.getElementById("genesis-member-badge-image");
+  var publicDirectoryList = document.getElementById("genesis-public-directory-list");
   var supporterRuntimeEnabled = false;
   var supporterMember = null;
   var lastConnectedNetwork = null;
@@ -698,38 +702,51 @@
     supporterRuntimeEnabled = supporterRuntimeMarkerPresent();
     var wallet = activeConnectedWallet();
     var ready = Boolean(supporterRuntimeEnabled && wallet && wallet.mainnet);
-    if (memberMode) {
-      memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
+    if (memberMode) memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
+    if (registerWalletButton) {
+      registerWalletButton.disabled = !ready || Boolean(supporterMember);
+      registerWalletButton.textContent = supporterMember ? "Primary wallet identity established" : "Continue with this primary wallet";
     }
-    if (registerWalletButton) registerWalletButton.disabled = !ready || Boolean(supporterMember);
-    if (loginWalletButton) loginWalletButton.disabled = !ready || Boolean(supporterMember);
+    if (loginWalletButton) loginWalletButton.hidden = true;
     if (linkWalletButton) linkWalletButton.disabled = !ready || !supporterMember;
-    if (logoutButton) logoutButton.disabled = !supporterRuntimeEnabled || !supporterMember;
+    if (logoutButton) {
+      logoutButton.disabled = !supporterRuntimeEnabled || !supporterMember;
+      logoutButton.textContent = "Disconnect wallet session";
+    }
     if (walletPurposeSelect) walletPurposeSelect.disabled = !supporterRuntimeEnabled || !supporterMember;
-    if (pseudonymInput) pseudonymInput.disabled = Boolean(supporterMember);
-    if (randomizeButton) randomizeButton.disabled = Boolean(supporterMember);
+    if (pseudonymInput) pseudonymInput.disabled = !supporterMember;
+    if (randomizeButton) randomizeButton.disabled = !supporterMember;
+    if (saveNameButton) saveNameButton.disabled = !supporterMember;
     if (memberProfileState) {
-      memberProfileState.textContent = supporterMember ? "Wallet verified" :
-        supporterRuntimeEnabled ? "Not registered" : "Preview only";
+      memberProfileState.textContent = supporterMember
+        ? (supporterMember.genesisMember && supporterMember.genesisMember.status === "ACTIVE" ? "Genesis Member" : "Wallet verified")
+        : (supporterRuntimeEnabled ? "Wallet not connected" : "Preview only");
     }
     if (!supporterRuntimeEnabled) {
-      if (memberFeedback) {
-        setFeedback(memberFeedback, "Standalone preview only. Wallet addresses can be displayed, but registration and wallet linking require the official staging Worker.", "neutral");
-      }
+      if (memberFeedback) setFeedback(memberFeedback,
+        "Standalone preview only. Wallet identity, unique-name reservation and wallet linking require the official staging Worker. No payment route is enabled.", "neutral");
       return;
     }
     if (supporterMember) {
-      if (memberSummary) memberSummary.textContent = supporterMember.member.username + " · verified supporter";
+      if (memberSummary) memberSummary.textContent =
+        supporterMember.walletIdentity.displayName + " · primary wallet identity";
+      if (nameAvailability && nameAvailability.dataset.state !== "available") {
+        nameAvailability.textContent = "Your current name is reserved to this wallet.";
+        nameAvailability.dataset.state = "available";
+      }
       return;
     }
     if (!wallet) {
-      if (memberFeedback) setFeedback(memberFeedback, "Connect an Ethereum, Tron or Solana wallet to continue. No funds are requested.", "neutral");
+      if (memberFeedback) setFeedback(memberFeedback,
+        "Connect your primary Ethereum, TRON or Solana mainnet wallet. Its signed message establishes the wallet identity automatically; there is no separate user registration.", "neutral");
     } else if (!wallet.mainnet) {
       var expected = wallet.network === "ethereum" ? "Ethereum Mainnet (chain ID 1)" :
         wallet.network === "tron" ? "TRON Mainnet" : "Solana Mainnet";
-      if (memberFeedback) setFeedback(memberFeedback, "The connected wallet is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
+      if (memberFeedback) setFeedback(memberFeedback,
+        "The connected wallet is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
     } else if (memberFeedback && memberFeedback.dataset.state === "neutral") {
-      setFeedback(memberFeedback, wallet.network.toUpperCase() + " mainnet wallet connected. Register or sign in below using an off-chain ownership message.", "neutral");
+      setFeedback(memberFeedback,
+        wallet.network.toUpperCase() + " mainnet wallet connected. Continue to prove control of this primary wallet with an off-chain message signature.", "neutral");
     }
   }
 
@@ -743,16 +760,15 @@
     var data = {};
     try { data = await response.json(); } catch (_) {}
     if (!response.ok) {
-      if (response.status === 428) {
-        throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage, then return here.");
-      }
-      throw new Error(data && data.error ? data.error : "The Genesis Programme service returned HTTP " + response.status + ".");
+      if (response.status === 428) throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage.");
+      throw new Error(data && data.error ? data.error : "The Genesis wallet service returned HTTP " + response.status + ".");
     }
     return data;
   }
 
   async function signSupporterChallenge(wallet, message) {
-    setFeedback(memberFeedback, "Your wallet will now display a message asking you to prove ownership. Read the full text. It must say this is an off-chain wallet-ownership proof, not a transaction.", "neutral");
+    setFeedback(memberFeedback,
+      "Your wallet will display an off-chain ownership message. Read it carefully. It must not request a transaction, token approval, transfer or payment.", "neutral");
     var signature = await wallet.sign(message);
     if (wallet.network === "solana") {
       if (typeof signature !== "string" || !/^[A-Za-z0-9_-]{80,100}$/.test(signature)) {
@@ -765,45 +781,54 @@
   }
 
   function applySupporterProfile(data) {
-    if (!data || !data.member || typeof data.member.username !== "string" || !Array.isArray(data.wallets)) {
-      throw new Error("The Genesis Programme service returned an incomplete member profile.");
+    if (!data || !data.walletIdentity || typeof data.walletIdentity.displayName !== "string" || !Array.isArray(data.wallets)) {
+      throw new Error("The Genesis service returned an incomplete wallet identity.");
     }
     supporterMember = data;
-    pseudonymInput.value = data.member.username;
+    pseudonymInput.value = data.walletIdentity.displayName;
     updatePseudonym();
-    if (memberSummary) memberSummary.textContent = data.member.username + " · verified supporter";
+    if (memberSummary) memberSummary.textContent = data.walletIdentity.displayName + " · primary wallet identity";
     if (memberWalletList) {
       memberWalletList.textContent = data.wallets.length
         ? data.wallets.map(function (wallet) {
-            return wallet.network.toUpperCase() + " · " + wallet.role.replace(/_/g, " ") + " · " + wallet.address;
+            return wallet.network.toUpperCase() + " · " + wallet.wallet_role.replace(/_/g, " ") + " · " + wallet.address;
           }).join("  |  ")
-        : "No verified wallets linked.";
+        : "No additional network addresses linked.";
     }
-    if (memberProfileState) memberProfileState.textContent = "Wallet verified";
+    var genesisMember = data.genesisMember && data.genesisMember.status === "ACTIVE";
+    if (genesisBadgeImage) {
+      genesisBadgeImage.hidden = !genesisMember;
+      genesisBadgeImage.alt = genesisMember ? "Gold DNA Genesis Member badge" : "";
+    }
+    if (memberProfileState) memberProfileState.textContent = genesisMember ? "Genesis Member" : "Wallet verified";
+    if (nameAvailability) {
+      nameAvailability.textContent = "Your current name is reserved exclusively to this wallet.";
+      nameAvailability.dataset.state = "available";
+    }
     if (memberFeedback) {
-      setFeedback(memberFeedback, "Signed in as " + data.member.username + ". " + data.wallets.length +
-        " wallet address(es) have independently verified ownership. Contributions and purchases remain disabled.", "connected");
+      setFeedback(memberFeedback, genesisMember
+        ? "Primary wallet verified. Genesis Member status and its gold DNA badge are active for this wallet."
+        : "Primary wallet verified. Its unique display name is reserved. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
     }
     updateSupporterActionButtons();
+    refreshGenesisDirectory();
   }
 
   async function refreshSupporterMember() {
     if (!supporterRuntimeMarkerPresent()) return;
     try {
-      var response = await fetch("/api/supporters/me", {
-        method: "GET",
-        credentials: "same-origin",
-        headers: { "Accept": "application/json" }
+      var response = await fetch("/api/genesis/me", {
+        method: "GET", credentials: "same-origin", headers: { "Accept": "application/json" }
       });
       if (response.ok) {
         applySupporterProfile(await response.json());
-      } else if (response.status === 428) {
-        setFeedback(memberFeedback, "Acknowledge the public staging notice on the AstroCrown homepage before registering or signing in.", "neutral");
       } else if (response.status !== 401) {
-        setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+        var data = {};
+        try { data = await response.json(); } catch (_) {}
+        setFeedback(memberFeedback, data.error || "The Genesis wallet identity could not be checked. Payment acceptance remains disabled.", "error");
       }
     } catch (_) {
-      setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+      setFeedback(memberFeedback, "The Genesis wallet identity could not be checked. Payment acceptance remains disabled.", "error");
     }
   }
 
@@ -811,46 +836,19 @@
     var wallet = activeConnectedWallet();
     if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;
     registerWalletButton.disabled = true;
-    loginWalletButton.disabled = true;
     try {
-      var username = pseudonymInput.value.trim();
-      var challenge = await supporterApiPost("/api/supporters/registration/challenge", {
-        username: username,
-        network: wallet.network,
-        address: wallet.address
+      var challenge = await supporterApiPost("/api/genesis/identity/challenge", {
+        network: wallet.network, address: wallet.address
       });
-      setFeedback(memberFeedback, "Registration challenge created. Confirm the off-chain message in your wallet; this does not transfer funds or pay gas.", "neutral");
+      setFeedback(memberFeedback,
+        "Wallet identity challenge created. Sign the exact off-chain message in your primary wallet. No user profile or separate account is being registered.", "neutral");
       var signature = await signSupporterChallenge(wallet, challenge.message);
-      var profile = await supporterApiPost("/api/supporters/registration/verify", {
-        challengeId: challenge.challengeId,
-        signature: signature
+      var profile = await supporterApiPost("/api/genesis/identity/verify", {
+        challengeId: challenge.challengeId, signature: signature
       });
       applySupporterProfile(profile);
     } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Registration was not completed."), "error");
-    } finally {
-      updateSupporterActionButtons();
-    }
-  }
-
-  async function runSupporterLogin() {
-    var wallet = activeConnectedWallet();
-    if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;
-    registerWalletButton.disabled = true;
-    loginWalletButton.disabled = true;
-    try {
-      var challenge = await supporterApiPost("/api/supporters/login/challenge", {
-        network: wallet.network,
-        address: wallet.address
-      });
-      var signature = await signSupporterChallenge(wallet, challenge.message);
-      var profile = await supporterApiPost("/api/supporters/login/verify", {
-        challengeId: challenge.challengeId,
-        signature: signature
-      });
-      applySupporterProfile(profile);
-    } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet sign-in was not completed."), "error");
+      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet verification was not completed."), "error");
     } finally {
       updateSupporterActionButtons();
     }
@@ -861,24 +859,91 @@
     if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || !supporterMember) return;
     linkWalletButton.disabled = true;
     try {
-      var role = walletPurposeSelect.value || "PAYMENT";
-      if (role !== "PAYMENT" && wallet.network !== "solana") {
-        throw new Error("Only a Solana wallet can be used as an ACROWN delivery wallet.");
+      var selectedRole = walletPurposeSelect.value || "PAYMENT";
+      var role = selectedRole === "ACROWN_DELIVERY" ? "DELIVERY" : selectedRole;
+      if ((role === "DELIVERY" || role === "PAYMENT_AND_DELIVERY") && wallet.network !== "solana") {
+        throw new Error("Only a Solana address can be designated for ACROWN delivery.");
       }
-      var challenge = await supporterApiPost("/api/supporters/wallet-challenge", {
-        network: wallet.network,
-        address: wallet.address,
-        walletRole: role
+      var challenge = await supporterApiPost("/api/genesis/wallet-link/challenge", {
+        network: wallet.network, address: wallet.address, walletRole: role
       });
       var signature = await signSupporterChallenge(wallet, challenge.message);
-      var profile = await supporterApiPost("/api/supporters/wallet-verify", {
-        challengeId: challenge.challengeId,
-        signature: signature,
-        purpose: challenge.purpose
+      var profile = await supporterApiPost("/api/genesis/wallet-link/verify", {
+        challengeId: challenge.challengeId, signature: signature
       });
       applySupporterProfile(profile);
+      setFeedback(memberFeedback, "The additional network address has been independently verified and linked to the primary wallet identity.", "connected");
     } catch (error) {
       setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet linking was not completed."), "error");
+    } finally {
+      updateSupporterActionButtons();
+    }
+  }
+
+  async function checkDisplayNameAvailability() {
+    if (!nameAvailability) return false;
+    var name = pseudonymInput.value.trim();
+    if (name.length < 3) {
+      nameAvailability.textContent = "Enter at least 3 characters.";
+      nameAvailability.dataset.state = "unavailable";
+      if (saveNameButton) saveNameButton.disabled = true;
+      return false;
+    }
+    try {
+      var response = await fetch("/api/genesis/name-availability?name=" + encodeURIComponent(name), {
+        credentials: "same-origin", headers: { "Accept": "application/json" }
+      });
+      var result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Name availability could not be checked.");
+      nameAvailability.textContent = result.available ? "Name available." : "Name unavailable — already in use.";
+      nameAvailability.dataset.state = result.available ? "available" : "unavailable";
+      if (saveNameButton) saveNameButton.disabled = !supporterMember || !result.available ||
+        result.displayName.toLowerCase() === supporterMember.walletIdentity.displayName.toLowerCase();
+      return Boolean(result.available);
+    } catch (error) {
+      nameAvailability.textContent = error.message || "Name availability could not be checked.";
+      nameAvailability.dataset.state = "unavailable";
+      if (saveNameButton) saveNameButton.disabled = true;
+      return false;
+    }
+  }
+
+  var displayNameCheckTimer = null;
+  if (pseudonymInput) pseudonymInput.addEventListener("input", function () {
+    updatePseudonym();
+    if (!supporterMember) return;
+    nameAvailability.textContent = "Checking availability…";
+    nameAvailability.dataset.state = "checking";
+    if (saveNameButton) saveNameButton.disabled = true;
+    window.clearTimeout(displayNameCheckTimer);
+    displayNameCheckTimer = window.setTimeout(checkDisplayNameAvailability, 250);
+  });
+
+  async function saveGenesisDisplayName() {
+    var wallet = activeConnectedWallet();
+    if (!supporterRuntimeMarkerPresent() || !supporterMember || !wallet || !wallet.mainnet) return;
+    if (!await checkDisplayNameAvailability()) return;
+    saveNameButton.disabled = true;
+    try {
+      var challenge = await supporterApiPost("/api/genesis/display-name/challenge", {
+        displayName: pseudonymInput.value.trim()
+      });
+      var primaryWallet = {
+        network: supporterMember.walletIdentity.primaryNetwork,
+        address: supporterMember.walletIdentity.primaryAddress
+      };
+      var active = activeConnectedWallet();
+      if (active.network !== primaryWallet.network || active.address.toLowerCase() !== primaryWallet.address.toLowerCase()) {
+        throw new Error("Reconnect the primary wallet before changing its public name.");
+      }
+      var signature = await signSupporterChallenge(active, challenge.message);
+      var profile = await supporterApiPost("/api/genesis/display-name/verify", {
+        challengeId: challenge.challengeId, signature: signature
+      });
+      applySupporterProfile(profile);
+      setFeedback(memberFeedback, "Your unique public display name has been saved to this wallet identity.", "connected");
+    } catch (error) {
+      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "The display name was not saved."), "error");
     } finally {
       updateSupporterActionButtons();
     }
@@ -888,38 +953,73 @@
     if (!supporterMember) return;
     logoutButton.disabled = true;
     try {
-      await supporterApiPost("/api/supporters/logout", {});
+      await supporterApiPost("/api/genesis/logout", {});
       supporterMember = null;
-      if (memberSummary) memberSummary.textContent = "Not signed in";
-      if (memberWalletList) memberWalletList.textContent = "No verified wallets linked.";
-      pseudonymInput.disabled = false;
-      randomizeButton.disabled = false;
-      pseudonymInput.value = generatePseudonym();
-      updatePseudonym();
-      setFeedback(memberFeedback, "You have signed out. The supporter session has been revoked.", "neutral");
+      if (memberSummary) memberSummary.textContent = "No primary wallet session";
+      if (memberWalletList) memberWalletList.textContent = "No wallet identity currently connected.";
+      if (genesisBadgeImage) genesisBadgeImage.hidden = true;
+      setFeedback(memberFeedback, "Wallet session disconnected. The Genesis identity and all entitlements remain bound to the primary wallet; reconnect that wallet to access them.", "neutral");
     } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : "Sign out could not be completed.", "error");
+      setFeedback(memberFeedback, error && error.message ? error.message : "The wallet session could not be disconnected.", "error");
     } finally {
       updateSupporterActionButtons();
     }
   }
 
+  async function refreshGenesisDirectory() {
+    if (!publicDirectoryList) return;
+    if (!supporterRuntimeMarkerPresent()) {
+      publicDirectoryList.textContent = "Public payment records will appear here after the Genesis Programme opens and payments are independently verified.";
+      return;
+    }
+    try {
+      var response = await fetch("/api/genesis/directory", { headers: { "Accept": "application/json" } });
+      var data = await response.json();
+      if (!response.ok || !Array.isArray(data.items)) throw new Error("The public Genesis directory is unavailable.");
+      publicDirectoryList.replaceChildren();
+      if (!data.items.length) {
+        publicDirectoryList.textContent = "No qualifying payments have been published. Genesis payment acceptance is currently disabled.";
+        return;
+      }
+      data.items.forEach(function (item) {
+        var row = document.createElement("article");
+        row.className = "genesis-directory-row";
+        var identity = document.createElement("strong");
+        identity.textContent = item.displayName + " · Genesis Member";
+        var detail = document.createElement("span");
+        detail.textContent = item.amount + " USDT · " + item.network.toUpperCase();
+        row.append(identity, detail);
+        if (item.explorerUrl) {
+          var link = document.createElement("a");
+          link.href = item.explorerUrl;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "Verify on " + (item.network === "ethereum" ? "Etherscan" : item.network === "tron" ? "TronScan" : "Solscan");
+          row.append(link);
+        }
+        publicDirectoryList.append(row);
+      });
+    } catch (_) {
+      publicDirectoryList.textContent = "The public Genesis directory is temporarily unavailable.";
+    }
+  }
+
   if (registerWalletButton) registerWalletButton.addEventListener("click", runSupporterRegistration);
-  if (loginWalletButton) loginWalletButton.addEventListener("click", runSupporterLogin);
   if (linkWalletButton) linkWalletButton.addEventListener("click", runSupporterWalletLink);
   if (logoutButton) logoutButton.addEventListener("click", runSupporterLogout);
+  if (saveNameButton) saveNameButton.addEventListener("click", saveGenesisDisplayName);
 
   async function refreshProgrammeStatus() {
     var statusElement = document.getElementById("supporter-runtime-status");
     if (!statusElement) return;
     var runtimeMarker = document.querySelector('meta[name="astro-supporter-runtime"]');
     if (!runtimeMarker || runtimeMarker.content !== "worker-staging" || window.location.protocol !== "https:") {
-      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Qualifying payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
       return;
     }
     try {
-      var response = await fetch("/api/supporters/status", {
+      var response = await fetch("/api/genesis/status", {
         method: "GET",
         credentials: "same-origin",
         headers: { "Accept": "application/json" }
@@ -939,7 +1039,7 @@
       statusElement.textContent = "Programme service connected · PRELAUNCH · Ethereum, Tron and Solana USDT intake is disabled. Do not send funds.";
       statusElement.dataset.state = "closed";
     } catch (_) {
-      statusElement.textContent = "Programme service status unavailable · Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Programme service status unavailable · Qualifying payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
     }
   }
@@ -947,6 +1047,7 @@
   refreshProgrammeStatus();
   updateSupporterActionButtons();
   refreshSupporterMember();
+  refreshGenesisDirectory();
 
   // Never call eth_sign, eth_sendTransaction, signAndSendTransaction,
   // signTransaction, signAndSendTransaction, signMessageV2, or any wallet payment method here.
