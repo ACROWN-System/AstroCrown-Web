@@ -235,8 +235,8 @@ async function identityProfile(db, identity) {
     ).bind(identity.identity_id).all(),
     db.prepare(
       "SELECT badge_code,status,awarded_at,rules_version FROM genesis_member_badges " +
-      "WHERE identity_id=? AND status='ACTIVE' ORDER BY awarded_at LIMIT 1"
-    ).bind(identity.identity_id).first(),
+      "WHERE identity_id=? AND status='ACTIVE' AND ?='ACTIVE' ORDER BY awarded_at LIMIT 1"
+    ).bind(identity.identity_id, identity.genesis_member_status).first(),
     db.prepare("SELECT earned_acrown_base_units,consumed_acrown_base_units FROM genesis_wallet_entitlements WHERE identity_id=?")
       .bind(identity.identity_id).first()
   ]);
@@ -254,7 +254,7 @@ async function identityProfile(db, identity) {
       badgeCode: badge.badge_code,
       awardedAt: new Date(Number(badge.awarded_at) * 1000).toISOString(),
       rulesVersion: badge.rules_version
-    } : { status: "NOT_QUALIFIED", badgeCode: null, awardedAt: null },
+    } : { status: identity.genesis_member_status || "NOT_QUALIFIED", badgeCode: null, awardedAt: null },
     wallets: wallets.results || [],
     entitlement: entitlement ? {
       earnedAcrownBaseUnits: entitlement.earned_acrown_base_units,
