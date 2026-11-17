@@ -1055,7 +1055,7 @@
         payload.programme.status === "PRELAUNCH" &&
         payload.paymentAcceptance &&
         payload.paymentAcceptance.enabled === false &&
-        payload.paymentAcceptance.contributionsAccepted === false &&
+        payload.paymentAcceptance.qualifyingPaymentsAccepted === false &&
         Array.isArray(payload.networks) &&
         payload.networks.length === 3;
       if (!prelaunch) throw new Error("The programme status could not be qualified.");
