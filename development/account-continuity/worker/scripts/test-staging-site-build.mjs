@@ -33,7 +33,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /The primary wallet is the identity, recovery anchor and entitlement holder/);
   assert.match(html, /Genesis Member distinction/);
   assert.match(html, /gold DNA Genesis Member badge/);
-  assert.match(html, /Explorer links reveal the full wallet address and associated public transaction history/);
+  assert.match(html, /Explorer links expose the full wallet address and associated public transaction history/);
   assert.match(html, /The primary wallet is the identity, recovery anchor and entitlement holder/);
   assert.match(html, /Genesis Member distinction/);
   assert.match(html, /gold DNA Genesis Member badge/);
