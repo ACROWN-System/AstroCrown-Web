@@ -51,7 +51,8 @@ const headers = read("_headers");
 const robots = read("robots.txt");
 
 assert.match(homepage, /name="robots" content="noindex, nofollow, noarchive"/i);
-assert.match(homepage, /Supporter Programme/);
+assert.match(homepage, /Genesis Programme/);
+assert.doesNotMatch(homepage, /Supporter Programme/i);
 assert.match(homepage, /Privacy &amp; Transparency Centre/);
 assert.match(homepage, /illustrative market values/i);
 assert.match(homepage, /no live services connected/i);
@@ -75,7 +76,8 @@ assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wal
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
 assert.match(supporterJs, /standard:connect/);
-assert.match(supporterPage, /No supporter contributions accepted in this development preview/i);
+assert.match(supporterPage, /No Genesis Programme contributions accepted in this development preview/i);
+assert.doesNotMatch(supporterPage, /Supporter Programme|early supporter programme|supporter contribution|supporter funds/i);
 assert.match(supporterPage, /USDT transfers not enabled/i);
 // The standalone Pages build is intentionally disconnected: only the staging Worker
 // build injects the runtime marker. The shared script must therefore keep member actions
