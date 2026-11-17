@@ -1,0 +1,27 @@
+{
+  "name": "AstroCrown Genesis — Private Proof Workspace",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "forwardPorts": [8765],
+  "portsAttributes": {
+    "8765": {
+      "label": "Genesis Ethereum proof (private)",
+      "protocol": "https",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "npm install --no-save --no-package-lock --no-audit --no-fund --prefix development/account-continuity/worker",
+  "customizations": {
+    "codespaces": {
+      "openFiles": [
+        "development/supporter-programme/TREASURY-ADDRESS-ONBOARDING.md",
+        "development/account-continuity/worker/scripts/genesis-ethereum-treasury-proof.mjs"
+      ]
+    },
+    "vscode": {
+      "settings": {
+        "terminal.integrated.cwd": "${workspaceFolder}/development/account-continuity/worker",
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}
