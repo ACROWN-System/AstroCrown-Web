@@ -243,7 +243,7 @@ async function applyRateLimit(db, env, request, action, maximum, seconds) {
 function createWalletMessage({ origin, address, network, purpose, challengeId, nonce, issuedAt, expiresAt }) {
   const url = new URL(origin);
   const uri = origin + "/supporters/";
-  const statement = "AstroCrown Supporter Programme wallet ownership proof. This is an off-chain message signature only. It does not authorize or submit a blockchain transaction.";
+  const statement = "AstroCrown Genesis Programme wallet ownership proof. This is an off-chain message signature only. It does not authorize or submit a blockchain transaction.";
   if (network === "ethereum") {
     return [
       url.host + " wants you to sign in with your Ethereum account:",
@@ -264,7 +264,7 @@ function createWalletMessage({ origin, address, network, purpose, challengeId, n
     ].join("\n");
   }
   return [
-    "AstroCrown Supporter Programme wallet ownership proof",
+    "AstroCrown Genesis Programme wallet ownership proof",
     "Domain: " + url.host,
     "URI: " + uri,
     "Address: " + address,
@@ -690,7 +690,7 @@ async function supporterLogout(db, request, config) {
 
 export async function handleSupporterApi(request, env, config) {
   const db = env?.SUPPORTERS_DB;
-  if (!db) return json(503, { error: "The isolated Supporter Programme service is not bound." });
+  if (!db) return json(503, { error: "The isolated Genesis Programme service is not bound." });
   const url = new URL(request.url);
   try {
     if (url.pathname === "/api/supporters/status" && request.method === "GET") {
@@ -706,9 +706,9 @@ export async function handleSupporterApi(request, env, config) {
         url.pathname !== "/api/supporters/wallet-challenge" &&
         url.pathname !== "/api/supporters/wallet-verify" &&
         url.pathname !== "/api/supporters/logout") {
-      return json(404, { error: "The Supporter Programme endpoint does not exist." });
+      return json(404, { error: "The Genesis Programme endpoint does not exist." });
     }
-    if (request.method !== "POST") return json(405, { error: "This Supporter Programme endpoint requires POST." });
+    if (request.method !== "POST") return json(405, { error: "This Genesis Programme endpoint requires POST." });
     const contentType = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
     if (contentType !== "application/json") return json(415, { error: "This endpoint accepts JSON only." });
     const body = await request.text();
@@ -784,13 +784,13 @@ export async function handleSupporterApi(request, env, config) {
       return await linkWalletVerify(db, env, request, payload, config, member);
     }
     if (url.pathname === "/api/supporters/logout") return await supporterLogout(db, request, config);
-    return json(404, { error: "The Supporter Programme endpoint does not exist." });
+    return json(404, { error: "The Genesis Programme endpoint does not exist." });
   } catch (error) {
     const status = Number(error?.status) || 500;
     if (env?.ENVIRONMENT === "local") {
       console.error("[LOCAL SUPPORTER TEST ONLY]", String(error?.message || "unknown error"));
     }
-    return json(status, { error: status < 500 ? error.message : "The Supporter Programme service encountered an unexpected error." });
+    return json(status, { error: status < 500 ? error.message : "The Genesis Programme service encountered an unexpected error." });
   }
 }
 
@@ -798,7 +798,7 @@ export async function supporterStatusResponse(env) {
   const db = env?.SUPPORTERS_DB;
   if (!db) {
     return json(503, {
-      error: "The isolated Supporter Programme database is not bound. Payment acceptance is unavailable.",
+      error: "The isolated Genesis Programme database is not bound. Payment acceptance is unavailable.",
     });
   }
 
@@ -818,22 +818,22 @@ export async function supporterStatusResponse(env) {
     return json(200, payload);
   } catch {
     return json(503, {
-      error: "The isolated Supporter Programme database could not be qualified. Contributions remain disabled.",
+      error: "The isolated Genesis Programme database could not be qualified. Contributions remain disabled.",
     });
   }
 }
 
 function buildSupporterStatus(program, networkRows) {
   if (!program || program.environment !== "MAINNET" || !Array.isArray(networkRows)) {
-    throw new Error("The isolated Supporter Programme database is not initialized correctly.");
+    throw new Error("The isolated Genesis Programme database is not initialized correctly.");
   }
   if (!["PRELAUNCH", "OPEN", "PAUSED", "CLOSED"].includes(program.status)) {
-    throw new Error("The Supporter Programme has an unrecognized lifecycle state.");
+    throw new Error("The Genesis Programme has an unrecognized lifecycle state.");
   }
   const byNetwork = new Map(networkRows.map((row) => [row.network, row]));
   if (networkRows.length !== NETWORK_ORDER.length || byNetwork.size !== NETWORK_ORDER.length ||
       NETWORK_ORDER.some((network) => !byNetwork.has(network))) {
-    throw new Error("The Supporter Programme database does not contain the exact three-network allowlist.");
+    throw new Error("The Genesis Programme database does not contain the exact three-network allowlist.");
   }
   const networks = NETWORK_ORDER.map((network) => {
     const row = byNetwork.get(network);
