@@ -68,7 +68,7 @@ It supports two execution modes:
 For a browser-based GitHub environment, create a Codespace from the existing Genesis PR branch. In its integrated terminal, from `development/account-continuity/worker`, install the existing package dependencies and run the proof tool:
 
 ```sh
-npm install --no-audit --no-fund
+npm install --no-save --no-package-lock --no-audit --no-fund
 npm run genesis:treasury-proof:ethereum
 ```
 
