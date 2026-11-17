@@ -323,6 +323,34 @@ if __name__ == "__main__":
             "UPDATE supporter_members SET registration_state='VERIFIED',registration_verified_at=2 "
             "WHERE member_id='m-activity'"
         )
+        prelaunch_at = launch - 100
+        self.db.execute(
+            "INSERT INTO supporter_contribution_intents(intent_id,member_id,wallet_id,network,token_identifier,"
+            "treasury_address,amount_base_units,status,rules_version,created_at,expires_at) "
+            "VALUES('i-prelaunch','m-activity','w-activity','ethereum','usdt-eth','treasury','100',"
+            "'CONFIRMED','v1',3,9999999999)"
+        )
+        self.db.execute(
+            "INSERT INTO supporter_contributions(contribution_id,intent_id,member_id,wallet_id,network,"
+            "token_identifier,sender_address,treasury_address,transaction_hash,transfer_index,amount_base_units,"
+            "block_or_slot,finality_status,provider_agreement_digest,multiplier_numerator,multiplier_denominator,"
+            "acrown_allowance_base_units,rules_version,confirmed_at) "
+            "VALUES('c-prelaunch','i-prelaunch','m-activity','w-activity','ethereum','usdt-eth','sender',"
+            "'treasury','0xprelaunch','0','100','99','FINALIZED','provider-agreement','25','1','2500','v1',?)",
+            (prelaunch_at,),
+        )
+        self.db.execute(
+            "INSERT INTO supporter_program_activity_events(activity_id,activity_type,contribution_id,"
+            "activity_at,recorded_at) VALUES('a-prelaunch','CONTRIBUTION','c-prelaunch',?,?)",
+            (prelaunch_at, launch + 1),
+        )
+        self.assertIsNone(
+            self.db.execute(
+                "SELECT last_qualifying_activity_at FROM supporter_program WHERE singleton=1"
+            ).fetchone()[0],
+            "Pre-launch activity must not move the inactivity clock ahead of its official start.",
+        )
+
         activity_at = launch + 100
         self.db.execute(
             "INSERT INTO supporter_contribution_intents(intent_id,member_id,wallet_id,network,token_identifier,"
