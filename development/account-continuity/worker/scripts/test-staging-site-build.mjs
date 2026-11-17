@@ -63,7 +63,9 @@ test("Genesis Programme wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
   assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
   assert.ok(js.includes("/api/supporters/status"));
-  assert.match(js, /contributions remain closed/i);
+  assert.match(js, /payments remain closed/i);
+  assert.match(js, /treasuryAddressFormatValid/);
+  assert.match(js, /receiving address not configured/);
   assert.equal(js.includes('method: "eth_sign"'), false);
   assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
   assert.equal(js.includes('method: "eth_sendTransaction"'), false);
