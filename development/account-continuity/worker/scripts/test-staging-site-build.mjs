@@ -10,14 +10,14 @@ async function readPublic(path) {
   return readFile(resolve(publicRoot, path), "utf8");
 }
 
-test("Worker staging build publishes the Supporter Programme at the shared origin", async () => {
+test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
   const homepage = await readPublic("index.html");
-  assert.match(homepage, /href="\.\/supporters\/">Supporter Programme/);
+  assert.match(homepage, /href="\.\/supporters\/">Genesis Programme/);
 });
 
-test("published Supporter Programme states that contributions are not open", async () => {
+test("published Genesis Programme states that contributions are not open", async () => {
   const html = await readPublic("supporters/index.html");
   assert.match(html, /DEVELOPMENT PREVIEW/);
   assert.match(html, /USDT CONTRIBUTIONS NOT OPEN/);
