@@ -187,8 +187,11 @@ At least two independently operated RPC sources are required per enabled chain. 
 
 ## 7. Data and accounting model
 
-The D1 migration creates:
-- one mainnet programme activation record with immutable activation and lifecycle status, with no fixed-duration expiry;
+The D1 migrations create:
+- one mainnet programme activation record with immutable activation and lifecycle status, with no fixed-duration individual allowance expiry;
+- the owner-approved UTC-midnight public-launch timestamp, the latest qualifying programme-wide activity timestamp, and closure evidence; the inactivity threshold is derived as `COALESCE(last_qualifying_activity_at, public_launch_at) + 180 days`;
+- append-only programme activity evidence tied to a finalized verified contribution or a settled ACROWN purchase; only activity at or after the official launch timestamp resets the global inactivity clock;
+- explicit closure metadata; reaching the 180-day inactivity threshold does not automatically close the programme, and inactivity termination requires an owner-authorized decision plus a published notice reference;
 - the approved USDT 1,000,000 aggregate contribution ceiling and the 25:1 multiplier/rules version;
 - the 25,000,000-ACROWN shared purchase-capacity ceiling and current remaining capacity;
 - the selected public-deployment event date at `00:00:00Z` and derived registration cutoff at `00:00:00Z` on the previous UTC date;
