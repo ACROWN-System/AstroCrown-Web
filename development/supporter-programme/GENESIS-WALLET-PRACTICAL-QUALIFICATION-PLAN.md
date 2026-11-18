@@ -80,7 +80,7 @@ Genesis accepts three payment rails, each with its own parser:
 
 The existing deterministic parsers and two-operator reconciliation function are read-only. A future live service must obtain the evidence through at least two separately operated and qualified RPC providers, bind it to a server-created payment intent, and prevent duplicate credit using network + transaction ID + transfer/event/instruction index. A wallet's UI, callback or submitted hash is never authoritative.
 
-A qualifying payment creates only the wallet-bound ACROWN purchase entitlement. It does not itself buy or issue ACROWN. The subsequent ACS pure-floor purchase and Solana delivery remain separate stages.
+A qualifying payment adds capacity to the shared Genesis-programme-wide USDT purchase-allowance pool; it does not create a wallet-bound or personal allowance and does not itself buy or issue ACROWN. Any eligible pre-freeze registered wallet may later draw from the remaining shared pool for a separate ACS pure-floor purchase, followed by Solana delivery.
 
 ## Current automated evidence
 
