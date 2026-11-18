@@ -85,7 +85,7 @@ assert.match(supporterPage, /USDT transfers not enabled/i);
 assert.match(supporterPage, /The primary wallet is the identity, recovery anchor and entitlement holder/i);
 assert.match(supporterPage, /Your wallet is your Genesis identity and entitlement/i);
 assert.match(supporterPage, /ACROWN purchase entitlement belongs to the primary wallet/i);
-assert.match(supporterPage, /A payment is not attributed to the primary wallet until its source address and transaction have both passed verification/i);
+assert.match(supporterPage, /A payment is accepted only when its on-chain sender matches an address already verified and linked to that primary identity for the same network/i);
 assert.match(supporterPage, /gold DNA Genesis Member badge/i);
 assert.match(supporterPage, /Explorer links reveal the full public address and its on-chain history/i);
 assert.match(supporterPage, /Genesis Member distinction/i);
