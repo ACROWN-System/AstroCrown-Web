@@ -122,6 +122,8 @@ A renewed 2026 ACS release, reserve valuation model, supply snapshot source, ora
 
 ## 5. Purchase, payment and delivery sequence
 
+The 180-day purchase-exercise window is governed by the authoritative rule in [MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md](./MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md). It starts only after official ACROWN launch and operational availability of the qualified ACS pure-floor purchase facility—not when Genesis qualifying payments open. A wallet that completes and receives purchases for its entire personal allowance is `FULLY_EXERCISED`; only an unused allowance balance remains subject to the global window's expiry rule. A pending, finalized-but-undelivered purchase must remain auditable and must not be silently expired.
+
 After receiving a valid quote, the participant must explicitly confirm:
 
 - selected ACROWN quantity and remaining personal allowance;
@@ -163,7 +165,7 @@ Keep every network disabled and payment acceptance false until all applicable ga
 1. **Treasury control:** verify the Ethereum, TRON and Solana Genesis receiving addresses on the correct mainnets using fresh, domain-bound proof challenges and an offline review trail. The current Ethereum/TRON proof artifacts do not by themselves record server-verified custody; the Solana treasury proof flow is still required.
 2. **Inbound asset correctness:** independently verify each canonical USDT token identifier, six-decimal precision, network identity, receiving address and Solana treasury token-account readiness against live mainnet data.
 3. **Finality and reconciliation:** qualify two independent RPC sources, chain-specific finality/reorg handling, Transfer evidence, duplicate detection and failure/retry behavior for each chain. The local parser foundation is documented in [GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md](./GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md); it is not the production RPC or settlement service.
-4. **Programme terms:** approve the contribution multiplier, minimum contribution threshold, any contribution ceiling, global ACROWN cap or no-cap policy, additional-contribution rules, 180-day activation time and exact rounding rules. The illustrative 25:1 value is not an approved live term.
+4. **Programme terms:** approve the contribution multiplier, minimum qualifying-payment threshold, any qualifying-payment ceiling, global USDT-denominated purchase-allowance cap or no-cap policy, additional-payment rules, the ACROWN-launch-triggered 180-day purchase-exercise window (including full-exercise and unused-balance handling), and exact rounding rules. The illustrative 25:1 value is not an approved live term.
 5. **ACS floor:** publish a renewed qualified ACS version covering reserve constituents and quantities, common numeraire, circulating-supply source, oracle quorum, feed tolerance/staleness, price snapshot, rounding and quote expiry.
 6. **ACROWN delivery:** identify the deployed Solana ACROWN mint, token program and decimals; verify available inventory; prove control of the delivery source; qualify the signer/approval procedure; and test finality and recipient-owner checks. No mint address or delivery authority may be guessed.
 7. **End-to-end qualification:** run local deterministic tests and controlled testnet simulations for each chain, then verify contribution credit, purchase quoting, payment reconciliation, allowance reservation, inventory reservation, failed delivery, retry, duplicate and compensation scenarios.
