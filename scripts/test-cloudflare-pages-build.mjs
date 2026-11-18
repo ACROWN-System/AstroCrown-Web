@@ -82,7 +82,7 @@ assert.match(supporterPage, /unused personal allowance/i);
 assert.match(supporterPage, /USDT purchase allowance within a programme-wide limit/i);
 assert.match(supporterPage, /proposed USDT 1,000,000 programme-wide allowance/i);
 assert.doesNotMatch(supporterPage, /programme-wide ACROWN cap/i);
-assert.match(supporterPage, /Any approved global ceiling applies to everyone/i);
+assert.match(supporterPage, /One global allowance ceiling applies to everyone/i);
 assert.doesNotMatch(supporterPage, /no separate per-wallet token ceiling|the wallet may purchase up to the entire remaining programme allowance/i);
 assert.match(supporterJs, /TIP6963:announceProvider/);
 assert.match(supporterJs, /eth_requestAccounts/);
