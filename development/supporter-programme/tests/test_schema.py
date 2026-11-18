@@ -164,7 +164,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,"
             "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
             "VALUES('gch-existing','gid-existing','ethereum','0xabc','0xabc','IDENTIFY','nonce-existing','example.test',"
-            "'digest-existing','existing wallet sign-in',?,?,?)".replace("?,?,?)", "?,?)"),
+            "'digest-existing','existing wallet sign-in',?,?)",
             (now, now + 600),
         )
         with self.assertRaisesRegex(sqlite3.IntegrityError, "New Genesis registrations"):
