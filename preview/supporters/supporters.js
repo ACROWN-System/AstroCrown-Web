@@ -1148,6 +1148,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   }
 
   refreshProgrammeStatus();
+  window.setInterval(refreshProgrammeStatus, 30000);
   updateSupporterActionButtons();
   refreshSupporterMember();
   refreshGenesisDirectory();
