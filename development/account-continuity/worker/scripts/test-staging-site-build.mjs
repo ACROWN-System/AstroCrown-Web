@@ -32,7 +32,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /id="participant-network-fee-policy"/);
   assert.doesNotMatch(html, /25 ACROWN per USD₮|USDT 150 transition threshold|USDT 250,000 target/);
   assert.match(html, /USDT purchase allowance within a programme-wide limit/);
-  assert.match(html, /proposed USDT 1,000,000 programme-wide allowance/);
+  assert.match(html, /one shared,? programme-wide USDT purchase-allowance pool/i);
   assert.doesNotMatch(html, /programme-wide ACROWN cap/);
   assert.match(html, /All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch/);
   assert.match(html, /New primary-wallet registration closes permanently at that cutoff and never resumes/);
