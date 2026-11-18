@@ -273,8 +273,7 @@ async function identityProfile(db, identity) {
       "SELECT allowance_cap_usdt_base_units,earned_usdt_base_units,reserved_usdt_base_units,consumed_usdt_base_units " +
       "FROM genesis_programme_allowance_state WHERE singleton=1"
     ).first(),
-    db.prepare("SELECT registration_freeze_at,registration_closed_at,purchase_window_started_at,purchase_window_closes_at " +
-      "FROM genesis_programme_control WHERE singleton=1").first()
+    loadGenesisProgrammeControl(db)
   ]);
   const earned = allowance?.earned_usdt_base_units || "0";
   const reserved = allowance?.reserved_usdt_base_units || "0";
