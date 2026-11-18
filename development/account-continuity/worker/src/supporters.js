@@ -1,3 +1,4 @@
+import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
 import {
   getAddress,
   isAddress,
@@ -8,20 +9,7 @@ import {
 } from "viem";
 
 const NETWORK_ORDER = ["ethereum", "tron", "solana"];
-const CANONICAL_NETWORKS = Object.freeze({
-  ethereum: {
-    networkIdentifier: "eip155:1",
-    tokenIdentifier: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-  },
-  tron: {
-    networkIdentifier: "tron:mainnet",
-    tokenIdentifier: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-  },
-  solana: {
-    networkIdentifier: "solana:mainnet",
-    tokenIdentifier: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-  },
-});
+const CANONICAL_NETWORKS = MAINNET_USDT_CONFIG;
 const SESSION_COOKIE = "acrown_supporter_session";
 const SESSION_SECONDS = 12 * 60 * 60;
 const CHALLENGE_SECONDS = 10 * 60;
@@ -255,7 +243,7 @@ async function applyRateLimit(db, env, request, action, maximum, seconds) {
 function createWalletMessage({ origin, address, network, purpose, challengeId, nonce, issuedAt, expiresAt }) {
   const url = new URL(origin);
   const uri = origin + "/supporters/";
-  const statement = "AstroCrown Supporter Programme wallet ownership proof. This is an off-chain message signature only. It does not authorize or submit a blockchain transaction.";
+  const statement = "AstroCrown Genesis Programme wallet ownership proof. This is an off-chain message signature only. It does not authorize or submit a blockchain transaction.";
   if (network === "ethereum") {
     return [
       url.host + " wants you to sign in with your Ethereum account:",
@@ -276,7 +264,7 @@ function createWalletMessage({ origin, address, network, purpose, challengeId, n
     ].join("\n");
   }
   return [
-    "AstroCrown Supporter Programme wallet ownership proof",
+    "AstroCrown Genesis Programme wallet ownership proof",
     "Domain: " + url.host,
     "URI: " + uri,
     "Address: " + address,
@@ -474,7 +462,7 @@ async function memberProfile(db, member) {
       proofMethod: wallet.proof_method,
     })),
     paymentStatus: "DISABLED",
-    contributionsAccepted: false,
+    qualifyingPaymentsAccepted: false,
   };
 }
 
@@ -702,7 +690,7 @@ async function supporterLogout(db, request, config) {
 
 export async function handleSupporterApi(request, env, config) {
   const db = env?.SUPPORTERS_DB;
-  if (!db) return json(503, { error: "The isolated Supporter Programme service is not bound." });
+  if (!db) return json(503, { error: "The isolated Genesis Programme service is not bound." });
   const url = new URL(request.url);
   try {
     if (url.pathname === "/api/supporters/status" && request.method === "GET") {
@@ -718,9 +706,9 @@ export async function handleSupporterApi(request, env, config) {
         url.pathname !== "/api/supporters/wallet-challenge" &&
         url.pathname !== "/api/supporters/wallet-verify" &&
         url.pathname !== "/api/supporters/logout") {
-      return json(404, { error: "The Supporter Programme endpoint does not exist." });
+      return json(404, { error: "The Genesis Programme endpoint does not exist." });
     }
-    if (request.method !== "POST") return json(405, { error: "This Supporter Programme endpoint requires POST." });
+    if (request.method !== "POST") return json(405, { error: "This Genesis Programme endpoint requires POST." });
     const contentType = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
     if (contentType !== "application/json") return json(415, { error: "This endpoint accepts JSON only." });
     const body = await request.text();
@@ -796,13 +784,13 @@ export async function handleSupporterApi(request, env, config) {
       return await linkWalletVerify(db, env, request, payload, config, member);
     }
     if (url.pathname === "/api/supporters/logout") return await supporterLogout(db, request, config);
-    return json(404, { error: "The Supporter Programme endpoint does not exist." });
+    return json(404, { error: "The Genesis Programme endpoint does not exist." });
   } catch (error) {
     const status = Number(error?.status) || 500;
     if (env?.ENVIRONMENT === "local") {
       console.error("[LOCAL SUPPORTER TEST ONLY]", String(error?.message || "unknown error"));
     }
-    return json(status, { error: status < 500 ? error.message : "The Supporter Programme service encountered an unexpected error." });
+    return json(status, { error: status < 500 ? error.message : "The Genesis Programme service encountered an unexpected error." });
   }
 }
 
@@ -810,58 +798,91 @@ export async function supporterStatusResponse(env) {
   const db = env?.SUPPORTERS_DB;
   if (!db) {
     return json(503, {
-      error: "The isolated Supporter Programme database is not bound. Payment acceptance is unavailable.",
+      error: "The isolated Genesis Programme database is not bound. Payment acceptance is unavailable.",
     });
   }
 
   try {
-    const [program, result] = await Promise.all([
+    const [program, result, genesisControl] = await Promise.all([
       db.prepare(
         "SELECT environment,status,activated_at,closes_at,rules_version " +
         "FROM supporter_program WHERE singleton = 1"
       ).first(),
       db.prepare(
-        "SELECT network,network_identifier,token_identifier,token_decimals,enabled," +
-        "CASE WHEN treasury_address IS NULL OR length(trim(treasury_address)) = 0 THEN 0 ELSE 1 END AS treasury_configured " +
+        "SELECT network,network_identifier,token_identifier,token_decimals,treasury_address,enabled " +
         "FROM supporter_network_config ORDER BY network"
       ).all(),
+      db.prepare(
+        "SELECT acrown_launched_at,acs_floor_purchase_opened_at,purchase_window_started_at," +
+        "purchase_window_last_purchase_at,purchase_window_closes_at " +
+        "FROM genesis_programme_control WHERE singleton=1"
+      ).first(),
     ]);
 
+    const now = Math.floor(Date.now() / 1000);
+    const lifecycle = {
+      acrownLaunchedAt: genesisControl?.acrown_launched_at ? Number(genesisControl.acrown_launched_at) : null,
+      acsFloorPurchaseOpenedAt: genesisControl?.acs_floor_purchase_opened_at ? Number(genesisControl.acs_floor_purchase_opened_at) : null,
+      purchaseWindowStartedAt: genesisControl?.purchase_window_started_at ? Number(genesisControl.purchase_window_started_at) : null,
+      purchaseWindowLastPurchaseAt: genesisControl?.purchase_window_last_purchase_at ? Number(genesisControl.purchase_window_last_purchase_at) : null,
+      purchaseWindowClosesAt: genesisControl?.purchase_window_closes_at ? Number(genesisControl.purchase_window_closes_at) : null,
+      purchaseWindowRemainingSeconds: genesisControl?.purchase_window_closes_at
+        ? Math.max(0, Number(genesisControl.purchase_window_closes_at) - now) : null,
+      purchaseWindowOpen: Boolean(genesisControl?.purchase_window_started_at && genesisControl?.purchase_window_closes_at &&
+        now >= Number(genesisControl.purchase_window_started_at) && now < Number(genesisControl.purchase_window_closes_at)),
+      inactivityPeriodSeconds: 15552000,
+      inactivityPeriodLabel: "180 days of inactivity"
+    };
     const payload = buildSupporterStatus(program, result?.results || []);
-    return json(200, payload);
+    return json(200, { ...payload, programmeLifecycle: lifecycle });
   } catch {
     return json(503, {
-      error: "The isolated Supporter Programme database could not be qualified. Contributions remain disabled.",
+      error: "The isolated Genesis Programme database could not be qualified. Qualifying payments remain disabled.",
     });
   }
 }
 
 function buildSupporterStatus(program, networkRows) {
   if (!program || program.environment !== "MAINNET" || !Array.isArray(networkRows)) {
-    throw new Error("The isolated Supporter Programme database is not initialized correctly.");
+    throw new Error("The isolated Genesis Programme database is not initialized correctly.");
   }
   if (!["PRELAUNCH", "OPEN", "PAUSED", "CLOSED"].includes(program.status)) {
-    throw new Error("The Supporter Programme has an unrecognized lifecycle state.");
+    throw new Error("The Genesis Programme has an unrecognized lifecycle state.");
   }
   const byNetwork = new Map(networkRows.map((row) => [row.network, row]));
   if (networkRows.length !== NETWORK_ORDER.length || byNetwork.size !== NETWORK_ORDER.length ||
       NETWORK_ORDER.some((network) => !byNetwork.has(network))) {
-    throw new Error("The Supporter Programme database does not contain the exact three-network allowlist.");
+    throw new Error("The Genesis Programme database does not contain the exact three-network allowlist.");
   }
   const networks = NETWORK_ORDER.map((network) => {
     const row = byNetwork.get(network);
     const canonical = CANONICAL_NETWORKS[network];
-    if (Number(row.token_decimals) !== 6 || row.network_identifier !== canonical.networkIdentifier ||
+    if (Number(row.token_decimals) !== canonical.tokenDecimals || row.network_identifier !== canonical.networkIdentifier ||
         row.token_identifier !== canonical.tokenIdentifier) {
       throw new Error("The configured network/token identity or USD₮ precision does not match the canonical allowlist.");
+    }
+    const configuredTreasury = typeof row.treasury_address === "string" ? row.treasury_address.trim() : "";
+    const expectedTreasury = network === "ethereum"
+      ? canonical.treasuryAddress.toLowerCase()
+      : canonical.treasuryAddress;
+    const normalizedTreasury = network === "ethereum"
+      ? configuredTreasury.toLowerCase()
+      : configuredTreasury;
+    if (configuredTreasury && normalizedTreasury !== expectedTreasury) {
+      throw new Error("The configured Genesis treasury address does not match the owner-approved network configuration.");
+    }
+    const treasuryConfigured = Boolean(configuredTreasury);
+    const networkConfigured = Number(row.enabled) === 1;
+    if (networkConfigured && !treasuryConfigured) {
+      throw new Error("A network cannot be enabled without its configured Genesis treasury address.");
     }
     return {
       network,
       networkIdentifier: canonical.networkIdentifier,
       tokenIdentifier: canonical.tokenIdentifier,
-      tokenDecimals: 6,
-      networkConfigured: Number(row.enabled) === 1,
-      treasuryConfigured: Number(row.treasury_configured) === 1,
+      tokenDecimals: canonical.tokenDecimals,
+      networkConfigured,
+      treasuryConfigured,
     };
   });
   return {
@@ -875,11 +896,11 @@ function buildSupporterStatus(program, networkRows) {
     networks,
     paymentAcceptance: {
       enabled: false,
-      contributionsAccepted: false,
+      qualifyingPaymentsAccepted: false,
       reason: "Mainnet payment intake is not enabled. No payment intent or transfer request can be created.",
     },
     purchaseAllowance: {
-      separateFromContribution: true,
+      separateFromQualifyingPayment: true,
       automaticTokenIssuance: false,
     },
   };

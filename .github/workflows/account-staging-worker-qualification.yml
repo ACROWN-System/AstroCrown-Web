@@ -59,7 +59,7 @@ jobs:
       - name: Build the restricted website asset set
         run: npm run build:site
 
-      - name: Verify the published supporter page and wallet script
+      - name: Verify the published Genesis page and wallet script
         run: |
           node --check public/supporters/supporters.js
           node scripts/test-staging-site-build.mjs
@@ -106,18 +106,18 @@ jobs:
           if (status.scope !== "staging-test-account-only") throw new Error("The account scope marker is missing.");
           if (status.passkeyAvailable !== true) throw new Error("The Worker did not report its passkey service.");
           NODE
-          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/supporters/status" -o "$RUNNER_TEMP/supporters-status.json"
-          node --input-type=module - "$RUNNER_TEMP/supporters-status.json" <<'NODE'
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/genesis/status" -o "$RUNNER_TEMP/genesis-status.json"
+          node --input-type=module - "$RUNNER_TEMP/genesis-status.json" <<'NODE'
           import fs from "node:fs";
           const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (status.environment !== "MAINNET" || status.programme?.status !== "PRELAUNCH") throw new Error("Supporter Programme must report MAINNET PRELAUNCH.");
-          if (status.paymentAcceptance?.enabled !== false || status.paymentAcceptance?.contributionsAccepted !== false) throw new Error("Mainnet payment acceptance must remain disabled.");
-          if (status.purchaseAllowance?.automaticTokenIssuance !== false) throw new Error("A contribution must not automatically issue ACROWN.");
-          if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Supporter Programme must expose the exact three-network allowlist.");
-          if (status.networks.some(x => x.networkConfigured || x.treasuryConfigured)) throw new Error("No supporter network may be configured before treasury approval.");
+          if (status.environment !== "MAINNET" || status.programme?.status !== "PRELAUNCH") throw new Error("Genesis Programme must report MAINNET PRELAUNCH.");
+          if (status.paymentAcceptance?.enabled !== false || status.paymentAcceptance?.qualifyingPaymentsAccepted !== false) throw new Error("Mainnet payment acceptance must remain disabled.");
+          if (status.purchaseAllowance?.automaticTokenIssuance !== false || status.purchaseAllowance?.separateFromQualifyingPayment !== true) throw new Error("A qualifying payment must not automatically issue ACROWN.");
+          if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Genesis Programme must expose the exact three-network allowlist.");
+          if (status.networks.some(x => x.networkConfigured || !x.treasuryConfigured)) throw new Error("All three owner-approved Genesis treasuries must be recorded while every payment network remains disabled.");
           NODE
           if ! ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-supporter-wallet-e2e.mjs; then
-            echo "Local-only supporter diagnostics (synthetic credentials only):"
+            echo "Local-only Genesis wallet diagnostics (synthetic credentials only):"
             grep "\\[LOCAL SUPPORTER TEST ONLY\\]" "$RUNNER_TEMP/acrown-worker.log" || true
             exit 1
           fi
@@ -139,7 +139,7 @@ jobs:
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
           grep -q "LIVE PUBLIC TEST ENVIRONMENT" "$RUNNER_TEMP/home.html"
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/" -o "$RUNNER_TEMP/supporters.html"
-          grep -q "USDT CONTRIBUTIONS NOT OPEN" "$RUNNER_TEMP/supporters.html"
+          grep -q "USDT QUALIFYING PAYMENTS NOT OPEN" "$RUNNER_TEMP/supporters.html"
           grep -q "DO NOT SEND FUNDS" "$RUNNER_TEMP/supporters.html"
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/supporters.js" -o "$RUNNER_TEMP/supporters.js"
           grep -q "TIP6963:announceProvider" "$RUNNER_TEMP/supporters.js"

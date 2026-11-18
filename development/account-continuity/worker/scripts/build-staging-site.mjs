@@ -95,8 +95,8 @@ for (const relativePath of allowlist) {
     html = replaceExactlyOnce(
       html,
       '          <a href="#explore">Explore ecosystem</a>',
-      '          <a href="#explore">Explore ecosystem</a>' + String.fromCharCode(10) + '          <a href="./supporters/">Supporter Programme</a>',
-      "Supporter Programme footer navigation",
+      '          <a href="#explore">Explore ecosystem</a>' + String.fromCharCode(10) + '          <a href="./supporters/">Genesis Programme</a>',
+      "Genesis Programme footer navigation",
     );
     if (!html.includes("astro-staging-banner")) {
       html = html.replace(
@@ -165,13 +165,15 @@ for (const relativePath of allowlist) {
   }
 }
 
-// The Supporter Programme preview is a deliberate, narrowly scoped static
+// The Genesis Programme preview is a deliberate, narrowly scoped static
 // addition to the same site. Do not copy the preview directory wholesale.
-const supporterFiles = [
+const genesisProgrammeFiles = [
   ["preview/supporters/index.html", "supporters/index.html"],
   ["preview/supporters/supporters.js", "supporters/supporters.js"],
+  ["preview/supporters/wallet-provider-adapters.mjs", "supporters/wallet-provider-adapters.mjs"],
+  ["preview/assets/genesis-member-dna.svg", "assets/genesis-member-dna.svg"],
 ];
-for (const [sourcePath, destinationPath] of supporterFiles) {
+for (const [sourcePath, destinationPath] of genesisProgrammeFiles) {
   const source = join(repoRoot, sourcePath);
   const destination = join(publicRoot, destinationPath);
   await mkdir(dirname(destination), { recursive: true });

@@ -1,3 +1,5 @@
+import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders, discoverDirectTronProviders, discoverDirectSolanaWallets, hasTronMessageSigner, isSolanaMainnet, encodeEvmPersonalSignMessage } from "./wallet-provider-adapters.mjs";
+
 (function () {
   "use strict";
 
@@ -35,8 +37,14 @@
   var memberFeedback = document.getElementById("supporter-member-feedback");
   var memberSummary = document.getElementById("supporter-member-summary");
   var memberWalletList = document.getElementById("supporter-member-wallet-list");
+  var saveNameButton = document.getElementById("member-name-save");
+  var nameAvailability = document.getElementById("member-name-availability");
+  var genesisBadgeImage = document.getElementById("genesis-member-badge-image");
+  var memberAvatar = document.getElementById("member-avatar");
+  var publicDirectoryList = document.getElementById("genesis-public-directory-list");
   var supporterRuntimeEnabled = false;
   var supporterMember = null;
+  var purchaseInactivityInterval = null;
   var lastConnectedNetwork = null;
 
   if (!solanaSelect || !evmSelect || !tronSelect || !pseudonymInput) return;
@@ -66,7 +74,7 @@
 
   function updatePseudonym() {
     var name = pseudonymInput.value.trim();
-    pseudonymDisplay.textContent = name || "Choose a member name";
+    pseudonymDisplay.textContent = name || "Choose a public name";
   }
 
   pseudonymInput.value = generatePseudonym();
@@ -75,8 +83,13 @@
   randomizeButton.addEventListener("click", function () {
     pseudonymInput.value = generatePseudonym();
     updatePseudonym();
-    solanaFeedback.textContent = "A new preview pseudonym has been generated. It is not saved to a member record.";
+    solanaFeedback.textContent = "A different display-name suggestion has been generated. It will be reserved only after the primary wallet verifies ownership and the name is confirmed available.";
     solanaFeedback.dataset.state = "neutral";
+    if (supporterMember && nameAvailability) {
+      nameAvailability.textContent = "Checking availability…";
+      nameAvailability.dataset.state = "checking";
+      checkDisplayNameAvailability();
+    }
   });
 
   function setFeedback(element, message, state) {
@@ -170,7 +183,7 @@
     updateSupporterActionButtons();
     setFeedback(
       evmFeedback,
-      "EVM wallet connected for display only. The address is not registered with the programme and no entitlement is activated.",
+      "EVM wallet connected for display only. The address is not yet verified as a Genesis primary wallet and no entitlement is activated.",
       "connected"
     );
   }
@@ -218,11 +231,13 @@
     }
 
     var id = "evm-" + (++nextEvmId);
+    var walletId = identifyWalletCandidate(info || {}, provider);
     var name = info && typeof info.name === "string" ? info.name :
-      (provider.isMetaMask ? "MetaMask" : "Injected EVM wallet");
+      (walletId ? walletDisplayName(walletId) : (provider.isMetaMask ? "MetaMask" : "Injected EVM wallet"));
     var entry = {
       id: id,
       uuid: uuid,
+      walletId: walletId,
       name: name,
       rdns: info && typeof info.rdns === "string" ? info.rdns : "",
       provider: provider,
@@ -242,17 +257,19 @@
 
   // Listen first, then request provider announcements as required by EIP-6963.
   window.dispatchEvent(new Event("eip6963:requestProvider"));
+  discoverDirectEvmProviders(window).forEach(function (entry) {
+    registerEvmProvider({ name: entry.name, rdns: entry.rdns }, entry.provider, true);
+  });
 
   // Compatibility fallback for EIP-1193 wallets that have not implemented EIP-6963.
   // Delay briefly so standard announcements can be collected first and avoid duplicates.
   window.setTimeout(function () {
-    if (evmProviders.size > 0) return;
     var injected = window.ethereum;
     if (!injected) return;
     var candidates = Array.isArray(injected.providers) ? injected.providers : [injected];
     candidates.forEach(function (provider) {
       registerEvmProvider(
-        { name: provider && provider.isMetaMask ? "MetaMask" : "Injected EVM wallet" },
+        { name: walletDisplayName(identifyWalletCandidate({}, provider)) },
         provider,
         true
       );
@@ -299,7 +316,7 @@
       evmConnectButton.disabled = true;
       setFeedback(
         evmFeedback,
-        "EVM wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "EVM wallet connected. It is not yet verified as the primary Genesis wallet. Use the wallet-identity control below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -424,6 +441,9 @@
   }
 
   window.dispatchEvent(new WalletStandardAppReadyEvent(walletApi));
+  discoverDirectSolanaWallets(window).forEach(function (wallet) {
+    registerSolanaWallets(wallet);
+  });
 
   solanaSelect.addEventListener("change", renderSolanaChoices);
   solanaConnectButton.addEventListener("click", async function () {
@@ -443,10 +463,7 @@
       var account = accounts.find(function (candidate) {
         return candidate &&
           typeof candidate.address === "string" &&
-          Array.isArray(candidate.chains) &&
-          candidate.chains.some(function (chain) {
-            return typeof chain === "string" && chain.indexOf("solana:") === 0;
-          });
+          Array.isArray(candidate.chains);
       });
 
       if (!account) {
@@ -457,15 +474,17 @@
       connectedSolanaAccount = account;
       lastConnectedNetwork = "solana";
       solanaAddress.textContent = account.address;
-      solanaChain.textContent = "Wallet-reported network(s): " + account.chains
-        .filter(function (chain) { return typeof chain === "string" && chain.indexOf("solana:") === 0; })
-        .join(", ");
+      var reportedSolanaChains = account.chains
+        .filter(function (chain) { return typeof chain === "string" && chain.indexOf("solana:") === 0; });
+      solanaChain.textContent = reportedSolanaChains.length
+        ? "Wallet-reported network(s): " + reportedSolanaChains.join(", ")
+        : "Solana account connected; cluster not independently confirmed. Genesis identity actions remain disabled.";
       solanaConnectButton.textContent = "Solana wallet connected";
       renderSolanaChoices();
       solanaConnectButton.disabled = true;
       setFeedback(
         solanaFeedback,
-        "Solana wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "Solana wallet connected. It is not yet verified as the primary Genesis wallet. Use the wallet-identity control below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -489,6 +508,8 @@
   // No message signing, transaction signing, contract call or transfer occurs here.
   var tronWallets = new Map();
   var connectedTronProvider = null;
+  var connectedTronWeb = null;
+  var connectedTronWallet = null;
   var connectedTronAddress = null;
   var connectedTronChainId = null;
   var tronWalletSequence = 0;
@@ -528,18 +549,24 @@
     tronClearButton.disabled = !connectedTronAddress;
   }
 
-  function registerTronProvider(info, provider) {
+  function registerTronProvider(info, provider, options) {
+    options = options || {};
     if (!supportedTronProvider(provider)) return;
     var uuid = info && typeof info.uuid === "string" ? info.uuid : "";
     var existing = Array.from(tronWallets.entries()).find(function (entry) {
       return entry[1].provider === provider || (uuid && entry[1].uuid === uuid);
     });
     if (existing) return;
+    var walletId = options.walletId || identifyWalletCandidate(info || {}, provider);
     var id = uuid || "tron-wallet-" + (++tronWalletSequence);
     tronWallets.set(id, {
       uuid: uuid,
-      name: info && typeof info.name === "string" ? info.name : (provider.isTronLink ? "TronLink" : "TRON wallet"),
-      provider: provider
+      walletId: walletId,
+      name: options.name || (info && typeof info.name === "string" ? info.name :
+        (walletId ? walletDisplayName(walletId) : (provider.isTronLink ? "TronLink" : "TRON wallet"))),
+      provider: provider,
+      tronWeb: options.tronWeb || provider.tronWeb || null,
+      connectMethod: options.connectMethod || "eth_requestAccounts"
     });
     renderTronChoices();
 
@@ -568,6 +595,8 @@
 
   function clearTronConnection(showMessage) {
     connectedTronProvider = null;
+    connectedTronWeb = null;
+    connectedTronWallet = null;
     connectedTronAddress = null;
     connectedTronChainId = null;
     if (lastConnectedNetwork === "tron") lastConnectedNetwork = null;
@@ -579,6 +608,9 @@
     updateSupporterActionButtons();
   }
 
+  discoverDirectTronProviders(window).forEach(function (entry) {
+    registerTronProvider({ name: entry.name, uuid: entry.walletId }, entry.provider, entry);
+  });
   window.addEventListener("TIP6963:announceProvider", function (event) {
     var detail = event && event.detail ? event.detail : {};
     registerTronProvider(detail.info || {}, detail.provider);
@@ -602,12 +634,21 @@
     tronConnectButton.textContent = "Connecting…";
     setFeedback(tronFeedback, "Approve the wallet's account-access request to share your public TRON address. No signature or transfer is requested.", "neutral");
     try {
-      var accounts = await wallet.provider.request({ method: "eth_requestAccounts" });
-      var address = Array.isArray(accounts) ? accounts.find(isTronAddress) : null;
-      var tronWeb = wallet.provider.tronWeb;
+      var accounts = await wallet.provider.request({ method: wallet.connectMethod || "eth_requestAccounts" });
+      if (accounts && typeof accounts === "object" && accounts.code && Number(accounts.code) !== 200) {
+        throw new Error(accounts.message || "The TRON wallet connection request was not approved.");
+      }
+      var address = Array.isArray(accounts) ? accounts.find(isTronAddress) :
+        (typeof accounts === "string" && isTronAddress(accounts) ? accounts : null);
+      var tronWeb = wallet.tronWeb || wallet.provider.tronWeb ||
+        (wallet.walletId === "bitget-wallet" && window.bitkeep ? window.bitkeep.tronWeb : null) ||
+        (wallet.walletId === "tokenpocket" && window.tokenpocket ? window.tokenpocket.tronWeb : null) ||
+        (wallet.walletId === "okx-wallet" && window.okxwallet && window.okxwallet.tronLink ? window.okxwallet.tronLink.tronWeb : null);
       if (!address && tronWeb && tronWeb.defaultAddress) address = tronWeb.defaultAddress.base58;
       if (!isTronAddress(address)) throw new Error("The selected wallet did not return a valid public TRON address.");
       connectedTronProvider = wallet.provider;
+      connectedTronWeb = tronWeb || null;
+      connectedTronWallet = wallet;
       connectedTronAddress = address;
       try {
         connectedTronChainId = await wallet.provider.request({ method: "eth_chainId" });
@@ -621,7 +662,7 @@
         : "Wallet connected; active network not independently confirmed in this preview";
       tronConnectButton.textContent = "TRON wallet connected";
       renderTronChoices();
-      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.", "connected");
+      setFeedback(tronFeedback, "TRON wallet connected. It is not yet verified as the primary Genesis wallet. Use the wallet-identity control below to prove ownership with an off-chain message signature.", "connected");
       updateSupporterActionButtons();
     } catch (error) {
       tronConnectButton.textContent = "Connect TRON wallet";
@@ -646,20 +687,21 @@
         address: connectedEvmAddress,
         mainnet: String(connectedEvmChainId || "").toLowerCase() === "0x1",
         sign: async function (message) {
-          return providerRequest(connectedEvm.provider, "personal_sign", [message, connectedEvmAddress]);
+          return providerRequest(connectedEvm.provider, "personal_sign", [encodeEvmPersonalSignMessage(message), connectedEvmAddress]);
         }
       };
     }
     if (lastConnectedNetwork === "tron" && connectedTronProvider && connectedTronAddress) {
-      var tronWeb = connectedTronProvider.tronWeb ||
-        (window.tron && window.tron.tronWeb) || null;
+      var tronWeb = connectedTronWeb || connectedTronProvider.tronWeb || null;
       return {
         network: "tron",
+        walletId: connectedTronWallet && connectedTronWallet.walletId,
         address: connectedTronAddress,
         mainnet: String(connectedTronChainId || "").toLowerCase() === "0x2b6653dc",
+        canSign: hasTronMessageSigner(tronWeb),
         sign: async function (message) {
-          if (!tronWeb || !tronWeb.trx || typeof tronWeb.trx.signMessageV2 !== "function") {
-            throw new Error("This TRON wallet does not expose TronLink signMessageV2 message signing.");
+          if (!hasTronMessageSigner(tronWeb)) {
+            throw new Error("This TRON wallet exposes account access but not the TIP-191 signMessageV2 method required by Genesis. No transaction or payment can be used as a substitute without a separately approved proof method.");
           }
           return tronWeb.trx.signMessageV2(message);
         }
@@ -670,7 +712,9 @@
       return {
         network: "solana",
         address: connectedSolanaAccount.address,
-        mainnet: chains.indexOf("solana:mainnet") !== -1,
+        walletId: connectedSolana.wallet.genesisWalletId || null,
+        mainnet: isSolanaMainnet(connectedSolanaAccount),
+        canSign: Boolean(connectedSolana.wallet.features && connectedSolana.wallet.features["solana:signMessage"] && typeof connectedSolana.wallet.features["solana:signMessage"].signMessage === "function"),
         sign: async function (message) {
           var wallet = connectedSolana.wallet;
           var feature = wallet && wallet.features && wallet.features["solana:signMessage"];
@@ -697,39 +741,52 @@
   function updateSupporterActionButtons() {
     supporterRuntimeEnabled = supporterRuntimeMarkerPresent();
     var wallet = activeConnectedWallet();
-    var ready = Boolean(supporterRuntimeEnabled && wallet && wallet.mainnet);
-    if (memberMode) {
-      memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
+    var ready = Boolean(supporterRuntimeEnabled && wallet && wallet.mainnet && wallet.canSign !== false);
+    if (memberMode) memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
+    if (registerWalletButton) {
+      registerWalletButton.disabled = !ready || Boolean(supporterMember);
+      registerWalletButton.textContent = supporterMember ? "Primary wallet identity established" : "Continue with this primary wallet";
     }
-    if (registerWalletButton) registerWalletButton.disabled = !ready || Boolean(supporterMember);
-    if (loginWalletButton) loginWalletButton.disabled = !ready || Boolean(supporterMember);
+    if (loginWalletButton) loginWalletButton.hidden = true;
     if (linkWalletButton) linkWalletButton.disabled = !ready || !supporterMember;
-    if (logoutButton) logoutButton.disabled = !supporterRuntimeEnabled || !supporterMember;
+    if (logoutButton) {
+      logoutButton.disabled = !supporterRuntimeEnabled || !supporterMember;
+      logoutButton.textContent = "Disconnect wallet session";
+    }
     if (walletPurposeSelect) walletPurposeSelect.disabled = !supporterRuntimeEnabled || !supporterMember;
-    if (pseudonymInput) pseudonymInput.disabled = Boolean(supporterMember);
-    if (randomizeButton) randomizeButton.disabled = Boolean(supporterMember);
+    if (pseudonymInput) pseudonymInput.disabled = !supporterMember;
+    if (randomizeButton) randomizeButton.disabled = !supporterMember;
+    if (saveNameButton) saveNameButton.disabled = !supporterMember;
     if (memberProfileState) {
-      memberProfileState.textContent = supporterMember ? "Wallet verified" :
-        supporterRuntimeEnabled ? "Not registered" : "Preview only";
+      memberProfileState.textContent = supporterMember
+        ? (supporterMember.genesisMember && supporterMember.genesisMember.status === "ACTIVE" ? "Genesis Member" : "Wallet verified")
+        : (supporterRuntimeEnabled ? "Wallet not connected" : "Preview only");
     }
     if (!supporterRuntimeEnabled) {
-      if (memberFeedback) {
-        setFeedback(memberFeedback, "Standalone preview only. Wallet addresses can be displayed, but registration and wallet linking require the official staging Worker.", "neutral");
-      }
+      if (memberFeedback) setFeedback(memberFeedback,
+        "Standalone preview only. Wallet identity, unique-name reservation and wallet linking require the official staging Worker. No payment route is enabled.", "neutral");
       return;
     }
     if (supporterMember) {
-      if (memberSummary) memberSummary.textContent = supporterMember.member.username + " · verified supporter";
+      if (memberSummary) memberSummary.textContent =
+        supporterMember.walletIdentity.displayName + " · primary wallet identity";
+      if (nameAvailability && nameAvailability.dataset.state !== "available") {
+        nameAvailability.textContent = "Your current name is reserved to this wallet.";
+        nameAvailability.dataset.state = "available";
+      }
       return;
     }
     if (!wallet) {
-      if (memberFeedback) setFeedback(memberFeedback, "Connect an Ethereum, Tron or Solana wallet to continue. No funds are requested.", "neutral");
+      if (memberFeedback) setFeedback(memberFeedback,
+        "Connect your primary Ethereum, TRON or Solana mainnet wallet. Its signed message establishes the wallet identity automatically; there is no separate user registration.", "neutral");
     } else if (!wallet.mainnet) {
       var expected = wallet.network === "ethereum" ? "Ethereum Mainnet (chain ID 1)" :
         wallet.network === "tron" ? "TRON Mainnet" : "Solana Mainnet";
-      if (memberFeedback) setFeedback(memberFeedback, "The connected wallet is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
+      if (memberFeedback) setFeedback(memberFeedback,
+        "The connected wallet is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
     } else if (memberFeedback && memberFeedback.dataset.state === "neutral") {
-      setFeedback(memberFeedback, wallet.network.toUpperCase() + " mainnet wallet connected. Register or sign in below using an off-chain ownership message.", "neutral");
+      setFeedback(memberFeedback,
+        wallet.network.toUpperCase() + " mainnet wallet connected. Continue to prove control of this primary wallet with an off-chain message signature.", "neutral");
     }
   }
 
@@ -743,16 +800,15 @@
     var data = {};
     try { data = await response.json(); } catch (_) {}
     if (!response.ok) {
-      if (response.status === 428) {
-        throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage, then return here.");
-      }
-      throw new Error(data && data.error ? data.error : "The supporter service returned HTTP " + response.status + ".");
+      if (response.status === 428) throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage.");
+      throw new Error(data && data.error ? data.error : "The Genesis wallet service returned HTTP " + response.status + ".");
     }
     return data;
   }
 
   async function signSupporterChallenge(wallet, message) {
-    setFeedback(memberFeedback, "Your wallet will now display a message asking you to prove ownership. Read the full text. It must say this is an off-chain wallet-ownership proof, not a transaction.", "neutral");
+    setFeedback(memberFeedback,
+      "Your wallet will display an off-chain ownership message. Read it carefully. It must not request a transaction, token approval, transfer or payment.", "neutral");
     var signature = await wallet.sign(message);
     if (wallet.network === "solana") {
       if (typeof signature !== "string" || !/^[A-Za-z0-9_-]{80,100}$/.test(signature)) {
@@ -764,46 +820,100 @@
     return signature;
   }
 
+  function renderPurchaseInactivityTimer(lifecycle) {
+    window.clearInterval(purchaseInactivityInterval);
+    var countdownElements = [
+      document.getElementById("genesis-public-purchase-inactivity-countdown"),
+      document.getElementById("genesis-purchase-inactivity-countdown")
+    ].filter(Boolean);
+    var resetElement = document.getElementById("genesis-purchase-inactivity-last-reset");
+    var startedAt = Number(lifecycle && lifecycle.purchaseWindowStartedAt || 0);
+    var closesAt = Number(lifecycle && lifecycle.purchaseWindowClosesAt || 0);
+    var lastPurchaseAt = Number(lifecycle && lifecycle.purchaseWindowLastPurchaseAt || 0);
+    function show(value) {
+      countdownElements.forEach(function (element) { element.textContent = value; });
+    }
+    if (!startedAt || !closesAt) {
+      show("Not started");
+      if (resetElement) resetElement.textContent = "The programme-wide countdown starts at official ACROWN launch. Each completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price resets the shared timer to 180 days of inactivity.";
+      return;
+    }
+    if (resetElement) {
+      resetElement.textContent = lastPurchaseAt
+        ? "Latest global timer reset after a completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price: " + new Date(lastPurchaseAt * 1000).toLocaleString() + ". Any eligible pre-freeze registered wallet resets the same programme-wide countdown."
+        : "The initial countdown began at official ACROWN launch. The first completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price will reset the shared countdown to 180 days of inactivity.";
+    }
+    function tick() {
+      var remaining = Math.max(0, closesAt - Math.floor(Date.now() / 1000));
+      if (remaining <= 0) {
+        show("Expired");
+        if (resetElement) resetElement.textContent = "The rolling 180 days of inactivity period has ended. Only unused shared purchase allowance is subject to expiry; Genesis Member status and the gold DNA badge are unaffected.";
+        window.clearInterval(purchaseInactivityInterval);
+        purchaseInactivityInterval = null;
+        return;
+      }
+      var days = Math.floor(remaining / 86400);
+      var hours = Math.floor((remaining % 86400) / 3600);
+      var minutes = Math.floor((remaining % 3600) / 60);
+      var seconds = remaining % 60;
+      show(days + "d " + String(hours).padStart(2, "0") + "h " + String(minutes).padStart(2, "0") + "m " + String(seconds).padStart(2, "0") + "s remaining");
+    }
+    tick();
+    purchaseInactivityInterval = window.setInterval(tick, 1000);
+  }
+
   function applySupporterProfile(data) {
-    if (!data || !data.member || typeof data.member.username !== "string" || !Array.isArray(data.wallets)) {
-      throw new Error("The supporter service returned an incomplete member profile.");
+    if (!data || !data.walletIdentity || typeof data.walletIdentity.displayName !== "string" || !Array.isArray(data.wallets)) {
+      throw new Error("The Genesis service returned an incomplete wallet identity.");
     }
     supporterMember = data;
-    pseudonymInput.value = data.member.username;
+    renderPurchaseInactivityTimer(data.programmeLifecycle || null);
+    pseudonymInput.value = data.walletIdentity.displayName;
     updatePseudonym();
-    if (memberSummary) memberSummary.textContent = data.member.username + " · verified supporter";
+    if (memberSummary) memberSummary.textContent = data.walletIdentity.displayName + " · primary wallet identity";
     if (memberWalletList) {
       memberWalletList.textContent = data.wallets.length
-        ? data.wallets.map(function (wallet) {
-            return wallet.network.toUpperCase() + " · " + wallet.role.replace(/_/g, " ") + " · " + wallet.address;
+        ? "Registered addresses in this primary wallet profile: " + data.wallets.map(function (wallet) {
+            return wallet.network.toUpperCase() + " · " + wallet.wallet_role.replace(/_/g, " ") + " · " + wallet.address;
           }).join("  |  ")
-        : "No verified wallets linked.";
+        : "No additional network addresses registered yet.";
     }
-    if (memberProfileState) memberProfileState.textContent = "Wallet verified";
+    var avatarGlyphs = { person: "●", crown: "♛", star: "★", moon: "☾", orbit: "◎", shield: "⬡" };
+    if (memberAvatar) memberAvatar.textContent = avatarGlyphs[data.walletIdentity.avatarKey] || "✦";
+    var genesisMember = data.genesisMember && data.genesisMember.status === "ACTIVE";
+    if (genesisBadgeImage) {
+      genesisBadgeImage.hidden = !genesisMember;
+      genesisBadgeImage.alt = genesisMember ? "Gold DNA Genesis Member badge" : "";
+    }
+    if (memberProfileState) memberProfileState.textContent = genesisMember ? "Genesis Member" : "Wallet verified";
+    if (nameAvailability) {
+      nameAvailability.textContent = "Your current name is reserved exclusively to this wallet.";
+      nameAvailability.dataset.state = "available";
+    }
     if (memberFeedback) {
-      setFeedback(memberFeedback, "Signed in as " + data.member.username + ". " + data.wallets.length +
-        " wallet address(es) have independently verified ownership. Contributions and purchases remain disabled.", "connected");
+      setFeedback(memberFeedback, genesisMember
+        ? "Primary wallet verified. Genesis Member status and its gold DNA badge are active for this wallet."
+        : "Primary wallet verified. Its unique display name is reserved. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
     }
     updateSupporterActionButtons();
+    refreshGenesisDirectory();
   }
 
   async function refreshSupporterMember() {
     if (!supporterRuntimeMarkerPresent()) return;
     try {
-      var response = await fetch("/api/supporters/me", {
-        method: "GET",
-        credentials: "same-origin",
-        headers: { "Accept": "application/json" }
+      var response = await fetch("/api/genesis/me", {
+        method: "GET", credentials: "same-origin", headers: { "Accept": "application/json" }
       });
       if (response.ok) {
         applySupporterProfile(await response.json());
-      } else if (response.status === 428) {
-        setFeedback(memberFeedback, "Acknowledge the public staging notice on the AstroCrown homepage before registering or signing in.", "neutral");
       } else if (response.status !== 401) {
-        setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+        var data = {};
+        try { data = await response.json(); } catch (_) {}
+        setFeedback(memberFeedback, data.error || "The Genesis wallet identity could not be checked. Payment acceptance remains disabled.", "error");
       }
     } catch (_) {
-      setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+      setFeedback(memberFeedback, "The Genesis wallet identity could not be checked. Payment acceptance remains disabled.", "error");
     }
   }
 
@@ -811,46 +921,19 @@
     var wallet = activeConnectedWallet();
     if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;
     registerWalletButton.disabled = true;
-    loginWalletButton.disabled = true;
     try {
-      var username = pseudonymInput.value.trim();
-      var challenge = await supporterApiPost("/api/supporters/registration/challenge", {
-        username: username,
-        network: wallet.network,
-        address: wallet.address
+      var challenge = await supporterApiPost("/api/genesis/identity/challenge", {
+        network: wallet.network, address: wallet.address
       });
-      setFeedback(memberFeedback, "Registration challenge created. Confirm the off-chain message in your wallet; this does not transfer funds or pay gas.", "neutral");
+      setFeedback(memberFeedback,
+        "Wallet identity challenge created. Sign the exact off-chain message in your primary wallet. No user profile or separate account is being registered.", "neutral");
       var signature = await signSupporterChallenge(wallet, challenge.message);
-      var profile = await supporterApiPost("/api/supporters/registration/verify", {
-        challengeId: challenge.challengeId,
-        signature: signature
+      var profile = await supporterApiPost("/api/genesis/identity/verify", {
+        challengeId: challenge.challengeId, signature: signature
       });
       applySupporterProfile(profile);
     } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Registration was not completed."), "error");
-    } finally {
-      updateSupporterActionButtons();
-    }
-  }
-
-  async function runSupporterLogin() {
-    var wallet = activeConnectedWallet();
-    if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;
-    registerWalletButton.disabled = true;
-    loginWalletButton.disabled = true;
-    try {
-      var challenge = await supporterApiPost("/api/supporters/login/challenge", {
-        network: wallet.network,
-        address: wallet.address
-      });
-      var signature = await signSupporterChallenge(wallet, challenge.message);
-      var profile = await supporterApiPost("/api/supporters/login/verify", {
-        challengeId: challenge.challengeId,
-        signature: signature
-      });
-      applySupporterProfile(profile);
-    } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet sign-in was not completed."), "error");
+      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet verification was not completed."), "error");
     } finally {
       updateSupporterActionButtons();
     }
@@ -861,24 +944,95 @@
     if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || !supporterMember) return;
     linkWalletButton.disabled = true;
     try {
-      var role = walletPurposeSelect.value || "PAYMENT";
-      if (role !== "PAYMENT" && wallet.network !== "solana") {
-        throw new Error("Only a Solana wallet can be used as an ACROWN delivery wallet.");
+      // The primary-wallet session authorizes this profile change. The connected network address signs only its own ownership proof; it never becomes a Genesis login or authority.
+      var selectedRole = walletPurposeSelect.value || "PAYMENT";
+      var role = selectedRole === "ACROWN_DELIVERY" ? "DELIVERY" : selectedRole;
+      if ((role === "DELIVERY" || role === "PAYMENT_AND_DELIVERY") && wallet.network !== "solana") {
+        throw new Error("Only a Solana address can be designated for ACROWN delivery.");
       }
-      var challenge = await supporterApiPost("/api/supporters/wallet-challenge", {
-        network: wallet.network,
-        address: wallet.address,
-        walletRole: role
+      var challenge = await supporterApiPost("/api/genesis/wallet-link/challenge", {
+        network: wallet.network, address: wallet.address, walletRole: role
       });
       var signature = await signSupporterChallenge(wallet, challenge.message);
-      var profile = await supporterApiPost("/api/supporters/wallet-verify", {
-        challengeId: challenge.challengeId,
-        signature: signature,
-        purpose: challenge.purpose
+      var profile = await supporterApiPost("/api/genesis/wallet-link/verify", {
+        challengeId: challenge.challengeId, signature: signature
       });
       applySupporterProfile(profile);
+      setFeedback(memberFeedback, "The network address has been independently verified and added to your primary wallet profile. Its signature proves control of that address only; Genesis authority remains with the primary wallet.", "connected");
     } catch (error) {
       setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet linking was not completed."), "error");
+    } finally {
+      updateSupporterActionButtons();
+    }
+  }
+
+  async function checkDisplayNameAvailability() {
+    if (!nameAvailability) return false;
+    var name = pseudonymInput.value.trim();
+    if (name.length < 3) {
+      nameAvailability.textContent = "Enter at least 3 characters.";
+      nameAvailability.dataset.state = "unavailable";
+      if (saveNameButton) saveNameButton.disabled = true;
+      return false;
+    }
+    try {
+      var response = await fetch("/api/genesis/name-availability?name=" + encodeURIComponent(name), {
+        credentials: "same-origin", headers: { "Accept": "application/json" }
+      });
+      var result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Name availability could not be checked.");
+      nameAvailability.textContent = result.available ? "Name available." : "Name unavailable — already in use.";
+      nameAvailability.dataset.state = result.available ? "available" : "unavailable";
+      if (saveNameButton) saveNameButton.disabled = !supporterMember || !result.available ||
+        result.displayName.toLowerCase() === supporterMember.walletIdentity.displayName.toLowerCase();
+      return Boolean(result.available);
+    } catch (error) {
+      nameAvailability.textContent = error.message || "Name availability could not be checked.";
+      nameAvailability.dataset.state = "unavailable";
+      if (saveNameButton) saveNameButton.disabled = true;
+      return false;
+    }
+  }
+
+  var displayNameCheckTimer = null;
+  if (pseudonymInput) pseudonymInput.addEventListener("input", function () {
+    updatePseudonym();
+    if (!supporterMember) return;
+    nameAvailability.textContent = "Checking availability…";
+    nameAvailability.dataset.state = "checking";
+    if (saveNameButton) saveNameButton.disabled = true;
+    window.clearTimeout(displayNameCheckTimer);
+    displayNameCheckTimer = window.setTimeout(checkDisplayNameAvailability, 250);
+  });
+
+  async function saveGenesisDisplayName() {
+    var wallet = activeConnectedWallet();
+    if (!supporterRuntimeMarkerPresent() || !supporterMember || !wallet || !wallet.mainnet) return;
+    if (!await checkDisplayNameAvailability()) return;
+    saveNameButton.disabled = true;
+    try {
+      var challenge = await supporterApiPost("/api/genesis/display-name/challenge", {
+        displayName: pseudonymInput.value.trim()
+      });
+      var primaryWallet = {
+        network: supporterMember.walletIdentity.primaryNetwork,
+        address: supporterMember.walletIdentity.primaryAddress
+      };
+      var active = activeConnectedWallet();
+      var addressesMatch = active.network === "ethereum"
+        ? active.address.toLowerCase() === primaryWallet.address.toLowerCase()
+        : active.address === primaryWallet.address;
+      if (active.network !== primaryWallet.network || !addressesMatch) {
+        throw new Error("Reconnect the primary wallet before changing its public name.");
+      }
+      var signature = await signSupporterChallenge(active, challenge.message);
+      var profile = await supporterApiPost("/api/genesis/display-name/verify", {
+        challengeId: challenge.challengeId, signature: signature
+      });
+      applySupporterProfile(profile);
+      setFeedback(memberFeedback, "Your unique public display name has been saved to this wallet identity.", "connected");
+    } catch (error) {
+      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "The display name was not saved."), "error");
     } finally {
       updateSupporterActionButtons();
     }
@@ -888,65 +1042,116 @@
     if (!supporterMember) return;
     logoutButton.disabled = true;
     try {
-      await supporterApiPost("/api/supporters/logout", {});
+      await supporterApiPost("/api/genesis/logout", {});
       supporterMember = null;
-      if (memberSummary) memberSummary.textContent = "Not signed in";
-      if (memberWalletList) memberWalletList.textContent = "No verified wallets linked.";
-      pseudonymInput.disabled = false;
-      randomizeButton.disabled = false;
-      pseudonymInput.value = generatePseudonym();
-      updatePseudonym();
-      setFeedback(memberFeedback, "You have signed out. The supporter session has been revoked.", "neutral");
+      renderPurchaseInactivityTimer(null);
+      if (memberSummary) memberSummary.textContent = "No primary wallet session";
+      if (memberWalletList) memberWalletList.textContent = "No wallet identity currently connected.";
+      if (genesisBadgeImage) genesisBadgeImage.hidden = true;
+      setFeedback(memberFeedback, "Wallet session disconnected. The Genesis identity and all entitlements remain bound to the primary wallet; reconnect that wallet to access them.", "neutral");
     } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : "Sign out could not be completed.", "error");
+      setFeedback(memberFeedback, error && error.message ? error.message : "The wallet session could not be disconnected.", "error");
     } finally {
       updateSupporterActionButtons();
     }
   }
 
+  async function refreshGenesisDirectory() {
+    if (!publicDirectoryList) return;
+    if (!supporterRuntimeMarkerPresent()) {
+      publicDirectoryList.textContent = "Public payment records will appear here after the Genesis Programme opens and payments are independently verified.";
+      return;
+    }
+    try {
+      var response = await fetch("/api/genesis/directory", { headers: { "Accept": "application/json" } });
+      var data = await response.json();
+      if (!response.ok || !Array.isArray(data.items)) throw new Error("The public Genesis directory is unavailable.");
+      publicDirectoryList.replaceChildren();
+      if (!data.items.length) {
+        publicDirectoryList.textContent = "No qualifying payments have been published. Genesis payment acceptance is currently disabled.";
+        return;
+      }
+      data.items.forEach(function (item) {
+        var row = document.createElement("article");
+        row.className = "genesis-directory-row";
+        var identityGroup = document.createElement("div");
+        identityGroup.className = "genesis-directory-identity";
+        var badge = document.createElement("img");
+        badge.src = "../assets/genesis-member-dna.svg";
+        badge.alt = "Genesis Member";
+        badge.className = "genesis-directory-badge";
+        var avatar = document.createElement("span");
+        avatar.className = "genesis-directory-avatar";
+        var glyphs = { person: "●", crown: "♛", star: "★", moon: "☾", orbit: "◎", shield: "⬡" };
+        avatar.textContent = glyphs[item.avatarKey] || "✦";
+        var identity = document.createElement("strong");
+        identity.textContent = item.displayName;
+        identityGroup.append(avatar, identity, badge);
+        var detail = document.createElement("span");
+        var paymentLabel = item.paymentKind === "QUALIFYING_PAYMENT" ? "Qualifying payment" : "ACROWN floor-price purchase";
+        detail.textContent = paymentLabel + " · " + item.amount + " USDT · " + item.network.toUpperCase();
+        row.append(identityGroup, detail);
+        if (item.explorerUrl) {
+          var link = document.createElement("a");
+          link.href = item.explorerUrl;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = "Verify on " + (item.network === "ethereum" ? "Etherscan" : item.network === "tron" ? "TronScan" : "Solscan");
+          row.append(link);
+        }
+        publicDirectoryList.append(row);
+      });
+    } catch (_) {
+      publicDirectoryList.textContent = "The public Genesis directory is temporarily unavailable.";
+    }
+  }
+
   if (registerWalletButton) registerWalletButton.addEventListener("click", runSupporterRegistration);
-  if (loginWalletButton) loginWalletButton.addEventListener("click", runSupporterLogin);
   if (linkWalletButton) linkWalletButton.addEventListener("click", runSupporterWalletLink);
   if (logoutButton) logoutButton.addEventListener("click", runSupporterLogout);
+  if (saveNameButton) saveNameButton.addEventListener("click", saveGenesisDisplayName);
 
   async function refreshProgrammeStatus() {
     var statusElement = document.getElementById("supporter-runtime-status");
     if (!statusElement) return;
     var runtimeMarker = document.querySelector('meta[name="astro-supporter-runtime"]');
     if (!runtimeMarker || runtimeMarker.content !== "worker-staging" || window.location.protocol !== "https:") {
-      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Qualifying payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
       return;
     }
     try {
-      var response = await fetch("/api/supporters/status", {
+      var response = await fetch("/api/genesis/status", {
         method: "GET",
         credentials: "same-origin",
         headers: { "Accept": "application/json" }
       });
       if (!response.ok) throw new Error("The programme status service is not available.");
       var payload = await response.json();
+      renderPurchaseInactivityTimer(payload && payload.programmeLifecycle || null);
       var prelaunch = payload &&
         payload.environment === "MAINNET" &&
         payload.programme &&
         payload.programme.status === "PRELAUNCH" &&
         payload.paymentAcceptance &&
         payload.paymentAcceptance.enabled === false &&
-        payload.paymentAcceptance.contributionsAccepted === false &&
+        payload.paymentAcceptance.qualifyingPaymentsAccepted === false &&
         Array.isArray(payload.networks) &&
         payload.networks.length === 3;
       if (!prelaunch) throw new Error("The programme status could not be qualified.");
       statusElement.textContent = "Programme service connected · PRELAUNCH · Ethereum, Tron and Solana USDT intake is disabled. Do not send funds.";
       statusElement.dataset.state = "closed";
     } catch (_) {
-      statusElement.textContent = "Programme service status unavailable · Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Programme service status unavailable · Qualifying payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
     }
   }
 
   refreshProgrammeStatus();
+  window.setInterval(refreshProgrammeStatus, 30000);
   updateSupporterActionButtons();
   refreshSupporterMember();
+  refreshGenesisDirectory();
 
   // Never call eth_sign, eth_sendTransaction, signAndSendTransaction,
   // signTransaction, signAndSendTransaction, signMessageV2, or any wallet payment method here.

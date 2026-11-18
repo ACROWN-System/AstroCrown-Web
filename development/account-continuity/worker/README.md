@@ -1,5 +1,8 @@
 # AstroCrown account staging Worker — qualification build
 
+> **Genesis Programme amendment — 18 November 2026:** Genesis is not an ordinary registered-user account. Its primary wallet is the sole identity, authentication and recovery anchor and owns the ACROWN purchase entitlement. Additional chain-specific addresses may be grouped in the same primary wallet profile, but each requires a separate wallet-control proof before use. Genesis payments are accepted only from pre-registered addresses; no unlinked one-time payment source is allowed. These addresses cannot recover or administer the primary identity. The new same-origin `/api/genesis/*` API implements that wallet-native identity; old `/api/supporters/*` registration/login paths return HTTP 410. The gold DNA Genesis Member badge, unique public display name, public payment directory and explorer-link address disclosure are described in [GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md](../../supporter-programme/GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md). Ordinary AstroCrown account/passkey functionality documented below remains a separate product feature; it does not restore or recover a Genesis wallet identity.
+
+
 **Status: public-access staging implementation is being qualified; remote staging is not yet deployed. This is not a production release or a completed commercial platform.**
 
 This is an isolated Worker/D1 implementation path for the adopted passkey-first account model. It is separate from the Python loopback reference prototype.
@@ -12,8 +15,8 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 - One-time 256-bit offline recovery key; only a salted SHA-256 verifier is stored. Recovery requires a new passkey, consumes/rotates the key, deactivates old credentials, revokes prior sessions and records an audit event.
 - Session tokens stored only as SHA-256 hashes; HttpOnly, SameSite=Strict cookies; Secure on HTTPS.
 - Runtime diagnostics for the actual SimpleWebAuthn default algorithm list and native ML-DSA Web Crypto support.
-- Restricted static build copies only the homepage, account UI assets, explicitly allowlisted account/legal pages, and the two named static Supporter Programme preview files. It does not publish the rest of the repository, audit records, backups, or source files.
-- The Supporter Programme preview is served at the same origin under `/supporters/` and linked from the homepage footer. It shows the intended Ethereum/Tron/Solana USD₮ mainnet scope and the illustrative multiplier model, but remains a display-only development preview: no real contributions, member registration, entitlement activation, ACROWN purchase or payment API is enabled.
+- Restricted static build copies only the homepage, account UI assets, explicitly allowlisted account/legal pages, and the allowlisted Genesis Programme preview files and the gold DNA badge asset. It does not publish the rest of the repository, audit records, backups, or source files.
+- The Genesis Programme preview is served at the same origin under `/supporters/` and linked from the homepage footer. It shows the intended Ethereum/Tron/Solana USD₮ mainnet scope and the illustrative multiplier model, but remains a display-only development preview: no real qualifying payments, entitlement activation, ACROWN purchase or payment service is enabled.
 - Existing homepage/account UI are reused. The generated staging homepage is clearly marked as a live public test environment. Its mandatory first-visit notice explains that public submissions are visible to anyone, that accounts/data are disposable, and that only enabled test functionality may be used. The notice must be acknowledged through a same-origin API request before account APIs accept requests.
 
 ## Account security lifecycle — local qualification passed; not deployed
