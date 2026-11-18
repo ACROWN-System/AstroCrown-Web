@@ -85,11 +85,13 @@ accountJs = accountJs
 write("account-continuity/prototype/account-ui.js", accountJs);
 copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-continuity/prototype/admin-wallet-ui.js");
 
-// Self-contained education and Genesis Programme previews. Its wallet JS is
-// limited to user-initiated public-address display; it does not sign/pay.
+// Self-contained education and Genesis Programme previews. Its wallet JS
+// permits only user-initiated off-chain ownership messages when the separate
+// Genesis Worker is present; no transaction or payment method is called.
 write("privacy-transparency.html", read("preview/privacy-transparency.html"));
 write("supporters/index.html", read("preview/supporters/index.html"));
 copy("preview/supporters/supporters.js", "supporters/supporters.js");
+copy("preview/supporters/wallet-provider-adapters.mjs", "supporters/wallet-provider-adapters.mjs");
 copy("preview/assets/genesis-member-dna.svg", "assets/genesis-member-dna.svg");
 
 // Security/indexing controls for an unlaunched preview.
