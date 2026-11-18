@@ -366,12 +366,10 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     if (inner && Array.isArray(inner.instructions)) orderedInstructions.push(...inner.instructions);
   }
   const matches = [];
-  let transferOrdinal = 0;
-  for (const instruction of orderedInstructions) {
+  for (let instructionOrdinal = 0; instructionOrdinal < orderedInstructions.length; instructionOrdinal += 1) {
+    const instruction = orderedInstructions[instructionOrdinal];
     const transfer = solanaInstructionTransfer(instruction);
     if (!transfer) continue;
-    const currentOrdinal = transferOrdinal;
-    transferOrdinal += 1;
     if (transfer.mint && transfer.mint !== mint) continue;
     const sourceIndex = keys.indexOf(transfer.sourceTokenAccount);
     const destinationIndex = keys.indexOf(transfer.destinationTokenAccount);
@@ -387,7 +385,7 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     const sourceDelta = sourceBefore.amount - sourceAfter.amount;
     const destinationDelta = destinationAfter.amount - destinationBefore.amount;
     if (transfer.amount === amount && sourceDelta === amount && destinationDelta === amount) {
-      matches.push({ transferIndex: currentOrdinal });
+      matches.push({ transferIndex: instructionOrdinal });
     }
   }
   if (matches.length !== 1) fail("Solana finalized transaction must contain exactly one matching USDT transfer instruction with matching owner and balance deltas.");
