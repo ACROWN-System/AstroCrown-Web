@@ -12,7 +12,7 @@ Each app/platform combination is a separate test target: Chrome extension and mo
 
 ## Implemented automated tests
 
-The preview imports wallet-provider-adapters.mjs. It supports the published direct provider namespaces where documented and retains standard discovery for the other candidates.
+The preview imports wallet-provider-adapters.mjs. It supports the published direct provider namespaces where documented and retains standard discovery for the other candidates. EVM proof text is encoded as UTF-8, 0x-prefixed bytes before EIP-1193 personal_sign; the server verifies the recovered address against the exact original challenge text.
 
 | Network | Adapter coverage | Safety boundary |
 |---|---|---|
@@ -52,7 +52,7 @@ A stage cannot be inferred from a previous stage. In particular, PROVIDER_DETECT
 
 ## Current result
 
-- Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212031251. The complete Worker invariant suite passed, so the new provider-contract tests were executed successfully with the rest of the suite.
+- Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212031251 for the previous source revision. A further EVM personal_sign UTF-8 payload-encoding test has now been added; the updated Worker run is pending.
 - Synthetic local wallet-signature E2E: PASS in Worker qualification run 44212031251. Tests cover Ethereum primary identity, TRON TIP-191 linked address, Solana Ed25519 linked address, replay prevention, cross-origin protection, case-insensitive name uniqueness, logout/reconnect and no payments.
 - Browser mock-wallet safety smoke: PASS in Chromium run 44211825917. It verifies the mocked wallet interaction and that no payment/transaction action is triggered; it does not execute installed vendor wallet apps.
 - Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44212031321.
