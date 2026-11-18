@@ -113,7 +113,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 (launch, launch + 1, launch, launch + 1 + 15552000),
             )
 
-    def test_database_freeze_blocks_new_identities_links_and_profile_edits_at_the_24_hour_cutoff(self):
+    def test_database_freeze_blocks_new_identity_registration_and_pauses_existing_member_edits_until_launch(self):
         now = self.db.execute("SELECT unixepoch()").fetchone()[0]
         launch = now + 86_400
         freeze = now
@@ -147,19 +147,19 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 "VALUES('gid-new','solana','SoNew','SoNew','New Wallet 2','new wallet 2',?,?)",
                 (now, now),
             )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "wallet linking is permanently closed"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "wallet linking is paused"):
             self.db.execute(
                 "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
                 "wallet_role,ownership_verified_at,proof_method,created_at) "
                 "VALUES('gwa-new','gid-existing','tron','TNew','TNew','PAYMENT',?,'TIP-191',?)",
                 (now, now),
             )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "profile changes are closed"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "profile changes are paused"):
             self.db.execute(
                 "UPDATE genesis_wallet_identities SET display_name='Changed Wallet',display_name_normalized='changed wallet' "
                 "WHERE identity_id='gid-existing'"
             )
-        # Existing primary-wallet authentication remains possible, but new identities and profile challenges do not.
+        # Existing primary-wallet authentication remains available during the pause.
         self.db.execute(
             "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,"
             "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
@@ -167,13 +167,58 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "'digest-existing','existing wallet sign-in',?,?)",
             (now, now + 600),
         )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "New Genesis registrations"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "New Genesis identities remain closed"):
             self.db.execute(
                 "INSERT INTO genesis_wallet_challenges(challenge_id,network,address,address_normalized,challenge_purpose,"
                 "nonce_digest,domain,message_digest,message,created_at,expires_at) "
                 "VALUES('gch-new','solana','SoNew','SoNew','IDENTIFY','nonce-new','example.test','digest-new',"
                 "'new identity sign-in',?,?)",
                 (now, now + 600),
+            )
+        # Actual launch resumes the programme for existing identities, but never reopens registration.
+        self.db.execute(
+            "UPDATE genesis_programme_control SET acrown_launched_at=?,updated_at=? WHERE singleton=1",
+            (launch, launch),
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-after-launch','gid-existing','tron','TAfter','TAfter','PAYMENT',?,'TIP-191',?)",
+            (launch + 1, launch + 1),
+        )
+        self.db.execute(
+            "UPDATE genesis_wallet_identities SET display_name='Changed Wallet',display_name_normalized='changed wallet',updated_at=? "
+            "WHERE identity_id='gid-existing'",
+            (launch + 1,),
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,"
+            "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
+            "VALUES('gch-link-after-launch','gid-existing','tron','TAfter','TAfter','LINK','nonce-link','example.test',"
+            "'digest-link','wallet link after launch',?,?)",
+            (launch + 1, launch + 601),
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,"
+            "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
+            "VALUES('gch-rename-after-launch','gid-existing','ethereum','0xabc','0xabc','RENAME','nonce-rename','example.test',"
+            "'digest-rename','profile rename after launch',?,?)",
+            (launch + 1, launch + 601),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "primary-wallet registration is permanently closed"):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+                "display_name,display_name_normalized,created_at,updated_at) "
+                "VALUES('gid-new-after-launch','solana','SoNew2','SoNew2','New Wallet 3','new wallet 3',?,?)",
+                (launch + 1, launch + 1),
+            )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "New Genesis identities remain closed"):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_challenges(challenge_id,network,address,address_normalized,challenge_purpose,"
+                "nonce_digest,domain,message_digest,message,created_at,expires_at) "
+                "VALUES('gch-new-after-launch','solana','SoNew2','SoNew2','IDENTIFY','nonce-new2','example.test','digest-new2',"
+                "'new identity after launch',?,?)",
+                (launch + 1, launch + 601),
             )
         with self.assertRaisesRegex(sqlite3.IntegrityError, "schedule.*(cannot change|locked)"):
             self.db.execute(
@@ -182,7 +227,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 (launch + 3600, freeze + 3600),
             )
 
-    def test_global_purchase_window_starts_at_acrown_launch_without_waiting_for_floor_service(self):
+        def test_global_purchase_window_starts_at_acrown_launch_without_waiting_for_floor_service(self):
         launch = 2_100_000_000
         close = launch + 15_552_000
         self.db.execute(
