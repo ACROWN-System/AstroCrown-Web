@@ -287,7 +287,9 @@ async function identityProfile(db, identity) {
   });
   const now = Math.floor(Date.now() / 1000);
   const windowStarted = control?.purchase_window_started_at ? Number(control.purchase_window_started_at) : null;
+  const windowLastPurchase = control?.purchase_window_last_purchase_at ? Number(control.purchase_window_last_purchase_at) : null;
   const windowCloses = control?.purchase_window_closes_at ? Number(control.purchase_window_closes_at) : null;
+  const windowRemainingSeconds = windowCloses ? Math.max(0, windowCloses - now) : null;
   return {
     walletIdentity: {
       identityId: identity.identity_id,
@@ -317,7 +319,9 @@ async function identityProfile(db, identity) {
       registrationFreezeAt: control?.registration_freeze_at ?? null,
       registrationPermanentlyClosed: Boolean(control?.registration_closed_at),
       purchaseWindowStartedAt: windowStarted,
+      purchaseWindowLastPurchaseAt: windowLastPurchase,
       purchaseWindowClosesAt: windowCloses,
+      purchaseWindowRemainingSeconds: windowRemainingSeconds,
       purchaseWindowOpen: Boolean(windowStarted && windowCloses && now >= windowStarted && now < windowCloses)
     },
     paymentAcceptance: { enabled: false }
