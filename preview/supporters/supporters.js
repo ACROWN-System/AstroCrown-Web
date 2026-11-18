@@ -44,6 +44,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   var publicDirectoryList = document.getElementById("genesis-public-directory-list");
   var supporterRuntimeEnabled = false;
   var supporterMember = null;
+  var purchaseInactivityInterval = null;
   var lastConnectedNetwork = null;
 
   if (!solanaSelect || !evmSelect || !tronSelect || !pseudonymInput) return;
@@ -819,11 +820,54 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     return signature;
   }
 
+  function renderPurchaseInactivityTimer(lifecycle) {
+    window.clearInterval(purchaseInactivityInterval);
+    var countdownElements = [
+      document.getElementById("genesis-public-purchase-inactivity-countdown"),
+      document.getElementById("genesis-purchase-inactivity-countdown")
+    ].filter(Boolean);
+    var resetElement = document.getElementById("genesis-purchase-inactivity-last-reset");
+    var startedAt = Number(lifecycle && lifecycle.purchaseWindowStartedAt || 0);
+    var closesAt = Number(lifecycle && lifecycle.purchaseWindowClosesAt || 0);
+    var lastPurchaseAt = Number(lifecycle && lifecycle.purchaseWindowLastPurchaseAt || 0);
+    function show(value) {
+      countdownElements.forEach(function (element) { element.textContent = value; });
+    }
+    if (!startedAt || !closesAt) {
+      show("Not started");
+      if (resetElement) resetElement.textContent = "The initial countdown starts only after official ACROWN launch and availability of qualified ACS floor-price purchases. Each completed, finalized floor-price purchase by any eligible wallet then resets the shared countdown to 180 days of inactivity.";
+      return;
+    }
+    if (resetElement) {
+      resetElement.textContent = lastPurchaseAt
+        ? "Latest global timer reset: completed, finalized ACS floor-price purchase on " + new Date(lastPurchaseAt * 1000).toLocaleString() + ". A purchase by any eligible wallet resets the same programme-wide countdown."
+        : "The initial countdown began when qualified ACS floor-price purchases became available after ACROWN launch. The first completed, finalized floor-price purchase by any eligible wallet will reset the shared countdown to 180 days of inactivity.";
+    }
+    function tick() {
+      var remaining = Math.max(0, closesAt - Math.floor(Date.now() / 1000));
+      if (remaining <= 0) {
+        show("Expired");
+        if (resetElement) resetElement.textContent = "The rolling 180 days of inactivity period has ended. Only unused shared purchase allowance is subject to expiry; Genesis Member status and the gold DNA badge are unaffected.";
+        window.clearInterval(purchaseInactivityInterval);
+        purchaseInactivityInterval = null;
+        return;
+      }
+      var days = Math.floor(remaining / 86400);
+      var hours = Math.floor((remaining % 86400) / 3600);
+      var minutes = Math.floor((remaining % 3600) / 60);
+      var seconds = remaining % 60;
+      show(days + "d " + String(hours).padStart(2, "0") + "h " + String(minutes).padStart(2, "0") + "m " + String(seconds).padStart(2, "0") + "s remaining");
+    }
+    tick();
+    purchaseInactivityInterval = window.setInterval(tick, 1000);
+  }
+
   function applySupporterProfile(data) {
     if (!data || !data.walletIdentity || typeof data.walletIdentity.displayName !== "string" || !Array.isArray(data.wallets)) {
       throw new Error("The Genesis service returned an incomplete wallet identity.");
     }
     supporterMember = data;
+    renderPurchaseInactivityTimer(data.programmeLifecycle || null);
     pseudonymInput.value = data.walletIdentity.displayName;
     updatePseudonym();
     if (memberSummary) memberSummary.textContent = data.walletIdentity.displayName + " · primary wallet identity";
@@ -1000,6 +1044,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     try {
       await supporterApiPost("/api/genesis/logout", {});
       supporterMember = null;
+      renderPurchaseInactivityTimer(null);
       if (memberSummary) memberSummary.textContent = "No primary wallet session";
       if (memberWalletList) memberWalletList.textContent = "No wallet identity currently connected.";
       if (genesisBadgeImage) genesisBadgeImage.hidden = true;
