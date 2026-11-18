@@ -160,6 +160,7 @@ def main() -> int:
       const okxTron = tronProvider("OKX Wallet", "T" + "3".repeat(33), "tron_requestAccounts");
       const trustTron = tronProvider("Trust Wallet", "T" + "4".repeat(33), "eth_requestAccounts");
       const tronLink = tronProvider("TronLink", "T" + "5".repeat(33), "eth_requestAccounts");
+      tronLink.isTronLink = true;
       window.bitkeep.tronLink = bitgetTron;
       window.bitkeep.tronWeb = bitgetTron.tronWeb;
       window.tokenpocket.tron = tokenPocketTron;
