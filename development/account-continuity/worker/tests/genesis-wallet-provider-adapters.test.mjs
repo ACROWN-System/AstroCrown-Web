@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   GENESIS_WALLET_CANDIDATES,
   identifyWalletCandidate,
+  encodeEvmPersonalSignMessage,
   walletDisplayName,
   discoverDirectEvmProviders,
   discoverDirectTronProviders,
@@ -21,6 +22,15 @@ test("the Genesis adapter registry covers all six wallet candidates", () => {
     "bitget-wallet", "coin98", "metamask", "okx-wallet", "tokenpocket", "trust-wallet",
   ]);
   assert.equal(walletDisplayName("coin98"), "Coin98");
+});
+
+test("EVM personal_sign encodes the exact UTF-8 message bytes as 0x-prefixed hex", () => {
+  const text = "AstroCrown Genesis proof — wallet identity";
+  const expected = "0x" + Array.from(new TextEncoder().encode(text), (byte) =>
+    byte.toString(16).padStart(2, "0")
+  ).join("");
+  assert.equal(encodeEvmPersonalSignMessage(text), expected);
+  assert.equal(encodeEvmPersonalSignMessage(""), "0x");
 });
 
 test("EIP-6963 metadata and provider flags identify all six EVM wallet candidates", () => {
