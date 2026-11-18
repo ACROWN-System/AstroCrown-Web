@@ -95,7 +95,7 @@ test("Coin98 Solana message signing can establish identity without requiring a T
 
 test("OKX TRON payment attribution does not depend on its dApp signing method", () => {
   const item = policy.candidates.find((candidate) => candidate.walletId === "okx-wallet");
-  assert.match(item.paymentAndDeliveryAssessment.paymentUse, /native TRON transfer/i);
+  assert.match(item.paymentAndDeliveryAssessment.paymentUse, /native TRON USDT send flow/i);
   assert.equal(item.tronDappMessageSignatureRequired, false);
 });
 
@@ -115,7 +115,7 @@ test("MetaMask remains outside the first five-wallet wave without being declared
 
 test("programme-level payment and accounting gates remain mandatory", () => {
   assert.ok(policy.systemWideGates.some((item) => /two independently operated RPC providers/i.test(item)));
-  assert.ok(policy.systemWideGates.some((item) => /unique.*transaction.*transfer/i.test(item)));
+  assert.ok(policy.systemWideGates.some((item) => /transaction.*transfer or instruction index is unique/i.test(item)));
   assert.ok(policy.systemWideGates.some((item) => /append-only/i.test(item)));
   assert.ok(policy.systemWideGates.some((item) => /Solana ACROWN destination/i.test(item)));
 });
