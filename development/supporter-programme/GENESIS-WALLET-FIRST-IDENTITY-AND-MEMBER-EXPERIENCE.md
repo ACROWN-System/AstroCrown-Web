@@ -108,6 +108,18 @@ The explorer link is a human-readable public receipt, not the authority that gra
 
 Payment records are append-only. Any correction must be a separate correction/reconciliation event; the original verified record must not be silently edited or deleted.
 
+## Participant-paid network fees and pre-payment disclosure
+
+Before the registered wallet owner confirms either a Genesis qualifying payment or a later ACROWN floor-price purchase, the dashboard must show the exact USDT principal, canonical token, selected network, registered source address and exact receiving destination. The blockchain network fee must be shown as a separate amount/estimate in the network's required native fee asset or resources. The registered wallet owner bears that fee separately and must maintain sufficient fee balance/resources; the fee is never deducted from, added to, or netted against the USDT principal. The wallet's own fee confirmation is authoritative because estimates can change. The owner can cancel before signing.
+
+The backend credits only the exact USDT principal received at the payment intent's destination. A transfer reduced by an exchange withdrawal fee, provider charge or other deduction must not receive a partial entitlement or be silently topped up. The interface must not present a combined figure that hides the distinction between USDT principal and network fee.
+
+The two destinations must be unmistakably distinguished:
+- a Genesis qualifying payment is received by the Genesis Programme treasury and is intended to fund the complete AstroCrown website frontend/backend launch; it is not automatically ACS reserve value V;
+- a later ACROWN floor-price purchase sends its full exact USDT principal directly to the separately verified ACS reserve destination counted in V. The participant's network fee is paid separately by the registered wallet owner and does not reduce V or the floor F = V/C.
+
+No payment action may become available until the disclosure has been displayed before the wallet-signing step and exact-principal behavior has passed qualification on the selected rail.
+
 ## 6. Financial sequence and terminology
 
 Genesis is an investment/acquisition programme, not a charitable, donation, voluntary-support or fundraising programme. Public-facing product language must not describe payment as a contribution or donation, or call participants supporters.
