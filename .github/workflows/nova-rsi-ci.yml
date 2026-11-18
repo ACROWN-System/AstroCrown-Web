@@ -38,6 +38,8 @@ jobs:
           EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
           docker pull --platform linux/amd64 "$IMAGE"
           ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          printf 'Resolved linux/amd64 image config ID: %s\n' "$ACTUAL_ID"
+          printf 'Expected immutable image config ID: %s\n' "$EXPECTED_ID"
           test "$ACTUAL_ID" = "$EXPECTED_ID"
 
       - name: Compile development Python
