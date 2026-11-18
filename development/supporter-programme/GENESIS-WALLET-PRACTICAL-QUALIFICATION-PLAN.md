@@ -12,13 +12,13 @@ Each app/platform combination is a separate test target: Chrome extension and mo
 
 ## Implemented automated tests
 
-The preview imports wallet-provider-adapters.mjs. It supports the published direct provider namespaces where documented and retains standard discovery for the other candidates. EVM proof text is encoded as UTF-8, 0x-prefixed bytes before EIP-1193 personal_sign; the server verifies the recovered address against the exact original challenge text.
+The preview imports wallet-provider-adapters.mjs. It supports the published direct provider namespaces where documented and retains standard discovery for the other candidates. EVM proof text is encoded as UTF-8, 0x-prefixed bytes before EIP-1193 personal_sign; the server verifies the recovered address against the exact original challenge text. Solana signing checks the active address again before signing when the provider exposes it, and also checks any signer public key returned with a signature. If no cluster is returned, the address is still displayed but Genesis identity actions stay disabled.
 
 | Network | Adapter coverage | Safety boundary |
 |---|---|---|
 | Ethereum | EIP-6963/EIP-1193; direct Bitget, TokenPocket, Coin98 and OKX namespaces | Connect + personal_sign challenge only; no transaction methods |
 | TRON | TIP-6963/TronLink; direct Bitget, TokenPocket and OKX account provider namespaces | Genesis accepts signMessageV2 / TIP-191 only; OKX trx.sign is not treated as equivalent |
-| Solana | Wallet Standard; direct Bitget, OKX, Coin98 and TokenPocket app-webview adapters | Off-chain Ed25519 message signing only; no transaction signing or sending |
+| Solana | Wallet Standard; direct Bitget, OKX, Coin98 and TokenPocket app-webview adapters | Off-chain Ed25519 message signing only; active-address/signer matching where exposed; unknown cluster blocks identity actions; no transaction signing or sending |
 
 Automated Node tests use synthetic provider objects and local 64-byte signatures to exercise provider discovery, account normalization, message signing calls, signature normalization, known mainnet identification and deliberate rejection. These tests verify our adapter logic; they do not execute a real vendor wallet binary or prove that a production wallet build behaves identically.
 
@@ -42,7 +42,7 @@ Automated Node tests use synthetic provider objects and local 64-byte signatures
 | OKX Wallet | Direct EVM/Solana; TRON connect namespace | Verify EVM/Solana signatures; TRON requires a server-compatible TIP-191 signMessageV2 result—the documented extension trx.sign result is not accepted by the current verifier |
 | Bitget Wallet | window.bitkeep.ethereum, window.bitkeep.tronLink, window.bitkeep.solana | Verify all provider prompts/signature outputs on extension and in-app routes; verify network identification and three-chain restore |
 | TokenPocket | window.tokenpocket.ethereum, window.tokenpocket.tron, mobile window.solana | Confirm the exact Solana extension/mobile provider; EVM/TRON/Solana signatures; three-chain restore |
-| Coin98 | window.coin98.provider, window.coin98.sol | Confirm EVM personal_sign compatibility; verify sol_signMessage return encoding/address binding; resolve TRON dApp/TIP-191 proof path; verify New/Old restore derivation |
+| Coin98 | window.coin98.provider, window.coin98.sol (`sol_requestAccounts`, `sol_accounts`, `sol_signMessage`) | Confirm EVM personal_sign (official EVM example currently shows eth_sign); verify the exact sol_signMessage return encoding and signer address; resolve TRON dApp/TIP-191 proof path; verify New/Old restore derivation |
 
 ## Result recording
 
@@ -59,7 +59,7 @@ A stage cannot be inferred from a previous stage. In particular, PROVIDER_DETECT
 - Local isolated Worker API smoke, local D1 application, build, preflight parser and remote fail-closed checks: PASS in run 44213495140.
 - External Review Pipeline: PASS in run 44213494989; Python CodeQL: PASS in run 44213495099.
 - Read-only three-network payment evidence suite: PASS in Worker qualification run 44213495140. Ethereum, TRON and Solana synthetic transfer evidence; token/precision, source/treasury, finality, duplicate, block-hash, owner-balance and two-operator agreement/rejection cases passed. The parser never applies credit.
-- Live installed-wallet signatures: NOT_TESTED for all six candidates.
+- Live installed-wallet signatures: NOT_TESTED for all six candidates. Adapter tests now explicitly reject a changed Coin98 active account and a returned Solana signer key that differs from the connected address.
 - Three-network USDT send/receive with each wallet: NOT_TESTED.
 - Wallet restore/address derivation on all three networks: NOT_TESTED.
 - Production acceptance: disabled; qualifiedWalletIds=[].
