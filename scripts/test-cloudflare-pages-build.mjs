@@ -92,7 +92,7 @@ assert.match(supporterPage, /id="genesis-public-purchase-inactivity-countdown"/i
 assert.match(supporterPage, /id="genesis-purchase-inactivity-countdown"/i);
 assert.match(supporterPage, /only unused shared purchase allowance is subject to the inactivity period/i);
 assert.doesNotMatch(supporterPage, /qualified ACS floor-price token-purchase service has actually become available.*countdown/i);
-assert.match(supporterPage, /Any one eligible wallet may buy the entire remaining programme-wide allowance/i);
+assert.match(supporterPage, /Any eligible identity registered before the permanent cutoff may purchase any amount up to the entire remaining pool/i);
 assert.match(supporterPage, /there is no personal purchase allowance|no personal per-wallet purchase cap/i);
 assert.match(supporterPage, /USDT purchase allowance within a programme-wide limit/i);
 assert.match(supporterPage, /one shared,? programme-wide USDT purchase-allowance pool/i);
