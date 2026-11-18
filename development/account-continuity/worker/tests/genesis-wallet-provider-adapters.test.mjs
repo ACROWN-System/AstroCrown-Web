@@ -39,6 +39,14 @@ test("EIP-6963 metadata and provider flags identify all six EVM wallet candidate
   assert.equal(identifyWalletCandidate({}, {}), null);
 });
 
+test("OKX EVM provider can use its documented top-level EIP-1193 namespace", () => {
+  const provider = { request: async () => [] };
+  const entries = discoverDirectEvmProviders({ okxwallet: provider });
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].walletId, "okx-wallet");
+  assert.equal(entries[0].provider, provider);
+});
+
 test("direct EVM provider namespaces are discovered without requiring a generic window.ethereum alias", () => {
   const providers = {
     request: async () => [],
