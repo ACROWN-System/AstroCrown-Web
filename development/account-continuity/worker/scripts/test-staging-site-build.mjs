@@ -41,6 +41,10 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.doesNotMatch(html, /\b180 days\b(?! of inactivity)/i);
   assert.match(html, /How does the rolling 180 days of inactivity timer work/);
   assert.match(html, /shared programme-wide countdown starts at ACROWN launch/i);
+  assert.match(html, /At official ACROWN launch, the Genesis Programme resumes for all identities registered before the cutoff/i);
+  assert.match(html, /Members may continue purchasing remaining Genesis rights/i);
+  assert.match(html, /New Genesis primary-wallet registration remains permanently closed/i);
+  assert.doesNotMatch(html, /After ACROWN launches and the qualified ACS floor-purchase facility is operational, only wallets registered/i);
   assert.match(html, /each completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price resets/i);
   assert.match(html, /id="genesis-public-purchase-inactivity-countdown"/i);
   assert.match(html, /id="genesis-purchase-inactivity-countdown"/i);
