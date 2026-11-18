@@ -51,7 +51,9 @@
     "wallet_restore_and_address_derivation_verified",
     "chain_specific_fee_requirements_disclosed",
     "provider_and_mobile_or_extension_build_versions_recorded",
-    "end_to_end_tests_passed_on_all_three_networks"
+    "end_to_end_tests_passed_on_all_three_networks",
+    "runtime_wallet_signature_output_matches_server_verifier",
+    "wallet_network_identity_explicitly_confirmed_for_each_chain"
   ],
   "candidates": [
     {
@@ -103,7 +105,14 @@
         "wallet_restore_test_all_three_networks",
         "platform_route_qualification",
         "provider_build_version_record"
-      ]
+      ],
+      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "adapterStatus": {
+        "evm": "DIRECT_PROVIDER_ADAPTER_ADDED",
+        "tron": "DIRECT_PROVIDER_ADAPTER_ADDED_SIGNMESSAGEV2_REQUIRED",
+        "solana": "DIRECT_PROVIDER_ADAPTER_ADDED_WALLET_STANDARD_SHAPE",
+        "liveWalletTests": "NOT_RUN"
+      }
     },
     {
       "walletId": "coin98",
@@ -117,8 +126,9 @@
         "ethereum": {
           "provider": "window.coin98.provider / EIP-1193 and EIP-6963",
           "capabilities": [
-            "connect",
-            "account_access"
+            "EIP-1193",
+            "account_access",
+            "eth_sign documented; Genesis personal_sign compatibility must be tested"
           ]
         },
         "tron": {
@@ -133,26 +143,29 @@
             "sol_accounts",
             "sol_requestAccounts",
             "sol_sign transaction",
-            "sol_verify"
+            "sol_verify",
+            "sol_signMessage (Coin98 Connect integration)"
           ]
         }
       },
       "notes": [
-        "Coin98 officially describes multichain asset management across Ethereum, Solana and TRON and documents Ethereum and Solana dApp providers.",
-        "Its published Solana extension guide documents transaction signing and signature verification, but the reviewed page does not explicitly document an arbitrary off-chain signMessage method for the Genesis identity challenge.",
-        "The reviewed official developer materials do not yet establish a complete TRON website dApp connection and message-signature route for the exact Coin98 product/platform variant.",
-        "Coin98's restore guidance warns that choosing the wrong New Standard or Old Standard for some chains, including Solana and TRON, may restore different addresses; the correct standard must be recorded and verified.",
-        "This is a documentation and integration gap, not a security finding or a reason to permanently exclude Coin98. Test the mobile DApp browser and extension separately."
+        "Coin98 officially documents multichain asset management across Ethereum, Solana and TRON and publishes EVM and Solana dApp provider APIs.",
+        "The official Coin98 Connect integration explicitly documents window.coin98.sol.request({method: 'sol_signMessage', params: [message]}), so arbitrary Solana off-chain message signing is a documented capability rather than an assumed gap.",
+        "The actual Solana signMessage return encoding and the current extension/mobile provider behavior must still be tested against Genesis's 64-byte Ed25519 verifier and connected address.",
+        "The reviewed official documentation still does not establish a complete Coin98 TRON dApp account-connection and TIP-191-compatible signMessageV2 route. Asset support alone does not satisfy this requirement.",
+        "Coin98 restore documentation warns that choosing the wrong New Standard or Old Standard for some chains, including Solana and TRON, may derive different addresses; record and verify the exact restore standard."
       ],
       "blockingGates": [
         "published_or_tested_tron_dapp_connect_and_message_signature_path",
-        "documented_or_tested_solana_offchain_message_signature_path",
+        "coin98_solana_signMessage_output_encoding_and_address_binding_test",
+        "coin98_evm_personal_sign_compatibility_test",
         "three_network_usdt_send_receive_tests",
         "additional_address_link_attribution_each_network",
         "wallet_restore_address_derivation_test_all_three_networks",
         "platform_route_qualification",
         "provider_build_version_record"
-      ]
+      ],
+      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
     },
     {
       "walletId": "metamask",
@@ -167,7 +180,14 @@
         "tron_primary_wallet_message_signature_or_approved_transaction_proof",
         "three_network_end_to_end_tests",
         "wallet_restore_test"
-      ]
+      ],
+      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "adapterStatus": {
+        "evm": "EIP6963_AND_EIP1193_DISCOVERY",
+        "tron": "NO_APPROVED_TRON_MESSAGE_PROOF_PATH",
+        "solana": "WALLET_STANDARD_DISCOVERY",
+        "liveWalletTests": "NOT_RUN"
+      }
     },
     {
       "walletId": "okx-wallet",
@@ -181,7 +201,14 @@
         "three_network_end_to_end_tests",
         "wallet_restore_test",
         "provider_build_version_record"
-      ]
+      ],
+      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "adapterStatus": {
+        "evm": "DIRECT_PROVIDER_ADAPTER_ADDED_WHEN_NAMESPACE_AVAILABLE",
+        "tron": "DISPLAY_CONNECTION_ADAPTER_ADDED_SIGNATURE_NOT_ACCEPTED_WITHOUT_SIGNMESSAGEV2",
+        "solana": "DIRECT_PROVIDER_ADAPTER_ADDED_SIGNMESSAGE",
+        "liveWalletTests": "NOT_RUN"
+      }
     },
     {
       "walletId": "tokenpocket",
@@ -232,7 +259,14 @@
         "solana_extension_provider_validation",
         "platform_route_qualification",
         "provider_build_version_record"
-      ]
+      ],
+      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "adapterStatus": {
+        "evm": "DIRECT_PROVIDER_ADAPTER_ADDED",
+        "tron": "DIRECT_PROVIDER_ADAPTER_ADDED_SIGNMESSAGEV2_REQUIRED",
+        "solana": "MOBILE_WINDOW_SOLANA_AND_OPTIONAL_EXTENSION_PROVIDER_ADAPTER_ADDED",
+        "liveWalletTests": "NOT_RUN"
+      }
     },
     {
       "walletId": "trust-wallet",
@@ -246,12 +280,19 @@
         "three_network_end_to_end_tests",
         "wallet_restore_test",
         "provider_build_version_record"
-      ]
+      ],
+      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "adapterStatus": {
+        "evm": "EIP6963_AND_EIP1193_DISCOVERY",
+        "tron": "TIP6963_DISCOVERY_WHEN_ANNOUNCED",
+        "solana": "WALLET_STANDARD_DISCOVERY",
+        "liveWalletTests": "NOT_RUN"
+      }
     }
   ],
   "productionAcceptance": {
     "enabled": false,
     "qualifiedWalletIds": [],
-    "reason": "No candidate has passed the complete three-network and wallet-recovery qualification suite."
+    "reason": "Automated provider-adapter contract tests are not equivalent to testing installed wallet builds. No candidate has yet passed live signature, USDT send/receive, wallet restore/address derivation and three-network end-to-end qualification."
   }
 }
