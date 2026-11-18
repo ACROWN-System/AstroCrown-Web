@@ -50,7 +50,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /id="genesis-purchase-inactivity-countdown"/i);
   assert.match(html, /only unused shared purchase allowance is subject to the inactivity period/i);
   assert.doesNotMatch(html, /qualified ACS floor-price token-purchase service has actually become available.*countdown/i);
-  assert.match(html, /Any one eligible wallet may buy the entire remaining programme-wide allowance/);
+  assert.match(html, /Any eligible identity registered before the permanent cutoff may purchase any amount up to the entire remaining pool/);
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
