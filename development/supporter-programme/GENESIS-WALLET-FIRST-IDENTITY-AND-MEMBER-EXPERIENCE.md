@@ -8,14 +8,16 @@
 
 Genesis does not create or register a conventional user account.
 
-The primary qualifying wallet is simultaneously:
+The primary wallet is simultaneously:
 - the Genesis participant identity;
 - the authentication and recovery anchor;
-- the owner of every Genesis purchase entitlement, allowance and associated acquisition record;
+- the authority for that identity's own programme actions and attributable payment/purchase history;
 - the root identity to which separately verified network addresses may be linked; and
-- the wallet to which Genesis Member status and its badge attach after qualification.
+- the wallet identity to which Genesis Member status and its badge attach after qualification.
 
-There is no separate username/password account, email registration, legal-name profile, personal account recovery, passkey-based recovery or customer-support process that can move an entitlement to a replacement wallet.
+The primary wallet does **not** own a personal purchase allowance. The ACROWN purchase allowance is one USDT-denominated pool shared by the entire Genesis Programme. Any eligible identity registered before the permanent cutoff may purchase from the entire remaining global pool; a single registered wallet may purchase all remaining programme capacity if it chooses and if inventory/ACS controls permit. Identity-specific payment and purchase events remain attributable and auditable, but they do not create an individual purchase cap.
+
+There is no separate username/password account, email registration, legal-name profile, personal account recovery, passkey-based recovery or customer-support process that can move a Genesis identity, badge or wallet-linked history to a replacement wallet.
 
 The application may issue a short-lived, server-side session after a fresh signed wallet challenge. That session is only an access mechanism for the already wallet-bound identity; it is not a separate account and cannot recover the wallet.
 
@@ -23,7 +25,7 @@ The application may issue a short-lived, server-side session after a fresh signe
 
 Ethereum, TRON and Solana addresses are distinct network-specific public addresses, even when derived or managed by the same multi-chain wallet application.
 
-The first wallet address that proves control becomes the **primary wallet**. It is the sole Genesis login, account authority and recovery anchor. During initial profile setup, the owner may connect the same multi-chain wallet application on Ethereum, TRON and/or Solana and confirm the network addresses to include in one primary wallet profile. Each additional address must independently sign a fresh, domain-bound off-chain challenge before it is linked. The wallet application's brand, provider metadata or visual display of several addresses is not ownership evidence; the cryptographic proof is. An address is eligible to originate a qualifying payment only after it has been verified and registered for that same network. The payment's actual on-chain sender must match that pre-registered address, preserving the direct explorer link between the member's verified wallet profile and the payment. A linked address is not another identity and cannot log in, recover the account, rename the profile, manage entitlements or authorize Genesis actions. The primary wallet alone authorizes Genesis account actions and profile changes. The Worker rejects state-changing requests unless the HTTP `Origin` exactly matches the configured official AstroCrown origin.
+The first wallet address that proves control becomes the **primary wallet**. It is the sole Genesis login, account authority and recovery anchor. During initial profile setup, the owner may connect the same multi-chain wallet application on Ethereum, TRON and/or Solana and confirm the network addresses to include in one primary wallet profile. Each additional address must independently sign a fresh, domain-bound off-chain challenge before it is linked. The wallet application's brand, provider metadata or visual display of several addresses is not ownership evidence; the cryptographic proof is. An address is eligible to originate a qualifying payment only after it has been verified and registered for that same network. The payment's actual on-chain sender must match that pre-registered address, preserving the direct explorer link between the member's verified wallet profile and the payment. A linked address is not another identity and cannot log in, recover the account, rename the profile, manage entitlements or authorize Genesis actions. The primary wallet alone authorizes Genesis identity actions while those actions are open under the programme lifecycle. Profile and wallet-link mutations are frozen at the 24-hour pre-launch cutoff and do not reopen after launch. The Worker rejects state-changing requests unless the HTTP `Origin` exactly matches the configured official AstroCrown origin.
 
 A linked Genesis address is a network-specific payment or delivery endpoint, not a recovery wallet. It cannot independently log in to, recover, rename or administer the primary Genesis identity. Genesis deliberately does not accept payments from unregistered one-time source addresses: the sender must first be independently verified and linked to the primary wallet profile. For the wider AstroCrown platform, optional auxiliary transaction wallets may be connected on demand without creating or registering another account. They never become alternate login/recovery identities, and each outgoing spend must be signed by the wallet that owns the source funds.  See [Primary Identity and Auxiliary Transaction Wallet Architecture](../account-continuity/PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md).
 
@@ -42,7 +44,9 @@ AstroCrown and Genesis must never request, receive, store, transmit or ask a use
 
 If the device is lost but the wallet is restorable from its own backup, the wallet holder restores it and proves control again. If the primary wallet and all of its recovery capability are irretrievably lost, the Genesis identity, access, entitlement, badge and rights associated with that wallet are lost. Genesis must not reassign those rights to a newly created wallet based on a claim, email, display name, document or manual support request.
 
-The 180-day ACROWN purchase-exercise window does not begin when Genesis qualifying payments open. It begins only after ACROWN has officially launched and the approved ACS pure-floor purchase facility is operationally available. A wallet that completes and receives purchases for its full personal allowance is marked `FULLY_EXERCISED`; it has no unused allowance to expire, and its Genesis Member status/badge remains intact. For a partially exercised wallet, only the unused purchase allowance is subject to the disclosed global post-launch expiry rule. The wallet dashboard must make the remaining allowance and the applicable close date clear.
+Exactly 24 hours before the scheduled official ACROWN launch, all Genesis activities enter a freeze, including new primary-wallet registration, qualifying payments, allowance-pool credits, purchase quotes, floor-price purchases, new wallet links and profile changes. The registration cutoff is permanent: Genesis does not resume or accept new primary-wallet registrations after the freeze or after ACROWN launches. During the freeze, read-only access and authentication/logout for existing identities may remain available.
+
+After ACROWN is officially launched and the approved ACS pure-floor purchase facility is operational, only identities registered before the freeze may resume the approved qualifying-payment/new-right and floor-price-purchase activities. They all access the same programme-wide USDT allowance pool; no identity has a personal allowance. One eligible wallet may purchase the entire remaining pool, which closes the offer for everyone once the pool is fully consumed and ACROWN delivery is verified. If the shared pool is not exhausted, only the remaining global amount is subject to expiry at the end of the single 180-day post-launch window. That window starts only when both the official ACROWN launch and live qualified ACS floor-purchase availability have occurred. The dashboard must show the global pool earned, reserved, consumed and remaining, the identity's own payment/purchase history for audit, the registration-closure status and the global close date.
 
 This consequence and the post-launch purchase-window rules must be explained before the primary wallet is confirmed.
 
@@ -50,7 +54,7 @@ This consequence and the post-launch purchase-window rules must be explained bef
 
 A newly verified primary wallet receives a randomly generated public display name and a generated avatar identity.
 
-The display name is a public label only. It is not the identity credential, an entitlement, a wallet recovery method or a proof of legal identity.
+The display name is a public label only. It is not the identity credential, ownership of the programme-wide allowance pool, a wallet recovery method or a proof of legal identity.
 
 The wallet holder may customize the name after proving control of the primary wallet. Names must be globally unique:
 - comparison is case-insensitive after Unicode compatibility normalization and whitespace normalization;
