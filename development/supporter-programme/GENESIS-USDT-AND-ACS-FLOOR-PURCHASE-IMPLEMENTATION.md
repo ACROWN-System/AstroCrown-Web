@@ -144,7 +144,7 @@ Keep every network disabled and payment acceptance false until all applicable ga
 
 1. **Treasury control:** verify the Ethereum, TRON and Solana Genesis receiving addresses on the correct mainnets using fresh, domain-bound proof challenges and an offline review trail. The current Ethereum/TRON proof artifacts do not by themselves record server-verified custody; the Solana treasury proof flow is still required.
 2. **Inbound asset correctness:** independently verify each canonical USDT token identifier, six-decimal precision, network identity, receiving address and Solana treasury token-account readiness against live mainnet data.
-3. **Finality and reconciliation:** qualify two independent RPC sources, chain-specific finality/reorg handling, Transfer evidence, duplicate detection and failure/retry behavior for each chain.
+3. **Finality and reconciliation:** qualify two independent RPC sources, chain-specific finality/reorg handling, Transfer evidence, duplicate detection and failure/retry behavior for each chain. The local parser foundation is documented in [GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md](./GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md); it is not the production RPC or settlement service.
 4. **Programme terms:** approve the contribution multiplier, minimum contribution threshold, any contribution ceiling, global ACROWN cap or no-cap policy, additional-contribution rules, 180-day activation time and exact rounding rules. The illustrative 25:1 value is not an approved live term.
 5. **ACS floor:** publish a renewed qualified ACS version covering reserve constituents and quantities, common numeraire, circulating-supply source, oracle quorum, feed tolerance/staleness, price snapshot, rounding and quote expiry.
 6. **ACROWN delivery:** identify the deployed Solana ACROWN mint, token program and decimals; verify available inventory; prove control of the delivery source; qualify the signer/approval procedure; and test finality and recipient-owner checks. No mint address or delivery authority may be guessed.
@@ -161,7 +161,8 @@ At the time of this specification:
 - all three networks remain disabled;
 - registration and off-chain wallet ownership proofs exist, with Solana-only ACROWN delivery-wallet roles;
 - deterministic allowance arithmetic and database structures exist;
-- there is no production payment-intent API, chain settlement/reconciliation service, floor-price quote service, purchase-intent service, inventory reservation service or ACROWN delivery service;
+- a local read-only evidence normalizer now parses synthetic Ethereum ERC-20, TRON TRC-20 and Solana SPL USDT transfer evidence and requires two normalized RPC observations to agree; its result explicitly has `creditApplied: false`. See [GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md](./GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md);
+- there is no production RPC client/registry, payment-intent API, chain settlement/reconciliation service, floor-price quote service, purchase-intent service, inventory reservation service or ACROWN delivery service;
 - there is no qualified 2026 ACS price snapshot provider in the Genesis Worker and no verified ACROWN mint/inventory/signer configuration.
 
-No remote D1 migration, remote Worker deployment, mainnet payment, payment acceptance, token approval, transfer, mint or treasury activation is performed by this specification.
+The parser accepts trusted chain observations as inputs; it does not fetch RPC data, establish RPC independence by itself, create payment records, credit entitlement, or serve an HTTP route. Automated tests use synthetic fixtures, not live mainnet transactions. No remote D1 migration, remote Worker deployment, mainnet payment, payment acceptance, token approval, transfer, mint or treasury activation is performed by this specification.
