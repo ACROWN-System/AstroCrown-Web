@@ -39,9 +39,13 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /New primary-wallet registration closes permanently at that cutoff and never resumes/);
   assert.match(html, /180 days of inactivity/);
   assert.doesNotMatch(html, /\b180 days\b(?! of inactivity)/i);
-  assert.match(html, /What does the 180 days of inactivity apply to, and when does it begin/);
+  assert.match(html, /How does the rolling 180 days of inactivity timer work/);
   assert.match(html, /ACROWN is officially deployed\/launched and the qualified ACS floor-price token-purchase service has actually become available/);
-  assert.match(html, /does not reset it/);
+  assert.match(html, /each completed, finalized ACS floor-price purchase by any eligible wallet resets/i);
+  assert.match(html, /id="genesis-public-purchase-inactivity-countdown"/i);
+  assert.match(html, /id="genesis-purchase-inactivity-countdown"/i);
+  assert.match(html, /only unused shared purchase allowance expires/i);
+  assert.doesNotMatch(html, /not a rolling timer|does not reset it/i);
   assert.match(html, /Any one eligible wallet may buy the entire remaining programme-wide allowance/);
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
@@ -83,6 +87,8 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(!js.includes("/api/supporters/registration/"));
   assert.ok(!js.includes("/api/supporters/login/"));
   assert.match(js, /qualifying payments remain closed/i);
+  assert.match(js, /window\.setInterval\(tick, 1000\)/);
+  assert.match(js, /Latest global timer reset/);
   assert.equal(js.includes('method: "eth_sign"'), false);
   assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
   assert.equal(js.includes('method: "eth_sendTransaction"'), false);
