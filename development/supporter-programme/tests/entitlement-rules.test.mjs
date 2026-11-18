@@ -44,7 +44,7 @@ test("rolling 180-day inactivity timer starts at ACROWN launch and rolls after e
   assert.equal(isWithinProgrammeWindow(secondResetClose, start, secondResetClose, laterFloorPurchase), false);
   assert.equal(isWithinProgrammeWindow(start - 1, start, initialClose), false);
   assert.equal(isWithinProgrammeWindow(start, start, start + 90), false);
-  assert.equal(isWithinProgrammeWindow(laterFloorPurchase, start, firstResetClose, firstRightPurchase), false);
+  assert.equal(isWithinProgrammeWindow(secondResetClose - 1, start, firstResetClose, firstRightPurchase), false);
   assert.throws(() => programmeClosesAt(start, start - 1), /predate/);
 });
 
