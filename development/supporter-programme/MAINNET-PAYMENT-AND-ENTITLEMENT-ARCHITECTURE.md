@@ -14,7 +14,7 @@
 
 The general AstroCrown website and platform functionality remain in Devnet/Testnet with valueless assets during development. The Genesis Programme is the deliberate exception: after separate activation gates pass, it is intended to accept real mainnet USD₮ from its first operational opening on Ethereum, Tron and Solana.
 
-Publishing a static Pages preview, merging a PR, deploying a Worker or creating a D1 database does not open the programme. Deliberately activating Genesis qualifying payments also does **not** start the 180-day ACROWN purchase-exercise clock. That clock starts only after ACROWN has been officially launched **and** the approved ACS pure-floor purchase facility is operationally open and available to eligible registered Genesis wallets.
+Publishing a static Pages preview, merging a PR, deploying a Worker or creating a D1 database does not open Genesis. The programme must enter a complete activity freeze exactly 24 hours before the scheduled official ACROWN launch. That freeze includes new primary-wallet registration, qualifying payments, allowance credits, purchase quotes, floor-price purchases and other Genesis state changes. After ACROWN launches and the qualified ACS floor-purchase facility is operational, only identities registered before the freeze may resume the permitted qualifying-payment and purchase activities. New Genesis primary-wallet registration never reopens. The global 180-day purchase-exercise clock starts only when both ACROWN is officially launched and the qualified ACS floor-purchase facility is available.
 
 Real supporter records and entitlements must be isolated from general AstroCrown testnet records. A test transaction, test account, browser-local value or client-supplied success state can never create or modify a real entitlement.
 
@@ -52,7 +52,7 @@ Requirements:
 
 ## 3. Declining global tiers and USDT-denominated purchase allowance
 
-The proposed programme schedule uses a decreasing multiplier applied to successive global tranches of finalized Genesis qualifying-payment principal. The multiplier creates a **USDT-denominated maximum purchase allowance**, not an ACROWN token quantity.
+The proposed programme schedule uses a decreasing multiplier applied to successive global tranches of finalized Genesis qualifying-payment principal. Each finalized qualifying payment increases one **shared, programme-wide USDT purchase-allowance pool**. It does not create or reserve a personal allowance for the wallet that made the payment. The pool is USDT-denominated capacity, not an ACROWN token quantity.
 
 | Cumulative qualifying-payment tranche | Multiplier | Allowance per USDT 10 within that tranche | Allowance for a full USDT 10,000 tranche |
 |---|---:|---:|---:|
@@ -71,7 +71,7 @@ Rules:
 - A USDT 10 payment wholly within the first tranche creates up to USDT 300 of later purchase allowance; the same payment wholly within the second creates up to USDT 250.
 - The full USDT 50,000 qualifying-payment target produces no more than USDT 1,000,000 aggregate purchase allowance under this schedule. The allowance cap is measured in USDT purchase value, not ACROWN base units.
 - The first qualifying payment funds the Genesis Programme's planned launch of the complete AstroCrown website frontend and backend. It is not itself an ACROWN purchase and is not automatically added to ACS reserve value V.
-- The allowance is a right to make a later, separate purchase of ACROWN for up to that USDT value at the contemporaneous approved ACS pure floor. It is not a free token grant, fixed token quantity, guaranteed return, guaranteed resale value or assurance that inventory/market liquidity will exist.
+- The resulting allowance is one shared programme-wide right to make later, separate ACROWN purchases at the contemporaneous approved ACS pure floor. Any eligible primary-wallet identity registered before the permanent registration cutoff may access the remaining shared pool; its purchases are not limited to the amount of qualifying payment made by that same wallet. A single eligible registered wallet may purchase up to the entire remaining programme-wide allowance if it chooses and if qualified ACROWN inventory and all other controls permit. Every completed purchase reduces the same global balance. This is not a free token grant, fixed token quantity, guaranteed return, guaranteed resale value or assurance that inventory/market liquidity will exist.
 
 For each payment intent, the backend must reserve the applicable global tranche portions and bind the exact tier breakdown and rules version. If a payment intent expires or is cancelled, its temporary reservation is released. Once the exact payment is finalized and reconciled, the tier allocation is recorded immutably and cannot be repriced because later participants advance the global counter.
 
@@ -79,24 +79,32 @@ Store all payment and USDT allowance values as canonical integer base-unit strin
 
 `earned_purchase_allowance_usdt_base = Σ(tranche_principal_usdt_base × tranche_multiplier)`
 
-At the later purchase stage, the wallet holder selects a USDT amount no greater than the unused personal USDT-denominated allowance. The approved contemporaneous pure-floor quote determines the corresponding ACROWN quantity using exact rational/integer arithmetic and the approved ACROWN decimal scale. Only the actual finalized floor-price purchase consumes the corresponding USDT allowance; unused allowance is not converted into tokens or treated as an owned asset. Reselling purchased tokens does not replenish consumed allowance.
+At the later purchase stage, an eligible registered wallet may request any USDT amount up to the remaining shared programme-wide allowance; there is no personal per-wallet allowance ceiling. The approved contemporaneous pure-floor quote determines the corresponding ACROWN quantity using exact rational/integer arithmetic and the approved ACROWN decimal scale. Global reservations prevent concurrent requests from overspending the pool. Only a separately verified, finalized purchase with verified ACROWN delivery consumes the corresponding global allowance; unused global allowance is not converted into tokens or treated as an owned asset. Reselling purchased tokens does not replenish the shared pool.
 
-**Schema migration required:** the current genesis_wallet_entitlements earned_acrown_base_units / consumed_acrown_base_units representation is ACROWN-denominated and incompatible with this model. Before payment activation, add a versioned migration and append-only entitlement events that store earned, reserved and consumed purchase allowance in USDT base units. Preserve actual acquired ACROWN quantities separately in floor-purchase records. Do not activate or credit payments against the old ACROWN-denominated columns.
+**Schema migration required:** the old `genesis_wallet_entitlements.earned_acrown_base_units` / `consumed_acrown_base_units` table is a retired per-wallet ACROWN-denominated model and must not be read or credited. Migration `0005_genesis_global_allowance_and_launch_freeze.sql` introduces one global USDT-denominated allowance state, an append-only programme-wide event ledger, and permanent launch/registration-freeze timestamps. Qualifying-payment credits, reservations, releases and purchases update the same shared pool atomically. The actor wallet remains recorded on each event for audit attribution only; it does not own a private sub-balance.
 
-## 4. Global 180-day ACROWN purchase-exercise window
+## 4. Permanent registration freeze and global 180-day purchase-exercise window
 
-The 180-day period is an **ACROWN post-launch purchase-exercise window**, not a Genesis qualifying-payment acceptance period.
+The 24-hour registration freeze and the 180-day post-launch purchase window are separate lifecycle controls.
 
-- Genesis qualifying-payment activation, the first Genesis payment, static preview publication, Git commits, PR merge, Worker deployment and database creation do **not** start this clock.
-- Set `acrown_purchase_window_started_at` only when both conditions are true: (1) ACROWN has been officially launched on its approved network; and (2) the renewed, approved ACS pure-floor purchase facility is live and eligible registered Genesis wallets can actually obtain a valid floor quote and complete the separate purchase flow.
+**Pre-launch freeze and permanent registration closure**
+- Record the scheduled official ACROWN launch timestamp and set `registration_freeze_at = scheduled_acrown_launch_at - 86,400 seconds`.
+- At that exact cutoff—24 hours before the scheduled ACROWN launch—all Genesis programme activity is frozen. This includes new primary-wallet identity registration, new qualifying-payment intents and acceptance, qualifying-payment credit, entitlement/pool changes, new purchase quotes, floor-price purchase intents, purchase settlement and profile/link mutations. Read-only records and authentication/logout needed to let existing wallets access their records may remain available.
+- The closure is permanent. When the freeze begins, set `registration_closed_at` and never clear it. Do not resume, reopen or accept new Genesis primary-wallet identities after ACROWN launches.
+- The 24-hour freeze remains in force through the ACROWN launch transition. Reopen only the approved qualifying-payment and ACS floor-purchase activities for identities that were already registered before `registration_closed_at`, and only after ACROWN is officially launched and the renewed ACS pure-floor purchase facility is operational. Do not reopen profile creation, new primary-wallet registration, wallet linking or profile mutation.
+- Every qualifying payment and floor-price purchase after reopening must be initiated by an identity registered before the freeze and from a matching-network address already verified and linked to that identity before the freeze.
+
+**Global 180-day exercise period**
+- `acrown_purchase_window_started_at` is set only when both conditions are true: (1) ACROWN has been officially launched on its approved network; and (2) the renewed, approved ACS pure-floor purchase facility is live and eligible pre-freeze registered Genesis wallets can actually obtain a valid floor quote and complete the separate purchase flow. The start is the later of those two verified events.
 - A token deployment or launch announcement without an operational, qualified floor-purchase facility is insufficient to start the clock.
-- `acrown_purchase_window_closes_at = acrown_purchase_window_started_at + 180 days` (15,552,000 seconds). This is one global programme window, not a separate 180-day period restarted for each wallet or each partial purchase.
-- The authoritative database stores the launch/offer-open event and close timestamp immutably. The public page, each wallet dashboard and the acquisition ledger disclose the start, close and each wallet's earned, exercised and remaining USDT allowance.
-- A wallet that purchases **and receives** ACROWN for its entire personal Genesis purchase allowance at the qualified ACS pure floor is marked `FULLY_EXERCISED`. It has no unexercised balance subject to expiry. Full exercise does not cancel or remove its Genesis Member status or badge.
-- For a partially exercised wallet, completed purchases remain final; only the unused USDT-denominated purchase allowance remaining at the global close is subject to expiry under the published terms. A wallet that has not exercised any allowance has its full unused allowance subject to that same rule.
-- Merely opening the dashboard, creating a quote, reserving allowance, submitting an unfinalized payment or starting a delivery does not count as a completed purchase. Only a separately verified, finalized floor-price purchase and verified ACROWN delivery consume the corresponding allowance. A finalized purchase whose delivery is still pending must remain in an auditable pending/reconciliation state and must not be silently expired or treated as fully exercised.
-- Pausing the service does not silently reset the global clock. Any extension, pause treatment for a material service outage, or other change must be separately approved, versioned and publicly disclosed before it affects participant rights.
-- The window start is immutable once established; no clock may begin before ACROWN launch and actual availability of the qualified floor-purchase service.
+- `acrown_purchase_window_closes_at = acrown_purchase_window_started_at + 180 days` (15,552,000 seconds). This is one global programme window, not a separate 180-day period for each wallet or each purchase.
+- During this period, only the pre-freeze registered identities may resume eligible qualifying payments (to add new capacity to the shared programme pool under approved tranche rules) and floor-price purchases (to consume the pool). New identity registration remains permanently closed.
+- Any eligible pre-freeze registered wallet may buy up to the entire remaining Genesis programme-wide allowance. There is no personal allowance that a wallet must first exhaust or that expires separately. Purchases by one wallet reduce the same global remaining balance available to all other eligible wallets.
+- If one wallet purchases and receives ACROWN for the entire remaining programme-wide allowance, the shared pool is `EXHAUSTED` and the programme purchase offer closes early for everyone. A fully consumed global pool is not a per-wallet `FULLY_EXERCISED` status.
+- If the shared pool is not exhausted by the global close, only the unused programme-wide remainder expires under the published rules. Completed purchases remain final.
+- Merely opening a dashboard, creating a quote, reserving allowance, submitting an unfinalized payment or starting a delivery does not count as a completed purchase. A purchase that is finalized but awaits ACROWN delivery remains in an auditable pending/reconciliation state; its reservation must not be silently expired or treated as delivered.
+- Pausing the service does not silently reset the global clock. Any extension or pause treatment for a material service outage requires a separately approved, versioned and publicly disclosed decision.
+- The actual launch, freeze, ACS-open and close events are recorded immutably and disclosed in the public programme status and every existing member dashboard.
 
 ## 5. Member and wallet identity
 
@@ -165,18 +173,18 @@ The initial Genesis qualifying payment is a different transaction: its exact USD
 ## 7. Data and accounting model
 
 The D1 migration creates:
-- one mainnet Genesis qualifying-payment activation record, kept separate from the post-ACROWN-launch purchase-window record and its immutable timestamps;
-- members and unique usernames;
-- independently verified chain wallets and short-lived challenges;
-- network-specific contribution intents;
-- finalized contributions unique by network + transaction hash + transfer/event index;
-- personal entitlement balances and append-only entitlement events;
-- separately recorded ACROWN purchases;
-- append-only public accounting events.
+- a Genesis lifecycle control record with the scheduled ACROWN launch, permanent 24-hour registration cutoff, official launch, ACS floor-purchase opening and immutable 180-day close;
+- one shared USDT-denominated programme allowance state and append-only global allowance event ledger;
+- members and unique usernames, with no new primary identities permitted after the permanent cutoff;
+- independently verified chain wallets and short-lived challenges for identities registered before the cutoff;
+- network-specific qualifying-payment intents;
+- finalized qualifying payments unique by network + transaction hash + transfer/event index;
+- separately recorded ACROWN floor-price purchases, reservations and delivery events;
+- append-only public accounting events. The historical per-wallet ACROWN entitlement table remains unused compatibility history.
 
 A contribution record preserves network, token identity, source wallet, treasury, amount/base units, transaction reference, event/instruction index, block/slot, finality evidence, provider agreement digest, timestamp and rules/multiplier version. Every entitlement calculation must be reproducible from stored inputs.
 
-Never rewrite financial history. Corrections are compensating events. Database uniqueness prevents duplicate credit; atomic reservation/settlement prevents concurrent purchases from exceeding the personal allowance or global cap.
+Never rewrite financial history. Corrections are compensating events. Database uniqueness prevents duplicate credit; atomic global-pool reservation/settlement prevents concurrent purchases—regardless of which registered wallet initiates them—from exceeding the programme-wide available allowance or approved cap.
 
 Public snapshots are dated, append-only, hashed and reconciled. GitHub may store intentionally public audit exports, but is not the live source of truth and must never hold secrets. On-chain explorer evidence must be paired with redacted receipts/invoices for off-chain spending.
 
@@ -242,7 +250,7 @@ The schema, static disclosures and deterministic arithmetic tests can be prepare
 
 The initial Genesis payment rails are USDT on Ethereum ERC-20, TRON TRC-20 and Solana SPL. This is one asset across three canonical mainnet token implementations; it does not implicitly support native coins or arbitrary tokens.
 
-The participant lifecycle has two separate payments: a finalized Genesis contribution credits a personal ACROWN purchase allowance; a later, separately confirmed USDT purchase consumes that allowance at the approved contemporaneous ACS pure floor and delivers ACROWN only to the independently verified Solana delivery wallet. The contribution itself never automatically issues ACROWN.
+The participant lifecycle has two separate payments: a finalized Genesis qualifying payment adds USDT-denominated capacity to the shared programme-wide purchase allowance; a later, separately confirmed USDT floor-price purchase by any eligible pre-freeze registered wallet consumes that shared capacity at the approved contemporaneous ACS pure floor and delivers ACROWN only to the independently verified Solana delivery wallet. The contribution itself never automatically issues ACROWN.
 
 The ACS core convention located for this integration is F_pure = V_reserves / Q_defended, with circulating supply as the defended quantity and fees excluded from the official floor. The ACS core currently expresses reserve value in BTC, so the Genesis USDT quote requires an approved BTC/USDT price snapshot. Genesis must not apply the provisional 35% roof uplift to participant purchases or substitute fee-adjusted external execution triggers for the official floor. The ACS source basis, quote snapshot requirements, chain verification, purchase settlement, ACROWN delivery and all activation gates are specified in [GENESIS-USDT-AND-ACS-FLOOR-PURCHASE-IMPLEMENTATION.md](GENESIS-USDT-AND-ACS-FLOOR-PURCHASE-IMPLEMENTATION.md).
 
