@@ -54,11 +54,11 @@ A stage cannot be inferred from a previous stage. In particular, PROVIDER_DETECT
 
 - Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212351208, including EVM personal_sign UTF-8 payload encoding. The subsequent mainnet evidence-parser suite also passed in run 44213495140.
 - Synthetic local wallet-signature E2E: PASS in Worker qualification run 44212031251. Tests cover Ethereum primary identity, TRON TIP-191 linked address, Solana Ed25519 linked address, replay prevention, cross-origin protection, case-insensitive name uniqueness, logout/reconnect and no payments.
-- Browser mock-wallet safety smoke: PASS in Chromium run 44213495115. It verifies the mocked wallet interaction and that no payment/transaction action is triggered; it does not execute installed vendor wallet apps.
-- Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44213495084.
+- Six-brand Chromium public-account smoke: PASS in run 44215436701. All six candidates discovered and connected on EVM; Bitget, TokenPocket, OKX, Trust Wallet (announced provider) and TronLink connected on TRON; all six candidates discovered and connected on Solana. External HTTP was blocked and no signing/transaction/approval/transfer method was called. This is synthetic provider injection only—not a live wallet qualification.
+- Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44215436776.
 - Local isolated Worker API smoke, local D1 application, build, preflight parser and remote fail-closed checks: PASS in run 44213495140.
-- External Review Pipeline: PASS in run 44213494989; Python CodeQL: PASS in run 44213495099.
-- Read-only three-network payment evidence suite: PASS in Worker qualification run 44213495140. Ethereum, TRON and Solana synthetic transfer evidence; token/precision, source/treasury, finality, duplicate, block-hash, owner-balance and two-operator agreement/rejection cases passed. The parser never applies credit.
+- External Review Pipeline: PASS in run 44215436761; Python CodeQL: PASS in run 44215436750.
+- Full latest Account Staging Worker qualification: PASS in run 44215436652, including all Worker invariant tests, wallet adapters, three-chain evidence parsers, local D1/schema migration, local HTTP API smoke, preflight parsing and remote fail-closed checks. The read-only three-network payment evidence suite passed in this run. Ethereum, TRON and Solana synthetic transfer evidence; token/precision, source/treasury, finality, duplicate, block-hash, owner-balance and two-operator agreement/rejection cases passed. The parser never applies credit.
 - Live installed-wallet signatures: NOT_TESTED for all six candidates. Adapter tests now explicitly reject a changed Coin98 active account and a returned Solana signer key that differs from the connected address.
 - Three-network USDT send/receive with each wallet: NOT_TESTED.
 - Wallet restore/address derivation on all three networks: NOT_TESTED.
