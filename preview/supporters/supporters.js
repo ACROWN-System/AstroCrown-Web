@@ -1128,6 +1128,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       });
       if (!response.ok) throw new Error("The programme status service is not available.");
       var payload = await response.json();
+      renderPurchaseInactivityTimer(payload && payload.programmeLifecycle || null);
       var prelaunch = payload &&
         payload.environment === "MAINNET" &&
         payload.programme &&
