@@ -34,7 +34,8 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /USDT purchase allowance within a programme-wide limit/);
   assert.match(html, /proposed USDT 1,000,000 programme-wide allowance/);
   assert.doesNotMatch(html, /programme-wide ACROWN cap/);
-  assert.match(html, /180-day purchase period begins at that operational activation/);
+  assert.match(html, /180-day purchase-exercise period begins only after ACROWN is officially launched and the approved ACS pure-floor purchase service is operationally available/);
+  assert.match(html, /entire personal purchase allowance is fully exercised/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
