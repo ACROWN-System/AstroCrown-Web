@@ -80,7 +80,7 @@ assert.doesNotMatch(supporterPage, /25 ACROWN per USD₮|USDT 150 transition thr
 assert.match(supporterPage, /All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch/i);
 assert.match(supporterPage, /New primary-wallet registration closes permanently at that cutoff and never resumes/i);
 assert.match(supporterPage, /180 days of inactivity/i);
-assert.doesNotMatch(supporterPage, /\\b180 days\\b(?! of inactivity)/i);
+assert.doesNotMatch(supporterPage, /\b180 days\b(?! of inactivity)/i);
 assert.match(supporterPage, /How does the rolling 180 days of inactivity timer work/i);
 assert.match(supporterPage, /shared programme-wide countdown starts at ACROWN launch/i);
 assert.match(supporterPage, /each completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price resets/i);
