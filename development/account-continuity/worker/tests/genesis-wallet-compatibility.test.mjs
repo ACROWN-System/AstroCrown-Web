@@ -7,6 +7,7 @@ const policy = JSON.parse(readFileSync(
   "utf8",
 ));
 
+// Genesis address policy: linked network addresses prove control only; the primary wallet remains the sole authority.
 const walletIds = [
   "bitget-wallet",
   "coin98",
