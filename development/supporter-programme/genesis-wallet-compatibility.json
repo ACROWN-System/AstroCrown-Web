@@ -1,59 +1,137 @@
 {
-  "schemaVersion": "1.0",
+  "schemaVersion": "1.1",
   "programme": "Genesis Programme",
-  "policy": "Only wallet applications that pass every required three-network capability and recovery test may be enabled for qualifying payments. Wallet provider metadata is discovery information, not proof of ownership or security.",
-  "paymentAsset": "USDT",
-  "requiredNetworks": [
+  "policy": "Qualify wallet applications only for the exact Genesis user journey: establish a wallet identity, make a qualifying USDT payment on a supported rail, and receive ACROWN as an SPL token on Solana. Wallet-specific dApp signing on every payment chain and wallet recovery testing on every chain are not requirements.",
+  "currentQualificationWave": [
+    "bitget-wallet",
+    "tokenpocket",
+    "coin98",
+    "okx-wallet",
+    "trust-wallet"
+  ],
+  "outsideCurrentWave": [
+    {
+      "walletId": "metamask",
+      "displayName": "MetaMask",
+      "status": "NOT_IN_CURRENT_FIVE_WALLET_WAVE",
+      "note": "Kept outside this five-wallet test wave based on the previously identified TRON dApp route limitation. That limitation is not a general disqualification under the narrowed workflow because TRON payment attribution is performed from on-chain evidence, not a TRON wallet dApp signature."
+    }
+  ],
+  "qualificationModel": {
+    "identity": {
+      "required": true,
+      "minimum": [
+        "Connect one supported primary wallet address",
+        "Prove control of that address with a domain-bound off-chain message signature on one supported identity route",
+        "Verify the signature server-side against the exact address, network, nonce, purpose, domain and expiry"
+      ],
+      "preferredIdentityNetworks": [
+        "ethereum",
+        "solana"
+      ],
+      "tronIdentity": "Optional where the selected wallet has a compatible TRON message-signing provider. TRON signing is not mandatory when the primary identity is established through Ethereum or Solana."
+    },
+    "payment": {
+      "required": true,
+      "acceptedRails": [
+        "ethereum",
+        "tron",
+        "solana"
+      ],
+      "minimum": [
+        "The participant can initiate a USDT transfer from the wallet application on at least one accepted rail",
+        "Genesis binds the payment to a server-created payment intent or equivalent approved attribution record",
+        "Genesis independently verifies the actual on-chain sender, canonical USDT asset, treasury, exact amount, transaction success, finality and uniqueness"
+      ],
+      "attribution": "The wallet does not need to notify Genesis that payment happened. A submitted transaction hash or a chain watcher starts discovery; the chain verifier is authoritative. The verified transaction records the actual sending address against the payment intent.",
+      "walletProviderNotRequired": [
+        "A dApp provider on every accepted payment network",
+        "A TRON signMessageV2 method solely to attribute a completed TRON payment",
+        "A wallet callback or browser event announcing payment completion"
+      ],
+      "networkSelection": "A wallet is not required to provide dApp integration or USDT transfer capability on all three rails. It may qualify for the rails it can actually use; the Genesis payment service must independently support and qualify each rail it offers."
+    },
+    "delivery": {
+      "required": true,
+      "network": "solana",
+      "assetStandard": "SPL",
+      "minimum": [
+        "Provide a valid Solana recipient address",
+        "Prove control of a separate Solana delivery address by an off-chain Solana message signature or a separately approved equivalent",
+        "Confirm that the wallet can receive the ACROWN SPL token"
+      ],
+      "transferActor": "AstroCrown's separately authorized Solana treasury/distribution signer submits the ACROWN transfer. The participant wallet is the recipient and does not need to sign or send the ACROWN transfer.",
+      "walletProviderNotRequired": [
+        "Participant-side Solana transaction signing for token receipt",
+        "Participant-side SOL gas payment for an AstroCrown-signed delivery"
+      ]
+    },
+    "notRequiredForWalletQualification": [
+      "Signing an identity challenge independently on all three payment networks",
+      "Connecting to a dApp on every payment network",
+      "Sending and receiving USDT on all three networks in every wallet application",
+      "Wallet-vendor recovery/restore testing across all three networks",
+      "The participant wallet signing or sending the ACROWN delivery transaction",
+      "Wallet-specific payment-completed notifications"
+    ]
+  },
+  "paymentRails": [
     {
       "network": "ethereum",
+      "networkIdentifier": "eip155:1",
       "assetStandard": "ERC-20",
       "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-      "requiredCapabilities": [
-        "receive",
-        "send",
-        "connect_or_verified_payment_proof",
-        "sign_primary_identity_challenge",
-        "restore"
+      "decimals": 6,
+      "serverVerification": [
+        "canonical contract and mainnet",
+        "exact Transfer event sender and treasury",
+        "exact six-decimal base-unit amount",
+        "successful receipt and canonical block",
+        "safe or finalized block evidence",
+        "unique transaction and transfer index"
       ]
     },
     {
       "network": "tron",
+      "networkIdentifier": "tron:mainnet",
       "assetStandard": "TRC-20",
       "token": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-      "requiredCapabilities": [
-        "receive",
-        "send",
-        "connect_or_verified_payment_proof",
-        "sign_primary_identity_challenge",
-        "restore"
+      "decimals": 6,
+      "serverVerification": [
+        "canonical contract and mainnet",
+        "exact Transfer event sender and treasury",
+        "exact six-decimal base-unit amount",
+        "successful smart-contract receipt",
+        "SolidityNode solidified receipt",
+        "unique transaction and transfer index"
       ]
     },
     {
       "network": "solana",
+      "networkIdentifier": "solana:mainnet-beta",
       "assetStandard": "SPL",
       "token": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-      "requiredCapabilities": [
-        "receive",
-        "send",
-        "connect_or_verified_payment_proof",
-        "sign_primary_identity_challenge",
-        "restore"
+      "tokenProgram": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 6,
+      "serverVerification": [
+        "Mainnet Beta genesis hash",
+        "canonical USDT mint and Token Program",
+        "exact source and treasury token-account owners",
+        "exact debit and credit deltas",
+        "successful finalized transaction",
+        "unique transaction and instruction index"
       ]
     }
   ],
-  "globalQualificationGates": [
-    "official_asset_and_network_verified",
-    "receive_and_send_test_on_each_network",
-    "primary_wallet_message_signature_verified",
-    "additional_address_link_signature_verified_or_separately_approved_transaction_proof",
-    "source_address_and_transaction_attribution_verified",
-    "mainnet_and_testnet_switching_verified",
-    "wallet_restore_and_address_derivation_verified",
-    "chain_specific_fee_requirements_disclosed",
-    "provider_and_mobile_or_extension_build_versions_recorded",
-    "end_to_end_tests_passed_on_all_three_networks",
-    "runtime_wallet_signature_output_matches_server_verifier",
-    "wallet_network_identity_explicitly_confirmed_for_each_chain"
+  "systemWideGates": [
+    "Each enabled payment rail passes its own independent chain-evidence and finality tests",
+    "Two independently operated RPC providers agree on the same normalized transfer evidence before payment credit",
+    "A server-created payment intent binds identity, payment purpose, selected network, exact asset, treasury and amount",
+    "Network plus transaction ID plus transfer or instruction index is unique and duplicate observations are idempotent",
+    "A verified payment creates only the separately defined purchase entitlement; it does not itself issue ACROWN",
+    "ACROWN purchase uses a contemporaneous approved ACS pure-floor quote and consumes entitlement atomically",
+    "The Solana ACROWN destination is verified and the outgoing token transfer is independently reconciled",
+    "All financial events are append-only and corrections are compensating events"
   ],
   "candidates": [
     {
@@ -64,151 +142,28 @@
         "Chrome Extension",
         "Bitget Wallet App DApp browser"
       ],
-      "documentedNetworkApis": {
-        "ethereum": {
-          "provider": "window.bitkeep.ethereum",
-          "capabilities": [
-            "connect",
-            "signPersonalMessage",
-            "signTypedMessage",
-            "switchChain"
-          ]
-        },
-        "tron": {
-          "provider": "window.bitkeep.tronLink / window.bitkeep.tronWeb",
-          "capabilities": [
-            "tron_requestAccounts",
-            "signMessageV2",
-            "signTransaction"
-          ]
-        },
-        "solana": {
-          "provider": "window.bitkeep.solana",
-          "capabilities": [
-            "connect",
-            "signMessage",
-            "signTransaction",
-            "signAndSendTransaction"
-          ]
-        }
+      "identityPaths": {
+        "ethereum": "window.bitkeep.ethereum with personal-message signing",
+        "solana": "window.bitkeep.solana with connect and signMessage"
       },
-      "notes": [
-        "Official developer documentation explicitly describes EVM, TRON and Solana dApp providers and message-signing APIs.",
-        "This is the strongest documented unified three-network candidate in the current register.",
-        "Bitget's WalletConnect documentation lists Ethereum and Solana for its mobile WalletConnect route, not TRON; qualify its Chrome extension and in-app DApp browser routes separately rather than assuming WalletConnect supplies all three networks.",
-        "The exact USDT send/receive flows, wallet restore/address derivation and provider behavior must still pass Genesis end-to-end tests."
-      ],
-      "blockingGates": [
-        "three_network_usdt_send_receive_tests",
-        "primary_wallet_message_signature_verification_each_network",
-        "additional_address_link_signature_verification_each_network",
-        "wallet_restore_test_all_three_networks",
-        "platform_route_qualification",
-        "provider_build_version_record"
-      ],
-      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
-      "adapterStatus": {
-        "evm": "DIRECT_PROVIDER_ADAPTER_ADDED",
-        "tron": "DIRECT_PROVIDER_ADAPTER_ADDED_SIGNMESSAGEV2_REQUIRED",
-        "solana": "DIRECT_PROVIDER_ADAPTER_ADDED_WALLET_STANDARD_SHAPE",
-        "liveWalletTests": "NOT_RUN"
-      }
-    },
-    {
-      "walletId": "coin98",
-      "displayName": "Coin98 Super Wallet",
-      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
-      "documentedPlatforms": [
-        "Coin98 Extension",
-        "Coin98 Super Wallet mobile app / DApp browser"
-      ],
-      "documentedNetworkApis": {
-        "ethereum": {
-          "provider": "window.coin98.provider / EIP-1193 and EIP-6963",
-          "capabilities": [
-            "EIP-1193",
-            "account_access",
-            "eth_sign documented; Genesis personal_sign compatibility must be tested"
-          ]
-        },
-        "tron": {
-          "provider": "No TRON extension dApp provider/sign-message path confirmed in the reviewed official developer docs",
-          "capabilities": [
-            "asset support documented; dApp account/signature path requires confirmation"
-          ]
-        },
-        "solana": {
-          "provider": "window.coin98.sol",
-          "capabilities": [
-            "sol_accounts",
-            "sol_requestAccounts",
-            "sol_sign transaction",
-            "sol_verify",
-            "sol_signMessage (Coin98 Connect integration)"
-          ]
-        }
+      "paymentAndDeliveryAssessment": {
+        "documentedAssetNetworks": [
+          "ethereum",
+          "tron",
+          "solana"
+        ],
+        "paymentUse": "Candidate for user-initiated USDT transfer through its native wallet interface on a selected accepted rail",
+        "solanaDelivery": "Solana address and SPL receiving support documented; verify on the exact app/extension build"
       },
-      "notes": [
-        "Coin98 officially documents multichain asset management across Ethereum, Solana and TRON and publishes EVM and Solana dApp provider APIs.",
-        "The official Coin98 Connect integration explicitly documents window.coin98.sol.request({method: 'sol_signMessage', params: [message]}), so arbitrary Solana off-chain message signing is a documented capability rather than an assumed gap.",
-        "The actual Solana signMessage return encoding and the current extension/mobile provider behavior must still be tested against Genesis's 64-byte Ed25519 verifier and connected address.",
-        "The reviewed official documentation still does not establish a complete Coin98 TRON dApp account-connection and TIP-191-compatible signMessageV2 route. Asset support alone does not satisfy this requirement.",
-        "Coin98 restore documentation warns that choosing the wrong New Standard or Old Standard for some chains, including Solana and TRON, may derive different addresses; record and verify the exact restore standard."
-      ],
+      "tronDappMessageSignatureRequired": false,
       "blockingGates": [
-        "published_or_tested_tron_dapp_connect_and_message_signature_path",
-        "coin98_solana_signMessage_output_encoding_and_address_binding_test",
-        "coin98_evm_personal_sign_compatibility_test",
-        "three_network_usdt_send_receive_tests",
-        "additional_address_link_attribution_each_network",
-        "wallet_restore_address_derivation_test_all_three_networks",
-        "platform_route_qualification",
-        "provider_build_version_record"
+        "live primary-wallet signature and server verification",
+        "selected-rail USDT transfer UX and exact asset confirmation",
+        "verified Solana recipient proof",
+        "SPL ACROWN test receipt",
+        "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
-    },
-    {
-      "walletId": "metamask",
-      "displayName": "MetaMask",
-      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
-      "notes": [
-        "Ethereum and Solana wallet integration are candidates for testing.",
-        "TRON asset management is documented, but the currently reviewed MetaMask TRON guide says direct TRON dApp connection is not available.",
-        "A secure, tested method is still required to prove and associate a MetaMask TRON sending address with the primary Genesis wallet. A manual transfer and explorer link alone do not establish that cross-chain identity link."
-      ],
-      "blockingGates": [
-        "tron_primary_wallet_message_signature_or_approved_transaction_proof",
-        "three_network_end_to_end_tests",
-        "wallet_restore_test"
-      ],
-      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
-      "adapterStatus": {
-        "evm": "EIP6963_AND_EIP1193_DISCOVERY",
-        "tron": "NO_APPROVED_TRON_MESSAGE_PROOF_PATH",
-        "solana": "WALLET_STANDARD_DISCOVERY",
-        "liveWalletTests": "NOT_RUN"
-      }
-    },
-    {
-      "walletId": "okx-wallet",
-      "displayName": "OKX Wallet",
-      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
-      "notes": [
-        "Candidate for a unified three-network browser-wallet workflow.",
-        "The actual extension/mobile provider, asset send/receive paths, signatures, address derivation and restoration must be tested before approval."
-      ],
-      "blockingGates": [
-        "three_network_end_to_end_tests",
-        "wallet_restore_test",
-        "provider_build_version_record"
-      ],
-      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
-      "adapterStatus": {
-        "evm": "DIRECT_PROVIDER_ADAPTER_ADDED_WHEN_NAMESPACE_AVAILABLE",
-        "tron": "DISPLAY_CONNECTION_ADAPTER_ADDED_SIGNATURE_NOT_ACCEPTED_WITHOUT_SIGNMESSAGEV2",
-        "solana": "DIRECT_PROVIDER_ADAPTER_ADDED_SIGNMESSAGE",
-        "liveWalletTests": "NOT_RUN"
-      }
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
     },
     {
       "walletId": "tokenpocket",
@@ -218,81 +173,126 @@
         "Chrome Extension",
         "TokenPocket Mobile DApp webview"
       ],
-      "documentedNetworkApis": {
-        "ethereum": {
-          "provider": "window.ethereum / window.tokenpocket.ethereum",
-          "capabilities": [
-            "EIP-1193",
-            "EIP-6963",
-            "account_access",
-            "message_signing_methods_documented"
-          ]
-        },
-        "tron": {
-          "provider": "window.tokenpocket.tron / window.tokenpocket.tronWeb",
-          "capabilities": [
-            "TIP-1102 account request",
-            "signMessageV2"
-          ]
-        },
-        "solana": {
-          "provider": "TokenPocket Solana Provider API is listed in the official extension developer index; mobile SDK documents window.solana connect and signMessage",
-          "capabilities": [
-            "connect",
-            "signMessage",
-            "platform_specific_adapter_validation"
-          ]
-        }
+      "identityPaths": {
+        "ethereum": "EIP-1193 / EIP-6963 provider",
+        "solana": "Solana provider route with connect and signMessage; extension and mobile routes require separate confirmation"
       },
-      "notes": [
-        "Official TokenPocket documentation lists Ethereum, TRON and Solana support and has separate EVM, TRON and Solana developer documentation.",
-        "The TRON developer page documents TIP-1102 account access and TronWeb signMessageV2.",
-        "The official developer index includes a Solana Provider API page, while TokenPocket's mobile JavaScript SDK documents connect and signMessage through window.solana.",
-        "The exact Solana provider behavior and primary-wallet message-signature flow must be confirmed on the current extension and mobile-app versions separately.",
-        "The provider's platform and wallet-version details must be captured; do not assume extension and mobile expose identical globals."
-      ],
+      "paymentAndDeliveryAssessment": {
+        "documentedAssetNetworks": [
+          "ethereum",
+          "tron",
+          "solana"
+        ],
+        "paymentUse": "Candidate for user-initiated USDT transfer through its native wallet interface on a selected accepted rail",
+        "solanaDelivery": "Solana address and SPL receiving support documented; verify the actual receiving account and token display"
+      },
+      "tronDappMessageSignatureRequired": false,
       "blockingGates": [
-        "three_network_usdt_send_receive_tests",
-        "primary_wallet_message_signature_verification_each_network",
-        "additional_address_link_signature_verification_each_network",
-        "wallet_restore_test_all_three_networks",
-        "solana_extension_provider_validation",
-        "platform_route_qualification",
-        "provider_build_version_record"
+        "live primary-wallet signature and server verification",
+        "selected-rail USDT transfer UX and exact asset confirmation",
+        "Solana extension or mobile recipient proof on the selected platform",
+        "SPL ACROWN test receipt",
+        "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
-      "adapterStatus": {
-        "evm": "DIRECT_PROVIDER_ADAPTER_ADDED",
-        "tron": "DIRECT_PROVIDER_ADAPTER_ADDED_SIGNMESSAGEV2_REQUIRED",
-        "solana": "MOBILE_WINDOW_SOLANA_AND_OPTIONAL_EXTENSION_PROVIDER_ADAPTER_ADDED",
-        "liveWalletTests": "NOT_RUN"
-      }
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
+    },
+    {
+      "walletId": "coin98",
+      "displayName": "Coin98 Super Wallet",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "documentedPlatforms": [
+        "Coin98 Extension",
+        "Coin98 Super Wallet mobile app / DApp browser"
+      ],
+      "identityPaths": {
+        "solana": "window.coin98.sol with sol_requestAccounts and documented sol_signMessage",
+        "ethereum": "window.coin98.provider; EVM personal_sign compatibility is optional if Solana is the selected primary identity route"
+      },
+      "paymentAndDeliveryAssessment": {
+        "documentedAssetNetworks": [
+          "ethereum",
+          "tron",
+          "solana"
+        ],
+        "paymentUse": "A missing TRON dApp signature route does not block payment use; the completed transfer is attributed from chain evidence and its payment intent",
+        "solanaDelivery": "Solana address and SPL receiving support documented; confirm sol_signMessage output and address binding for a separate delivery address"
+      },
+      "tronDappMessageSignatureRequired": false,
+      "blockingGates": [
+        "live Solana primary or delivery-address signature accepted by the Genesis verifier",
+        "selected-rail USDT transfer UX and exact asset confirmation",
+        "SPL ACROWN test receipt",
+        "exact New/Old wallet derivation choice recorded only where it affects the selected Solana address",
+        "exact platform and version record"
+      ],
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
+    },
+    {
+      "walletId": "okx-wallet",
+      "displayName": "OKX Wallet",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "documentedPlatforms": [
+        "OKX Wallet Extension",
+        "OKX Wallet App"
+      ],
+      "identityPaths": {
+        "ethereum": "EVM provider",
+        "solana": "Solana provider with message signing"
+      },
+      "paymentAndDeliveryAssessment": {
+        "documentedAssetNetworks": [
+          "ethereum",
+          "tron",
+          "solana"
+        ],
+        "paymentUse": "The wallet's native TRON USDT send flow can be used without treating trx.sign as a Genesis identity signature",
+        "solanaDelivery": "Solana address and SPL receiving support documented; verify on the exact app/extension build"
+      },
+      "tronDappMessageSignatureRequired": false,
+      "blockingGates": [
+        "live EVM or Solana primary-wallet signature and server verification",
+        "selected-rail USDT transfer UX and exact asset confirmation",
+        "verified Solana recipient proof",
+        "SPL ACROWN test receipt",
+        "exact platform and version record"
+      ],
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
     },
     {
       "walletId": "trust-wallet",
       "displayName": "Trust Wallet",
       "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
-      "notes": [
-        "Candidate for a unified three-network browser-wallet workflow.",
-        "The actual extension/mobile provider, asset send/receive paths, signatures, address derivation and restoration must be tested before approval."
+      "documentedPlatforms": [
+        "Browser Extension",
+        "Trust Wallet Mobile"
       ],
+      "identityPaths": {
+        "ethereum": "EVM provider through EIP-1193 / EIP-6963",
+        "solana": "Solana Wallet Standard provider where announced"
+      },
+      "paymentAndDeliveryAssessment": {
+        "documentedAssetNetworks": [
+          "ethereum",
+          "tron",
+          "solana"
+        ],
+        "paymentUse": "Candidate for user-initiated USDT transfer through its native wallet interface on a selected accepted rail",
+        "solanaDelivery": "Solana address and SPL receiving support documented; verify on the exact app/extension build"
+      },
+      "tronDappMessageSignatureRequired": false,
       "blockingGates": [
-        "three_network_end_to_end_tests",
-        "wallet_restore_test",
-        "provider_build_version_record"
+        "live EVM or Solana primary-wallet signature and server verification",
+        "selected-rail USDT transfer UX and exact asset confirmation",
+        "Solana provider connection and recipient proof on selected platform",
+        "SPL ACROWN test receipt",
+        "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_DISCOVERY_OR_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
-      "adapterStatus": {
-        "evm": "EIP6963_AND_EIP1193_DISCOVERY",
-        "tron": "TIP6963_DISCOVERY_WHEN_ANNOUNCED",
-        "solana": "WALLET_STANDARD_DISCOVERY",
-        "liveWalletTests": "NOT_RUN"
-      }
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
     }
   ],
   "productionAcceptance": {
     "enabled": false,
     "qualifiedWalletIds": [],
-    "reason": "Automated provider-adapter contract tests are not equivalent to testing installed wallet builds. No candidate has yet passed live signature, USDT send/receive, wallet restore/address derivation and three-network end-to-end qualification."
+    "reason": "The required live primary-identity signature, selected payment-route confirmation, verified Solana recipient and SPL receipt test have not been completed on installed wallet builds. The narrowed policy does not require each wallet to sign on all three payment chains or undergo three-chain restore testing."
   }
 }
