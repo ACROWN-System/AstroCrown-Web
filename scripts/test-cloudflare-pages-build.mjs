@@ -78,7 +78,7 @@ assert.match(supporterPage, /full USDT principal.*ACS reserve destination.*V/is)
 assert.match(supporterPage, /id="participant-network-fee-policy"/i);
 assert.doesNotMatch(supporterPage, /25 ACROWN per USD₮|USDT 150 transition threshold|USDT 250,000 target/i);
 assert.match(supporterPage, /180-day purchase period begins at that operational activation/i);
-assert.match(supporterPage, /unused personal allowance/i);
+assert.match(supporterPage, /unused personal USDT-denominated purchase allowance/i);
 assert.match(supporterPage, /USDT purchase allowance within a programme-wide limit/i);
 assert.match(supporterPage, /proposed USDT 1,000,000 programme-wide allowance/i);
 assert.doesNotMatch(supporterPage, /programme-wide ACROWN cap/i);
