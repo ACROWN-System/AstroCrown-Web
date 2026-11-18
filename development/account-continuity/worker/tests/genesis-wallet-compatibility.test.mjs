@@ -50,13 +50,21 @@ test("TokenPocket candidate records EVM, TRON and Solana proof paths and platfor
   assert.ok(tp.blockingGates.includes("platform_route_qualification"));
 });
 
-test("Coin98 remains a candidate with explicit, testable TRON and Solana signing blockers", () => {
+test("Coin98 remains a candidate with documented Solana message signing and an unresolved TRON proof route", () => {
   const coin98 = policy.candidates.find((item) => item.walletId === "coin98");
   assert.ok(coin98);
-  assert.ok(coin98.notes.some((note) => /does not yet explicitly document an arbitrary off-chain message-signing method/i.test(note)));
+  assert.ok(coin98.documentedNetworkApis.solana.capabilities.includes("sol_signMessage (Coin98 Connect integration)"));
+  assert.ok(coin98.notes.some((note) => /explicitly documents.*sol_signMessage/i.test(note)));
   assert.ok(coin98.blockingGates.includes("published_or_tested_tron_dapp_connect_and_message_signature_path"));
-  assert.ok(coin98.blockingGates.includes("documented_or_tested_solana_offchain_message_signature_path"));
+  assert.ok(coin98.blockingGates.includes("coin98_solana_signMessage_output_encoding_and_address_binding_test"));
+  assert.ok(coin98.blockingGates.includes("coin98_evm_personal_sign_compatibility_test"));
   assert.ok(coin98.blockingGates.includes("wallet_restore_address_derivation_test_all_three_networks"));
+});
+
+test("OKX TRON display connection does not count as TIP-191 identity proof", () => {
+  const okx = policy.candidates.find((item) => item.walletId === "okx-wallet");
+  assert.ok(okx);
+  assert.match(okx.adapterStatus.tron, /SIGNATURE_NOT_ACCEPTED_WITHOUT_SIGNMESSAGEV2/);
 });
 
 test("MetaMask TRON dApp limitation remains a blocking qualification item", () => {
