@@ -175,10 +175,32 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 "'new identity sign-in',?,?)",
                 (now, now + 600),
             )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "paused during the 24-hour pre-launch freeze"):
+            self.db.execute(
+                "INSERT INTO genesis_programme_allowance_events(event_id,identity_id,event_type,amount_usdt_base_units,"
+                "resulting_earned_usdt_base_units,resulting_reserved_usdt_base_units,resulting_consumed_usdt_base_units,"
+                "rules_version,created_at) VALUES('evt-frozen-right','gid-existing','QUALIFYING_PAYMENT_CREDIT',"
+                "'1000000','1000000','0','0','rules-v1',?)",
+                (now,),
+            )
         # Actual launch resumes the programme for existing identities, but never reopens registration.
         self.db.execute(
             "UPDATE genesis_programme_control SET acrown_launched_at=?,updated_at=? WHERE singleton=1",
             (launch, launch),
+        )
+        self.db.execute(
+            "INSERT INTO genesis_programme_allowance_events(event_id,identity_id,event_type,amount_usdt_base_units,"
+            "resulting_earned_usdt_base_units,resulting_reserved_usdt_base_units,resulting_consumed_usdt_base_units,"
+            "rules_version,created_at) VALUES('evt-resumed-right','gid-existing','QUALIFYING_PAYMENT_CREDIT',"
+            "'1000000','1000000','0','0','rules-v1',?)",
+            (launch + 10,),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT purchase_window_last_purchase_at,purchase_window_closes_at "
+                "FROM genesis_programme_control WHERE singleton=1"
+            ).fetchone(),
+            (launch + 10, launch + 10 + 15_552_000),
         )
         self.db.execute(
             "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
