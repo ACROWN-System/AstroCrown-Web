@@ -640,7 +640,10 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       }
       var address = Array.isArray(accounts) ? accounts.find(isTronAddress) :
         (typeof accounts === "string" && isTronAddress(accounts) ? accounts : null);
-      var tronWeb = wallet.tronWeb || wallet.provider.tronWeb;
+      var tronWeb = wallet.tronWeb || wallet.provider.tronWeb ||
+        (wallet.walletId === "bitget-wallet" && window.bitkeep ? window.bitkeep.tronWeb : null) ||
+        (wallet.walletId === "tokenpocket" && window.tokenpocket ? window.tokenpocket.tronWeb : null) ||
+        (wallet.walletId === "okx-wallet" && window.okxwallet && window.okxwallet.tronLink ? window.okxwallet.tronLink.tronWeb : null);
       if (!address && tronWeb && tronWeb.defaultAddress) address = tronWeb.defaultAddress.base58;
       if (!isTronAddress(address)) throw new Error("The selected wallet did not return a valid public TRON address.");
       connectedTronProvider = wallet.provider;
