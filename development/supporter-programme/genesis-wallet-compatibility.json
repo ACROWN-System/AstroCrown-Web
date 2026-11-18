@@ -43,13 +43,14 @@
         "Genesis binds the payment to a server-created payment intent or equivalent approved attribution record",
         "Genesis independently verifies the actual on-chain sender, canonical USDT asset, treasury, exact amount, transaction success, finality and uniqueness"
       ],
-      "attribution": "The wallet does not need to notify Genesis that payment happened. A submitted transaction hash or a chain watcher starts discovery; the chain verifier is authoritative. The verified transaction records the actual sending address against the payment intent.",
+      "attribution": "Target design: the wallet does not notify Genesis that payment happened. A submitted transaction hash or chain watcher starts discovery; the chain verifier is authoritative. The verified transaction records the actual sending address against a server-created payment intent. Current implementation boundary: the read-only parsers and two-source reconciliation exist, but the payment-intent API and one-time on-chain source-address proof/write path do not yet exist. The current payment schema still requires a pre-verified PAYMENT wallet-address row.",
       "walletProviderNotRequired": [
         "A dApp provider on every accepted payment network",
         "A TRON signMessageV2 method solely to attribute a completed TRON payment",
         "A wallet callback or browser event announcing payment completion"
       ],
-      "networkSelection": "A wallet is not required to provide dApp integration or USDT transfer capability on all three rails. It may qualify for the rails it can actually use; the Genesis payment service must independently support and qualify each rail it offers."
+      "networkSelection": "A wallet is not required to provide dApp integration or USDT transfer capability on all three rails. It may qualify for the rails it can actually use; the Genesis payment service must independently support and qualify each rail it offers.",
+      "implementationStatus": "READ_ONLY_CHAIN_PARSERS_AND_RPC_RECONCILIATION_IMPLEMENTED; PAYMENT_INTENT_AND_ONCHAIN_PAYMENT_SOURCE_BINDING_NOT_IMPLEMENTED"
     },
     "delivery": {
       "required": true,
@@ -124,6 +125,7 @@
     }
   ],
   "systemWideGates": [
+    "Implement a server-created payment intent and safe one-time on-chain proof path for a source address that is not already linked by an off-chain wallet signature; until then only the primary or a previously verified linked payment address can be credited.",
     "Each enabled payment rail passes its own independent chain-evidence and finality tests",
     "Two independently operated RPC providers agree on the same normalized transfer evidence before payment credit",
     "A server-created payment intent binds identity, payment purpose, selected network, exact asset, treasury and amount",
@@ -293,6 +295,6 @@
   "productionAcceptance": {
     "enabled": false,
     "qualifiedWalletIds": [],
-    "reason": "The required live primary-identity signature, selected payment-route confirmation, verified Solana recipient and SPL receipt test have not been completed on installed wallet builds. The narrowed policy does not require each wallet to sign on all three payment chains or undergo three-chain restore testing."
+    "reason": "The payment-intent and one-time on-chain payment-source binding/write path are not implemented. Live identity signatures, selected payment-route confirmation, verified Solana recipient and SPL receipt tests on installed wallet builds also remain incomplete. The narrowed policy does not require each wallet to sign on all three payment chains or undergo three-chain restore testing."
   }
 }
