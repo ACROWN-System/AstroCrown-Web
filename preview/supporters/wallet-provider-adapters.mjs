@@ -206,6 +206,7 @@ function chainsFromGenesisHash(hash) {
 function accountAddress(value) {
   if (typeof value === "string") return value;
   if (value && typeof value.address === "string") return value.address;
+  if (value && value.publicKey && typeof value.publicKey.toBase58 === "function") return value.publicKey.toBase58();
   if (value && value.publicKey && typeof value.publicKey.toString === "function") return value.publicKey.toString();
   if (value && value.publicKey && typeof value.publicKey === "string") return value.publicKey;
   return "";
