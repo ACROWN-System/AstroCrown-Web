@@ -1,7 +1,7 @@
 {
-  "schemaVersion": "1.1",
+  "schemaVersion": "1.2",
   "programme": "Genesis Programme",
-  "policy": "Qualify wallet applications only for the exact Genesis user journey: establish a wallet identity, make a qualifying USDT payment on a supported rail, and receive ACROWN as an SPL token on Solana. Wallet-specific dApp signing on every payment chain and wallet recovery testing on every chain are not requirements.",
+  "policy": "One primary Genesis wallet identity; additional network-specific payment addresses are registered in the same profile only after independent ownership proofs. Payments are accepted only from pre-registered addresses on their matching network. The primary wallet alone authorizes Genesis account actions. Wallet-app labels/provider metadata are not ownership proof.",
   "currentQualificationWave": [
     "bitget-wallet",
     "tokenpocket",
@@ -14,22 +14,24 @@
       "walletId": "metamask",
       "displayName": "MetaMask",
       "status": "NOT_IN_CURRENT_FIVE_WALLET_WAVE",
-      "note": "Kept outside this five-wallet test wave based on the previously identified TRON dApp route limitation. That limitation is not a general disqualification under the narrowed workflow because TRON payment attribution is performed from on-chain evidence, not a TRON wallet dApp signature."
+      "note": "Kept outside this five-wallet test wave. A wallet may qualify for Ethereum or Solana if those routes pass. To use TRON for Genesis payments, it must also support a valid TRON address-link ownership proof; native TRON send capability alone is insufficient."
     }
   ],
   "qualificationModel": {
     "identity": {
       "required": true,
       "minimum": [
-        "Connect one supported primary wallet address",
-        "Prove control of that address with a domain-bound off-chain message signature on one supported identity route",
-        "Verify the signature server-side against the exact address, network, nonce, purpose, domain and expiry"
+        "Connect and prove control of one primary address with a domain-bound off-chain signature",
+        "Use the primary address as the sole Genesis identity, login, account authority and recovery anchor",
+        "Connect the same wallet application on any additional network the owner intends to use",
+        "Prove control of every additional network address with its own fresh, network-specific domain-bound signature",
+        "Verify every signature server-side against address, network, nonce, purpose, domain, identity and expiry"
       ],
       "preferredIdentityNetworks": [
         "ethereum",
         "solana"
       ],
-      "tronIdentity": "Optional where the selected wallet has a compatible TRON message-signing provider. TRON signing is not mandatory when the primary identity is established through Ethereum or Solana."
+      "tronIdentity": "TRON signing is not required to establish primary identity on Ethereum or Solana. A TRON address must independently pass the TRON address-link challenge before it can originate a Genesis qualifying payment."
     },
     "payment": {
       "required": true,
@@ -39,18 +41,20 @@
         "solana"
       ],
       "minimum": [
-        "The participant can initiate a USDT transfer from the wallet application on at least one accepted rail",
-        "Genesis binds the payment to a server-created payment intent or equivalent approved attribution record",
-        "Genesis independently verifies the actual on-chain sender, canonical USDT asset, treasury, exact amount, transaction success, finality and uniqueness"
+        "Initiate USDT from an address already verified and registered as a PAYMENT address in the primary Genesis wallet profile for that same network",
+        "Bind the payment intent to the primary identity and that pre-registered source address",
+        "Independently verify that the actual on-chain sender exactly matches the registered address, canonical USDT asset, treasury, amount, success, finality and uniqueness"
       ],
-      "attribution": "Target design: the wallet does not notify Genesis that payment happened. A submitted transaction hash or chain watcher starts discovery; the chain verifier is authoritative. The verified transaction records the actual sending address against a server-created payment intent. Current implementation boundary: the read-only parsers and two-source reconciliation exist, but the payment-intent API and one-time on-chain source-address proof/write path do not yet exist. The current payment schema still requires a pre-verified PAYMENT wallet-address row.",
+      "attribution": "Genesis does not rely on wallet notifications. The actual sender must exactly match a previously verified PAYMENT address belonging to the same primary Genesis identity and network. The existing D1 schema and trigger enforce this pre-registration rule. Read-only parsers and two-source reconciliation are implemented; the payment-intent API, live RPC clients and entitlement-credit writer are not. Genesis does not accept unlinked one-time payment sources.",
       "walletProviderNotRequired": [
-        "A dApp provider on every accepted payment network",
-        "A TRON signMessageV2 method solely to attribute a completed TRON payment",
-        "A wallet callback or browser event announcing payment completion"
+        "A dApp provider on every accepted payment network if the wallet is not used on that rail",
+        "A wallet callback or browser event announcing payment completion",
+        "Wallet-vendor recovery/restore testing on every network"
       ],
-      "networkSelection": "A wallet is not required to provide dApp integration or USDT transfer capability on all three rails. It may qualify for the rails it can actually use; the Genesis payment service must independently support and qualify each rail it offers.",
-      "implementationStatus": "READ_ONLY_CHAIN_PARSERS_AND_RPC_RECONCILIATION_IMPLEMENTED; PAYMENT_INTENT_AND_ONCHAIN_PAYMENT_SOURCE_BINDING_NOT_IMPLEMENTED"
+      "networkSelection": "A wallet application need not support all three rails. The participant may use only rails for which the app can expose and independently prove the corresponding network address and initiate canonical USDT transfer. An address without a network-specific ownership proof cannot be used for Genesis payment on that rail.",
+      "implementationStatus": "READ_ONLY_CHAIN_PARSERS_AND_RPC_RECONCILIATION_IMPLEMENTED; PAYMENT_INTENT_LIVE_RPC_AND_ENTITLEMENT_WRITER_NOT_IMPLEMENTED; PRE_REGISTERED_PAYMENT_ADDRESS_REQUIRED",
+      "tronAddressProof": "A TRON address used for Genesis payment must pass the TRON wallet-link challenge. A native transfer alone does not establish profile ownership.",
+      "genesisAddressPolicy": "One primary wallet identity; independently verified network addresses grouped under that identity; only the primary wallet authorizes Genesis actions; payment sender must match a pre-registered address."
     },
     "delivery": {
       "required": true,
@@ -68,8 +72,8 @@
       ]
     },
     "notRequiredForWalletQualification": [
-      "Signing an identity challenge independently on all three payment networks",
-      "Connecting to a dApp on every payment network",
+      "Registering payment addresses on all three networks when the participant does not intend to use all three rails",
+      "Connecting to a dApp on every payment network the participant does not intend to use",
       "Sending and receiving USDT on all three networks in every wallet application",
       "Wallet-vendor recovery/restore testing across all three networks",
       "The participant wallet signing or sending the ACROWN delivery transaction",
@@ -125,7 +129,8 @@
     }
   ],
   "systemWideGates": [
-    "Implement a server-created payment intent and safe one-time on-chain proof path for a source address that is not already linked by an off-chain wallet signature; until then only the primary or a previously verified linked payment address can be credited.",
+    "Every Genesis payment source address must already be independently verified and registered as a PAYMENT address under the same primary identity and network; no unlinked one-time payment-source exception is permitted.",
+    "The primary wallet alone authorizes Genesis account actions; linked network addresses prove only their own control and never receive login, recovery, profile or entitlement-administration authority.",
     "Each enabled payment rail passes its own independent chain-evidence and finality tests",
     "Two independently operated RPC providers agree on the same normalized transfer evidence before payment credit",
     "A server-created payment intent binds identity, payment purpose, selected network, exact asset, treasury and amount",
@@ -154,18 +159,19 @@
           "tron",
           "solana"
         ],
-        "paymentUse": "Candidate for user-initiated USDT transfer through its native wallet interface on a selected accepted rail",
+        "paymentUse": "Candidate only for payment rails where its network-specific address can be independently verified and registered in the primary wallet profile, and its native UI can initiate the canonical USDT transfer.",
         "solanaDelivery": "Solana address and SPL receiving support documented; verify on the exact app/extension build"
       },
       "tronDappMessageSignatureRequired": false,
       "blockingGates": [
         "live primary-wallet signature and server verification",
-        "selected-rail USDT transfer UX and exact asset confirmation",
+        "address-link proof on every selected payment network plus selected-rail USDT transfer UX and exact asset confirmation",
         "verified Solana recipient proof",
         "SPL ACROWN test receipt",
         "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "tronAddressLinkProofRequiredForTronPayments": true
     },
     {
       "walletId": "tokenpocket",
@@ -185,18 +191,19 @@
           "tron",
           "solana"
         ],
-        "paymentUse": "Candidate for user-initiated USDT transfer through its native wallet interface on a selected accepted rail",
+        "paymentUse": "Candidate only for payment rails where its network-specific address can be independently verified and registered in the primary wallet profile, and its native UI can initiate the canonical USDT transfer.",
         "solanaDelivery": "Solana address and SPL receiving support documented; verify the actual receiving account and token display"
       },
       "tronDappMessageSignatureRequired": false,
       "blockingGates": [
         "live primary-wallet signature and server verification",
-        "selected-rail USDT transfer UX and exact asset confirmation",
+        "address-link proof on every selected payment network plus selected-rail USDT transfer UX and exact asset confirmation",
         "Solana extension or mobile recipient proof on the selected platform",
         "SPL ACROWN test receipt",
         "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "tronAddressLinkProofRequiredForTronPayments": true
     },
     {
       "walletId": "coin98",
@@ -216,18 +223,19 @@
           "tron",
           "solana"
         ],
-        "paymentUse": "A missing TRON dApp signature route does not block payment use; the completed transfer is attributed from chain evidence and its payment intent",
+        "paymentUse": "Candidate only for payment rails where its network-specific address can be independently verified and registered in the primary wallet profile, and its native UI can initiate the canonical USDT transfer.",
         "solanaDelivery": "Solana address and SPL receiving support documented; confirm sol_signMessage output and address binding for a separate delivery address"
       },
       "tronDappMessageSignatureRequired": false,
       "blockingGates": [
         "live Solana primary or delivery-address signature accepted by the Genesis verifier",
-        "selected-rail USDT transfer UX and exact asset confirmation",
+        "address-link proof on every selected payment network plus selected-rail USDT transfer UX and exact asset confirmation",
         "SPL ACROWN test receipt",
         "exact New/Old wallet derivation choice recorded only where it affects the selected Solana address",
         "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "tronAddressLinkProofRequiredForTronPayments": true
     },
     {
       "walletId": "okx-wallet",
@@ -247,18 +255,19 @@
           "tron",
           "solana"
         ],
-        "paymentUse": "The wallet's native TRON USDT send flow can be used without treating trx.sign as a Genesis identity signature",
+        "paymentUse": "Candidate only for payment rails where its network-specific address can be independently verified and registered in the primary wallet profile, and its native UI can initiate the canonical USDT transfer.",
         "solanaDelivery": "Solana address and SPL receiving support documented; verify on the exact app/extension build"
       },
       "tronDappMessageSignatureRequired": false,
       "blockingGates": [
         "live EVM or Solana primary-wallet signature and server verification",
-        "selected-rail USDT transfer UX and exact asset confirmation",
+        "address-link proof on every selected payment network plus selected-rail USDT transfer UX and exact asset confirmation",
         "verified Solana recipient proof",
         "SPL ACROWN test receipt",
         "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "tronAddressLinkProofRequiredForTronPayments": true
     },
     {
       "walletId": "trust-wallet",
@@ -278,18 +287,19 @@
           "tron",
           "solana"
         ],
-        "paymentUse": "Candidate for user-initiated USDT transfer through its native wallet interface on a selected accepted rail",
+        "paymentUse": "Candidate only for payment rails where its network-specific address can be independently verified and registered in the primary wallet profile, and its native UI can initiate the canonical USDT transfer.",
         "solanaDelivery": "Solana address and SPL receiving support documented; verify on the exact app/extension build"
       },
       "tronDappMessageSignatureRequired": false,
       "blockingGates": [
         "live EVM or Solana primary-wallet signature and server verification",
-        "selected-rail USDT transfer UX and exact asset confirmation",
+        "address-link proof on every selected payment network plus selected-rail USDT transfer UX and exact asset confirmation",
         "Solana provider connection and recipient proof on selected platform",
         "SPL ACROWN test receipt",
         "exact platform and version record"
       ],
-      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED"
+      "integrationStatus": "PROVIDER_ADAPTER_TESTS_ONLY_LIVE_WALLET_NOT_QUALIFIED",
+      "tronAddressLinkProofRequiredForTronPayments": true
     }
   ],
   "productionAcceptance": {
