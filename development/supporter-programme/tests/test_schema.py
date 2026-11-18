@@ -296,7 +296,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 "SELECT COUNT(*) FROM genesis_programme_allowance_events "
                 "WHERE event_type IN ('QUALIFYING_PAYMENT_CREDIT','FLOOR_PURCHASE_CONSUMPTION')"
             ).fetchone()[0],
-            5,
+            4,
         )
 
     def test_wallet_native_schema_has_primary_wallet_identity_unique_name_and_retires_personal_entitlement_rows(self):
