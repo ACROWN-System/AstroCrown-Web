@@ -66,13 +66,22 @@ A qualifying payment creates only the wallet-bound ACROWN purchase entitlement. 
 
 ## Current automated evidence
 
-- Synthetic provider/adaptor tests passed in the latest Account Staging Worker qualification before the current scope reduction.
-- The previous Chromium smoke injected synthetic providers for six evaluated brands. It demonstrated browser discovery/connect behavior and no signing, transaction, approval or transfer calls. It is not a live-wallet qualification and must not be relabelled as one.
-- Ethereum, TRON and Solana synthetic payment-evidence parser and two-operator comparison tests passed. These functions do not connect to RPC, write D1 or apply entitlement credit.
-- Live signatures on installed wallet builds: NOT_TESTED.
-- Native USDT transfer UX on installed wallet builds: NOT_TESTED.
-- Solana SPL receipt test for the ACROWN destination flow: NOT_TESTED.
-- Mainnet payment intent, live RPC reconciliation, entitlement credit and ACROWN delivery: NOT_IMPLEMENTED / DISABLED.
-- Production wallet allowlist remains empty.
+Latest validation of the narrowed wallet-use-case policy:
 
-No real wallet seed, private key, mainnet transfer, token approval, payment, entitlement credit, token transfer or remote migration was performed by the automated qualification work.
+- **Account Staging Worker Qualification — PASS**, run [44233002267](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44233002267). The Worker invariant suite passed 100/100 tests; canonical and mirrored schema tests passed 19/19; restricted asset build, published Genesis page/script checks, browser-code and Worker-bundle checks, local D1 application, local Worker/API/homepage smoke, deployment/preflight parsing and remote fail-closed checks all passed.
+- **Cloudflare Pages Static Preview Build — PASS**, run [44233002246](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44233002246). Publication allowlist, browser-facing safety, JavaScript syntax, deterministic entitlement and D1 schema checks passed.
+- **Homepage Browser Smoke — PASS**, run [44233002269](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44233002269). Its wallet-specific synthetic-provider suite passed 24/24 checks. EVM public-address connection was exercised for MetaMask, Trust Wallet, Bitget Wallet, TokenPocket, Coin98 and OKX Wallet. TRON public-account connection was exercised for Bitget, TokenPocket, OKX, Trust Wallet and TronLink. Solana public-account connection was exercised for all six candidate providers. The test deliberately made no signature, transaction, approval or transfer calls and blocked external HTTP(S) access. This is mock-provider browser evidence only.
+- **External Review Pipeline CI — PASS**, run [44233002380](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44233002380).
+- **Python CodeQL — PASS**, run [44233002261](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44233002261).
+- **NOVA RSI Engine CI — FAILED before tests**, run [44233002319](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44233002319). The runner's pinned Docker image digest did not match the expected immutable digest; Python compile/RSI tests did not execute. This is a separate NOVA runner-image issue, not a Genesis wallet or payment test failure.
+
+Installed wallet applications and exact production versions have not been used in this automated environment. Therefore:
+- Live primary-wallet signatures on the installed five wallet applications: NOT_TESTED.
+- Actual native USDT transfer UX in each wallet application: NOT_TESTED.
+- Solana SPL test-token receipt using each installed application as the recipient: NOT_TESTED.
+- Live RPC, payment-intent service, entitlement credit, ACS floor quote/purchase and ACROWN delivery: NOT_IMPLEMENTED / DISABLED.
+- Production wallet allowlist: empty.
+
+The 24/24 browser checks must not be described as five (or six) live-wallet approvals. They prove that the preview's provider-discovery and public-account connection code handles synthetic provider interfaces without requesting signatures or moving funds.
+
+No real wallet seed, private key, mainnet transfer, token approval, payment, entitlement credit, token transfer or remote migration was used or performed by these tests.
