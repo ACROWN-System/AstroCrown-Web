@@ -344,6 +344,10 @@ async function getOrCreateIdentity(db, challenge) {
     return identity;
   }
 
+  if (genesisRegistrationClosed(await loadGenesisProgrammeControl(db))) {
+    throw error(403, "New Genesis primary-wallet registration is permanently closed from the 24-hour pre-launch cutoff.");
+  }
+
   const linked = await db.prepare(
     "SELECT identity_id,wallet_role FROM genesis_wallet_addresses WHERE network=? AND address_normalized=?"
   ).bind(challenge.network, challenge.address_normalized).first();
