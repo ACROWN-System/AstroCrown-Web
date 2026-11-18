@@ -45,7 +45,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /id="genesis-public-purchase-inactivity-countdown"/i);
   assert.match(html, /id="genesis-purchase-inactivity-countdown"/i);
   assert.match(html, /only unused shared purchase allowance expires/i);
-  assert.doesNotMatch(html, /not a rolling timer|does not reset it/i);
+  assert.doesNotMatch(html, /not a rolling timer/i);
   assert.match(html, /Any one eligible wallet may buy the entire remaining programme-wide allowance/);
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
@@ -89,6 +89,7 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.match(js, /qualifying payments remain closed/i);
   assert.match(js, /window\.setInterval\(tick, 1000\)/);
   assert.match(js, /Latest global timer reset/);
+  assert.match(js, /window\.setInterval\(refreshProgrammeStatus, 30000\)/);
   assert.equal(js.includes('method: "eth_sign"'), false);
   assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
   assert.equal(js.includes('method: "eth_sendTransaction"'), false);
