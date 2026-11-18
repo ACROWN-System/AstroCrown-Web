@@ -63,6 +63,27 @@ test("Genesis mainnet USD₮ configuration contains valid owner-supplied public 
   }
 });
 
+test("owner-configured Genesis treasuries are accepted while all payment networks remain disabled", () => {
+  const payload = buildSupporterStatus(
+    { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, closes_at: null, rules_version: null },
+    networks
+  );
+  assert.deepEqual(
+    payload.networks.map((row) => ({
+      network: row.network,
+      treasuryConfigured: row.treasuryConfigured,
+      networkConfigured: row.networkConfigured
+    })),
+    [
+      { network: "ethereum", treasuryConfigured: true, networkConfigured: false },
+      { network: "tron", treasuryConfigured: true, networkConfigured: false },
+      { network: "solana", treasuryConfigured: true, networkConfigured: false }
+    ]
+  );
+  assert.equal(payload.paymentAcceptance.enabled, false);
+  assert.equal(payload.paymentAcceptance.qualifyingPaymentsAccepted, false);
+});
+
 test("Supporter status never exposes a treasury address or claims that a transfer can be made", () => {
   const payload = buildSupporterStatus(
     { environment: "MAINNET", status: "OPEN", activated_at: 1_800_000_000, closes_at: 1_815_552_000, rules_version: "v1" },
