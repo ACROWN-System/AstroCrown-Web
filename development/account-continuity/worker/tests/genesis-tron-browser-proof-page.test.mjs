@@ -16,8 +16,18 @@ test("Genesis TRON browser proof is pinned to its exact no-index HTTPS URL", () 
   assert.match(html, /const APPROVED_PATH = "\/AstroCrown-Web\/preview\/genesis-tron-treasury-proof\.html"/);
 });
 
-test("Genesis TRON proof requires TronLink, address match, and the documented Mainnet network switch", () => {
-  assert.match(html, /window\.tron\.isTronLink !== true/);
+test("Genesis TRON proof discovers the official TronLink provider through TIP-6963 before connecting", () => {
+  assert.ok(html.includes("function isTronLinkProvider(candidate)"));
+  assert.ok(html.includes("function discoverTronLinkProvider()"));
+  assert.ok(html.includes('window.addEventListener("TIP6963:announceProvider", onAnnounce)'));
+  assert.ok(html.includes('window.dispatchEvent(new Event("TIP6963:requestProvider"))'));
+  assert.ok(html.includes('info.name === "TronLink" || info.rdns === "org.tronlink.www"'));
+  assert.ok(html.includes("provider = await discoverTronLinkProvider()"));
+  assert.ok(html.includes("}, 1500);"));
+  assert.match(html, /No TronLink provider announced itself to this page/);
+});
+
+test("Genesis TRON proof requires the discovered TronLink provider, address match, and documented Mainnet switch", () => {
   assert.match(html, /method: "eth_requestAccounts"/);
   assert.match(html, /connectedAddress !== targetAddress/);
   assert.match(html, /method: "wallet_switchEthereumChain"/);

@@ -121,6 +121,42 @@
     return typeof value === "string" && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(value);
   }
 
+  function isTronLinkProvider(candidate) {
+    return !!candidate && candidate.isTronLink === true && typeof candidate.request === "function";
+  }
+
+  function discoverTronLinkProvider() {
+    if (isTronLinkProvider(window.tron)) return Promise.resolve(window.tron);
+
+    return new Promise(resolve => {
+      let settled = false;
+      let timeoutId = null;
+
+      const finish = candidate => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("TIP6963:announceProvider", onAnnounce);
+        if (timeoutId !== null) window.clearTimeout(timeoutId);
+        resolve(isTronLinkProvider(candidate) ? candidate : null);
+      };
+
+      const onAnnounce = event => {
+        const info = event && event.detail && event.detail.info;
+        const candidate = event && event.detail && event.detail.provider;
+        if (info && (info.name === "TronLink" || info.rdns === "org.tronlink.www") &&
+            isTronLinkProvider(candidate)) {
+          finish(candidate);
+        }
+      };
+
+      window.addEventListener("TIP6963:announceProvider", onAnnounce);
+      timeoutId = window.setTimeout(() => {
+        finish(isTronLinkProvider(window.tron) ? window.tron : null);
+      }, 1500);
+      window.dispatchEvent(new Event("TIP6963:requestProvider"));
+    });
+  }
+
   function createNonce() {
     const bytes = crypto.getRandomValues(new Uint8Array(16));
     return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
@@ -219,10 +255,11 @@
       if (!validAddress(targetAddress)) {
         throw new Error("Enter the complete public TRON address (T followed by 33 Base58 characters).");
       }
-      if (!window.tron || window.tron.isTronLink !== true || typeof window.tron.request !== "function") {
-        throw new Error("The current browser did not expose the official TronLink provider. Open this page in the browser profile containing TronLink.");
+      setStatus("Looking for the TronLink extension…");
+      provider = await discoverTronLinkProvider();
+      if (!provider) {
+        throw new Error("No TronLink provider announced itself to this page. Confirm TronLink is installed and enabled in this same Edge profile, allow it to run on this site, then reload this page and retry. No wallet connection or signature was requested.");
       }
-      provider = window.tron;
       attachWalletListeners(provider);
       const accounts = await provider.request({ method: "eth_requestAccounts" });
       if (!Array.isArray(accounts) || accounts.length !== 1 || typeof accounts[0] !== "string") {
