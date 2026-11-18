@@ -68,6 +68,7 @@ function ethereumFixture(overrides = {}) {
   return {
     chainId: "0x1",
     expected: ETH_EXPECTED,
+    tokenMetadata: { contractAddress: GENESIS_USDT_ASSETS.ethereum.assetIdentifier, chainId: 1, decimals: 6 },
     receipt: {
       transactionHash: ETH_TX,
       status: "0x1",
@@ -102,6 +103,7 @@ test("Ethereum parser requires a successful canonical Mainnet USDT Transfer and 
 
 test("Ethereum parser rejects wrong chain, failed receipt, wrong token, wrong sender and stale finality", () => {
   assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({ chainId: "0x5" })), /chain id 1/);
+  assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({ tokenMetadata: { contractAddress: GENESIS_USDT_ASSETS.ethereum.assetIdentifier, chainId: 1, decimals: 18 } })), /six-decimal metadata/);
   assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
     receipt: { ...ethereumFixture().receipt, status: "0x0" },
   })), /not successful/);
@@ -149,6 +151,7 @@ test("TRON parser requires a checksummed Mainnet address and a SolidityNode soli
   const evidence = await parseTronUsdtTransferEvidence({
     networkTag: "TRON_MAINNET",
     receiptSource: "SOLIDITY_NODE",
+    tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 },
     transactionInfo: info,
     expected,
   });
@@ -157,17 +160,19 @@ test("TRON parser requires a checksummed Mainnet address and a SolidityNode soli
   assert.equal(evidence.amountBaseUnits, "1000000");
   assert.equal(evidence.transferIndex, 0);
   await assert.rejects(() => parseTronUsdtTransferEvidence({
-    networkTag: "TRON_MAINNET", receiptSource: "FULL_NODE", transactionInfo: info, expected,
+    networkTag: "TRON_MAINNET", receiptSource: "FULL_NODE", tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 }, transactionInfo: info, expected,
   }), /SolidityNode/);
   await assert.rejects(() => parseTronUsdtTransferEvidence({
-    networkTag: "TRON_NILE", receiptSource: "SOLIDITY_NODE", transactionInfo: info, expected,
+    networkTag: "TRON_NILE", receiptSource: "SOLIDITY_NODE", tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 }, transactionInfo: info, expected,
   }), /not qualified as mainnet/);
   await assert.rejects(() => parseTronUsdtTransferEvidence({
     networkTag: "TRON_MAINNET", receiptSource: "SOLIDITY_NODE",
+    tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 },
     transactionInfo: { ...info, receipt: { result: "FAILED" } }, expected,
   }), /unsuccessful/);
   await assert.rejects(() => parseTronUsdtTransferEvidence({
     networkTag: "TRON_MAINNET", receiptSource: "SOLIDITY_NODE",
+    tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 },
     transactionInfo: { ...info, log: [] }, expected,
   }), /exactly one matching/);
 });
@@ -218,6 +223,7 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
     clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
     transaction,
     signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint: GENESIS_USDT_ASSETS.solana.assetIdentifier, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
     expected,
   });
   assert.equal(evidence.networkIdentifier, "solana:mainnet-beta");
@@ -250,12 +256,12 @@ test("Solana parser rejects wrong cluster, non-finalized status, failed transact
     meta: {
       err: null,
       preTokenBalances: [
-        { accountIndex: 1, mint, owner: sender, uiTokenAmount: { amount: "5000000" } },
-        { accountIndex: 2, mint, owner: treasury, uiTokenAmount: { amount: "0" } },
+        { accountIndex: 1, mint, owner: sender, uiTokenAmount: { amount: "5000000", decimals: 6 } },
+        { accountIndex: 2, mint, owner: treasury, uiTokenAmount: { amount: "0", decimals: 6 } },
       ],
       postTokenBalances: [
-        { accountIndex: 1, mint, owner: sender, uiTokenAmount: { amount: "4000000" } },
-        { accountIndex: 2, mint, owner: treasury, uiTokenAmount: { amount: "1000000" } },
+        { accountIndex: 1, mint, owner: sender, uiTokenAmount: { amount: "4000000", decimals: 6 } },
+        { accountIndex: 2, mint, owner: treasury, uiTokenAmount: { amount: "1000000", decimals: 6 } },
       ],
       innerInstructions: [],
     },
@@ -265,10 +271,12 @@ test("Solana parser rejects wrong cluster, non-finalized status, failed transact
     clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
     transaction: tx,
     signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint: GENESIS_USDT_ASSETS.solana.assetIdentifier, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
     expected,
     ...overrides,
   });
   assert.throws(() => parse({ clusterGenesisHash: "devnet" }), /Mainnet Beta/);
+  assert.throws(() => parse({ mintMetadata: { mint, programOwner: "wrong-program", decimals: 6 } }), /mint owner program or six-decimal metadata/);
   assert.throws(() => parse({ signatureStatus: { err: null, confirmationStatus: "confirmed" } }), /not finalized/);
   assert.throws(() => parse({ transaction: { ...tx, meta: { ...tx.meta, err: { InstructionError: [0, "Error"] } } } }), /execution failed/);
   assert.throws(() => parse({ transaction: { ...tx, meta: { ...tx.meta, postTokenBalances: [
