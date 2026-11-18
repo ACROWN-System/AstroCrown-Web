@@ -19,15 +19,16 @@ A wallet is compatible when it can support the specific user journey—not when 
 |---|---|---|
 | Connect and identify one primary address | Yes | The selected identity route must provide a stable public address |
 | Sign one off-chain identity challenge | Yes | Server verifies the signature, address, domain, purpose, nonce and expiry |
-| Send USDT on at least one offered payment rail | Yes | The wallet's native UI or supported dApp flow can initiate the chosen transfer |
-| Have special dApp signing APIs on Ethereum, TRON and Solana | No | Payment attribution is chain-side; TRON dApp signing is not required just to verify a TRON transfer |
+| Prove each intended payment-network address | Yes | Every address used for payment must sign its own network-specific link challenge and be registered under the primary identity |
+| Send USDT on each intended payment rail | Yes | The wallet's native UI or supported dApp flow must initiate the chosen transfer from that pre-registered address |
+| Support all three payment rails in every wallet app | No | A participant may use only rails for which the app can prove the network address and initiate the canonical transfer |
 | Notify Genesis when payment is complete | No | Chain observation and independent RPC verification determine completion |
 | Receive the ACROWN SPL token on Solana | Yes | Provide a valid recipient address and confirm token receipt/display |
 | Sign a transaction to receive ACROWN | No | The participant is the recipient; AstroCrown's authorized signer submits delivery |
 | Restore every network address during wallet qualification | No | Wallet backup and recovery remain the holder's responsibility, not a programme feature |
 | Test every platform for every wallet brand | No | Qualify the exact app or extension route that is actually offered and used |
 
-The programme as a whole still supports all three USDT payment rails. That is a system-level requirement, not a rule that every wallet must implement all three dApp APIs. Each enabled payment rail must pass its own server-side verification tests independently.
+The programme as a whole is designed to support all three USDT payment rails. Each enabled rail must pass its own server-side verification tests. A wallet need not support every rail, but each address used on a selected rail must first pass that network's ownership-link proof. A TRON payment requires a verified TRON address-link challenge; native transfer capability alone is insufficient.
 
 ## Payment attribution and wallet identity
 
