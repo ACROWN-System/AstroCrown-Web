@@ -100,7 +100,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             self.db.execute(
                 "UPDATE genesis_programme_control SET registration_closed_at=NULL WHERE singleton=1"
             )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "cannot change after registration freeze"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "schedule.*(cannot change|locked)"):
             self.db.execute(
                 "UPDATE genesis_programme_control SET scheduled_acrown_launch_at=?,registration_freeze_at=? "
                 "WHERE singleton=1",
