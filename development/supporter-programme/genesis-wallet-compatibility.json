@@ -8,19 +8,37 @@
       "network": "ethereum",
       "assetStandard": "ERC-20",
       "token": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-      "requiredCapabilities": ["receive", "send", "connect_or_verified_payment_proof", "sign_primary_identity_challenge", "restore"]
+      "requiredCapabilities": [
+        "receive",
+        "send",
+        "connect_or_verified_payment_proof",
+        "sign_primary_identity_challenge",
+        "restore"
+      ]
     },
     {
       "network": "tron",
       "assetStandard": "TRC-20",
       "token": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-      "requiredCapabilities": ["receive", "send", "connect_or_verified_payment_proof", "sign_primary_identity_challenge", "restore"]
+      "requiredCapabilities": [
+        "receive",
+        "send",
+        "connect_or_verified_payment_proof",
+        "sign_primary_identity_challenge",
+        "restore"
+      ]
     },
     {
       "network": "solana",
       "assetStandard": "SPL",
       "token": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
-      "requiredCapabilities": ["receive", "send", "connect_or_verified_payment_proof", "sign_primary_identity_challenge", "restore"]
+      "requiredCapabilities": [
+        "receive",
+        "send",
+        "connect_or_verified_payment_proof",
+        "sign_primary_identity_challenge",
+        "restore"
+      ]
     }
   ],
   "globalQualificationGates": [
@@ -37,6 +55,106 @@
   ],
   "candidates": [
     {
+      "walletId": "bitget-wallet",
+      "displayName": "Bitget Wallet",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "documentedPlatforms": [
+        "Chrome Extension",
+        "Bitget Wallet App DApp browser"
+      ],
+      "documentedNetworkApis": {
+        "ethereum": {
+          "provider": "window.bitkeep.ethereum",
+          "capabilities": [
+            "connect",
+            "signPersonalMessage",
+            "signTypedMessage",
+            "switchChain"
+          ]
+        },
+        "tron": {
+          "provider": "window.bitkeep.tronLink / window.bitkeep.tronWeb",
+          "capabilities": [
+            "tron_requestAccounts",
+            "signMessageV2",
+            "signTransaction"
+          ]
+        },
+        "solana": {
+          "provider": "window.bitkeep.solana",
+          "capabilities": [
+            "connect",
+            "signMessage",
+            "signTransaction",
+            "signAndSendTransaction"
+          ]
+        }
+      },
+      "notes": [
+        "Official developer documentation explicitly describes EVM, TRON and Solana dApp providers and message-signing APIs.",
+        "This is the strongest documented unified three-network candidate in the current register.",
+        "Bitget's WalletConnect documentation lists Ethereum and Solana for its mobile WalletConnect route, not TRON; qualify its Chrome extension and in-app DApp browser routes separately rather than assuming WalletConnect supplies all three networks.",
+        "The exact USDT send/receive flows, wallet restore/address derivation and provider behavior must still pass Genesis end-to-end tests."
+      ],
+      "blockingGates": [
+        "three_network_usdt_send_receive_tests",
+        "primary_wallet_message_signature_verification_each_network",
+        "additional_address_link_signature_verification_each_network",
+        "wallet_restore_test_all_three_networks",
+        "platform_route_qualification",
+        "provider_build_version_record"
+      ]
+    },
+    {
+      "walletId": "coin98",
+      "displayName": "Coin98 Super Wallet",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "documentedPlatforms": [
+        "Coin98 Extension",
+        "Coin98 Super Wallet mobile app / DApp browser"
+      ],
+      "documentedNetworkApis": {
+        "ethereum": {
+          "provider": "window.coin98.provider / EIP-1193 and EIP-6963",
+          "capabilities": [
+            "connect",
+            "account_access"
+          ]
+        },
+        "tron": {
+          "provider": "No TRON extension dApp provider/sign-message path confirmed in the reviewed official developer docs",
+          "capabilities": [
+            "asset support documented; dApp account/signature path requires confirmation"
+          ]
+        },
+        "solana": {
+          "provider": "window.coin98.sol",
+          "capabilities": [
+            "sol_accounts",
+            "sol_requestAccounts",
+            "sol_sign transaction",
+            "sol_verify"
+          ]
+        }
+      },
+      "notes": [
+        "Coin98 officially describes multichain asset management across Ethereum, Solana and TRON and documents Ethereum and Solana dApp providers.",
+        "Its published Solana extension guide documents transaction signing and signature verification, but the reviewed page does not explicitly document an arbitrary off-chain signMessage method for the Genesis identity challenge.",
+        "The reviewed official developer materials do not yet establish a complete TRON website dApp connection and message-signature route for the exact Coin98 product/platform variant.",
+        "Coin98's restore guidance warns that choosing the wrong New Standard or Old Standard for some chains, including Solana and TRON, may restore different addresses; the correct standard must be recorded and verified.",
+        "This is a documentation and integration gap, not a security finding or a reason to permanently exclude Coin98. Test the mobile DApp browser and extension separately."
+      ],
+      "blockingGates": [
+        "published_or_tested_tron_dapp_connect_and_message_signature_path",
+        "documented_or_tested_solana_offchain_message_signature_path",
+        "three_network_usdt_send_receive_tests",
+        "additional_address_link_attribution_each_network",
+        "wallet_restore_address_derivation_test_all_three_networks",
+        "platform_route_qualification",
+        "provider_build_version_record"
+      ]
+    },
+    {
       "walletId": "metamask",
       "displayName": "MetaMask",
       "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
@@ -45,17 +163,11 @@
         "TRON asset management is documented, but the currently reviewed MetaMask TRON guide says direct TRON dApp connection is not available.",
         "A secure, tested method is still required to prove and associate a MetaMask TRON sending address with the primary Genesis wallet. A manual transfer and explorer link alone do not establish that cross-chain identity link."
       ],
-      "blockingGates": ["tron_primary_wallet_message_signature_or_approved_transaction_proof", "three_network_end_to_end_tests", "wallet_restore_test"]
-    },
-    {
-      "walletId": "trust-wallet",
-      "displayName": "Trust Wallet",
-      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
-      "notes": [
-        "Candidate for a unified three-network browser-wallet workflow.",
-        "The actual extension/mobile provider, asset send/receive paths, signatures, address derivation and restoration must be tested before approval."
-      ],
-      "blockingGates": ["three_network_end_to_end_tests", "wallet_restore_test", "provider_build_version_record"]
+      "blockingGates": [
+        "tron_primary_wallet_message_signature_or_approved_transaction_proof",
+        "three_network_end_to_end_tests",
+        "wallet_restore_test"
+      ]
     },
     {
       "walletId": "okx-wallet",
@@ -65,7 +177,76 @@
         "Candidate for a unified three-network browser-wallet workflow.",
         "The actual extension/mobile provider, asset send/receive paths, signatures, address derivation and restoration must be tested before approval."
       ],
-      "blockingGates": ["three_network_end_to_end_tests", "wallet_restore_test", "provider_build_version_record"]
+      "blockingGates": [
+        "three_network_end_to_end_tests",
+        "wallet_restore_test",
+        "provider_build_version_record"
+      ]
+    },
+    {
+      "walletId": "tokenpocket",
+      "displayName": "TokenPocket",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "documentedPlatforms": [
+        "Chrome Extension",
+        "TokenPocket Mobile DApp webview"
+      ],
+      "documentedNetworkApis": {
+        "ethereum": {
+          "provider": "window.ethereum / window.tokenpocket.ethereum",
+          "capabilities": [
+            "EIP-1193",
+            "EIP-6963",
+            "account_access",
+            "message_signing_methods_documented"
+          ]
+        },
+        "tron": {
+          "provider": "window.tokenpocket.tron / window.tokenpocket.tronWeb",
+          "capabilities": [
+            "TIP-1102 account request",
+            "signMessageV2"
+          ]
+        },
+        "solana": {
+          "provider": "TokenPocket Solana Provider API is listed in the official extension developer index; mobile SDK documents window.solana connect and signMessage",
+          "capabilities": [
+            "connect",
+            "signMessage",
+            "platform_specific_adapter_validation"
+          ]
+        }
+      },
+      "notes": [
+        "Official TokenPocket documentation lists Ethereum, TRON and Solana support and has separate EVM, TRON and Solana developer documentation.",
+        "The TRON developer page documents TIP-1102 account access and TronWeb signMessageV2.",
+        "The official developer index includes a Solana Provider API page, while TokenPocket's mobile JavaScript SDK documents connect and signMessage through window.solana.",
+        "The exact Solana provider behavior and primary-wallet message-signature flow must be confirmed on the current extension and mobile-app versions separately.",
+        "The provider's platform and wallet-version details must be captured; do not assume extension and mobile expose identical globals."
+      ],
+      "blockingGates": [
+        "three_network_usdt_send_receive_tests",
+        "primary_wallet_message_signature_verification_each_network",
+        "additional_address_link_signature_verification_each_network",
+        "wallet_restore_test_all_three_networks",
+        "solana_extension_provider_validation",
+        "platform_route_qualification",
+        "provider_build_version_record"
+      ]
+    },
+    {
+      "walletId": "trust-wallet",
+      "displayName": "Trust Wallet",
+      "qualificationStatus": "CANDIDATE_NOT_QUALIFIED",
+      "notes": [
+        "Candidate for a unified three-network browser-wallet workflow.",
+        "The actual extension/mobile provider, asset send/receive paths, signatures, address derivation and restoration must be tested before approval."
+      ],
+      "blockingGates": [
+        "three_network_end_to_end_tests",
+        "wallet_restore_test",
+        "provider_build_version_record"
+      ]
     }
   ],
   "productionAcceptance": {
