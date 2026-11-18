@@ -4,7 +4,7 @@ const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 50;
 const REACTIONS = new Set(["like", "insightful", "support"]);
 const REPORT_CATEGORIES = new Set(["spam", "harassment", "impersonation", "privacy", "illegal", "other"]);
-const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])$/;
+const SLUG_PATTERN = /^(?=.{3,48}$)[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const POST_ID_PATTERN = /^post_[a-f0-9]{32}$/;
 
 function json(status, data) {
