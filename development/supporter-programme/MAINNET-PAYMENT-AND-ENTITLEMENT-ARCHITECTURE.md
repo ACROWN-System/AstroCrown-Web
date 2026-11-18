@@ -14,7 +14,7 @@
 
 The general AstroCrown website and platform functionality remain in Devnet/Testnet with valueless assets during development. The Genesis Programme is the deliberate exception: after separate activation gates pass, it is intended to accept real mainnet USD₮ from its first operational opening on Ethereum, Tron and Solana.
 
-Publishing a static Pages preview, merging a PR, deploying a Worker or creating a D1 database does not open the programme and does not start its 180-day clock. The clock begins only when the owner-approved payment service is deliberately activated and ready to accept real contributions.
+Publishing a static Pages preview, merging a PR, deploying a Worker or creating a D1 database does not open the programme. Deliberately activating Genesis qualifying payments also does **not** start the 180-day ACROWN purchase-exercise clock. That clock starts only after ACROWN has been officially launched **and** the approved ACS pure-floor purchase facility is operationally open and available to eligible registered Genesis wallets.
 
 Real supporter records and entitlements must be isolated from general AstroCrown testnet records. A test transaction, test account, browser-local value or client-supplied success state can never create or modify a real entitlement.
 
@@ -83,15 +83,20 @@ At the later purchase stage, the wallet holder selects a USDT amount no greater 
 
 **Schema migration required:** the current genesis_wallet_entitlements earned_acrown_base_units / consumed_acrown_base_units representation is ACROWN-denominated and incompatible with this model. Before payment activation, add a versioned migration and append-only entitlement events that store earned, reserved and consumed purchase allowance in USDT base units. Preserve actual acquired ACROWN quantities separately in floor-purchase records. Do not activate or credit payments against the old ACROWN-denominated columns.
 
-## 4. One global 180-day window
+## 4. Global 180-day ACROWN purchase-exercise window
 
-- `activated_at` is set once when the owner deliberately opens the real contribution service after all activation gates pass.
-- `closes_at = activated_at + 180 days` (15,552,000 seconds).
-- Static preview deployment, Git commit, PR merge, Worker deployment or database creation does not start the period.
-- The authoritative database stores both timestamps; the public page and ledger disclose them.
-- No contribution/purchase is eligible before activation. Purchases must settle before the global close.
-- Pausing service does not reset or extend the window. Reopening or extending requires a separate approved and publicly recorded decision.
-- The activation timestamp is immutable.
+The 180-day period is an **ACROWN post-launch purchase-exercise window**, not a Genesis qualifying-payment acceptance period.
+
+- Genesis qualifying-payment activation, the first Genesis payment, static preview publication, Git commits, PR merge, Worker deployment and database creation do **not** start this clock.
+- Set `acrown_purchase_window_started_at` only when both conditions are true: (1) ACROWN has been officially launched on its approved network; and (2) the renewed, approved ACS pure-floor purchase facility is live and eligible registered Genesis wallets can actually obtain a valid floor quote and complete the separate purchase flow.
+- A token deployment or launch announcement without an operational, qualified floor-purchase facility is insufficient to start the clock.
+- `acrown_purchase_window_closes_at = acrown_purchase_window_started_at + 180 days` (15,552,000 seconds). This is one global programme window, not a separate 180-day period restarted for each wallet or each partial purchase.
+- The authoritative database stores the launch/offer-open event and close timestamp immutably. The public page, each wallet dashboard and the acquisition ledger disclose the start, close and each wallet's earned, exercised and remaining USDT allowance.
+- A wallet that purchases **and receives** ACROWN for its entire personal Genesis purchase allowance at the qualified ACS pure floor is marked `FULLY_EXERCISED`. It has no unexercised balance subject to expiry. Full exercise does not cancel or remove its Genesis Member status or badge.
+- For a partially exercised wallet, completed purchases remain final; only the unused USDT-denominated purchase allowance remaining at the global close is subject to expiry under the published terms. A wallet that has not exercised any allowance has its full unused allowance subject to that same rule.
+- Merely opening the dashboard, creating a quote, reserving allowance, submitting an unfinalized payment or starting a delivery does not count as a completed purchase. Only a separately verified, finalized floor-price purchase and verified ACROWN delivery consume the corresponding allowance. A finalized purchase whose delivery is still pending must remain in an auditable pending/reconciliation state and must not be silently expired or treated as fully exercised.
+- Pausing the service does not silently reset the global clock. Any extension, pause treatment for a material service outage, or other change must be separately approved, versioned and publicly disclosed before it affects participant rights.
+- The window start is immutable once established; no clock may begin before ACROWN launch and actual availability of the qualified floor-purchase service.
 
 ## 5. Member and wallet identity
 
@@ -160,7 +165,7 @@ The initial Genesis qualifying payment is a different transaction: its exact USD
 ## 7. Data and accounting model
 
 The D1 migration creates:
-- one mainnet programme activation record with immutable 180-day timestamps;
+- one mainnet Genesis qualifying-payment activation record, kept separate from the post-ACROWN-launch purchase-window record and its immutable timestamps;
 - members and unique usernames;
 - independently verified chain wallets and short-lived challenges;
 - network-specific contribution intents;
