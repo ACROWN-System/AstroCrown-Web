@@ -35,21 +35,25 @@ test("the current practical qualification wave contains the selected five wallet
   assert.deepEqual(policy.productionAcceptance.qualifiedWalletIds, []);
 });
 
-test("wallet identity needs one verified signing route, not signatures on every payment chain", () => {
+test("primary identity is sole Genesis authority and every used payment address is independently linked", () => {
   const identity = policy.qualificationModel.identity;
   assert.equal(identity.required, true);
   assert.ok(identity.preferredIdentityNetworks.includes("ethereum"));
   assert.ok(identity.preferredIdentityNetworks.includes("solana"));
-  assert.match(identity.tronIdentity, /optional/i);
+  assert.match(identity.tronIdentity, /TRON address-link challenge/i);
+  assert.ok(identity.minimum.some((item) => /every additional network address/i.test(item)));
+  assert.match(policy.qualificationModel.payment.genesisAddressPolicy, /only the primary wallet authorizes Genesis actions/i);
 });
 
 test("payment completion is verified from chain evidence, not a wallet notification", () => {
   const payment = policy.qualificationModel.payment;
   assert.deepEqual(payment.acceptedRails.slice().sort(), ["ethereum", "solana", "tron"]);
   assert.match(payment.attribution, /wallet does not notify Genesis/i);
-  assert.ok(payment.walletProviderNotRequired.some((item) => /TRON signMessageV2/i.test(item)));
+  assert.match(payment.attribution, /previously verified PAYMENT address/i);
+  assert.match(payment.attribution, /does not accept unlinked one-time payment sources/i);
+  assert.match(payment.tronAddressProof, /TRON wallet-link challenge/i);
   assert.ok(payment.walletProviderNotRequired.some((item) => /every accepted payment network/i.test(item)));
-  assert.match(payment.networkSelection, /not required.*all three rails/i);
+  assert.match(payment.networkSelection, /need not support all three rails/i);
 });
 
 test("Solana delivery only requires a verified SPL recipient; participant signing is not required", () => {
@@ -70,6 +74,7 @@ test("obsolete per-wallet three-chain signature, transfer and restore gates are 
     const gateText = candidate.blockingGates.join(" ").toLowerCase();
     assert.doesNotMatch(gateText, /restore.*all three|sign.*all three|three.network.*restore/);
     assert.equal(candidate.tronDappMessageSignatureRequired, false);
+    assert.equal(candidate.tronAddressLinkProofRequiredForTronPayments, true);
   }
 });
 
@@ -86,16 +91,16 @@ test("TokenPocket keeps extension and mobile Solana route differences explicit",
   assert.ok(item.blockingGates.some((gate) => /Solana extension or mobile/i.test(gate)));
 });
 
-test("Coin98 Solana message signing can establish identity without requiring a TRON dApp signer", () => {
+test("Coin98 Solana message signing can establish primary identity; TRON payment still needs a linked TRON address", () => {
   const item = policy.candidates.find((candidate) => candidate.walletId === "coin98");
   assert.match(item.identityPaths.solana, /sol_signMessage/);
-  assert.match(item.paymentAndDeliveryAssessment.paymentUse, /missing TRON dApp signature route does not block/i);
+  assert.match(item.paymentAndDeliveryAssessment.paymentUse, /network-specific address can be independently verified/i);
   assert.equal(item.tronDappMessageSignatureRequired, false);
 });
 
-test("OKX TRON payment attribution does not depend on its dApp signing method", () => {
+test("OKX must prove its TRON address before TRON Genesis payment", () => {
   const item = policy.candidates.find((candidate) => candidate.walletId === "okx-wallet");
-  assert.match(item.paymentAndDeliveryAssessment.paymentUse, /native TRON USDT send flow/i);
+  assert.match(item.paymentAndDeliveryAssessment.paymentUse, /network-specific address can be independently verified/i);
   assert.equal(item.tronDappMessageSignatureRequired, false);
 });
 
@@ -113,8 +118,10 @@ test("MetaMask remains outside the first five-wallet wave without being declared
   assert.match(item.note, /not a general disqualification/i);
 });
 
-test("programme-level payment and accounting gates remain mandatory", () => {
+test("programme-level payment, primary-authority and accounting gates remain mandatory", () => {
   assert.ok(policy.systemWideGates.some((item) => /two independently operated RPC providers/i.test(item)));
+  assert.ok(policy.systemWideGates.some((item) => /no unlinked one-time payment-source exception/i.test(item)));
+  assert.ok(policy.systemWideGates.some((item) => /primary wallet alone authorizes Genesis account actions/i.test(item)));
   assert.ok(policy.systemWideGates.some((item) => /transaction.*transfer or instruction index is unique/i.test(item)));
   assert.ok(policy.systemWideGates.some((item) => /append-only/i.test(item)));
   assert.ok(policy.systemWideGates.some((item) => /Solana ACROWN destination/i.test(item)));
