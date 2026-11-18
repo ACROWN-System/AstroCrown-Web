@@ -12,11 +12,22 @@ const networks = [
   { network: "solana", network_identifier: MAINNET_USDT_CONFIG.solana.networkIdentifier, token_identifier: MAINNET_USDT_CONFIG.solana.tokenIdentifier, token_decimals: 6, treasury_address: MAINNET_USDT_CONFIG.solana.treasuryAddress, enabled: 0 },
 ];
 
-function mockDb(program = { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, closes_at: null, rules_version: null }, rows = networks) {
+function mockDb(
+  program = { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, closes_at: null, rules_version: null },
+  rows = networks,
+  genesisControl = {
+    acrown_launched_at: null,
+    acs_floor_purchase_opened_at: null,
+    purchase_window_started_at: null,
+    purchase_window_last_purchase_at: null,
+    purchase_window_closes_at: null
+  }
+) {
   return {
     prepare(sql) {
       return {
         first: async () => {
+          if (/FROM genesis_programme_control/.test(sql)) return genesisControl;
           assert.match(sql, /FROM supporter_program/);
           return program;
         },
@@ -37,6 +48,10 @@ test("Supporter status reads the dedicated D1 and exposes exactly the canonical 
   assert.equal(payload.programme.status, "PRELAUNCH");
   assert.equal(payload.programme.activatedAt, null);
   assert.equal(payload.programme.closesAt, null);
+  assert.equal(payload.programmeLifecycle.purchaseWindowStartedAt, null);
+  assert.equal(payload.programmeLifecycle.purchaseWindowLastPurchaseAt, null);
+  assert.equal(payload.programmeLifecycle.purchaseWindowClosesAt, null);
+  assert.equal(payload.programmeLifecycle.inactivityPeriodLabel, "180 days of inactivity");
 });
 
 test("Genesis mainnet USD₮ configuration contains valid owner-supplied public treasury addresses", async () => {
