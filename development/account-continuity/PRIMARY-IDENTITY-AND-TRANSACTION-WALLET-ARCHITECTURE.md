@@ -65,9 +65,9 @@ For an account-owned, reusable withdrawal or Genesis delivery address, request a
 
 ### Payment attribution
 
-For a one-time payment, bind the source address presented by the connected wallet to the server-created payment intent. After broadcast, derive/verify the actual sender from chain evidence and require it to match the intent. A chain transaction's cryptographic authorization is the proof that the sender authorized that transfer; a wallet callback, screenshot, explorer URL or client-supplied success flag is not.
+For general AstroCrown transaction flows, a one-time payment may bind the connected source address to a server-created intent and verify the actual sender from chain evidence. **Genesis is an explicit stricter exception:** a payment source must first be independently verified and registered in the member's primary wallet profile. No unlinked one-time payment source is accepted for Genesis. A chain transaction's cryptographic authorization proves that the sender authorized that transfer; a wallet callback, screenshot, explorer URL or client-supplied success flag is not.
 
-This permits a wallet to make a native TRON USDT transfer without requiring that wallet to expose Genesis-specific TRON message signing, provided the exact source address and transaction can be matched to the payment intent and independently verified. A reusable saved wallet link remains a separate optional feature.
+For general non-Genesis transaction flows, a native TRON transfer may be attributed from chain evidence without a separate address-link proof if the transaction intent securely binds its source. Genesis does not use that exception: a TRON address must pass the TRON address-link challenge before it can originate a qualifying payment.
 
 ## 5. Chain and asset extensibility
 
@@ -156,7 +156,7 @@ The general platform design should reuse the primary identity/session and chain-
 
 Specific outstanding Genesis work remains:
 - payment-intent endpoint and immutable intent lifecycle;
-- one-time payment-source binding so a transaction wallet can pay without first becoming a persistent account-linked wallet;
+- one-time payment-source binding for general transaction flows, with Genesis explicitly requiring pre-registration of each payment address in the primary wallet profile;
 - live independently operated RPC adapter/registry and payment writer;
 - atomic wallet-bound entitlement events and payment directory writes;
 - ACS floor quote/purchase workflow and separately reconciled Solana ACROWN delivery.
