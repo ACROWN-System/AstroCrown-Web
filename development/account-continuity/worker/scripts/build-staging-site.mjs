@@ -170,6 +170,7 @@ for (const relativePath of allowlist) {
 const genesisProgrammeFiles = [
   ["preview/supporters/index.html", "supporters/index.html"],
   ["preview/supporters/supporters.js", "supporters/supporters.js"],
+  ["preview/supporters/wallet-provider-adapters.mjs", "supporters/wallet-provider-adapters.mjs"],
   ["preview/assets/genesis-member-dna.svg", "assets/genesis-member-dna.svg"],
 ];
 for (const [sourcePath, destinationPath] of genesisProgrammeFiles) {
