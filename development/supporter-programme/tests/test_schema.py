@@ -182,30 +182,32 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 (launch + 3600, freeze + 3600),
             )
 
-    def test_global_purchase_window_starts_after_both_launch_and_floor_service(self):
+    def test_global_purchase_window_starts_at_acrown_launch_without_waiting_for_floor_service(self):
         launch = 2_100_000_000
-        floor_open = launch + 7200
-        start = floor_open
-        close = start + 15_552_000
+        close = launch + 15_552_000
         self.db.execute(
-            "UPDATE genesis_programme_control SET acrown_launched_at=?,acs_floor_purchase_opened_at=?,"
-            "purchase_window_started_at=?,purchase_window_closes_at=?,updated_at=1 WHERE singleton=1",
-            (launch, floor_open, start, close),
+            "UPDATE genesis_programme_control SET acrown_launched_at=?,updated_at=1 WHERE singleton=1",
+            (launch,),
         )
         self.assertEqual(
             self.db.execute(
                 "SELECT purchase_window_started_at,purchase_window_last_purchase_at,purchase_window_closes_at "
                 "FROM genesis_programme_control WHERE singleton=1"
             ).fetchone(),
-            (start, None, close),
+            (launch, None, close),
         )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "rolling inactivity timer can move only after a finalized floor-price purchase"):
+        self.assertIsNone(
+            self.db.execute(
+                "SELECT acs_floor_purchase_opened_at FROM genesis_programme_control WHERE singleton=1"
+            ).fetchone()[0]
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "rolling inactivity timer can move only after a finalized Genesis-right or ACS floor-price purchase"):
             self.db.execute(
                 "UPDATE genesis_programme_control SET purchase_window_closes_at=? WHERE singleton=1",
                 (close + 1,),
             )
 
-    def test_each_finalized_floor_purchase_rolls_the_shared_inactivity_timer_but_other_activity_does_not(self):
+    def test_genesis_right_and_floor_purchases_both_roll_the_shared_inactivity_timer(self):
         identity_id = "gid-rolling-timer"
         self.db.execute(
             "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
@@ -214,14 +216,6 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             (identity_id, "ethereum", "0xrolling", "0xrolling", "Rolling Timer 1", "rolling timer 1"),
         )
         launch = 2_100_000_000
-        floor_open = launch + 7200
-        start = floor_open
-        initial_close = start + 15_552_000
-        self.db.execute(
-            "UPDATE genesis_programme_control SET acrown_launched_at=?,acs_floor_purchase_opened_at=?,"
-            "purchase_window_started_at=?,purchase_window_closes_at=?,updated_at=1 WHERE singleton=1",
-            (launch, floor_open, start, initial_close),
-        )
 
         def add_event(event_id, event_type, created_at):
             self.db.execute(
@@ -231,49 +225,78 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 (event_id, identity_id, event_type, "1000000", "1000000", "0", "1000000", "rules-v1", created_at),
             )
 
-        first_purchase = start + 86_400
-        add_event("evt-floor-1", "FLOOR_PURCHASE_CONSUMPTION", first_purchase)
+        # Before ACROWN launch, a qualifying-payment credit does not start or reset the timer.
+        add_event("evt-prelaunch-right", "QUALIFYING_PAYMENT_CREDIT", launch - 10)
+        self.db.execute(
+            "UPDATE genesis_programme_control SET acrown_launched_at=?,updated_at=1 WHERE singleton=1",
+            (launch,),
+        )
+        initial_close = launch + 15_552_000
+        self.assertEqual(
+            self.db.execute(
+                "SELECT purchase_window_started_at,purchase_window_last_purchase_at,purchase_window_closes_at "
+                "FROM genesis_programme_control WHERE singleton=1"
+            ).fetchone(),
+            (launch, None, initial_close),
+        )
+
+        # ACS floor-purchase service availability is separate from the timer's launch start.
+        floor_open = launch + 7200
+        self.db.execute(
+            "UPDATE genesis_programme_control SET acs_floor_purchase_opened_at=?,updated_at=2 WHERE singleton=1",
+            (floor_open,),
+        )
+
+        first_right_purchase = launch + 86_400
+        add_event("evt-right-1", "QUALIFYING_PAYMENT_CREDIT", first_right_purchase)
         self.assertEqual(
             self.db.execute(
                 "SELECT purchase_window_last_purchase_at,purchase_window_closes_at "
                 "FROM genesis_programme_control WHERE singleton=1"
             ).fetchone(),
-            (first_purchase, first_purchase + 15_552_000),
+            (first_right_purchase, first_right_purchase + 15_552_000),
         )
 
-        qualifying_payment = first_purchase + 5 * 86_400
-        add_event("evt-qualifying-payment", "QUALIFYING_PAYMENT_CREDIT", qualifying_payment)
+        # Quotes/reservations are not purchases and do not move the shared timer.
+        reservation = first_right_purchase + 5 * 86_400
+        add_event("evt-floor-reservation", "FLOOR_PURCHASE_RESERVATION", reservation)
         self.assertEqual(
             self.db.execute(
                 "SELECT purchase_window_last_purchase_at,purchase_window_closes_at "
                 "FROM genesis_programme_control WHERE singleton=1"
             ).fetchone(),
-            (first_purchase, first_purchase + 15_552_000),
+            (first_right_purchase, first_right_purchase + 15_552_000),
         )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "rolling inactivity timer can move only after a finalized floor-price purchase"):
-            self.db.execute(
-                "UPDATE genesis_programme_control SET purchase_window_last_purchase_at=?,purchase_window_closes_at=? "
-                "WHERE singleton=1",
-                (qualifying_payment, qualifying_payment + 15_552_000),
-            )
 
-        second_purchase = first_purchase + 30 * 86_400
-        add_event("evt-floor-2", "FLOOR_PURCHASE_CONSUMPTION", second_purchase)
+        first_floor_purchase = first_right_purchase + 30 * 86_400
+        add_event("evt-floor-1", "FLOOR_PURCHASE_CONSUMPTION", first_floor_purchase)
         self.assertEqual(
             self.db.execute(
                 "SELECT purchase_window_last_purchase_at,purchase_window_closes_at "
                 "FROM genesis_programme_control WHERE singleton=1"
             ).fetchone(),
-            (second_purchase, second_purchase + 15_552_000),
+            (first_floor_purchase, first_floor_purchase + 15_552_000),
         )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "inactivity window is not open"):
-            add_event("evt-floor-after-expiry", "FLOOR_PURCHASE_CONSUMPTION", second_purchase + 15_552_000)
+
+        second_right_purchase = first_floor_purchase + 30 * 86_400
+        add_event("evt-right-2", "QUALIFYING_PAYMENT_CREDIT", second_right_purchase)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT purchase_window_last_purchase_at,purchase_window_closes_at "
+                "FROM genesis_programme_control WHERE singleton=1"
+            ).fetchone(),
+            (second_right_purchase, second_right_purchase + 15_552_000),
+        )
+
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "purchase inactivity period is not open"):
+            add_event("evt-right-after-expiry", "QUALIFYING_PAYMENT_CREDIT", second_right_purchase + 15_552_000)
 
         self.assertEqual(
             self.db.execute(
-                "SELECT COUNT(*) FROM genesis_programme_allowance_events WHERE event_type='FLOOR_PURCHASE_CONSUMPTION'"
+                "SELECT COUNT(*) FROM genesis_programme_allowance_events "
+                "WHERE event_type IN ('QUALIFYING_PAYMENT_CREDIT','FLOOR_PURCHASE_CONSUMPTION')"
             ).fetchone()[0],
-            2,
+            5,
         )
 
     def test_wallet_native_schema_has_primary_wallet_identity_unique_name_and_retires_personal_entitlement_rows(self):
