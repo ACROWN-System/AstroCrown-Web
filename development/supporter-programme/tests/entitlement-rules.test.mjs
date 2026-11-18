@@ -24,26 +24,27 @@ test("new primary-wallet registration freezes exactly 24 hours before scheduled 
   assert.equal(isGenesisRegistrationOpen(launch + 100_000, null, freeze), false);
 });
 
-test("rolling 180-day inactivity timer starts after ACROWN launch and qualified ACS floor-purchase availability", () => {
+test("rolling 180-day inactivity timer starts at ACROWN launch and rolls after either Genesis purchase type", () => {
   const launch = 1_800_000_000;
   const floorOpenLater = launch + 3_600;
-  const start = purchaseWindowStartsAt(launch, floorOpenLater);
+  const start = purchaseWindowStartsAt(launch);
   const initialClose = start + PROGRAMME_WINDOW_SECONDS;
-  const firstPurchase = start + 86_400;
-  const firstResetClose = firstPurchase + PROGRAMME_WINDOW_SECONDS;
-  const laterPurchase = firstPurchase + 30 * 86_400;
-  const secondResetClose = laterPurchase + PROGRAMME_WINDOW_SECONDS;
-  assert.equal(start, floorOpenLater);
+  const firstRightPurchase = start + 86_400;
+  const firstResetClose = firstRightPurchase + PROGRAMME_WINDOW_SECONDS;
+  const laterFloorPurchase = firstRightPurchase + 30 * 86_400;
+  const secondResetClose = laterFloorPurchase + PROGRAMME_WINDOW_SECONDS;
+  assert.equal(floorOpenLater > start, true);
+  assert.equal(start, launch);
   assert.equal(PROGRAMME_WINDOW_SECONDS, 15_552_000);
   assert.equal(programmeClosesAt(start), initialClose);
-  assert.equal(programmeClosesAt(start, firstPurchase), firstResetClose);
-  assert.equal(programmeClosesAt(start, laterPurchase), secondResetClose);
-  assert.equal(isWithinProgrammeWindow(firstPurchase, start, firstResetClose, firstPurchase), true);
-  assert.equal(isWithinProgrammeWindow(secondResetClose - 1, start, secondResetClose, laterPurchase), true);
-  assert.equal(isWithinProgrammeWindow(secondResetClose, start, secondResetClose, laterPurchase), false);
+  assert.equal(programmeClosesAt(start, firstRightPurchase), firstResetClose);
+  assert.equal(programmeClosesAt(start, laterFloorPurchase), secondResetClose);
+  assert.equal(isWithinProgrammeWindow(firstRightPurchase, start, firstResetClose, firstRightPurchase), true);
+  assert.equal(isWithinProgrammeWindow(secondResetClose - 1, start, secondResetClose, laterFloorPurchase), true);
+  assert.equal(isWithinProgrammeWindow(secondResetClose, start, secondResetClose, laterFloorPurchase), false);
   assert.equal(isWithinProgrammeWindow(start - 1, start, initialClose), false);
   assert.equal(isWithinProgrammeWindow(start, start, start + 90), false);
-  assert.equal(isWithinProgrammeWindow(laterPurchase, start, firstResetClose, firstPurchase), false);
+  assert.equal(isWithinProgrammeWindow(laterFloorPurchase, start, firstResetClose, firstRightPurchase), false);
   assert.throws(() => programmeClosesAt(start, start - 1), /predate/);
 });
 
