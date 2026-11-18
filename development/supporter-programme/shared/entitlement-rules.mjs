@@ -43,15 +43,24 @@ export function purchaseWindowStartsAt(acrownLaunchedAtSeconds, floorPurchaseOpe
   return Math.max(launch, floorOpen);
 }
 
-export function programmeClosesAt(windowStartedAtSeconds) {
-  return timestamp(windowStartedAtSeconds, "Purchase-window start") + PROGRAMME_WINDOW_SECONDS;
+export function programmeClosesAt(windowStartedAtSeconds, lastCompletedFloorPurchaseAtSeconds = null) {
+  const startedAt = timestamp(windowStartedAtSeconds, "Purchase-window start");
+  const lastPurchaseAt = lastCompletedFloorPurchaseAtSeconds === null || lastCompletedFloorPurchaseAtSeconds === undefined
+    ? startedAt
+    : timestamp(lastCompletedFloorPurchaseAtSeconds, "Last completed floor-price purchase");
+  if (lastPurchaseAt < startedAt) throw new RangeError("A completed floor-price purchase cannot predate the purchase-window start.");
+  return lastPurchaseAt + PROGRAMME_WINDOW_SECONDS;
 }
 
-export function isWithinProgrammeWindow(now, windowStartedAt, closesAt) {
+export function isWithinProgrammeWindow(now, windowStartedAt, closesAt, lastCompletedFloorPurchaseAt = null) {
   if (![now, windowStartedAt, closesAt].every(Number.isSafeInteger)) return false;
-  return windowStartedAt > 0
-    && closesAt === windowStartedAt + PROGRAMME_WINDOW_SECONDS
-    && now >= windowStartedAt && now < closesAt;
+  let expectedClose;
+  try {
+    expectedClose = programmeClosesAt(windowStartedAt, lastCompletedFloorPurchaseAt);
+  } catch {
+    return false;
+  }
+  return now >= windowStartedAt && now < closesAt && closesAt === expectedClose;
 }
 
 /** Convert qualifying-payment principal to shared USDT purchase allowance for one approved tranche rate. */
