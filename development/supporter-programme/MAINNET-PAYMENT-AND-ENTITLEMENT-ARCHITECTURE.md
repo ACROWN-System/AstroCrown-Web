@@ -50,28 +50,38 @@ Requirements:
 - ACROWN delivery remains Solana-based. The member must separately prove control of the Solana delivery wallet.
 - Only these three networks are in initial scope. An extra network needs an independent review and explicit approval.
 
-## 3. Multiplier and personal purchase allowance
+## 3. Declining global tiers and USDT-denominated purchase allowance
 
-The owner's illustration establishes the intended direction: the verified contribution determines a personal ACROWN purchase allowance using an approved multiplier/rate.
+The proposed programme schedule uses a decreasing multiplier applied to successive global tranches of finalized Genesis qualifying-payment principal. The multiplier creates a **USDT-denominated maximum purchase allowance**, not an ACROWN token quantity.
 
-**Illustration only:** 1,000 USD₮ verified contribution × 25 ACROWN per USD₮ = **25,000 ACROWN purchase allowance**.
+| Cumulative qualifying-payment tranche | Multiplier | Allowance per USDT 10 within that tranche | Allowance for a full USDT 10,000 tranche |
+|---|---:|---:|---:|
+| USDT 0–10,000 | 30× | USDT 300 | USDT 300,000 |
+| USDT 10,000–20,000 | 25× | USDT 250 | USDT 250,000 |
+| USDT 20,000–30,000 | 20× | USDT 200 | USDT 200,000 |
+| USDT 30,000–40,000 | 15× | USDT 150 | USDT 150,000 |
+| USDT 40,000–50,000 | 10× | USDT 100 | USDT 100,000 |
+| **Total** | **20× weighted average** | — | **USDT 1,000,000** |
 
-The 25:1 rate is not silently treated as a final term. Before payments open, the owner must approve and publish:
-- exact multiplier/rate and units;
-- fractional-amount and base-unit rounding rules;
-- ACS floor-price calculation, version and purchase-time snapshot;
-- first-contribution qualification threshold;
-- programme-wide ACROWN cap, or an explicit decision not to impose one;
-- whether later contributions add to the same member's unused personal allowance;
-- purchase and settlement sequence.
+The schedule is a proposed owner-directed ruleset; payment activation remains blocked until its exact version, boundary semantics, minimum payment, rounding, expiry, reservation, inventory/ACS compatibility and legal disclosures are approved and published.
 
-Store all token and payment quantities as integer base-unit strings, never floating-point numbers. The general formula is:
+Rules:
+- The tiers are **global**. The programme-wide counter advances only by exact, finalized, eligible Genesis qualifying-payment principal received at the designated Genesis treasury. It is not restarted for each wallet or payment.
+- A qualifying payment that crosses a tranche boundary is split across the remaining portions of the successive tranches. For example, if USDT 3,000 remains in the 30× tranche, a USDT 10,000 qualifying payment earns USDT 90,000 allowance for its first USDT 3,000 and USDT 175,000 for its next USDT 7,000, totalling USDT 265,000.
+- A USDT 10 payment wholly within the first tranche creates up to USDT 300 of later purchase allowance; the same payment wholly within the second creates up to USDT 250.
+- The full USDT 50,000 qualifying-payment target produces no more than USDT 1,000,000 aggregate purchase allowance under this schedule. The allowance cap is measured in USDT purchase value, not ACROWN base units.
+- The first qualifying payment funds the Genesis Programme's planned launch of the complete AstroCrown website frontend and backend. It is not itself an ACROWN purchase and is not automatically added to ACS reserve value V.
+- The allowance is a right to make a later, separate purchase of ACROWN for up to that USDT value at the contemporaneous approved ACS pure floor. It is not a free token grant, fixed token quantity, guaranteed return, guaranteed resale value or assurance that inventory/market liquidity will exist.
 
-`allowance_base = floor(verified_USDT_base × rate_numerator × 10^ACROWN_decimals / (10^USDT_decimals × rate_denominator))`
+For each payment intent, the backend must reserve the applicable global tranche portions and bind the exact tier breakdown and rules version. If a payment intent expires or is cancelled, its temporary reservation is released. Once the exact payment is finalized and reconciled, the tier allocation is recorded immutably and cannot be repriced because later participants advance the global counter.
 
-The available amount at purchase time is the smaller of the unused personal allowance and any remaining approved programme-wide ACROWN cap. A global cap is a separate limit; it does not replace the personal multiplier calculation. Purchases must consume both balances atomically. Reselling purchased tokens does not replenish consumed allowance.
+Store all payment and USDT allowance values as canonical integer base-unit strings. The conceptual allowance formula is:
 
-A contribution activates purchase eligibility; it does not itself issue, transfer or purchase ACROWN. A later ACROWN acquisition is a separate, separately recorded transaction at the approved ACS floor. An allowance must never be represented as tokens already owned or delivered.
+`earned_purchase_allowance_usdt_base = Σ(tranche_principal_usdt_base × tranche_multiplier)`
+
+At the later purchase stage, the wallet holder selects a USDT amount no greater than the unused personal USDT-denominated allowance. The approved contemporaneous pure-floor quote determines the corresponding ACROWN quantity using exact rational/integer arithmetic and the approved ACROWN decimal scale. Only the actual finalized floor-price purchase consumes the corresponding USDT allowance; unused allowance is not converted into tokens or treated as an owned asset. Reselling purchased tokens does not replenish consumed allowance.
+
+**Schema migration required:** the current genesis_wallet_entitlements earned_acrown_base_units / consumed_acrown_base_units representation is ACROWN-denominated and incompatible with this model. Before payment activation, add a versioned migration and append-only entitlement events that store earned, reserved and consumed purchase allowance in USDT base units. Preserve actual acquired ACROWN quantities separately in floor-purchase records. Do not activate or credit payments against the old ACROWN-denominated columns.
 
 ## 4. One global 180-day window
 
@@ -135,6 +145,18 @@ The server creates an exact payment intent before a wallet signs a transfer. Eac
 
 At least two independently operated RPC sources are required per enabled chain. Normalize and compare evidence from both. If providers disagree, are unavailable, exceed quotas, or cannot establish finality, keep the intent pending/blocked and fail closed. Never credit from a single unverified UI callback, explorer screenshot, wallet status or LLM output.
 
+### Participant-paid network fees and exact principal
+
+The registered wallet owner bears the blockchain network fee for each participant-originated Genesis qualifying payment and each later ACROWN floor-price purchase. The participant's fee is paid separately from the USDT principal, using the native fee asset or network resources required by the selected chain (for example, ETH, TRX or SOL where applicable). The programme must not sponsor, paymaster, net, withhold or deduct this participant network fee from the USDT payment.
+
+Before the wallet signs, the dashboard must display the exact USDT principal, token, network, source, destination and intent expiry separately from a live network-fee estimate. The wallet's own confirmation prompt is the final fee confirmation; estimates may change. The registered wallet owner must maintain sufficient fee balance/resources and may cancel before signing. Never imply that the fee estimate is fixed or part of the USDT amount.
+
+The finalized on-chain transfer must deliver the exact USDT principal in the payment intent. Reject or leave uncredited any partial/netted amount, wrong destination, wrong asset or transfer whose provider/withdrawal fee reduces the principal. Do not add a platform fee or chain fee to the USDT principal. A transfer from a route that cannot deliver the exact specified amount must not be offered.
+
+For a later ACROWN floor-price purchase, the full exact USDT principal must be sent directly to the separately verified ACS reserve destination whose value is included in V. It must not be routed through the Genesis website-launch treasury or netted against an operating-fee account. Count the full received purchase principal in reserve value V under the approved valuation method. With F = V/C, participant network fees must not reduce V or be included as a deduction from the floor-price principal. Any platform-side operating or treasury-management costs must have a separately approved funding source and accounting treatment outside this purchase principal.
+
+The initial Genesis qualifying payment is a different transaction: its exact USDT principal is sent to the Genesis Programme treasury for the planned complete website frontend/backend launch, not to ACS reserve V. Its participant-side network fee is still paid separately by the registered wallet owner.
+
 ## 7. Data and accounting model
 
 The D1 migration creates:
@@ -190,11 +212,11 @@ Until all gates are evidenced, `SUPPORTER_MAINNET_ENABLED` remains false, no tre
 
 These values cannot safely be invented:
 - independent wallet-control proof and custody verification for the three already-supplied treasury receiving addresses;
-- final multiplier/rate and first-contribution threshold;
-- final floor-price/rounding/version rules;
+- final publication of the five global tiers (30× / 25× / 20× / 15× / 10× over successive USDT 10,000 tranches), tranche-reservation and boundary-crossing rules, minimum qualifying payment, USDT-denominated allowance migration and aggregate USDT 1,000,000 allowance cap;
+- final floor-price/rounding/version rules, independent ACS reserve V destination/custody proof and confirmation that the full floor-purchase USDT principal is credited to V;
 - global ACROWN cap or explicit no-cap decision;
-- whether later contributions add to unused personal allowance;
-- final terms and applicable jurisdictional conditions;
+- separate confirmation of whether later qualifying payments are permitted after the initial USDT 50,000 tiered target is reached;
+- participant-paid network-fee disclosure and exact-principal enforcement for every enabled rail, final terms and applicable jurisdictional conditions;
 - Cloudflare account 02 access/state and explicit authorization for Pages/Functions/D1 creation and deployment.
 
 The schema, static disclosures and deterministic arithmetic tests can be prepared without these inputs. Payment activation cannot.
