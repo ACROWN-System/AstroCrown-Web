@@ -314,4 +314,20 @@ test("RPC reconciliation requires two distinct operators and identical normalize
       { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, transferIndex: 9 } },
     ],
   }), /disagree/);
+  assert.throws(() => reconcileGenesisRpcEvidence({
+    network: "ethereum",
+    expected: ETH_EXPECTED,
+    observations: [
+      { providerId: "rpc-a", operatorId: "operator-a", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
+      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
+    ],
+  }), /canonical network, token identifier/);
+  assert.throws(() => reconcileGenesisRpcEvidence({
+    network: "ethereum",
+    expected: ETH_EXPECTED,
+    observations: [
+      { providerId: "rpc-a", operatorId: "operator-a", evidence: { ...evidence, finalityStatus: "LATEST" } },
+      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, finalityStatus: "LATEST" } },
+    ],
+  }), /chain-specific finality/);
 });
