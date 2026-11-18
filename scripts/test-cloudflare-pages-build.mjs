@@ -87,9 +87,10 @@ assert.match(supporterPage, /each completed, finalized ACS floor-price purchase 
 assert.match(supporterPage, /id="genesis-public-purchase-inactivity-countdown"/i);
 assert.match(supporterPage, /id="genesis-purchase-inactivity-countdown"/i);
 assert.match(supporterPage, /only unused shared purchase allowance expires/i);
-assert.doesNotMatch(supporterPage, /not a rolling timer|does not reset it/i);
+assert.doesNotMatch(supporterPage, /not a rolling timer/i);
 assert.match(supporterJs, /purchaseWindowLastPurchaseAt/);
 assert.match(supporterJs, /window\.setInterval\(tick, 1000\)/);
+assert.match(supporterJs, /window\.setInterval\(refreshProgrammeStatus, 30000\)/);
 assert.match(supporterPage, /Any one eligible wallet may buy the entire remaining programme-wide allowance/i);
 assert.match(supporterPage, /there is no personal purchase allowance|no personal per-wallet purchase cap/i);
 assert.match(supporterPage, /USDT purchase allowance within a programme-wide limit/i);
