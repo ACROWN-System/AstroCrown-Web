@@ -38,7 +38,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch/);
   assert.match(html, /New primary-wallet registration closes permanently at that cutoff and never resumes/);
   assert.match(html, /180 days of inactivity/);
-  assert.doesNotMatch(html, /\\b180 days\\b(?! of inactivity)/i);
+  assert.doesNotMatch(html, /\b180 days\b(?! of inactivity)/i);
   assert.match(html, /How does the rolling 180 days of inactivity timer work/);
   assert.match(html, /shared programme-wide countdown starts at ACROWN launch/i);
   assert.match(html, /each completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price resets/i);
