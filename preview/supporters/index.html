@@ -250,7 +250,7 @@
       <div class="hero-main">
         <div class="eyebrow">AstroCrown · Genesis Programme</div>
         <h1 id="page-title">Genesis begins here.<br><span>A privileged path to ACROWN.</span></h1>
-        <p class="hero-copy">Genesis is the first funding stage for the complete AstroCrown website frontend and backend. A finalized qualifying payment establishes a wallet-bound, USDT-denominated right to make a later, separate ACROWN purchase at the qualified ACS pure floor. The qualifying payment does not itself buy or issue ACROWN, and ACROWN is not deployed before Genesis has accumulated sufficient funds for the website launch.</p>
+        <p class="hero-copy">Genesis is the first funding stage for the complete AstroCrown website frontend and backend. Finalized qualifying payments add capacity to one shared, programme-wide USDT purchase-allowance pool. Any eligible wallet registered before the permanent pre-launch cutoff may purchase from the entire remaining pool at the qualified ACS pure floor; a single registered wallet may use all of it if it chooses and remaining inventory permits. A qualifying payment does not itself buy or issue ACROWN, and ACROWN is not deployed before Genesis has accumulated sufficient funds for the website launch.</p>
         <div class="stat-grid">
           <article class="stat-card">
             <div class="side-label">Genesis qualifying-payment target</div>
@@ -445,23 +445,23 @@
             <span class="dashboard-state pending-state">Not activated</span>
           </div>
           <div class="entitlement-summary">
-            <span class="side-label">Your personal purchase allowance</span>
+            <span class="side-label">Shared Genesis programme purchase allowance</span>
             <strong>Verified qualifying payment × approved programme terms</strong>
-            <p>Illustrative only: the final acquisition terms, qualifying threshold and entitlement formula remain subject to approval. A verified qualifying payment may establish a wallet-bound right to acquire ACROWN at the qualified ACS pure floor. This is not a guarantee of profit, resale value or market-price premium.</p>
+            <p>Illustrative only: the final qualifying-payment terms, global pool cap and multiplier formula remain subject to approval. Qualifying payments add capacity to the shared programme-wide pool. Any eligible wallet registered before the permanent cutoff may purchase from the entire remaining pool; there is no personal per-wallet purchase cap. This is not a guarantee of profit, resale value or market-price premium.</p>
           </div>
           <div class="result-list">
             <div class="result-row"><span class="result-label">First qualifying payment threshold</span><strong class="result-value">Pending final terms</strong></div>
             <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
             <div class="result-row"><span class="result-label">Total ACROWN programme allowance</span><strong class="result-value">Pending approval</strong></div>
-            <div class="result-row"><span class="result-label">Remaining ACROWN allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
+            <div class="result-row"><span class="result-label">Programme-wide remaining purchase allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
             <div class="result-row"><span class="result-label">Purchases completed by this wallet</span><strong class="result-value">No purchase records</strong></div>
           </div>
           <button class="disabled-button dashboard-purchase-button" id="supporter-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
-          <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No qualifying payment or purchase balance is created by wallet verification; payment and entitlement accounting remain closed.</p>
+          <p class="fine-print">Your profile and verified wallet links are supported by the staging backend. Wallet verification creates no personal purchase allowance. Qualifying-payment credits and purchases are accounted for in one shared programme-wide pool; payment and purchase accounting remain closed in this preview.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The public display name and avatar are labels only. The primary wallet controls identity, access and the purchase entitlement. Each additional network address must separately prove ownership. AstroCrown will never ask for a seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The public display name and avatar are labels only. The primary wallet controls identity and access to the programme-wide shared purchase pool; it does not own a personal allowance. Each additional network address must separately prove ownership. AstroCrown will never ask for a seed phrase or private key.
       </div>
     </section>
 
@@ -483,22 +483,22 @@
             <div class="result-row"><span class="result-label">Completed USDT purchase value</span><strong class="result-value">Live ledger required</strong></div>
             <div class="result-row"><span class="result-label">Remaining allowance</span><strong class="result-value">Displayed in wallet dashboard</strong></div>
           </div>
-          <p class="fine-print">Remaining allowance = USDT-denominated allowance earned across the global tiers − finalized USDT value of floor-price purchases. Every completed purchase reduces the same shared balance.</p>
+          <p class="fine-print">Remaining programme allowance = shared USDT-denominated capacity earned across the global tiers − active purchase reservations − finalized floor-purchase value. Every eligible wallet draws from and reduces the same shared balance.</p>
         </section>
         <section class="panel" aria-label="Wallet purchase entitlement">
           <div class="side-label">What one eligible wallet may purchase</div>
-          <h3 style="margin-top:7px">Unused personal USDT-denominated purchase allowance</h3>
-          <p class="panel-intro">A primary wallet may make later ACS floor-price purchases up to its unused USDT-denominated allowance, provided the shared USDT allowance cap and qualified ACROWN inventory constraints also have capacity.</p>
+          <h3 style="margin-top:7px">Entire remaining programme-wide USDT allowance</h3>
+          <p class="panel-intro">Any eligible primary wallet registered before the permanent cutoff may make later ACS floor-price purchases up to the entire remaining shared USDT-denominated programme allowance, regardless of how much qualifying payment that wallet personally made. There is no per-wallet purchase ceiling; the shared pool and qualified ACROWN inventory are the limits.</p>
           <div class="result-highlight">
-            <div class="result-label">Maximum available to this wallet</div>
-            <div class="result-value">Unused USDT purchase allowance</div>
+            <div class="result-label">Maximum available to any eligible registered wallet</div>
+            <div class="result-value">Entire shared global remainder</div>
           </div>
           <div class="formula">USDT purchase allowance = Σ (qualifying-payment amount in each global tranche × that tranche's multiplier)</div>
           <p class="fine-print">Proposed tiers: 30× / 25× / 20× / 15× / 10× across five successive USDT 10,000 tranches. A USDT 10 qualifying payment wholly within the first tranche creates up to USDT 300 of later purchase allowance. USDT 50,000 total qualifying payments creates up to USDT 1,000,000 aggregate allowance. The allowance remains denominated in USDT; ACROWN quantity is calculated at the later approved ACS floor.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>One global allowance ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot restart the global tranche counter or create duplicate identity entitlements. The purchase system must update the shared remaining USDT allowance atomically so simultaneous purchases cannot exceed the proposed USDT 1,000,000 programme-wide allowance. Each primary wallet's earned and consumed allowance remains separately auditable.
+        <strong>One global allowance pool applies to everyone.</strong> Splitting activity across multiple wallets cannot restart the tranche counter or create duplicate identity registrations. Any one eligible pre-freeze registered wallet may purchase the entire remaining pool. The purchase system must reserve and update the shared USDT balance atomically so simultaneous purchases cannot exceed the approved programme-wide amount. Each wallet's qualifying payments and purchases remain separately auditable as activity records, but no personal allowance balance or per-wallet cap exists.
       </div>
     </section>
 
@@ -548,9 +548,9 @@
       <div class="section-heading">
         <div>
           <div class="eyebrow">Wallet identity and Genesis Member status</div>
-          <h2 id="wallet-records-title">Your wallet is your Genesis identity and entitlement</h2>
+          <h2 id="wallet-records-title">Your wallet is your Genesis identity and access key</h2>
         </div>
-        <p>The primary wallet is the sole Genesis identity, login authority, recovery anchor and owner of its ACROWN purchase entitlement. Ethereum, TRON and Solana addresses from the same registered wallet application are grouped under that identity, but each address must independently prove control before it can be used. Only the primary wallet authorizes Genesis actions. The display name and avatar are public labels only, not identity credentials or entitlements.</p>
+        <p>The primary wallet is the sole Genesis identity, login authority and recovery anchor. It authorizes that identity's participation in the shared programme-wide allowance pool; it does not own a personal share or cap. Ethereum, TRON and Solana addresses from the same registered wallet application are grouped under that identity, but each address must independently prove control before it can be used. Only the primary wallet authorizes Genesis identity actions. The display name and avatar are public labels only, not identity credentials or ownership of the global pool.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
@@ -558,8 +558,8 @@
           <p>A random display name is generated when the primary wallet is first verified. The wallet holder may customize it only if it is globally available. Availability is checked in real time and reserved atomically by the Genesis service.</p>
         </article>
         <article class="transparency-card">
-          <strong>2. The wallet controls the entitlement</strong>
-          <p>The ACROWN purchase entitlement belongs to the primary wallet identity, never to its display name, avatar or linked network addresses. The primary wallet alone authorizes Genesis profile changes and later floor-price purchases. A linked network address may only prove its own control and originate a matching-network qualifying payment. AstroCrown never asks for or stores a seed phrase or private key.</p>
+          <strong>2. The wallet controls identity access, not a personal allowance</strong>
+          <p>The primary wallet is the identity and access authority. The USDT purchase allowance is one shared Genesis programme-wide pool, not an amount owned by or capped per wallet. Any eligible identity registered before the permanent freeze may buy up to the entire remaining global pool. Qualifying payments and purchases remain attributable to the initiating identity for audit purposes. AstroCrown never asks for or stores a seed phrase or private key.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Public GitHub records and backups</strong>
@@ -587,11 +587,11 @@
         </article>
         <article class="rule-card">
           <h3>The multiplier is purchase eligibility, not free tokens</h3>
-          <p>A verified qualifying payment creates a personal ACROWN purchase entitlement under the approved multiplier and programme terms. This is not an airdrop or bonus token issuance. The primary wallet may purchase up to its unused entitlement at the applicable ACS floor, subject to any approved programme-wide cap.</p>
+          <p>A verified qualifying payment adds USDT-denominated purchase capacity to the shared Genesis programme-wide pool under the approved multiplier and programme terms. It does not create a personal allowance or bonus token issuance. Any eligible wallet registered before the permanent cutoff may purchase up to the entire remaining shared pool at the applicable ACS floor.</p>
         </article>
         <article class="rule-card">
           <h3>Used entitlement is not replenished by resale</h3>
-          <p>Under the proposed model, each completed purchase consumes the corresponding part of the entitlement. Reselling those purchased tokens does not restore the consumed capacity.</p>
+          <p>Each completed floor-price purchase consumes the corresponding part of the one global pool. Reselling purchased tokens does not restore consumed programme capacity.</p>
         </article>
         <article class="rule-card">
           <h3>Allocation and sale are different</h3>
@@ -704,12 +704,20 @@
         </details>
         <details><summary>Who pays blockchain network fees, and are they deducted from my USDT amount?</summary><p>The registered wallet owner pays the network fee separately, using the fee asset or network resources required by the selected chain. The exact USDT amount in the payment intent must arrive in full. No network fee is deducted from the qualifying payment, the later ACROWN purchase principal, or the amount counted in ACS reserve value V. The dashboard must show the exact USDT principal and destination separately from the wallet's fee prompt. Maintain sufficient network-fee balance and cancel if you do not accept the fee. Estimates can change. Do not use a route that deducts a withdrawal or service fee from the USDT principal.</p></details>
         <details>
+          <summary>When does Genesis registration close?</summary>
+          <p>Exactly 24 hours before the scheduled official ACROWN launch, all Genesis activity enters a freeze, including new primary-wallet registration, qualifying payments, purchase quotes, floor-price purchases, wallet linking and profile changes. The registration cutoff is permanent: no new Genesis primary-wallet identities are accepted during or after ACROWN launch. After ACROWN launches and the qualified ACS floor-purchase facility is operational, only wallets registered before the freeze may resume approved qualifying-payment/new-right activity and floor-price purchases. New registration never reopens.</p>
+        </details>
+        <details>
+          <summary>Can one registered wallet purchase the entire Genesis programme allowance?</summary>
+          <p>Yes. The purchase allowance is one shared programme-wide USDT pool, not a personal balance for each wallet. Any eligible identity registered before the permanent cutoff may purchase any amount up to the entire remaining pool, even if that amount exceeds the qualifying payments made by that wallet. One wallet may consume the whole remaining pool; once the shared pool is exhausted, no further Genesis floor-price allowance remains for other wallets.</p>
+        </details>
+        <details>
           <summary>Can I send USDT now?</summary>
           <p>No. This is a development preview. Ethereum, TRON and Solana payment acceptance is disabled. Do not send USDT or any other asset. No payment will be recognized until the official verified flow is enabled.</p>
         </details>
         <details>
           <summary>How does my Genesis display name and wallet identity work?</summary>
-          <p>A random unique public display name is assigned after the primary wallet is verified. You can customize it only when it is not already used by another Genesis wallet; the service checks availability and reserves the name atomically. The primary wallet is the identity, recovery anchor and entitlement holder. If the primary wallet and its recovery capability are irretrievably lost, Genesis cannot restore the identity or entitlement. Explorer links reveal the full public address and its on-chain history. Never share your seed phrase or private key.</p>
+          <p>A random unique public display name is assigned after the primary wallet is verified. You can customize it only when it is not already used by another Genesis wallet; the service checks availability and reserves the name atomically. The primary wallet is the identity, login authority and recovery anchor; it is not the owner of a personal share of the programme-wide purchase pool. If the primary wallet and its recovery capability are irretrievably lost, Genesis cannot restore the identity or entitlement. Explorer links reveal the full public address and its on-chain history. Never share your seed phrase or private key.</p>
         </details>
         <details>
           <summary>What happens if I send more USDT than the authorized amount?</summary>
@@ -726,7 +734,7 @@
       <div>
         <div class="eyebrow">Participation status</div>
         <h2 id="participate-title">The Genesis Programme is being prepared.</h2>
-        <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. The 180-day purchase-exercise period begins only after ACROWN is officially launched and the approved ACS pure-floor purchase service is operationally available. A registered wallet that completes and receives ACROWN for its entire personal purchase allowance is fully exercised; only any unused allowance remains subject to the disclosed global close.</p>
+        <p>Real participation will open only after the programme terms, Ethereum/TRON/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, operational controls and required reviews are complete. All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch. New primary-wallet registration closes permanently at that cutoff and never resumes. After ACROWN launches and the approved ACS pure-floor purchase service is operationally available, only identities registered before the freeze may resume approved qualifying payments (adding capacity to the shared pool) and floor-price purchases (consuming it). The one global 180-day period starts when both ACROWN and the qualified floor-purchase service are live. Any one eligible wallet may buy the entire remaining programme-wide allowance; if the pool is not exhausted, only its global remainder expires at the 180-day close.</p>
         <p id="supporter-runtime-status" role="status" aria-live="polite">Checking the isolated Genesis Programme service. Qualifying payments remain closed.</p>
       </div>
       <button class="disabled-button" type="button" disabled aria-disabled="true">USDT transfers not enabled</button>
