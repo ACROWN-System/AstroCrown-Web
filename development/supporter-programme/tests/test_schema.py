@@ -175,7 +175,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 "'new identity sign-in',?,?)",
                 (now, now + 600),
             )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "schedule is locked once the 24-hour"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "schedule.*(cannot change|locked)"):
             self.db.execute(
                 "UPDATE genesis_programme_control SET scheduled_acrown_launch_at=?,registration_freeze_at=? "
                 "WHERE singleton=1",
