@@ -37,7 +37,10 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.doesNotMatch(html, /programme-wide ACROWN cap/);
   assert.match(html, /All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch/);
   assert.match(html, /New primary-wallet registration closes permanently at that cutoff and never resumes/);
-  assert.match(html, /one global 180-day period starts when both ACROWN and the qualified floor-purchase service are live/);
+  assert.match(html, /180 days of inactivity/);
+  assert.match(html, /What does the 180 days of inactivity apply to, and when does it begin/);
+  assert.match(html, /ACROWN is officially deployed\/launched and the qualified ACS floor-price token-purchase service has actually become available/);
+  assert.match(html, /does not reset it/);
   assert.match(html, /Any one eligible wallet may buy the entire remaining programme-wide allowance/);
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
