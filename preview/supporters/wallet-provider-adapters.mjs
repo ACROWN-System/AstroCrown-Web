@@ -50,6 +50,13 @@ const WALLET_NAMES = Object.freeze({
   coin98: "Coin98",
 });
 
+export function encodeEvmPersonalSignMessage(message) {
+  const bytes = new TextEncoder().encode(String(message));
+  let hex = "";
+  bytes.forEach((byte) => { hex += byte.toString(16).padStart(2, "0"); });
+  return "0x" + hex;
+}
+
 export function walletDisplayName(walletId) {
   return WALLET_NAMES[walletId] || "Injected wallet";
 }
