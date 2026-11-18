@@ -835,13 +835,13 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     if (!startedAt || !closesAt) {
       show("Not started");
-      if (resetElement) resetElement.textContent = "The initial countdown starts only after official ACROWN launch and availability of qualified ACS floor-price purchases. Each completed, finalized floor-price purchase by any eligible wallet then resets the shared countdown to 180 days of inactivity.";
+      if (resetElement) resetElement.textContent = "The programme-wide countdown starts at official ACROWN launch. Each completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price resets the shared timer to 180 days of inactivity.";
       return;
     }
     if (resetElement) {
       resetElement.textContent = lastPurchaseAt
-        ? "Latest global timer reset: completed, finalized ACS floor-price purchase on " + new Date(lastPurchaseAt * 1000).toLocaleString() + ". A purchase by any eligible wallet resets the same programme-wide countdown."
-        : "The initial countdown began when qualified ACS floor-price purchases became available after ACROWN launch. The first completed, finalized floor-price purchase by any eligible wallet will reset the shared countdown to 180 days of inactivity.";
+        ? "Latest global timer reset after a completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price: " + new Date(lastPurchaseAt * 1000).toLocaleString() + ". Any eligible pre-freeze registered wallet resets the same programme-wide countdown."
+        : "The initial countdown began at official ACROWN launch. The first completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price will reset the shared countdown to 180 days of inactivity.";
     }
     function tick() {
       var remaining = Math.max(0, closesAt - Math.floor(Date.now() / 1000));
