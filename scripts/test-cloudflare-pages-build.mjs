@@ -77,7 +77,7 @@ assert.match(supporterPage, /registered wallet owner.*network fee.*separately/is
 assert.match(supporterPage, /full USDT principal.*ACS reserve destination.*V/is);
 assert.match(supporterPage, /id="participant-network-fee-policy"/i);
 assert.doesNotMatch(supporterPage, /25 ACROWN per USD₮|USDT 150 transition threshold|USDT 250,000 target/i);
-assert.match(supporterPage, /All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch/i);
+assert.match(supporterPage, /Exactly 24 hours before the scheduled official ACROWN launch, Genesis activity pauses/i);
 assert.match(supporterPage, /New primary-wallet registration closes permanently at that cutoff and never resumes/i);
 assert.match(supporterPage, /180 days of inactivity/i);
 assert.doesNotMatch(supporterPage, /\b180 days\b(?! of inactivity)/i);
