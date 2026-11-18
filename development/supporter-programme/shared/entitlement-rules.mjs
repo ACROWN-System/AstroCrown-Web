@@ -36,11 +36,9 @@ export function isGenesisRegistrationOpen(nowSeconds, scheduledAcrownLaunchAtSec
   return nowSeconds < registrationFreezeAt(scheduledAcrownLaunchAtSeconds);
 }
 
-/** Start the global 180-day window only once both ACROWN and the qualified ACS floor-purchase facility are live. */
-export function purchaseWindowStartsAt(acrownLaunchedAtSeconds, floorPurchaseOpenedAtSeconds) {
-  const launch = timestamp(acrownLaunchedAtSeconds, "Official ACROWN launch");
-  const floorOpen = timestamp(floorPurchaseOpenedAtSeconds, "ACS floor-purchase opening");
-  return Math.max(launch, floorOpen);
+/** The programme-wide 180 days of inactivity timer starts at official ACROWN launch. */
+export function purchaseWindowStartsAt(acrownLaunchedAtSeconds) {
+  return timestamp(acrownLaunchedAtSeconds, "Official ACROWN launch");
 }
 
 export function programmeClosesAt(windowStartedAtSeconds, lastCompletedFloorPurchaseAtSeconds = null) {
