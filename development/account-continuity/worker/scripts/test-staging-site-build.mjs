@@ -13,6 +13,7 @@ async function readPublic(path) {
 test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
+  await access(resolve(publicRoot, "supporters/wallet-provider-adapters.mjs"));
   await access(resolve(publicRoot, "assets/genesis-member-dna.svg"));
   const homepage = await readPublic("index.html");
   assert.match(homepage, /href="\.\/supporters\/">Genesis Programme/);
@@ -42,6 +43,9 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
   assert.match(js, /wallet-standard:app-ready/);
+  assert.match(js, /discoverDirectEvmProviders/);
+  assert.match(js, /discoverDirectTronProviders/);
+  assert.match(js, /discoverDirectSolanaWallets/);
   assert.match(js, /eth_requestAccounts/);
   assert.match(js, /standard:connect/);
   assert.match(js, /personal_sign/);
