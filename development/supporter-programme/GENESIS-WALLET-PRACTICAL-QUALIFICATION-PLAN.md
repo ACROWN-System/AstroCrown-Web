@@ -52,16 +52,17 @@ A stage cannot be inferred from a previous stage. In particular, PROVIDER_DETECT
 
 ## Current result
 
-- Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212031251 for the previous source revision. A further EVM personal_sign UTF-8 payload-encoding test has now been added; the updated Worker run is pending.
+- Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212351208, including the EVM personal_sign UTF-8 payload-encoding test added in this revision.
 - Synthetic local wallet-signature E2E: PASS in Worker qualification run 44212031251. Tests cover Ethereum primary identity, TRON TIP-191 linked address, Solana Ed25519 linked address, replay prevention, cross-origin protection, case-insensitive name uniqueness, logout/reconnect and no payments.
-- Browser mock-wallet safety smoke: PASS in Chromium run 44211825917. It verifies the mocked wallet interaction and that no payment/transaction action is triggered; it does not execute installed vendor wallet apps.
-- Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44212031321.
-- Local isolated Worker API smoke, local D1 application, build, preflight parser and remote fail-closed checks: PASS in run 44212031251.
-- External Review Pipeline: PASS in run 44212031362.
+- Browser mock-wallet safety smoke: PASS in Chromium run 44212351188. It verifies the mocked wallet interaction and that no payment/transaction action is triggered; it does not execute installed vendor wallet apps.
+- Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44212351355.
+- Local isolated Worker API smoke, local D1 application, build, preflight parser and remote fail-closed checks: PASS in run 44212351208.
+- External Review Pipeline: PASS in run 44212351452; Python CodeQL: PASS in run 44212351395.
 - Live installed-wallet signatures: NOT_TESTED for all six candidates.
 - Three-network USDT send/receive with each wallet: NOT_TESTED.
 - Wallet restore/address derivation on all three networks: NOT_TESTED.
 - Production acceptance: disabled; qualifiedWalletIds=[].
+- NOVA RSI Engine CI run 44212351346 failed at the pinned immutable Python sandbox image digest verification before compile/unit tests; RSI tests were skipped. This is a separate runner-image issue, not a Genesis wallet adapter failure.
 - All six remain CANDIDATE_NOT_QUALIFIED; passing automated adapter tests must not be promoted to wallet qualification.
 
 No real assets, seed phrases, private keys, wallet transactions, token approvals, payment intents or funds are used by the automated tests or this development change.
