@@ -132,6 +132,20 @@ END;
 -- After launch, acquiring additional Genesis purchase rights and buying ACROWN at
 -- the ACS floor price are both purchase events that reset the same global timer.
 -- Pre-launch qualifying-payment credits do not start or reset this timer.
+-- Purchase and allowance events are paused from the 24-hour cutoff until actual launch.
+-- Existing members resume the same purchase activities at official ACROWN launch.
+CREATE TRIGGER IF NOT EXISTS genesis_purchase_activity_freeze_guard
+BEFORE INSERT ON genesis_programme_allowance_events
+WHEN NEW.event_type IN ('QUALIFYING_PAYMENT_CREDIT', 'FLOOR_PURCHASE_RESERVATION', 'FLOOR_PURCHASE_CONSUMPTION')
+ AND EXISTS (
+   SELECT 1 FROM genesis_programme_control c
+   WHERE c.singleton=1
+     AND c.registration_freeze_at IS NOT NULL
+     AND NEW.created_at >= c.registration_freeze_at
+     AND (c.acrown_launched_at IS NULL OR NEW.created_at < c.acrown_launched_at)
+ )
+BEGIN SELECT RAISE(ABORT, 'Genesis purchase activity is paused during the 24-hour pre-launch freeze'); END;
+
 CREATE TRIGGER IF NOT EXISTS genesis_purchase_events_require_open_window
 BEFORE INSERT ON genesis_programme_allowance_events
 WHEN NEW.event_type IN ('QUALIFYING_PAYMENT_CREDIT', 'FLOOR_PURCHASE_CONSUMPTION')
@@ -206,7 +220,9 @@ BEGIN SELECT RAISE(ABORT, 'Programme-wide allowance events are append-only'); EN
 
 -- Database-level backstops enforce the cutoff even if an API path is added incorrectly.
 -- Before the cutoff timestamp, the programme can accept new identity/profile records.
--- At/after the cutoff, new identities, address links and identity/profile edits are blocked permanently.
+-- At/after the cutoff, new identities are blocked permanently. During the pre-launch
+-- freeze, wallet linking and profile changes pause, then resume for existing identities
+-- after official ACROWN launch.
 CREATE TRIGGER IF NOT EXISTS genesis_primary_identity_registration_cutoff
 BEFORE INSERT ON genesis_wallet_identities
 WHEN EXISTS (
@@ -222,10 +238,11 @@ BEFORE INSERT ON genesis_wallet_addresses
 WHEN EXISTS (
   SELECT 1 FROM genesis_programme_control c
   WHERE c.singleton=1
+    AND c.acrown_launched_at IS NULL
     AND (c.registration_closed_at IS NOT NULL
       OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
 )
-BEGIN SELECT RAISE(ABORT, 'Genesis wallet linking is permanently closed at the 24-hour pre-launch freeze'); END;
+BEGIN SELECT RAISE(ABORT, 'Genesis wallet linking is paused during the 24-hour pre-launch freeze'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_identity_profile_mutation_cutoff
 BEFORE UPDATE OF display_name, display_name_normalized, avatar_key
@@ -233,31 +250,39 @@ ON genesis_wallet_identities
 WHEN EXISTS (
   SELECT 1 FROM genesis_programme_control c
   WHERE c.singleton=1
+    AND c.acrown_launched_at IS NULL
     AND (c.registration_closed_at IS NOT NULL
       OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
 )
-BEGIN SELECT RAISE(ABORT, 'Genesis profile changes are closed at the 24-hour pre-launch freeze'); END;
+BEGIN SELECT RAISE(ABORT, 'Genesis profile changes are paused during the 24-hour pre-launch freeze'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_wallet_challenge_cutoff
 BEFORE INSERT ON genesis_wallet_challenges
-WHEN EXISTS (
-  SELECT 1 FROM genesis_programme_control c
-  WHERE c.singleton=1
-    AND (c.registration_closed_at IS NOT NULL
-      OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
-)
-AND (
+WHEN (
   NEW.challenge_purpose IN ('LINK', 'RENAME')
-  OR (
-    NEW.challenge_purpose='IDENTIFY'
-    AND NOT EXISTS (
-      SELECT 1 FROM genesis_wallet_identities i
-      WHERE i.primary_network=NEW.network
-        AND i.primary_address_normalized=NEW.address_normalized
-    )
+  AND EXISTS (
+    SELECT 1 FROM genesis_programme_control c
+    WHERE c.singleton=1
+      AND c.acrown_launched_at IS NULL
+      AND (c.registration_closed_at IS NOT NULL
+        OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
   )
 )
-BEGIN SELECT RAISE(ABORT, 'New Genesis registrations, wallet links and profile challenges are closed at the 24-hour pre-launch freeze'); END;
+OR (
+  NEW.challenge_purpose='IDENTIFY'
+  AND EXISTS (
+    SELECT 1 FROM genesis_programme_control c
+    WHERE c.singleton=1
+      AND (c.registration_closed_at IS NOT NULL
+        OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
+  )
+  AND NOT EXISTS (
+    SELECT 1 FROM genesis_wallet_identities i
+    WHERE i.primary_network=NEW.network
+      AND i.primary_address_normalized=NEW.address_normalized
+  )
+)
+BEGIN SELECT RAISE(ABORT, 'New Genesis identities remain closed; existing wallet links and profile changes resume at ACROWN launch'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_wallet_address_delete_cutoff
 BEFORE DELETE ON genesis_wallet_addresses
