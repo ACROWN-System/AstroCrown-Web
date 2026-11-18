@@ -345,6 +345,110 @@ async function getWorkerJson(path) {
     ".then(async r=>({status:r.status,body:await r.json()}))"
   );
 }
+async function testCommunityApi() {
+  const discovery = await getWorkerJson("/api/community/communities");
+  assert.equal(discovery.status, 200, JSON.stringify(discovery.body));
+  const slugs = discovery.body.communities.map(item => item.slug);
+  for (const expected of ["finance-tokenomics","aerospace","computing-power-infrastructure","superintelligence-ai-systems","ethics-governance","science-research"]) {
+    assert.ok(slugs.includes(expected), "the initial community directory must include " + expected);
+  }
+
+  const emptyGlobalFeed = await getWorkerJson("/api/community/feed");
+  assert.equal(emptyGlobalFeed.status, 200, JSON.stringify(emptyGlobalFeed.body));
+  assert.equal(emptyGlobalFeed.body.scope, "global");
+
+  const ordinaryCommunityCreation = await postWorkerJson("/api/community/communities", {
+    name: "Unauthorized Community", slug: "unauthorized-community", visibility: "public", membershipPolicy: "open"
+  });
+  assert.equal(ordinaryCommunityCreation.status, 403,
+    "ordinary passkey accounts must not create platform communities without authorized administrator step-up.");
+
+  const marker = "AstroCrown community integration test " + randomUUID();
+  const created = await postWorkerJson("/api/community/posts", { content: marker });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const post = created.body.post;
+  assert.match(post.id, /^post_[a-f0-9]{32}$/);
+  assert.equal(post.content, marker);
+  assert.equal(post.visibility, "public");
+  assert.equal(post.author.handle.length > 0, true);
+
+  const detail = await getWorkerJson("/api/community/posts/" + post.id);
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.post.content, marker);
+
+  const globalFeed = await getWorkerJson("/api/community/feed?limit=10");
+  assert.equal(globalFeed.status, 200);
+  assert.ok(globalFeed.body.items.some(item => item.id === post.id));
+
+  const reply = await postWorkerJson("/api/community/posts/" + post.id + "/replies", {
+    content: "Reply to " + marker
+  });
+  assert.equal(reply.status, 201, JSON.stringify(reply.body));
+  assert.equal(reply.body.post.parentId, post.id);
+  const replies = await getWorkerJson("/api/community/posts/" + post.id + "/replies");
+  assert.equal(replies.status, 200);
+  assert.ok(replies.body.items.some(item => item.id === reply.body.post.id));
+
+  const reaction = await postWorkerJson("/api/community/posts/" + post.id + "/reactions", { reaction: "like" });
+  assert.equal(reaction.status, 200);
+  assert.equal(reaction.body.post.likedByViewer, true);
+  assert.equal(reaction.body.post.likeCount, 1);
+  const duplicateReaction = await postWorkerJson("/api/community/posts/" + post.id + "/reactions", { reaction: "like" });
+  assert.equal(duplicateReaction.status, 200);
+  assert.equal(duplicateReaction.body.post.likeCount, 1, "duplicate reactions must be idempotent");
+  const removeReaction = await postWorkerJson("/api/community/posts/" + post.id + "/reactions", { reaction: null });
+  assert.equal(removeReaction.status, 200);
+  assert.equal(removeReaction.body.post.likedByViewer, false);
+
+  const bookmark = await postWorkerJson("/api/community/posts/" + post.id + "/bookmark", {});
+  assert.equal(bookmark.status, 200);
+  assert.equal(bookmark.body.post.bookmarkedByViewer, true);
+  const unbookmark = await postWorkerJson("/api/community/posts/" + post.id + "/bookmark", {});
+  assert.equal(unbookmark.status, 200);
+  assert.equal(unbookmark.body.post.bookmarkedByViewer, false);
+
+  const report = await postWorkerJson("/api/community/posts/" + post.id + "/report", {
+    category: "other", details: "Automated local-only test report."
+  });
+  assert.equal(report.status, 201);
+  const duplicateReport = await postWorkerJson("/api/community/posts/" + post.id + "/report", {
+    category: "other", details: "Duplicate local-only test report."
+  });
+  assert.equal(duplicateReport.status, 409, "a reporter must not submit duplicate reports for one target");
+
+  const joined = await postWorkerJson("/api/community/communities/aerospace/join", {});
+  assert.equal(joined.status, 200);
+  assert.equal(joined.body.membershipStatus, "active");
+  const spacePost = await postWorkerJson("/api/community/posts", {
+    content: "Aerospace community test " + randomUUID(), communitySlug: "aerospace"
+  });
+  assert.equal(spacePost.status, 201, JSON.stringify(spacePost.body));
+  assert.equal(spacePost.body.post.community.slug, "aerospace");
+  const spaceFeed = await getWorkerJson("/api/community/communities/aerospace/feed?limit=10");
+  assert.equal(spaceFeed.status, 200);
+  assert.ok(spaceFeed.body.items.some(item => item.id === spacePost.body.post.id));
+
+  const left = await postWorkerJson("/api/community/communities/aerospace/leave", {});
+  assert.equal(left.status, 200);
+  assert.equal(left.body.membershipStatus, "left");
+  const deniedPost = await postWorkerJson("/api/community/posts", {
+    content: "Should not post after leaving", communitySlug: "aerospace"
+  });
+  assert.equal(deniedPost.status, 403, "leaving a community must immediately remove posting authority");
+
+  const selfControl = await postWorkerJson("/api/community/accounts/not-a-valid-target/control", {
+    type: "block", action: "add"
+  });
+  assert.equal(selfControl.status, 404, "account-control routes must not reveal a nonexistent target account");
+
+  const deleted = await postWorkerJson("/api/community/posts/" + post.id + "/delete", {});
+  assert.equal(deleted.status, 200);
+  assert.equal(deleted.body.deleted, true);
+  const missingAfterDelete = await getWorkerJson("/api/community/posts/" + post.id);
+  assert.equal(missingAfterDelete.status, 404);
+  console.log("PASS: authenticated community directory, global feed, post/reply persistence, reaction idempotency, bookmark toggling, duplicate-report prevention, community membership/posting boundaries, and author removal.");
+}
+
 async function signSiwe(account, challenge) {
   assert.equal(challenge.status, 200, JSON.stringify(challenge.body));
   assert.equal(challenge.body.transactionAuthorized, false);
@@ -937,6 +1041,7 @@ try {
   assert.equal(account.adminRoleAssigned, false);
   assert.equal(account.admin, false);
 
+  await testCommunityApi();
 
   await trustedClick("#account-recovery-key-saved");
   await waitFor("offline recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));
