@@ -329,7 +329,7 @@
           <div class="field">
             <label for="member-pseudonym">Public display name</label>
             <input id="member-pseudonym" type="text" maxlength="28" autocomplete="off" spellcheck="false" aria-describedby="display-name-help">
-            <small id="display-name-help">A random unique name is assigned automatically after primary-wallet verification. You may customize it later; names must be globally unique. Losing the primary wallet and its recovery capability means losing access to this Genesis identity and its wallet-bound entitlements.</small>
+            <small id="display-name-help">A random unique name is assigned automatically after primary-wallet verification. You may customize it later; names must be globally unique. Losing the primary wallet and its recovery capability means losing access to this Genesis identity, its badge and its attributable activity history; no personal purchase allowance is attached to the wallet.</small>
           </div>
           <div class="profile-actions">
             <button class="secondary-button" id="member-name-randomize" type="button">Generate another name</button>
@@ -439,19 +439,19 @@
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
           <div class="dashboard-panel-head">
             <div>
-              <span class="scenario-tag">Wallet entitlement</span>
+              <span class="scenario-tag">Programme-wide pool access</span>
               <h3 id="entitlement-title" style="margin-top:12px">Your purchase access</h3>
             </div>
             <span class="dashboard-state pending-state">Not activated</span>
           </div>
           <div class="entitlement-summary">
             <span class="side-label">Shared Genesis programme purchase allowance</span>
-            <strong>Verified qualifying payment × approved programme terms</strong>
+            <strong>Shared programme allowance from finalized qualifying payments × approved programme terms</strong>
             <p>Illustrative only: the final qualifying-payment terms, global pool cap and multiplier formula remain subject to approval. Qualifying payments add capacity to the shared programme-wide pool. Any eligible wallet registered before the permanent cutoff may purchase from the entire remaining pool; there is no personal per-wallet purchase cap. This is not a guarantee of profit, resale value or market-price premium.</p>
           </div>
           <div class="result-list">
             <div class="result-row"><span class="result-label">First qualifying payment threshold</span><strong class="result-value">Pending final terms</strong></div>
-            <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
+            <div class="result-row"><span class="result-label">Programme multiplier schedule</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
             <div class="result-row"><span class="result-label">Total ACROWN programme allowance</span><strong class="result-value">Pending approval</strong></div>
             <div class="result-row"><span class="result-label">Programme-wide remaining purchase allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
             <div class="result-row"><span class="result-label">Purchases completed by this wallet</span><strong class="result-value">No purchase records</strong></div>
@@ -461,7 +461,7 @@
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The public display name and avatar are labels only. The primary wallet controls identity and access to the programme-wide shared purchase pool; it does not own a personal allowance. Each additional network address must separately prove ownership. AstroCrown will never ask for a seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The public display name and avatar are labels only. The primary wallet controls identity and access to the programme-wide shared purchase pool; the pool is not owned by any one wallet. Each additional network address must separately prove ownership. AstroCrown will never ask for a seed phrase or private key.
       </div>
     </section>
 
