@@ -159,6 +159,22 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 "UPDATE genesis_wallet_identities SET display_name='Changed Wallet',display_name_normalized='changed wallet' "
                 "WHERE identity_id='gid-existing'"
             )
+        # Existing primary-wallet authentication remains possible, but new identities and profile challenges do not.
+        self.db.execute(
+            "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,"
+            "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
+            "VALUES('gch-existing','gid-existing','ethereum','0xabc','0xabc','IDENTIFY','nonce-existing','example.test',"
+            "'digest-existing','existing wallet sign-in',?,?,?)".replace("?,?,?)", "?,?)"),
+            (now, now + 600),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "New Genesis registrations"):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_challenges(challenge_id,network,address,address_normalized,challenge_purpose,"
+                "nonce_digest,domain,message_digest,message,created_at,expires_at) "
+                "VALUES('gch-new','solana','SoNew','SoNew','IDENTIFY','nonce-new','example.test','digest-new',"
+                "'new identity sign-in',?,?)",
+                (now, now + 600),
+            )
         with self.assertRaisesRegex(sqlite3.IntegrityError, "schedule is locked once the 24-hour"):
             self.db.execute(
                 "UPDATE genesis_programme_control SET scheduled_acrown_launch_at=?,registration_freeze_at=? "
