@@ -54,8 +54,8 @@ function genesisRegistrationClosed(control, now = Math.floor(Date.now() / 1000))
 }
 
 function assertGenesisProfileMutationsOpen(control) {
-  if (genesisRegistrationClosed(control)) {
-    throw error(423, "Genesis activity is frozen. New identities, wallet links and profile changes are permanently closed from 24 hours before ACROWN launch.");
+  if (!control?.acrown_launched_at && genesisRegistrationClosed(control)) {
+    throw error(423, "Existing Genesis wallet links and profile changes are paused during the 24-hour pre-launch freeze; they resume when ACROWN officially launches. New Genesis identity registration remains permanently closed.");
   }
 }
 
