@@ -52,6 +52,24 @@ No test asks for a seed phrase/private key. No test requires restore of all thre
 
 MetaMask is outside this five-wallet test wave. Its earlier TRON dApp integration limitation is not treated as a general incompatibility under this narrower policy; it can be reconsidered as a later candidate without requiring a TRON message-signing API.
 
+## Implementation boundary that affects the payment-source route
+
+Already implemented:
+- primary wallet identity, off-chain challenge/signature verification, session and name management;
+- optional signed wallet-link challenges for PAYMENT and Solana DELIVERY addresses;
+- immutable payment/public-record schema, wallet-bound entitlement and badge gates;
+- deterministic read-only Ethereum, TRON and Solana USDT evidence parsers;
+- normalized two-operator evidence reconciliation tests;
+- offline ACS floor-purchase arithmetic and tests.
+
+Not yet implemented:
+- server-created payment-intent endpoint and its persistent lifecycle;
+- live RPC clients and the qualified two-operator provider registry;
+- entitlement-credit writer and the full append-only payment-to-entitlement workflow;
+- one-time on-chain proof/write path that can add an unlinked payment-source address from a successfully reconciled transfer.
+
+**Current constraint:** the existing D1 payment table requires its source address to exist as a previously verified PAYMENT wallet-address row. Therefore, until the one-time on-chain source-proof path is implemented, a payment from a different/unlinked address still needs the existing wallet-link signature before it can be credited. This is especially relevant to TRON when a wallet exposes native USDT transfers but no Genesis-compatible TRON dApp message signer. The revised policy removes the unnecessary wallet-vendor requirement; it does not pretend the missing server-side attribution path already exists.
+
 ## System-level payment verification (not repeated for every wallet)
 
 Genesis accepts three payment rails, each with its own parser:
