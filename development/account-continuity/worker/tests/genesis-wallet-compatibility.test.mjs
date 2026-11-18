@@ -48,11 +48,11 @@ test("primary identity is sole Genesis authority and every used payment address 
 test("payment completion is verified from chain evidence, not a wallet notification", () => {
   const payment = policy.qualificationModel.payment;
   assert.deepEqual(payment.acceptedRails.slice().sort(), ["ethereum", "solana", "tron"]);
-  assert.match(payment.attribution, /wallet does not notify Genesis/i);
+  assert.match(payment.attribution, /does not rely on wallet notifications/i);
   assert.match(payment.attribution, /previously verified PAYMENT address/i);
   assert.match(payment.attribution, /does not accept unlinked one-time payment sources/i);
   assert.match(payment.tronAddressProof, /TRON wallet-link challenge/i);
-  assert.ok(payment.walletProviderNotRequired.some((item) => /every accepted payment network/i.test(item)));
+  assert.ok(payment.walletProviderNotRequired.some((item) => /dApp provider on every accepted payment network/i.test(item)));
   assert.match(payment.networkSelection, /need not support all three rails/i);
 });
 
@@ -67,7 +67,7 @@ test("Solana delivery only requires a verified SPL recipient; participant signin
 
 test("obsolete per-wallet three-chain signature, transfer and restore gates are explicitly removed", () => {
   const excluded = policy.qualificationModel.notRequiredForWalletQualification.join(" ").toLowerCase();
-  assert.match(excluded, /all three payment networks/);
+  assert.match(excluded, /all three networks/);
   assert.match(excluded, /restore testing/);
   assert.match(excluded, /signing or sending the acrown delivery/);
   for (const candidate of policy.candidates) {
