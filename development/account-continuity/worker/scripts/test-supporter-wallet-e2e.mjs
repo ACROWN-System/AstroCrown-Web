@@ -136,7 +136,11 @@ const identityId = established.data.walletIdentity.identityId;
 const firstProfile = await profile(sessionCookie);
 assert.equal(firstProfile.walletIdentity.identityId, identityId);
 assert.equal(firstProfile.walletIdentity.displayName, established.data.walletIdentity.displayName);
-assert.equal(firstProfile.entitlement.earnedAcrownBaseUnits, "0");
+assert.equal(firstProfile.programmePurchaseAllowance.scope, "GENESIS_PROGRAMME_GLOBAL");
+assert.equal(firstProfile.programmePurchaseAllowance.earnedUsdtBaseUnits, "0");
+assert.equal(firstProfile.programmePurchaseAllowance.remainingUsdtBaseUnits, "0");
+assert.equal(firstProfile.programmePurchaseAllowance.oneEligibleWalletMayUseEntireRemainder, true);
+assert.equal("entitlement" in firstProfile, false);
 assert.equal(firstProfile.genesisMember.status, "NOT_QUALIFIED");
 
 // Challenges are single use and cannot be replayed to recreate or reassign a wallet identity.
@@ -221,7 +225,8 @@ assert.equal(finalProfile.wallets.length, 3);
 assert.equal(finalProfile.walletIdentity.displayName, customName);
 assert.equal(finalProfile.walletIdentity.identityId, identityId);
 assert.equal(finalProfile.paymentAcceptance.enabled, false);
-assert.equal(finalProfile.entitlement.earnedAcrownBaseUnits, "0");
+assert.equal(finalProfile.programmePurchaseAllowance.scope, "GENESIS_PROGRAMME_GLOBAL");
+assert.equal(finalProfile.programmePurchaseAllowance.remainingUsdtBaseUnits, "0");
 assert.equal(finalProfile.wallets.some((wallet) => wallet.network === "tron"), true);
 assert.equal(finalProfile.wallets.some((wallet) => wallet.network === "solana" && wallet.wallet_role === "PAYMENT_AND_DELIVERY"), true);
 
@@ -247,7 +252,8 @@ const reconnected = await post("/api/genesis/identity/verify", {
 assert.equal(reconnected.data.walletIdentity.identityId, identityId);
 assert.equal(reconnected.data.walletIdentity.displayName, customName);
 assert.equal(reconnected.data.wallets.length, 3);
-assert.equal(reconnected.data.entitlement.earnedAcrownBaseUnits, "0");
+assert.equal(reconnected.data.programmePurchaseAllowance.scope, "GENESIS_PROGRAMME_GLOBAL");
+assert.equal(reconnected.data.programmePurchaseAllowance.remainingUsdtBaseUnits, "0");
 assert.equal(reconnected.data.genesisMember.status, "NOT_QUALIFIED");
 
 console.log(JSON.stringify({
