@@ -803,7 +803,7 @@ export async function supporterStatusResponse(env) {
   }
 
   try {
-    const [program, result] = await Promise.all([
+    const [program, result, genesisControl] = await Promise.all([
       db.prepare(
         "SELECT environment,status,activated_at,closes_at,rules_version " +
         "FROM supporter_program WHERE singleton = 1"
@@ -812,10 +812,29 @@ export async function supporterStatusResponse(env) {
         "SELECT network,network_identifier,token_identifier,token_decimals,treasury_address,enabled " +
         "FROM supporter_network_config ORDER BY network"
       ).all(),
+      db.prepare(
+        "SELECT acrown_launched_at,acs_floor_purchase_opened_at,purchase_window_started_at," +
+        "purchase_window_last_purchase_at,purchase_window_closes_at " +
+        "FROM genesis_programme_control WHERE singleton=1"
+      ).first(),
     ]);
 
+    const now = Math.floor(Date.now() / 1000);
+    const lifecycle = {
+      acrownLaunchedAt: genesisControl?.acrown_launched_at ? Number(genesisControl.acrown_launched_at) : null,
+      acsFloorPurchaseOpenedAt: genesisControl?.acs_floor_purchase_opened_at ? Number(genesisControl.acs_floor_purchase_opened_at) : null,
+      purchaseWindowStartedAt: genesisControl?.purchase_window_started_at ? Number(genesisControl.purchase_window_started_at) : null,
+      purchaseWindowLastPurchaseAt: genesisControl?.purchase_window_last_purchase_at ? Number(genesisControl.purchase_window_last_purchase_at) : null,
+      purchaseWindowClosesAt: genesisControl?.purchase_window_closes_at ? Number(genesisControl.purchase_window_closes_at) : null,
+      purchaseWindowRemainingSeconds: genesisControl?.purchase_window_closes_at
+        ? Math.max(0, Number(genesisControl.purchase_window_closes_at) - now) : null,
+      purchaseWindowOpen: Boolean(genesisControl?.purchase_window_started_at && genesisControl?.purchase_window_closes_at &&
+        now >= Number(genesisControl.purchase_window_started_at) && now < Number(genesisControl.purchase_window_closes_at)),
+      inactivityPeriodSeconds: 15552000,
+      inactivityPeriodLabel: "180 days of inactivity"
+    };
     const payload = buildSupporterStatus(program, result?.results || []);
-    return json(200, payload);
+    return json(200, { ...payload, programmeLifecycle: lifecycle });
   } catch {
     return json(503, {
       error: "The isolated Genesis Programme database could not be qualified. Qualifying payments remain disabled.",
