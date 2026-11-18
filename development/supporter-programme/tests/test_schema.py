@@ -113,6 +113,59 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 (launch, launch + 1, launch, launch + 1 + 15552000),
             )
 
+    def test_database_freeze_blocks_new_identities_links_and_profile_edits_at_the_24_hour_cutoff(self):
+        now = self.db.execute("SELECT unixepoch()").fetchone()[0]
+        launch = now + 86_400
+        freeze = now
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,created_at,updated_at) "
+            "VALUES('gid-existing','ethereum','0xabc','0xabc','Existing Wallet 1','existing wallet 1',?,?)",
+            (now - 100, now - 100),
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-existing','gid-existing','ethereum','0xabc','0xabc','PRIMARY',?,'EIP-191',?)",
+            (now - 100, now - 100),
+        )
+        self.db.execute(
+            "UPDATE genesis_programme_control SET scheduled_acrown_launch_at=?,registration_freeze_at=?,updated_at=? "
+            "WHERE singleton=1",
+            (launch, freeze, now),
+        )
+        # The close timestamp has not yet been lazily persisted by an API request.
+        self.assertIsNone(
+            self.db.execute(
+                "SELECT registration_closed_at FROM genesis_programme_control WHERE singleton=1"
+            ).fetchone()[0]
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "primary-wallet registration is permanently closed"):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+                "display_name,display_name_normalized,created_at,updated_at) "
+                "VALUES('gid-new','solana','SoNew','SoNew','New Wallet 2','new wallet 2',?,?)",
+                (now, now),
+            )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "wallet linking is permanently closed"):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+                "wallet_role,ownership_verified_at,proof_method,created_at) "
+                "VALUES('gwa-new','gid-existing','tron','TNew','TNew','PAYMENT',?,'TIP-191',?)",
+                (now, now),
+            )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "profile changes are closed"):
+            self.db.execute(
+                "UPDATE genesis_wallet_identities SET display_name='Changed Wallet',display_name_normalized='changed wallet' "
+                "WHERE identity_id='gid-existing'"
+            )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "schedule is locked once the 24-hour"):
+            self.db.execute(
+                "UPDATE genesis_programme_control SET scheduled_acrown_launch_at=?,registration_freeze_at=? "
+                "WHERE singleton=1",
+                (launch + 3600, freeze + 3600),
+            )
+
     def test_global_purchase_window_requires_both_launch_and_floor_service_and_is_180_days(self):
         launch = 2_100_000_000
         floor_open = launch + 7200
