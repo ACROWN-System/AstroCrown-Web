@@ -105,7 +105,8 @@ test("Genesis accepts only TIP-191-compatible signMessageV2 on TRON; OKX trx.sig
 test("Bitget Solana adapter connects Wallet-Standard accounts and returns a verified 64-byte signature", async () => {
   const provider = {
     connect: async () => ({ accounts: [{ address: publicKey, chains: ["solana:mainnet"] }] }),
-    signMessage: async () => [{ signature }],
+    getAccount: async () => publicKey,
+    signMessage: async () => [{ signature, publicKey }],
   };
   const wallet = createSolanaProviderAdapter({ walletId: "bitget-wallet", name: "Bitget Wallet", provider });
   const connected = await wallet.features["standard:connect"].connect();
@@ -125,8 +126,9 @@ test("OKX Solana adapter calls only connect, getGenesisHash and signMessage", as
     signMessage: async (message, encoding) => {
       calls.push("signMessage:" + encoding);
       assert.equal(new TextDecoder().decode(message), "Genesis proof");
-      return { signature };
+      return { signature, publicKey };
     },
+    publicKey,
   };
   const wallet = createSolanaProviderAdapter({ walletId: "okx-wallet", name: "OKX Wallet", provider });
   const connected = await wallet.features["standard:connect"].connect();
@@ -144,8 +146,9 @@ test("Coin98 uses sol_requestAccounts and sol_signMessage, never sol_sign or a t
     request: async (request) => {
       calls.push(request.method);
       if (request.method === "sol_requestAccounts") return [publicKey];
+      if (request.method === "sol_accounts") return [publicKey];
       if (request.method === "getGenesisHash") return MAINNET_HASH;
-      if (request.method === "sol_signMessage") return { signature };
+      if (request.method === "sol_signMessage") return { signature, publicKey };
       throw new Error("Unexpected Coin98 method: " + request.method);
     },
   };
@@ -157,8 +160,59 @@ test("Coin98 uses sol_requestAccounts and sol_signMessage, never sol_sign or a t
     account: connected.accounts[0], message: new TextEncoder().encode("Genesis proof"),
   });
   assert.equal(signed[0].signature.length, 64);
-  assert.deepEqual(calls, ["sol_requestAccounts", "getGenesisHash", "sol_signMessage"]);
+  assert.deepEqual(calls, ["sol_requestAccounts", "getGenesisHash", "sol_accounts", "sol_signMessage"]);
   assert.equal(calls.includes("sol_sign"), false);
+});
+
+test("Coin98 refuses to sign when its current account changed and rejects a signature returned for another public key", async () => {
+  let signCalls = 0;
+  const provider = {
+    request: async ({ method }) => {
+      if (method === "sol_requestAccounts") return [publicKey];
+      if (method === "getGenesisHash") return MAINNET_HASH;
+      if (method === "sol_accounts") return ["11111111111111111111111111111112"];
+      if (method === "sol_signMessage") {
+        signCalls += 1;
+        return { signature, publicKey: "11111111111111111111111111111113" };
+      }
+      throw new Error("Unexpected Coin98 method: " + method);
+    },
+  };
+  const wallet = createSolanaProviderAdapter({ walletId: "coin98", name: "Coin98", provider });
+  const connected = await wallet.features["standard:connect"].connect();
+  await assert.rejects(() => wallet.features["solana:signMessage"].signMessage({
+    account: connected.accounts[0], message: new TextEncoder().encode("Genesis proof"),
+  }), /active Solana account changed/);
+  assert.equal(signCalls, 0);
+
+  const stableProvider = {
+    request: async ({ method }) => {
+      if (method === "sol_requestAccounts" || method === "sol_accounts") return [publicKey];
+      if (method === "getGenesisHash") return MAINNET_HASH;
+      if (method === "sol_signMessage") return { signature, publicKey: "11111111111111111111111111111113" };
+      throw new Error("Unexpected Coin98 method: " + method);
+    },
+  };
+  const stableWallet = createSolanaProviderAdapter({ walletId: "coin98", name: "Coin98", provider: stableProvider });
+  const stableAccount = (await stableWallet.features["standard:connect"].connect()).accounts[0];
+  await assert.rejects(() => stableWallet.features["solana:signMessage"].signMessage({
+    account: stableAccount, message: new TextEncoder().encode("Genesis proof"),
+  }), /different Solana address/);
+});
+
+test("Solana provider can connect an address without a known cluster but must not qualify it as Mainnet", async () => {
+  const wallet = createSolanaProviderAdapter({
+    walletId: "bitget-wallet",
+    name: "Bitget Wallet",
+    provider: {
+      connect: async () => ({ publicKey: { toString: () => publicKey } }),
+      signMessage: async () => [{ signature, publicKey }],
+    },
+  });
+  const connected = await wallet.features["standard:connect"].connect();
+  assert.equal(connected.accounts[0].address, publicKey);
+  assert.deepEqual(connected.accounts[0].chains, []);
+  assert.equal(isSolanaMainnet(connected.accounts[0]), false);
 });
 
 test("TokenPocket mobile Solana and direct Bitget/OKX/Coin98 Solana providers are discovered independently", () => {
