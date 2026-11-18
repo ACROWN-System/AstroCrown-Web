@@ -211,6 +211,45 @@ function accountAddress(value) {
   return "";
 }
 
+function publicKeyString(value) {
+  if (typeof value === "string") return value;
+  if (value && typeof value.toBase58 === "function") return value.toBase58();
+  if (value && typeof value.toString === "function") return value.toString();
+  return "";
+}
+
+function signatureSigner(result) {
+  const candidates = [
+    result,
+    result && result[0],
+    result && result.result,
+    result && result.data,
+  ];
+  for (const candidate of candidates) {
+    if (!candidate || typeof candidate !== "object") continue;
+    const key = publicKeyString(candidate.publicKey || candidate.address);
+    if (key) return key;
+  }
+  return "";
+}
+
+async function currentSolanaProviderAddress(provider, walletId) {
+  if (provider && typeof provider.getAccount === "function") {
+    const account = await provider.getAccount();
+    const address = accountAddress(account);
+    if (address) return address;
+  }
+  if (provider && provider.publicKey) {
+    const address = publicKeyString(provider.publicKey);
+    if (address) return address;
+  }
+  if (walletId === "coin98" && provider && typeof provider.request === "function") {
+    const accounts = await provider.request({ method: "sol_accounts" });
+    if (Array.isArray(accounts) && typeof accounts[0] === "string") return accounts[0];
+  }
+  return "";
+}
+
 export function createSolanaProviderAdapter({ walletId, name, provider }) {
   if (!provider || typeof provider !== "object") return null;
   const connect = async () => {
@@ -233,8 +272,14 @@ export function createSolanaProviderAdapter({ walletId, name, provider }) {
     return { accounts: [{ address, chains, features: ["solana:signMessage"] }] };
   };
 
-  const signMessage = async ({ message }) => {
+  const signMessage = async ({ account, message }) => {
     const text = typeof message === "string" ? message : new TextDecoder().decode(message);
+    const expectedAddress = accountAddress(account);
+    if (!expectedAddress) throw new Error(name + " message signing requires the exact connected Solana account.");
+    const currentAddress = await currentSolanaProviderAddress(provider, walletId);
+    if (currentAddress && currentAddress !== expectedAddress) {
+      throw new Error(name + " active Solana account changed after connection. Reconnect before signing the Genesis challenge.");
+    }
     let result;
     if (walletId === "coin98") {
       result = await provider.request({ method: "sol_signMessage", params: [text] });
@@ -242,6 +287,10 @@ export function createSolanaProviderAdapter({ walletId, name, provider }) {
       result = await provider.signMessage(new TextEncoder().encode(text), "utf8");
     } else {
       result = await provider.signMessage(new TextEncoder().encode(text));
+    }
+    const signedBy = signatureSigner(result);
+    if (signedBy && signedBy !== expectedAddress) {
+      throw new Error(name + " signed the challenge with a different Solana address than the connected account.");
     }
     return [{ signature: normalizeSolanaSignature(result) }];
   };
