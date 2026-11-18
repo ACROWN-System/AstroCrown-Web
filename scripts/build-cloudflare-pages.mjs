@@ -91,6 +91,8 @@ copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-con
 write("privacy-transparency.html", read("preview/privacy-transparency.html"));
 write("supporters/index.html", read("preview/supporters/index.html"));
 copy("preview/supporters/supporters.js", "supporters/supporters.js");
+// Required local dependency of the Genesis browser module. It is an allowlisted
+// provider adapter only; no network transfer or payment method is invoked here.
 copy("preview/supporters/wallet-provider-adapters.mjs", "supporters/wallet-provider-adapters.mjs");
 copy("preview/assets/genesis-member-dna.svg", "assets/genesis-member-dna.svg");
 
