@@ -165,6 +165,27 @@ WHEN EXISTS (
 )
 BEGIN SELECT RAISE(ABORT, 'Genesis profile changes are closed at the 24-hour pre-launch freeze'); END;
 
+CREATE TRIGGER IF NOT EXISTS genesis_wallet_challenge_cutoff
+BEFORE INSERT ON genesis_wallet_challenges
+WHEN EXISTS (
+  SELECT 1 FROM genesis_programme_control c
+  WHERE c.singleton=1
+    AND (c.registration_closed_at IS NOT NULL
+      OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
+)
+AND (
+  NEW.challenge_purpose IN ('LINK', 'RENAME')
+  OR (
+    NEW.challenge_purpose='IDENTIFY'
+    AND NOT EXISTS (
+      SELECT 1 FROM genesis_wallet_identities i
+      WHERE i.primary_network=NEW.network
+        AND i.primary_address_normalized=NEW.address_normalized
+    )
+  )
+)
+BEGIN SELECT RAISE(ABORT, 'New Genesis registrations, wallet links and profile challenges are closed at the 24-hour pre-launch freeze'); END;
+
 CREATE TRIGGER IF NOT EXISTS genesis_wallet_address_delete_cutoff
 BEFORE DELETE ON genesis_wallet_addresses
 WHEN EXISTS (
