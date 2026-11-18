@@ -7,7 +7,7 @@
 
 ## Purpose
 
-This module defines deterministic checks for whether a submitted transaction reference corresponds to one exact USDT transfer from a wallet already verified by Genesis to the configured Genesis treasury. It is deliberately not an HTTP payment endpoint, payment-intent service, RPC client, contribution writer or entitlement ledger.
+This module defines deterministic checks for whether a submitted transaction reference corresponds to one exact USDT transfer from the source address bound to a Genesis payment intent to the configured Genesis treasury. The primary Genesis identity is proved separately. For a one-time payment, the actual finalized transaction establishes which address sent the funds; that source address is recorded in the payment evidence and does not automatically become a Genesis login or recovery wallet. It is deliberately not an HTTP payment endpoint, payment-intent service, RPC client, entitlement writer or live ledger.
 
 Source code:
 - `../account-continuity/worker/src/genesis-payment-evidence.js`
@@ -39,7 +39,7 @@ The caller must obtain those fields from the appropriate on-chain RPC methods on
 2. Successful transaction receipt, with the exact submitted transaction hash.
 3. Canonical block hash at the receipt's block height; the hash must match the receipt.
 4. A `safe` or `finalized` block head at or beyond the receipt's block height.
-5. Exactly one canonical USDT `Transfer(address,address,uint256)` log whose indexed sender and recipient are the verified source wallet and configured Genesis treasury, and whose exact integer value equals the payment intent amount in six-decimal base units.
+5. Exactly one canonical USDT `Transfer(address,address,uint256)` log whose indexed sender matches the source address bound to the server-created payment intent and whose recipient is the configured Genesis treasury; its exact integer value must equal the intent amount in six-decimal base units.
 
 The event's log index is retained as the transfer index. A receipt being returned by an RPC is not by itself proof of finality.
 
@@ -97,10 +97,12 @@ No database write, allowance update, badge award, public-directory event, paymen
 ## Rejection and idempotency requirements for the future payment service
 
 The evidence parser is one stage only. Before any future payment route can call it, the payment-intent service must also bind the evidence to:
-- a unique, unexpired, server-created payment intent;
-- the already verified primary wallet or explicitly verified linked payment wallet;
-- the exact supported network, canonical token, treasury, exact six-decimal base-unit amount and intent purpose;
-- an immutable intent/rules version and a unique transaction + transfer/event index key.
+- a unique, unexpired, server-created payment intent associated with the authenticated primary Genesis identity;
+- the selected payment network and the source address declared for that one-time intent (which may be the primary address or a separate payment-source address);
+- the exact canonical token, treasury, six-decimal base-unit amount and payment purpose;
+- an immutable intent/rules version and a unique transaction + transfer/event/instruction index key.
+
+A separate dApp message signature from a TRON payment-source address is not mandatory merely to attribute that completed payment: the actual transaction evidence must prove that the stated source address executed the exact transfer. A source address recorded this way is a payment-origin record only; it does not gain identity-login, name-change, recovery or entitlement-transfer authority. If a payment source must be retained as a reusable linked wallet, use the normal wallet-link ownership challenge.
 
 The eventual database constraint must make network + transaction id + transfer index unique. A payment hash alone is insufficient because one transaction can contain multiple token transfers. Duplicate observations must be idempotent and must not credit twice. Corrections must be compensating append-only events; a verified financial event must never be silently deleted or rewritten.
 
