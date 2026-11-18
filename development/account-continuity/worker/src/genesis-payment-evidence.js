@@ -449,6 +449,26 @@ export function reconcileGenesisRpcEvidence({ network, observations, expected })
     fail("Independent RPC sources disagree on the canonical transfer evidence.");
   }
   const evidence = cores[0];
+  const canonicalAsset = GENESIS_USDT_ASSETS[network];
+  if (evidence.networkIdentifier !== canonicalAsset.networkIdentifier ||
+      evidence.assetIdentifier !== canonicalAsset.assetIdentifier ||
+      evidence.decimals !== canonicalAsset.decimals) {
+    fail("Normalized evidence does not use the canonical network, token identifier and six-decimal precision.");
+  }
+  const allowedFinality = {
+    ethereum: ["SAFE", "FINALIZED"],
+    tron: ["SOLIDIFIED"],
+    solana: ["FINALIZED"],
+  }[network];
+  if (!allowedFinality.includes(evidence.finalityStatus)) {
+    fail("Normalized evidence does not carry the required chain-specific finality status.");
+  }
+  if (!Number.isSafeInteger(evidence.transferIndex) || evidence.transferIndex < 0) {
+    fail("Normalized evidence does not contain a valid transfer/event index.");
+  }
+  if (!evidence.inclusion || typeof evidence.inclusion !== "object" || Array.isArray(evidence.inclusion)) {
+    fail("Normalized evidence is missing its block/slot inclusion reference.");
+  }
   const expectedId = requireTransactionId(expected, network);
   if (evidence.transactionId !== expectedId) fail("Reconciled transaction id does not match the payment reference.");
   if (evidence.amountBaseUnits !== expectedAmount(expected).toString()) fail("Reconciled exact amount does not match the payment expectation.");
