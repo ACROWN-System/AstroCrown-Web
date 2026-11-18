@@ -8,11 +8,11 @@
 
 Wallet qualification is not a three-chain API completeness contest.
 
-- A wallet must identify and prove control of one primary address using one supported off-chain message-signing route. Ethereum or Solana is sufficient; TRON signing is optional.
+- A wallet must identify and prove control of one primary address using a supported off-chain message-signing route. Ethereum or Solana is sufficient for primary identity. For every additional network address the participant intends to register for Genesis payments, the wallet must also support an accepted, separate ownership proof on that network. A TRON payment address therefore requires a TRON address-link proof.
 - A wallet must let the holder initiate USDT payment on at least one Genesis payment rail through its native UI or a supported dApp route.
 - Genesis independently detects and verifies the on-chain payment. The wallet is not responsible for notifying Genesis that it happened.
 - The holder must provide and prove the Solana recipient address. The wallet only needs to receive the ACROWN SPL token; the AstroCrown-authorized signer submits the outgoing transfer.
-- A separate payment source address is recorded from the verified transfer and bound to the payment intent. It does not become a login/recovery wallet merely because it sent USDT.
+- Every Genesis payment must originate from a payment address already verified and registered in the primary wallet profile for the same network. The source address remains a payment endpoint, not a login/recovery identity.
 - Wallet vendor recovery/restore testing on every network is not a Genesis qualification gate. Wallet recovery remains the holder's responsibility.
 
 ## Implemented automated tests
@@ -32,8 +32,8 @@ Automated tests use synthetic providers, keys and chain responses. They do not e
 
 For each selected wallet app and the precise platform intended for release:
 
-1. **Identity:** connect through its supported EVM or Solana route. Compare the displayed address to the wallet's own account screen. Sign one fresh Genesis off-chain challenge. Confirm the backend verifier accepts it only for the same address and challenge.
-2. **Payment:** confirm that the wallet's native UI can construct a USDT transfer on at least one supported rail. Confirm the selected network, canonical token and recipient display. Do not broadcast a mainnet payment as part of ordinary qualification.
+1. **Primary identity:** connect through a supported Ethereum or Solana route. Compare the displayed address to the wallet's own account screen and sign one fresh Genesis identity challenge. Confirm the backend verifier accepts it only for the same address and challenge.
+2. **Registered payment addresses:** for each rail the wallet application is intended to support for Genesis, connect the address on that network and sign a fresh address-link challenge. Verify that the backend links it to the existing primary identity, not a new identity. Then confirm the wallet's native UI can construct the canonical USDT transfer to the official treasury. Do not broadcast a mainnet payment as part of ordinary qualification.
 3. **Solana destination:** connect or enter the Solana recipient address and prove control with an off-chain Solana message signature. If this wallet cannot produce an acceptable signature for a separate destination address, record that route as unsupported rather than trusting a pasted address.
 4. **Token receipt:** on an isolated Solana test environment, send a test SPL token to the recipient and verify the destination token-account owner and received amount. This tests receiving, not participant-side transaction signing.
 5. Record exact wallet app/extension version, platform, OS/browser, provider identifier, primary identity network, selected payment rail and Solana receipt outcome.
@@ -66,9 +66,9 @@ Not yet implemented:
 - server-created payment-intent endpoint and its persistent lifecycle;
 - live RPC clients and the qualified two-operator provider registry;
 - entitlement-credit writer and the full append-only payment-to-entitlement workflow;
-- one-time on-chain proof/write path that can add an unlinked payment-source address from a successfully reconciled transfer.
+- payment-intent endpoint and persistent lifecycle, bound to an already registered payment address; Genesis will not accept unlinked one-time payment-source addresses.
 
-**Current constraint:** the existing D1 payment table requires its source address to exist as a previously verified PAYMENT wallet-address row. Therefore, until the one-time on-chain source-proof path is implemented, a payment from a different/unlinked address still needs the existing wallet-link signature before it can be credited. This is especially relevant to TRON when a wallet exposes native USDT transfers but no Genesis-compatible TRON dApp message signer. The revised policy removes the unnecessary wallet-vendor requirement; it does not pretend the missing server-side attribution path already exists.
+**Adopted rule:** the D1 payment table and trigger require a pre-registered PAYMENT address linked to the same primary identity and network. This is the permanent Genesis policy, not a temporary limitation. No one-time unlinked-source payment path will be built. If an app cannot sign a TRON address-link challenge, that address cannot be used for TRON Genesis payments, although the same app may still qualify for Ethereum or Solana if those addresses pass their own proof and payment checks.
 
 ## System-level payment verification (not repeated for every wallet)
 
