@@ -10,7 +10,7 @@ import {
   createSolanaProviderAdapter,
   discoverDirectSolanaWallets,
   isSolanaMainnet,
-} from "../../../preview/supporters/wallet-provider-adapters.mjs";
+} from "../../../../preview/supporters/wallet-provider-adapters.mjs";
 
 const MAINNET_HASH = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
 const publicKey = "11111111111111111111111111111111";
