@@ -35,7 +35,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /one shared,? programme-wide USDT purchase-allowance pool/i);
   assert.match(html, /Total programme-wide USDT purchase allowance/i);
   assert.doesNotMatch(html, /programme-wide ACROWN cap/);
-  assert.match(html, /All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch/);
+  assert.match(html, /Exactly 24 hours before the scheduled official ACROWN launch, Genesis activity pauses/);
   assert.match(html, /New primary-wallet registration closes permanently at that cutoff and never resumes/);
   assert.match(html, /180 days of inactivity/);
   assert.doesNotMatch(html, /\b180 days\b(?! of inactivity)/i);
