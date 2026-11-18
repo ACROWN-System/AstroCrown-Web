@@ -42,7 +42,9 @@ AstroCrown and Genesis must never request, receive, store, transmit or ask a use
 
 If the device is lost but the wallet is restorable from its own backup, the wallet holder restores it and proves control again. If the primary wallet and all of its recovery capability are irretrievably lost, the Genesis identity, access, entitlement, badge and rights associated with that wallet are lost. Genesis must not reassign those rights to a newly created wallet based on a claim, email, display name, document or manual support request.
 
-This consequence must be explained before the primary wallet is confirmed.
+The 180-day ACROWN purchase-exercise window does not begin when Genesis qualifying payments open. It begins only after ACROWN has officially launched and the approved ACS pure-floor purchase facility is operationally available. A wallet that completes and receives purchases for its full personal allowance is marked `FULLY_EXERCISED`; it has no unused allowance to expire, and its Genesis Member status/badge remains intact. For a partially exercised wallet, only the unused purchase allowance is subject to the disclosed global post-launch expiry rule. The wallet dashboard must make the remaining allowance and the applicable close date clear.
+
+This consequence and the post-launch purchase-window rules must be explained before the primary wallet is confirmed.
 
 ## 2. Unique public display name and avatar
 
