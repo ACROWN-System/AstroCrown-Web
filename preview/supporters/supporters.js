@@ -829,10 +829,10 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     if (memberSummary) memberSummary.textContent = data.walletIdentity.displayName + " · primary wallet identity";
     if (memberWalletList) {
       memberWalletList.textContent = data.wallets.length
-        ? data.wallets.map(function (wallet) {
+        ? "Registered addresses in this primary wallet profile: " + data.wallets.map(function (wallet) {
             return wallet.network.toUpperCase() + " · " + wallet.wallet_role.replace(/_/g, " ") + " · " + wallet.address;
           }).join("  |  ")
-        : "No additional network addresses linked.";
+        : "No additional network addresses registered yet.";
     }
     var avatarGlyphs = { person: "●", crown: "♛", star: "★", moon: "☾", orbit: "◎", shield: "⬡" };
     if (memberAvatar) memberAvatar.textContent = avatarGlyphs[data.walletIdentity.avatarKey] || "✦";
@@ -900,6 +900,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || !supporterMember) return;
     linkWalletButton.disabled = true;
     try {
+      // The primary-wallet session authorizes this profile change. The connected network address signs only its own ownership proof; it never becomes a Genesis login or authority.
       var selectedRole = walletPurposeSelect.value || "PAYMENT";
       var role = selectedRole === "ACROWN_DELIVERY" ? "DELIVERY" : selectedRole;
       if ((role === "DELIVERY" || role === "PAYMENT_AND_DELIVERY") && wallet.network !== "solana") {
@@ -913,7 +914,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         challengeId: challenge.challengeId, signature: signature
       });
       applySupporterProfile(profile);
-      setFeedback(memberFeedback, "The additional network address has been independently verified and linked to the primary wallet identity.", "connected");
+      setFeedback(memberFeedback, "The network address has been independently verified and added to your primary wallet profile. Its signature proves control of that address only; Genesis authority remains with the primary wallet.", "connected");
     } catch (error) {
       setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet linking was not completed."), "error");
     } finally {
