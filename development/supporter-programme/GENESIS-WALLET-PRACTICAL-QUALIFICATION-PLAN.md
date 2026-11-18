@@ -38,7 +38,7 @@ For each selected wallet app and the precise platform intended for release:
 4. **Token receipt:** on an isolated Solana test environment, send a test SPL token to the recipient and verify the destination token-account owner and received amount. This tests receiving, not participant-side transaction signing.
 5. Record exact wallet app/extension version, platform, OS/browser, provider identifier, primary identity network, selected payment rail and Solana receipt outcome.
 
-No test asks for a seed phrase/private key. No test requires restore of all three network addresses, dApp signatures on every rail, wallet notification callbacks, or participant-side signing of the ACROWN delivery.
+No test asks for a seed phrase/private key. No test requires restore of all three network addresses, dApp signatures on payment rails the participant does not intend to use, wallet notification callbacks, or participant-side signing of the ACROWN delivery.
 
 ## Selected wallet matrix
 
@@ -46,13 +46,13 @@ No test asks for a seed phrase/private key. No test requires restore of all thre
 |---|---|---|---|
 | Bitget Wallet | EVM or Solana message signature | Native USDT transfer on a selected supported rail | Verify signed recipient address and SPL receipt |
 | TokenPocket | EVM or Solana message signature; qualify extension/mobile separately if both are released | Native USDT transfer on a selected supported rail | Verify signed recipient address and SPL receipt |
-| Coin98 Super Wallet | Solana `sol_signMessage` can be used as primary proof; EVM proof is optional when Solana is selected | TRON dApp signing is not required; native USDT send plus chain verification is sufficient | Verify actual signature return encoding/address binding and SPL receipt |
-| OKX Wallet | EVM or Solana message signature | TRON `trx.sign` is not required for payment attribution; native USDT send plus chain verification is sufficient | Verify signed recipient address and SPL receipt |
+| Coin98 Super Wallet | Solana `sol_signMessage` can be used as primary proof; EVM proof is optional when Solana is selected | For every rail selected, separately prove the network address before payment; TRON cannot be used unless its address-link proof is supported | Verify actual signature return encoding/address binding and SPL receipt |
+| OKX Wallet | EVM or Solana message signature | Use TRON only if the selected build can sign the TRON address-link challenge; native send alone is insufficient | Verify signed recipient address and SPL receipt |
 | Trust Wallet | EVM or Solana provider route | Native USDT transfer on a selected supported rail | Verify provider, signed recipient address and SPL receipt |
 
-MetaMask is outside this five-wallet test wave. Its earlier TRON dApp integration limitation is not treated as a general incompatibility under this narrower policy; it can be reconsidered as a later candidate without requiring a TRON message-signing API.
+MetaMask is outside this five-wallet test wave, not generally incompatible. It may be considered for Ethereum or Solana if those routes pass. A TRON payment address can be used only if the exact MetaMask build supports the required TRON address-link proof.
 
-## Implementation boundary that affects the payment-source route
+## Implementation boundary for registered payment addresses
 
 Already implemented:
 - primary wallet identity, off-chain challenge/signature verification, session and name management;
@@ -66,7 +66,7 @@ Not yet implemented:
 - server-created payment-intent endpoint and its persistent lifecycle;
 - live RPC clients and the qualified two-operator provider registry;
 - entitlement-credit writer and the full append-only payment-to-entitlement workflow;
-- payment-intent endpoint and persistent lifecycle, bound to an already registered payment address; Genesis will not accept unlinked one-time payment-source addresses.
+
 
 **Adopted rule:** the D1 payment table and trigger require a pre-registered PAYMENT address linked to the same primary identity and network. This is the permanent Genesis policy, not a temporary limitation. No one-time unlinked-source payment path will be built. If an app cannot sign a TRON address-link challenge, that address cannot be used for TRON Genesis payments, although the same app may still qualify for Ethereum or Solana if those addresses pass their own proof and payment checks.
 
