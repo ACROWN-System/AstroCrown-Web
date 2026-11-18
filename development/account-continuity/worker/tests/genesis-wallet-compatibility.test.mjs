@@ -46,7 +46,7 @@ test("wallet identity needs one verified signing route, not signatures on every 
 test("payment completion is verified from chain evidence, not a wallet notification", () => {
   const payment = policy.qualificationModel.payment;
   assert.deepEqual(payment.acceptedRails.slice().sort(), ["ethereum", "solana", "tron"]);
-  assert.match(payment.attribution, /wallet does not need to notify Genesis/i);
+  assert.match(payment.attribution, /wallet does not notify Genesis/i);
   assert.ok(payment.walletProviderNotRequired.some((item) => /TRON signMessageV2/i.test(item)));
   assert.ok(payment.walletProviderNotRequired.some((item) => /every accepted payment network/i.test(item)));
   assert.match(payment.networkSelection, /not required.*all three rails/i);
