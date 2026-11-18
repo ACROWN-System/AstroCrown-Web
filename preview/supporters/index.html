@@ -469,36 +469,36 @@
       <div class="section-heading">
         <div>
           <div class="eyebrow">Multiplier-based purchase entitlement</div>
-          <h2 id="calculator-title">Personal allowance within a programme-wide limit</h2>
+          <h2 id="calculator-title">USDT purchase allowance within a programme-wide limit</h2>
         </div>
-        <p>Each verified Genesis Programme qualifying payment creates a personal ACROWN purchase allowance using the approved multiplier. A separate programme-wide ceiling, if approved, limits the total amount all members may purchase.</p>
+        <p>Each verified Genesis qualifying payment adds a USDT-denominated purchase allowance according to the global tranche rates. The shared programme-wide ceiling is USDT 1,000,000 under the proposed schedule; ACROWN quantity is determined only when a later floor-price purchase is quoted.</p>
       </div>
       <div class="calculator-grid">
         <section class="panel" aria-label="Programme-wide purchase allowance">
           <span class="scenario-tag">Shared programme limit</span>
           <h3 style="margin-top:13px">The remaining programme amount sets the limit</h3>
-          <p class="panel-intro">The programme-wide ACROWN cap is separate from each primary wallet's personal multiplier allowance. The cap, multiplier and qualification threshold must be approved before launch and enforced across all members.</p>
+          <p class="panel-intro">The proposed USDT 1,000,000 aggregate purchase-allowance cap is shared across all primary wallet identities. The global counter advances only on finalized Genesis qualifying-payment principal; it does not reset for each wallet.</p>
           <div class="result-list">
             <div class="result-row"><span class="result-label">Proposed total USDT purchase allowance</span><strong class="result-value">USDT 1,000,000</strong></div>
-            <div class="result-row"><span class="result-label">Completed purchases</span><strong class="result-value">Live ledger required</strong></div>
+            <div class="result-row"><span class="result-label">Completed USDT purchase value</span><strong class="result-value">Live ledger required</strong></div>
             <div class="result-row"><span class="result-label">Remaining allowance</span><strong class="result-value">Displayed in wallet dashboard</strong></div>
           </div>
           <p class="fine-print">Remaining allowance = USDT-denominated allowance earned across the global tiers − finalized USDT value of floor-price purchases. Every completed purchase reduces the same shared balance.</p>
         </section>
         <section class="panel" aria-label="Wallet purchase entitlement">
           <div class="side-label">What one eligible wallet may purchase</div>
-          <h3 style="margin-top:7px">Unused personal multiplier allowance</h3>
-          <p class="panel-intro">A member may purchase up to the unused personal allowance created by verified qualifying payments, provided the programme-wide allowance also has enough capacity.</p>
+          <h3 style="margin-top:7px">Unused personal USDT-denominated purchase allowance</h3>
+          <p class="panel-intro">A primary wallet may make later ACS floor-price purchases up to its unused USDT-denominated allowance, provided the shared USDT allowance cap and qualified ACROWN inventory constraints also have capacity.</p>
           <div class="result-highlight">
             <div class="result-label">Maximum available to this wallet</div>
-            <div class="result-value">Unused personal entitlement</div>
+            <div class="result-value">Unused USDT purchase allowance</div>
           </div>
           <div class="formula">USDT purchase allowance = Σ (qualifying-payment amount in each global tranche × that tranche's multiplier)</div>
           <p class="fine-print">Proposed tiers: 30× / 25× / 20× / 15× / 10× across five successive USDT 10,000 tranches. A USDT 10 qualifying payment wholly within the first tranche creates up to USDT 300 of later purchase allowance. USDT 50,000 total qualifying payments creates up to USDT 1,000,000 aggregate allowance. The allowance remains denominated in USDT; ACROWN quantity is calculated at the later approved ACS floor.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Any approved global ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot restart the global tranche counter or create duplicate identity entitlements. The purchase system must update the shared remaining USDT allowance atomically so simultaneous purchases cannot exceed the USDT 1,000,000 proposed programme-wide allowance. Each primary wallet's earned and consumed allowance remains separately auditable.
+        <strong>One global allowance ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot restart the global tranche counter or create duplicate identity entitlements. The purchase system must update the shared remaining USDT allowance atomically so simultaneous purchases cannot exceed the proposed USDT 1,000,000 programme-wide allowance. Each primary wallet's earned and consumed allowance remains separately auditable.
       </div>
     </section>
 
