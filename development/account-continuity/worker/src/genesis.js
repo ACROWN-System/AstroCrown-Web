@@ -1,4 +1,5 @@
 import { normalizeWalletAddress, verifyWalletSignature } from "./supporters.js";
+import { availableProgrammeAllowance, isGenesisRegistrationOpen } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 
 const COOKIE = "acrown_genesis_wallet";
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -25,6 +26,37 @@ function error(status, message) {
   const result = new Error(message);
   result.status = status;
   return result;
+}
+
+async function loadGenesisProgrammeControl(db) {
+  let control = await db.prepare(
+    "SELECT * FROM genesis_programme_control WHERE singleton=1"
+  ).first();
+  if (!control) throw error(503, "The Genesis programme lifecycle control is not initialized.");
+  const now = Math.floor(Date.now() / 1000);
+  const freezeAt = control.registration_freeze_at === null || control.registration_freeze_at === undefined
+    ? null : Number(control.registration_freeze_at);
+  if (!control.registration_closed_at && Number.isSafeInteger(freezeAt) && freezeAt > 0 && now >= freezeAt) {
+    await db.prepare(
+      "UPDATE genesis_programme_control SET registration_closed_at=registration_freeze_at,updated_at=? " +
+      "WHERE singleton=1 AND registration_closed_at IS NULL AND registration_freeze_at IS NOT NULL AND registration_freeze_at<=?"
+    ).bind(now, now).run();
+    control = await db.prepare(
+      "SELECT * FROM genesis_programme_control WHERE singleton=1"
+    ).first();
+  }
+  return control;
+}
+
+function genesisRegistrationClosed(control, now = Math.floor(Date.now() / 1000)) {
+  return Boolean(control?.registration_closed_at)
+    || !isGenesisRegistrationOpen(now, control?.scheduled_acrown_launch_at ?? null, control?.registration_closed_at ?? null);
+}
+
+function assertGenesisProfileMutationsOpen(control) {
+  if (genesisRegistrationClosed(control)) {
+    throw error(423, "Genesis activity is frozen. New identities, wallet links and profile changes are permanently closed from 24 hours before ACROWN launch.");
+  }
 }
 
 function randomBytes(length) {
@@ -228,7 +260,7 @@ async function currentIdentity(db, request) {
 }
 
 async function identityProfile(db, identity) {
-  const [wallets, badge, entitlement] = await Promise.all([
+  const [wallets, badge, allowance, control] = await Promise.all([
     db.prepare(
       "SELECT network,address,wallet_role,ownership_verified_at,proof_method FROM genesis_wallet_addresses " +
       "WHERE identity_id=? ORDER BY CASE wallet_role WHEN 'PRIMARY' THEN 0 ELSE 1 END,network"
@@ -237,9 +269,26 @@ async function identityProfile(db, identity) {
       "SELECT badge_code,status,awarded_at,rules_version FROM genesis_member_badges " +
       "WHERE identity_id=? AND status='ACTIVE' AND ?='ACTIVE' ORDER BY awarded_at LIMIT 1"
     ).bind(identity.identity_id, identity.genesis_member_status).first(),
-    db.prepare("SELECT earned_acrown_base_units,consumed_acrown_base_units FROM genesis_wallet_entitlements WHERE identity_id=?")
-      .bind(identity.identity_id).first()
+    db.prepare(
+      "SELECT allowance_cap_usdt_base_units,earned_usdt_base_units,reserved_usdt_base_units,consumed_usdt_base_units " +
+      "FROM genesis_programme_allowance_state WHERE singleton=1"
+    ).first(),
+    db.prepare("SELECT registration_freeze_at,registration_closed_at,purchase_window_started_at,purchase_window_closes_at " +
+      "FROM genesis_programme_control WHERE singleton=1").first()
   ]);
+  const earned = allowance?.earned_usdt_base_units || "0";
+  const reserved = allowance?.reserved_usdt_base_units || "0";
+  const consumed = allowance?.consumed_usdt_base_units || "0";
+  const cap = allowance?.allowance_cap_usdt_base_units ?? null;
+  const remaining = availableProgrammeAllowance({
+    earnedBaseUnits: earned,
+    reservedBaseUnits: reserved,
+    consumedBaseUnits: consumed,
+    capBaseUnits: cap
+  });
+  const now = Math.floor(Date.now() / 1000);
+  const windowStarted = control?.purchase_window_started_at ? Number(control.purchase_window_started_at) : null;
+  const windowCloses = control?.purchase_window_closes_at ? Number(control.purchase_window_closes_at) : null;
   return {
     walletIdentity: {
       identityId: identity.identity_id,
@@ -256,10 +305,22 @@ async function identityProfile(db, identity) {
       rulesVersion: badge.rules_version
     } : { status: identity.genesis_member_status || "NOT_QUALIFIED", badgeCode: null, awardedAt: null },
     wallets: wallets.results || [],
-    entitlement: entitlement ? {
-      earnedAcrownBaseUnits: entitlement.earned_acrown_base_units,
-      consumedAcrownBaseUnits: entitlement.consumed_acrown_base_units
-    } : { earnedAcrownBaseUnits: "0", consumedAcrownBaseUnits: "0" },
+    programmePurchaseAllowance: {
+      scope: "GENESIS_PROGRAMME_GLOBAL",
+      earnedUsdtBaseUnits: earned,
+      reservedUsdtBaseUnits: reserved,
+      consumedUsdtBaseUnits: consumed,
+      capUsdtBaseUnits: cap,
+      remainingUsdtBaseUnits: remaining,
+      oneEligibleWalletMayUseEntireRemainder: true
+    },
+    programmeLifecycle: {
+      registrationFreezeAt: control?.registration_freeze_at ?? null,
+      registrationPermanentlyClosed: Boolean(control?.registration_closed_at),
+      purchaseWindowStartedAt: windowStarted,
+      purchaseWindowClosesAt: windowCloses,
+      purchaseWindowOpen: Boolean(windowStarted && windowCloses && now >= windowStarted && now < windowCloses)
+    },
     paymentAcceptance: { enabled: false }
   };
 }
@@ -302,8 +363,7 @@ async function getOrCreateIdentity(db, challenge) {
         db.prepare(
           "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,wallet_role," +
           "ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,'PRIMARY',?,?,?)"
-        ).bind(randomId("gwa"), identityId, challenge.network, challenge.address, challenge.address_normalized, now, signatureMethod(challenge.network), now),
-        db.prepare("INSERT INTO genesis_wallet_entitlements(identity_id,updated_at) VALUES(?,?)").bind(identityId, now)
+        ).bind(randomId("gwa"), identityId, challenge.network, challenge.address, challenge.address_normalized, now, signatureMethod(challenge.network), now)
       ]);
       identity = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identityId).first();
       if (identity) return identity;
@@ -405,6 +465,10 @@ export async function handleGenesisWalletApi(request, env, config) {
         "SELECT identity_id,wallet_role FROM genesis_wallet_addresses WHERE network=? AND address_normalized=?"
       ).bind(network, normalized.normalized).first();
       if (linked && !existing) throw error(409, "This address is already linked to a Genesis identity. Use the primary wallet for that identity.");
+      const control = await loadGenesisProgrammeControl(db);
+      if (!existing && genesisRegistrationClosed(control)) {
+        throw error(403, "New Genesis wallet registration is permanently closed from 24 hours before the scheduled ACROWN launch. Only a previously registered primary wallet may sign in.");
+      }
       return response(200, await issueChallenge(db, config, {
         identityId: existing?.identity_id || null, network, address: normalized.address, purpose: "IDENTIFY"
       }));
@@ -413,6 +477,9 @@ export async function handleGenesisWalletApi(request, env, config) {
     if (url.pathname === "/api/genesis/identity/verify") {
       await rateLimit(db, env, request, "identity-verify");
       const challenge = await consumeChallenge(db, payload.challengeId, "IDENTIFY", config);
+      if (!challenge.identity_id && genesisRegistrationClosed(await loadGenesisProgrammeControl(db))) {
+        throw error(403, "This wallet was not registered before the permanent Genesis cutoff. New primary-wallet registration is closed.");
+      }
       await authenticateSignature(challenge, payload.signature);
       const identity = await getOrCreateIdentity(db, challenge);
       const setCookie = await createSession(db, identity.identity_id, config.origin);
@@ -420,6 +487,7 @@ export async function handleGenesisWalletApi(request, env, config) {
     }
 
     if (url.pathname === "/api/genesis/wallet-link/challenge") {
+      assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "wallet-link-challenge");
       const identity = await currentIdentity(db, request);
       if (!identity) throw error(401, "Authenticate with the primary wallet before linking another network address.");
@@ -442,6 +510,7 @@ export async function handleGenesisWalletApi(request, env, config) {
     }
 
     if (url.pathname === "/api/genesis/wallet-link/verify") {
+      assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "wallet-link-verify");
       const challenge = await consumeChallenge(db, payload.challengeId, "LINK", config);
       const identity = await currentIdentity(db, request);
@@ -459,6 +528,7 @@ export async function handleGenesisWalletApi(request, env, config) {
     }
 
     if (url.pathname === "/api/genesis/display-name/challenge") {
+      assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "display-name-challenge");
       const identity = await currentIdentity(db, request);
       if (!identity) throw error(401, "Authenticate with the primary wallet before changing its display name.");
@@ -474,6 +544,7 @@ export async function handleGenesisWalletApi(request, env, config) {
     }
 
     if (url.pathname === "/api/genesis/display-name/verify") {
+      assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "display-name-verify");
       const challenge = await consumeChallenge(db, payload.challengeId, "RENAME", config);
       const identity = await currentIdentity(db, request);
