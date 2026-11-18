@@ -30,8 +30,7 @@ CREATE TABLE IF NOT EXISTS genesis_programme_control (
     OR (
       purchase_window_started_at IS NOT NULL
       AND acrown_launched_at IS NOT NULL
-      AND acs_floor_purchase_opened_at IS NOT NULL
-      AND purchase_window_started_at = MAX(acrown_launched_at, acs_floor_purchase_opened_at)
+      AND purchase_window_started_at = acrown_launched_at
       AND (purchase_window_last_purchase_at IS NULL OR purchase_window_last_purchase_at >= purchase_window_started_at)
       AND purchase_window_closes_at = COALESCE(purchase_window_last_purchase_at, purchase_window_started_at) + 15552000
     )
@@ -116,9 +115,30 @@ CREATE TABLE IF NOT EXISTS genesis_programme_allowance_events (
 CREATE INDEX IF NOT EXISTS genesis_programme_allowance_events_identity_idx
   ON genesis_programme_allowance_events(identity_id, created_at);
 
-CREATE TRIGGER IF NOT EXISTS genesis_floor_purchase_consumption_requires_open_window
+-- The 180-day inactivity timer starts at the official ACROWN launch, independently
+-- of ACS floor-purchase service readiness.
+CREATE TRIGGER IF NOT EXISTS genesis_purchase_window_starts_at_acrown_launch
+AFTER UPDATE OF acrown_launched_at ON genesis_programme_control
+WHEN OLD.acrown_launched_at IS NULL AND NEW.acrown_launched_at IS NOT NULL
+BEGIN
+  UPDATE genesis_programme_control
+  SET purchase_window_started_at=NEW.acrown_launched_at,
+      purchase_window_last_purchase_at=NULL,
+      purchase_window_closes_at=NEW.acrown_launched_at + 15552000,
+      updated_at=MAX(updated_at, NEW.acrown_launched_at)
+  WHERE singleton=1;
+END;
+
+-- After launch, acquiring additional Genesis purchase rights and buying ACROWN at
+-- the ACS floor price are both purchase events that reset the same global timer.
+-- Pre-launch qualifying-payment credits do not start or reset this timer.
+CREATE TRIGGER IF NOT EXISTS genesis_purchase_events_require_open_window
 BEFORE INSERT ON genesis_programme_allowance_events
-WHEN NEW.event_type='FLOOR_PURCHASE_CONSUMPTION'
+WHEN NEW.event_type IN ('QUALIFYING_PAYMENT_CREDIT', 'FLOOR_PURCHASE_CONSUMPTION')
+ AND EXISTS (
+   SELECT 1 FROM genesis_programme_control c
+   WHERE c.singleton=1 AND c.purchase_window_started_at IS NOT NULL
+ )
  AND NOT EXISTS (
    SELECT 1 FROM genesis_programme_control c
    WHERE c.singleton=1
@@ -126,11 +146,22 @@ WHEN NEW.event_type='FLOOR_PURCHASE_CONSUMPTION'
      AND NEW.created_at >= c.purchase_window_started_at
      AND NEW.created_at < c.purchase_window_closes_at
  )
-BEGIN SELECT RAISE(ABORT, 'Genesis floor-price purchase inactivity window is not open'); END;
+BEGIN SELECT RAISE(ABORT, 'Genesis purchase inactivity period is not open'); END;
 
-CREATE TRIGGER IF NOT EXISTS genesis_floor_purchase_consumption_resets_rolling_timer
-AFTER INSERT ON genesis_programme_allowance_events
+CREATE TRIGGER IF NOT EXISTS genesis_floor_purchase_requires_acs_service
+BEFORE INSERT ON genesis_programme_allowance_events
 WHEN NEW.event_type='FLOOR_PURCHASE_CONSUMPTION'
+ AND NOT EXISTS (
+   SELECT 1 FROM genesis_programme_control c
+   WHERE c.singleton=1
+     AND c.acs_floor_purchase_opened_at IS NOT NULL
+     AND NEW.created_at >= c.acs_floor_purchase_opened_at
+ )
+BEGIN SELECT RAISE(ABORT, 'ACS floor-price purchase service is not open'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_purchase_event_resets_rolling_timer
+AFTER INSERT ON genesis_programme_allowance_events
+WHEN NEW.event_type IN ('QUALIFYING_PAYMENT_CREDIT', 'FLOOR_PURCHASE_CONSUMPTION')
 BEGIN
   UPDATE genesis_programme_control
   SET purchase_window_last_purchase_at=NEW.created_at,
@@ -159,11 +190,11 @@ WHEN OLD.purchase_window_started_at IS NOT NULL
    OR NEW.purchase_window_closes_at != NEW.purchase_window_last_purchase_at + 15552000
    OR NOT EXISTS (
      SELECT 1 FROM genesis_programme_allowance_events e
-     WHERE e.event_type='FLOOR_PURCHASE_CONSUMPTION'
+     WHERE e.event_type IN ('QUALIFYING_PAYMENT_CREDIT', 'FLOOR_PURCHASE_CONSUMPTION')
        AND e.created_at=NEW.purchase_window_last_purchase_at
    )
  )
-BEGIN SELECT RAISE(ABORT, 'Genesis rolling inactivity timer can move only after a finalized floor-price purchase'); END;
+BEGIN SELECT RAISE(ABORT, 'Genesis rolling inactivity timer can move only after a finalized Genesis-right or ACS floor-price purchase'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_programme_allowance_events_no_update
 BEFORE UPDATE ON genesis_programme_allowance_events
