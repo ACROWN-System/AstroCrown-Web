@@ -75,7 +75,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "display_name,display_name_normalized,created_at,updated_at) "
             "VALUES('gid-global','ethereum','0x987','0x987','Global Pool 2042','global pool 2042',1,1)"
         )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "programme-wide allowance pool"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "global Genesis programme allowance pool"):
             self.db.execute(
                 "INSERT INTO genesis_wallet_entitlements(identity_id,updated_at) VALUES('gid-global',1)"
             )
@@ -147,7 +147,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "wallet_role,ownership_verified_at,proof_method,created_at) "
             "VALUES('gwa-primary','gid-primary','ethereum','0x111','0x111','PRIMARY',1,'EIP-191',1)"
         )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "programme-wide allowance pool"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "global Genesis programme allowance pool"):
             self.db.execute(
                 "INSERT INTO genesis_wallet_entitlements(identity_id,updated_at) VALUES('gid-primary',1)"
             )
