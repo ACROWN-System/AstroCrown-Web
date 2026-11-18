@@ -190,19 +190,22 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
       signatures: [transactionId],
       message: {
         accountKeys: [sender, sourceTokenAccount, destinationTokenAccount, treasury, GENESIS_USDT_ASSETS.solana.tokenProgramId],
-        instructions: [{
-          programId: GENESIS_USDT_ASSETS.solana.tokenProgramId,
-          parsed: {
-            type: "transferChecked",
-            info: {
-              source: sourceTokenAccount,
-              destination: destinationTokenAccount,
-              mint,
-              authority: sender,
-              tokenAmount: { amount: "1000000", decimals: 6 },
+        instructions: [
+          { programId: "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr", parsed: { type: "memo", info: { memo: "fixture" } } },
+          {
+            programId: GENESIS_USDT_ASSETS.solana.tokenProgramId,
+            parsed: {
+              type: "transferChecked",
+              info: {
+                source: sourceTokenAccount,
+                destination: destinationTokenAccount,
+                mint,
+                authority: sender,
+                tokenAmount: { amount: "1000000", decimals: 6 },
+              },
             },
           },
-        }],
+        ],
       },
     },
     meta: {
@@ -230,7 +233,7 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
   assert.equal(evidence.assetIdentifier, mint);
   assert.equal(evidence.finalityStatus, "FINALIZED");
   assert.equal(evidence.amountBaseUnits, "1000000");
-  assert.equal(evidence.transferIndex, 0);
+  assert.equal(evidence.transferIndex, 1);
   assert.deepEqual(evidence.inclusion, { slot: "987654" });
 });
 
