@@ -31,9 +31,27 @@ Every receiving address is an owner-supplied public destination. Recording an ad
 The current programme model deliberately separates a contribution from an ACROWN purchase:
 
 1. **Contribution / programme eligibility.** A verified participant sends the exact USDT amount in a chain-specific contribution intent to the designated Genesis receiving address. The service verifies the actual token transfer and finality, then credits a personal ACROWN purchase allowance under the immutable programme terms.
-2. **Optional ACROWN purchase.** The participant later chooses an ACROWN quantity up to the unused allowance. The service quotes that quantity at the contemporaneous, approved ACS pure floor, creates a separate exact USDT purchase intent, verifies the purchase payment, and only then arranges delivery to the participant's independently verified Solana wallet.
+2. **Later ACROWN floor-price purchase.** The participant later chooses a USDT purchase value no greater than the unused USDT-denominated allowance. The service quotes the corresponding ACROWN quantity at the contemporaneous, approved ACS pure floor, creates a separate exact USDT purchase intent addressed directly to the approved ACS reserve destination counted in V, verifies the purchase payment, and only then arranges ACROWN delivery to the participant's independently verified Solana wallet.
 
-A contribution is not itself an ACROWN purchase, does not automatically issue or transfer tokens, and must never be counted again as the purchase payment. The participant interface must show these as separate events, amounts, receipts, and balances before a participant confirms either transfer. The illustrative 25 ACROWN per USDT rate in existing tests is not an approved live programme multiplier.
+A Genesis qualifying payment is not itself an ACROWN purchase, does not automatically issue or transfer tokens, and is not automatically added to ACS reserve value V. It funds the Genesis Programme's planned launch of the complete AstroCrown website frontend and backend. The later floor-price purchase is a separate transaction; its exact USDT principal must be received in full by the approved ACS reserve destination and counted in V. The participant interface must show both transactions, their distinct destinations, exact amounts, fee responsibilities, receipts and balances before either transfer is confirmed. The proposed declining global tiers are 30×, 25×, 20×, 15× and 10× across successive USDT 10,000 qualifying-payment tranches, targeting USDT 50,000 of Genesis qualifying payments and up to USDT 1,000,000 of aggregate USDT-denominated purchase allowance. The detailed global allocation rules are in [MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md](./MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md).
+
+## 2A. Participant network-fee responsibility and full-principal rule
+
+For every participant-originated Genesis qualifying payment and every later ACROWN floor-price purchase, the registered wallet owner pays the blockchain network fee separately from the USDT principal. The fee is paid in the selected chain's required native fee asset or network resources (for example, ETH, TRX or SOL where applicable). No participant network fee may be deducted from the USDT principal, added to the principal, sponsored by the programme, or netted against the amount credited.
+
+Before signing, the interface must separately show:
+- the exact USDT amount and six-decimal base-unit amount authorized by the intent;
+- the exact network, canonical USDT token, registered source address and receiving destination;
+- the payment purpose (Genesis qualifying payment versus ACROWN floor-price purchase);
+- the current network-fee estimate and fee asset/resource, clearly labelled as separate from the USDT principal;
+- a warning that the fee estimate can change and the wallet's own confirmation prompt is authoritative;
+- the requirement that the registered wallet owner maintain sufficient fee balance/resources and may cancel before signing.
+
+The verifier must require that the finalized transfer delivers the exact USDT principal to the exact intent destination. If a route, intermediary or provider deducts a withdrawal/service fee from the USDT amount so that the destination receives less than the authorized principal, the payment must remain uncredited/rejected under the exact-amount rules. Do not compensate by silently increasing the requested USDT amount.
+
+**Reserve integrity:** the destination for an ACROWN floor-price purchase is a separately verified ACS reserve destination whose value is counted in V; it is not the Genesis website-launch treasury and not the ACROWN inventory/delivery wallet. The full received USDT purchase principal is included in V under the approved ACS valuation method. With F = V/C, participant network fees are outside the purchase principal and must not reduce V. Any project-side operating or treasury-management cost must have a separately approved source and accounting treatment outside this principal. The Genesis qualifying payment instead goes in full to the Genesis Programme treasury for the planned website frontend/backend launch; it does not automatically increase ACS reserve V.
+
+No fee is subtracted from the quoted ACS pure floor. Do not add gas, processor fees, a service margin or a percentage haircut to the purchase principal. No live route may be activated until this exact-principal and fee-disclosure behavior is tested end to end for each supported rail.
 
 ## 3. Contribution receipt and allowance credit
 
