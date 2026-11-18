@@ -7,7 +7,7 @@
 
 ## Purpose
 
-This module defines deterministic checks for whether a submitted transaction reference corresponds to one exact USDT transfer from the source address bound to a Genesis payment intent to the configured Genesis treasury. The primary Genesis identity is proved separately. For a one-time payment, the actual finalized transaction establishes which address sent the funds; that source address is recorded in the payment evidence and does not automatically become a Genesis login or recovery wallet. It is deliberately not an HTTP payment endpoint, payment-intent service, RPC client, entitlement writer or live ledger.
+This module defines deterministic checks for whether a submitted transaction reference corresponds to one exact USDT transfer from a pre-verified payment address in the member's primary Genesis wallet profile to the configured Genesis treasury. The primary Genesis identity is proved separately, and each additional network address must be independently linked before it can be used as a payment source. An on-chain transaction from an unregistered address is not eligible for Genesis attribution, even if the transfer itself is otherwise valid. It is deliberately not an HTTP payment endpoint, payment-intent service, RPC client, entitlement writer or live ledger.
 
 Source code:
 - `../account-continuity/worker/src/genesis-payment-evidence.js`
@@ -98,11 +98,11 @@ No database write, allowance update, badge award, public-directory event, paymen
 
 The evidence parser is one stage only. Before any future payment route can call it, the payment-intent service must also bind the evidence to:
 - a unique, unexpired, server-created payment intent associated with the authenticated primary Genesis identity;
-- the selected payment network and the source address declared for that one-time intent (which may be the primary address or a separate payment-source address);
+- the selected payment network and source address, which must match a previously verified PAYMENT address linked to the same primary Genesis identity;
 - the exact canonical token, treasury, six-decimal base-unit amount and payment purpose;
 - an immutable intent/rules version and a unique transaction + transfer/event/instruction index key.
 
-A separate dApp message signature from a TRON payment-source address is not mandatory merely to attribute that completed payment: the actual transaction evidence must prove that the stated source address executed the exact transfer. A source address recorded this way is a payment-origin record only; it does not gain identity-login, name-change, recovery or entitlement-transfer authority. If a payment source must be retained as a reusable linked wallet, use the normal wallet-link ownership challenge.
+A TRON payment address must pass the normal TRON wallet-link ownership challenge before it is eligible for a Genesis payment. The completed transaction must then match that pre-verified address exactly. The linked address remains a payment endpoint only; it does not gain identity-login, name-change, recovery or entitlement-transfer authority. Genesis does not accept a one-time unlinked payment source.
 
 The eventual database constraint must make network + transaction id + transfer index unique. A payment hash alone is insufficient because one transaction can contain multiple token transfers. Duplicate observations must be idempotent and must not credit twice. Corrections must be compensating append-only events; a verified financial event must never be silently deleted or rewritten.
 
