@@ -41,20 +41,20 @@ export function purchaseWindowStartsAt(acrownLaunchedAtSeconds) {
   return timestamp(acrownLaunchedAtSeconds, "Official ACROWN launch");
 }
 
-export function programmeClosesAt(windowStartedAtSeconds, lastCompletedFloorPurchaseAtSeconds = null) {
+export function programmeClosesAt(windowStartedAtSeconds, lastCompletedPurchaseAtSeconds = null) {
   const startedAt = timestamp(windowStartedAtSeconds, "Purchase-window start");
-  const lastPurchaseAt = lastCompletedFloorPurchaseAtSeconds === null || lastCompletedFloorPurchaseAtSeconds === undefined
+  const lastPurchaseAt = lastCompletedPurchaseAtSeconds === null || lastCompletedPurchaseAtSeconds === undefined
     ? startedAt
-    : timestamp(lastCompletedFloorPurchaseAtSeconds, "Last completed floor-price purchase");
-  if (lastPurchaseAt < startedAt) throw new RangeError("A completed floor-price purchase cannot predate the purchase-window start.");
+    : timestamp(lastCompletedPurchaseAtSeconds, "Last completed purchase");
+  if (lastPurchaseAt < startedAt) throw new RangeError("A completed purchase cannot predate the purchase-window start.");
   return lastPurchaseAt + PROGRAMME_WINDOW_SECONDS;
 }
 
-export function isWithinProgrammeWindow(now, windowStartedAt, closesAt, lastCompletedFloorPurchaseAt = null) {
+export function isWithinProgrammeWindow(now, windowStartedAt, closesAt, lastCompletedPurchaseAt = null) {
   if (![now, windowStartedAt, closesAt].every(Number.isSafeInteger)) return false;
   let expectedClose;
   try {
-    expectedClose = programmeClosesAt(windowStartedAt, lastCompletedFloorPurchaseAt);
+    expectedClose = programmeClosesAt(windowStartedAt, lastCompletedPurchaseAt);
   } catch {
     return false;
   }
