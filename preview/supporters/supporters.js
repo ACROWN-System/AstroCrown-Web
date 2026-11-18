@@ -1,3 +1,5 @@
+import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders, discoverDirectTronProviders, discoverDirectSolanaWallets, hasTronMessageSigner, isSolanaMainnet } from "./wallet-provider-adapters.mjs";
+
 (function () {
   "use strict";
 
@@ -228,11 +230,13 @@
     }
 
     var id = "evm-" + (++nextEvmId);
+    var walletId = identifyWalletCandidate(info || {}, provider);
     var name = info && typeof info.name === "string" ? info.name :
-      (provider.isMetaMask ? "MetaMask" : "Injected EVM wallet");
+      (walletId ? walletDisplayName(walletId) : (provider.isMetaMask ? "MetaMask" : "Injected EVM wallet"));
     var entry = {
       id: id,
       uuid: uuid,
+      walletId: walletId,
       name: name,
       rdns: info && typeof info.rdns === "string" ? info.rdns : "",
       provider: provider,
@@ -252,17 +256,19 @@
 
   // Listen first, then request provider announcements as required by EIP-6963.
   window.dispatchEvent(new Event("eip6963:requestProvider"));
+  discoverDirectEvmProviders(window).forEach(function (entry) {
+    registerEvmProvider({ name: entry.name, rdns: entry.rdns }, entry.provider, true);
+  });
 
   // Compatibility fallback for EIP-1193 wallets that have not implemented EIP-6963.
   // Delay briefly so standard announcements can be collected first and avoid duplicates.
   window.setTimeout(function () {
-    if (evmProviders.size > 0) return;
     var injected = window.ethereum;
     if (!injected) return;
     var candidates = Array.isArray(injected.providers) ? injected.providers : [injected];
     candidates.forEach(function (provider) {
       registerEvmProvider(
-        { name: provider && provider.isMetaMask ? "MetaMask" : "Injected EVM wallet" },
+        { name: walletDisplayName(identifyWalletCandidate({}, provider)) },
         provider,
         true
       );
@@ -434,6 +440,9 @@
   }
 
   window.dispatchEvent(new WalletStandardAppReadyEvent(walletApi));
+  discoverDirectSolanaWallets(window).forEach(function (wallet) {
+    registerSolanaWallets(wallet);
+  });
 
   solanaSelect.addEventListener("change", renderSolanaChoices);
   solanaConnectButton.addEventListener("click", async function () {
@@ -499,6 +508,8 @@
   // No message signing, transaction signing, contract call or transfer occurs here.
   var tronWallets = new Map();
   var connectedTronProvider = null;
+  var connectedTronWeb = null;
+  var connectedTronWallet = null;
   var connectedTronAddress = null;
   var connectedTronChainId = null;
   var tronWalletSequence = 0;
@@ -538,18 +549,24 @@
     tronClearButton.disabled = !connectedTronAddress;
   }
 
-  function registerTronProvider(info, provider) {
+  function registerTronProvider(info, provider, options) {
+    options = options || {};
     if (!supportedTronProvider(provider)) return;
     var uuid = info && typeof info.uuid === "string" ? info.uuid : "";
     var existing = Array.from(tronWallets.entries()).find(function (entry) {
       return entry[1].provider === provider || (uuid && entry[1].uuid === uuid);
     });
     if (existing) return;
+    var walletId = options.walletId || identifyWalletCandidate(info || {}, provider);
     var id = uuid || "tron-wallet-" + (++tronWalletSequence);
     tronWallets.set(id, {
       uuid: uuid,
-      name: info && typeof info.name === "string" ? info.name : (provider.isTronLink ? "TronLink" : "TRON wallet"),
-      provider: provider
+      walletId: walletId,
+      name: options.name || (info && typeof info.name === "string" ? info.name :
+        (walletId ? walletDisplayName(walletId) : (provider.isTronLink ? "TronLink" : "TRON wallet"))),
+      provider: provider,
+      tronWeb: options.tronWeb || provider.tronWeb || null,
+      connectMethod: options.connectMethod || "eth_requestAccounts"
     });
     renderTronChoices();
 
@@ -578,6 +595,8 @@
 
   function clearTronConnection(showMessage) {
     connectedTronProvider = null;
+    connectedTronWeb = null;
+    connectedTronWallet = null;
     connectedTronAddress = null;
     connectedTronChainId = null;
     if (lastConnectedNetwork === "tron") lastConnectedNetwork = null;
@@ -589,6 +608,9 @@
     updateSupporterActionButtons();
   }
 
+  discoverDirectTronProviders(window).forEach(function (entry) {
+    registerTronProvider({ name: entry.name, uuid: entry.walletId }, entry.provider, entry);
+  });
   window.addEventListener("TIP6963:announceProvider", function (event) {
     var detail = event && event.detail ? event.detail : {};
     registerTronProvider(detail.info || {}, detail.provider);
@@ -612,12 +634,18 @@
     tronConnectButton.textContent = "Connecting…";
     setFeedback(tronFeedback, "Approve the wallet's account-access request to share your public TRON address. No signature or transfer is requested.", "neutral");
     try {
-      var accounts = await wallet.provider.request({ method: "eth_requestAccounts" });
-      var address = Array.isArray(accounts) ? accounts.find(isTronAddress) : null;
-      var tronWeb = wallet.provider.tronWeb;
+      var accounts = await wallet.provider.request({ method: wallet.connectMethod || "eth_requestAccounts" });
+      if (accounts && typeof accounts === "object" && accounts.code && Number(accounts.code) !== 200) {
+        throw new Error(accounts.message || "The TRON wallet connection request was not approved.");
+      }
+      var address = Array.isArray(accounts) ? accounts.find(isTronAddress) :
+        (typeof accounts === "string" && isTronAddress(accounts) ? accounts : null);
+      var tronWeb = wallet.tronWeb || wallet.provider.tronWeb;
       if (!address && tronWeb && tronWeb.defaultAddress) address = tronWeb.defaultAddress.base58;
       if (!isTronAddress(address)) throw new Error("The selected wallet did not return a valid public TRON address.");
       connectedTronProvider = wallet.provider;
+      connectedTronWeb = tronWeb || null;
+      connectedTronWallet = wallet;
       connectedTronAddress = address;
       try {
         connectedTronChainId = await wallet.provider.request({ method: "eth_chainId" });
@@ -661,15 +689,16 @@
       };
     }
     if (lastConnectedNetwork === "tron" && connectedTronProvider && connectedTronAddress) {
-      var tronWeb = connectedTronProvider.tronWeb ||
-        (window.tron && window.tron.tronWeb) || null;
+      var tronWeb = connectedTronWeb || connectedTronProvider.tronWeb || null;
       return {
         network: "tron",
+        walletId: connectedTronWallet && connectedTronWallet.walletId,
         address: connectedTronAddress,
         mainnet: String(connectedTronChainId || "").toLowerCase() === "0x2b6653dc",
+        canSign: hasTronMessageSigner(tronWeb),
         sign: async function (message) {
-          if (!tronWeb || !tronWeb.trx || typeof tronWeb.trx.signMessageV2 !== "function") {
-            throw new Error("This TRON wallet does not expose TronLink signMessageV2 message signing.");
+          if (!hasTronMessageSigner(tronWeb)) {
+            throw new Error("This TRON wallet exposes account access but not the TIP-191 signMessageV2 method required by Genesis. No transaction or payment can be used as a substitute without a separately approved proof method.");
           }
           return tronWeb.trx.signMessageV2(message);
         }
@@ -680,7 +709,9 @@
       return {
         network: "solana",
         address: connectedSolanaAccount.address,
-        mainnet: chains.indexOf("solana:mainnet") !== -1,
+        walletId: connectedSolana.wallet.genesisWalletId || null,
+        mainnet: isSolanaMainnet(connectedSolanaAccount),
+        canSign: Boolean(connectedSolana.wallet.features && connectedSolana.wallet.features["solana:signMessage"] && typeof connectedSolana.wallet.features["solana:signMessage"].signMessage === "function"),
         sign: async function (message) {
           var wallet = connectedSolana.wallet;
           var feature = wallet && wallet.features && wallet.features["solana:signMessage"];
@@ -707,7 +738,7 @@
   function updateSupporterActionButtons() {
     supporterRuntimeEnabled = supporterRuntimeMarkerPresent();
     var wallet = activeConnectedWallet();
-    var ready = Boolean(supporterRuntimeEnabled && wallet && wallet.mainnet);
+    var ready = Boolean(supporterRuntimeEnabled && wallet && wallet.mainnet && wallet.canSign !== false);
     if (memberMode) memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
     if (registerWalletButton) {
       registerWalletButton.disabled = !ready || Boolean(supporterMember);
