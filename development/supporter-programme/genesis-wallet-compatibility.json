@@ -14,7 +14,7 @@
       "walletId": "metamask",
       "displayName": "MetaMask",
       "status": "NOT_IN_CURRENT_FIVE_WALLET_WAVE",
-      "note": "Kept outside this five-wallet test wave. A wallet may qualify for Ethereum or Solana if those routes pass. To use TRON for Genesis payments, it must also support a valid TRON address-link ownership proof; native TRON send capability alone is insufficient."
+      "note": "Kept outside this five-wallet test wave; this is not a general disqualification. A wallet may qualify for Ethereum or Solana if those routes pass. To use TRON for Genesis payments, it must also support a valid TRON address-link ownership proof; native TRON send capability alone is insufficient."
     }
   ],
   "qualificationModel": {
