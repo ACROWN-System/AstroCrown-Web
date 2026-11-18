@@ -42,7 +42,7 @@ The wallet provider's own recovery mechanism—such as its Secret Recovery Phras
 
 AstroCrown and Genesis must never request, receive, store, transmit or ask a user to upload a seed phrase, private key, recovery phrase or hardware-wallet secret.
 
-If the device is lost but the wallet is restorable from its own backup, the wallet holder restores it and proves control again. If the primary wallet and all of its recovery capability are irretrievably lost, the Genesis identity, access, entitlement, badge and rights associated with that wallet are lost. Genesis must not reassign those rights to a newly created wallet based on a claim, email, display name, document or manual support request.
+If the device is lost but the wallet is restorable from its own backup, the wallet holder restores it and proves control again. If the primary wallet and all of its recovery capability are irretrievably lost, access to that Genesis identity, its badge and its attributable activity history is lost. A linked address cannot take over the primary identity, and no private purchase allowance exists to transfer; the programme-wide pool remains shared among all other eligible pre-freeze identities. Genesis must not reassign the identity or badge to a newly created wallet based on a claim, email, display name, document or manual support request.
 
 Exactly 24 hours before the scheduled official ACROWN launch, all Genesis activities enter a freeze, including new primary-wallet registration, qualifying payments, allowance-pool credits, purchase quotes, floor-price purchases, new wallet links and profile changes. The registration cutoff is permanent: Genesis does not resume or accept new primary-wallet registrations after the freeze or after ACROWN launches. During the freeze, read-only access and authentication/logout for existing identities may remain available.
 
@@ -131,8 +131,8 @@ No payment action may become available until the disclosure has been displayed b
 Genesis is an investment/acquisition programme, not a charitable, donation, voluntary-support or fundraising programme. Public-facing product language must not describe payment as a contribution or donation, or call participants supporters.
 
 Use:
-- **qualifying payment** or **acquisition payment** for the first payment that establishes the wallet's purchase entitlement;
-- **ACROWN purchase entitlement** or **purchase allowance** for the wallet-bound right/maximum capacity to buy;
+- **qualifying payment** or **acquisition payment** for a payment that adds capacity to the shared Genesis-programme-wide purchase allowance pool;
+- **Genesis programme-wide purchase allowance** for the shared USDT-denominated pool of purchase capacity available to any eligible pre-freeze registered identity;
 - **floor-price purchase** for the later, separate purchase of ACROWN at the qualified ACS pure floor;
 - **acquisition record** and **verified on-chain payment** for the public audit trail;
 - **Genesis Member** for the special honorific status.
