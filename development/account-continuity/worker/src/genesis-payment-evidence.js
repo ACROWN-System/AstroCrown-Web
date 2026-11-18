@@ -146,6 +146,13 @@ function solanaAddress(value, label) {
   return value;
 }
 
+function solanaSignature(value, label) {
+  if (typeof value !== "string" || !BASE58.test(value)) fail(label + " is not a valid base58 transaction signature.");
+  const bytes = base58Decode(value);
+  if (bytes.length !== 64) fail(label + " is not a 64-byte Solana transaction signature.");
+  return value;
+}
+
 function expectedAmount(expected) {
   return positiveBigInt(expected && expected.amountBaseUnits, "Expected amount");
 }
@@ -154,7 +161,7 @@ function requireTransactionId(expected, network) {
   const value = expected && expected.transactionId;
   if (network === "ethereum") return ethereumHash(value, "Expected transaction hash");
   if (network === "tron") return tronHash(value, "Expected transaction id");
-  return solanaAddress(value, "Expected Solana transaction signature");
+  return solanaSignature(value, "Expected Solana transaction signature");
 }
 
 function canonicalEvidence(network, transactionId, sender, treasury, amount, transferIndex, inclusion, finalityStatus) {
@@ -321,7 +328,7 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, transactio
   if (!transaction || !transaction.meta || !transaction.transaction) fail("Solana transaction or metadata is absent.");
   const signatures = transaction.transaction.signatures;
   if (!Array.isArray(signatures) || typeof signatures[0] !== "string") fail("Solana transaction signatures are missing.");
-  const transactionId = solanaAddress(signatures[0], "Solana transaction signature");
+  const transactionId = solanaSignature(signatures[0], "Solana transaction signature");
   if (transactionId !== requireTransactionId(expected, "solana")) fail("Solana transaction signature does not match the submitted signature.");
   if (transaction.meta.err !== null) fail("Solana transaction execution failed or did not provide a null error result.");
   if (!signatureStatus || signatureStatus.err !== null || signatureStatus.confirmationStatus !== "finalized") {
