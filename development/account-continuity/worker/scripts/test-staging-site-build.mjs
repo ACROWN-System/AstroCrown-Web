@@ -38,6 +38,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /All Genesis activities freeze exactly 24 hours before the scheduled official ACROWN launch/);
   assert.match(html, /New primary-wallet registration closes permanently at that cutoff and never resumes/);
   assert.match(html, /180 days of inactivity/);
+  assert.doesNotMatch(html, /\\b180 days\\b(?! of inactivity)/i);
   assert.match(html, /What does the 180 days of inactivity apply to, and when does it begin/);
   assert.match(html, /ACROWN is officially deployed\/launched and the qualified ACS floor-price token-purchase service has actually become available/);
   assert.match(html, /does not reset it/);
