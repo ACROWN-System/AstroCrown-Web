@@ -71,7 +71,12 @@ assert.match(supporterPage, /USDT qualifying payments and ACROWN purchases are n
 assert.match(supporterPage, /DO NOT SEND FUNDS/i);
 assert.match(supporterPage, /ACROWN delivery remains (?:on Solana|Solana-based)/i);
 assert.match(supporterPage, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/i);
-assert.match(supporterPage, /1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance/i);
+assert.match(supporterPage, /30×.*USDT 10,000.*25×.*20×.*15×.*10×/is);
+assert.match(supporterPage, /USDT 1,000,000.*USDT-denominated/i);
+assert.match(supporterPage, /registered wallet owner.*network fee.*separately/is);
+assert.match(supporterPage, /full USDT principal.*ACS reserve destination.*V/is);
+assert.match(supporterPage, /id="participant-network-fee-policy"/i);
+assert.doesNotMatch(supporterPage, /25 ACROWN per USD₮|USDT 150 transition threshold|USDT 250,000 target/i);
 assert.match(supporterPage, /180-day purchase period begins at that operational activation/i);
 assert.match(supporterPage, /unused personal allowance/i);
 assert.match(supporterPage, /Any approved global ceiling applies to everyone/i);
