@@ -1,74 +1,115 @@
-# Genesis Programme — Wallet Compatibility and Qualification Gate
+# Genesis Wallet Compatibility — Use-Case Qualification
 
-**Status:** Fail-closed candidate register; no wallet application is approved for production payments yet.  
-**Owner direction:** Accept only a curated set of wallet applications demonstrated to manage the required USDT assets across Ethereum, TRON and Solana. A familiar wallet brand or a provider name reported by a browser is not sufficient evidence.
+**Programme status:** PRELAUNCH; qualifying payments remain disabled.  
+**Current qualification wave:** Bitget Wallet, TokenPocket, Coin98, OKX Wallet and Trust Wallet.  
+**Outside this five-wallet wave:** MetaMask. Its previously identified TRON dApp limitation is recorded, not treated as proof that the wallet is generally incapable of receiving or sending assets.
 
-## Required asset scope
+## The actual Genesis wallet job
 
-The initial payment assets remain:
-- Ethereum Mainnet — USDT ERC-20;
-- TRON Mainnet — USDT TRC-20;
-- Solana Mainnet — USDT SPL.
+A wallet is compatible when it can support the specific user journey—not when it exposes every API on every supported chain.
 
-The same wallet application should provide reliable access to all three assets. Their public addresses are different across chains. Every address must be independently attributed to the primary Genesis wallet by a cryptographic ownership proof or a separately qualified transaction-proof method.
+1. **Identify the holder.** Connect one primary wallet address and prove control with a domain-bound off-chain message signature on one supported identity route. Ethereum or Solana is sufficient. TRON message signing is optional; it is not a universal wallet requirement.
+2. **Make a qualifying payment.** The participant sends USDT using one of the available payment rails: Ethereum ERC-20, TRON TRC-20 or Solana SPL. A wallet does not have to expose a dApp provider or message-signing method on all three chains. The exact payment route used must be supported by that wallet's own interface.
+3. **Verify the payment.** Genesis—not the wallet application—detects and validates the completed on-chain transfer. A wallet popup, balance display, explorer link or provider event is not payment evidence. A submitted transaction hash may start reconciliation; it cannot credit an entitlement.
+4. **Receive ACROWN on Solana.** The participant supplies a verified Solana recipient address that can receive the ACROWN SPL token. AstroCrown's separately authorized Solana signer sends the token. The participant's wallet does not need to sign or submit the outgoing ACROWN transaction.
 
-## Candidate register
+## What is required from each wallet
 
-The machine-readable register is `genesis-wallet-compatibility.json`. No brand is approved merely because it appears in this table.
+| Capability | Required? | Qualification meaning |
+|---|---|---|
+| Connect and identify one primary address | Yes | The selected identity route must provide a stable public address |
+| Sign one off-chain identity challenge | Yes | Server verifies the signature, address, domain, purpose, nonce and expiry |
+| Send USDT on at least one offered payment rail | Yes | The wallet's native UI or supported dApp flow can initiate the chosen transfer |
+| Have special dApp signing APIs on Ethereum, TRON and Solana | No | Payment attribution is chain-side; TRON dApp signing is not required just to verify a TRON transfer |
+| Notify Genesis when payment is complete | No | Chain observation and independent RPC verification determine completion |
+| Receive the ACROWN SPL token on Solana | Yes | Provide a valid recipient address and confirm token receipt/display |
+| Sign a transaction to receive ACROWN | No | The participant is the recipient; AstroCrown's authorized signer submits delivery |
+| Restore every network address during wallet qualification | No | Wallet backup and recovery remain the holder's responsibility, not a programme feature |
+| Test every platform for every wallet brand | No | Qualify the exact app or extension route that is actually offered and used |
 
-| Wallet application | Current disposition | What the official documentation demonstrates | Remaining qualification concern |
+The programme as a whole still supports all three USDT payment rails. That is a system-level requirement, not a rule that every wallet must implement all three dApp APIs. Each enabled payment rail must pass its own server-side verification tests independently.
+
+## Payment attribution and wallet identity
+
+The primary wallet remains the Genesis identity and recovery anchor.
+
+A qualifying payment is associated with that identity through its server-created payment intent and independently verified transaction evidence. The evidence records the actual sending address, canonical USDT asset, receiving treasury, exact amount, transaction or transfer index, success and finality. The source address is retained in the payment record; it does not automatically become a login or recovery wallet.
+
+Where a distinct Solana delivery address is used, it must prove control before ACROWN is sent to it. A Solana off-chain message signature is preferred. If a wallet cannot produce a compatible proof, do not silently trust a pasted address; a separately reviewed equivalent proof method is required.
+
+## Canonical payment rails
+
+| Network | Asset | Canonical identifier | Precision |
+|---|---|---|---:|
+| Ethereum Mainnet | USDT ERC-20 | `0xdAC17F958D2ee523a2206206994597C13D831ec7` | 6 |
+| TRON Mainnet | USDT TRC-20 | `TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t` | 6 |
+| Solana Mainnet Beta | USDT SPL | `Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB` | 6 |
+
+These system-level checks remain mandatory for each activated rail:
+
+- canonical network and token contract/mint and on-chain decimals;
+- exact source address, Genesis treasury and base-unit amount;
+- successful chain execution and chain-appropriate finality;
+- unique transaction plus transfer/event/instruction index;
+- independent evidence from at least two independently operated RPC operators;
+- duplicate protection and fail-closed behavior when providers disagree or evidence is incomplete.
+
+Those checks are implemented as read-only deterministic parsers and reconciliation functions. They are not yet a live RPC client, payment-intent API or entitlement-credit service.
+
+## Five-wallet qualification wave
+
+| Wallet | Identity route to test | Payment use | Solana delivery |
 |---|---|---|---|
-| Bitget Wallet | Candidate — promising three-network integration | EVM provider with personal-message signing; TRON provider with `tron_requestAccounts` and `signMessageV2`; Solana Wallet Standard provider with `connect` and `signMessage`. Official docs cover the Chrome extension and in-app DApp browser. | Test exact USDT send/receive flows, signature recovery and restore/address derivation on all three networks. Its WalletConnect mobile route documents Ethereum and Solana, not TRON, so assess its extension and in-app routes separately. |
-| TokenPocket | Candidate — promising three-network integration | Official docs provide EVM EIP-1193/EIP-6963, TRON account access and `signMessageV2`; the developer index lists a Solana Provider API, and its mobile SDK documents Solana `connect` and `signMessage`. | Confirm the actual Solana provider method and message-signing flow on the current extension and mobile versions separately; do not assume the injected providers are identical. |
-| Coin98 Super Wallet | Candidate — EVM and Solana APIs documented; TRON proof remains unresolved | Official docs show `window.coin98.provider` for EVM and `window.coin98.sol` with `sol_accounts` / `sol_requestAccounts`; Coin98 Connect documents `sol_signMessage`. | The public guide does not fully specify the off-chain signing return shape/address binding, and its EVM example demonstrates `eth_sign` rather than Genesis `personal_sign`. Verify both live. No qualifying TRON dApp/TIP-191 `signMessageV2` path is documented. New/Old restore derivation must also be tested. |
-| MetaMask | Candidate — not qualified | Ethereum and Solana integrations are candidates. TRON asset management is documented. | Its reviewed TRON guide says direct TRON dApp connection is not currently available; a qualified way to prove and link the TRON address is still required. |
-| Trust Wallet | Candidate — not qualified | Official developer documentation describes dApp integration across Ethereum, EVM networks, Solana and TRON. | Confirm the actual mobile/extension providers, message signatures, USDT send/receive and recovery flows on the exact versions being tested. |
-| OKX Wallet | Candidate — not qualified | Official help documentation lists Ethereum, Solana and TRON among its supported networks. | Confirm the actual dApp provider APIs, chain-specific message signing, USDT send/receive and recovery behavior; network support alone is not sufficient. |
+| Bitget Wallet | EVM or Solana message signature | Use its native USDT send interface on a selected supported rail | Verify recipient address and SPL receipt |
+| TokenPocket | EVM or Solana message signature; test selected extension/mobile route | Use its native USDT send interface on a selected supported rail | Verify recipient address and SPL receipt |
+| Coin98 Super Wallet | Solana `sol_signMessage` is a documented primary route; EVM `personal_sign` is optional | A missing TRON dApp signature route does not block a native USDT transfer whose on-chain evidence is verified | Confirm signature encoding/address binding and SPL receipt |
+| OKX Wallet | EVM or Solana message signature | Its native TRON transfer can be attributed from the chain; `trx.sign` is not treated as a Genesis identity signature | Verify recipient address and SPL receipt |
+| Trust Wallet | EVM or Solana provider route on the selected platform | Use its native USDT send interface on a selected supported rail | Verify provider, recipient address and SPL receipt |
 
-### Official documentation examined
+A provider adapter or mocked test only demonstrates that our code handles a documented interface shape. It does not qualify an installed wallet binary. The current Chromium smoke exercised synthetic providers across the six previously evaluated brands; that run must not be described as five live-wallet approvals.
 
-- [Bitget Wallet EVM provider](https://web3.bitget.com/en/docs/connect/mainnet/evm), [TRON provider](https://web3.bitget.com/en/docs/connect/mainnet/tron), [Solana provider](https://web3.bitget.com/en/docs/connect/mainnet/solana), and [WalletConnect support](https://web3.bitget.com/en/docs/connect/adaptor/wallet-connect).
-- [TokenPocket Ethereum provider](https://help.tokenpocket.pro/developer-en/extension-wallet/api-reference/ethereum-provider-api), [TRON provider](https://help.tokenpocket.pro/developer-en/extension-wallet/api-reference/tron-provider-api), [developer documentation index](https://help.tokenpocket.pro/developer-en/llms.txt), and [mobile JavaScript SDK](https://github.com/TP-Lab/tp-js-sdk), whose webview API documents `window.solana.connect()` and `signMessage()`.
-- [Coin98 EVM dApp integration](https://docs.coin98.com/developer-guide/dapps-integration/evm-compatible-dapps-integration), [Solana dApp integration](https://docs.coin98.com/developer-guide/solana-dapps-integration), [Coin98 Connect integration (including sol_signMessage)](https://docs.coin98.com/developer-guide/coin98-connect-integration), [multichain extension restore guidance](https://docs.coin98.com/products/coin98-super-wallet/extension/getting-started/how-to-create-or-import-a-multichain-wallet), and [USDT transfer/gas guidance](https://docs.coin98.com/products/coin98-super-wallet/mobile/asset-management/faqs/why-cant-i-send-usdt-to-other-wallets).
+## Tests that are deliberately not required
 
-These references establish that each wallet deserves evaluation; they do not establish that any release version has passed the Genesis qualification suite.
+The following earlier requirements were broader than the actual use case and are removed from the wallet acceptance gate:
 
-## Practical adapter work and test boundary
+- a wallet must dApp-connect and sign a challenge independently on Ethereum, TRON and Solana;
+- each wallet must send and receive USDT on all three chains;
+- each wallet must complete recovery/restore and address-derivation tests for all three chains;
+- a wallet must notify the website after a payment;
+- the participant wallet must sign or send the ACROWN Solana delivery transaction.
 
-The Genesis preview now contains explicit provider adapters for the published direct namespaces where available:
-- EVM: Bitget `window.bitkeep.ethereum`, TokenPocket `window.tokenpocket.ethereum`, Coin98 `window.coin98.provider`, OKX `window.okxwallet.ethereum`, plus EIP-6963/EIP-1193 discovery for MetaMask, Trust Wallet and other announced providers.
-- TRON: Bitget `window.bitkeep.tronLink`, TokenPocket `window.tokenpocket.tron`, OKX `window.okxwallet.tronLink`, generic TIP-6963 and `window.tron` discovery. Genesis only permits identity proof through `tronWeb.trx.signMessageV2` (TIP-191). OKX's documented `trx.sign` flow is not silently substituted.
-- Solana: Wallet Standard plus direct Bitget `window.bitkeep.solana`, OKX `window.okxwallet.solana`, Coin98 `window.coin98.sol` (`sol_requestAccounts` / `sol_signMessage`), and TokenPocket's mobile `window.solana` route when the TokenPocket webview is present.
+A wallet-specific TRON dApp signature gap is therefore not, by itself, a reason to reject that wallet for Genesis. If the holder establishes primary identity on Ethereum or Solana, a TRON payment can still be verified by the chain evidence. The wallet must still be able to initiate the TRON USDT transfer in its own interface if TRON is the selected payment route.
 
-The automated adapter tests use synthetic provider objects and signatures. They exercise detection, connect-call contracts, UTF-8 personal_sign encoding, Solana signature normalization, connected-address continuity, explicit mainnet identification and deliberate rejection of unsupported TRON signature methods. Where a Solana provider exposes its active address before signing or its public key with the signature, the adapter rejects an account change or signer mismatch. A Solana address can be displayed even when the wallet omits its cluster, but Genesis identity actions remain disabled until mainnet is confirmed. **These tests do not prove that an installed wallet build works.** The following require the exact physical app/extension and version to be present:
-1. Connect and sign a fresh Genesis challenge for each supported primary-wallet and linked-address route.
-2. Verify that the returned signature is accepted by the production-equivalent server verifier and remains tied to the address shown by the wallet. Where the provider exposes its active account or signing public key, confirm both match the connected address; an account change between connection and signing must fail.
-3. Confirm mainnet/testnet switching and network identification. A missing or ambiguous chain identifier keeps identity actions disabled.
-4. Restore each wallet from its own recovery method into a clean test profile and compare all three derived addresses.
-5. Verify receiving addresses and token balances for the canonical USDT contracts/mint. Actual on-chain USDT send/receive tests are not part of browser mock tests and require a separately authorized test plan; no funds are moved by these changes.
+## Remaining practical qualification
 
-No wallet is marked qualified merely because its adapter or automated mock test passes. Provider integration, live signature verification, USDT transfer behavior and wallet recovery remain separately recorded gates. Mainnet payment acceptance stays disabled.
+For each of the five wallet applications, on the exact platform/build intended for release:
 
-These are candidates for testing, not an approved payment allowlist. No candidate is marked qualified and the production allowlist is empty.
+1. Connect the wallet and verify the displayed primary address.
+2. Sign one off-chain Genesis challenge using the selected Ethereum or Solana identity route; verify it with the same server verifier used by Genesis.
+3. Open the wallet's native USDT transfer screen and confirm that it can construct a payment on at least one Genesis rail, with the correct network and canonical asset selected. Do not send mainnet funds during this step.
+4. Connect or submit the intended Solana delivery address and prove its control.
+5. On an isolated Solana test environment, receive a test SPL token using the same token-account/recipient pattern intended for ACROWN. Verify the resulting destination owner and token balance.
+6. Record app/extension version, OS/browser, provider identifier, identity network, payment rail tested and delivery result.
 
-## Qualification requirements
+Actual mainnet USDT transfers are not required to establish provider compatibility and must not be initiated as an incidental test. Payment verifier qualification remains a separate system-level exercise using fixtures, independently sourced mainnet reads and an expressly approved end-to-end plan.
 
-A wallet application can be approved only after all of the following pass for the exact app version, platform and provider integration being released:
+## Status vocabulary
 
-1. It receives and sends the exact canonical USDT asset on each of Ethereum, TRON and Solana.
-2. The Genesis website can establish and verify control of the primary wallet without requesting a transaction, token approval, seed phrase or private key.
-3. Every additional chain address can be independently proven and linked to that same primary identity. Merely submitting a transaction hash or showing a wallet balance is not proof that a secondary address belongs to the primary wallet.
-4. If a network lacks dApp connection, any manual-payment alternative must have an independently qualified and auditable source-attribution method. A public explorer link alone is insufficient.
-5. The same wallet can be restored using its official recovery process, and the restored account derives the same addresses on all three target networks.
-6. Chain/network selection, mainnet switching and transaction-fee requirements are displayed clearly and correctly.
-7. Tests record wallet application name, platform, exact version, provider identifiers, network, asset contract/mint, proof method and results.
+- `NOT_TESTED`
+- `PROVIDER_DETECTED`
+- `ACCOUNT_CONNECTED`
+- `PRIMARY_SIGNATURE_VERIFIED`
+- `PAYMENT_RAIL_UI_CONFIRMED`
+- `SOLANA_RECIPIENT_VERIFIED`
+- `SPL_RECEIPT_TESTED`
+- `QUALIFIED_FOR_GENESIS_USE_CASE`
 
-Wallet provider metadata, icons, names and reverse-DNS identifiers are useful for selecting the intended provider in the interface, but they are not trusted as proof of ownership. Ownership is established only by verified cryptographic signatures or a separately approved on-chain proof method. All signatures are checked server-side against the requested chain, address, domain, nonce, purpose and expiry.
+No wallet is production-approved until the required live tests pass for its exact release route. The current production allowlist remains empty. All qualifying payment routes remain disabled; no payment intent, entitlement credit, ACS purchase, ACROWN transfer or remote deployment is enabled by this qualification register.
 
-## Runtime and release boundary
+## Official documentation pointers
 
-The current staging page discovers EVM, TRON and Solana wallet providers for isolated, display-only ownership-proof testing. It does not constitute approval of every detected provider. The candidate register explicitly keeps production acceptance disabled until the full qualification suite passes.
-
-The payment backend must fail closed if the requested wallet application/version and network route are not present in the approved release register. Never infer qualification from a token balance, wallet brand, an explorer screenshot or a user-provided URL.
-
-No mainnet payment, entitlement credit, ACROWN purchase, token transfer, mint or delivery is enabled by this register or its tests.
+- Bitget Wallet EVM, TRON, Solana and WalletConnect provider documentation: https://web3.bitget.com/en/docs/connect/mainnet/evm ; https://web3.bitget.com/en/docs/connect/mainnet/tron ; https://web3.bitget.com/en/docs/connect/mainnet/solana ; https://web3.bitget.com/en/docs/connect/adaptor/wallet-connect
+- TokenPocket EVM and TRON provider documentation: https://help.tokenpocket.pro/developer-en/extension-wallet/api-reference/ethereum-provider-api ; https://help.tokenpocket.pro/developer-en/extension-wallet/api-reference/tron-provider-api ; developer index: https://help.tokenpocket.pro/developer-en/llms.txt
+- Coin98 EVM, Solana and Coin98 Connect documentation: https://docs.coin98.com/developer-guide/dapps-integration/evm-compatible-dapps-integration ; https://docs.coin98.com/developer-guide/solana-dapps-integration ; https://docs.coin98.com/developer-guide/coin98-connect-integration
+- OKX Wallet developer documentation: https://www.okx.com/web3/build/docs
+- Trust Wallet developer documentation: https://developer.trustwallet.com/
