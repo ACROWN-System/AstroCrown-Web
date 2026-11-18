@@ -84,6 +84,7 @@ assert.match(supporterPage, /Any one eligible wallet may buy the entire remainin
 assert.match(supporterPage, /there is no personal purchase allowance|no personal per-wallet purchase cap/i);
 assert.match(supporterPage, /USDT purchase allowance within a programme-wide limit/i);
 assert.match(supporterPage, /one shared,? programme-wide USDT purchase-allowance pool/i);
+assert.match(supporterPage, /Total programme-wide USDT purchase allowance/i);
 assert.doesNotMatch(supporterPage, /programme-wide ACROWN cap/i);
 assert.match(supporterPage, /One global allowance pool applies to everyone/i);
 assert.match(supporterPage, /Any one eligible pre-freeze registered wallet may purchase the entire remaining pool/i);
