@@ -52,11 +52,16 @@ A stage cannot be inferred from a previous stage. In particular, PROVIDER_DETECT
 
 ## Current result
 
-- Automated adapter contract tests: added to the Worker test suite; CI result pending.
-- Synthetic local wallet-signature E2E: existing tests cover Ethereum primary identity, TRON TIP-191 linked address, Solana Ed25519 linked address, replay prevention, cross-origin protection, case-insensitive name uniqueness, logout/reconnect and no payments.
+- Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212031251. The complete Worker invariant suite passed, so the new provider-contract tests were executed successfully with the rest of the suite.
+- Synthetic local wallet-signature E2E: PASS in Worker qualification run 44212031251. Tests cover Ethereum primary identity, TRON TIP-191 linked address, Solana Ed25519 linked address, replay prevention, cross-origin protection, case-insensitive name uniqueness, logout/reconnect and no payments.
+- Browser mock-wallet safety smoke: PASS in Chromium run 44211825917. It verifies the mocked wallet interaction and that no payment/transaction action is triggered; it does not execute installed vendor wallet apps.
+- Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44212031321.
+- Local isolated Worker API smoke, local D1 application, build, preflight parser and remote fail-closed checks: PASS in run 44212031251.
+- External Review Pipeline: PASS in run 44212031362.
 - Live installed-wallet signatures: NOT_TESTED for all six candidates.
 - Three-network USDT send/receive with each wallet: NOT_TESTED.
 - Wallet restore/address derivation on all three networks: NOT_TESTED.
 - Production acceptance: disabled; qualifiedWalletIds=[].
+- All six remain CANDIDATE_NOT_QUALIFIED; passing automated adapter tests must not be promoted to wallet qualification.
 
 No real assets, seed phrases, private keys, wallet transactions, token approvals, payment intents or funds are used by the automated tests or this development change.
