@@ -216,7 +216,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.db.execute(
             "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,wallet_role,"
             "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
-            "VALUES('gch-link-after-launch','gid-existing','tron','TAfter','TAfter','PAYMENT','LINK','nonce-link','example.test',"
+            "VALUES('gch-link-after-launch','gid-existing','tron','TNext','TNext','PAYMENT','LINK','nonce-link','example.test',"
             "'digest-link','wallet link after launch',?,?)",
             (launch + 1, launch + 601),
         )
