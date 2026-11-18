@@ -185,9 +185,12 @@ function canonicalEvidence(network, transactionId, sender, treasury, amount, tra
  * Parse one Ethereum Mainnet receipt plus canonical block/finality observations.
  * The caller must obtain all fields from a configured Ethereum Mainnet RPC source.
  */
-export function parseEthereumUsdtTransferEvidence({ chainId, receipt, blockAtReceiptHeight, finalityBlock, expected }) {
+export function parseEthereumUsdtTransferEvidence({ chainId, tokenMetadata, receipt, blockAtReceiptHeight, finalityBlock, expected }) {
   if (Number(quantityBigInt(chainId, "Ethereum chain id")) !== GENESIS_USDT_ASSETS.ethereum.chainId) {
     fail("Ethereum RPC source is not chain id 1.");
+  }
+  if (!tokenMetadata || String(tokenMetadata.contractAddress || "").toLowerCase() !== GENESIS_USDT_ASSETS.ethereum.assetIdentifier.toLowerCase() || Number(tokenMetadata.chainId) !== 1 || Number(tokenMetadata.decimals) !== GENESIS_USDT_ASSETS.ethereum.decimals) {
+    fail("Ethereum on-chain USDT contract identity or six-decimal metadata is not verified.");
   }
   if (!receipt || typeof receipt !== "object") fail("Ethereum transaction receipt is absent.");
   const transactionId = ethereumHash(receipt.transactionHash, "Ethereum receipt transaction hash");
@@ -239,9 +242,12 @@ export function parseEthereumUsdtTransferEvidence({ chainId, receipt, blockAtRec
  * A FullNode receipt alone is deliberately insufficient: only the solidified
  * walletsolidity/gettransactioninfobyid view is accepted by this normalizer.
  */
-export async function parseTronUsdtTransferEvidence({ networkTag, receiptSource, transactionInfo, expected }) {
+export async function parseTronUsdtTransferEvidence({ networkTag, receiptSource, tokenMetadata, transactionInfo, expected }) {
   if (networkTag !== "TRON_MAINNET") fail("TRON RPC source is not qualified as mainnet.");
   if (receiptSource !== "SOLIDITY_NODE") fail("TRON transaction receipt did not come from the SolidityNode solidified view.");
+  if (!tokenMetadata || tokenMetadata.networkTag !== "TRON_MAINNET" || String(tokenMetadata.contractAddress || "") !== GENESIS_USDT_ASSETS.tron.assetIdentifier || Number(tokenMetadata.decimals) !== GENESIS_USDT_ASSETS.tron.decimals) {
+    fail("TRON on-chain USDT contract identity or six-decimal metadata is not verified.");
+  }
   if (!transactionInfo || typeof transactionInfo !== "object") fail("TRON transaction receipt is absent.");
   const transactionId = tronHash(transactionInfo.id, "TRON receipt transaction id");
   if (transactionId !== requireTransactionId(expected, "tron")) fail("TRON receipt id does not match the submitted transaction id.");
@@ -279,6 +285,7 @@ function solanaInstructionTransfer(instruction) {
   if (!["transfer", "transferChecked"].includes(String(parsed.type || ""))) return null;
   const info = parsed.info;
   if (!info || typeof info.source !== "string" || typeof info.destination !== "string") return null;
+  if (parsed.type === "transferChecked" && Number(info.tokenAmount && info.tokenAmount.decimals) !== GENESIS_USDT_ASSETS.solana.decimals) return null;
   const amountValue = parsed.type === "transferChecked"
     ? info.tokenAmount && info.tokenAmount.amount
     : info.amount;
@@ -311,6 +318,9 @@ function solanaTokenBalance(balances, accountIndex, mint, label) {
   if (!matches.length) return { amount: 0n, owner: null };
   const entry = matches[0];
   if (!entry.owner) fail(label + " token balance omits its token-account owner.");
+  if (Number(entry.uiTokenAmount && entry.uiTokenAmount.decimals) !== GENESIS_USDT_ASSETS.solana.decimals) {
+    fail(label + " token balance does not report the canonical six-decimal precision.");
+  }
   return {
     amount: quantityBigInt(entry.uiTokenAmount && entry.uiTokenAmount.amount, label + " token balance"),
     owner: solanaAddress(entry.owner, label + " token-account owner"),
@@ -321,9 +331,12 @@ function solanaTokenBalance(balances, accountIndex, mint, label) {
  * Parse a Solana Mainnet transaction using jsonParsed instructions, token-balance
  * metadata and an independently fetched finalized signature status.
  */
-export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, transaction, signatureStatus, expected }) {
+export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetadata, transaction, signatureStatus, expected }) {
   if (clusterGenesisHash !== GENESIS_USDT_ASSETS.solana.clusterGenesisHash) {
     fail("Solana RPC source is not on the configured Mainnet Beta cluster.");
+  }
+  if (!mintMetadata || mintMetadata.mint !== GENESIS_USDT_ASSETS.solana.assetIdentifier || mintMetadata.programOwner !== GENESIS_USDT_ASSETS.solana.tokenProgramId || Number(mintMetadata.decimals) !== GENESIS_USDT_ASSETS.solana.decimals) {
+    fail("Solana USDT mint owner program or six-decimal metadata is not verified.");
   }
   if (!transaction || !transaction.meta || !transaction.transaction) fail("Solana transaction or metadata is absent.");
   const signatures = transaction.transaction.signatures;
