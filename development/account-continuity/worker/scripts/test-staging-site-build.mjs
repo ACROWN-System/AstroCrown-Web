@@ -31,6 +31,10 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
   assert.match(html, /The primary wallet is the identity, recovery anchor and entitlement holder/);
+  assert.match(html, /same wallet application on each supported network/);
+  assert.match(html, /Each address must independently sign a fresh, domain-bound ownership challenge/);
+  assert.match(html, /Linked addresses cannot authenticate, recover, rename or administer the Genesis identity/);
+  assert.match(html, /must originate from an address already verified and registered in your primary wallet profile/);
   assert.match(html, /Genesis Member distinction/);
   assert.match(html, /gold DNA Genesis Member badge/);
   assert.match(html, /Explorer links expose the full wallet address and associated public transaction history/);
