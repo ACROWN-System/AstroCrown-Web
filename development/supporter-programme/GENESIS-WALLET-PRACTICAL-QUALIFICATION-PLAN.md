@@ -52,17 +52,18 @@ A stage cannot be inferred from a previous stage. In particular, PROVIDER_DETECT
 
 ## Current result
 
-- Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212351208, including the EVM personal_sign UTF-8 payload-encoding test added in this revision.
+- Automated adapter contract tests: PASS in Account Staging Worker Qualification run 44212351208, including EVM personal_sign UTF-8 payload encoding. The subsequent mainnet evidence-parser suite also passed in run 44213495140.
 - Synthetic local wallet-signature E2E: PASS in Worker qualification run 44212031251. Tests cover Ethereum primary identity, TRON TIP-191 linked address, Solana Ed25519 linked address, replay prevention, cross-origin protection, case-insensitive name uniqueness, logout/reconnect and no payments.
-- Browser mock-wallet safety smoke: PASS in Chromium run 44212351188. It verifies the mocked wallet interaction and that no payment/transaction action is triggered; it does not execute installed vendor wallet apps.
-- Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44212351355.
-- Local isolated Worker API smoke, local D1 application, build, preflight parser and remote fail-closed checks: PASS in run 44212351208.
-- External Review Pipeline: PASS in run 44212351452; Python CodeQL: PASS in run 44212351395.
+- Browser mock-wallet safety smoke: PASS in Chromium run 44213495115. It verifies the mocked wallet interaction and that no payment/transaction action is triggered; it does not execute installed vendor wallet apps.
+- Pages publication allowlist, browser-facing safety, JavaScript syntax, entitlement rules and D1 schema checks: PASS in run 44213495084.
+- Local isolated Worker API smoke, local D1 application, build, preflight parser and remote fail-closed checks: PASS in run 44213495140.
+- External Review Pipeline: PASS in run 44213494989; Python CodeQL: PASS in run 44213495099.
+- Read-only three-network payment evidence suite: PASS in Worker qualification run 44213495140. Ethereum, TRON and Solana synthetic transfer evidence; token/precision, source/treasury, finality, duplicate, block-hash, owner-balance and two-operator agreement/rejection cases passed. The parser never applies credit.
 - Live installed-wallet signatures: NOT_TESTED for all six candidates.
 - Three-network USDT send/receive with each wallet: NOT_TESTED.
 - Wallet restore/address derivation on all three networks: NOT_TESTED.
 - Production acceptance: disabled; qualifiedWalletIds=[].
-- NOVA RSI Engine CI run 44212351346 failed at the pinned immutable Python sandbox image digest verification before compile/unit tests; RSI tests were skipped. This is a separate runner-image issue, not a Genesis wallet adapter failure.
+- NOVA RSI Engine CI run 44213495014 failed at the pinned immutable Python sandbox image digest verification before compile/unit tests; RSI tests were skipped. This is a separate runner-image issue, not a Genesis wallet adapter failure.
 - All six remain CANDIDATE_NOT_QUALIFIED; passing automated adapter tests must not be promoted to wallet qualification.
 
 No real assets, seed phrases, private keys, wallet transactions, token approvals, payment intents or funds are used by the automated tests or this development change.
