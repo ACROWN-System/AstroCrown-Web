@@ -163,7 +163,9 @@ Current published Workers Free limits include 100,000 requests/day, 10 ms CPU/re
 
 The already merged static Pages package remains a no-payment, no-backend preview and must keep its explicit publication allowlist. The staging Worker now has a separate `SUPPORTERS_DB` binding (a legacy technical identifier), independent from the account/test D1, and a read-only `GET /api/supporters/status` endpoint. It reports the mainnet programme as `PRELAUNCH`, validates the canonical Ethereum/Tron/Solana USD₮ token identifiers and six-decimal precision, and exposes only whether a treasury has been configured (never the treasury address itself). This status endpoint is publicly readable because it returns no account or member data. It cannot create members, wallet challenges, payment intents, transfers, contributions or entitlements; mainnet payment acceptance is hard-coded disabled in this release. The Genesis Programme page displays this live status. The dedicated D1 remains separate from all test-account identity and session data.
 
-This foundation does not add payment endpoints or alter that boundary.
+A new local module, `development/account-continuity/worker/src/genesis-payment-evidence.js`, now provides deterministic read-only parsers for synthetic Ethereum, TRON and Solana USDT receipt evidence and a two-source normalized evidence comparison. It is not imported into the Worker HTTP API, does not connect to RPC providers, does not write D1, and cannot credit an entitlement. It is documented in [GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md](./GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md). The eventual production RPC adapter must prove provider/operator independence from a reviewed registry; participant-supplied labels are never trusted.
+
+This foundation does not add payment endpoints or alter the fail-closed boundary.
 
 ## 9. Activation gates
 
