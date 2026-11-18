@@ -214,16 +214,16 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             (launch + 1,),
         )
         self.db.execute(
-            "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,"
+            "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,wallet_role,"
             "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
-            "VALUES('gch-link-after-launch','gid-existing','tron','TAfter','TAfter','LINK','nonce-link','example.test',"
+            "VALUES('gch-link-after-launch','gid-existing','tron','TAfter','TAfter','PAYMENT','LINK','nonce-link','example.test',"
             "'digest-link','wallet link after launch',?,?)",
             (launch + 1, launch + 601),
         )
         self.db.execute(
             "INSERT INTO genesis_wallet_challenges(challenge_id,identity_id,network,address,address_normalized,"
-            "challenge_purpose,nonce_digest,domain,message_digest,message,created_at,expires_at) "
-            "VALUES('gch-rename-after-launch','gid-existing','ethereum','0xabc','0xabc','RENAME','nonce-rename','example.test',"
+            "challenge_purpose,requested_display_name,nonce_digest,domain,message_digest,message,created_at,expires_at) "
+            "VALUES('gch-rename-after-launch','gid-existing','ethereum','0xabc','0xabc','RENAME','Changed Wallet','nonce-rename','example.test',"
             "'digest-rename','profile rename after launch',?,?)",
             (launch + 1, launch + 601),
         )
