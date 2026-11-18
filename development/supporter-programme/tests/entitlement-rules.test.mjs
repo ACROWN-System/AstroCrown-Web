@@ -24,19 +24,27 @@ test("new primary-wallet registration freezes exactly 24 hours before scheduled 
   assert.equal(isGenesisRegistrationOpen(launch + 100_000, null, freeze), false);
 });
 
-test("180-day purchase window starts only when both official ACROWN launch and ACS floor-purchase opening have occurred", () => {
+test("rolling 180-day inactivity timer starts after ACROWN launch and qualified ACS floor-purchase availability", () => {
   const launch = 1_800_000_000;
   const floorOpenLater = launch + 3_600;
   const start = purchaseWindowStartsAt(launch, floorOpenLater);
-  const end = start + PROGRAMME_WINDOW_SECONDS;
+  const initialClose = start + PROGRAMME_WINDOW_SECONDS;
+  const firstPurchase = start + 86_400;
+  const firstResetClose = firstPurchase + PROGRAMME_WINDOW_SECONDS;
+  const laterPurchase = firstPurchase + 30 * 86_400;
+  const secondResetClose = laterPurchase + PROGRAMME_WINDOW_SECONDS;
   assert.equal(start, floorOpenLater);
   assert.equal(PROGRAMME_WINDOW_SECONDS, 15_552_000);
-  assert.equal(programmeClosesAt(start), end);
-  assert.equal(isWithinProgrammeWindow(start, start, end), true);
-  assert.equal(isWithinProgrammeWindow(end - 1, start, end), true);
-  assert.equal(isWithinProgrammeWindow(end, start, end), false);
-  assert.equal(isWithinProgrammeWindow(start - 1, start, end), false);
+  assert.equal(programmeClosesAt(start), initialClose);
+  assert.equal(programmeClosesAt(start, firstPurchase), firstResetClose);
+  assert.equal(programmeClosesAt(start, laterPurchase), secondResetClose);
+  assert.equal(isWithinProgrammeWindow(firstPurchase, start, firstResetClose, firstPurchase), true);
+  assert.equal(isWithinProgrammeWindow(secondResetClose - 1, start, secondResetClose, laterPurchase), true);
+  assert.equal(isWithinProgrammeWindow(secondResetClose, start, secondResetClose, laterPurchase), false);
+  assert.equal(isWithinProgrammeWindow(start - 1, start, initialClose), false);
   assert.equal(isWithinProgrammeWindow(start, start, start + 90), false);
+  assert.equal(isWithinProgrammeWindow(laterPurchase, start, firstResetClose, firstPurchase), false);
+  assert.throws(() => programmeClosesAt(start, start - 1), /predate/);
 });
 
 test("qualifying-payment multiplier produces a shared USDT-denominated purchase allowance", () => {
