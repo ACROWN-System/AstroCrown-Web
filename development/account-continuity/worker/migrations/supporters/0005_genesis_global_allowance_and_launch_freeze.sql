@@ -131,6 +131,66 @@ CREATE TRIGGER IF NOT EXISTS genesis_programme_allowance_events_no_delete
 BEFORE DELETE ON genesis_programme_allowance_events
 BEGIN SELECT RAISE(ABORT, 'Programme-wide allowance events are append-only'); END;
 
+-- Database-level backstops enforce the cutoff even if an API path is added incorrectly.
+-- Before the cutoff timestamp, the programme can accept new identity/profile records.
+-- At/after the cutoff, new identities, address links and identity/profile edits are blocked permanently.
+CREATE TRIGGER IF NOT EXISTS genesis_primary_identity_registration_cutoff
+BEFORE INSERT ON genesis_wallet_identities
+WHEN EXISTS (
+  SELECT 1 FROM genesis_programme_control c
+  WHERE c.singleton=1
+    AND (c.registration_closed_at IS NOT NULL
+      OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
+)
+BEGIN SELECT RAISE(ABORT, 'Genesis primary-wallet registration is permanently closed at the 24-hour pre-launch freeze'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_wallet_address_link_cutoff
+BEFORE INSERT ON genesis_wallet_addresses
+WHEN EXISTS (
+  SELECT 1 FROM genesis_programme_control c
+  WHERE c.singleton=1
+    AND (c.registration_closed_at IS NOT NULL
+      OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
+)
+BEGIN SELECT RAISE(ABORT, 'Genesis wallet linking is permanently closed at the 24-hour pre-launch freeze'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_identity_profile_mutation_cutoff
+BEFORE UPDATE OF display_name, display_name_normalized, avatar_key
+ON genesis_wallet_identities
+WHEN EXISTS (
+  SELECT 1 FROM genesis_programme_control c
+  WHERE c.singleton=1
+    AND (c.registration_closed_at IS NOT NULL
+      OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
+)
+BEGIN SELECT RAISE(ABORT, 'Genesis profile changes are closed at the 24-hour pre-launch freeze'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_wallet_address_delete_cutoff
+BEFORE DELETE ON genesis_wallet_addresses
+WHEN EXISTS (
+  SELECT 1 FROM genesis_programme_control c
+  WHERE c.singleton=1
+    AND (c.registration_closed_at IS NOT NULL
+      OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
+)
+BEGIN SELECT RAISE(ABORT, 'Genesis wallet records cannot be removed after the 24-hour pre-launch freeze'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_wallet_identity_delete_cutoff
+BEFORE DELETE ON genesis_wallet_identities
+WHEN EXISTS (
+  SELECT 1 FROM genesis_programme_control c
+  WHERE c.singleton=1
+    AND (c.registration_closed_at IS NOT NULL
+      OR (c.registration_freeze_at IS NOT NULL AND c.registration_freeze_at<=unixepoch()))
+)
+BEGIN SELECT RAISE(ABORT, 'Genesis wallet identities cannot be removed after the 24-hour pre-launch freeze'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_launch_schedule_lock_at_freeze
+BEFORE UPDATE OF scheduled_acrown_launch_at, registration_freeze_at ON genesis_programme_control
+WHEN OLD.registration_closed_at IS NOT NULL
+  OR (OLD.registration_freeze_at IS NOT NULL AND OLD.registration_freeze_at<=unixepoch())
+BEGIN SELECT RAISE(ABORT, 'Genesis launch schedule is locked once the 24-hour pre-launch freeze begins'); END;
+
 -- Legacy per-wallet ACROWN-denominated balances are retained only for schema-history
 -- compatibility. All new rights and all purchases must use the programme-wide USDT pool.
 CREATE TRIGGER IF NOT EXISTS genesis_legacy_wallet_entitlements_no_insert
