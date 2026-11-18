@@ -60,7 +60,7 @@ export function discoverDirectEvmProviders(win) {
     { walletId: "bitget-wallet", name: WALLET_NAMES["bitget-wallet"], provider: objectAt(win, "bitkeep.ethereum"), rdns: "com.bitget.web3" },
     { walletId: "tokenpocket", name: WALLET_NAMES.tokenpocket, provider: objectAt(win, "tokenpocket.ethereum"), rdns: "io.tokenpocket" },
     { walletId: "coin98", name: WALLET_NAMES.coin98, provider: objectAt(win, "coin98.provider"), rdns: "com.coin98" },
-    { walletId: "okx-wallet", name: WALLET_NAMES["okx-wallet"], provider: objectAt(win, "okxwallet.ethereum"), rdns: "com.okx.wallet" },
+    { walletId: "okx-wallet", name: WALLET_NAMES["okx-wallet"], provider: objectAt(win, "okxwallet.ethereum") || (win.okxwallet && typeof win.okxwallet.request === "function" ? win.okxwallet : null), rdns: "com.okx.wallet" },
   ];
   return uniqueEntries(entries)
     .filter((entry) => typeof entry.provider.request === "function");
@@ -86,18 +86,6 @@ export function discoverDirectTronProviders(win) {
       provider: objectAt(win, "okxwallet.tronLink"),
       tronWeb: objectAt(win, "okxwallet.tronLink.tronWeb"),
       connectMethod: "tron_requestAccounts",
-    },
-    {
-      walletId: "trust-wallet", name: WALLET_NAMES["trust-wallet"],
-      provider: objectAt(win, "trustwallet.tron"),
-      tronWeb: objectAt(win, "trustwallet.tronWeb"),
-      connectMethod: "eth_requestAccounts",
-    },
-    {
-      walletId: "metamask", name: WALLET_NAMES.metamask,
-      provider: objectAt(win, "metamask.tron"),
-      tronWeb: objectAt(win, "metamask.tronWeb"),
-      connectMethod: "eth_requestAccounts",
     },
   ];
   // Generic TIP-6963/TronLink discovery remains available for providers
@@ -194,7 +182,7 @@ async function providerGenesisHash(provider, walletId) {
     if (provider && typeof provider.getGenesisHash === "function") {
       return await provider.getGenesisHash();
     }
-    if (walletId === "coin98" && provider && typeof provider.request === "function") {
+    if (provider && typeof provider.request === "function") {
       return await provider.request({ method: "getGenesisHash" });
     }
   } catch (_) {}
