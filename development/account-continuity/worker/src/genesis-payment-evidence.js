@@ -262,7 +262,7 @@ export async function parseTronUsdtTransferEvidence({ networkTag, receiptSource,
     if (log.topics.length !== 3 || typeof log.data !== "string" || !/^(?:0x)?[0-9a-f]{64}$/i.test(log.data)) continue;
     const from = tronIndexedAddress(log.topics[1], "TRON Transfer sender topic");
     const to = tronIndexedAddress(log.topics[2], "TRON Transfer recipient topic");
-    const value = BigInt(log.data.replace(/^0x/i, ""));
+    const value = BigInt("0x" + log.data.replace(/^0x/i, ""));
     if (from === senderHex && to === treasuryHex && value === amount) matches.push({ transferIndex: index });
   }
   if (matches.length !== 1) fail("TRON solidified receipt must contain exactly one matching canonical USDT Transfer event.");
