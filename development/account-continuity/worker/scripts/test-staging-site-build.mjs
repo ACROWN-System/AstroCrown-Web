@@ -31,6 +31,9 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /full USDT principal.*ACS reserve destination.*V/s);
   assert.match(html, /id="participant-network-fee-policy"/);
   assert.doesNotMatch(html, /25 ACROWN per USD₮|USDT 150 transition threshold|USDT 250,000 target/);
+  assert.match(html, /USDT purchase allowance within a programme-wide limit/);
+  assert.match(html, /proposed USDT 1,000,000 programme-wide allowance/);
+  assert.doesNotMatch(html, /programme-wide ACROWN cap/);
   assert.match(html, /180-day purchase period begins at that operational activation/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
