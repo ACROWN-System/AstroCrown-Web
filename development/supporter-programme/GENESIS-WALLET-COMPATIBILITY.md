@@ -14,13 +14,24 @@ The same wallet application should provide reliable access to all three assets. 
 
 ## Candidate register
 
-The machine-readable register is `genesis-wallet-compatibility.json`.
+The machine-readable register is `genesis-wallet-compatibility.json`. No brand is approved merely because it appears in this table.
 
-| Wallet application | Current disposition | Qualification note |
-|---|---|---|
-| MetaMask | Candidate — not qualified | Ethereum and Solana integration are candidates. Its reviewed TRON documentation confirms TRON asset management but says direct TRON dApp connection is not currently available. The primary-wallet linkage/proof path for a MetaMask TRON address remains unresolved. |
-| Trust Wallet | Candidate — not qualified | Candidate for the unified three-network flow. The exact browser-extension and mobile provider behavior, signatures, transfers and restoration must pass local end-to-end tests. |
-| OKX Wallet | Candidate — not qualified | Candidate for the unified three-network flow. The exact browser-extension and mobile provider behavior, signatures, transfers and restoration must pass local end-to-end tests. |
+| Wallet application | Current disposition | What the official documentation demonstrates | Remaining qualification concern |
+|---|---|---|---|
+| Bitget Wallet | Candidate — promising three-network integration | EVM provider with personal-message signing; TRON provider with `tron_requestAccounts` and `signMessageV2`; Solana Wallet Standard provider with `connect` and `signMessage`. Official docs cover the Chrome extension and in-app DApp browser. | Test exact USDT send/receive flows, signature recovery and restore/address derivation on all three networks. Its WalletConnect mobile route documents Ethereum and Solana, not TRON, so assess its extension and in-app routes separately. |
+| TokenPocket | Candidate — promising three-network integration | Official docs provide EVM EIP-1193/EIP-6963, TRON account access and `signMessageV2`; the developer index lists a Solana Provider API, and its mobile SDK documents Solana `connect` and `signMessage`. | Confirm the actual Solana provider method and message-signing flow on the current extension and mobile versions separately; do not assume the injected providers are identical. |
+| Coin98 Super Wallet | Candidate — requires additional proof-path confirmation | Official docs describe multichain assets including Ethereum, Solana and TRON, EVM EIP-1193/EIP-6963, and a Solana extension provider with account access, transaction signing and signature verification. | The reviewed extension docs do not yet explicitly establish a TRON dApp connect/message-signature path or an arbitrary Solana off-chain message-signing method suitable for Genesis identity proof. Test the mobile DApp browser separately. Restore guidance also warns that selecting the wrong New/Old wallet standard can derive the wrong Solana or TRON address. |
+| MetaMask | Candidate — not qualified | Ethereum and Solana integrations are candidates. TRON asset management is documented. | Its reviewed TRON guide says direct TRON dApp connection is not currently available; a qualified way to prove and link the TRON address is still required. |
+| Trust Wallet | Candidate — not qualified | Official developer documentation describes dApp integration across Ethereum, EVM networks, Solana and TRON. | Confirm the actual mobile/extension providers, message signatures, USDT send/receive and recovery flows on the exact versions being tested. |
+| OKX Wallet | Candidate — not qualified | Official help documentation lists Ethereum, Solana and TRON among its supported networks. | Confirm the actual dApp provider APIs, chain-specific message signing, USDT send/receive and recovery behavior; network support alone is not sufficient. |
+
+### Official documentation examined
+
+- [Bitget Wallet EVM provider](https://web3.bitget.com/en/docs/connect/mainnet/evm), [TRON provider](https://web3.bitget.com/en/docs/connect/mainnet/tron), [Solana provider](https://web3.bitget.com/en/docs/connect/mainnet/solana), and [WalletConnect support](https://web3.bitget.com/en/docs/connect/adaptor/wallet-connect).
+- [TokenPocket Ethereum provider](https://help.tokenpocket.pro/developer-en/extension-wallet/api-reference/ethereum-provider-api), [TRON provider](https://help.tokenpocket.pro/developer-en/extension-wallet/api-reference/tron-provider-api), [developer documentation index](https://help.tokenpocket.pro/developer-en/llms.txt), and [mobile JavaScript SDK](https://github.com/TP-Lab/tp-js-sdk).
+- [Coin98 EVM dApp integration](https://docs.coin98.com/developer-guide/dapps-integration/evm-compatible-dapps-integration), [Solana dApp integration](https://docs.coin98.com/developer-guide/solana-dapps-integration), [multichain extension restore guidance](https://docs.coin98.com/products/coin98-super-wallet/extension/getting-started/how-to-create-or-import-a-multichain-wallet), and [USDT transfer/gas guidance](https://docs.coin98.com/products/coin98-super-wallet/mobile/asset-management/faqs/why-cant-i-send-usdt-to-other-wallets).
+
+These references establish that each wallet deserves evaluation; they do not establish that any release version has passed the Genesis qualification suite.
 
 These are candidates for testing, not an approved payment allowlist. No candidate is marked qualified and the production allowlist is empty.
 
