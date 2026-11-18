@@ -281,7 +281,7 @@ test("Solana parser rejects wrong cluster, non-finalized status, failed transact
   assert.throws(() => parse({ transaction: { ...tx, meta: { ...tx.meta, err: { InstructionError: [0, "Error"] } } } }), /execution failed/);
   assert.throws(() => parse({ transaction: { ...tx, meta: { ...tx.meta, postTokenBalances: [
     tx.meta.postTokenBalances[0],
-    { ...tx.meta.postTokenBalances[1], uiTokenAmount: { amount: "999999" } },
+    { ...tx.meta.postTokenBalances[1], uiTokenAmount: { amount: "999999", decimals: 6 } },
   ] } } }), /exactly one matching/);
 });
 
