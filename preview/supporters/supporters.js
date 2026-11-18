@@ -462,10 +462,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       var account = accounts.find(function (candidate) {
         return candidate &&
           typeof candidate.address === "string" &&
-          Array.isArray(candidate.chains) &&
-          candidate.chains.some(function (chain) {
-            return typeof chain === "string" && chain.indexOf("solana:") === 0;
-          });
+          Array.isArray(candidate.chains);
       });
 
       if (!account) {
@@ -476,9 +473,11 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       connectedSolanaAccount = account;
       lastConnectedNetwork = "solana";
       solanaAddress.textContent = account.address;
-      solanaChain.textContent = "Wallet-reported network(s): " + account.chains
-        .filter(function (chain) { return typeof chain === "string" && chain.indexOf("solana:") === 0; })
-        .join(", ");
+      var reportedSolanaChains = account.chains
+        .filter(function (chain) { return typeof chain === "string" && chain.indexOf("solana:") === 0; });
+      solanaChain.textContent = reportedSolanaChains.length
+        ? "Wallet-reported network(s): " + reportedSolanaChains.join(", ")
+        : "Solana account connected; cluster not independently confirmed. Genesis identity actions remain disabled.";
       solanaConnectButton.textContent = "Solana wallet connected";
       renderSolanaChoices();
       solanaConnectButton.disabled = true;
