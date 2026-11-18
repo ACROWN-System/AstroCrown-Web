@@ -215,6 +215,23 @@ test("Solana provider can connect an address without a known cluster but must no
   assert.equal(isSolanaMainnet(connected.accounts[0]), false);
 });
 
+test("TokenPocket Solana public keys using toBase58() are normalized to the connected account", async () => {
+  const tokenPocketAddress = "ComputeBudget111111111111111111111111111111";
+  const provider = {
+    network: "mainnet-beta",
+    connect: async () => ({ publicKey: { toBase58: () => tokenPocketAddress } }),
+    publicKey: { toBase58: () => tokenPocketAddress },
+    signMessage: async () => ({ signature, publicKey: { toBase58: () => tokenPocketAddress } }),
+  };
+  const wallet = createSolanaProviderAdapter({ walletId: "tokenpocket", name: "TokenPocket", provider });
+  const connected = await wallet.features["standard:connect"].connect();
+  assert.equal(connected.accounts[0].address, tokenPocketAddress);
+  const signed = await wallet.features["solana:signMessage"].signMessage({
+    account: connected.accounts[0], message: new TextEncoder().encode("Genesis proof"),
+  });
+  assert.equal(signed[0].signature.length, 64);
+});
+
 test("TokenPocket mobile Solana and direct Bitget/OKX/Coin98 Solana providers are discovered independently", () => {
   const simple = {
     connect: async () => ({ publicKey: { toString: () => publicKey } }),
