@@ -136,7 +136,7 @@ test("TRON parser requires a checksummed Mainnet address and a SolidityNode soli
     receipt: { result: "SUCCESS" },
     log: [{
       address: "a614f803b6fd780986a42c78ec9c7f77e6ded13c",
-      topics: [topic, topicAddress(senderHex), topicAddress(decodeBase58(treasuryAddress).slice(1, 21).map((b) => b.toString(16).padStart(2, "0")).join(""))],
+      topics: [topic, topicAddress(senderHex), topicAddress(Array.from(decodeBase58(treasuryAddress).slice(1, 21), (b) => b.toString(16).padStart(2, "0")).join(""))],
       data: "00000000000000000000000000000000000000000000000000000000000f4240",
     }],
   };
