@@ -271,7 +271,7 @@
       </div>
       <aside class="hero-side" aria-label="How the programme is intended to work">
         <div class="side-label">The participation model</div>
-        <div class="side-stat">Contribute → qualify → purchase</div>
+        <div class="side-stat">Qualifying payment → entitlement → purchase</div>
         <p class="side-copy">Three distinct stages. The qualifying payment and any later ACROWN purchase must be separately recorded.</p>
         <div class="side-divider"></div>
         <div class="side-label">What the multiplier means</div>
@@ -296,7 +296,7 @@
           <div class="eyebrow">Wallet identity</div>
           <h2 id="member-dashboard-title">Your Genesis wallet identity</h2>
         </div>
-        <p>Your primary wallet is your Genesis identity and the sole recovery anchor. A random unique public display name and avatar are assigned automatically; the name can be customized if available. Additional Ethereum, TRON or Solana addresses can be linked only after separate ownership proofs. Payment and floor-price purchase functions remain disabled.</p>
+        <p>Your primary wallet is the sole Genesis identity, login and recovery authority. Register one primary wallet profile, then connect that same wallet application on any additional supported network you intend to use. Each network address must separately prove control before it is linked to this profile. Linked addresses can make qualifying payments on their own network, but cannot log in, change the profile, manage entitlements or authorize other Genesis actions. Payment and floor-price purchase functions remain disabled.</p>
       </div>
       <section class="panel genesis-directory-panel" aria-labelledby="genesis-directory-title">
         <div class="dashboard-panel-head">
@@ -410,20 +410,20 @@
               <strong id="genesis-wallet-verification-heading">Wallet identity and linked network addresses</strong>
               <span class="ecosystem-tag" id="supporter-member-mode">Staging service required</span>
             </div>
-            <p class="panel-intro">Connect the primary wallet once to establish or access its wallet-native Genesis identity. There is no separate user account, email, username or password. Then link each additional network address by signing a separate off-chain ownership proof. Only the primary wallet can authenticate this Genesis identity.</p>
+            <p class="panel-intro">Connect the primary wallet once to establish the Genesis identity. Then connect the same wallet application on Ethereum, TRON or Solana and register each address you intend to use. The primary wallet session authorizes the profile change; the address being added signs its own domain-bound off-chain proof solely to demonstrate control of that address. The added address does not receive Genesis login or account authority.</p>
             <div class="field">
-              <label for="supporter-wallet-purpose">Purpose of the additional address</label>
+              <label for="supporter-wallet-purpose">Purpose of this network address</label>
               <select id="supporter-wallet-purpose">
-                <option value="PAYMENT">Payment wallet</option>
-                <option value="DELIVERY">Solana ACROWN delivery wallet</option>
-                <option value="PAYMENT_AND_DELIVERY">Solana payment and ACROWN delivery wallet</option>
+                <option value="PAYMENT">Registered payment address</option>
+                <option value="DELIVERY">Solana ACROWN delivery address</option>
+                <option value="PAYMENT_AND_DELIVERY">Solana payment and ACROWN delivery address</option>
               </select>
-              <small>Delivery-only and combined payment/delivery roles are accepted only for Solana wallets.</small>
+              <small>Payment addresses are registered separately for their own network. A delivery address must be Solana. The primary wallet remains the only Genesis authority; the connected address signs only its own ownership proof.</small>
             </div>
             <div class="wallet-actions">
               <button class="primary-button" id="supporter-register-wallet" type="button" disabled>Continue with this primary wallet</button>
               <button class="secondary-button" id="supporter-login-wallet" type="button" hidden disabled>Legacy sign-in unavailable</button>
-              <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link wallet</button>
+              <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link address</button>
               <button class="secondary-button" id="supporter-logout" type="button" disabled>Disconnect wallet session</button>
             </div>
             <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Connect your primary Ethereum, TRON or Solana mainnet wallet. A signed off-chain proof establishes its wallet identity; no separate user account is created.</div>
@@ -433,7 +433,7 @@
               <span id="supporter-member-wallet-list">No additional network addresses linked.</span>
             </div>
           </section>
-          <p class="fine-print">A multi-chain wallet exposes different public addresses on Ethereum, TRON and Solana; each address must be independently verified and linked to the primary wallet identity. The initial payment asset is USDT on Ethereum ERC-20, TRON TRC-20 and Solana SPL. ACROWN delivery remains Solana-based. Genesis stores only public addresses, unique display names, proof metadata and session digests. AstroCrown never receives private keys or recovery phrases. Qualifying payments and floor-price purchases remain disabled.</p>
+          <p class="fine-print">A multi-chain wallet exposes different public addresses on Ethereum, TRON and Solana. During Genesis registration, the owner may connect the same wallet application on each supported network and confirm the addresses to include in one primary wallet profile. Each address must independently sign a fresh, domain-bound ownership challenge before it is accepted; merely appearing in the same application, sharing a brand name or being displayed by provider metadata is not proof. A registered address may originate a qualifying payment only on its own network. The payment sender must match that pre-verified address, so Etherscan, TronScan or Solscan can independently show the registered sender, official treasury, token and amount. Linked addresses cannot authenticate, recover, rename or administer the Genesis identity. The primary wallet alone authorizes Genesis account actions. Genesis stores only public addresses, unique display names, proof metadata and session digests. AstroCrown never receives private keys or recovery phrases. Qualifying payments and floor-price purchases remain disabled.</p>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
@@ -565,13 +565,13 @@
         <article class="step-card">
           <div class="step-number">02</div>
           <h3>Connect your primary wallet and establish its unique display name</h3>
-          <p>Connect the wallet that you control and sign its off-chain ownership challenge. AstroCrown assigns a random unique public name, which the wallet holder may customize when the name is available. No legal name or identity document is collected.</p>
+          <p>Connect the primary wallet application and sign its off-chain ownership challenge. AstroCrown assigns a random unique public name. During profile setup, connect that same application on each supported network you intend to use and separately prove control of each address. The primary wallet alone remains the Genesis authority; no legal name or identity document is collected.</p>
           <span class="pending">Staging wallet verification available; production pending</span>
         </article>
         <article class="step-card">
           <div class="step-number">03</div>
           <h3>Authorize the exact USDT qualifying payment</h3>
-          <p>The wallet dashboard will display the exact authorized amount, network, token and destination. Review them carefully and authorize the transaction from your wallet-verified wallet.</p>
+          <p>The wallet dashboard will display the exact authorized amount, network, token and destination. The payment must originate from an address already verified and registered in your primary wallet profile for that network. Review the details carefully and authorize the transaction from that address.</p>
           <span class="pending">Payment route not configured</span>
         </article>
         <article class="step-card">
@@ -594,7 +594,7 @@
           <div class="eyebrow">Wallet identity and Genesis Member status</div>
           <h2 id="wallet-records-title">Your wallet is your Genesis identity and entitlement</h2>
         </div>
-        <p>The primary wallet is the sole Genesis identity, recovery anchor and owner of its ACROWN purchase entitlement. Additional Ethereum, TRON and Solana addresses are distinct chain-specific addresses; each must independently prove control before being linked. The display name and avatar are public labels only, not identity credentials or entitlements.</p>
+        <p>The primary wallet is the sole Genesis identity, login authority, recovery anchor and owner of its ACROWN purchase entitlement. Ethereum, TRON and Solana addresses from the same registered wallet application are grouped under that identity, but each address must independently prove control before it can be used. Only the primary wallet authorizes Genesis actions. The display name and avatar are public labels only, not identity credentials or entitlements.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
@@ -603,7 +603,7 @@
         </article>
         <article class="transparency-card">
           <strong>2. The wallet controls the entitlement</strong>
-          <p>The ACROWN purchase entitlement belongs to the primary wallet, never to its display name or avatar. The primary wallet proves control of the identity and authorizes its qualifying payment and later separate floor-price purchases. AstroCrown never asks for or stores a seed phrase or private key.</p>
+          <p>The ACROWN purchase entitlement belongs to the primary wallet identity, never to its display name, avatar or linked network addresses. The primary wallet alone authorizes Genesis profile changes and later floor-price purchases. A linked network address may only prove its own control and originate a matching-network qualifying payment. AstroCrown never asks for or stores a seed phrase or private key.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Public GitHub records and backups</strong>
@@ -668,7 +668,7 @@
         </article>
         <article class="transparency-card">
           <strong>2. Public qualifying payment record</strong>
-          <p>Each confirmed USDT qualifying payment will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The primary Genesis wallet, observed source address and independently verified address-link proof will be recorded as distinct fields. A payment is not attributed to the primary wallet until its source address and transaction have both passed verification.</p>
+          <p>Each confirmed USDT qualifying payment will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The primary Genesis identity, pre-registered source address and its ownership-proof metadata will be recorded as distinct fields. A payment is accepted only when its on-chain sender matches an address already verified and linked to that primary identity for the same network.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Every use of funds</strong>
