@@ -249,7 +249,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 (launch + 3600, freeze + 3600),
             )
 
-        def test_global_purchase_window_starts_at_acrown_launch_without_waiting_for_floor_service(self):
+    def test_global_purchase_window_starts_at_acrown_launch_without_waiting_for_floor_service(self):
         launch = 2_100_000_000
         close = launch + 15_552_000
         self.db.execute(
