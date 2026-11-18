@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS genesis_programme_control (
   acrown_launched_at INTEGER,
   acs_floor_purchase_opened_at INTEGER,
   purchase_window_started_at INTEGER,
+  purchase_window_last_purchase_at INTEGER,
   purchase_window_closes_at INTEGER,
   rules_version TEXT,
   updated_at INTEGER NOT NULL,
@@ -25,13 +26,14 @@ CREATE TABLE IF NOT EXISTS genesis_programme_control (
   ),
   CHECK (registration_closed_at IS NULL OR registration_closed_at = registration_freeze_at),
   CHECK (
-    (purchase_window_started_at IS NULL AND purchase_window_closes_at IS NULL)
+    (purchase_window_started_at IS NULL AND purchase_window_last_purchase_at IS NULL AND purchase_window_closes_at IS NULL)
     OR (
       purchase_window_started_at IS NOT NULL
       AND acrown_launched_at IS NOT NULL
       AND acs_floor_purchase_opened_at IS NOT NULL
       AND purchase_window_started_at = MAX(acrown_launched_at, acs_floor_purchase_opened_at)
-      AND purchase_window_closes_at = purchase_window_started_at + 15552000
+      AND (purchase_window_last_purchase_at IS NULL OR purchase_window_last_purchase_at >= purchase_window_started_at)
+      AND purchase_window_closes_at = COALESCE(purchase_window_last_purchase_at, purchase_window_started_at) + 15552000
     )
   )
 );
@@ -65,15 +67,6 @@ BEFORE UPDATE OF acs_floor_purchase_opened_at ON genesis_programme_control
 WHEN OLD.acs_floor_purchase_opened_at IS NOT NULL
  AND NEW.acs_floor_purchase_opened_at IS NOT OLD.acs_floor_purchase_opened_at
 BEGIN SELECT RAISE(ABORT, 'ACS floor-purchase opening timestamp is immutable'); END;
-
-CREATE TRIGGER IF NOT EXISTS genesis_purchase_window_immutable
-BEFORE UPDATE OF purchase_window_started_at, purchase_window_closes_at ON genesis_programme_control
-WHEN OLD.purchase_window_started_at IS NOT NULL
- AND (
-   NEW.purchase_window_started_at IS NOT OLD.purchase_window_started_at
-   OR NEW.purchase_window_closes_at IS NOT OLD.purchase_window_closes_at
- )
-BEGIN SELECT RAISE(ABORT, 'Genesis post-launch purchase window is immutable'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_programme_control_no_delete
 BEFORE DELETE ON genesis_programme_control
@@ -122,6 +115,55 @@ CREATE TABLE IF NOT EXISTS genesis_programme_allowance_events (
 
 CREATE INDEX IF NOT EXISTS genesis_programme_allowance_events_identity_idx
   ON genesis_programme_allowance_events(identity_id, created_at);
+
+CREATE TRIGGER IF NOT EXISTS genesis_floor_purchase_consumption_requires_open_window
+BEFORE INSERT ON genesis_programme_allowance_events
+WHEN NEW.event_type='FLOOR_PURCHASE_CONSUMPTION'
+ AND NOT EXISTS (
+   SELECT 1 FROM genesis_programme_control c
+   WHERE c.singleton=1
+     AND c.purchase_window_started_at IS NOT NULL
+     AND NEW.created_at >= c.purchase_window_started_at
+     AND NEW.created_at < c.purchase_window_closes_at
+ )
+BEGIN SELECT RAISE(ABORT, 'Genesis floor-price purchase inactivity window is not open'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_floor_purchase_consumption_resets_rolling_timer
+AFTER INSERT ON genesis_programme_allowance_events
+WHEN NEW.event_type='FLOOR_PURCHASE_CONSUMPTION'
+BEGIN
+  UPDATE genesis_programme_control
+  SET purchase_window_last_purchase_at=NEW.created_at,
+      purchase_window_closes_at=NEW.created_at + 15552000,
+      updated_at=MAX(updated_at, NEW.created_at)
+  WHERE singleton=1
+    AND purchase_window_started_at IS NOT NULL
+    AND NEW.created_at >= purchase_window_started_at
+    AND NEW.created_at < purchase_window_closes_at
+    AND NEW.created_at > COALESCE(purchase_window_last_purchase_at, purchase_window_started_at);
+END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_purchase_window_start_immutable
+BEFORE UPDATE OF purchase_window_started_at ON genesis_programme_control
+WHEN OLD.purchase_window_started_at IS NOT NULL
+ AND NEW.purchase_window_started_at IS NOT OLD.purchase_window_started_at
+BEGIN SELECT RAISE(ABORT, 'Genesis purchase-window start is immutable'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_purchase_window_rolling_timer_guard
+BEFORE UPDATE OF purchase_window_started_at, purchase_window_last_purchase_at, purchase_window_closes_at ON genesis_programme_control
+WHEN OLD.purchase_window_started_at IS NOT NULL
+ AND (
+   NEW.purchase_window_started_at IS NOT OLD.purchase_window_started_at
+   OR NEW.purchase_window_last_purchase_at IS NULL
+   OR NEW.purchase_window_last_purchase_at < COALESCE(OLD.purchase_window_last_purchase_at, OLD.purchase_window_started_at)
+   OR NEW.purchase_window_closes_at != NEW.purchase_window_last_purchase_at + 15552000
+   OR NOT EXISTS (
+     SELECT 1 FROM genesis_programme_allowance_events e
+     WHERE e.event_type='FLOOR_PURCHASE_CONSUMPTION'
+       AND e.created_at=NEW.purchase_window_last_purchase_at
+   )
+ )
+BEGIN SELECT RAISE(ABORT, 'Genesis rolling inactivity timer can move only after a finalized floor-price purchase'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_programme_allowance_events_no_update
 BEFORE UPDATE ON genesis_programme_allowance_events
