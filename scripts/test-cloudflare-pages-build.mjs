@@ -77,7 +77,8 @@ assert.match(supporterPage, /registered wallet owner.*network fee.*separately/is
 assert.match(supporterPage, /full USDT principal.*ACS reserve destination.*V/is);
 assert.match(supporterPage, /id="participant-network-fee-policy"/i);
 assert.doesNotMatch(supporterPage, /25 ACROWN per USD₮|USDT 150 transition threshold|USDT 250,000 target/i);
-assert.match(supporterPage, /180-day purchase period begins at that operational activation/i);
+assert.match(supporterPage, /180-day purchase-exercise period begins only after ACROWN is officially launched and the approved ACS pure-floor purchase service is operationally available/i);
+assert.match(supporterPage, /entire personal purchase allowance is fully exercised/i);
 assert.match(supporterPage, /unused personal USDT-denominated purchase allowance/i);
 assert.match(supporterPage, /USDT purchase allowance within a programme-wide limit/i);
 assert.match(supporterPage, /proposed USDT 1,000,000 programme-wide allowance/i);
