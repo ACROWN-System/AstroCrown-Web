@@ -39,13 +39,15 @@ const expectedFiles = [
   "privacy-transparency.html",
   "robots.txt",
   "supporters/index.html",
-  "supporters/supporters.js"
+  "supporters/supporters.js",
+  "supporters/wallet-provider-adapters.mjs"
 ].sort();
 assert.deepEqual(actualFiles, expectedFiles, "Only the approved publication files may be deployed.");
 
 const homepage = read("index.html");
 const supporterPage = read("supporters/index.html");
 const supporterJs = read("supporters/supporters.js");
+const walletAdapters = read("supporters/wallet-provider-adapters.mjs");
 const privacy = read("privacy-transparency.html");
 const accountJs = read("account-continuity/prototype/account-ui.js");
 const headers = read("_headers");
@@ -100,6 +102,10 @@ assert.match(supporterJs, /signSupporterChallenge\(wallet, challenge\.message\)/
 assert.match(supporterJs, /personal_sign/);
 assert.match(supporterJs, /signMessageV2/);
 assert.match(supporterJs, /solana:signMessage/);
+assert.match(supporterJs, /discoverDirectEvmProviders/);
+assert.match(walletAdapters, /sol_signMessage/);
+assert.match(walletAdapters, /signMessageV2/);
+assert.match(walletAdapters, /isSolanaMainnet/);
 // No transaction or typed-data submission method may be called. Explanatory comments
 // may name such methods so that users and auditors know which prompts to reject.
 assert.doesNotMatch(supporterJs, /\.request\(\s*\{\s*method\s*:\s*["'](?:eth_sign|eth_signTypedData(?:_v4)?|eth_sendTransaction|eth_sendRawTransaction|wallet_sendCalls)["']/i);
