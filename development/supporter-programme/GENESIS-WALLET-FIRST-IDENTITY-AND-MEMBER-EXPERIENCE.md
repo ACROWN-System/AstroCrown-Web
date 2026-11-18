@@ -23,7 +23,7 @@ The application may issue a short-lived, server-side session after a fresh signe
 
 Ethereum, TRON and Solana addresses are distinct network-specific public addresses, even when derived or managed by the same multi-chain wallet application.
 
-The first wallet address that proves control becomes the **primary wallet**. Additional Ethereum, TRON or Solana addresses must each prove control through a separate domain-bound off-chain message challenge before they may be linked to that primary identity. The primary wallet alone may authenticate the identity and authorize name changes or further address links. The Worker also rejects state-changing requests unless the HTTP `Origin` exactly matches the configured official AstroCrown origin; an off-site page must not be able to use Genesis as a signing-challenge relay.
+The first wallet address that proves control becomes the **primary wallet**. It is the sole Genesis login and recovery anchor. Additional chain addresses are required only when they are actually used: a payment source is attributed through its server-created payment intent and independently verified on-chain transfer; a separate Solana delivery address must prove control before ACROWN is sent to it. A payment-source address does not automatically become a login or recovery wallet. The primary wallet authorizes identity changes and further address links. The Worker rejects state-changing requests unless the HTTP `Origin` exactly matches the configured official AstroCrown origin.
 
 A linked address is a payment or delivery address, not a recovery wallet. It cannot independently log in to, recover or transfer the primary wallet identity.
 
@@ -32,7 +32,7 @@ The first payment allowlist remains:
 - TRON Mainnet — canonical USDT TRC-20; and
 - Solana Mainnet — canonical USDT SPL.
 
-ACROWN delivery remains Solana-based. Each delivery address must be independently verified. A supported wallet application must be qualified on the actual connection, signature, send, receive, restore and chain-specific payment routes before it is included in the allowlist. A wallet's ability to display an asset does not prove that it can connect to a website dApp on that chain.
+ACROWN delivery remains Solana-based. A delivery address distinct from the primary identity must prove control before delivery. The participant wallet only needs to receive the ACROWN SPL token; AstroCrown's separately authorized Solana signer submits the outgoing transfer. The participant wallet does not need to sign or send that delivery transaction. Wallet qualification is limited to the actual identity route, a selected USDT payment route and Solana token receipt; dApp signing on every payment chain and wallet-vendor restore testing on every chain are not required.
 
 ### 1.2 Wallet backup and irreversible loss
 
@@ -130,7 +130,7 @@ The intended sequence is:
 2. Sign a clearly labelled, domain-bound off-chain ownership challenge. It must not ask for a transaction, token approval, transfer or payment.
 3. The server establishes or accesses the wallet-native Genesis identity and assigns a unique random display name and avatar.
 4. The wallet holder may customize the public display name after a green availability check and a fresh primary-wallet signature.
-5. Additional network-specific payment/delivery addresses are individually proved and linked to the primary wallet.
+5. The backend attributes a qualifying payment to the active identity using its payment intent and independently verified chain transaction; a separate Solana delivery address is proved before it is used.
 6. After all programme terms and network checks are approved, the wallet may initiate its qualifying payment.
 7. The backend verifies the transfer and records the entitlement against the primary wallet.
 8. The Genesis Member badge is awarded once the published qualification and finality requirements pass.
@@ -157,7 +157,11 @@ The public directory reads finalized, immutable records only. No public endpoint
 
 ## 9. Wallet application qualification
 
-The curated wallet application candidates, implemented provider adapters, practical test plan and qualification gates are maintained in [GENESIS-WALLET-COMPATIBILITY.md](./GENESIS-WALLET-COMPATIBILITY.md), [GENESIS-WALLET-PRACTICAL-QUALIFICATION-PLAN.md](./GENESIS-WALLET-PRACTICAL-QUALIFICATION-PLAN.md) and [genesis-wallet-compatibility.json](./genesis-wallet-compatibility.json). MetaMask, Trust Wallet, OKX Wallet, Bitget Wallet, TokenPocket and Coin98 remain candidates only; none is production-qualified. Bitget, TokenPocket and OKX have documented three-network provider/signing paths worth testing. Coin98's official Coin98 Connect page documents Solana sol_signMessage, while its TRON dApp proof path remains unresolved and EVM personal_sign compatibility requires verification. MetaMask's TRON dApp-connection limitation also remains a specific proof/attribution gate. Provider adapters and automated mock tests are not approval; live signatures, USDT asset flows, recovery/address derivation and platform/version tests must pass before any wallet can be qualified. Payment acceptance remains disabled.
+The current five-wallet qualification wave is Bitget Wallet, TokenPocket, Coin98, OKX Wallet and Trust Wallet. Their acceptance is based on three practical functions: establish a verified primary wallet identity through one supported signing route; enable a holder-selected USDT transfer on at least one supported payment rail; and provide a verified Solana address capable of receiving ACROWN SPL tokens. The five-wallet scope, use-case gates and practical test plan are maintained in [GENESIS-WALLET-COMPATIBILITY.md](./GENESIS-WALLET-COMPATIBILITY.md), [GENESIS-WALLET-PRACTICAL-QUALIFICATION-PLAN.md](./GENESIS-WALLET-PRACTICAL-QUALIFICATION-PLAN.md) and [genesis-wallet-compatibility.json](./genesis-wallet-compatibility.json).
+
+Genesis—not the wallet application—detects and verifies completed payments. The participant wallet does not need to notify the website of a payment, expose a dApp provider on all three payment networks, or sign a TRON challenge merely because a TRON transfer is used. The TRON transaction is attributed through the payment intent and independently verified chain evidence. Likewise, a recipient wallet does not need to sign or submit the ACROWN delivery transaction; it must provide a verified Solana recipient address and receive the SPL token.
+
+Provider adapters and synthetic tests are not approval. Exact installed app/extension builds still require a live primary-wallet signature check, confirmation of the selected native USDT payment route, and a Solana test-token receipt. Wallet-vendor recovery testing on all three chains is outside the Genesis qualification gate. MetaMask remains outside this first five-wallet wave; its earlier TRON dApp limitation is not regarded as a general disqualification under the narrowed payment-attribution model. Payment acceptance remains disabled.
 
 ## 10. Current hard stop
 
