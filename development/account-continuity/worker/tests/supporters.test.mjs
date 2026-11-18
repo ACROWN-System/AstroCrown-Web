@@ -6,12 +6,12 @@ import { keccak256, toBytes } from "viem";
 import { generateKeyPairSync, webcrypto } from "node:crypto";
 
 const networks = [
-  { network: "ethereum", network_identifier: "eip155:1", token_identifier: "0xdAC17F958D2ee523a2206206994597C13D831ec7", token_decimals: 6, enabled: 0, treasury_configured: 0 },
-  { network: "tron", network_identifier: "tron:mainnet", token_identifier: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", token_decimals: 6, enabled: 0, treasury_configured: 0 },
-  { network: "solana", network_identifier: "solana:mainnet", token_identifier: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", token_decimals: 6, enabled: 0, treasury_configured: 0 },
+  { network: "ethereum", network_identifier: "eip155:1", token_identifier: "0xdAC17F958D2ee523a2206206994597C13D831ec7", token_decimals: 6, enabled: 0, treasury_address: null },
+  { network: "tron", network_identifier: "tron:mainnet", token_identifier: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", token_decimals: 6, enabled: 0, treasury_address: null },
+  { network: "solana", network_identifier: "solana:mainnet", token_identifier: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", token_decimals: 6, enabled: 0, treasury_address: null },
 ];
 
-function mockDb(program = { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, closes_at: null, rules_version: null }, rows = networks) {
+function mockDb(program = { environment: "MAINNET", status: "PRELAUNCH", activated_at: null, rules_version: null }, rows = networks) {
   return {
     prepare(sql) {
       return {
@@ -35,18 +35,42 @@ test("Supporter status reads the dedicated D1 and exposes exactly the canonical 
   assert.deepEqual(payload.networks.map((item) => item.network), ["ethereum", "tron", "solana"]);
   assert.equal(payload.programme.status, "PRELAUNCH");
   assert.equal(payload.programme.activatedAt, null);
-  assert.equal(payload.programme.closesAt, null);
+  assert.equal("closesAt" in payload.programme, false);
 });
 
-test("Supporter status never exposes a treasury address or claims that a transfer can be made", () => {
-  const payload = buildSupporterStatus(
-    { environment: "MAINNET", status: "OPEN", activated_at: 1_800_000_000, closes_at: 1_815_552_000, rules_version: "v1" },
-    networks.map((row) => ({ ...row, enabled: 1, treasury_configured: 1 }))
+test("Supporter status validates staged receiving-address formats but never exposes the addresses or enables payments", async () => {
+  const validTreasuries = {
+    ethereum: "0x0000000000000000000000000000000000000001",
+    tron: await tronAddressFromEvm("0x0000000000000000000000000000000000000002"),
+    solana: "So11111111111111111111111111111111111111112",
+  };
+  const payload = await buildSupporterStatus(
+    { environment: "MAINNET", status: "OPEN", activated_at: 1_800_000_000, rules_version: "v1" },
+    networks.map((row) => ({ ...row, enabled: 1, treasury_address: validTreasuries[row.network] }))
   );
   assert.equal(payload.paymentAcceptance.enabled, false);
   assert.equal(payload.paymentAcceptance.contributionsAccepted, false);
   assert.equal(payload.purchaseAllowance.automaticTokenIssuance, false);
+  assert.ok(payload.networks.every((row) => row.treasuryConfigured));
+  assert.ok(payload.networks.every((row) => row.treasuryAddressFormatValid));
+  assert.ok(payload.networks.every((row) => row.networkConfigured));
   assert.ok(payload.networks.every((row) => !("treasuryAddress" in row)));
+});
+
+test("An invalid staged treasury address cannot make its network appear configured", async () => {
+  const rows = networks.map((row, index) => index === 1
+    ? { ...row, enabled: 1, treasury_address: "TInvalidAddress" }
+    : { ...row, enabled: 1, treasury_address: row.network === "ethereum"
+      ? "0x0000000000000000000000000000000000000001"
+      : "So11111111111111111111111111111111111111112" });
+  const payload = await buildSupporterStatus(
+    { environment: "MAINNET", status: "PRELAUNCH" },
+    rows
+  );
+  const tron = payload.networks.find((row) => row.network === "tron");
+  assert.equal(tron.treasuryConfigured, true);
+  assert.equal(tron.treasuryAddressFormatValid, false);
+  assert.equal(tron.networkConfigured, false);
 });
 
 test("Supporter status fails closed when the dedicated database binding is absent", async () => {
@@ -56,20 +80,20 @@ test("Supporter status fails closed when the dedicated database binding is absen
   assert.match(payload.error, /not bound/i);
 });
 
-test("Supporter status fails closed if a network is missing, duplicated, non-canonical or has unexpected precision", () => {
-  assert.throws(() => buildSupporterStatus(
+test("Supporter status fails closed if a network is missing, duplicated, non-canonical or has unexpected precision", async () => {
+  await assert.rejects(() => buildSupporterStatus(
     { environment: "MAINNET", status: "PRELAUNCH" },
     networks.slice(0, 2)
   ));
-  assert.throws(() => buildSupporterStatus(
+  await assert.rejects(() => buildSupporterStatus(
     { environment: "MAINNET", status: "PRELAUNCH" },
     networks.map((row, index) => index === 0 ? { ...row, token_decimals: 18 } : row)
   ));
-  assert.throws(() => buildSupporterStatus(
+  await assert.rejects(() => buildSupporterStatus(
     { environment: "MAINNET", status: "PRELAUNCH" },
     networks.map((row, index) => index === 0 ? { ...row, token_identifier: "0xmalicious" } : row)
   ));
-  assert.throws(() => buildSupporterStatus(
+  await assert.rejects(() => buildSupporterStatus(
     { environment: "MAINNET", status: "PRELAUNCH" },
     [...networks, networks[0]]
   ));

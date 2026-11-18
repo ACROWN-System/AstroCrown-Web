@@ -10,28 +10,47 @@ async function readPublic(path) {
   return readFile(resolve(publicRoot, path), "utf8");
 }
 
-test("Worker staging build publishes the Supporter Programme at the shared origin", async () => {
+test("Worker staging build publishes the ACROWN Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
   const homepage = await readPublic("index.html");
-  assert.match(homepage, /href="\.\/supporters\/">Supporter Programme/);
+  assert.match(homepage, /href="\.\/supporters\/">ACROWN Genesis Programme/);
 });
 
-test("published Supporter Programme states that contributions are not open", async () => {
+test("published ACROWN Genesis Programme states that contributions are not open", async () => {
   const html = await readPublic("supporters/index.html");
   assert.match(html, /DEVELOPMENT PREVIEW/);
   assert.match(html, /USDT CONTRIBUTIONS NOT OPEN/);
   assert.match(html, /DO NOT SEND FUNDS/);
   assert.match(html, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/);
-  assert.match(html, /1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance/);
-  assert.match(html, /180-day purchase period begins at that operational activation/);
+  assert.match(html, /25 ACROWN per USDT 1/i);
+  assert.match(html, /USDT 1,000,000/i);
+  assert.match(html, /25,000,000 ACROWN/i);
+  assert.match(html, /wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event/i);
+  assert.match(html, /full floor-price consideration must reach the ACS reserve/i);
+  assert.match(html, /one all-inclusive ACROWN-denominated Paymaster fee/i);
+  assert.match(html, /only when this exact wallet is eligible/i);
+  assert.match(html, /Individual wallet allowances do not expire merely through non-use/i);
+  assert.match(html, /final programme duration and closure policy will be published before contributions open/i);
+  assert.doesNotMatch(html, /180 consecutive days|180-day|USDT 150/i);
+  assert.match(html, /all ordinary\/public ACROWN purchase routes operated or authorized by AstroCrown remain disabled until the official ACROWN launch/i);
+  assert.match(html, /registration-countdown-stage/);
+  assert.match(html, /launch-countdown-stage/);
+  assert.match(html, /data-public-deployment-at=""/);
+  assert.match(html, /Wallet loss receives no recovery, replacement, allowance transfer or refund/i);
+  assert.match(html, /Each linked wallet has its own allowance and purchase history/i);
+  assert.match(html, /Genesis Programme Participants/);
+  assert.match(html, /data-feed-state="empty"/);
+  assert.match(html, /No verified participant events are being displayed/i);
+  assert.match(html, /Live Programme Activity/);
+  assert.match(html, /Replay Verified Programme Activity/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
   assert.match(html, /Never share your seed phrase or private key/);
 });
 
-test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
+test("Genesis Programme wallet script supports off-chain ownership proofs but no transaction submission", async () => {
   const js = await readPublic("supporters/supporters.js");
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
@@ -44,7 +63,9 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
   assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
   assert.ok(js.includes("/api/supporters/status"));
-  assert.match(js, /contributions remain closed/i);
+  assert.match(js, /payments remain closed/i);
+  assert.match(js, /treasuryAddressFormatValid/);
+  assert.match(js, /receiving address not configured/);
   assert.equal(js.includes('method: "eth_sign"'), false);
   assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
   assert.equal(js.includes('method: "eth_sendTransaction"'), false);

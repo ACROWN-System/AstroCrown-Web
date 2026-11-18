@@ -95,8 +95,8 @@ for (const relativePath of allowlist) {
     html = replaceExactlyOnce(
       html,
       '          <a href="#explore">Explore ecosystem</a>',
-      '          <a href="#explore">Explore ecosystem</a>' + String.fromCharCode(10) + '          <a href="./supporters/">Supporter Programme</a>',
-      "Supporter Programme footer navigation",
+      '          <a href="#explore">Explore ecosystem</a>' + String.fromCharCode(10) + '          <a href="./supporters/">ACROWN Genesis Programme</a>',
+      "ACROWN Genesis Programme footer navigation",
     );
     if (!html.includes("astro-staging-banner")) {
       html = html.replace(

@@ -509,7 +509,7 @@ async function registrationChallenge(db, env, request, payload, config) {
   const existingWallet = await db.prepare(
     "SELECT 1 AS found FROM supporter_wallets WHERE network=? AND address_normalized=? LIMIT 1"
   ).bind(network, address.normalized).first();
-  if (existingWallet) throw httpError(409, "That wallet already belongs to a supporter. Sign in or use the account recovery process.");
+  if (existingWallet) throw httpError(409, "That wallet already belongs to a supporter. Sign in with the original wallet; this programme does not provide wallet recovery or replacement.");
   const memberId = newId("mem");
   const reserveUntil = now + CHALLENGE_SECONDS;
   const challengeId = newId("wch");
@@ -817,17 +817,16 @@ export async function supporterStatusResponse(env) {
   try {
     const [program, result] = await Promise.all([
       db.prepare(
-        "SELECT environment,status,activated_at,closes_at,rules_version " +
+        "SELECT environment,status,activated_at,rules_version " +
         "FROM supporter_program WHERE singleton = 1"
       ).first(),
       db.prepare(
-        "SELECT network,network_identifier,token_identifier,token_decimals,enabled," +
-        "CASE WHEN treasury_address IS NULL OR length(trim(treasury_address)) = 0 THEN 0 ELSE 1 END AS treasury_configured " +
+        "SELECT network,network_identifier,token_identifier,token_decimals,enabled,treasury_address " +
         "FROM supporter_network_config ORDER BY network"
       ).all(),
     ]);
 
-    const payload = buildSupporterStatus(program, result?.results || []);
+    const payload = await buildSupporterStatus(program, result?.results || []);
     return json(200, payload);
   } catch {
     return json(503, {
@@ -836,7 +835,7 @@ export async function supporterStatusResponse(env) {
   }
 }
 
-function buildSupporterStatus(program, networkRows) {
+async function buildSupporterStatus(program, networkRows) {
   if (!program || program.environment !== "MAINNET" || !Array.isArray(networkRows)) {
     throw new Error("The isolated Supporter Programme database is not initialized correctly.");
   }
@@ -848,28 +847,39 @@ function buildSupporterStatus(program, networkRows) {
       NETWORK_ORDER.some((network) => !byNetwork.has(network))) {
     throw new Error("The Supporter Programme database does not contain the exact three-network allowlist.");
   }
-  const networks = NETWORK_ORDER.map((network) => {
+  const networks = await Promise.all(NETWORK_ORDER.map(async (network) => {
     const row = byNetwork.get(network);
     const canonical = CANONICAL_NETWORKS[network];
     if (Number(row.token_decimals) !== 6 || row.network_identifier !== canonical.networkIdentifier ||
         row.token_identifier !== canonical.tokenIdentifier) {
       throw new Error("The configured network/token identity or USD₮ precision does not match the canonical allowlist.");
     }
+    const treasuryAddress = typeof row.treasury_address === "string" ? row.treasury_address.trim() : "";
+    let treasuryAddressFormatValid = false;
+    if (treasuryAddress) {
+      try {
+        await normalizeWalletAddress(network, treasuryAddress);
+        treasuryAddressFormatValid = true;
+      } catch {
+        // A malformed staged address is a readiness failure, not a status API outage.
+      }
+    }
+    const treasuryConfigured = treasuryAddress.length > 0;
     return {
       network,
       networkIdentifier: canonical.networkIdentifier,
       tokenIdentifier: canonical.tokenIdentifier,
       tokenDecimals: 6,
-      networkConfigured: Number(row.enabled) === 1,
-      treasuryConfigured: Number(row.treasury_configured) === 1,
+      networkConfigured: Number(row.enabled) === 1 && treasuryAddressFormatValid,
+      treasuryConfigured,
+      treasuryAddressFormatValid,
     };
-  });
+  }));
   return {
     environment: "MAINNET",
     programme: {
       status: String(program.status),
       activatedAt: Number(program.activated_at) > 0 ? new Date(Number(program.activated_at) * 1000).toISOString() : null,
-      closesAt: Number(program.closes_at) > 0 ? new Date(Number(program.closes_at) * 1000).toISOString() : null,
       rulesVersion: program.rules_version || null,
     },
     networks,

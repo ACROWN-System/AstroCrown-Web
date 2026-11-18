@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#081426">
-  <meta name="description" content="AstroCrown Supporter Programme preview. Review the proposed priority-purchase model and calculate illustrative capacity.">
+  <meta name="description" content="ACROWN Genesis Programme development preview. Review the proposed wallet-specific ACROWN purchase allowance and programme rules.">
   <meta name="robots" content="noindex, nofollow, noarchive">
-  <title>AstroCrown Supporter Programme — Preview</title>
+  <title>ACROWN Genesis Programme — Preview</title>
   <style>
     :root {
       color-scheme: dark;
@@ -109,6 +109,22 @@
     .rule-card h3{margin:0 0 7px;color:#e9edf6;font-size:12px}
     .rule-card p{margin:0;color:var(--muted);font-size:10px;line-height:1.7}
     .transparency-intro{max-width:760px;margin:-3px 0 16px;color:var(--muted);font-size:11px;line-height:1.7}
+    .activity-feed-shell{overflow:hidden;border:1px solid var(--line-strong);border-radius:13px;background:linear-gradient(145deg,rgba(13,29,50,.94),rgba(7,17,31,.96))}
+    .activity-feed-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+    .activity-feed-head strong{font-size:12px}
+    .activity-feed-state{color:var(--quiet);font-size:9px;font-weight:850;letter-spacing:.06em;text-transform:uppercase}
+    .activity-feed-empty{padding:24px 18px;text-align:center}
+    .activity-feed-empty strong{display:block;margin-bottom:6px;color:#e7edf7;font-size:12px}
+    .activity-feed-empty p{max-width:680px;margin:0 auto;color:var(--muted);font-size:10px;line-height:1.7}
+    .activity-event-types{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .activity-event-types span{padding:6px 9px;border:1px solid var(--line);border-radius:999px;background:rgba(10,23,41,.78);color:#c7d3e3;font-size:9px;font-weight:750}
+    .activity-ticker-item{animation:activity-enter .55s ease both}
+    .activity-ticker-item.is-leaving{animation:activity-leave .45s ease both}
+    .activity-ticker-copy.is-typing{display:inline-block;overflow:hidden;white-space:nowrap;animation:activity-typewriter 2.2s steps(38,end) both}
+    @keyframes activity-enter{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes activity-leave{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-16px)}}
+    @keyframes activity-typewriter{from{max-width:0}to{max-width:100%}}
+
     .transparency-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:15px 0}
     .transparency-card{padding:15px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
     .transparency-card strong{display:block;margin:0 0 6px;color:#edf1f8;font-size:11px}
@@ -162,7 +178,7 @@
       .disabled-button{width:100%}
       .site-footer{flex-direction:column}
     }
-    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,.activity-ticker-item,.activity-ticker-item.is-leaving,.activity-ticker-copy.is-typing{animation:none!important;transition:none!important}}
   
     .wallet-instructions{margin:13px 0;color:var(--muted);font-size:10px;line-height:1.7}
     .wallet-ecosystem-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:14px}
@@ -198,7 +214,39 @@
     .entitlement-summary strong{display:block;margin-top:5px;color:var(--gold-soft);font-size:20px;line-height:1.2;letter-spacing:-.025em}
     .entitlement-summary p{margin:7px 0 0;color:var(--muted);font-size:10px;line-height:1.65}
     .dashboard-purchase-button{width:100%;margin-top:12px}
-    @media(max-width:820px){.dashboard-grid{grid-template-columns:1fr}.wallet-ecosystem-grid{grid-template-columns:1fr}}
+    .purchase-readiness{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:88px;min-height:36px;margin-top:10px;padding:0 15px;border:1px solid rgba(153,178,213,.22);border-radius:999px;font-size:10px;font-weight:950;letter-spacing:.15em}
+    .purchase-readiness.off{background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.018));color:#8795aa;border-color:rgba(153,178,213,.2);box-shadow:inset 0 1px rgba(255,255,255,.035)}
+    .dashboard-metrics{display:grid;gap:12px;margin-top:16px}
+    .dashboard-metric-group{padding:13px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.13)}
+    .dashboard-metric-group h4{margin:0 0 11px;color:#e9edf6;font-size:10px;letter-spacing:.04em}
+    .dashboard-metric-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;margin-top:9px}
+    .dashboard-metric-label{color:var(--muted);font-size:9px}
+    .dashboard-metric-value{color:#dfe7f3;font-size:9px;font-weight:850;text-align:right}
+    .dashboard-metric-track{grid-column:1 / -1;overflow:hidden;height:7px;border:1px solid rgba(153,178,213,.14);border-radius:99px;background:rgba(255,255,255,.035)}
+    .dashboard-metric-track span{display:block;width:0;height:100%;border-radius:99px}
+    .metric-earned span{background:#d5b6ff}
+    .metric-bought span{background:#20c878}
+    .metric-remaining span{background:#67b9ff}
+
+    .purchase-readiness.on{background:linear-gradient(110deg,#fff1a8,#ffd700 45%,#fff5bd);border-color:#fff0a1;color:#161923;box-shadow:0 0 12px rgba(255,215,0,.36),0 0 26px rgba(255,215,0,.17),inset 0 1px rgba(255,255,255,.7)}
+    .purchase-readiness.on::before{content:"✦";font-size:12px}
+    .countdown-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
+    .countdown-stage{padding:18px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(145deg,rgba(13,29,50,.92),rgba(7,17,31,.96))}
+    .countdown-stage.active{border-color:rgba(255,215,0,.35);box-shadow:0 12px 32px rgba(0,0,0,.16)}
+    .countdown-stage-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .countdown-stage h3{margin:13px 0 6px;color:#edf2fa;font-size:14px}
+    .countdown-stage p{color:var(--muted);font-size:10px;line-height:1.65}
+    .countdown-stage-state{color:var(--warning);font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+    .countdown-digits{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:15px 0 7px}
+    .countdown-digits span{display:grid;gap:3px;justify-items:center;padding:12px 5px;border:1px solid rgba(153,178,213,.14);border-radius:9px;background:rgba(0,0,0,.16)}
+    .countdown-digits strong{color:var(--gold-soft);font-size:20px;font-variant-numeric:tabular-nums}
+    .countdown-digits small{color:var(--quiet);font-size:8px;text-transform:uppercase;letter-spacing:.08em}
+    .countdown-foot{margin:9px 0 0!important;color:var(--quiet)!important;font-size:9px!important}
+    .countdown-stage.complete{border-color:rgba(32,200,120,.28)}
+    .countdown-stage.complete .countdown-stage-state{color:#8fe2b9}
+
+    
+    @media(max-width:820px){.dashboard-grid{grid-template-columns:1fr}.wallet-ecosystem-grid{grid-template-columns:1fr}.countdown-grid{grid-template-columns:1fr}}
     @media(max-width:560px){.wallet-actions{display:grid;grid-template-columns:1fr}.wallet-actions button,.profile-actions button{width:100%}.profile-actions{align-items:stretch}.member-display-name{width:100%}}
 
   </style>
@@ -215,7 +263,7 @@
       </svg>
       <span class="brand-name">ASTRO<span>CROWN</span></span>
     </a>
-    <nav class="header-nav" aria-label="Supporter page navigation">
+    <nav class="header-nav" aria-label="Genesis Programme page navigation">
       <a class="nav-link" href="../index.html">Homepage</a>
       <a class="nav-link active" href="#programme">Programme</a>
       <a class="nav-link nav-cta" href="#calculator">Calculate capacity</a>
@@ -225,24 +273,24 @@
   <main class="page-shell" id="main-content">
     <section class="hero-grid" id="programme" aria-labelledby="page-title">
       <div class="hero-main">
-        <div class="eyebrow">AstroCrown · Early supporter programme</div>
-        <h1>Help build AstroCrown.<br><span>Priority access, not free tokens.</span></h1>
-        <p class="hero-copy">The proposed programme is designed to recognise early supporters through a priority opportunity to make a separate ACROWN purchase at the applicable ACS floor price. A supporter contribution is not itself a token purchase, does not issue ACROWN, and does not automatically enter the ACS reserve.</p>
+        <div class="eyebrow">ACROWN Genesis Programme</div>
+        <h1>Take part in AstroCrown's beginning.<br><span>A separate future ACROWN purchase allowance—not free tokens.</span></h1>
+        <p class="hero-copy">The <strong>ACROWN Genesis Programme</strong> is for eligible <strong>Genesis Programme Participants</strong> who make a verified contribution during its initial phase. Each USDT 1 of verified contribution creates a wallet-specific allowance to make a separate future purchase of up to 25 ACROWN at the applicable ACS floor. The contribution is not a token purchase, does not pay the later purchase consideration and does not automatically enter the ACS reserve. The full floor-price consideration must reach the ACS reserve V. When Paymaster is active, one all-inclusive ACROWN-denominated Paymaster fee includes network execution/gas and is not charged again as a separate network fee; otherwise, the wallet pays native network gas directly.</p>
         <div class="stat-grid">
           <article class="stat-card">
-            <div class="side-label">Planned aggregate target</div>
-            <div class="stat-value">USDT 250,000</div>
-            <p class="stat-note">Maximum programme planning target across all supporters; not a live funding counter.</p>
+            <div class="side-label">Aggregate contribution ceiling</div>
+            <div class="stat-value">USDT 1,000,000</div>
+            <p class="stat-note">Hard programme-wide ceiling across the three approved networks; not a live funding counter.</p>
           </article>
           <article class="stat-card">
-            <div class="side-label">Illustrative multiplier rate</div>
+            <div class="side-label">Approved multiplier</div>
             <div class="stat-value">25 ACROWN / USDT</div>
-            <p class="stat-note">Example only. The final multiplier and programme terms require approval.</p>
+            <p class="stat-note">USDT 1 of verified contribution creates allowance to purchase up to 25 ACROWN; the later floor-price consideration and the applicable fee route are separate. An active Paymaster has one all-inclusive ACROWN fee that includes network execution.</p>
           </article>
           <article class="stat-card">
-            <div class="side-label">Purchase eligibility window</div>
-            <div class="stat-value">180 days</div>
-            <p class="stat-note">Starts only when real supporter payments are deliberately activated, not when this preview is deployed.</p>
+            <div class="side-label">Maximum purchase allowance</div>
+            <div class="stat-value">25,000,000 ACROWN</div>
+            <p class="stat-note">Programme-wide purchase capacity, bounded by verified contributions and completed purchases.</p>
           </article>
         </div>
       </div>
@@ -252,10 +300,13 @@
         <p class="side-copy">Three distinct stages. The contribution and any later ACROWN purchase must be separately recorded.</p>
         <div class="side-divider"></div>
         <div class="side-label">What the multiplier means</div>
-        <p class="side-copy">A verified contribution establishes the member's personal multiplier-based ACROWN purchase allowance. Example only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance, subject to any remaining programme-wide cap.</p>
+        <p class="side-copy">The approved rule is 25 ACROWN of purchase allowance for each 1 USD₮ of verified contribution. That contribution does not pay the purchase price. The full ACS floor consideration must reach V. If Paymaster is active, its single ACROWN-denominated fee already includes network execution costs; there is no second network-fee charge. USDT 1,000,000 can create at most 25,000,000 ACROWN of aggregate purchase allowance.</p>
+        <div class="side-divider"></div>
+        <div class="side-label">Purchase period</div>
+        <p class="side-copy">There is no fixed time-based expiry. The programme follows its approved lifecycle rules until the shared 25,000,000-ACROWN sale capacity is exhausted or a separate owner-approved closure is published.</p>
         <div class="side-divider"></div>
         <div class="side-label">ACS protection</div>
-        <p class="side-copy">Any ACROWN purchase or distribution must follow the ACS accounting rules. The official floor must not be reduced by programme operations.</p>
+        <p class="side-copy">The ACS floor is F = V/C and may never decrease. The full floor consideration is credited to V. An active Paymaster displays one all-inclusive fee in ACROWN, including network execution cost; it is not duplicated as another gas line. A floor-price sale preserves F, all else equal.</p>
       </aside>
     </section>
 
@@ -263,30 +314,81 @@
       <div class="status-icon" aria-hidden="true">!</div>
       <div>
         <strong>Wallet connection is display-only in this preview. USDT contributions and ACROWN purchases are not enabled.</strong>
-        <p>The operational Supporter Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. The official staging Worker can register wallet ownership with off-chain message signatures after the homepage safety notice is acknowledged. The standalone repository preview is display-only. Neither environment accepts contributions or enables transfers. Do not send funds or sign a transaction here.</p>
+        <p>The operational ACROWN Genesis Programme is designed to accept real mainnet USD₮ on Ethereum (ERC-20), Tron (TRC-20) and Solana (SPL). These are separate network-specific assets and payment paths. ACROWN delivery remains Solana-based. The rest of AstroCrown's development platform remains on Devnet/Testnet with valueless assets. The official staging Worker can register wallet ownership with off-chain message signatures after the homepage safety notice is acknowledged. The standalone repository preview is display-only. Neither environment accepts contributions or enables transfers. Do not send funds or sign a transaction here.</p>
       </div>
+    </section>
+
+    <section class="status-banner" role="note">
+      <div class="status-icon" aria-hidden="true">24h</div>
+      <div>
+        <strong>Wallet registration closes at 00:00:00 UTC on the day before the official public-deployment event.</strong>
+        <p>The event begins at 00:00:00 UTC on its selected date; the cutoff is exactly 24 hours earlier, at 00:00:00 UTC on the preceding UTC calendar day. Only frozen, ownership-verified wallets may use participant-level programme functions after cutoff. Already registered wallets may continue qualifying contributions while the programme is OPEN. Wallet loss receives no recovery, replacement, allowance transfer or refund under this programme; another wallet linked to the same participant does not inherit the lost wallet's record. This preview does not enforce the cutoff.</p>
+      </div>
+    </section>
+
+
+    <section class="section countdown-panel" id="public-event-countdown" data-public-deployment-at="" aria-labelledby="public-event-countdown-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Public deployment schedule</div>
+          <h2 id="public-event-countdown-title">Two-stage countdown to the event</h2>
+        </div>
+        <p>The event name and exact UTC date will be announced only when readiness, adoption, funding and development progress justify the decision. No countdown is active yet.</p>
+      </div>
+      <div class="countdown-grid">
+        <article class="countdown-stage active" id="registration-countdown-stage" aria-live="off">
+          <div class="countdown-stage-head">
+            <span class="step-number">01</span>
+            <span class="countdown-stage-state">Not announced</span>
+          </div>
+          <h3>Wallet registration countdown</h3>
+          <p>Counts down from the official event announcement to the registration cutoff at 00:00:00 UTC on the preceding day.</p>
+          <div class="countdown-digits" id="registration-countdown" aria-label="Time remaining to wallet registration cutoff">
+            <span><strong>—</strong><small>Days</small></span>
+            <span><strong>—</strong><small>Hours</small></span>
+            <span><strong>—</strong><small>Minutes</small></span>
+            <span><strong>—</strong><small>Seconds</small></span>
+          </div>
+          <p class="countdown-foot" id="registration-countdown-caption">Waiting for the official event date.</p>
+        </article>
+        <article class="countdown-stage" id="launch-countdown-stage" aria-live="off">
+          <div class="countdown-stage-head">
+            <span class="step-number">02</span>
+            <span class="countdown-stage-state">Starts at cutoff</span>
+          </div>
+          <h3>Final 24-hour launch countdown</h3>
+          <p>Begins automatically when registration closes and counts down the final 24 hours to the public-deployment event.</p>
+          <div class="countdown-digits" id="launch-countdown" aria-label="Time remaining to public deployment">
+            <span><strong>—</strong><small>Hours</small></span>
+            <span><strong>—</strong><small>Minutes</small></span>
+            <span><strong>—</strong><small>Seconds</small></span>
+          </div>
+          <p class="countdown-foot" id="launch-countdown-caption">Wallet eligibility has not yet been frozen.</p>
+        </article>
+      </div>
+      <p class="fine-print">Both timers use the same officially published UTC timestamp. They are informational displays; the server-enforced cutoff and frozen wallet list are authoritative. A missing event timestamp never produces an active or guessed deadline.</p>
     </section>
 
     <section class="section" id="member-dashboard" aria-labelledby="member-dashboard-title">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">Wallet membership</div>
-          <h2 id="member-dashboard-title">Your supporter dashboard</h2>
+          <div class="eyebrow">Wallet participation</div>
+          <h2 id="member-dashboard-title">Your Genesis Programme dashboard</h2>
         </div>
-        <p>AstroCrown generates a member name for you, and you can customize it. The staging service now supports wallet-verified member registration and separately verified wallet linking. Payment and ACROWN purchase functions remain disabled.</p>
+        <p>AstroCrown generates a participant display name for you, and you can customize it. The staging service supports wallet-verified participant registration and separately verified wallet linking. Each linked wallet has its own allowance and purchase history. The dashboard design distinguishes programme-wide capacity from the exact connected wallet's earned allowance, ACROWN purchased and remaining allowance. Purchase actions remain disabled in this preview.</p>
       </div>
       <div class="dashboard-grid">
         <section class="panel member-profile-panel" aria-labelledby="member-profile-title">
           <div class="dashboard-panel-head">
             <div>
-              <span class="scenario-tag">Member profile</span>
-              <h3 id="member-profile-title" style="margin-top:12px">Your member identity</h3>
+              <span class="scenario-tag">participant profile</span>
+              <h3 id="member-profile-title" style="margin-top:12px">Your participant identity</h3>
             </div>
             <span class="dashboard-state" id="member-profile-state">Preview only</span>
           </div>
           <div class="member-avatar" aria-hidden="true">✦</div>
           <div class="field">
-            <label for="member-pseudonym">Member pseudonym</label>
+            <label for="member-pseudonym">participant display name</label>
             <input id="member-pseudonym" type="text" maxlength="28" autocomplete="off" spellcheck="false" aria-describedby="pseudonym-help">
             <small id="pseudonym-help">A random name is generated automatically. Customize it before registration. On the official staging service, it is saved only after the connected wallet proves ownership.</small>
           </div>
@@ -365,7 +467,7 @@
           </div>
           <section class="wallet-ecosystem-card" aria-labelledby="member-registration-heading">
             <div class="ecosystem-heading">
-              <strong id="member-registration-heading">Member registration and wallet ownership</strong>
+              <strong id="member-registration-heading">participant registration and wallet ownership</strong>
               <span class="ecosystem-tag" id="supporter-member-mode">Staging service required</span>
             </div>
             <p class="panel-intro">Register with one payment wallet first. After signing in, link other payment wallets and add your Solana ACROWN delivery wallet. Each address is verified separately.</p>
@@ -386,12 +488,12 @@
             </div>
             <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Connect an Ethereum, Tron or Solana mainnet wallet to begin. Registration becomes available after the homepage staging notice is acknowledged.</div>
             <div class="wallet-address-card">
-              <span class="side-label">Verified supporter identity</span>
+              <span class="side-label">Verified participant identity</span>
               <strong id="supporter-member-summary">Not signed in</strong>
               <span id="supporter-member-wallet-list">No wallets linked.</span>
             </div>
           </section>
-          <p class="fine-print">A wallet may expose separate Ethereum/EVM, Tron and Solana addresses; prove control of each independently. The initial payment allowlist is USD₮ ERC-20 on Ethereum, USD₮ TRC-20 on Tron and USD₮ SPL on Solana. ACROWN delivery remains Solana-based. Registration records only public addresses, a member pseudonym, verification timestamps and session digests. AstroCrown never receives private keys or recovery phrases. Contributions, payment intents and token purchases remain disabled.</p>
+          <p class="fine-print">A wallet may expose separate Ethereum/EVM, Tron and Solana addresses; prove control of each independently. The initial payment allowlist is USD₮ ERC-20 on Ethereum, USD₮ TRC-20 on Tron and USD₮ SPL on Solana. ACROWN delivery remains Solana-based. Registration records only public addresses, a participant display name, verification timestamps and session digests. AstroCrown never receives private keys or recovery phrases. Contributions, payment intents and token purchases remain disabled.</p>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
@@ -405,82 +507,80 @@
           <div class="entitlement-summary">
             <span class="side-label">Your personal purchase allowance</span>
             <strong>Verified contribution × approved multiplier</strong>
-            <p>Example only: 1,000 USD₮ at 25 ACROWN per USD₮ = 25,000 ACROWN available to purchase at the applicable ACS floor, subject to any remaining programme-wide cap.</p>
+            <p>Example only: 1,000 USD₮ contributed by this exact wallet creates an allowance to purchase up to 25,000 ACROWN against this wallet's record. The full ACS floor-price consideration is separate. If Paymaster is active, one ACROWN-denominated Paymaster fee includes network execution cost; do not add a separate network fee again.</p>
+          </div>
+          <div class="dashboard-metrics" aria-label="Genesis Programme purchase progress preview">
+            <section class="dashboard-metric-group" aria-labelledby="programme-progress-title">
+              <h4 id="programme-progress-title">Programme-wide capacity · maximum 25,000,000 ACROWN</h4>
+              <div class="dashboard-metric-row"><span class="dashboard-metric-label">Purchase allowance earned from verified contributions</span><strong class="dashboard-metric-value">Awaiting verified ledger</strong><div class="dashboard-metric-track metric-earned" aria-hidden="true"><span></span></div></div>
+              <div class="dashboard-metric-row"><span class="dashboard-metric-label">ACROWN purchased and settled</span><strong class="dashboard-metric-value">Awaiting purchase records</strong><div class="dashboard-metric-track metric-bought" aria-hidden="true"><span></span></div></div>
+              <div class="dashboard-metric-row"><span class="dashboard-metric-label">Remaining programme sale capacity</span><strong class="dashboard-metric-value">Up to 25,000,000 ACROWN before purchases</strong><div class="dashboard-metric-track metric-remaining" aria-hidden="true"><span></span></div></div>
+            </section>
+            <section class="dashboard-metric-group" aria-labelledby="wallet-progress-title">
+              <h4 id="wallet-progress-title">This connected wallet</h4>
+              <div class="dashboard-metric-row"><span class="dashboard-metric-label">ACROWN purchase allowance earned (25× verified USDT)</span><strong class="dashboard-metric-value">Awaiting verified contributions</strong><div class="dashboard-metric-track metric-earned" aria-hidden="true"><span></span></div></div>
+              <div class="dashboard-metric-row"><span class="dashboard-metric-label">ACROWN purchased at the ACS floor</span><strong class="dashboard-metric-value">No purchase records</strong><div class="dashboard-metric-track metric-bought" aria-hidden="true"><span></span></div></div>
+              <div class="dashboard-metric-row"><span class="dashboard-metric-label">Remaining personal purchase allowance</span><strong class="dashboard-metric-value">Awaiting verified ledger</strong><div class="dashboard-metric-track metric-remaining" aria-hidden="true"><span></span></div></div>
+            </section>
           </div>
           <div class="result-list">
             <div class="result-row"><span class="result-label">First contribution threshold</span><strong class="result-value">Pending final terms</strong></div>
-            <div class="result-row"><span class="result-label">Multiplier entitlement</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
-            <div class="result-row"><span class="result-label">Total ACROWN programme allowance</span><strong class="result-value">Pending approval</strong></div>
-            <div class="result-row"><span class="result-label">Remaining ACROWN allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
-            <div class="result-row"><span class="result-label">Purchases completed by this wallet</span><strong class="result-value">No purchase records</strong></div>
+            <div class="result-row"><span class="result-label">ACROWN purchase allowance earned by this wallet</span><strong class="result-value" id="supporter-multiplier-state">Not activated</strong></div>
+            <div class="result-row"><span class="result-label">ACROWN purchased at the ACS floor</span><strong class="result-value">No purchase records</strong></div>
+            <div class="result-row"><span class="result-label">This wallet's remaining purchase allowance</span><strong class="result-value" id="supporter-remaining-allowance">Not yet available</strong></div>
+            <div class="result-row"><span class="result-label">Programme-wide sale capacity remaining</span><strong class="result-value">Awaiting live ledger</strong></div>
           </div>
+          <button class="purchase-readiness off" id="supporter-purchase-readiness" type="button" disabled aria-disabled="true">OFF</button>
           <button class="disabled-button dashboard-purchase-button" id="supporter-purchase-button" type="button" disabled aria-disabled="true">ACROWN purchase not enabled</button>
-          <p class="fine-print">Your profile and verified wallet links are now supported by the staging backend. No contribution or purchase balance is created by registration; payment and entitlement accounting remain closed.</p>
+          <p class="fine-print">OFF is the current preview-safe state. ON may appear only when this exact wallet is eligible, the programme is open, its own allowance and global capacity remain, and the applicable fee route preserves full ACS floor consideration. With Paymaster active, the single ACROWN Paymaster fee includes network execution; there is no duplicate gas charge. This indicator cannot be switched ON by the user.</p>
+          <p class="fine-print">Your participant profile may link multiple wallets, but their purchase allowances are always separate. Wallet A cannot spend, inherit or pool wallet B's allowance. No contribution or purchase balance is created by registration; payment and entitlement accounting remain closed.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Wallet ownership is the authority.</strong> The pseudonym is a display name only. Verified wallet control will be required for contributions and purchases when those services are activated. AstroCrown will never ask for your seed phrase or private key.
+        <strong>Wallet ownership is the authority.</strong> The pseudonym groups the participant profile only. Each connected, verified wallet selects its own separate participant allowance and purchase history. Another wallet linked to the same participant cannot inherit a lost wallet's record. Wallet loss is not recoverable or refundable through this programme; AstroCrown will never ask for your seed phrase or private key.
       </div>
     </section>
 
-    <section class="section" id="migration-reserve" aria-labelledby="migration-reserve-title">
+        <section class="section" id="programme-treasury" aria-labelledby="programme-treasury-title">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">First production transition</div>
-          <h2 id="migration-reserve-title">A small, defined funding gate to leave the $0 environment</h2>
+          <div class="eyebrow">Programme treasury</div>
+          <h2 id="programme-treasury-title">Programme funds remain separately accounted for</h2>
         </div>
-        <p>AstroCrown remains in its $0 qualification environment until the first paid production order is fully costed, independently checked and funded. The supporter programme is intended to cover that narrow transition, not an open-ended operating budget.</p>
-      </div>
-      <div class="stat-grid">
-        <article class="stat-card">
-          <div class="side-label">Proposed migration threshold</div>
-          <div class="stat-value">USDT 150</div>
-          <p class="stat-note">A provisional aggregate reserve target based on the current deployment-budget envelope, not a final provider quote or a live funding counter.</p>
-        </article>
-        <article class="stat-card">
-          <div class="side-label">Initial hosting runway</div>
-          <div class="stat-value">3 months</div>
-          <p class="stat-note">The transition budget should cover at least the first three months of the selected production host, plus the domain and essential backup arrangements.</p>
-        </article>
-        <article class="stat-card">
-          <div class="side-label">How the target could be reached</div>
-          <div class="stat-value">1 or 2</div>
-          <p class="stat-note">Illustratively, one USDT 150 contribution or two USDT 75 contributions would reach the aggregate target. These are examples, not individual contribution minimums.</p>
-        </article>
+        <p>Verified contributions are intended to enter dedicated, network-specific Genesis Programme receiving treasuries. They are not automatically part of the ACS floor reserve or the separately designated competition-prize allocation.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
-          <strong>What the reserve is meant to cover</strong>
-          <p>Initial VPS/hosting prepayment, domain registration, essential independent backup, required network or conversion fees, minimum gas, migration and restore testing, and a modest contingency.</p>
+          <strong>Three distinct receiving networks</strong>
+          <p>The planned payment routes are Ethereum USD₮ ERC-20, Tron USD₮ TRC-20 and Solana USD₮ SPL. Each network requires its own verified receiving address and token identity.</p>
         </article>
         <article class="transparency-card">
-          <strong>When the reserve can be spent</strong>
-          <p>Only after the selected provider passes the required account, payment-network, terms, security and restore checks, and the actual order-level costs fit inside the cleared reserve.</p>
+          <strong>Separate from ACS reserve V</strong>
+          <p>A Genesis Programme contribution does not itself fund an ACROWN purchase or enter the ACS reserve. Any later transfer or allocation must be a separate, approved and traceable accounting event.</p>
         </article>
         <article class="transparency-card">
-          <strong>What happens if the quote is higher</strong>
-          <p>The transition does not begin. The budget and threshold must be revised transparently before contributions open; the programme must not quietly rely on an unfunded balance or a paid fallback.</p>
+          <strong>Use-of-funds policy before opening</strong>
+          <p>Permitted uses, allocation rules, spending authority, custody controls and public reporting must be settled and disclosed before real contributions are accepted.</p>
         </article>
       </div>
       <div class="policy-highlight">
-        <strong>Funding gate, not a promise of zero risk.</strong> Reaching USDT 150 would be a proposed minimum aggregate migration reserve, not proof that every provider or future operating cost is funded. It materially reduces the risk of starting migration without enough money for known initial costs, but it cannot eliminate vendor, security, availability, legal, renewal or future operating risks. Funds remain in the separate supporter treasury until the approved activation conditions are met.
+        <strong>Not open for contributions.</strong> This preview publishes no receiving addresses and creates no payment intent. Do not send funds. Only verified, owner-approved addresses and a qualified payment flow may be published when the programme is formally opened.
       </div>
-      <p class="fine-print">The USDT 150 figure is provisional. Before contributions are enabled, the exact provider, accepted USDT network, domain price, backup plan, required fees and first three months of hosting must be verified from checkout/order quotes. If those costs plus contingency exceed USDT 150, the threshold must be increased before launch. Final terms must also explain how the segregated reserve is handled if the threshold is never reached, subject to mandatory legal rights.</p>
     </section>
 
-    <section class="section" id="calculator" aria-labelledby="calculator-title">
+<section class="section" id="calculator" aria-labelledby="calculator-title">
       <div class="section-heading">
         <div>
           <div class="eyebrow">Multiplier-based purchase entitlement</div>
           <h2 id="calculator-title">Personal allowance within a programme-wide limit</h2>
         </div>
-        <p>Each verified supporter contribution creates a personal ACROWN purchase allowance using the approved multiplier. A separate programme-wide ceiling, if approved, limits the total amount all members may purchase.</p>
+        <p>Each verified contribution creates a personal ACROWN purchase allowance at the approved 25:1 multiplier. The programme-wide maximum is 25,000,000 ACROWN; no participant can exceed their personal unused allowance or the shared remaining programme capacity.</p>
       </div>
       <div class="calculator-grid">
         <section class="panel" aria-label="Programme-wide purchase allowance">
           <span class="scenario-tag">Shared programme limit</span>
           <h3 style="margin-top:13px">The remaining programme amount sets the limit</h3>
-          <p class="panel-intro">The programme-wide ACROWN cap is separate from each member's personal multiplier allowance. The cap, multiplier and qualification threshold must be approved before launch and enforced across all members.</p>
+          <p class="panel-intro">The programme-wide ACROWN cap is separate from each source wallet's personal multiplier allowance. Wallets linked to one participant remain independent: their allowances are never pooled, transferred or shared. The cap is enforced across all wallets.</p>
           <div class="result-list">
             <div class="result-row"><span class="result-label">Total authorized programme allowance</span><strong class="result-value">To be finalized</strong></div>
             <div class="result-row"><span class="result-label">Completed purchases</span><strong class="result-value">Live ledger required</strong></div>
@@ -491,17 +591,17 @@
         <section class="panel" aria-label="Wallet purchase entitlement">
           <div class="side-label">What one eligible wallet may purchase</div>
           <h3 style="margin-top:7px">Unused personal multiplier allowance</h3>
-          <p class="panel-intro">A member may purchase up to the unused personal allowance created by verified contributions, provided the programme-wide allowance also has enough capacity.</p>
+          <p class="panel-intro">A participant may purchase up to the unused personal allowance created by verified contributions, provided the programme-wide allowance also has enough capacity.</p>
           <div class="result-highlight">
             <div class="result-label">Maximum available to this wallet</div>
             <div class="result-value">Unused personal entitlement</div>
           </div>
           <div class="formula">Personal allowance = verified USD₮ × approved ACROWN-per-USD₮ rate</div>
-          <p class="fine-print">Illustration only: 1,000 USD₮ at 25 ACROWN per USD₮ creates a 25,000 ACROWN purchase allowance. The final rate, threshold, floor-price rules and programme-wide cap remain pending approval.</p>
+          <p class="fine-print">Example: 1,000 USD₮ of verified contribution creates a right to purchase up to 25,000 ACROWN at the approved ACS floor. The contribution itself does not purchase or issue ACROWN. The multiplier is 25:1 and the programme-wide maximum purchase allowance is 25,000,000 ACROWN. Each further verified contribution from an already eligible wallet adds allowance while the programme remains open; a completed purchase remains consumed after resale. The minimum first-contribution threshold and final floor implementation/rounding rules remain subject to approval.</p>
         </section>
       </div>
       <div class="policy-highlight">
-        <strong>Any approved global ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot increase the total ACROWN quantity authorized for the programme. The purchase system must update the shared remaining allowance atomically so simultaneous purchases cannot exceed an approved global cap. Each member's personal multiplier allowance remains a separate limit.
+        <strong>The 25,000,000-ACROWN programme ceiling applies to everyone.</strong> Splitting participation across multiple wallet addresses cannot increase the total ACROWN quantity available under this programme. The purchase system must update the shared remaining capacity atomically so simultaneous purchases cannot exceed the fixed cap. Each wallet's personal multiplier allowance remains a separate limit; wallets linked to the same participant never pool or transfer allowance.
       </div>
     </section>
 
@@ -517,13 +617,13 @@
         <article class="step-card">
           <div class="step-number">01</div>
           <h3>Review the final terms</h3>
-          <p>Read the approved contribution rules, eligibility, period, non-cancellable / no-voluntary-refund policy, purchase entitlement and applicable jurisdictional conditions.</p>
+          <p>Read the approved contribution rules, eligibility, period, contribution cancellation and refund policy, purchase entitlement and applicable jurisdictional conditions.</p>
           <span class="pending">Terms pending approval</span>
         </article>
         <article class="step-card">
           <div class="step-number">02</div>
-          <h3>Register your wallet and member name</h3>
-          <p>Connect the wallet that you control and sign the off-chain ownership challenge on the official staging service. AstroCrown generates a random member pseudonym by default, which you may customize. No legal name or identity document is collected by this programme flow.</p>
+          <h3>Register your wallet and participant display name</h3>
+          <p>Connect the wallet that you control and sign the off-chain ownership challenge on the official staging service. AstroCrown generates a random participant display name by default, which you may customize. No legal name or identity document is collected by this programme flow.</p>
           <span class="pending">Staging registration available; production pending</span>
         </article>
         <article class="step-card">
@@ -549,23 +649,23 @@
     <section class="section" id="wallet-records" aria-labelledby="wallet-records-title">
       <div class="section-heading">
         <div>
-          <div class="eyebrow">Wallet and member profile</div>
-          <h2 id="wallet-records-title">Your wallet is your membership and entitlement</h2>
+          <div class="eyebrow">Wallet and participant profile</div>
+          <h2 id="wallet-records-title">Your wallet is your participation and entitlement</h2>
         </div>
-        <p>The supporter controls each registered wallet. The member pseudonym groups independently verified public addresses into one supporter profile; it does not prove legal identity or create a financial entitlement by itself.</p>
+        <p>The participant controls each registered wallet. The participant display name groups independently verified public addresses into one participant profile; it does not prove legal identity or create a financial entitlement by itself.</p>
       </div>
       <div class="transparency-grid">
         <article class="transparency-card">
-          <strong>1. Random member name by default</strong>
-          <p>Registration generates a random pseudonym automatically. The supporter may customize it. No legal name, government ID, email identity or other legal-identity registration is required by this programme design.</p>
+          <strong>1. Random participant display name by default</strong>
+          <p>Registration generates a random pseudonym automatically. The participant may customize it. No legal name, government ID, email identity or other legal-identity registration is required by this programme design.</p>
         </article>
         <article class="transparency-card">
           <strong>2. The wallet controls the entitlement</strong>
-          <p>The multiplier entitlement is attached to the registered wallet, not to the display name. The supporter uses that wallet to authorize the contribution and later ACROWN purchases. AstroCrown never asks for or stores the wallet's seed phrase or private key.</p>
+          <p>The multiplier entitlement is attached to the registered wallet, not to the display name. The participant uses that wallet to authorize the contribution and later ACROWN purchases. AstroCrown never asks for or stores the wallet's seed phrase or private key.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Public GitHub records and backups</strong>
-          <p>The public audit record may show the wallet address, member pseudonym, verified contribution transaction, multiplier eligibility, completed purchases and remaining programme allowance. Dated, append-only snapshots should include checksums and reconciliation totals.</p>
+          <p>The public audit record may show the wallet address, participant display name, verified contribution transaction, multiplier eligibility, completed purchases and remaining programme allowance. Dated, append-only snapshots should include checksums and reconciliation totals.</p>
         </article>
         <article class="transparency-card">
           <strong>4. No identity-document collection</strong>
@@ -575,11 +675,39 @@
       <p class="fine-print">The wallet owner remains responsible for wallet security and transaction approvals. Never share a seed phrase, private key or recovery phrase with AstroCrown or anyone claiming to represent it. The repository is public, so only the expressly public wallet, pseudonym and audit fields described by the programme may be published; credentials and signing secrets must never be included.</p>
     </section>
 
+    <section class="section" id="programme-activity" aria-labelledby="programme-activity-title">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Verified programme record</div>
+          <h2 id="programme-activity-title">Genesis Programme Activity</h2>
+        </div>
+        <p>Participant events will be displayed only after the underlying action has been verified and recorded.</p>
+      </div>
+      <div class="activity-feed-shell" id="genesis-activity-feed" data-feed-state="empty" aria-live="off">
+        <div class="activity-feed-head">
+          <strong>Verified activity feed</strong>
+          <span class="activity-feed-state">Preview · no events available</span>
+        </div>
+        <div class="activity-feed-empty">
+          <strong>No verified participant events are being displayed.</strong>
+          <p>This development preview contains no sample participants or fabricated activity. A future feed will distinguish wallet registration, verified contribution, purchase allowance credited, ACROWN purchase completed and delivery confirmed.</p>
+        </div>
+      </div>
+      <div class="activity-event-types" aria-label="Planned verified activity types">
+        <span>Wallet registered</span>
+        <span>Contribution verified</span>
+        <span>Purchase allowance credited</span>
+        <span>ACROWN purchased</span>
+        <span>Delivery confirmed</span>
+      </div>
+      <p class="fine-print">The planned presentation uses an infinite vertical ticker with typewriter-style entry and slide/fade transitions. “Live Programme Activity” will be used only for genuinely current events. Historical playback will be labelled “Replay Verified Programme Activity” and will retain each event's original timestamp. Animation will respect reduced-motion preferences and will never create activity records.</p>
+    </section>
+
     <section class="section" aria-labelledby="rules-title">
       <div class="section-heading">
         <div>
           <div class="eyebrow">Programme principles</div>
-          <h2 id="rules-title">What the supporter programme does — and does not do</h2>
+          <h2 id="rules-title">What the ACROWN Genesis Programme does — and does not do</h2>
         </div>
       </div>
       <div class="rule-grid">
@@ -589,23 +717,29 @@
         </article>
         <article class="rule-card">
           <h3>The multiplier is purchase eligibility, not free tokens</h3>
-          <p>A verified qualifying contribution creates a personal ACROWN purchase allowance using the approved multiplier/rate. This is not an airdrop or bonus token issuance. The member may purchase up to their unused personal allowance at the applicable ACS floor, subject to any approved programme-wide cap.</p>
+          <p>A verified qualifying contribution creates a personal ACROWN purchase allowance at 25 ACROWN per USDT 1. This is not an airdrop or bonus token issuance. The participant may purchase up to their unused personal allowance at the applicable ACS floor, subject to the fixed 25,000,000-ACROWN programme-wide ceiling and remaining capacity.</p>
         </article>
         <article class="rule-card">
           <h3>Used entitlement is not replenished by resale</h3>
           <p>Under the proposed model, each completed purchase consumes the corresponding part of the entitlement. Reselling those purchased tokens does not restore the consumed capacity.</p>
         </article>
         <article class="rule-card">
+          <h3>Public purchases begin only at official launch</h3>
+          <p>All ordinary/public ACROWN purchase routes operated or authorized by AstroCrown remain disabled until the official ACROWN launch. A Genesis Programme allowance is a future right to make a purchase after launch, not permission to purchase early. This restriction does not claim control over independent third-party or private transfers outside AstroCrown-operated or authorized routes.</p>
           <h3>Allocation and sale are different</h3>
           <p>A reserved purchase opportunity is not a completed sale. Unsold tokens remain platform inventory and do not enter circulating supply merely because an entitlement exists.</p>
         </article>
         <article class="rule-card">
-          <h3>The ACS floor is a protocol constraint</h3>
-          <p>Programme operations must preserve the ACS-defined floor, F = V/C. External market prices may differ from the ACS floor and are not guaranteed by this page.</p>
+          <h3>The ACS floor is protected from fees</h3>
+          <p>The governing formula is F = V/C, where V is the reserve vault and C is circulating ACROWN. A purchase of q ACROWN must credit the full q × F to V. When Paymaster is active, one all-inclusive ACROWN-denominated fee includes network execution cost; no separate network-fee line is added. External market prices may differ from F.</p>
         </article>
         <article class="rule-card">
-          <h3>The first qualification threshold and global cap must be clear</h3>
-          <p>The minimum first contribution, approved multiplier/rate, any programme-wide ACROWN cap, purchase window and applicable cancellation/refund terms must be published before contributions open. Each member's personal allowance is calculated from verified contributions and the approved multiplier; an approved global cap is an additional aggregate limit.</p>
+          <h3>ACS and Paymaster apply protocol economics</h3>
+          <p>AstroCrown is designed to apply the same floor/roof and Paymaster economics to circular or self-directed trading as to every other transaction, rather than policing a holder's trading intent. The intended outcome is that round-trip costs make extraction unattractive and may benefit the community through the published fee design; this must be proven from the final mechanics, not assumed.</p>
+        </article>
+        <article class="rule-card">
+          <h3>The qualification threshold and purchase cap</h3>
+          <p>The multiplier is fixed at 25 ACROWN per USDT 1 of verified contribution, with an aggregate contribution ceiling of USDT 1,000,000 and a maximum programme-wide purchase allowance of 25,000,000 ACROWN. The minimum first contribution, floor-price calculation/version, rounding rules, programme duration/closure terms and applicable cancellation/refund terms must be published before contributions open. Each wallet's personal allowance is calculated only from verified contributions sent by that same wallet; the shared global cap is an additional limit.</p>
         </article>
       </div>
     </section>
@@ -614,19 +748,19 @@
       <div class="section-heading">
         <div>
           <div class="eyebrow">Public accountability</div>
-          <h2 id="transparency-title">Every use of supporter funds, publicly accounted for</h2>
+          <h2 id="transparency-title">Every use of Genesis Programme funds, publicly accounted for</h2>
         </div>
-        <p>Supporters and the public should be able to follow contributions into the programme treasury and trace every subsequent use of those funds.</p>
+        <p>Genesis Programme participants and the public should be able to follow contributions into the programme treasury and trace every subsequent use of those funds.</p>
       </div>
-      <p class="transparency-intro">The programme should use a dedicated, separately accounted-for supporter treasury. Its funds must remain distinguishable from the ACS reserve and the separately designated competition-prize allocation. The public record is intended to cover every confirmed contribution, outgoing payment, treasury-to-treasury transfer, network fee and off-chain expenditure attributable to the programme. Public accounting entries will be paired with independently checkable evidence wherever the underlying activity permits it.</p>
+      <p class="transparency-intro">The programme should use a dedicated, separately accounted-for Genesis Programme treasury. Its funds must remain distinguishable from the ACS reserve and the separately designated competition-prize allocation. The public record is intended to cover every confirmed contribution, outgoing payment, treasury-to-treasury transfer, network fee and off-chain expenditure attributable to the programme. Public accounting entries will be paired with independently checkable evidence wherever the underlying activity permits it.</p>
       <div class="transparency-grid">
         <article class="transparency-card">
-          <strong>1. Segregated supporter treasury</strong>
-          <p>Supporter funds will be separately accounted for and kept distinguishable from the ACS reserve and competition-prize allocation. Any transfer to another wallet or account must remain traceable.</p>
+          <strong>1. Segregated Genesis Programme treasury</strong>
+          <p>Genesis Programme funds will be separately accounted for and kept distinguishable from the ACS reserve and competition-prize allocation. Any transfer to another wallet or account must remain traceable.</p>
         </article>
         <article class="transparency-card">
           <strong>2. Public contribution record</strong>
-          <p>Each confirmed USDT contribution will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The registered supporter wallet, observed transaction source and account association will be stored as separate fields with an explicit verification status.</p>
+          <p>Each confirmed USDT contribution will be recorded with its date and time, network, token identifier, amount, receiving treasury address and transaction reference. The registered participant wallet, observed transaction source and account association will be stored as separate fields with an explicit verification status.</p>
         </article>
         <article class="transparency-card">
           <strong>3. Every use of funds</strong>
@@ -638,13 +772,13 @@
         </article>
       </div>
 
-      <div class="ledger-shell" aria-label="Supporter programme public ledger status">
+      <div class="ledger-shell" aria-label="Genesis Programme public ledger status">
         <div class="ledger-head">
-          <strong>Supporter fund transparency ledger</strong>
+          <strong>Genesis Programme treasury ledger</strong>
           <span>Not yet live</span>
         </div>
         <div class="ledger-empty">
-          <strong>No supporter contributions accepted in this development preview.</strong>
+          <strong>No Genesis Programme contributions accepted in this development preview.</strong>
           <p>No programme inflows or expenditures are being represented here as actual transactions. Once the programme is activated, this area is intended to show the live reconciled ledger and historical records rather than illustrative or fabricated entries.</p>
           <div class="ledger-fields">
             <div class="ledger-field"><b>Contribution inflows</b><span>Timestamp · amount · USDT token/network · sender/treasury references · transaction hash</span></div>
@@ -664,49 +798,69 @@
       <div class="section-heading">
         <div>
           <div class="eyebrow">Questions</div>
-          <h2 id="faq-title">Supporter programme FAQ</h2>
+          <h2 id="faq-title">ACROWN Genesis Programme FAQ</h2>
         </div>
       </div>
       <div class="faq">
         <details>
           <summary>Can I cancel a confirmed contribution or request a refund?</summary>
-          <p>The programme is designed to be non-cancellable and to offer no voluntary refunds once a contribution has been confirmed and recorded. Review the final terms carefully before sending any funds. This policy does not remove a remedy or right that applicable law makes mandatory.</p>
+          <p>The cancellation and refund policy has not been finalised. The complete rules, including treatment of confirmed, failed, duplicate, excess or misdirected contributions and any mandatory legal remedies, will be published before the programme opens. Do not send funds while the programme remains closed.</p>
         </details>
         <details>
-          <summary>How can I verify what AstroCrown does with supporter funds?</summary>
+          <summary>How can I verify what AstroCrown does with Genesis Programme funds?</summary>
           <p>The public ledger is intended to disclose every contribution and every use of programme funds. On-chain transactions will link to the correct network explorer; off-chain payments will be supported by accounting evidence such as receipts, invoices or reconciled records. An explorer link proves the on-chain movement, not by itself the purpose of the expenditure.</p>
         </details>
         <details>
+          <summary>Can anyone purchase ACROWN before its official launch?</summary>
+          <p>No public ACROWN Genesis Programme purchase is available before the official ACROWN launch, including for wallets that have already registered and earned an allowance. Contributions create only a future right to purchase; they do not buy, issue or deliver ACROWN. Specifically authorized administrator qualification tests are separate, auditable test activity and do not count as public participant purchases or change participant allowances.</p>
+        </details>
+        <details>
+          <summary>Can an unused allowance expire?</summary>
+                  <p>An earned wallet-specific allowance does not expire merely because that wallet has not used it for a period of time under the current intended rules. The final programme duration and any programme-wide closure conditions remain to be confirmed and will be published before contributions open.</p>
+        </details>
+        <details>
           <summary>Does my USDT contribution buy ACROWN?</summary>
-          <p>No. The proposed programme separates the supporter contribution from a later ACROWN purchase. The contribution does not itself issue tokens or automatically increase the ACS reserve. Any later purchase would be a separate transaction under final approved terms.</p>
+          <p>No. The proposed programme separates the Genesis Programme contribution from a later ACROWN purchase. The contribution does not itself issue tokens or automatically increase the ACS reserve. Any later purchase would be a separate transaction under final approved terms.</p>
         </details>
         <details>
           <summary>What does the multiplier allow me to do?</summary>
-          <p>A verified qualifying contribution establishes a personal ACROWN purchase allowance using the approved multiplier/rate. Illustration only: 1,000 USD₮ at 25 ACROWN per USD₮ gives a 25,000 ACROWN allowance. This is permission to make a later purchase at the applicable ACS floor, not free tokens or automatic issuance. Any programme-wide cap also applies. The final rate, threshold, floor-price rules and cap must be published before launch.</p>
+          <p>A verified qualifying contribution establishes a personal ACROWN purchase allowance at 25 ACROWN per USDT 1. Example: 1,000 USD₮ creates a right to purchase up to 25,000 ACROWN at the applicable ACS floor. This is permission to make a later purchase, not free tokens or automatic issuance. The programme-wide maximum is 25,000,000 ACROWN; the minimum first-contribution threshold and final floor-price/rounding rules must be published before launch.</p>
         </details>
         <details>
           <summary>Can I send USDT now?</summary>
           <p>No. This is a development preview and does not accept USDT. No receiving address or network is published. Do not send funds for this programme until an official, verified payment flow is enabled on the AstroCrown website.</p>
         </details>
         <details>
-          <summary>What is the USDT 150 transition threshold?</summary>
-          <p>It is a provisional aggregate funding gate intended to cover the initial move from $0 qualification to paid hosting, including at least three months of hosting, the domain, essential backup and required migration/network costs. It is not a provider quote. The final amount must be checked against actual order costs before contributions open; if those costs exceed USDT 150, the target must be raised.</p>
+          <summary>How will Genesis Programme funds be used?</summary>
+                  <p>Contributions are received into dedicated programme treasuries and remain separately accounted for from ACS reserve V and the competition-prize allocation. The permitted uses, allocation rules and spending controls must be published before contributions open. No receiving addresses or payment function are available in this preview.</p>
         </details>
         <details>
-          <summary>How does my member name and wallet registration work?</summary>
-          <p>A random member pseudonym is generated when you register and you may customize it. Your connected wallet address is the public identifier that controls the entitlement and authorizes purchases. No legal name or identity document is required by the programme design. The public GitHub audit snapshot may link your pseudonym, wallet address and programme transactions. Never share your seed phrase or private key.</p>
+          <summary>How does my participant display name and wallet registration work?</summary>
+          <p>A random participant display name is generated when you register and you may customize it. Your connected wallet address is the public identifier that controls the entitlement and authorizes purchases. No legal name or identity document is required by the programme design. The public GitHub audit snapshot may link your pseudonym, wallet address and programme transactions. Never share your seed phrase or private key.</p>
         </details>
         <details>
-          <summary>Is the USDT 250,000 target the ACROWN purchase allowance?</summary>
-          <p>No. USDT 250,000 is the provisional aggregate contribution planning ceiling. A member's personal multiplier allowance is calculated separately from any programme-wide ACROWN cap. The programme-wide cap, if adopted, limits the aggregate purchase capacity of all supporters.</p>
+          <summary>What does the USDT 1,000,000 contribution ceiling represent?</summary>
+          <p>It is the maximum aggregate verified contribution across Ethereum, Tron and Solana. At the approved 25:1 multiplier, it can create no more than 25,000,000 ACROWN of programme purchase allowance. Each wallet's personal allowance is calculated separately from its own verified contributions; wallets linked to one participant do not pool balances. The shared purchase ceiling limits the aggregate ACROWN quantity all eligible wallets may buy at the approved floor price.</p>
         </details>
         <details>
           <summary>What happens if I send more USDT than the authorized amount?</summary>
           <p>Do not do this. Excess funds are not credited with extra entitlement and are not promised to be returned, refunded or compensated. A direct or excess transfer may be permanently unrecoverable. Even a failed or rejected blockchain transaction can still consume network fees. Never assume AstroCrown can recover or return excess funds.</p>
         </details>
         <details>
+          <summary>Are gas and Paymaster fees included in the ACS floor price?</summary>
+          <p>No. For a purchase of q ACROWN, the full q × F floor-price consideration must be credited to the ACS reserve V. When Paymaster is active, the user pays one all-inclusive Paymaster fee denominated in ACROWN; that fee already includes network execution cost and must not be duplicated as a separate network fee. Without Paymaster, native network gas is paid through the direct-wallet route. Neither route may reduce the floor-price credit to V.</p>
+        </details>
+        <details>
+          <summary>Can I resell ACROWN after buying it?</summary>
+          <p>Purchased ACROWN may be resold through an available external exchange or swap venue, subject to applicable terms and law. Resale does not restore the purchase allowance already consumed. A higher external price may create an opportunity only if it is executable after fees and slippage; the ACS floor does not guarantee an external market price, profit, listing or liquidity. Selling can also create market sell pressure. The native ACS floor/roof and Paymaster rules are intended to make circular activity costly to the trader and potentially value-accretive to the community under a future qualified fee allocation; the allocation remains under research. AstroCrown does not police holder trading intent. This outcome requires formal economic proof and does not control third-party venues.</p>
+        </details>
+        <details>
+          <summary>Are ACS corridor settings and performance claims final?</summary>
+          <p>No. The current design keeps the reserve-derived floor relationship F = V/C and the existence of an official roof and corridor as structural elements. The corridor margin above F, crash-classification thresholds, sale-surplus allocation and other operating parameters remain subject to research, optimisation, implementation and qualification. No proposed value is presented as final or optimal, and no crash-resilience or market-performance result is promised before the complete system is qualified and publicly released.</p>
+        </details>
+        <details>
           <summary>Does the ACS guarantee the external market price?</summary>
-          <p>No. The ACS floor is an internally defined reserve-to-circulation measure, F = V/C. It is distinct from the price at which ACROWN might trade on an external venue.</p>
+          <p>No. The ACS floor is an internally defined reserve-to-circulation measure, F = V/C, and the protocol must never allow it to decrease. A sale at F that credits the full consideration to V preserves the floor, all else equal. When Paymaster is active, its single ACROWN-denominated fee includes network execution cost; without Paymaster, direct native gas applies. The ACS floor is distinct from the price at which ACROWN might trade on an external venue.</p>
         </details>
       </div>
     </section>
@@ -714,15 +868,15 @@
     <section class="section participate-panel" id="participate" aria-labelledby="participate-title">
       <div>
         <div class="eyebrow">Participation status</div>
-        <h2 id="participate-title">The supporter programme is being prepared.</h2>
-        <p>Real participation will open only after the programme terms, Ethereum/Tron/Solana USD₮ networks, three verified receiving treasuries, wallet ownership checks, on-chain confirmation, account association, operational controls and required reviews are complete. The 180-day purchase period begins at that operational activation.</p>
-        <p id="supporter-runtime-status" role="status" aria-live="polite">Checking the isolated Supporter Programme service. Contributions remain closed.</p>
+        <h2 id="participate-title">The ACROWN Genesis Programme is being prepared.</h2>
+        <p>Individual wallet allowances do not expire merely through non-use under the current intended rules. The final programme duration and closure policy will be published before contributions open.</p>
+        <p id="supporter-runtime-status" role="status" aria-live="polite">Checking the isolated ACROWN Genesis Programme service. Contributions remain closed.</p>
       </div>
       <button class="disabled-button" type="button" disabled aria-disabled="true">USDT transfers not enabled</button>
     </section>
 
     <footer class="site-footer">
-      <span>© AstroCrown project · Supporter programme development preview · Not open for contributions.</span>
+      <span>© AstroCrown project · ACROWN Genesis Programme development preview · Not open for contributions.</span>
       <nav aria-label="Footer navigation">
         <a href="../index.html">AstroCrown homepage</a>
         <a href="https://github.com/ACROWN-System/AstroCrown-Web" target="_blank" rel="noreferrer">Project repository ↗</a>

@@ -1,6 +1,120 @@
 (function () {
   "use strict";
 
+  // Public brand: ACROWN Genesis Programme. Existing supporter-prefixed DOM IDs,
+  // API paths and internal variables remain compatibility identifiers only; they
+  // do not define an account role, programme authority or administrator permission.
+
+  function initializePublicEventCountdown() {
+    var countdown = document.getElementById("public-event-countdown");
+    if (!countdown) return;
+    var publicAtText = String(countdown.getAttribute("data-public-deployment-at") || "").trim();
+    var registrationStage = document.getElementById("registration-countdown-stage");
+    var launchStage = document.getElementById("launch-countdown-stage");
+    var registrationDigits = document.getElementById("registration-countdown");
+    var launchDigits = document.getElementById("launch-countdown");
+    var registrationState = registrationStage && registrationStage.querySelector(".countdown-stage-state");
+    var launchState = launchStage && launchStage.querySelector(".countdown-stage-state");
+    var registrationCaption = document.getElementById("registration-countdown-caption");
+    var launchCaption = document.getElementById("launch-countdown-caption");
+    var daySeconds = 24 * 60 * 60;
+    var publicAt = new Date(publicAtText);
+    var validTimestamp = /^\\d{4}-\\d{2}-\\d{2}T00:00:00(?:\\.000)?Z$/.test(publicAtText) &&
+      Number.isFinite(publicAt.getTime()) &&
+      publicAt.toISOString().slice(0, 10) === publicAtText.slice(0, 10) &&
+      publicAt.getUTCHours() === 0 && publicAt.getUTCMinutes() === 0 &&
+      publicAt.getUTCSeconds() === 0 && publicAt.getUTCMilliseconds() === 0;
+
+    function setDigits(container, values, labels) {
+      if (!container) return;
+      container.replaceChildren();
+      values.forEach(function (value, index) {
+        var span = document.createElement("span");
+        var strong = document.createElement("strong");
+        var small = document.createElement("small");
+        strong.textContent = String(value).padStart(2, "0");
+        small.textContent = labels[index];
+        span.append(strong, small);
+        container.appendChild(span);
+      });
+    }
+
+    function resetNotAnnounced() {
+      setDigits(registrationDigits, ["—", "—", "—", "—"], ["Days", "Hours", "Minutes", "Seconds"]);
+      setDigits(launchDigits, ["—", "—", "—"], ["Hours", "Minutes", "Seconds"]);
+      if (registrationState) registrationState.textContent = "Not announced";
+      if (launchState) launchState.textContent = "Starts at cutoff";
+      if (registrationCaption) registrationCaption.textContent = "Waiting for the official UTC event timestamp.";
+      if (launchCaption) launchCaption.textContent = "Wallet eligibility has not yet been frozen.";
+      if (registrationStage) registrationStage.classList.add("active");
+      if (launchStage) launchStage.classList.remove("active", "complete");
+    }
+
+    if (!validTimestamp) {
+      resetNotAnnounced();
+      return;
+    }
+
+    var publicAtMs = publicAt.getTime();
+    var cutoffAtMs = publicAtMs - daySeconds * 1000;
+
+    function parts(milliseconds) {
+      var remaining = Math.max(0, Math.floor(milliseconds / 1000));
+      var days = Math.floor(remaining / 86400);
+      var hours = Math.floor((remaining % 86400) / 3600);
+      var minutes = Math.floor((remaining % 3600) / 60);
+      var seconds = remaining % 60;
+      return { days: days, hours: hours, minutes: minutes, seconds: seconds };
+    }
+
+    function tick() {
+      var now = Date.now();
+      if (now < cutoffAtMs) {
+        var beforeCutoff = parts(cutoffAtMs - now);
+        setDigits(registrationDigits,
+          [beforeCutoff.days, beforeCutoff.hours, beforeCutoff.minutes, beforeCutoff.seconds],
+          ["Days", "Hours", "Minutes", "Seconds"]);
+        setDigits(launchDigits, ["—", "—", "—"], ["Hours", "Minutes", "Seconds"]);
+        if (registrationState) registrationState.textContent = "Registration open";
+        if (launchState) launchState.textContent = "Starts at cutoff";
+        if (registrationCaption) registrationCaption.textContent = "Wallet registration closes at " + new Date(cutoffAtMs).toISOString() + ".";
+        if (launchCaption) launchCaption.textContent = "The 24-hour launch phase begins when registration closes.";
+        if (registrationStage) registrationStage.classList.add("active");
+        if (launchStage) launchStage.classList.remove("active", "complete");
+        return;
+      }
+
+      if (now < publicAtMs) {
+        var beforeLaunch = parts(publicAtMs - now);
+        setDigits(registrationDigits, ["00", "00", "00", "00"], ["Days", "Hours", "Minutes", "Seconds"]);
+        setDigits(launchDigits,
+          [beforeLaunch.hours + (beforeLaunch.days * 24), beforeLaunch.minutes, beforeLaunch.seconds],
+          ["Hours", "Minutes", "Seconds"]);
+        if (registrationState) registrationState.textContent = "Registration closed";
+        if (launchState) launchState.textContent = "Final 24 hours";
+        if (registrationCaption) registrationCaption.textContent = "The verified-wallet eligibility set is frozen.";
+        if (launchCaption) launchCaption.textContent = "Public deployment begins at " + publicAt.toISOString() + ".";
+        if (registrationStage) registrationStage.classList.remove("active");
+        if (launchStage) launchStage.classList.add("active");
+        return;
+      }
+
+      setDigits(registrationDigits, ["00", "00", "00", "00"], ["Days", "Hours", "Minutes", "Seconds"]);
+      setDigits(launchDigits, ["00", "00", "00"], ["Hours", "Minutes", "Seconds"]);
+      if (registrationState) registrationState.textContent = "Closed";
+      if (launchState) launchState.textContent = "Event time reached";
+      if (registrationCaption) registrationCaption.textContent = "The eligible-wallet set remains frozen.";
+      if (launchCaption) launchCaption.textContent = "The scheduled public-deployment timestamp has arrived.";
+      if (registrationStage) registrationStage.classList.remove("active");
+      if (launchStage) launchStage.classList.add("complete");
+    }
+
+    tick();
+    window.setInterval(tick, 1000);
+  }
+
+  initializePublicEventCountdown();
+
   var solanaSelect = document.getElementById("supporter-wallet-choice");
   var solanaConnectButton = document.getElementById("supporter-wallet-connect");
   var solanaClearButton = document.getElementById("supporter-wallet-clear");
@@ -66,7 +180,7 @@
 
   function updatePseudonym() {
     var name = pseudonymInput.value.trim();
-    pseudonymDisplay.textContent = name || "Choose a member name";
+    pseudonymDisplay.textContent = name || "Choose a participant display name";
   }
 
   pseudonymInput.value = generatePseudonym();
@@ -75,7 +189,7 @@
   randomizeButton.addEventListener("click", function () {
     pseudonymInput.value = generatePseudonym();
     updatePseudonym();
-    solanaFeedback.textContent = "A new preview pseudonym has been generated. It is not saved to a member record.";
+    solanaFeedback.textContent = "A new preview display name has been generated. It is not saved to a participant record.";
     solanaFeedback.dataset.state = "neutral";
   });
 
@@ -299,7 +413,7 @@
       evmConnectButton.disabled = true;
       setFeedback(
         evmFeedback,
-        "EVM wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "EVM wallet connected. It is not registered yet; use the participant controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -465,7 +579,7 @@
       solanaConnectButton.disabled = true;
       setFeedback(
         solanaFeedback,
-        "Solana wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.",
+        "Solana wallet connected. It is not registered yet; use the participant controls below to prove ownership with an off-chain message signature.",
         "connected"
       );
       updateSupporterActionButtons();
@@ -621,7 +735,7 @@
         : "Wallet connected; active network not independently confirmed in this preview";
       tronConnectButton.textContent = "TRON wallet connected";
       renderTronChoices();
-      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the member controls below to prove ownership with an off-chain message signature.", "connected");
+      setFeedback(tronFeedback, "TRON wallet connected. It is not registered yet; use the participant controls below to prove ownership with an off-chain message signature.", "connected");
       updateSupporterActionButtons();
     } catch (error) {
       tronConnectButton.textContent = "Connect TRON wallet";
@@ -719,7 +833,7 @@
       return;
     }
     if (supporterMember) {
-      if (memberSummary) memberSummary.textContent = supporterMember.member.username + " · verified supporter";
+      if (memberSummary) memberSummary.textContent = supporterMember.member.username + " · verified Genesis Programme participant";
       return;
     }
     if (!wallet) {
@@ -746,7 +860,7 @@
       if (response.status === 428) {
         throw new Error("First acknowledge the public test-environment notice on the AstroCrown homepage, then return here.");
       }
-      throw new Error(data && data.error ? data.error : "The supporter service returned HTTP " + response.status + ".");
+      throw new Error(data && data.error ? data.error : "The Genesis Programme service returned HTTP " + response.status + ".");
     }
     return data;
   }
@@ -766,12 +880,12 @@
 
   function applySupporterProfile(data) {
     if (!data || !data.member || typeof data.member.username !== "string" || !Array.isArray(data.wallets)) {
-      throw new Error("The supporter service returned an incomplete member profile.");
+      throw new Error("The Genesis Programme service returned an incomplete member profile.");
     }
     supporterMember = data;
     pseudonymInput.value = data.member.username;
     updatePseudonym();
-    if (memberSummary) memberSummary.textContent = data.member.username + " · verified supporter";
+    if (memberSummary) memberSummary.textContent = data.member.username + " · verified Genesis Programme participant";
     if (memberWalletList) {
       memberWalletList.textContent = data.wallets.length
         ? data.wallets.map(function (wallet) {
@@ -800,10 +914,10 @@
       } else if (response.status === 428) {
         setFeedback(memberFeedback, "Acknowledge the public staging notice on the AstroCrown homepage before registering or signing in.", "neutral");
       } else if (response.status !== 401) {
-        setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+        setFeedback(memberFeedback, "The participant session could not be checked. Contributions remain disabled.", "error");
       }
     } catch (_) {
-      setFeedback(memberFeedback, "The supporter member session could not be checked. Contributions remain disabled.", "error");
+      setFeedback(memberFeedback, "The participant session could not be checked. Contributions remain disabled.", "error");
     }
   }
 
@@ -896,7 +1010,7 @@
       randomizeButton.disabled = false;
       pseudonymInput.value = generatePseudonym();
       updatePseudonym();
-      setFeedback(memberFeedback, "You have signed out. The supporter session has been revoked.", "neutral");
+      setFeedback(memberFeedback, "You have signed out. The programme session has been revoked.", "neutral");
     } catch (error) {
       setFeedback(memberFeedback, error && error.message ? error.message : "Sign out could not be completed.", "error");
     } finally {
@@ -914,7 +1028,7 @@
     if (!statusElement) return;
     var runtimeMarker = document.querySelector('meta[name="astro-supporter-runtime"]');
     if (!runtimeMarker || runtimeMarker.content !== "worker-staging" || window.location.protocol !== "https:") {
-      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Standalone preview · Not connected to the programme backend. Payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
       return;
     }
@@ -936,10 +1050,25 @@
         Array.isArray(payload.networks) &&
         payload.networks.length === 3;
       if (!prelaunch) throw new Error("The programme status could not be qualified.");
-      statusElement.textContent = "Programme service connected · PRELAUNCH · Ethereum, Tron and Solana USDT intake is disabled. Do not send funds.";
+      var networkNames = { ethereum: "Ethereum", tron: "Tron", solana: "Solana" };
+      var destinationStatus = payload.networks.map(function (network) {
+        var label = networkNames[network.network] || "Unknown network";
+        if (network.networkConfigured && network.treasuryAddressFormatValid) {
+          return label + " destination configuration enabled";
+        }
+        if (network.treasuryAddressFormatValid) {
+          return label + " address format valid; activation pending";
+        }
+        if (network.treasuryConfigured) {
+          return label + " address format invalid; review required";
+        }
+        return label + " receiving address not configured";
+      }).join(" · ");
+      statusElement.textContent = "Programme service connected · PRELAUNCH · " + destinationStatus +
+        " · Payment acceptance disabled. Do not send funds.";
       statusElement.dataset.state = "closed";
     } catch (_) {
-      statusElement.textContent = "Programme service status unavailable · Contributions remain closed. Do not send funds.";
+      statusElement.textContent = "Programme service status unavailable · Payments remain closed. Do not send funds.";
       statusElement.dataset.state = "closed";
     }
   }

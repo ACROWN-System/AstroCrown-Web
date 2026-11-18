@@ -2,7 +2,43 @@
  * Dependency-free, deterministic entitlement arithmetic.
  * This module never reads RPC data, signs transactions or enables payments.
  */
-export const PROGRAMME_WINDOW_SECONDS = 180 * 24 * 60 * 60;
+export const PROGRAMME_USDT_DECIMALS = 6;
+export const PROGRAMME_MULTIPLIER_NUMERATOR = "25";
+export const PROGRAMME_MULTIPLIER_DENOMINATOR = "1";
+export const PROGRAMME_CONTRIBUTION_CEILING_USDT = "1000000";
+export const PROGRAMME_CONTRIBUTION_CEILING_USDT_BASE_UNITS = "1000000000000";
+export const PROGRAMME_GLOBAL_ACROWN_CAP_WHOLE = "25000000";
+export const WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS = 24 * 60 * 60;
+
+export function walletRegistrationClosesAt(publicDeploymentAtSeconds) {
+  if (!Number.isSafeInteger(publicDeploymentAtSeconds)
+      || publicDeploymentAtSeconds <= WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS) {
+    throw new TypeError("Public deployment must be a valid timestamp later than the 24-hour registration lead.");
+  }
+  if (publicDeploymentAtSeconds % WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS !== 0) {
+    throw new TypeError("Public deployment must be scheduled at 00:00:00 UTC.");
+  }
+  return publicDeploymentAtSeconds - WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS;
+}
+
+export function isWalletRegistrationOpen(nowSeconds, publicDeploymentAtSeconds) {
+  if (!Number.isSafeInteger(nowSeconds) || nowSeconds <= 0
+      || !Number.isSafeInteger(publicDeploymentAtSeconds)
+      || publicDeploymentAtSeconds <= WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS
+      || publicDeploymentAtSeconds % WALLET_REGISTRATION_CUTOFF_LEAD_SECONDS !== 0) {
+    return false;
+  }
+  return nowSeconds < walletRegistrationClosesAt(publicDeploymentAtSeconds);
+}
+
+export function remainingContributionCapacity(confirmedTotalBaseUnits) {
+  const confirmed = integer(confirmedTotalBaseUnits, "Confirmed contributions");
+  const ceiling = BigInt(PROGRAMME_CONTRIBUTION_CEILING_USDT_BASE_UNITS);
+  if (confirmed > ceiling) {
+    throw new RangeError("Confirmed contributions exceed the programme ceiling.");
+  }
+  return (ceiling - confirmed).toString();
+}
 
 function integer(value, label) {
   const stringValue = String(value);
@@ -10,19 +46,6 @@ function integer(value, label) {
     throw new TypeError(label + " must be a non-negative canonical integer string.");
   }
   return BigInt(stringValue);
-}
-
-export function programmeClosesAt(activatedAtSeconds) {
-  if (!Number.isSafeInteger(activatedAtSeconds) || activatedAtSeconds <= 0) {
-    throw new TypeError("Activation must be a positive safe Unix timestamp in seconds.");
-  }
-  return activatedAtSeconds + PROGRAMME_WINDOW_SECONDS;
-}
-
-export function isWithinProgrammeWindow(now, activatedAt, closesAt) {
-  if (![now, activatedAt, closesAt].every(Number.isSafeInteger)) return false;
-  return activatedAt > 0 && closesAt === activatedAt + PROGRAMME_WINDOW_SECONDS
-    && now >= activatedAt && now < closesAt;
 }
 
 /** Rate means whole ACROWN per one whole USD₮. Returns ACROWN base units. */
