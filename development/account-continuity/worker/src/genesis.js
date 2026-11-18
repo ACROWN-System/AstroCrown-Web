@@ -175,7 +175,7 @@ function createMessage({ origin, network, address, purpose, challengeId, nonce, 
     "Request ID: " + challengeId,
     "",
     "This is an off-chain message signature only. It does not authorize a transaction, token approval, transfer, payment or gas expenditure.",
-    "The primary wallet is the sole Genesis identity and recovery anchor. Genesis cannot restore a wallet or move its entitlements to another wallet."
+    "The primary wallet is the sole Genesis identity and recovery anchor. Genesis cannot restore a lost wallet or move its identity, badge or attributable activity history to another wallet. No personal purchase allowance exists."
   ].filter(Boolean).join("\n");
 }
 
