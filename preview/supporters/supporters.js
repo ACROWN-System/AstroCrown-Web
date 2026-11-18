@@ -1,4 +1,4 @@
-import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders, discoverDirectTronProviders, discoverDirectSolanaWallets, hasTronMessageSigner, isSolanaMainnet } from "./wallet-provider-adapters.mjs";
+import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders, discoverDirectTronProviders, discoverDirectSolanaWallets, hasTronMessageSigner, isSolanaMainnet, encodeEvmPersonalSignMessage } from "./wallet-provider-adapters.mjs";
 
 (function () {
   "use strict";
@@ -687,7 +687,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         address: connectedEvmAddress,
         mainnet: String(connectedEvmChainId || "").toLowerCase() === "0x1",
         sign: async function (message) {
-          return providerRequest(connectedEvm.provider, "personal_sign", [message, connectedEvmAddress]);
+          return providerRequest(connectedEvm.provider, "personal_sign", [encodeEvmPersonalSignMessage(message), connectedEvmAddress]);
         }
       };
     }
