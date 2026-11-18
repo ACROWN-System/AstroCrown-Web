@@ -303,14 +303,14 @@ def main() -> int:
                 page.locator(connect_id).click()
                 page.wait_for_function(
                     """args => document.querySelector(args.address).textContent.trim() === args.expected""",
-                    {"address":address_id, "expected":expected_address}
+                    arg={"address":address_id, "expected":expected_address}
                 )
                 actual = page.locator(address_id).inner_text().strip()
                 record(test_name, actual == expected_address, {"wallet":label, "address":actual})
                 page.locator(clear_id).click()
                 page.wait_for_function(
                     "(selector) => document.querySelector(selector).textContent.trim() === 'Not connected'",
-                    address_id
+                    arg=address_id
                 )
 
             page.wait_for_function("""() =>
