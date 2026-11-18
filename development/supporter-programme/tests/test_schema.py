@@ -11,6 +11,8 @@ TREASURY_MIGRATION = ROOT / "migrations" / "0003_genesis_usdt_treasury_addresses
 GENESIS_WALLET_MIGRATION = ROOT / "migrations" / "0004_genesis_wallet_native_identity.sql"
 WORKER_TREASURY_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0003_genesis_usdt_treasury_addresses.sql"
 WORKER_GENESIS_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0004_genesis_wallet_native_identity.sql"
+GLOBAL_ALLOWANCE_MIGRATION = ROOT / "migrations" / "0005_genesis_global_allowance_and_launch_freeze.sql"
+WORKER_GLOBAL_ALLOWANCE_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0005_genesis_global_allowance_and_launch_freeze.sql"
 
 class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
@@ -20,6 +22,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.db.executescript(WALLET_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(TREASURY_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(GENESIS_WALLET_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(GLOBAL_ALLOWANCE_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -52,7 +55,88 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "The Worker-deployed wallet-native Genesis migration must match the canonical migration.",
         )
 
-    def test_wallet_native_schema_has_primary_wallet_identity_unique_name_and_separate_entitlement(self):
+    def test_global_allowance_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_GLOBAL_ALLOWANCE_MIGRATION.read_bytes(),
+            GLOBAL_ALLOWANCE_MIGRATION.read_bytes(),
+            "The Worker-deployed global allowance/freeze migration must match the canonical migration.",
+        )
+
+    def test_global_pool_is_one_shared_usdt_balance_and_personal_entitlement_rows_are_rejected(self):
+        self.assertEqual(
+            self.db.execute(
+                "SELECT earned_usdt_base_units,reserved_usdt_base_units,consumed_usdt_base_units "
+                "FROM genesis_programme_allowance_state WHERE singleton=1"
+            ).fetchone(),
+            ("0", "0", "0"),
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,created_at,updated_at) "
+            "VALUES('gid-global','ethereum','0x987','0x987','Global Pool 2042','global pool 2042',1,1)"
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "programme-wide allowance pool"):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_entitlements(identity_id,updated_at) VALUES('gid-global',1)"
+            )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM genesis_wallet_entitlements").fetchone()[0],
+            0,
+        )
+
+    def test_launch_freeze_is_exactly_24_hours_before_acrown_and_permanent(self):
+        launch = 2_000_000_000
+        freeze = launch - 86_400
+        self.db.execute(
+            "UPDATE genesis_programme_control SET scheduled_acrown_launch_at=?,registration_freeze_at=?,updated_at=1 "
+            "WHERE singleton=1",
+            (launch, freeze),
+        )
+        self.db.execute(
+            "UPDATE genesis_programme_control SET registration_closed_at=?,updated_at=2 WHERE singleton=1",
+            (freeze,),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "closure is permanent"):
+            self.db.execute(
+                "UPDATE genesis_programme_control SET registration_closed_at=NULL WHERE singleton=1"
+            )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "cannot change after registration freeze"):
+            self.db.execute(
+                "UPDATE genesis_programme_control SET scheduled_acrown_launch_at=?,registration_freeze_at=? "
+                "WHERE singleton=1",
+                (launch + 3600, freeze + 3600),
+            )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(
+                "UPDATE genesis_programme_control SET acrown_launched_at=?,acs_floor_purchase_opened_at=?,"
+                "purchase_window_started_at=?,purchase_window_closes_at=? WHERE singleton=1",
+                (launch, launch + 1, launch, launch + 1 + 15552000),
+            )
+
+    def test_global_purchase_window_requires_both_launch_and_floor_service_and_is_180_days(self):
+        launch = 2_100_000_000
+        floor_open = launch + 7200
+        start = floor_open
+        close = start + 15_552_000
+        self.db.execute(
+            "UPDATE genesis_programme_control SET acrown_launched_at=?,acs_floor_purchase_opened_at=?,"
+            "purchase_window_started_at=?,purchase_window_closes_at=?,updated_at=1 WHERE singleton=1",
+            (launch, floor_open, start, close),
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT purchase_window_started_at,purchase_window_closes_at "
+                "FROM genesis_programme_control WHERE singleton=1"
+            ).fetchone(),
+            (start, close),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "purchase window is immutable"):
+            self.db.execute(
+                "UPDATE genesis_programme_control SET purchase_window_closes_at=? WHERE singleton=1",
+                (close + 1,),
+            )
+
+    def test_wallet_native_schema_has_primary_wallet_identity_unique_name_and_retires_personal_entitlement_rows(self):
         self.db.execute(
             "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
             "display_name,display_name_normalized,avatar_key,created_at,updated_at) "
@@ -63,9 +147,10 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "wallet_role,ownership_verified_at,proof_method,created_at) "
             "VALUES('gwa-primary','gid-primary','ethereum','0x111','0x111','PRIMARY',1,'EIP-191',1)"
         )
-        self.db.execute(
-            "INSERT INTO genesis_wallet_entitlements(identity_id,updated_at) VALUES('gid-primary',1)"
-        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "programme-wide allowance pool"):
+            self.db.execute(
+                "INSERT INTO genesis_wallet_entitlements(identity_id,updated_at) VALUES('gid-primary',1)"
+            )
         with self.assertRaises(sqlite3.IntegrityError):
             self.db.execute(
                 "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
@@ -78,11 +163,10 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             ).fetchone(),
             ("ethereum", "0x111", "SilverComet 4821"),
         )
-        self.assertEqual(
+        self.assertIsNone(
             self.db.execute(
                 "SELECT earned_acrown_base_units,consumed_acrown_base_units FROM genesis_wallet_entitlements WHERE identity_id='gid-primary'"
-            ).fetchone(),
-            ("0", "0"),
+            ).fetchone()
         )
 
     def test_genesis_wallet_addresses_are_unique_per_network_and_can_link_other_chains(self):
