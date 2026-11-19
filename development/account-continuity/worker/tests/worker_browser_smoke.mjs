@@ -461,8 +461,10 @@ async function testCommunityApi(accountIdentifier) {
   const fixtureTimestamp = new Date().toISOString();
   const requestSlug = "request-" + randomUUID().slice(0, 8);
   const privateSlug = "private-" + randomUUID().slice(0, 8);
+  const transferSlug = "handover-" + randomUUID().slice(0, 8);
   const requestSpaceId = "space_request_" + randomUUID().replace(/-/g, "");
   const privateSpaceId = "space_private_" + randomUUID().replace(/-/g, "");
+  const transferSpaceId = "space_transfer_" + randomUUID().replace(/-/g, "");
   executeLocalD1Fixture([
     "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
       [blockedAuthorId,blockedAuthorIdentifier,blockedAuthorHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
@@ -478,11 +480,18 @@ async function testCommunityApi(accountIdentifier) {
     "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
       [privateSpaceId,privateSlug,"Invitation Workflow Test","Synthetic private-space fixture","Test invitation lifecycle","Synthetic local test only","private","invite_only","active"].map(sqlLiteral).join(",") +
       ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
+    "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
+      [transferSpaceId,transferSlug,"Ownership Transfer Test","Synthetic public handover fixture","Test ownership succession","Synthetic local test only","public","open","active"].map(sqlLiteral).join(",") +
+      ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
     "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
       "SELECT " + sqlLiteral(requestSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
     "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
       "SELECT " + sqlLiteral(privateSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
-  ].join("\n"), "Create synthetic second account and local community membership fixtures");
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(transferSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(transferSpaceId) + ",account_id,'active','member'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(nonMemberIdentifier) + ";",
+  ].join("\n"), "Create synthetic second account, request/private fixtures and owner-transfer fixture");
 
   // Request-based membership is not active until an owner/moderator approves it.
   await setBrowserAccountSession(blockedAuthorToken);
@@ -587,6 +596,90 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(resolvedByReporter.status, "resolved");
   assert.equal(resolvedByReporter.resolution, "Resolved in the synthetic local browser test");
   assert.equal(dismissedByReporter.status, "dismissed");
+
+  // Ownership transfer is a two-party handover. The existing owner remains
+  // owner until the successor accepts; the former owner is then demoted.
+  await setBrowserAccountSession(nonMemberToken);
+  const nonOwnerTransfer = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier: blockedAuthorIdentifier, reason: "A non-owner must not transfer a community"
+  });
+  assert.equal(nonOwnerTransfer.status, 403, "only the current owner may propose ownership transfer.");
+
+  await setBrowserAccountSession(rootToken);
+  const targetNotMember = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier: blockedAuthorIdentifier, reason: "A proposed successor must already be a member"
+  });
+  assert.equal(targetNotMember.status, 409, "the proposed successor must already be an active community member.");
+  const transferCreated = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier: nonMemberIdentifier, reason: "Synthetic local ownership handover test"
+  });
+  assert.equal(transferCreated.status, 201, JSON.stringify(transferCreated.body));
+  const transferId = transferCreated.body.transfer.id;
+  assert.equal(transferCreated.body.transfer.status, "pending");
+  const pendingTransferLeave = await postWorkerJson("/api/community/communities/" + transferSlug + "/leave", {});
+  assert.equal(pendingTransferLeave.status, 409, "the current owner cannot leave before successor acceptance.");
+  const ownerTransferList = await getWorkerJson("/api/community/ownership-transfers");
+  assert.equal(ownerTransferList.status, 200);
+  assert.ok(ownerTransferList.body.outgoing.some(item => item.id === transferId));
+
+  await setBrowserAccountSession(blockedAuthorToken);
+  const wrongRecipientAccept = await postWorkerJson("/api/community/ownership-transfers/" + transferId + "/respond", {
+    action: "accept"
+  });
+  assert.equal(wrongRecipientAccept.status, 404, "only the intended successor may accept the transfer.");
+  const transferSpaceJoin = await postWorkerJson("/api/community/communities/" + transferSlug + "/join", {});
+  assert.equal(transferSpaceJoin.status, 200);
+  assert.equal(transferSpaceJoin.body.membershipStatus, "active");
+
+  await setBrowserAccountSession(nonMemberToken);
+  const successorInbox = await getWorkerJson("/api/community/ownership-transfers");
+  assert.equal(successorInbox.status, 200);
+  assert.ok(successorInbox.body.incoming.some(item => item.id === transferId));
+  const acceptedTransfer = await postWorkerJson("/api/community/ownership-transfers/" + transferId + "/respond", {
+    action: "accept", reason: "Successor explicitly accepts responsibility in the local browser test"
+  });
+  assert.equal(acceptedTransfer.status, 200, JSON.stringify(acceptedTransfer.body));
+  assert.equal(acceptedTransfer.body.status, "accepted");
+  const acceptedAgain = await postWorkerJson("/api/community/ownership-transfers/" + transferId + "/respond", { action: "accept" });
+  assert.equal(acceptedAgain.status, 409, "an accepted handover cannot be replayed.");
+
+  await setBrowserAccountSession(rootToken);
+  const formerOwnerDetail = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(formerOwnerDetail.status, 200);
+  assert.equal(formerOwnerDetail.body.memberRole, "member", "the former owner is demoted to ordinary-member privilege.");
+  const formerOwnerCanLeave = await postWorkerJson("/api/community/communities/" + transferSlug + "/leave", {});
+  assert.equal(formerOwnerCanLeave.status, 200, "the former owner may leave after the transfer has been accepted.");
+
+  // Exercise decline and owner cancellation; neither may change the owner role.
+  await setBrowserAccountSession(nonMemberToken);
+  const declineTransfer = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier, reason: "Synthetic successor-decline lifecycle test"
+  });
+  assert.equal(declineTransfer.status, 201, JSON.stringify(declineTransfer.body));
+  const declineId = declineTransfer.body.transfer.id;
+  await setBrowserAccountSession(rootToken);
+  const declined = await postWorkerJson("/api/community/ownership-transfers/" + declineId + "/respond", {
+    action: "decline", reason: "The proposed successor declines in the local test."
+  });
+  assert.equal(declined.status, 200, JSON.stringify(declined.body));
+  assert.equal(declined.body.status, "declined");
+  await setBrowserAccountSession(nonMemberToken);
+  const cancelledTransfer = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier, reason: "Synthetic owner-cancellation lifecycle test"
+  });
+  assert.equal(cancelledTransfer.status, 201, JSON.stringify(cancelledTransfer.body));
+  const cancelledId = cancelledTransfer.body.transfer.id;
+  const cancelled = await postWorkerJson("/api/community/ownership-transfers/" + cancelledId + "/cancel", {
+    reason: "The current owner cancels this handover in the local test."
+  });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+  assert.equal(cancelled.body.status, "cancelled");
+  const activeOwnerAfterCancellation = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(activeOwnerAfterCancellation.status, 200);
+  assert.equal(activeOwnerAfterCancellation.body.memberRole, "owner");
+  const noPendingTransfers = await getWorkerJson("/api/community/ownership-transfers");
+  assert.equal(noPendingTransfers.status, 200);
+  assert.equal(noPendingTransfers.body.incoming.some(item => item.id === cancelledId), false);
   await setBrowserAccountSession(blockedAuthorToken);
 
   const leftRequestSpace = await postWorkerJson("/api/community/communities/" + requestSlug + "/leave", {});
@@ -747,7 +840,7 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(deleted.body.deleted, true);
   const missingAfterDelete = await getWorkerJson("/api/community/posts/" + post.id);
   assert.equal(missingAfterDelete.status, 404);
-  console.log("PASS: authenticated Community backend/API journeys, report submission and status transitions, request approval/rejection, private invitations and isolation, posting boundaries, author removal, and author-side-block feed isolation.");
+  console.log("PASS: authenticated Community API journeys, request/invitation state machines, accepted/declined/cancelled owner handovers, report moderation, feed privacy, posting boundaries and author removal.");
   return { rootToken, nonMemberToken, accountIdentifier };
 }
 
