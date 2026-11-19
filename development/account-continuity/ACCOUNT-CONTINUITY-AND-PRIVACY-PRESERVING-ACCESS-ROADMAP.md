@@ -1,5 +1,7 @@
 # Account Continuity and Privacy-Preserving Access Roadmap
 
+> **Authentication authority (2026-11-04):** this document is broad ecosystem context, not an account sign-in specification. The sole governing account-authentication and recovery design is [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). Earlier password/email/provider experiments are not current implementation directions.
+
 **Status:** DEVELOPMENT-ONLY ARCHITECTURE PROPOSAL — NOT IMPLEMENTED  
 **Last updated:** 2026-10-16  
 **Primary location:** AstroCrown-Web `development/account-continuity/`  
@@ -632,3 +634,12 @@ The source list is a research index, not an exhaustive legal analysis, a guarant
 Create a **Requirements and Threat Model Register** before coding account creation. It should reference this roadmap and include for each requirement: ID, actor, scenario, required behavior, data accessed, trust boundary, legal/operational dependency, test, evidence, result and unresolved issues. Use it to select a minimal authentication/recovery prototype first; defer person-verification vendor selection and monetary benefits until their separate requirements are known.
 
 Only after that register is reviewed should implementation work start. Each implementation should have its own dated plan, branch, exact source-of-truth contract, test plan, evidence, impact analysis, review and explicit promotion decision.
+
+
+## Current account-authentication status — 2026-11-04
+
+This roadmap remains broad ecosystem context, not the active account-authentication specification. The current local account prototype uses WebAuthn passkeys for registration and discoverable sign-in, plus a user-held one-time offline recovery key. Account identity, sessions and roles remain independent of wallet addresses. The separate EVM/SIWE capability is reserved for administrator wallet enrollment and step-up; optional ordinary-account wallet backup is not yet implemented.
+
+The account flow does not request an email address, password or phone number. Email verification, email password-reset and external email delivery are not account capabilities or recovery dependencies.
+
+This is a loopback-only local prototype, not a production account service. Public onboarding remains blocked pending a verified HTTPS relying-party origin, durable production storage, backup/restore, complete authenticator/session lifecycle controls, privacy/legal approval, independent security review and operational recovery. See the [current implementation status](../audit/Active/2026-11-04-Passkey-First-Account-Implementation-Status.md) and the governing [passkey-first requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md).

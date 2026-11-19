@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Genesis Member gold DNA badge</title>
+  <desc id="desc">A transparent-background gold medallion with a double helix and the words Genesis Member.</desc>
+  <defs>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff2ad"/>
+      <stop offset=".22" stop-color="#f8d66e"/>
+      <stop offset=".5" stop-color="#b87818"/>
+      <stop offset=".72" stop-color="#ffe89a"/>
+      <stop offset="1" stop-color="#8d570e"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#102849"/>
+      <stop offset="1" stop-color="#061326"/>
+    </linearGradient>
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <circle cx="256" cy="238" r="190" fill="url(#blue)" stroke="url(#gold)" stroke-width="13"/>
+  <circle cx="256" cy="238" r="174" fill="none" stroke="#e9bd54" stroke-width="2" opacity=".75"/>
+  <g fill="none" stroke="url(#gold)" stroke-width="10" stroke-linecap="round" filter="url(#glow)">
+    <path d="M256 72 C94 132 418 194 256 254 C94 314 418 376 256 432"/>
+    <path d="M256 72 C418 132 94 194 256 254 C418 314 94 376 256 432"/>
+  </g>
+  <g stroke="#f6d77d" stroke-width="6" stroke-linecap="round">
+    <path d="M224 91 L288 91 M190 128 L322 128 M176 166 L336 166 M194 205 L318 205 M222 244 L290 244 M194 283 L318 283 M176 322 L336 322 M190 360 L322 360 M224 399 L288 399"/>
+  </g>
+  <g fill="none" stroke="url(#gold)" stroke-width="9" stroke-linecap="round">
+    <path d="M99 347 C63 300 58 229 78 173 M413 347 C449 300 454 229 434 173"/>
+    <path d="M100 347 l-24 -10 M91 315 l-27 -4 M82 280 l-27 4 M79 242 l-25 11 M82 204 l-21 16"/>
+    <path d="M412 347 l24 -10 M421 315 l27 -4 M430 280 l27 4 M433 242 l25 11 M430 204 l21 16"/>
+  </g>
+  <path d="M77 392 Q256 426 435 392 L424 462 Q256 492 88 462 Z" fill="url(#blue)" stroke="url(#gold)" stroke-width="9"/>
+  <text x="256" y="437" text-anchor="middle" fill="#ffe7a0" stroke="#8e5b13" stroke-width="1.2" paint-order="stroke" font-family="Georgia,serif" font-size="34" font-weight="bold" letter-spacing="2">GENESIS</text>
+  <text x="256" y="466" text-anchor="middle" fill="#f7d77b" font-family="Georgia,serif" font-size="19" font-weight="bold" letter-spacing="4">MEMBER</text>
+  <path d="M256 25 l8 18 20 2 -15 13 4 20 -17 -10 -17 10 4 -20 -15 -13 20 -2z" fill="url(#gold)" stroke="#8f5e16" stroke-width="2"/>
+</svg>

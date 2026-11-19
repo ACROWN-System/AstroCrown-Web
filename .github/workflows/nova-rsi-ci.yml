@@ -27,7 +27,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.12"
 
@@ -35,10 +35,24 @@ jobs:
         run: |
           set -euo pipefail
           IMAGE="python@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
-          EXPECTED_ID="sha256:4f228bc1cbcfc794e4878312cfc241d368eff55a21c08d1e2bb263116c4ef524"
+          EXPECTED_ID="sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258"
           docker pull --platform linux/amd64 "$IMAGE"
+
+          IMAGE_DETAILS="$(docker image inspect "$IMAGE" --format '{{.Id}}|{{.Os}}|{{.Architecture}}|{{json .Config.Env}}')"
+          printf 'Resolved immutable image details: %s\n' "$IMAGE_DETAILS"
+
           ACTUAL_ID="$(docker image inspect "$IMAGE" --format '{{.Id}}')"
+          ACTUAL_PLATFORM="$(docker image inspect "$IMAGE" --format '{{.Os}}/{{.Architecture}}')"
+          ACTUAL_PYTHON="$(docker run --rm --platform linux/amd64 "$IMAGE" python3 --version)"
+
+          printf 'Resolved image config ID: %s\n' "$ACTUAL_ID"
+          printf 'Expected immutable image config ID: %s\n' "$EXPECTED_ID"
+          printf 'Resolved image platform: %s\n' "$ACTUAL_PLATFORM"
+          printf 'Container Python version: %s\n' "$ACTUAL_PYTHON"
+
           test "$ACTUAL_ID" = "$EXPECTED_ID"
+          test "$ACTUAL_PLATFORM" = "linux/amd64"
+          test "$ACTUAL_PYTHON" = "Python 3.12.15"
 
       - name: Compile development Python
         run: python -m compileall -q development

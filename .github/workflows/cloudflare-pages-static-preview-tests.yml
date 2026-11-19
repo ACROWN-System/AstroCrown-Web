@@ -1,0 +1,67 @@
+name: Cloudflare Pages Static Preview Build
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/index.html"
+      - "development/account-continuity/prototype/account-prototype.css"
+      - "development/account-continuity/prototype/account-ui.js"
+      - "development/account-continuity/prototype/admin-wallet-ui.js"
+      - "preview/supporters/**"
+      - "development/supporter-programme/**"
+      - "preview/privacy-transparency.html"
+      - "scripts/build-cloudflare-pages.mjs"
+      - "scripts/test-cloudflare-pages-build.mjs"
+      - ".github/workflows/cloudflare-pages-static-preview-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "development/index.html"
+      - "development/account-continuity/prototype/account-prototype.css"
+      - "development/account-continuity/prototype/account-ui.js"
+      - "development/account-continuity/prototype/admin-wallet-ui.js"
+      - "preview/supporters/**"
+      - "development/supporter-programme/**"
+      - "preview/privacy-transparency.html"
+      - "scripts/build-cloudflare-pages.mjs"
+      - "scripts/test-cloudflare-pages-build.mjs"
+      - ".github/workflows/cloudflare-pages-static-preview-tests.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-pages-static-preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-verify:
+    name: Build and verify the Pages publication allowlist
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v6.1.0
+        with:
+          node-version: "22"
+
+      - name: Build the exact Cloudflare Pages publication bundle
+        run: node scripts/build-cloudflare-pages.mjs
+
+      - name: Verify publication boundary and browser-facing safety
+        run: node scripts/test-cloudflare-pages-build.mjs
+
+      - name: Check supporter browser script syntax
+        run: node --check preview/supporters/supporters.js
+
+      - name: Verify deterministic supporter entitlement rules
+        run: node --test development/supporter-programme/tests/entitlement-rules.test.mjs
+
+      - name: Verify supporter D1 schema constraints
+        run: python3 development/supporter-programme/tests/test_schema.py

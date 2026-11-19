@@ -480,3 +480,59 @@ A durable checkpoint enables reliable resumption when work is interrupted; it do
 Continue while a plausible, material, safe and authorized route remains untested, or while obtainable evidence could change the decision. Stop an individual route only when evidence rules it out, its prerequisite is genuinely unavailable, its cost/risk is disproportionate to its decision value, or it crosses a clear execution boundary; document which reason applies and continue with other routes where possible.
 
 A work item is complete only when its acceptance criteria have been tested to the level they require, material alternatives and risks have been evaluated, regressions have been considered, and the durable record states what remains unverified. If any material criterion remains unresolved, retain it as open/BLOCKED and name the next viable action. Persistence must not be confused with declaring success without evidence.
+
+
+## 20. Execution-Environment Selection and Cloud-First Operations
+
+This section records and operationalizes the established project direction for this workstream: use GitHub-hosted and other approved remote development environments by default; treat the owner's local workstation as an exception, not as the assumed build, test, or deployment host. This is not a new preference inferred by an assistant. It preserves the existing owner direction and makes its application explicit.
+
+### Mandatory pre-action environment check
+
+Before asking the owner to install software, run terminal commands, clone a repository, edit local files, or troubleshoot a workstation, the work plan must first identify the intended execution location for each material operation:
+
+- connected repository/app tools;
+- GitHub-hosted Actions or another existing hosted development runner;
+- approved cloud development environment;
+- remote provider dashboard/API;
+- owner-local workstation.
+
+Inspect existing repository workflows, scripts, remote environments, connected tools, and prior evidence before selecting a local path. A local script or a local-first README section is an implementation detail to review, not proof that the owner must run it locally.
+
+For AstroCrown/NOVA work covered by the established cloud-first direction, GitHub-hosted or other approved remote execution is the default for repository inspection, builds, dependency installation, tests, static checks, browser automation where supported, and deployment preparation. Existing hosted workflows should be reused before creating a new workflow. A missing hosted capability should be evaluated as an implementation gap; it must not automatically be transferred to the owner's workstation.
+
+### Local execution exception
+
+Request owner-local execution only when a specific requirement cannot be satisfied through available remote tools or hosted runners, for example:
+
+- physical authenticator, hardware key, wallet or device-specific behavior that cannot be represented by a supported virtual test;
+- browser, operating-system, local network, peripheral or accessibility behavior that genuinely depends on the owner's device;
+- a private file, local-only environment or credential that cannot safely be made available to a hosted runner;
+- a demonstrated provider/tool limitation for which no materially different authorized remote route exists.
+
+Before requesting local execution, record:
+1. the exact operation that must be local;
+2. why current connected tools and hosted workflows cannot perform it;
+3. the smallest local action required;
+4. what it will change and what it will not change;
+5. the expected output/evidence;
+6. how to stop and recover safely.
+
+Do not ask the owner to install a runtime, package manager, CLI, browser or other development tool merely because an existing script assumes it. Prefer adapting the script/workflow to the approved hosted runner when safe and proportionate.
+
+### Failure and recurrence control
+
+If a local setup step fails, do not continue with a chain of speculative installation, PATH, policy or machine-configuration changes. Stop, preserve the exact error, inspect prior attempts, and re-evaluate hosted alternatives before another local attempt. Never weaken OS security settings merely to make a convenience path work.
+
+Every substantive work plan must record the selected execution location and the reason. Any departure from the established cloud-first direction must be explicitly marked as a justified exception and remain open for owner confirmation where it increases owner effort, changes the machine, exposes credentials or creates persistent state.
+
+### Credentials and hosted execution
+
+Remote execution does not relax security boundaries. Use least-privilege credentials only in protected hosted environments; do not expose secrets to untrusted pull-request code, dependency installation, build steps, logs, artifacts or generated source. Separate ordinary CI from manually authorized external deployment. A hosted workflow is not a deployment authorization, and a passing local/hosted test is not live-provider or production evidence.
+
+### Acceptance and audit
+
+A work item that required avoidable owner-local setup while an adequate authorized hosted route existed must be recorded as a process deviation. Its prevention requires both:
+- a documented pre-action environment-selection rule; and
+- a reproducible workflow/check or review gate where the behavior can be tested automatically.
+
+Where assistant/tool execution cannot yet be governed by a deterministic NOVA control, state that limitation. Do not describe a prompt, memory or documentation rule as universal runtime enforcement.

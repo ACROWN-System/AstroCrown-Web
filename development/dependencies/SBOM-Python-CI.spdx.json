@@ -1,0 +1,1439 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "AstroCrown Python CI dependencies — Ubuntu 24.04 / CPython 3.12 / x86_64",
+  "documentNamespace": "https://github.com/ACROWN-System/AstroCrown-Web/spdx/python-ci/2e3867e37fb204da790643f5a674d4d8e56c121d",
+  "creationInfo": {
+    "created": "2026-11-04T00:00:00Z",
+    "creators": [
+      "Tool: AstroCrown Standard-Library SPDX Generator"
+    ],
+    "comment": "Inventory derived from the SHA-256-pinned, wheel-only account-continuity CI lock. License declarations and conclusions are intentionally NOASSERTION pending independent metadata and human review."
+  },
+  "packages": [
+    {
+      "name": "abnf",
+      "SPDXID": "SPDXRef-Package-abnf",
+      "versionInfo": "2.2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5dc2ae31a84ff454f7de46e08a2a21a442a0e21a092468420587a1590b490d1f"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/abnf@2.2.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "aiohappyeyeballs",
+      "SPDXID": "SPDXRef-Package-aiohappyeyeballs",
+      "versionInfo": "2.7.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9243213661e29250eb41368e5daa826fc017156c3b8a11440826b2e3ed376472"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/aiohappyeyeballs@2.7.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "aiohttp",
+      "SPDXID": "SPDXRef-Package-aiohttp",
+      "versionInfo": "3.14.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "20f085697d7e911f1f73c43ed03fafbed1e7121797e2eb5428efa80398060584"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/aiohttp@3.14.5"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "aiosignal",
+      "SPDXID": "SPDXRef-Package-aiosignal",
+      "versionInfo": "1.4.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "053243f8b92b990551949e63930a839ff0cf0b0ebbe0597b0f3fb19e1a0fe82e"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/aiosignal@1.4.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "annotated-types",
+      "SPDXID": "SPDXRef-Package-annotated-types",
+      "versionInfo": "0.8.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/annotated-types@0.8.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "attrs",
+      "SPDXID": "SPDXRef-Package-attrs",
+      "versionInfo": "26.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/attrs@26.1.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "bitarray",
+      "SPDXID": "SPDXRef-Package-bitarray",
+      "versionInfo": "3.12.3",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "8a32e10bd3c7e287df1e4c3da73efda5585a56ec59337b1467245f53dd469a99"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/bitarray@3.12.3"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "cbor2",
+      "SPDXID": "SPDXRef-Package-cbor2",
+      "versionInfo": "6.1.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "b70d7c47ea84d456034d2be02e89d92eef7044cfcedf6f05058e21d4452f0fef"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cbor2@6.1.5"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "certifi",
+      "SPDXID": "SPDXRef-Package-certifi",
+      "versionInfo": "2026.10.19",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "42d35340cc5b9ba78e818ddbff0c5b1c2b779de448a340fd1b989f5fa8670e1b"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/certifi@2026.10.19"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "cffi",
+      "SPDXID": "SPDXRef-Package-cffi",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3e17ed538242334bf70832644a32a7aae3d83b57567f9fd60a26257e992b79ba"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cffi@2.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "charset-normalizer",
+      "SPDXID": "SPDXRef-Package-charset-normalizer",
+      "versionInfo": "3.5.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/charset-normalizer@3.5.2"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "ckzg",
+      "SPDXID": "SPDXRef-Package-ckzg",
+      "versionInfo": "2.1.8",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "10339d23e36b8a0a4e6fda7f6c72d6b2fd4e1506f7b64a661ba8c706ee33f335"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/ckzg@2.1.8"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "cryptography",
+      "SPDXID": "SPDXRef-Package-cryptography",
+      "versionInfo": "50.0.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9dab55f57c74c3cad24c323bacbbd04be4705ba6eb0d92e920b1fc4837ed5079"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cryptography@50.0.2"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "cytoolz",
+      "SPDXID": "SPDXRef-Package-cytoolz",
+      "versionInfo": "1.2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f99e8e1f1e84522257c4c762ed194106b6b40eeca5a5d181b180fdeb3e927ef5"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/cytoolz@1.2.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-abi",
+      "SPDXID": "SPDXRef-Package-eth-abi",
+      "versionInfo": "6.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "05ad63b50bd5448cfac0079b3cc5464de7464b4336a2496bf368d5808c7f9e9f"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-abi@6.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-account",
+      "SPDXID": "SPDXRef-Package-eth-account",
+      "versionInfo": "0.13.7",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "39727de8c94d004ff61d10da7587509c04d2dc7eac71e04830135300bdfc6d24"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-account@0.13.7"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-hash",
+      "SPDXID": "SPDXRef-Package-eth-hash",
+      "versionInfo": "0.8.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "523718a51b369ab89866b929a5c93c52978cd866ea309192ad980dd8271f9fac"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-hash@0.8.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-keyfile",
+      "SPDXID": "SPDXRef-Package-eth-keyfile",
+      "versionInfo": "0.8.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "65387378b82fe7e86d7cb9f8d98e6d639142661b2f6f490629da09fddbef6d64"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-keyfile@0.8.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-keys",
+      "SPDXID": "SPDXRef-Package-eth-keys",
+      "versionInfo": "0.8.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "a7b94222638cccbdf2b5dae5c365d883a96826d82bb0faeb56baa65375f514ae"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-keys@0.8.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-rlp",
+      "SPDXID": "SPDXRef-Package-eth-rlp",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "32f355261c36ad2c369db098170f873123795667e50d496b034f369e2c9d2346"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-rlp@3.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-typing",
+      "SPDXID": "SPDXRef-Package-eth-typing",
+      "versionInfo": "6.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ee74fb641eb36dd885e1c42c2a3055314efa532b3e71480816df70a94d35cfb9"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-typing@6.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "eth-utils",
+      "SPDXID": "SPDXRef-Package-eth-utils",
+      "versionInfo": "6.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "63cf48ee32c45541cb5748751909a8345c470432fb6f0fed4bd7c53fd6400469"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/eth-utils@6.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "frozenlist",
+      "SPDXID": "SPDXRef-Package-frozenlist",
+      "versionInfo": "1.8.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "494a5952b1c597ba44e0e78113a7266e656b9794eec897b19ead706bd7074383"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/frozenlist@1.8.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "hexbytes",
+      "SPDXID": "SPDXRef-Package-hexbytes",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5425bd7ac83cdd9791c13a5bf97cfe9b9609a304b1ef3ab146adfd50de06cf0e"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/hexbytes@2.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "idna",
+      "SPDXID": "SPDXRef-Package-idna",
+      "versionInfo": "3.20",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/idna@3.20"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "multidict",
+      "SPDXID": "SPDXRef-Package-multidict",
+      "versionInfo": "7.1.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "fed6b7705d49dd07e5e0dd5f5c873fc44047e92d714299b13245b5fecac49d01"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/multidict@7.1.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "parsimonious",
+      "SPDXID": "SPDXRef-Package-parsimonious",
+      "versionInfo": "0.10.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "982ab435fabe86519b57f6b35610aa4e4e977e9f02a14353edf4bbc75369fc0f"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/parsimonious@0.10.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "propcache",
+      "SPDXID": "SPDXRef-Package-propcache",
+      "versionInfo": "0.5.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2814ecd8e818f487bee4b0f921bc4d1c176cc5fc71ac0f072d0fa67eda4ac14b"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/propcache@0.5.4"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pyasn1",
+      "SPDXID": "SPDXRef-Package-pyasn1",
+      "versionInfo": "0.6.5",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4017b0fce125096b8573b39c989fdb1a4b19cf761e683398184550fea0e66587"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pyasn1@0.6.5"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pyasn1-modules",
+      "SPDXID": "SPDXRef-Package-pyasn1-modules",
+      "versionInfo": "0.4.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "29253a9207ce32b64c3ac6600edc75368f98473906e8fd1043bd6b5b1de2c14a"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pyasn1-modules@0.4.2"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pycparser",
+      "SPDXID": "SPDXRef-Package-pycparser",
+      "versionInfo": "2.23",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e5c6e8d3fbad53479cab09ac03729e0a9faf2bee3db8208a550daf5af81a5934"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pycparser@2.23"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pycryptodome",
+      "SPDXID": "SPDXRef-Package-pycryptodome",
+      "versionInfo": "3.24.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "93619c3117a8f14ea1267b427e465d152a66c89c3d3c643262070c05b2855aae"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pycryptodome@3.24.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pydantic",
+      "SPDXID": "SPDXRef-Package-pydantic",
+      "versionInfo": "2.14.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9195d967ec791692a04438115466764fb8b9a27b31f14a760437694f40d6b454"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pydantic@2.14.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pydantic-core",
+      "SPDXID": "SPDXRef-Package-pydantic-core",
+      "versionInfo": "2.50.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "93ba4e9d8210d941c200431a56b2c0400b131865947903937ed3ec5404307d2e"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pydantic-core@2.50.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pyopenssl",
+      "SPDXID": "SPDXRef-Package-pyopenssl",
+      "versionInfo": "26.4.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f0eb0cb2d581d3ad2b9c489468485e7f2ab6727d08401bcf9d824c3caddf3c1c"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pyopenssl@26.4.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "pyunormalize",
+      "SPDXID": "SPDXRef-Package-pyunormalize",
+      "versionInfo": "18.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cdc571ab761c2bd905275c9f3e3cf386d10b4f9bc8d55b32d410cc635e684ba8"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/pyunormalize@18.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "regex",
+      "SPDXID": "SPDXRef-Package-regex",
+      "versionInfo": "2026.9.29",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/regex@2026.9.29"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "requests",
+      "SPDXID": "SPDXRef-Package-requests",
+      "versionInfo": "2.34.2",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/requests@2.34.2"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "rlp",
+      "SPDXID": "SPDXRef-Package-rlp",
+      "versionInfo": "5.0.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9525fb895d3a6540b7401eadd11c1b64740a5eccb82e543ac7e9735d319b0977"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/rlp@5.0.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "siwe",
+      "SPDXID": "SPDXRef-Package-siwe",
+      "versionInfo": "4.4.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3a4db2d36e10933c01d09ba0aad4db2f404e9ab2c9e9a204fa1bc1103e9d754d"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/siwe@4.4.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "toolz",
+      "SPDXID": "SPDXRef-Package-toolz",
+      "versionInfo": "1.2.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "890f820b1cb8152785aaf9386d8707770110809035800985ca65cb24ce1120ef"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/toolz@1.2.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "types-requests",
+      "SPDXID": "SPDXRef-Package-types-requests",
+      "versionInfo": "2.33.0.20261006",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "26cc8146505cab33cda9737991929e4144c559bebe05078ccc6998f27c4ca2c1"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/types-requests@2.33.0.20261006"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "typing-extensions",
+      "SPDXID": "SPDXRef-Package-typing-extensions",
+      "versionInfo": "4.16.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/typing-extensions@4.16.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "typing-inspection",
+      "SPDXID": "SPDXRef-Package-typing-inspection",
+      "versionInfo": "0.4.4",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/typing-inspection@0.4.4"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "urllib3",
+      "SPDXID": "SPDXRef-Package-urllib3",
+      "versionInfo": "2.8.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/urllib3@2.8.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "web3",
+      "SPDXID": "SPDXRef-Package-web3",
+      "versionInfo": "7.16.0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "760b2718c473980d70708c3593d9d28395db4b482f45e38a63a36fa028178f51"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/web3@7.16.0"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "webauthn",
+      "SPDXID": "SPDXRef-Package-webauthn",
+      "versionInfo": "3.0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9927b2f530773bd1d7f8194cd643a2e634a20995ea31f2d8f7a3e70b11c93e31"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/webauthn@3.0.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "websockets",
+      "SPDXID": "SPDXRef-Package-websockets",
+      "versionInfo": "15.0.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "64dee438fed052b52e4f98f76c5790513235efaa1ef7f3f2192c392cd7c91b65"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/websockets@15.0.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    },
+    {
+      "name": "yarl",
+      "SPDXID": "SPDXRef-Package-yarl",
+      "versionInfo": "1.25.1",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c6f117789d22dce188e5754e8bc65b7e6ebf8cb73963b9fa761f672a5883769d"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:pypi/yarl@1.25.1"
+        }
+      ],
+      "sourceInfo": "Exact SHA-256 digest recorded for the CPython 3.12, Ubuntu 24.04, x86_64 wheel selected by the corresponding pip --only-binary lock. The digest is an artifact-integrity identifier, not a publisher signature."
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-abnf"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-aiohappyeyeballs"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-aiohttp"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-aiosignal"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-annotated-types"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-attrs"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-bitarray"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-cbor2"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-certifi"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-cffi"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-charset-normalizer"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-ckzg"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-cryptography"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-cytoolz"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-abi"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-account"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-hash"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-keyfile"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-keys"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-rlp"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-typing"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-eth-utils"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-frozenlist"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-hexbytes"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-idna"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-multidict"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-parsimonious"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-propcache"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pyasn1"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pyasn1-modules"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pycparser"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pycryptodome"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pydantic"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pydantic-core"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pyopenssl"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-pyunormalize"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-regex"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-requests"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-rlp"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-siwe"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-toolz"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-types-requests"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-typing-extensions"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-typing-inspection"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-urllib3"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-web3"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-webauthn"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-websockets"
+    },
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-yarl"
+    }
+  ]
+}
