@@ -106,6 +106,17 @@ test("unauthenticated users cannot create posts or communities", async () => {
   assert.equal(rateCalls, 0, "unauthenticated writes must be rejected before consuming authenticated rate-limit budget");
 });
 
+test("unscoped moderation reports are restricted to platform administrators before querying D1", async () => {
+  const response = await handleCommunityApi(
+    new Request("https://astrocrown.invalid/api/community/moderation/reports"),
+    {},
+    { account_id: "ordinary_account" },
+    { isPlatformAdmin: async () => false, rateLimit: async () => {} }
+  );
+  assert.equal(response.status, 403);
+  assert.match((await response.json()).error, /platform administrator/i);
+});
+
 test("unknown community routes fail closed without querying storage", async () => {
   const response = await handleCommunityApi(new Request("https://astrocrown.invalid/api/community/unknown"), {}, null);
   assert.equal(response.status, 404);

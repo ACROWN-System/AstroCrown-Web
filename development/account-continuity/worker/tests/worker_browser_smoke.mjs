@@ -511,6 +511,84 @@ async function testCommunityApi(accountIdentifier) {
     content: "Approved restricted-space post " + randomUUID(), communitySlug: requestSlug
   });
   assert.equal(restrictedPost.status, 201, JSON.stringify(restrictedPost.body));
+
+  // A community manager may triage reports for their own community, but an
+  // ordinary member cannot inspect or transition that queue.
+  await setBrowserAccountSession(rootToken);
+  const reportTargetA = await postWorkerJson("/api/community/posts", {
+    content: "Synthetic post for report resolution test " + randomUUID(), communitySlug: requestSlug
+  });
+  assert.equal(reportTargetA.status, 201, JSON.stringify(reportTargetA.body));
+  await setBrowserAccountSession(blockedAuthorToken);
+  const reportA = await postWorkerJson("/api/community/posts/" + reportTargetA.body.post.id + "/report", {
+    category: "spam", details: "Synthetic local browser report-resolution test"
+  });
+  assert.equal(reportA.status, 201, JSON.stringify(reportA.body));
+  assert.ok(reportA.body.reportId);
+  const duplicateReportA = await postWorkerJson("/api/community/posts/" + reportTargetA.body.post.id + "/report", {
+    category: "spam", details: "Duplicate report must remain rejected"
+  });
+  assert.equal(duplicateReportA.status, 409);
+  const ordinaryReportQueue = await getWorkerJson("/api/community/moderation/reports?community=" + requestSlug);
+  assert.equal(ordinaryReportQueue.status, 403, "ordinary members must not read a community's moderation queue.");
+  const ordinaryReportTransition = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "start_review", reason: "Unauthorized local report review attempt"
+  });
+  assert.equal(ordinaryReportTransition.status, 403, "ordinary members must not change report status.");
+  const reporterOwnReportBefore = await getWorkerJson("/api/community/reports/mine");
+  assert.equal(reporterOwnReportBefore.status, 200);
+  assert.equal(reporterOwnReportBefore.body.reports.find(item => item.id === reportA.body.reportId).status, "open");
+
+  await setBrowserAccountSession(rootToken);
+  const unscopedManagerQueue = await getWorkerJson("/api/community/moderation/reports");
+  assert.equal(unscopedManagerQueue.status, 403, "a community manager cannot read the unscoped platform-wide queue.");
+  const reportQueue = await getWorkerJson("/api/community/moderation/reports?community=" + requestSlug);
+  assert.equal(reportQueue.status, 200, JSON.stringify(reportQueue.body));
+  assert.ok(reportQueue.body.reports.some(item => item.id === reportA.body.reportId));
+  const reportStarted = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "start_review", reason: "Assigned to the community moderation queue"
+  });
+  assert.equal(reportStarted.status, 200, JSON.stringify(reportStarted.body));
+  assert.equal(reportStarted.body.status, "in_review");
+  const reportResolved = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "resolve", reason: "Resolved in the synthetic local browser test"
+  });
+  assert.equal(reportResolved.status, 200, JSON.stringify(reportResolved.body));
+  assert.equal(reportResolved.body.status, "resolved");
+  const duplicateResolution = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "dismiss", reason: "A final report decision cannot be changed by a second transition"
+  });
+  assert.equal(duplicateResolution.status, 409);
+
+  const reportTargetB = await postWorkerJson("/api/community/posts", {
+    content: "Synthetic post for report dismissal test " + randomUUID(), communitySlug: requestSlug
+  });
+  assert.equal(reportTargetB.status, 201, JSON.stringify(reportTargetB.body));
+  await setBrowserAccountSession(blockedAuthorToken);
+  const reportB = await postWorkerJson("/api/community/posts/" + reportTargetB.body.post.id + "/report", {
+    category: "other", details: "Synthetic local browser report-dismissal test"
+  });
+  assert.equal(reportB.status, 201, JSON.stringify(reportB.body));
+  await setBrowserAccountSession(rootToken);
+  const reportBStarted = await postWorkerJson("/api/community/moderation/reports/" + reportB.body.reportId + "/transition", {
+    action: "start_review", reason: "Assigned to the community moderation queue"
+  });
+  assert.equal(reportBStarted.status, 200, JSON.stringify(reportBStarted.body));
+  const reportDismissed = await postWorkerJson("/api/community/moderation/reports/" + reportB.body.reportId + "/transition", {
+    action: "dismiss", reason: "The synthetic test report does not require content action"
+  });
+  assert.equal(reportDismissed.status, 200, JSON.stringify(reportDismissed.body));
+  assert.equal(reportDismissed.body.status, "dismissed");
+  await setBrowserAccountSession(blockedAuthorToken);
+  const reporterOwnReportsAfter = await getWorkerJson("/api/community/reports/mine");
+  assert.equal(reporterOwnReportsAfter.status, 200, JSON.stringify(reporterOwnReportsAfter.body));
+  const resolvedByReporter = reporterOwnReportsAfter.body.reports.find(item => item.id === reportA.body.reportId);
+  const dismissedByReporter = reporterOwnReportsAfter.body.reports.find(item => item.id === reportB.body.reportId);
+  assert.equal(resolvedByReporter.status, "resolved");
+  assert.equal(resolvedByReporter.resolution, "Resolved in the synthetic local browser test");
+  assert.equal(dismissedByReporter.status, "dismissed");
+  await setBrowserAccountSession(rootToken);
+
   const leftRequestSpace = await postWorkerJson("/api/community/communities/" + requestSlug + "/leave", {});
   assert.equal(leftRequestSpace.status, 200);
   const requestAgain = await postWorkerJson("/api/community/communities/" + requestSlug + "/join", {});
