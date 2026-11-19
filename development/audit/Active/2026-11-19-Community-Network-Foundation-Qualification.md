@@ -1,11 +1,11 @@
 # Community Network Foundation — Engineering Qualification and Continuity Record
 
 **Record:** CN-AUDIT-2026-11-19-001  
-**Created:** 2026-11-19; revised after report-moderation API and Chrome UI qualification (UTC)
-**Status:** BACKEND + INITIAL COMMUNITY FRONTEND + REPORT REVIEW SLICE QUALIFIED; NOT PRODUCT OR PRODUCTION READY
+**Created:** 2026-11-19; revised after voluntary ownership-transfer API and Chrome UI qualification (UTC)
+**Status:** BACKEND + COMMUNITY FRONTEND + REPORT REVIEW + VOLUNTARY OWNER TRANSFER QUALIFIED; NOT PRODUCT OR PRODUCTION READY
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Branch:** `feature/community-network-foundation-2026-11-19`  
-**Qualified code/UI commit:** `90ed2d997c0b9a504c5865d7c88902e014ea450b`
+**Qualified code/UI commit:** `af93971d1635b80b8ab81e98d740a5c4d8646f4a`
 **Base:** `main` at `51da27b004c8f5aa94a37bd90a9521a61bedb565`  
 **Related GitHub pull requests:** [#194 — Community API foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/194); [#170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170)  
 **Information handling:** INTERNAL — repository engineering evidence; synthetic test identities only  
@@ -13,9 +13,9 @@
 
 ## 1. Outcome and scope
 
-This record covers the first qualified backend foundation, the first native Community homepage slice and a constrained moderator report-review slice. It does not declare the complete AstroCrown social/community product finished.
+This record covers the first qualified backend foundation, the first native Community homepage slice, a constrained moderator report-review slice and a voluntary successor-accepted ownership-transfer slice. It does not declare the complete AstroCrown social/community product finished.
 
-Delivered and qualified on code/UI commit `90ed2d997c0b9a504c5865d7c88902e014ea450b`:
+Delivered and qualified on code/UI commit `af93971d1635b80b8ab81e98d740a5c4d8646f4a`:
 
 - D1 schema and authenticated Worker APIs for community discovery, global/community feeds, post/reply persistence, reactions, bookmarks, block/mute, reports, membership and moderation audit.
 - Manager-reviewed request membership: pending requests, manager-only queue, approve/reject decisions, conditional updates and audit events.
@@ -24,12 +24,13 @@ Delivered and qualified on code/UI commit `90ed2d997c0b9a504c5865d7c88902e014ea4
 - Corrected author-side block feed isolation. Hidden posts are omitted from feeds and direct reads remain denied without breaking unrelated feed items.
 - A one-statement feed hydrator. A 20-post page retrieves post fields, author/community information, counts and viewer flags in one D1 statement, retaining server-side membership, visibility, moderation and block predicates. A unit regression fails if the route returns to per-post D1 reads.
 - Report submission and duplicate-report prevention; reporter-only status lookup; community-scoped moderator queues; global queue restricted to a platform admin with active step-up; atomic `open → in_review → resolved/dismissed` transitions; mandatory reason and audit event.
-- First-party Community section in the canonical `development/index.html`: global feed, six seeded community links, post composer, replies, reactions, bookmarks, report submission, join/request/leave, request review, invitation acceptance, moderation review and “My reports”.
+- Voluntary ownership handover: the active owner proposes transfer to an existing active member; only that intended account can accept or decline; the proposer can cancel; a single pending proposal is allowed per community; acceptance demotes the former owner to ordinary member and promotes the successor in one D1 transaction. A unique partial index enforces one active owner. The original creator attribution remains unchanged.
+- First-party Community section in the canonical `development/index.html`: global feed, six seeded community links, post composer, replies, reactions, bookmarks, report submission, join/request/leave, request review, invitation acceptance, report review, My reports, ownership-proposal inbox/outbox, owner proposal form, successor accept/decline and owner cancellation.
 - Reuses the existing AstroCrown passkey/account session. No separate social identity, password or login system was added.
 - Worker staging and static Pages build allowlists include only the two explicit Community assets. The standalone static preview injects a no-backend marker and presents a read-only explanation; account-backed Community behavior is confined to connected Worker staging.
-- Real Chrome tests verify the rendered homepage, six seeded links, asset delivery, unauthenticated composer boundary, membership/invitation/API journeys, private-content isolation, report review through visible controls and reporter-visible outcome.
+- Real Chrome tests verify the homepage, six seeded links, asset delivery, membership/invitation/API journeys, private-content isolation, report review through visible controls, ownership proposal/acceptance/decline/cancellation through visible controls and server-refreshed roles.
 
-Not delivered: appeals, evidence-retention/appeal policy, community owner transfer, manager invitation issuance from the homepage UI, full community creation/settings UI, member profiles/search, private/group chat, media uploads, subgroups/channels, public share cards/permalink safety, polls/proposals/events, binding elections, complete accessibility/performance/load/backup qualification.
+Still not delivered: report appeals and evidence-retention policy; emergency owner recovery when the owner loses access or becomes unavailable; an approved automatic expiry policy for pending ownership proposals; manager invitation issuance from the homepage UI; full community creation/settings UI; member profiles/search; private/group chat; media uploads; subgroups/channels; public share cards/permalink safety; polls/proposals/events; binding elections; complete accessibility/performance/load/backup qualification.
 
 No production deployment, remote D1 migration, public onboarding, payment, wallet transaction, mint, transfer or on-chain action was performed. PR #194 and PR #170 remain drafts and unmerged.
 
@@ -69,9 +70,9 @@ Product rules applied to this audit:
 - Repository: `ACROWN-System/AstroCrown-Web`
 - PR: [#194 — Community API foundation and first-party homepage interface](https://github.com/ACROWN-System/AstroCrown-Web/pull/194)
 - Branch: `feature/community-network-foundation-2026-11-19`
-- Exact qualified code/UI commit: `90ed2d997c0b9a504c5865d7c88902e014ea450b`
+- Exact qualified code/UI commit: `af93971d1635b80b8ab81e98d740a5c4d8646f4a`
 - Base branch: `main`; PR #194 is open, draft and unmerged.
-- PR #194 is 27 commits ahead and 0 behind `main`; GitHub reports mergeable=true. This is not an instruction or approval to merge.
+- At this code/UI commit, PR #194 was 36 commits ahead and 0 behind `main`; GitHub reported mergeable=true. This is not an instruction or approval to merge.
 - Product requirements: [PR #170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170), synchronized against current main, still draft, unmerged and mergeable.
 - No force push, merge or production promotion was performed.
 
@@ -79,6 +80,7 @@ Principal implementation paths:
 
 - `development/account-continuity/worker/migrations/0006_community_social_foundation.sql`
 - `development/account-continuity/worker/migrations/0007_community_membership_invitations.sql`
+- `development/account-continuity/worker/migrations/0008_community_ownership_transfers.sql`
 - `development/account-continuity/worker/src/community.js`
 - `development/account-continuity/worker/src/index.js`
 - `development/account-continuity/worker/tests/community.test.mjs`
@@ -93,15 +95,17 @@ Principal implementation paths:
 
 The staging build copies Community assets into the connected Worker environment. The standalone static Pages preview copies the same CSS/JS under its explicit allowlist but injects `window.ASTROCROWN_COMMUNITY_STATIC_PREVIEW = true`; the UI then suppresses account/publishing controls and all API calls and displays a read-only explanation. This avoids presenting a nonfunctional static bundle as a live social service.
 
-The Community UI uses DOM element creation and `textContent` for server-derived post, reply, member and community text; it does not interpolate untrusted post data into `innerHTML`. The account UI emits an edge-triggered account-status event so Community refreshes only when authentication changes, not on unrelated status refreshes.
+The Community UI uses DOM element creation and `textContent` for server-derived post, reply, member, transfer and community text; it does not interpolate these values into `innerHTML`. Ownership controls are displayed only to authenticated users; the proposal form is shown only when the server-loaded community detail says the current account is the active owner. The API remains authoritative and rechecks roles and membership on every transition.
 
 The Community feed uses one set-based SELECT rather than a loop calling `visiblePost()` and `postView()` once per returned item. Existing indexes cover global/community feed ordering, parent/reply lookup, reaction lookup, bookmark lookup and membership checks. This reduces D1 request/round-trip overhead without lowering the page size and closes the identified 50-query-per-invocation risk for a 20-post page; it does not remove daily row quotas.
 
-The six seeded initial public spaces are the initial taxonomy only; the taxonomy remains extensible. Request/invite-only membership policies now have server-side workflows rather than dead-end status values. Report submission, moderation transitions and reporter-visible outcomes also have a defined backend/UI path; appeals and ownership succession remain open.
+Ownership transfer uses active membership roles as the authority. `created_by_account_id` remains historical creator attribution and is not mutated by handover. The acceptance batch checks the intended recipient, active community, current owner and successor membership; demotes the former owner before promoting the successor to satisfy the single-active-owner partial index; and records an audit event. All statements run in one D1 batch. One pending proposal per community is enforced by a partial unique index. There is currently no automatic expiry for a pending ownership proposal; the owner may cancel and the successor may decline.
+
+The six seeded initial public spaces are the initial taxonomy only; the taxonomy remains extensible. Request/invite-only membership policies have server-side workflows rather than dead-end status values. Report submission, moderation transitions and reporter-visible outcomes also have a defined backend/UI path; appeals and owner-loss recovery remain open.
 
 ## 5. Verification criteria and results
 
-All results below are tied to exact code/UI commit `90ed2d997c0b9a504c5865d7c88902e014ea450b`; earlier green checks from prior commits are not substituted for this candidate.
+All results below are tied to exact code/UI commit `af93971d1635b80b8ab81e98d740a5c4d8646f4a`; earlier green checks from prior commits are not substituted for this candidate.
 
 | ID | Criterion | Method / evidence | Result |
 |---|---|---|---|
@@ -120,18 +124,20 @@ All results below are tied to exact code/UI commit `90ed2d997c0b9a504c5865d7c889
 | CN-Q-013 | Shared AstroCrown passkey account/session is reused | Community checks the existing `/api/account/status`; the same passkey session is used, with no second identity/login | PASS for tested integration |
 | CN-Q-014 | Security and external pipeline gates complete | CodeQL, NOVA RSI Engine CI and External Review Pipeline all succeeded on the exact code/UI commit | PASS |
 | CN-Q-015 | Production deployment, public onboarding, remote D1 migration and real financial/on-chain behavior | Not performed; expressly outside authorization | NOT PERFORMED |
+| CN-Q-016 | Voluntary owner transfer API and transactional invariants | Account Staging Worker Qualification, run `44440670380`; Chrome local D1 journey verifies non-owner denial, active-member successor requirement, one pending transfer, pending-owner leave denial, intended-successor-only acceptance, former-owner demotion, decline, cancellation and no replay | PASS |
+| CN-Q-017 | Ownership transfer controls work in the actual Community UI | Same Chrome run: current owner proposes through the form; successor accepts through incoming proposals; former owner declines a later proposal; current owner cancels a third proposal; server-loaded role controls update after acceptance | PASS |
 
 ### Exact-head hosted workflow evidence
 
-Candidate code/UI commit: `90ed2d997c0b9a504c5865d7c88902e014ea450b`
+Candidate code/UI commit: `af93971d1635b80b8ab81e98d740a5c4d8646f4a`
 
-- Account Staging Worker Qualification: [run 44433801075](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44433801075) — success.
-- Cloudflare Pages Static Preview Build: [run 44433801056](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44433801056) — success.
-- NOVA RSI CodeQL Security Analysis: [run 44433801200](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44433801200) — success.
-- NOVA RSI Engine CI: [run 44433801184](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44433801184) — success.
-- External Review Pipeline CI: [run 44433801040](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44433801040) — success.
-- CodeQL check `135257881366` — success.
-- Python CodeQL check `135257498866` — success.
+- Account Staging Worker Qualification: [run 44440670380](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670380) — success.
+- Cloudflare Pages Static Preview Build: [run 44440670394](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670394) — success.
+- NOVA RSI CodeQL Security Analysis: [run 44440670395](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670395) — success.
+- NOVA RSI Engine CI: [run 44440670603](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670603) — success.
+- External Review Pipeline CI: [run 44440670460](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670460) — success.
+- CodeQL check `135280672530` — success.
+- Python CodeQL check `135280415235` — success.
 
 Worker Qualification completed all steps, including dependency lock/install, Worker invariant tests, schema tests, staging-site build, browser/Worker bundle validation, local D1 migrations, HTTP/Chrome smoke, manual deployment workflow parsing, read-only Cloudflare preflight checks and fail-closed remote-environment verification.
 
@@ -144,6 +150,8 @@ The browser log included these success markers:
 `PASS: authenticated Community backend/API journeys, report submission and status transitions, request approval/rejection, private invitations and isolation, posting boundaries, author removal, and author-side-block feed isolation.`
 
 `PASS: Chrome report moderation UI: owner opens community queue, starts review, resolves with reason, and reporter sees the final outcome in My reports.`
+
+`PASS: Chrome ownership UI: owner proposes to an active member, successor accepts, former owner declines a later proposal, and current owner cancels another proposal.`
 
 The same qualification also completed the existing account/passkey/recovery and local admin-wallet test flows using synthetic credentials/test wallets only. No real payment or on-chain action was performed.
 
@@ -187,17 +195,17 @@ The original backend review identified request and invite-only membership as inc
 
 **Still open:** appeals, appeal authority, deadline, evidence-retention/deletion rules, escalation/independent review and whether any specific finding should cause content to be hidden or removed. The current report decision does not automatically remove content. These are product/governance policies; do not invent defaults or enable appeals until approved.
 
-### CN-G-004 — Community owner transfer is not implemented
+### CN-G-004 — Community owner transfer and succession
 
-The system prevents the owner from leaving without a transfer, but no successor invitation/acceptance, concurrent transfer guard or complete succession lifecycle is present.
+**Status: PARTIALLY CLOSED — voluntary owner-proposed, successor-accepted transfer is implemented and exact-head browser-tested.** The active community owner can propose a handover to an existing active member by AstroCrown account identifier. The intended successor alone can accept or decline. The current owner retains control until acceptance and can cancel while the proposal is pending. A single pending transfer per community is enforced. Acceptance uses one D1 batch: it verifies the current owner and successor, demotes the former owner to ordinary-member privilege, promotes the successor, and records an audit event. A partial unique index prevents more than one active owner. The original `created_by_account_id` is preserved as historical creator attribution. Chrome verified proposal, acceptance, a later decline and cancellation through the actual Community UI controls.
 
-**Status: OPEN — owner succession and transfer must be implemented and tested before describing community lifecycle as complete.**
+**Still open:** there is no automatic expiry for a pending ownership proposal; the current design leaves it pending until the owner cancels or the successor declines/accepts. The policy for any timeout must be explicitly approved. There is also no emergency owner recovery or transfer path for an inaccessible/deceased/abandoned owner account; do not invent an admin override or constitutional succession rule before that authority is approved.
 
 ### CN-G-005 — First-party Community frontend
 
-**Status: PARTIALLY CLOSED — initial homepage and moderation UI delivered and exact-head browser-tested; full product UI remains open.** The canonical development homepage includes navigation, a global feed, six seeded spaces, post composition, replies, reactions, bookmarks, report submission, join/request/leave, manager review of requests, invitation acceptance, a community-scoped report-review queue, decision-reason entry and a reporter-only My reports view. Chrome verified the owner opens the queue, starts review, resolves a report and the reporter sees the final outcome. The UI reuses the existing passkey session and has responsive layouts and keyboard focus indicators.
+**Status: PARTIALLY CLOSED — initial homepage, moderation and ownership-transfer UI delivered and exact-head browser-tested; full product UI remains open.** The canonical development homepage includes navigation, a global feed, six seeded spaces, post composition, replies, reactions, bookmarks, report submission, join/request/leave, manager review of requests, invitation acceptance, a community-scoped report-review queue, decision-reason entry, reporter-only My reports, incoming/outgoing ownership proposals, owner proposal form, successor accept/decline and owner cancellation. Chrome verified the report-review and complete voluntary ownership-transfer user journeys. The UI reuses the existing passkey session and has responsive layouts and keyboard focus indicators.
 
-Still missing are member profiles, comprehensive member/community search, community creation/settings, manager invitation issuance, appeal UI, safe owner transfer, full mobile/screen-reader testing and a complete accessibility audit.
+Still missing are member profiles, comprehensive member/community search, community creation/settings, manager invitation issuance, appeal UI, emergency owner recovery and full mobile/screen-reader testing and accessibility audit.
 
 The static Pages preview is deliberately disconnected and read-only. Account-backed behavior is tested only on the connected Worker staging build.
 
@@ -253,7 +261,7 @@ The purpose of this review is to reuse established behavior and avoid creating u
 
 Keep the existing AstroCrown account identity, Worker, D1 migration pattern, server-side authorization and hosted browser qualification. Borrow mature behavior/state-machine concepts from Discourse, Lemmy and Matrix, and keep ActivityPub as an optional future interoperability decision. Do not introduce a second social login, copy GPL/AGPL source into the repository, bolt on a managed third-party community product, or add a new service without a verified $0/no-card/operational-control assessment.
 
-The request-membership and invite-only membership options now have explicit, audited state transitions and browser coverage; the report workflow also has an open/review/final-decision lifecycle. Continue treating authorization, membership, moderation and ownership as state machines rather than isolated endpoints. The remaining moderation work is appeals and evidence policy; the remaining community-lifecycle work is owner transfer/succession.
+The request-membership and invite-only membership options now have explicit, audited state transitions and browser coverage; the report workflow has an open/review/final-decision lifecycle; and voluntary ownership transfer now has proposal, acceptance, decline, cancellation, role-demotion and audit states. Continue treating authorization, membership, moderation and ownership as state machines rather than isolated endpoints. Remaining moderation work is appeals and evidence policy; remaining ownership work is pending-transfer expiry policy and recovery when the active owner becomes unavailable.
 
 ### Cloudflare D1 Free-tier constraints and query qualification (verified 2026-11-19)
 
@@ -280,10 +288,10 @@ Sources:
 
 ## 9. Workflow anomaly — two push runs with no jobs
 
-The exact push to qualified code/UI commit `90ed2d997c0b9a504c5865d7c88902e014ea450b` produced two completed failures with empty job arrays:
+The exact push to qualified code/UI commit `af93971d1635b80b8ab81e98d740a5c4d8646f4a` produced two completed failures with empty job arrays:
 
-- `44433795862`, `.github/workflows/python-ci-lock-refresh.yml`, event `push`, zero retrievable jobs.
-- `44433794183`, `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, zero retrievable jobs.
+- `44440664065`, `.github/workflows/python-ci-lock-refresh.yml`, event `push`, zero retrievable jobs.
+- `44440662593`, `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, zero retrievable jobs.
 
 The inspected workflow source does not match these feature-branch push events: the Python lock-refresh workflow has PR path filters, schedule and workflow_dispatch but no push trigger; the prototype test workflow limits push to `main`. The connected job lookup returned empty arrays. That establishes only that no job-level explanation is available; it does not prove GitHub's internal root cause.
 
@@ -306,7 +314,7 @@ No trigger was broadened and no fake job was added to suppress the red indicator
 
 1. Obtain product approval for the current 7-day invitation expiry default or replace it with an explicitly approved policy before activating private communities publicly.
 2. Define the appeal authority, timing, escalation, evidence-retention and deletion rules before implementing report appeals. The current report queue, decisions and reporter-visible outcomes are implemented; do not add policy defaults silently.
-3. Implement safe community-owner transfer/succession with successor acceptance, concurrency controls, immutable audit events and real-browser tests.
+3. Decide whether a pending community ownership proposal needs an automatic expiry. The present voluntary flow has explicit owner cancellation and successor decline/acceptance, but no automatic timeout. Define a recovery/authority path for an inaccessible or abandoned owner before implementing emergency succession or platform-admin override.
 4. Complete manager UI for invitation issuance and private-community management; complete community creation/settings through the existing authorized platform-admin step-up, not client role assertions.
 5. Extend the Community UI with member profiles, search/discovery, subgroups/channels, pinned posts and additional interaction models only after each is specified and backed by a tested API.
 6. Research chat with Matrix and other mature options; qualify protocol, self-hosting, licensing, no-card cost, encryption/key recovery, abuse operations, data sovereignty and backups before adopting a new service.
@@ -318,11 +326,13 @@ No trigger was broadened and no fake job was added to suppress the red indicator
 
 ## 12. Closure and resumption checkpoint
 
-**Current qualified code/UI snapshot:** `90ed2d997c0b9a504c5865d7c88902e014ea450b`. The Community backend, request membership decisions, private invitation lifecycle including ban-safe transactional acceptance, author-side-block feed isolation, one-statement 20-post feed hydration, first-party homepage UI, report moderation API and actual Chrome report-review UI all pass exact-head GitHub-hosted tests.
+**Current qualified code/UI snapshot:** `af93971d1635b80b8ab81e98d740a5c4d8646f4a`. The Community backend, request membership decisions, private invitation lifecycle including ban-safe transactional acceptance, author-side-block feed isolation, one-statement 20-post feed hydration, first-party homepage UI, report moderation API/UI and voluntary ownership-transfer API/UI all pass exact-head GitHub-hosted tests.
 
-**Pull-request state:** PR #194 open, draft, unmerged and mergeable; 27 commits ahead and 0 behind `main`. PR #170 open, draft, unmerged and mergeable. Neither has been merged. No production deployment or promotion was performed. This audit amendment is documentation-only; fetch the live branch head before making any further change.
+**Ownership transfer boundary:** the voluntary handover path is qualified, but an automatic timeout for pending proposals and emergency recovery if the active owner becomes unavailable are not implemented. Current creator attribution is preserved. No admin/constitutional override has been invented.
 
-**Next highest-value work:** define appeal authority/evidence policy before adding appeals; implement community owner transfer/succession; complete manager invitation issuance and community settings UI; then extend profiles/search/accessibility/permalink safety. The 7-day invitation expiry remains a release policy decision. Daily D1 Free row quotas must be monitored and load-qualified before public activation; the one-query feed regression addresses the distinct per-invocation query budget.
+**Pull-request state at the qualified code/UI snapshot:** PR #194 open, draft, unmerged and mergeable; 36 commits ahead and 0 behind `main`. PR #170 open, draft, unmerged and mergeable. Neither has been merged. No production deployment or promotion was performed. This audit revision is documentation-only; fetch the live branch head before making any further code change.
+
+**Next highest-value work:** define ownership proposal timeout and owner-loss recovery policy; complete manager invitation issuance and community settings UI; define appeal authority/evidence policy before adding appeals; then extend profiles/search/accessibility/permalink safety. The 7-day invitation expiry remains a release policy decision. Daily D1 Free row quotas must be monitored and load-qualified before public activation; the one-query feed regression addresses the distinct per-invocation query budget.
 
 On resumption, fetch the current main and PR heads, read this record, compare the branch before editing, and continue from the exact head. Do not repeat the already-passing backend/browser/static checks unless a relevant file or workflow changes. If a rule requires owner/constitutional approval, stop at that boundary rather than silently inventing policy.
 
