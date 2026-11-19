@@ -602,6 +602,11 @@ async function testCommunityApi(accountIdentifier) {
     " WHERE space_id=" + sqlLiteral(privateSpaceId) + " AND account_id=" + sqlLiteral(blockedAuthorId) + ";",
     "Restore the synthetic account after the banned-recipient acceptance test"
   );
+  const bannedInvitationRevoked = await postWorkerJson("/api/community/invitations/" + bannedInviteId + "/revoke", {
+    reason: "Close the synthetic banned-recipient test invitation"
+  });
+  assert.equal(bannedInvitationRevoked.status, 200, JSON.stringify(bannedInvitationRevoked.body));
+  assert.equal(bannedInvitationRevoked.body.invitationStatus, "revoked");
 
   const invitationToRevoke = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
     accountId: blockedAuthorId, reason: "Local browser test revocation"
