@@ -726,12 +726,7 @@ function membershipInviteId(value) {
   return value;
 }
 
-function ownershipTransferId(value) {
-  if (typeof value !== "string" || !/^transfer_[a-f0-9]{32}$/.test(value)) {
-    throw fail(400, "The ownership transfer reference is invalid.");
-  }
-  return value;
-}
+
 
 function moderationReportId(value) {
   if (typeof value !== "string" || !/^report_[a-f0-9]{32}$/.test(value)) {
