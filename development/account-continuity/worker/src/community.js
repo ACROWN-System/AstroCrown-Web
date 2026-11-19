@@ -592,51 +592,77 @@ async function respondOwnershipTransfer(db, account, transferRef, payload) {
   );
 
   if (payload.action === "decline") {
-    const result = await db.batch([
-    // The transfer record is the transaction gate. Both parties and the
-    // community must still be in the expected state at acceptance time.
+    const declined = await db.batch([
+      db.prepare(
+        "UPDATE community_ownership_transfers SET transfer_status='declined',responded_at=?,response_reason=? " +
+        "WHERE transfer_id=? AND to_account_id=? AND transfer_status='pending' " +
+        "AND EXISTS(SELECT 1 FROM community_spaces c WHERE c.space_id=community_ownership_transfers.space_id AND c.status='active')"
+      ).bind(now, responseReason, id, actor.account_id),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,?,'community_ownership_transfer_declined','ownership_transfer',?,?,?,? WHERE changes()=1"
+      ).bind(
+        randomId("audit_"), actor.account_id, id, responseReason,
+        JSON.stringify({ spaceId: transfer.space_id, fromAccountId: transfer.from_account_id }),
+        now
+      ),
+    ]);
+    if (Number(declined?.[0]?.meta?.changes || 0) !== 1 ||
+        Number(declined?.[1]?.meta?.changes || 0) !== 1) {
+      throw fail(409, "The ownership transfer changed before the decline could be recorded.");
+    }
+    return { transferId: id, status: "declined" };
+  }
+
+  // The transfer gate checks that the original owner remains active and that
+  // the intended successor remains an active non-owner member.
+  const accepted = await db.batch([
     db.prepare(
       "UPDATE community_ownership_transfers SET transfer_status='accepted',responded_at=?,response_reason=? " +
-      "WHERE transfer_id=? AND to_account_id=? AND transfer_status='pending' AND EXISTS(" +
-      "SELECT 1 FROM community_spaces c WHERE c.space_id=community_ownership_transfers.space_id AND c.status='active') " +
+      "WHERE transfer_id=? AND to_account_id=? AND transfer_status='pending' " +
+      "AND EXISTS(SELECT 1 FROM community_spaces c WHERE c.space_id=community_ownership_transfers.space_id " +
+      "AND c.status='active' AND c.created_by_account_id=community_ownership_transfers.from_account_id) " +
       "AND EXISTS(SELECT 1 FROM community_memberships old_owner WHERE old_owner.space_id=community_ownership_transfers.space_id " +
       "AND old_owner.account_id=community_ownership_transfers.from_account_id AND old_owner.membership_status='active' " +
-      "AND old_owner.member_role='owner') AND EXISTS(SELECT 1 FROM community_memberships successor " +
-      "WHERE successor.space_id=community_ownership_transfers.space_id AND successor.account_id=community_ownership_transfers.to_account_id " +
-      "AND successor.membership_status='active' AND successor.member_role<>'owner')"
+      "AND old_owner.member_role='owner') " +
+      "AND EXISTS(SELECT 1 FROM community_memberships successor WHERE successor.space_id=community_ownership_transfers.space_id " +
+      "AND successor.account_id=community_ownership_transfers.to_account_id AND successor.membership_status='active' " +
+      "AND successor.member_role<>'owner')"
     ).bind(now, responseReason, id, actor.account_id),
-    // Demote first. The D1 batch is transactional, so no outside request can
-    // observe the interim state. This order satisfies the immediate unique
-    // partial index that permits only one active owner per community.
+    // Demote first. D1 batch is transactional, so no outside request can
+    // observe the interim state; this also satisfies the unique active-owner
+    // index without relying on row update order inside a single UPDATE.
     db.prepare(
       "UPDATE community_memberships SET member_role='member',updated_at=? " +
       "WHERE space_id=? AND account_id=? AND membership_status='active' AND member_role='owner' " +
-      "AND EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? AND t.transfer_status='accepted' " +
-      "AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?)"
+      "AND EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? " +
+      "AND t.transfer_status='accepted' AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?)"
     ).bind(now, transfer.space_id, transfer.from_account_id, id, now, transfer.from_account_id, transfer.to_account_id),
-    // Only after the former owner is demoted do we promote the successor.
-    // If either conditional update fails, the full D1 batch is rolled back.
+    // Promote successor only after the old owner is demoted.
     db.prepare(
       "UPDATE community_memberships SET member_role='owner',updated_at=? " +
       "WHERE space_id=? AND account_id=? AND membership_status='active' AND member_role<>'owner' " +
-      "AND EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? AND t.transfer_status='accepted' " +
-      "AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?) " +
+      "AND EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? " +
+      "AND t.transfer_status='accepted' AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?) " +
       "AND EXISTS(SELECT 1 FROM community_memberships old_owner WHERE old_owner.space_id=? " +
       "AND old_owner.account_id=? AND old_owner.membership_status='active' AND old_owner.member_role='member')"
-    ).bind(now, transfer.space_id, transfer.to_account_id, id, now, transfer.from_account_id, transfer.to_account_id, transfer.space_id, transfer.from_account_id),
+    ).bind(now, transfer.space_id, transfer.to_account_id, id, now, transfer.from_account_id, transfer.to_account_id,
+      transfer.space_id, transfer.from_account_id),
     db.prepare(
-      "UPDATE community_spaces SET created_by_account_id=? WHERE space_id=? AND status='active' AND EXISTS(" +
-      "SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? AND t.transfer_status='accepted' AND t.responded_at=? " +
-      "AND t.from_account_id=? AND t.to_account_id=?)"
-    ).bind(transfer.to_account_id, transfer.space_id, id, now, transfer.from_account_id, transfer.to_account_id),
+      "UPDATE community_spaces SET created_by_account_id=? " +
+      "WHERE space_id=? AND status='active' AND created_by_account_id=? " +
+      "AND EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? " +
+      "AND t.transfer_status='accepted' AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?)"
+    ).bind(transfer.to_account_id, transfer.space_id, transfer.from_account_id, id, now,
+      transfer.from_account_id, transfer.to_account_id),
     db.prepare(
       "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
       "SELECT ?,?,'community_ownership_transfer_accepted','ownership_transfer',?,?,?,? " +
       "WHERE changes()=1 " +
-      "AND EXISTS(SELECT 1 FROM community_memberships owner WHERE owner.space_id=? AND owner.account_id=? " +
-      "AND owner.membership_status='active' AND owner.member_role='member') " +
-      "AND EXISTS(SELECT 1 FROM community_memberships successor WHERE successor.space_id=? AND successor.account_id=? " +
-      "AND successor.membership_status='active' AND successor.member_role='owner') " +
+      "AND EXISTS(SELECT 1 FROM community_memberships former_owner WHERE former_owner.space_id=? " +
+      "AND former_owner.account_id=? AND former_owner.membership_status='active' AND former_owner.member_role='member') " +
+      "AND EXISTS(SELECT 1 FROM community_memberships successor WHERE successor.space_id=? " +
+      "AND successor.account_id=? AND successor.membership_status='active' AND successor.member_role='owner') " +
       "AND EXISTS(SELECT 1 FROM community_spaces c WHERE c.space_id=? AND c.created_by_account_id=?)"
     ).bind(
       randomId("audit_"), actor.account_id, id, responseReason,
@@ -646,11 +672,11 @@ async function respondOwnershipTransfer(db, account, transferRef, payload) {
     ),
   ]);
 
-  if (Number(result?.[0]?.meta?.changes || 0) !== 1 ||
-      Number(result?.[1]?.meta?.changes || 0) !== 1 ||
-      Number(result?.[2]?.meta?.changes || 0) !== 1 ||
-      Number(result?.[3]?.meta?.changes || 0) !== 1 ||
-      Number(result?.[4]?.meta?.changes || 0) !== 1) {
+  if (Number(accepted?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(accepted?.[1]?.meta?.changes || 0) !== 1 ||
+      Number(accepted?.[2]?.meta?.changes || 0) !== 1 ||
+      Number(accepted?.[3]?.meta?.changes || 0) !== 1 ||
+      Number(accepted?.[4]?.meta?.changes || 0) !== 1) {
     throw fail(409, "The ownership handover could not be completed consistently; refresh the community and transfer status.");
   }
   return {
