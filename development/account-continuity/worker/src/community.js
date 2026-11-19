@@ -651,7 +651,8 @@ async function respondOwnershipTransfer(db, account, transferRef, payload) {
     db.prepare(
       "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
       "SELECT ?,?,'community_ownership_transfer_accepted','ownership_transfer',?,?,?,? " +
-      "WHERE EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? " +
+      "WHERE changes()=1 " +
+      "AND EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? " +
       "AND t.transfer_status='accepted' AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?) " +
       "AND EXISTS(SELECT 1 FROM community_memberships former_owner WHERE former_owner.space_id=? " +
       "AND former_owner.account_id=? AND former_owner.membership_status='active' AND former_owner.member_role='member') " +
