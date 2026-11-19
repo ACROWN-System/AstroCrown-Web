@@ -621,7 +621,7 @@ async function respondOwnershipTransfer(db, account, transferRef, payload) {
       "UPDATE community_ownership_transfers SET transfer_status='accepted',responded_at=?,response_reason=? " +
       "WHERE transfer_id=? AND to_account_id=? AND transfer_status='pending' " +
       "AND EXISTS(SELECT 1 FROM community_spaces c WHERE c.space_id=community_ownership_transfers.space_id " +
-      "AND c.status='active' AND c.created_by_account_id=community_ownership_transfers.from_account_id) " +
+      "AND c.status='active') " +
       "AND EXISTS(SELECT 1 FROM community_memberships old_owner WHERE old_owner.space_id=community_ownership_transfers.space_id " +
       "AND old_owner.account_id=community_ownership_transfers.from_account_id AND old_owner.membership_status='active' " +
       "AND old_owner.member_role='owner') " +
@@ -649,34 +649,28 @@ async function respondOwnershipTransfer(db, account, transferRef, payload) {
     ).bind(now, transfer.space_id, transfer.to_account_id, id, now, transfer.from_account_id, transfer.to_account_id,
       transfer.space_id, transfer.from_account_id),
     db.prepare(
-      "UPDATE community_spaces SET created_by_account_id=? " +
-      "WHERE space_id=? AND status='active' AND created_by_account_id=? " +
-      "AND EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? " +
-      "AND t.transfer_status='accepted' AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?)"
-    ).bind(transfer.to_account_id, transfer.space_id, transfer.from_account_id, id, now,
-      transfer.from_account_id, transfer.to_account_id),
-    db.prepare(
       "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
       "SELECT ?,?,'community_ownership_transfer_accepted','ownership_transfer',?,?,?,? " +
-      "WHERE changes()=1 " +
+      "WHERE EXISTS(SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? " +
+      "AND t.transfer_status='accepted' AND t.responded_at=? AND t.from_account_id=? AND t.to_account_id=?) " +
       "AND EXISTS(SELECT 1 FROM community_memberships former_owner WHERE former_owner.space_id=? " +
       "AND former_owner.account_id=? AND former_owner.membership_status='active' AND former_owner.member_role='member') " +
       "AND EXISTS(SELECT 1 FROM community_memberships successor WHERE successor.space_id=? " +
       "AND successor.account_id=? AND successor.membership_status='active' AND successor.member_role='owner') " +
-      "AND EXISTS(SELECT 1 FROM community_spaces c WHERE c.space_id=? AND c.created_by_account_id=?)"
+      "AND EXISTS(SELECT 1 FROM community_spaces c WHERE c.space_id=? AND c.status='active')"
     ).bind(
       randomId("audit_"), actor.account_id, id, responseReason,
       JSON.stringify({ spaceId: transfer.space_id, fromAccountId: transfer.from_account_id, toAccountId: transfer.to_account_id }),
-      now, transfer.space_id, transfer.from_account_id, transfer.space_id, transfer.to_account_id,
-      transfer.space_id, transfer.to_account_id
+      now, id, now, transfer.from_account_id, transfer.to_account_id,
+      transfer.space_id, transfer.from_account_id, transfer.space_id, transfer.to_account_id,
+      transfer.space_id
     ),
   ]);
 
   if (Number(accepted?.[0]?.meta?.changes || 0) !== 1 ||
       Number(accepted?.[1]?.meta?.changes || 0) !== 1 ||
       Number(accepted?.[2]?.meta?.changes || 0) !== 1 ||
-      Number(accepted?.[3]?.meta?.changes || 0) !== 1 ||
-      Number(accepted?.[4]?.meta?.changes || 0) !== 1) {
+      Number(accepted?.[3]?.meta?.changes || 0) !== 1) {
     throw fail(409, "The ownership handover could not be completed consistently; refresh the community and transfer status.");
   }
   return {
