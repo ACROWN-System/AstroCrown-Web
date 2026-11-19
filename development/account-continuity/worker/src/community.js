@@ -427,6 +427,261 @@ async function leaveCommunity(db, account, slug) {
   return { slug: space.slug, membershipStatus: "left" };
 }
 
+function membershipAccountId(value) {
+  if (typeof value !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(value)) {
+    throw fail(400, "The community member reference is invalid.");
+  }
+  return value;
+}
+
+function membershipInviteId(value) {
+  if (typeof value !== "string" || !/^invite_[a-f0-9]{32}$/.test(value)) {
+    throw fail(400, "The invitation reference is invalid.");
+  }
+  return value;
+}
+
+async function requireCommunityManager(db, space, account, services) {
+  const memberManager = await isSpaceModerator(db, space.space_id, account);
+  const platformManager = await isPlatformModerator(account, services);
+  if (!memberManager && !platformManager) {
+    throw fail(403, "An active community owner, moderator or authorized platform administrator is required.");
+  }
+}
+
+async function listMembershipRequests(db, account, slug, services) {
+  const actor = requireAccount(account);
+  const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
+  if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
+  await requireCommunityManager(db, space, actor, services);
+  const result = await db.prepare(
+    "SELECT m.account_id,m.requested_at,m.updated_at,a.user_handle,a.avatar_id " +
+    "FROM community_memberships m JOIN auth_accounts a ON a.account_id=m.account_id " +
+    "WHERE m.space_id=? AND m.membership_status='pending' " +
+    "ORDER BY m.requested_at ASC,m.account_id ASC LIMIT 100"
+  ).bind(space.space_id).all();
+  return {
+    slug: space.slug,
+    items: (result.results || []).map(row => ({
+      accountId: row.account_id,
+      handle: row.user_handle,
+      avatarId: row.avatar_id,
+      requestedAt: Number(row.requested_at),
+      updatedAt: Number(row.updated_at),
+    })),
+  };
+}
+
+async function decideMembershipRequest(db, account, slug, targetId, payload, services) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["action","reason"], "The membership decision");
+  const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
+  if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
+  await requireCommunityManager(db, space, actor, services);
+  const targetAccountId = membershipAccountId(targetId);
+  if (!["approve","reject"].includes(payload.action)) throw fail(400, "Choose approve or reject for this membership request.");
+  const reason = cleanText(
+    payload.reason || (payload.action === "approve" ? "Membership request approved by a community manager." : "Membership request declined by a community manager."),
+    500,
+    "Membership decision reason"
+  );
+  const target = await db.prepare(
+    "SELECT membership_status FROM community_memberships WHERE space_id=? AND account_id=?"
+  ).bind(space.space_id, targetAccountId).first();
+  if (!target || target.membership_status !== "pending") {
+    throw fail(409, "This account has no pending membership request to decide.");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const newStatus = payload.action === "approve" ? "active" : "left";
+  const result = await db.batch([
+    db.prepare(
+      "UPDATE community_memberships SET membership_status=?,member_role='member',updated_at=? " +
+      "WHERE space_id=? AND account_id=? AND membership_status='pending'"
+    ).bind(newStatus, now, space.space_id, targetAccountId),
+    db.prepare(
+      "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+      "SELECT ?,?,?,?,?,?,?,? WHERE changes()=1"
+    ).bind(randomId("audit_"), actor.account_id, "membership_request_" + payload.action, "membership", space.space_id + ":" + targetAccountId,
+      reason, JSON.stringify({ priorStatus: "pending", newStatus }), now),
+  ]);
+  if (Number(result?.[0]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The membership request changed before this decision could be applied; refresh the request list.");
+  }
+  return { slug: space.slug, accountId: targetAccountId, membershipStatus: newStatus, decision: payload.action };
+}
+
+async function createMembershipInvitation(db, account, slug, payload, services) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["accountId","reason"], "The membership invitation");
+  const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
+  if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
+  await requireCommunityManager(db, space, actor, services);
+  if (space.membership_policy !== "invite_only" || space.visibility !== "private") {
+    throw fail(409, "Invitations are currently enabled only for private invite-only communities.");
+  }
+  const targetAccountId = membershipAccountId(payload.accountId);
+  if (targetAccountId === actor.account_id) throw fail(400, "You cannot invite your own account.");
+  const targetAccount = await db.prepare("SELECT account_id FROM auth_accounts WHERE account_id=?").bind(targetAccountId).first();
+  if (!targetAccount) throw fail(404, "The AstroCrown account to invite could not be found.");
+  const membership = await membershipFor(db, space.space_id, targetAccountId);
+  if (membership?.membership_status === "banned") throw fail(409, "A banned account cannot be invited to this community.");
+  if (membership?.membership_status === "active") throw fail(409, "This account is already an active community member.");
+  const now = Math.floor(Date.now() / 1000);
+  const expiresAt = now + 7 * 24 * 60 * 60;
+  const inviteId = randomId("invite_");
+  const reason = cleanText(payload.reason || "Community invitation issued by an authorized manager.", 500, "Invitation reason");
+  try {
+    await db.batch([
+      db.prepare(
+        "INSERT INTO community_membership_invitations(invite_id,space_id,invited_account_id,invited_by_account_id,invitation_status,created_at,expires_at) " +
+        "VALUES(?,?,?,?,'pending',?,?)"
+      ).bind(inviteId, space.space_id, targetAccountId, actor.account_id, now, expiresAt),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) VALUES(?,?,?,?,?,?,?,?)"
+      ).bind(randomId("audit_"), actor.account_id, "membership_invitation_created", "invitation", inviteId, reason,
+        JSON.stringify({ spaceId: space.space_id, targetAccountId, expiresAt }), now),
+    ]);
+  } catch (error) {
+    if (/unique|constraint/i.test(String(error?.message || error))) {
+      throw fail(409, "A pending invitation already exists for this account in this community.");
+    }
+    throw error;
+  }
+  return { invitation: { id: inviteId, slug: space.slug, accountId: targetAccountId, status: "pending", createdAt: now, expiresAt } };
+}
+
+async function listMembershipInvitations(db, account) {
+  const actor = requireAccount(account);
+  const now = Math.floor(Date.now() / 1000);
+  const result = await db.prepare(
+    "SELECT i.invite_id,i.invitation_status,i.created_at,i.expires_at,i.space_id," +
+    "c.slug AS community_slug,c.name AS community_name,a.user_handle AS inviter_handle " +
+    "FROM community_membership_invitations i " +
+    "JOIN community_spaces c ON c.space_id=i.space_id " +
+    "JOIN auth_accounts a ON a.account_id=i.invited_by_account_id " +
+    "WHERE i.invited_account_id=? AND i.invitation_status='pending' AND i.expires_at>? AND c.status='active' " +
+    "ORDER BY i.created_at DESC LIMIT 50"
+  ).bind(actor.account_id, now).all();
+  return {
+    invitations: (result.results || []).map(row => ({
+      id: row.invite_id, slug: row.community_slug, communityName: row.community_name,
+      inviterHandle: row.inviter_handle, status: row.invitation_status,
+      createdAt: Number(row.created_at), expiresAt: Number(row.expires_at),
+    })),
+  };
+}
+
+async function respondMembershipInvitation(db, account, inviteId, payload) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["action"], "The invitation response");
+  if (!["accept","decline"].includes(payload.action)) throw fail(400, "Choose accept or decline for this invitation.");
+  const id = membershipInviteId(inviteId);
+  const invitation = await db.prepare(
+    "SELECT invite_id,space_id,invited_account_id,invitation_status,expires_at,responded_at " +
+    "FROM community_membership_invitations WHERE invite_id=? AND invited_account_id=?"
+  ).bind(id, actor.account_id).first();
+  if (!invitation) throw fail(404, "The invitation could not be found.");
+  const now = Math.floor(Date.now() / 1000);
+  if (invitation.invitation_status === "pending" && Number(invitation.expires_at) <= now) {
+    await db.prepare(
+      "UPDATE community_membership_invitations SET invitation_status='expired' WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
+    ).bind(id, now).run();
+    throw fail(410, "This community invitation has expired.");
+  }
+  if (invitation.invitation_status !== "pending") {
+    if (payload.action === "accept" && invitation.invitation_status === "accepted") {
+      const acceptedMembership = await membershipFor(db, invitation.space_id, actor.account_id);
+      if (acceptedMembership?.membership_status === "active") {
+        return { invitationId: id, invitationStatus: "accepted", membershipStatus: "active", alreadyProcessed: true };
+      }
+    }
+    if (payload.action === "decline" && invitation.invitation_status === "declined") {
+      return { invitationId: id, invitationStatus: "declined", alreadyProcessed: true };
+    }
+    throw fail(409, "This invitation is no longer awaiting a response.");
+  }
+  if (payload.action === "accept") {
+    const membership = await membershipFor(db, invitation.space_id, actor.account_id);
+    if (membership?.membership_status === "banned") throw fail(403, "A banned account cannot accept an invitation to this community.");
+  }
+  const nextStatus = payload.action === "accept" ? "accepted" : "declined";
+  const batch = [
+    db.prepare(
+      "UPDATE community_membership_invitations SET invitation_status=?,responded_at=? " +
+      "WHERE invite_id=? AND invited_account_id=? AND invitation_status='pending' AND expires_at>?"
+    ).bind(nextStatus, now, id, actor.account_id, now),
+  ];
+  if (payload.action === "accept") {
+    batch.push(db.prepare(
+      "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT space_id,invited_account_id,'active','member',?,? FROM community_membership_invitations " +
+      "WHERE invite_id=? AND invited_account_id=? AND invitation_status='accepted' AND responded_at=? " +
+      "ON CONFLICT(space_id,account_id) DO UPDATE SET membership_status='active',member_role='member',updated_at=excluded.updated_at " +
+      "WHERE community_memberships.membership_status IN ('left','pending')"
+    ).bind(now, now, id, actor.account_id, now));
+  }
+  batch.push(db.prepare(
+    "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+    "SELECT ?,?,'membership_invitation_" + (payload.action === "accept" ? "accepted" : "declined") + "',?,?,?, ?,? " +
+    "WHERE EXISTS(SELECT 1 FROM community_membership_invitations WHERE invite_id=? AND invitation_status=? AND responded_at=?)"
+  ).bind(randomId("audit_"), actor.account_id, "invitation", id,
+    "Invitation " + payload.action + "ed by its recipient.",
+    JSON.stringify({ spaceId: invitation.space_id }), now, id, nextStatus, now));
+  await db.batch(batch);
+  const current = await db.prepare(
+    "SELECT invitation_status FROM community_membership_invitations WHERE invite_id=? AND invited_account_id=?"
+  ).bind(id, actor.account_id).first();
+  if (current?.invitation_status !== nextStatus) throw fail(409, "The invitation changed before your response could be recorded.");
+  if (payload.action === "accept") {
+    const acceptedMembership = await membershipFor(db, invitation.space_id, actor.account_id);
+    if (acceptedMembership?.membership_status !== "active") {
+      throw fail(409, "The invitation was accepted but community membership could not be activated; contact a community moderator.");
+    }
+    return { invitationId: id, invitationStatus: nextStatus, membershipStatus: "active" };
+  }
+  return { invitationId: id, invitationStatus: nextStatus };
+}
+
+async function revokeMembershipInvitation(db, account, inviteId, payload, services) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["reason"], "The invitation revocation");
+  const id = membershipInviteId(inviteId);
+  const invitation = await db.prepare(
+    "SELECT invite_id,space_id,invited_account_id,invited_by_account_id,invitation_status,expires_at " +
+    "FROM community_membership_invitations WHERE invite_id=?"
+  ).bind(id).first();
+  if (!invitation) throw fail(404, "The invitation could not be found.");
+  const space = await db.prepare("SELECT slug,status FROM community_spaces WHERE space_id=?").bind(invitation.space_id).first();
+  if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
+  const manager = await isSpaceModerator(db, invitation.space_id, actor) || await isPlatformModerator(actor, services);
+  if (!manager && invitation.invited_by_account_id !== actor.account_id) {
+    throw fail(403, "Only the invitation issuer, a community manager or a platform administrator may revoke this invitation.");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  if (invitation.invitation_status === "pending" && Number(invitation.expires_at) <= now) {
+    await db.prepare(
+      "UPDATE community_membership_invitations SET invitation_status='expired' WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
+    ).bind(id, now).run();
+    throw fail(410, "This community invitation has expired.");
+  }
+  if (invitation.invitation_status !== "pending") throw fail(409, "Only a pending invitation can be revoked.");
+  const reason = cleanText(payload.reason || "Invitation revoked by an authorized community manager.", 500, "Invitation revocation reason");
+  const result = await db.batch([
+    db.prepare(
+      "UPDATE community_membership_invitations SET invitation_status='revoked',revoked_at=? " +
+      "WHERE invite_id=? AND invitation_status='pending' AND expires_at>?"
+    ).bind(now, id, now),
+    db.prepare(
+      "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+      "SELECT ?,?,'membership_invitation_revoked','invitation',?,?,?,? WHERE changes()=1"
+    ).bind(randomId("audit_"), actor.account_id, id, reason, JSON.stringify({ spaceId: invitation.space_id, targetAccountId: invitation.invited_account_id }), now),
+  ]);
+  if (Number(result?.[0]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The invitation changed before revocation could be applied; refresh and try again.");
+  }
+  return { invitationId: id, invitationStatus: "revoked" };
+}
+
 async function changeMemberRole(db, account, slug, targetAccountId, payload, services) {
   const actor = requireAccount(account);
   onlyKeys(payload, ["role","reason"], "The membership role change");
@@ -600,6 +855,17 @@ export async function handleCommunityApi(request, db, account, services = {}) {
       feedUrl.searchParams.set("space", normalizeCommunitySlug(communityFeed[1]));
       return json(200, await listFeed(db, feedUrl, account));
     }
+    if (method === "GET" && path === "/api/community/invitations") {
+      requireAccount(account);
+      await limited("community-invitations", 30, 60);
+      return json(200, await listMembershipInvitations(db, account));
+    }
+    const membershipRequestsRoute = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)\/membership-requests$/);
+    if (method === "GET" && membershipRequestsRoute) {
+      requireAccount(account);
+      await limited("membership-requests", 30, 60);
+      return json(200, await listMembershipRequests(db, account, membershipRequestsRoute[1], services));
+    }
     const communityDetailMatch = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)$/);
     if (method === "GET" && communityDetailMatch) {
       await limited("community-detail", 120, 60);
@@ -640,6 +906,30 @@ export async function handleCommunityApi(request, db, account, services = {}) {
         return json(200, membershipRoute[2] === "join"
           ? await joinCommunity(db, account, membershipRoute[1])
           : await leaveCommunity(db, account, membershipRoute[1]));
+      }
+      const membershipDecisionRoute = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)\/members\/([A-Za-z0-9_-]{1,100})\/decision$/);
+      if (membershipDecisionRoute) {
+        requireAccount(account);
+        await limited("membership-decision", 20, 3600);
+        return json(200, await decideMembershipRequest(db, account, membershipDecisionRoute[1], membershipDecisionRoute[2], payload, services));
+      }
+      const invitationCreateRoute = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)\/invitations$/);
+      if (invitationCreateRoute) {
+        requireAccount(account);
+        await limited("membership-invite", 20, 3600);
+        return json(201, await createMembershipInvitation(db, account, invitationCreateRoute[1], payload, services));
+      }
+      const invitationRespondRoute = path.match(/^\/api\/community\/invitations\/(invite_[a-f0-9]{32})\/respond$/);
+      if (invitationRespondRoute) {
+        requireAccount(account);
+        await limited("membership-invite-response", 20, 3600);
+        return json(200, await respondMembershipInvitation(db, account, invitationRespondRoute[1], payload));
+      }
+      const invitationRevokeRoute = path.match(/^\/api\/community\/invitations\/(invite_[a-f0-9]{32})\/revoke$/);
+      if (invitationRevokeRoute) {
+        requireAccount(account);
+        await limited("membership-invite-revoke", 20, 3600);
+        return json(200, await revokeMembershipInvitation(db, account, invitationRevokeRoute[1], payload, services));
       }
       const roleRoute = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)\/members\/([A-Za-z0-9_-]{1,100})\/role$/);
       if (roleRoute) {
