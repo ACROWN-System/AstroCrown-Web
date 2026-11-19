@@ -1,11 +1,11 @@
 # Community Network Foundation — Engineering Qualification and Continuity Record
 
 **Record:** CN-AUDIT-2026-11-19-001  
-**Created:** 2026-11-19 (UTC)  
-**Status:** IN PROGRESS — BACKEND FOUNDATION QUALIFIED; PRODUCT ACCEPTANCE BLOCKED  
+**Created:** 2026-11-19; revised after frontend qualification on 2026-11-19 (UTC)
+**Status:** BACKEND + INITIAL FRONTEND SLICE QUALIFIED ON EXACT HEAD; NOT PRODUCT OR PRODUCTION READY
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Branch:** `feature/community-network-foundation-2026-11-19`  
-**Candidate commit at record creation:** `71c10fdf3d949df06646eae229da8cd41e86686e`  
+**Candidate commit at record revision:** `22764679870d69c27554dcb115e77e6892216ca4`
 **Base:** `main` at `51da27b004c8f5aa94a37bd90a9521a61bedb565`  
 **Related GitHub pull requests:** [#194 — Community API foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/194); [#170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170)  
 **Information handling:** INTERNAL — repository engineering evidence; synthetic test identities only  
@@ -13,29 +13,22 @@
 
 ## 1. Outcome and scope
 
-This record establishes what is actually implemented and qualified in the first native community backend slice, what was corrected during this work block, what remains incomplete against the accepted product direction, and the exact next engineering actions.
+This record now covers the first qualified backend foundation **and the first native Community homepage slice**. It does not declare the complete AstroCrown social/community product finished.
 
-The objective is not to declare the social platform complete. It is to establish a durable, reviewable foundation on the existing AstroCrown account identity, avoid duplicate authentication, preserve server-side visibility boundaries, and prevent the first backend slice from being mistaken for a finished social/community experience.
+Delivered and qualified on the exact candidate commit:
 
-Included in the current implementation candidate:
+- D1 schema and authenticated Worker APIs for community discovery, global/community feeds, post/reply persistence, reactions, bookmarks, block/mute, reports, membership and moderation audit.
+- Manager-reviewed request membership: pending requests, manager-only queue, approve/reject decisions, conditional updates and audit events.
+- Account-bound private-community invitations: manager issuance, invitee inbox, accept/decline, issuer/manager revocation, expiry reconciliation and audit records. An invitation grants no access until its intended AstroCrown account accepts it.
+- Corrected author-side block feed isolation. Hidden posts are omitted from feeds and direct reads remain denied without breaking unrelated feed items.
+- First-party Community section in the canonical `development/index.html`: global feed, six seeded community links, group feed, post composer, replies, reactions, bookmarks, report submission, join/request/leave actions, request review and invitation acceptance.
+- Reuses the existing AstroCrown passkey/account session. No separate social identity, password or login system was added.
+- Worker staging and static Pages build allowlists now include only the two explicit Community assets. The standalone static preview injects a no-backend marker and presents a read-only explanation; account-backed Community behavior remains confined to the connected Worker staging environment.
+- Real Chrome tests verify the rendered homepage section, six seeded links, staging CSS/JavaScript delivery, unauthenticated composer boundary, navigation, backend API journeys and private-content isolation.
 
-- D1 schema for community spaces, memberships, posts/replies, reactions, bookmarks, account block/mute controls, content reports and append-only moderation audit.
-- Six seed communities, with an extensible taxonomy.
-- Worker APIs for discovery, global/community feeds, community details, membership join/leave, posting/replies, reactions, bookmarks, reports, author deletion, account controls, community roles and hide/restore moderation.
-- Existing AstroCrown account sessions as the write identity; platform community creation requires server-confirmed administrator authority and a fresh enrolled-wallet step-up.
-- A real-browser Worker/D1 smoke path using disposable local D1 and synthetic identities.
+Not delivered: private/group chat, file or media uploads, member profile pages, full member search, complete moderation case review and appeals, community owner transfer, invitations issued from the homepage UI, full community creation/settings UI, subgroups/channels, public share cards/permalink safety, polls/proposals/events, binding elections, complete accessibility/performance/load/backup qualification.
 
-Explicitly outside this slice and not delivered by it:
-
-- Social/community frontend, navigation, profiles and complete browser user journeys.
-- Private messaging/chat and communications.
-- File/media attachments and content processing.
-- Subgroups, topic channels, pinned posts, search/discovery ranking, quotations/reposts, non-binding polls, proposals, events and external-share cards.
-- Membership approval/rejection and invitation delivery/acceptance workflows.
-- Report review/decision lifecycle and appeals.
-- Council election or binding governance functionality.
-
-No production deployment, production D1 migration, public onboarding, payment, wallet transaction, mint, transfer or on-chain action is authorized by this work.
+No production deployment, remote D1 migration, public onboarding, payment, wallet transaction, mint, transfer or on-chain action was performed. Both relevant pull requests remain drafts and unmerged.
 
 ## 2. Governing product requirements and decisions
 
@@ -70,60 +63,74 @@ Product rules applied to this audit:
 
 ## 4. Candidate and exact implementation state
 
-PR #194 current candidate at the time of the initial qualification:
-
+- Repository: `ACROWN-System/AstroCrown-Web`
+- PR: [#194 — Community API foundation and first-party homepage interface](https://github.com/ACROWN-System/AstroCrown-Web/pull/194)
 - Branch: `feature/community-network-foundation-2026-11-19`
-- Commit: `71c10fdf3d949df06646eae229da8cd41e86686e`
-- Commit message: `fix(community): isolate author-side blocks in feeds`
-- Parent: `2d86234774621c6fde6a0dfaa91fe83ec34f43d8`
-- Base main commit: `51da27b004c8f5aa94a37bd90a9521a61bedb565`
-- Five files changed in the pull request; the last code commit added one regression fix across the community API and Worker browser test.
-- The pull request remained open, draft and unmerged.
+- Exact qualified candidate: `22764679870d69c27554dcb115e77e6892216ca4`
+- Base branch: `main`; PR remains open, draft and unmerged.
+- Product requirements: [PR #170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170), synchronized against current main, still draft and unmerged.
+- No force push, merge or production promotion was performed.
 
-The backend schema and route implementation live under:
+Principal implementation paths:
 
 - `development/account-continuity/worker/migrations/0006_community_social_foundation.sql`
+- `development/account-continuity/worker/migrations/0007_community_membership_invitations.sql`
 - `development/account-continuity/worker/src/community.js`
 - `development/account-continuity/worker/src/index.js`
 - `development/account-continuity/worker/tests/community.test.mjs`
 - `development/account-continuity/worker/tests/worker_browser_smoke.mjs`
+- `development/account-continuity/worker/scripts/build-staging-site.mjs`
+- `development/account-continuity/prototype/account-ui.js`
+- `development/index.html`
+- `development/community-network/community-network.css`
+- `development/community-network/community-network.js`
+- `scripts/build-cloudflare-pages.mjs`
+- `scripts/test-cloudflare-pages-build.mjs`
 
-The current `main` preview directory was inspected. It contains the existing homepage/account/Genesis/privacy assets, but no community page or social UI. The PR #194 changed-file list also contains no frontend/community page or account-navigation file. Therefore, the earlier conversation handoff's mention of a completed community page/account navigation is **not corroborated by the currently inspectable branch/source** and is not counted as delivered. It may represent work from another unmerged or unavailable branch; no attempt is made to infer that it exists.
+The staging build copies the Community assets into the connected Worker environment. The standalone static Pages preview copies the same CSS/JS under its explicit allowlist but injects `window.ASTROCROWN_COMMUNITY_STATIC_PREVIEW = true`; the UI then suppresses account/publishing controls and all API calls and displays a read-only explanatory state. This avoids presenting a nonfunctional static bundle as a live social service.
+
+The Community UI uses DOM element creation and `textContent` for server-derived post, reply, member and community text; it does not interpolate untrusted post data into `innerHTML`. The account UI emits an edge-triggered account-status event so Community refreshes only when authentication changes, not on unrelated status refreshes.
+
+The six seeded initial public spaces are the initial taxonomy only; the taxonomy is intended to remain extensible. Request/invite-only membership policies are now backed by server workflows rather than dead-end status values.
 
 ## 5. Verification criteria and results
 
-The project convention distinguishes static/source, unit, contract, integration and promotion evidence. These categories are not interchangeable. The following evidence is tied to the exact candidate commit above.
+All results below are tied to exact candidate `22764679870d69c27554dcb115e77e6892216ca4`; earlier green checks from prior commits are not substituted for this candidate.
 
-| ID | Criterion | Method and evidence | Result |
+| ID | Criterion | Method / evidence | Result |
 |---|---|---|---|
-| CN-BE-001 | Community schema applies to an isolated disposable D1 database | Worker Qualification run `44426950857`, job `135234130183`; step “Apply local account and isolated Supporter Programme D1 schemas” passed; migration 0006 listed and applied | PASS |
-| CN-BE-002 | Community API deterministic validation and Worker invariant tests pass | Same run/job; “Run Worker invariant tests” passed. The prior exact-head run reported 108 Worker tests, 108 passed, 0 failed | PASS |
-| CN-BE-003 | Browser/API journey covers directory, global feed, post/reply persistence, reactions, bookmarks, duplicate report, membership, posting boundaries and author removal | Same run/job; Chrome browser smoke output explicitly reported PASS for these behaviors | PASS |
-| CN-BE-004 | An author-side block hides direct post access and does not break the viewer's overall feed | Same run/job; browser smoke explicitly reported “feed isolation for author-side blocks”; direct access 404, global feed 200 and post omitted | PASS |
-| CN-BE-005 | Community writes require an authenticated AstroCrown account session | Community browser journey ran after passkey registration and used the same account cookie/session; unauthenticated route and ordinary-role creation restrictions are also exercised in the Worker/API test path | PASS for exercised paths |
-| CN-BE-006 | Community creation rejects ordinary account self-promotion and requires server-confirmed admin authorization | Browser smoke expected ordinary account community creation to return 403; platform admin callback derives role and step-up from Worker session summary | PASS for exercised paths |
-| CN-BE-007 | Worker build/syntax and restricted site asset build remain valid | Same run/job; build, JavaScript syntax, Worker bundle checks and site-build tests all passed | PASS |
-| CN-BE-008 | Mainline external-review, NOVA RSI and security-analysis CI gates complete on the candidate | Exact commit check runs listed below | PASS |
-| CN-BE-009 | Current pull-request diff is integrated against the latest main | PR #194 metadata reported mergeable=true after checks | PASS for GitHub mergeability only; not an approval to merge |
-| CN-BE-010 | Real production deployment, remote D1 migration, public onboarding or live payment behavior | Not performed and expressly unauthorized | N/A for this development-only qualification; production readiness remains BLOCKED |
+| CN-Q-001 | Community migrations apply on isolated D1 | Account Staging Worker Qualification, run `44430616998`; local migration step applied migrations 0006 and 0007 | PASS |
+| CN-Q-002 | Worker/API invariant and schema tests pass | Same qualification job; 108 Worker invariant tests passed and 3 schema tests passed | PASS |
+| CN-Q-003 | Global/community feed, posts, replies, reactions, bookmarks, reports, membership and deletion work through Chrome against the local Worker/D1 | Same qualification job; browser smoke reported the full authenticated Community API journey | PASS |
+| CN-Q-004 | Request-based membership has a complete manager decision path | Chrome browser journey: pending request, no posting while pending, manager-only request queue, approve grants access, rejection removes posting access | PASS |
+| CN-Q-005 | Invite-only membership is account-bound and fail-closed | Chrome browser journey: invitee inbox, decline, accept, private member/owner read access, non-member 404, revocation, expiry, and re-invitation after expiry | PASS |
+| CN-Q-006 | Author-side block hides the author's content but cannot break unrelated feed items | Two-account browser regression: direct post 404, overall feed 200, blocked author's post omitted | PASS |
+| CN-Q-007 | Canonical homepage renders native Community interface | Chrome waited for Community section and all six seeded community links; verified Community navigation and logged-out composer/login boundary | PASS |
+| CN-Q-008 | Worker staging delivers the Community CSS and JavaScript | Browser fetches both explicit asset paths and verifies 200 plus expected source markers; the app executes sufficiently to populate the six-community directory | PASS |
+| CN-Q-009 | Static Pages preview publishes assets without falsely enabling the service | Cloudflare Pages Static Preview Build run `44430616751`; strict asset manifest and tests passed; static-only marker ensures no account/API operations | PASS |
+| CN-Q-010 | Shared AstroCrown passkey session is reused | Canonical account UI emits authentication changes; Community checks `/api/account/status`; no second identity or password system | PASS for tested integration |
+| CN-Q-011 | Security and external pipeline gates complete | CodeQL `44430616782`, NOVA RSI Engine CI `44430616851`, External Review Pipeline `44430616870` all succeeded | PASS |
+| CN-Q-012 | Production deployment, public onboarding, remote D1 migration and real financial/on-chain behavior | Not performed; expressly outside authorization | NOT PERFORMED |
 
-### Exact-head CI evidence
+### Exact-head hosted workflow evidence
 
-Commit: `71c10fdf3d949df06646eae229da8cd41e86686e`
+Candidate: `22764679870d69c27554dcb115e77e6892216ca4`
 
-- Account Staging Worker Qualification: run [44426950857](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44426950857) — success.
-- External Review Pipeline CI: run [44426950520](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44426950520) — success.
-- NOVA RSI CodeQL Security Analysis: run [44426950663](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44426950663) — success.
-- NOVA RSI Engine CI: run [44426951029](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44426951029) — success.
-- CodeQL check run `135234487997` — success.
+- Account Staging Worker Qualification: [run 44430616998](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616998) — success.
+- Cloudflare Pages Static Preview Build: [run 44430616751](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616751) — success.
+- NOVA RSI CodeQL Security Analysis: [run 44430616782](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616782) — success.
+- NOVA RSI Engine CI: [run 44430616851](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616851) — success.
+- External Review Pipeline CI: [run 44430616870](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616870) — success.
 
-Worker Qualification job `135234130183` completed with every listed step successful, including dependency lock/install, Worker invariant tests, schema tests, site build, browser syntax/Worker bundle validation, local database migrations, Worker HTTP/browser smoke journey, read-only Cloudflare preflight checks, and fail-closed deployment configuration checks.
+Worker Qualification includes dependency installation/lock checks, Worker invariant tests, schema tests, staging-site build, browser bundle validation, local D1 migrations, HTTP/Chrome smoke, read-only Cloudflare preflight and fail-closed deployment configuration checks. No live deployment action was authorized or performed.
 
-The browser log specifically recorded:
+The browser log includes these success markers:
 
-`PASS: authenticated community directory, global feed, post/reply persistence, reaction idempotency, bookmark toggling, duplicate-report prevention, community membership/posting boundaries, author removal, and feed isolation for author-side blocks.`
+`PASS: canonical homepage publishes the native Community section, six seeded community links, scoped staging CSS/JS assets, unauthenticated composer boundary and navigation.`
 
-The same run also exercised passkey registration/sign-in, recovery rotation, session revocation, the EIP-4361/EIP-191 test-wallet enrollment and admin step-up flows using deterministic test-only keys. Those tests do not constitute physical hardware-key testing or a live production wallet interaction.
+`PASS: authenticated community directory/feed, post/reply, reactions/bookmarks/reports, request approval/rejection, private invitation inbox/acceptance/revocation/expiry, private-content isolation, posting boundaries, author removal, and author-side-block feed isolation.`
+
+The standalone Pages build intentionally remains a static read-only visual preview. A passing static build does not imply a live community backend is connected there.
 
 ## 6. Finding CN-F-001 — author-side block could break a feed
 
@@ -137,73 +144,69 @@ The same run also exercised passkey registration/sign-in, recovery rotation, ses
 
 ## 7. Open findings and product-completeness gaps
 
-The following are not represented as passing merely because current CI is green. Severity is not assigned here because the repository convention requires a declared severity model before using severity labels.
+The original backend review identified request and invite-only membership as incomplete. Those two findings are now closed for the API paths and browser scenarios specified below. The following broader product gaps remain open.
 
-### CN-G-001 — Request membership has no moderation decision workflow
+### CN-G-001 — Request membership decision workflow
 
-The membership policy enum supports `request` and join creates `pending` membership, but the current API has no owner/moderator queue or approve/reject route. This leaves a request-policy community without a complete path from request to active membership or denial.
+**Status: CLOSED for the defined request-membership lifecycle.** Owners/moderators can list pending requests and approve/reject them; state changes are conditional, audit-backed and tested in Chrome. Pending membership does not grant posting access; rejected membership remains non-active. This does not establish a complete notification or appeal process for declined requests.
 
-**Result:** FAIL for end-to-end completeness of the exposed request policy; open remediation. Do not present request-policy communities as operational until approval/rejection and audit behavior exist and are browser-tested.
+### CN-G-002 — Private/invite-only membership lifecycle
 
-### CN-G-002 — Invite-only/private membership has no invitation workflow
-
-The schema/API allow `invite_only` and private visibility, while self-join is rejected. The candidate has no invitation creation, delivery, acceptance, expiry or revocation lifecycle.
-
-**Result:** FAIL for end-to-end completeness of the exposed invite-only/private membership policy; open remediation. Do not create invite-only/private user communities as a functioning product capability until the complete authorized invitation lifecycle exists and is tested.
+**Status: CLOSED for the defined invitation lifecycle.** Manager issuance, recipient inbox, accept/decline, issuer/manager revocation, expiry reconciliation and re-invitation after expiry are implemented and tested. Invitations are account-bound; access is activated only after the intended account accepts; a non-member receives 404 for private content/feed. The implementation currently uses a **7-day technical expiry default**. That duration is not a constitutional or finalized public product policy; it must be approved or changed before enabling the private/invitation product publicly. Invitation creation is API-backed but is not yet exposed as a complete manager UI in the homepage.
 
 ### CN-G-003 — Report handling ends at submission
 
-Members can submit a report, and duplicate report submission is prevented. The candidate does not provide a report review queue, moderator resolution/dismissal actions, reporter-visible outcomes, appeal workflow or auditable case lifecycle.
+Members can submit reports and duplicate submissions are prevented, but there is no complete moderator case queue, decision/dismissal workflow, reporter-visible case outcome, evidence-retention policy or appeal process.
 
-**Result:** FAIL for complete moderation/report lifecycle; open remediation. Report submission must not be marketed as a full reporting/appeal system.
+**Status: OPEN — report submission is not a complete moderation system.**
 
 ### CN-G-004 — Community owner transfer is not implemented
 
-The API prevents the owner from leaving unless ownership is transferred, but there is no transfer-ownership route. This prevents orphaning a community, but also leaves ownership succession/exit incomplete.
+The system prevents the owner from leaving without a transfer, but no successor invitation/acceptance, concurrent transfer guard or complete succession lifecycle is present.
 
-**Result:** FAIL for complete community lifecycle; open remediation. Define transfer, acceptance, audit, concurrent-change and last-owner invariants before implementing.
+**Status: OPEN — owner succession and transfer must be implemented and tested before describing community lifecycle as complete.**
 
-### CN-G-005 — First-party social frontend is absent from the inspected candidate
+### CN-G-005 — First-party Community frontend
 
-No native community page, global social feed UI, community navigation, profile page, member directory UI or browser-visible post composer/feed interaction is included in PR #194. No UI/browser acceptance can be claimed from backend API tests.
+**Status: PARTIALLY CLOSED — initial homepage interface delivered and exact-head browser-tested; full product UI remains open.** The canonical development homepage now includes navigation, a global feed, six seeded spaces, post composition, replies, reactions, bookmarks, reports, join/request/leave, manager review of requests and invitation acceptance. The UI reuses the passkey account state and has responsive layouts and keyboard focus indicators. It does not yet include member profiles, comprehensive member/community search, community creation/settings, manager invitation issuance, report case triage/appeals, complete mobile/screen-reader testing or a full accessibility audit.
 
-**Result:** BLOCKED for product/UI acceptance. Build on the existing AstroCrown homepage/account design rather than a parallel login or disconnected prototype. Every displayed action must map to a tested API contract.
+The static Pages preview is deliberately disconnected and read-only. Account-backed behavior is tested only on the connected Worker staging build.
 
-### CN-G-006 — Private chat and communications are not delivered
+### CN-G-006 — Private chat and communications
 
-The existing account communications endpoint explicitly returns `available:false` and a staging-disabled message. PR #194 does not implement first-party private/group chat. This is a major requirement dependency, not a minor polish item.
+Private and group chat are not implemented. The account communications endpoint remains staging-disabled.
 
-**Result:** BLOCKED. Assess established, self-hostable protocols and the cost/operations/security model before selecting an implementation.
+**Status: OPEN.** Evaluate Matrix and other mature protocols with no-card cost, licensing, encryption/key recovery, abuse controls, hosting, backup and operational ownership before selecting a solution.
 
-### CN-G-007 — Subgroups and channel structures are not usable
+### CN-G-007 — Subgroups and topic channels
 
-The database contains a parent-space relationship, but the API does not yet provide a complete create/list/archive/authorization lifecycle for subgroups or topic channels, and there is no UI.
+A parent-space relationship exists in the schema, but no complete subgroup/channel create, list, archive, permission or UI lifecycle is delivered.
 
-**Result:** BLOCKED.
+**Status: OPEN.**
 
-### CN-G-008 — Rich social interactions and discovery are not delivered
+### CN-G-008 — Rich interactions and discovery
 
-Quotations/reposts, tags/topics, search, chronological/followed/recommended feed selectors, pinned content, media attachments, poll/proposal/event flows and transparent ranking controls are not delivered by this PR.
+Quotations/reposts, tags/topics, feed search and ranking modes, pinned content, media attachments, non-binding polls, proposals and events are not delivered. Keep these independently specified and tested; do not conflate non-binding polls with Council elections.
 
-**Result:** BLOCKED, each item to be decomposed into independently testable requirements before implementation.
+**Status: OPEN.**
 
-### CN-G-009 — Public permalinks and share/preview safety are not qualified
+### CN-G-009 — Public permalinks and share/preview safety
 
-The API's post representation may include a permalink field, but no first-party public post route/page or Open Graph/share-card implementation is included in this candidate. Private/restricted/deleted content must remain excluded from metadata and exports.
+A permalink value in an API response does not prove that a public page, canonical metadata or preview is implemented. No complete public post route/share-card system has been qualified. Private, restricted, deleted or moderated content must not leak through metadata, search, notifications, link unfurling or exports.
 
-**Result:** BLOCKED. Do not treat a returned URL field as proof of a working or privacy-safe permalink.
+**Status: OPEN.** Keep external sharing user-controlled and optional.
 
-### CN-G-010 — Security, privacy, accessibility and load acceptance remain broader than current tests
+### CN-G-010 — Broader security, privacy, accessibility and operations acceptance
 
-The focused Worker tests are useful but do not establish full ASVS v5.0.0 conformance, comprehensive XSS-safe rendering, keyboard/screen-reader support, responsive behavior, authorization across every community state transition, rate-limit effectiveness under load, backup/restore, retention/deletion or performance at scale. The repository's separate `SECURITY-BASELINE.md` lists SEC-001 through SEC-015 as UNVERIFIED.
+The present tests do not establish blanket OWASP ASVS 5.0.0 conformance, full WCAG 2.2 AA, exhaustive XSS/CSRF coverage, keyboard/screen-reader acceptance, responsive browser matrix, rate-limit effectiveness under load, concurrency/load performance, retention/deletion policy or backup/restore evidence. Repository security-baseline items SEC-001 through SEC-015 remain separately UNVERIFIED unless individually evidenced.
 
-**Result:** BLOCKED for overall security/accessibility/operational readiness. Use OWASP ASVS 5.0.0 as a versioned verification reference where applicable; do not claim certification or blanket conformance.
+**Status: OPEN.** Extend verification per feature; do not make certification claims.
 
-### CN-G-011 — Council elections and binding governance are intentionally not implemented
+### CN-G-011 — Council elections and binding governance
 
-The requirements baseline expressly leaves constitutional rules unresolved. No election register, ballot, voting, tally, Councillor mandate or Council-seat implementation is included.
+No elections, ballots, seat allocation, Councillor mandate or binding voting behavior is included. Constitutional rules remain unresolved.
 
-**Result:** BLOCKED pending explicit approved constitution and subsequent independent security/threat model. This is not a defect in the present backend slice; it is a hard sequencing boundary.
+**Status: BLOCKED pending approved constitutional requirements and an independent election threat model.** This is an intentional sequencing boundary, not a defect in this slice.
 
 ## 8. Reuse and comparable-system review
 
@@ -225,19 +228,14 @@ The immediate reusable correction is to treat membership, moderation and ownersh
 
 ## 9. Workflow anomaly — two push runs with no jobs
 
-The exact push to candidate commit `71c10fdf3d949df06646eae229da8cd41e86686e` produced two extra completed failure runs:
+The earlier candidate push produced two completed failures with no retrievable jobs:
 
-- `44426941417`, workflow file `.github/workflows/python-ci-lock-refresh.yml`, event `push`, branch `feature/community-network-foundation-2026-11-19`, failed, zero jobs reported.
-- `44426939649`, workflow file `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, branch `feature/community-network-foundation-2026-11-19`, failed, zero jobs reported.
+- `44426941417`, `.github/workflows/python-ci-lock-refresh.yml`, event `push`, zero jobs.
+- `44426939649`, `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, zero jobs.
 
-The workflow source inspected on the candidate branch does not explain these feature-branch push runs:
+The inspected source did not match those feature-branch push events: the Python lock-refresh workflow has PR path filters, schedule and workflow_dispatch but no push trigger; the prototype test workflow limits push to `main`. The connected job lookup returned empty arrays. That proves only that no job-level reason was available; it does not prove GitHub's internal root cause.
 
-- `python-ci-lock-refresh.yml` declares `pull_request` with path filters, `schedule`, and `workflow_dispatch`; it has no `push` trigger.
-- `account-continuity-prototype-tests.yml` declares `push` only for `branches: [main]` (and a separate pull_request trigger).
-
-The connected workflow-job lookup returns an empty job array for each run. This establishes that the connector could not retrieve any job-level explanation; it does **not** establish the root cause. The anomaly may be a GitHub event/workflow reporting behavior, but that remains unverified. No trigger was broadened, no job was added just to make a red status disappear, and no blind rerun was performed.
-
-**Result:** BLOCKED / UNEXPLAINED. Revisit only if a run with actual job/log evidence appears, GitHub exposes the event payload, or the anomaly affects required PR checks. The four PR-triggered qualification workflows listed above are separate and all passed.
+No trigger was broadened and no fake job was added to suppress the red indicator. The PR-triggered qualification workflows listed in Section 5 are separately green on the current exact head. Keep this anomaly classified as **UNEXPLAINED / NOT A PRODUCT TEST FAILURE** unless a run with job/log evidence identifies its cause.
 
 ## 10. Alternatives and decisions
 
@@ -254,26 +252,26 @@ The connected workflow-job lookup returns an empty job array for each run. This 
 
 ## 11. Remediation plan and next sequence
 
-1. Keep PR #170 as the canonical product requirement review; it is now current against `main` and mergeable, but still draft and unmerged.
-2. Fix CN-G-001 and CN-G-002 before enabling request or invite-only/private membership options. Implement and test a complete membership state machine, with audit entries and race-safe transitions. Until then, either do not expose those policies for general use or fail closed with a clear unsupported-capability response; never accept a pending request that no moderator can process.
-3. Complete report queue, moderator decision and appeal model (CN-G-003) before describing the report feature as fully operational.
-4. Define community ownership transfer and succession (CN-G-004), with dual-confirmation or an equivalent safe transfer design, audit and last-owner invariants.
-5. Build the native social frontend against the existing API, not a second account system. Begin with directory, community detail, chronological feed, post composer, replies, reactions, bookmarks, membership state and moderation affordances; no unbacked/inert buttons.
-6. Resolve privacy-safe public permalinks and preview behavior before enabling external sharing.
-7. Research private/group communications with Matrix and other mature options under exact project cost, licensing, data-control and operational constraints; do not choose a service solely because protocol code is open source.
-8. Expand negative, security, accessibility, responsive, rate-limit, concurrency, load and backup/restore verification as corresponding product capabilities are implemented.
-9. Keep polls/proposals separate from binding elections. Do not implement Council elections until the approved constitutional requirements are available.
-10. Re-run the original regression and all required checks against each exact new commit. Preserve the current passing evidence; do not declare new code qualified until its own run is complete.
+1. Obtain product approval for the current 7-day invitation expiry default or replace it with an explicitly approved policy before activating private communities publicly.
+2. Implement report triage, moderator decisions, auditable case lifecycle and an appeal policy only after the appeal authority, deadlines and evidence-retention rules are explicit.
+3. Implement safe community-owner transfer/succession with successor acceptance, concurrency controls, immutable audit events and real-browser tests.
+4. Complete manager UI for invitation issuance and private-community management; complete community creation/settings through the existing authorized platform-admin step-up, not client role assertions.
+5. Extend the Community UI with member profiles, search/discovery, subgroups/channels, pinned posts and additional interaction models only after each is specified and backed by a tested API.
+6. Research chat with Matrix and other mature options; qualify protocol, self-hosting, licensing, no-card cost, encryption/key recovery, abuse operations, data sovereignty and backups before adopting a new service.
+7. Complete permalink/preview safety before external sharing. Keep external networks non-authoritative and optional.
+8. Expand security, privacy, accessibility, responsive, load, rate-limit, concurrency and backup/restore tests. Record each criterion separately; passing the current CI suite is not blanket certification.
+9. Keep polls/proposals distinct from binding elections. Do not implement Council elections until the approved constitution and election threat model are available.
+10. Re-run all relevant tests against each exact new commit. Preserve existing passing evidence and avoid repeating unrelated checks when neither the code nor workflow changed.
 
 ## 12. Closure and resumption checkpoint
 
-**Current work-block result:** the backend foundation and the author-side-block feed regression passed the exact-head GitHub-hosted qualification and four PR workflows. The broader native community product is not complete and remains blocked by the findings in Section 7.
+**Current work-block result:** the Community backend foundation, request membership decisions, private invitation lifecycle, author-side-block feed isolation and first-party homepage UI all pass exact-head GitHub-hosted tests on `22764679870d69c27554dcb115e77e6892216ca4`.
 
-**Pull-request state:** PR #194 open, draft, unmerged. PR #170 open, draft, unmerged. No deployment or promotion performed.
+**Pull-request state:** PR #194 open, draft, unmerged; PR #170 open, draft, unmerged. GitHub reports PR #194 mergeable, but merge is not authorized. No production deployment or promotion was performed.
 
-**Current next action:** close the exposed-but-incomplete membership policy gap (CN-G-001/CN-G-002) with a minimal, audited, race-safe membership/invitation state machine, or remove unsupported modes from the currently enabled API surface until the state machine is delivered. Then add real-browser tests for owner/moderator approval, denial, invite acceptance, expiry/revocation, blocked/banned accounts, and concurrent state transitions.
+**Next highest-value work:** complete report-case moderation and owner transfer only after their decision/appeal/succession rules are explicit; meanwhile improve manager invitation UI, profiles/search, accessibility and privacy-safe permalink behavior. The 7-day invitation expiry remains a release policy decision.
 
-On resumption, re-read this record, re-fetch the current PR heads and main head, and confirm no remote changes before modifying either branch. Do not repeat already-passing checks unless code or the relevant workflow changes.
+On resumption, fetch the current main and PR heads, read this record, compare the branch before editing, and continue from the exact new head. Do not repeat the already-passing backend/browser/static checks unless a relevant file or workflow changes. If a rule requires owner/constitutional approval, stop at that boundary rather than silently inventing policy.
 
 ## 13. References
 
