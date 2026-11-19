@@ -89,7 +89,7 @@ let communityPreviewJs = read("development/community-network/community-network.j
 communityPreviewJs = replaceExactlyOnce(
   communityPreviewJs,
   "(function () {",
-  "(function () {\\n  window.ASTROCROWN_COMMUNITY_STATIC_PREVIEW = true;",
+  "(function () {\n  window.ASTROCROWN_COMMUNITY_STATIC_PREVIEW = true;",
   "backend-free static Community preview guard"
 );
 write("community-network/community-network.js", communityPreviewJs);
