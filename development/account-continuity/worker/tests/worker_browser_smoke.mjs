@@ -452,6 +452,11 @@ async function testCommunityApi(accountIdentifier) {
   const blockedAuthorHandle = randomBytes(32).toString("base64url");
   const blockedAuthorToken = randomBytes(32).toString("base64url");
   const blockedAuthorTokenHash = createHash("sha256").update(blockedAuthorToken).digest("base64url");
+  const nonMemberId = "community-outsider-" + randomUUID();
+  const nonMemberIdentifier = "AC-" + randomBytes(5).toString("hex").toUpperCase();
+  const nonMemberHandle = randomBytes(32).toString("base64url");
+  const nonMemberToken = randomBytes(32).toString("base64url");
+  const nonMemberTokenHash = createHash("sha256").update(nonMemberToken).digest("base64url");
   const fixtureNow = Math.floor(Date.now() / 1000);
   const fixtureTimestamp = new Date().toISOString();
   const requestSlug = "request-" + randomUUID().slice(0, 8);
@@ -463,6 +468,10 @@ async function testCommunityApi(accountIdentifier) {
       [blockedAuthorId,blockedAuthorIdentifier,blockedAuthorHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
     "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
       [blockedAuthorTokenHash,blockedAuthorId,randomBytes(16).toString("hex"),null,fixtureNow,fixtureNow+1800].map(value => value === null ? "NULL" : sqlLiteral(value)).join(",") + ");",
+    "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
+      [nonMemberId,nonMemberIdentifier,nonMemberHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
+    "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
+      [nonMemberTokenHash,nonMemberId,randomBytes(16).toString("hex"),null,fixtureNow,fixtureNow+1800].map(value => value === null ? "NULL" : sqlLiteral(value)).join(",") + ");",
     "INSERT INTO community_account_controls(account_id,target_account_id,control_type,created_at) " +
       "SELECT " + sqlLiteral(blockedAuthorId) + ",account_id,'block'," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
     "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
@@ -557,8 +566,17 @@ async function testCommunityApi(accountIdentifier) {
     content: "Private invitation post " + randomUUID(), communitySlug: privateSlug
   });
   assert.equal(privatePost.status, 201, JSON.stringify(privatePost.body));
-  const ownerCannotReadPrivatePost = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
-  assert.equal(ownerCannotReadPrivatePost.status, 404, "private community content must remain hidden from non-members.");
+  const invitedMemberCanRead = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
+  assert.equal(invitedMemberCanRead.status, 200, "an accepted invite must grant the invited member access.");
+  await setBrowserAccountSession(rootToken);
+  const ownerCanReadPrivatePost = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
+  assert.equal(ownerCanReadPrivatePost.status, 200, "the active private-community owner must retain access.");
+  await setBrowserAccountSession(nonMemberToken);
+  const nonMemberCannotReadPrivatePost = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
+  assert.equal(nonMemberCannotReadPrivatePost.status, 404, "private content must remain hidden from an unrelated authenticated account.");
+  const nonMemberCannotReadPrivateFeed = await getWorkerJson("/api/community/communities/" + privateSlug + "/feed");
+  assert.equal(nonMemberCannotReadPrivateFeed.status, 404, "private community feed must remain hidden from an unrelated authenticated account.");
+  await setBrowserAccountSession(blockedAuthorToken);
 
   const leftPrivateSpace = await postWorkerJson("/api/community/communities/" + privateSlug + "/leave", {});
   assert.equal(leftPrivateSpace.status, 200);
