@@ -345,7 +345,7 @@ async function getWorkerJson(path) {
     ".then(async r=>({status:r.status,body:await r.json()}))"
   );
 }
-async function testCommunityApi() {
+async function testCommunityApi(accountIdentifier) {
   const discovery = await getWorkerJson("/api/community/communities");
   assert.equal(discovery.status, 200, JSON.stringify(discovery.body));
   const slugs = discovery.body.communities.map(item => item.slug);
@@ -441,12 +441,46 @@ async function testCommunityApi() {
   });
   assert.equal(selfControl.status, 404, "account-control routes must not reveal a nonexistent target account");
 
+  // Exercise the reverse-direction block case with a second synthetic local account.
+  // An author blocking the viewer must hide that author's content, but must not
+  // turn one hidden post into a failure for the viewer's entire feed.
+  const rootCookies = await cdp("Network.getCookies", { urls: [baseUrl] });
+  const rootToken = (rootCookies.cookies || []).find(item => item.name === "acrown_account_session" && item.value)?.value;
+  assert.ok(rootToken, "the primary community test account must retain its ordinary session.");
+  const blockedAuthorId = "community-author-" + randomUUID();
+  const blockedAuthorIdentifier = "AC-" + randomBytes(5).toString("hex").toUpperCase();
+  const blockedAuthorHandle = randomBytes(32).toString("base64url");
+  const blockedAuthorToken = randomBytes(32).toString("base64url");
+  const blockedAuthorTokenHash = createHash("sha256").update(blockedAuthorToken).digest("base64url");
+  const fixtureNow = Math.floor(Date.now() / 1000);
+  const fixtureTimestamp = new Date().toISOString();
+  executeLocalD1Fixture([
+    "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
+      [blockedAuthorId,blockedAuthorIdentifier,blockedAuthorHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
+    "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
+      [blockedAuthorTokenHash,blockedAuthorId,randomBytes(16).toString("hex"),null,fixtureNow,fixtureNow+1800].map(value => value === null ? "NULL" : sqlLiteral(value)).join(",") + ");",
+    "INSERT INTO community_account_controls(account_id,target_account_id,control_type,created_at) " +
+      "SELECT " + sqlLiteral(blockedAuthorId) + ",account_id,'block'," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+  ].join("\n"), "Create a second local account and a reverse-direction block fixture");
+  await setBrowserAccountSession(blockedAuthorToken);
+  const blockedAuthorPost = await postWorkerJson("/api/community/posts", {
+    content: "Blocked author feed-isolation test " + randomUUID()
+  });
+  assert.equal(blockedAuthorPost.status, 201, JSON.stringify(blockedAuthorPost.body));
+  await setBrowserAccountSession(rootToken);
+  const hiddenPostDetail = await getWorkerJson("/api/community/posts/" + blockedAuthorPost.body.post.id);
+  assert.equal(hiddenPostDetail.status, 404, "an author-side block must continue to hide direct post access.");
+  const feedAfterAuthorBlock = await getWorkerJson("/api/community/feed?limit=50");
+  assert.equal(feedAfterAuthorBlock.status, 200, JSON.stringify(feedAfterAuthorBlock.body));
+  assert.equal(feedAfterAuthorBlock.body.items.some(item => item.id === blockedAuthorPost.body.post.id), false,
+    "a feed must omit content from an author who blocked the viewer without failing unrelated feed items.");
+
   const deleted = await postWorkerJson("/api/community/posts/" + post.id + "/delete", {});
   assert.equal(deleted.status, 200);
   assert.equal(deleted.body.deleted, true);
   const missingAfterDelete = await getWorkerJson("/api/community/posts/" + post.id);
   assert.equal(missingAfterDelete.status, 404);
-  console.log("PASS: authenticated community directory, global feed, post/reply persistence, reaction idempotency, bookmark toggling, duplicate-report prevention, community membership/posting boundaries, and author removal.");
+  console.log("PASS: authenticated community directory, global feed, post/reply persistence, reaction idempotency, bookmark toggling, duplicate-report prevention, community membership/posting boundaries, author removal, and feed isolation for author-side blocks.");
 }
 
 async function signSiwe(account, challenge) {
@@ -1041,7 +1075,7 @@ try {
   assert.equal(account.adminRoleAssigned, false);
   assert.equal(account.admin, false);
 
-  await testCommunityApi();
+  await testCommunityApi(identifier);
 
   await trustedClick("#account-recovery-key-saved");
   await waitFor("offline recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));

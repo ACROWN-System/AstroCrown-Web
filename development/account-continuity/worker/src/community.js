@@ -284,10 +284,12 @@ async function listFeed(db, url, account) {
     "SELECT p.post_id,p.created_at FROM community_posts p " +
     "WHERE " + where + parentClause +
     " AND p.deleted_at IS NULL AND p.moderation_status='visible' " +
-    "AND NOT EXISTS(SELECT 1 FROM community_account_controls ctl WHERE ctl.account_id=? AND ctl.target_account_id=p.author_account_id AND ctl.control_type IN ('block','mute'))" +
+    "AND NOT EXISTS(SELECT 1 FROM community_account_controls ctl WHERE " +
+"(ctl.account_id=? AND ctl.target_account_id=p.author_account_id AND ctl.control_type IN ('block','mute')) OR " +
+"(ctl.account_id=p.author_account_id AND ctl.target_account_id=? AND ctl.control_type='block'))" +
     cursorClause +
     " ORDER BY p.created_at DESC,p.post_id DESC LIMIT ?";
-  const args = [...bindings, viewerId];
+  const args = [...bindings, viewerId, viewerId];
   if (cursor) args.push(cursor.timestamp, cursor.timestamp, cursor.id);
   args.push(limit + 1);
   const result = await db.prepare(sql).bind(...args).all();
