@@ -472,8 +472,6 @@ async function testCommunityApi(accountIdentifier) {
       [nonMemberId,nonMemberIdentifier,nonMemberHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
     "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
       [nonMemberTokenHash,nonMemberId,randomBytes(16).toString("hex"),null,fixtureNow,fixtureNow+1800].map(value => value === null ? "NULL" : sqlLiteral(value)).join(",") + ");",
-    "INSERT INTO community_account_controls(account_id,target_account_id,control_type,created_at) " +
-      "SELECT " + sqlLiteral(blockedAuthorId) + ",account_id,'block'," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
     "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
       [requestSpaceId,requestSlug,"Request Workflow Test","Synthetic restricted-space fixture","Test membership request lifecycle","Synthetic local test only","restricted","request","active"].map(sqlLiteral).join(",") +
       ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
@@ -616,6 +614,14 @@ async function testCommunityApi(accountIdentifier) {
 
   // The author-side block below is a separate visibility regression: direct access
   // stays hidden while the global feed continues to return unrelated content.
+  // Apply the block only now so it cannot contaminate the private-community
+  // owner-visibility assertions above.
+  executeLocalD1Fixture(
+    "INSERT INTO community_account_controls(account_id,target_account_id,control_type,created_at) " +
+    "SELECT " + sqlLiteral(blockedAuthorId) + ",account_id,'block'," + fixtureNow +
+    " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "Apply the author-side block only for the final feed-isolation regression"
+  );
   await setBrowserAccountSession(blockedAuthorToken);
   const blockedAuthorPost = await postWorkerJson("/api/community/posts", {
     content: "Blocked author feed-isolation test " + randomUUID()
