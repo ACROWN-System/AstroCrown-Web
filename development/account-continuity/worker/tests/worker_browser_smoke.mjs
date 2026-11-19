@@ -1170,6 +1170,28 @@ try {
     }
   }
 
+  await waitFor("first-party Community directory loads on the canonical homepage", () =>
+    evaluate("Boolean(document.getElementById('community-network')) && " +
+      "document.querySelectorAll('#community-space-list [data-community-slug]').length === 6 && " +
+      "Boolean(document.getElementById('community-global-feed'))"));
+  const communityAssets = await evaluate(
+    "Promise.all([" +
+    "fetch('/community-network/community-network.css',{cache:'no-store'}).then(async r=>({status:r.status,text:await r.text()}))," +
+    "fetch('/community-network/community-network.js',{cache:'no-store'}).then(async r=>({status:r.status,text:await r.text()}))" +
+    "])"
+  );
+  assert.equal(communityAssets[0].status, 200, "the staging asset builder must publish the Community stylesheet.");
+  assert.match(communityAssets[0].text, /community-workspace/);
+  assert.equal(communityAssets[1].status, 200, "the staging asset builder must publish the Community application script.");
+  assert.match(communityAssets[1].text, /api\\/community\\/communities/);
+  assert.equal(await evaluate("document.getElementById('community-composer-form').hidden"), true,
+    "the unauthenticated homepage must not expose an active post composer.");
+  assert.equal(await evaluate("document.getElementById('community-login-prompt').hidden"), false,
+    "the unauthenticated homepage must offer the existing AstroCrown Log In flow.");
+  assert.equal(await evaluate("document.querySelectorAll('a[href=\\"#community-network\\"]').length >= 2"), true,
+    "the Community destination must appear in primary and secondary navigation.");
+  console.log("PASS: canonical homepage publishes the native Community section, six seeded community links, scoped staging CSS/JS assets, unauthenticated composer boundary and navigation.");
+
   await trustedClick("#open-account-dialog");
   await waitFor("account sign-in modal", () => evaluate("Boolean(document.getElementById('account-dialog')?.open)"));
   assert.equal(await evaluate("Boolean(document.getElementById('account-email'))"), false);
