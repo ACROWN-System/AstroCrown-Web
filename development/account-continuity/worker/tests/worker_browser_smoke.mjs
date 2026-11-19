@@ -854,7 +854,88 @@ async function testCommunityApi(accountIdentifier) {
   const missingAfterDelete = await getWorkerJson("/api/community/posts/" + post.id);
   assert.equal(missingAfterDelete.status, 404);
   console.log("PASS: authenticated Community API journeys, request/invitation state machines, accepted/declined/cancelled owner handovers, report moderation, feed privacy, posting boundaries and author removal.");
-  return { rootToken, nonMemberToken, accountIdentifier };
+  return { rootToken, nonMemberToken, accountIdentifier, nonMemberIdentifier, transferSlug };
+}
+
+async function testCommunityOwnershipUi(fixtures) {
+  const { rootToken, nonMemberToken, accountIdentifier, nonMemberIdentifier, transferSlug } = fixtures;
+
+  // The API journey leaves nonMember as the current owner and root as an
+  // active ordinary member. Exercise every ownership control in the real UI.
+  await setBrowserAccountSession(nonMemberToken);
+  await trustedClick("#community-refresh");
+  await waitFor("ownership fixture community appears in the directory", () =>
+    evaluate("Boolean(document.querySelector('#community-space-list [data-community-slug=" + transferSlug + "]'))"));
+  await evaluate("document.querySelector('#community-space-list [data-community-slug=" + transferSlug + "]').click()");
+  await waitFor("the current owner sees Transfer ownership", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === false"));
+
+  await trustedClick("#community-transfer-ownership");
+  await waitFor("ownership form is visible to the current owner", () =>
+    evaluate("!document.getElementById('community-ownership-propose-form').hidden"));
+  await evaluate(
+    "document.getElementById('community-ownership-successor').value=" + JSON.stringify(accountIdentifier)
+  );
+  await trustedClick("#community-ownership-propose-form button[type=submit]");
+  await waitFor("outgoing ownership proposal appears in the owner UI", () =>
+    evaluate("!document.getElementById('community-ownership-panel').hidden && " +
+      "document.getElementById('community-ownership-transfer-list').textContent.includes('Proposed successor for Ownership Transfer Test')"));
+
+  // Switch to the intended successor. Refresh uses the real account cookie and
+  // server membership response to hide the owner-only action.
+  await setBrowserAccountSession(rootToken);
+  await trustedClick("#community-refresh");
+  await waitFor("ordinary successor view does not display owner-only controls", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === true"));
+  await trustedClick("#community-ownership-transfers-button");
+  await waitFor("successor sees the incoming ownership proposal", () =>
+    evaluate("document.getElementById('community-ownership-transfer-list').textContent.includes('Successor requested for Ownership Transfer Test')"));
+  await trustedClick("#community-ownership-transfer-list [data-ownership-response=accept]");
+  await waitFor("successor becomes owner after clicking Accept ownership", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === false"));
+  const acceptedDetail = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(acceptedDetail.status, 200, JSON.stringify(acceptedDetail.body));
+  assert.equal(acceptedDetail.body.memberRole, "owner");
+
+  // The new owner proposes again; the former owner declines through the UI.
+  await trustedClick("#community-transfer-ownership");
+  await evaluate(
+    "document.getElementById('community-ownership-successor').value=" + JSON.stringify(nonMemberIdentifier)
+  );
+  await trustedClick("#community-ownership-propose-form button[type=submit]");
+  await waitFor("the new owner sees a second outgoing proposal", () =>
+    evaluate("document.getElementById('community-ownership-transfer-list').textContent.includes('Proposed successor for Ownership Transfer Test')"));
+  await setBrowserAccountSession(nonMemberToken);
+  await trustedClick("#community-refresh");
+  await waitFor("the former owner is now an ordinary member", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === true"));
+  await trustedClick("#community-ownership-transfers-button");
+  await waitFor("former owner sees the second incoming proposal", () =>
+    evaluate("document.getElementById('community-ownership-transfer-list').textContent.includes('Successor requested for Ownership Transfer Test')"));
+  await trustedClick("#community-ownership-transfer-list [data-ownership-response=decline]");
+  const retainedOwner = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(retainedOwner.status, 200);
+  assert.equal(retainedOwner.body.memberRole, "member");
+
+  // Propose once more and cancel from the current owner's outgoing queue.
+  await setBrowserAccountSession(rootToken);
+  await trustedClick("#community-refresh");
+  await waitFor("current owner regains transfer controls", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === false"));
+  await trustedClick("#community-transfer-ownership");
+  await evaluate(
+    "document.getElementById('community-ownership-successor').value=" + JSON.stringify(nonMemberIdentifier)
+  );
+  await trustedClick("#community-ownership-propose-form button[type=submit]");
+  await waitFor("cancellable outgoing proposal is displayed", () =>
+    evaluate("document.querySelector('#community-ownership-transfer-list [data-ownership-cancel]') !== null"));
+  await trustedClick("#community-ownership-transfer-list [data-ownership-cancel]");
+  await waitFor("cancellation removes the proposal from the outgoing queue", () =>
+    evaluate("!document.getElementById('community-ownership-transfer-list').textContent.includes('Proposed successor for Ownership Transfer Test')"));
+  const retainedAfterCancel = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(retainedAfterCancel.status, 200);
+  assert.equal(retainedAfterCancel.body.memberRole, "owner");
+  console.log("PASS: Chrome ownership UI: owner proposes to an active member, successor accepts, former owner declines a later proposal, and current owner cancels another proposal.");
 }
 
 async function testCommunityModerationUi(fixtures) {
@@ -1554,6 +1635,7 @@ try {
     evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open && " +
       "Boolean(document.getElementById('community-network'))"));
   await testCommunityModerationUi(communityFixtures);
+  await testCommunityOwnershipUi(communityFixtures);
 
   // A returning member who reloads the root URL with a valid session must
   // resume at the User dashboard instead of seeing the public homepage.
