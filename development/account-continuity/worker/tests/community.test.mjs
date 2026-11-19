@@ -25,6 +25,56 @@ test("community feed page sizes are strictly bounded", () => {
   for (const invalid of ["0", "51", "-1", "1.5", "001", "abc", "100"]) assert.throws(() => validateCommunityPageSize(invalid));
 });
 
+test("a 20-post global feed hydrates all post fields in one D1 statement", async () => {
+  const statements = [];
+  const rows = Array.from({ length: 21 }, (_, index) => ({
+    post_id: "post_" + String(index + 1).padStart(32, "0"),
+    content: "Post " + (index + 1),
+    visibility: "public",
+    parent_post_id: null,
+    created_at: 1763500000 - index,
+    edited_at: null,
+    author_handle: "member-" + (index + 1),
+    author_avatar: "person",
+    community_slug: null,
+    community_name: null,
+    like_count: index,
+    reply_count: 0,
+    liked_by_viewer: 0,
+    bookmarked_by_viewer: 0,
+  }));
+  const db = {
+    prepare(sql) {
+      statements.push(sql);
+      return {
+        bind(..._args) {
+          return { all: async () => ({ results: rows }) };
+        },
+      };
+    },
+  };
+  const response = await handleCommunityApi(
+    new Request("https://astrocrown.invalid/api/community/feed?limit=20"),
+    db,
+    { account_id: "account_test" },
+    { rateLimit: async () => {} }
+  );
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.items.length, 20);
+  assert.equal(body.items[0].id, rows[0].post_id);
+  assert.equal(body.items[0].content, rows[0].content);
+  assert.equal(body.items[0].author.handle, rows[0].author_handle);
+  assert.equal(body.items[0].likeCount, 0);
+  assert.equal(body.nextCursor !== null, true);
+  assert.equal(body.scope, "global");
+  assert.equal(statements.length, 1,
+    "feed rendering must use one D1 statement rather than separate visibility and post-view reads per item");
+  assert.match(statements[0], /community_account_controls/);
+  assert.match(statements[0], /community_memberships/);
+  assert.match(statements[0], /bookmarked_by_viewer/);
+});
+
 test("community cursors require a valid encoded timestamp and post identifier", () => {
   const valid = btoa("1763500000|post_0123456789abcdef0123456789abcdef")
     .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");

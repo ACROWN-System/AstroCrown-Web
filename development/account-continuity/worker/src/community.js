@@ -199,20 +199,7 @@ async function preventReplyToBlock(db, authorId, actorId) {
   if (blocked) throw fail(404, "This post could not be found.");
 }
 
-async function postView(db, post, account) {
-  const row = await db.prepare(
-    "SELECT p.post_id,p.content,p.visibility,p.parent_post_id,p.created_at,p.edited_at," +
-    "a.user_handle AS author_handle,a.avatar_id AS author_avatar," +
-    "c.slug AS community_slug,c.name AS community_name," +
-    "(SELECT COUNT(*) FROM community_post_reactions r WHERE r.post_id=p.post_id AND r.reaction='like') AS like_count," +
-    "(SELECT COUNT(*) FROM community_posts reply WHERE reply.parent_post_id=p.post_id AND reply.deleted_at IS NULL AND reply.moderation_status='visible') AS reply_count," +
-    "EXISTS(SELECT 1 FROM community_post_reactions mine WHERE mine.post_id=p.post_id AND mine.account_id=? AND mine.reaction='like') AS liked_by_viewer," +
-    "EXISTS(SELECT 1 FROM community_post_bookmarks bookmark WHERE bookmark.post_id=p.post_id AND bookmark.account_id=?) AS bookmarked_by_viewer " +
-    "FROM community_posts p JOIN auth_accounts a ON a.account_id=p.author_account_id " +
-    "LEFT JOIN community_spaces c ON c.space_id=p.space_id " +
-    "WHERE p.post_id=? AND p.deleted_at IS NULL AND p.moderation_status='visible'"
-  ).bind(account?.account_id || "", account?.account_id || "", post.post_id).first();
-  if (!row) throw fail(404, "This post could not be found.");
+function presentPost(row) {
   return {
     id: row.post_id,
     content: row.content,
@@ -228,6 +215,23 @@ async function postView(db, post, account) {
     bookmarkedByViewer: Boolean(row.bookmarked_by_viewer),
     permalink: "/community/post/" + row.post_id,
   };
+}
+
+async function postView(db, post, account) {
+  const row = await db.prepare(
+    "SELECT p.post_id,p.content,p.visibility,p.parent_post_id,p.created_at,p.edited_at," +
+    "a.user_handle AS author_handle,a.avatar_id AS author_avatar," +
+    "c.slug AS community_slug,c.name AS community_name," +
+    "(SELECT COUNT(*) FROM community_post_reactions r WHERE r.post_id=p.post_id AND r.reaction='like') AS like_count," +
+    "(SELECT COUNT(*) FROM community_posts reply WHERE reply.parent_post_id=p.post_id AND reply.deleted_at IS NULL AND reply.moderation_status='visible') AS reply_count," +
+    "EXISTS(SELECT 1 FROM community_post_reactions mine WHERE mine.post_id=p.post_id AND mine.account_id=? AND mine.reaction='like') AS liked_by_viewer," +
+    "EXISTS(SELECT 1 FROM community_post_bookmarks bookmark WHERE bookmark.post_id=p.post_id AND bookmark.account_id=?) AS bookmarked_by_viewer " +
+    "FROM community_posts p JOIN auth_accounts a ON a.account_id=p.author_account_id " +
+    "LEFT JOIN community_spaces c ON c.space_id=p.space_id " +
+    "WHERE p.post_id=? AND p.deleted_at IS NULL AND p.moderation_status='visible'"
+  ).bind(account?.account_id || "", account?.account_id || "", post.post_id).first();
+  if (!row) throw fail(404, "This post could not be found.");
+  return presentPost(row);
 }
 
 async function listCommunities(db, account) {
@@ -257,55 +261,74 @@ async function listFeed(db, url, account) {
   const slug = url.searchParams.get("space");
   const parentId = url.searchParams.has("parent") ? postId(url.searchParams.get("parent")) : null;
   let where;
-  let bindings;
-  let space = null;
-  let membership = null;
+  let bindings = [];
+  let scope = "global";
+
   if (slug) {
-    space = await spaceBySlug(db, normalizeCommunitySlug(slug));
-    membership = await requireReadableSpace(db, space, account);
-    if (space.visibility !== "public" && membership?.membership_status !== "active") {
-      throw fail(404, "This community could not be found.");
-    }
-    where = "p.space_id=? AND (p.visibility='public' OR (p.visibility='members' AND ?=1))";
-    bindings = [space.space_id, membership?.membership_status === "active" ? 1 : 0];
+    const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
+    await requireReadableSpace(db, space, account);
+    where = "p.space_id=?";
+    bindings = [space.space_id];
+    scope = "community";
   } else if (parentId) {
     const parent = await visiblePost(db, parentId, account);
-    where = "p.space_id IS ? AND p.visibility IN ('public','members')";
+    where = "p.space_id IS ?";
     bindings = [parent.space_id];
+    scope = "replies";
   } else {
     where = "p.space_id IS NULL AND p.visibility='public'";
-    bindings = [];
   }
+
+  const parentClause = parentId
+    ? " AND p.parent_post_id=? AND EXISTS(" +
+      "SELECT 1 FROM community_posts parent WHERE parent.post_id=p.parent_post_id " +
+      "AND parent.deleted_at IS NULL AND parent.moderation_status='visible')"
+    : " AND p.parent_post_id IS NULL";
   if (parentId) bindings.push(parentId);
-  const parentClause = parentId ? " AND p.parent_post_id=?" : " AND p.parent_post_id IS NULL";
+
   const viewerId = account?.account_id || "";
   const cursorClause = cursor ? " AND (p.created_at < ? OR (p.created_at = ? AND p.post_id < ?))" : "";
+  // All feed visibility and viewer flags are selected in one statement. The
+  // previous per-post visiblePost()+postView() loop performed several D1
+  // subrequests per item and could exceed the Workers Free 50-query budget.
   const sql =
-    "SELECT p.post_id,p.created_at FROM community_posts p " +
+    "SELECT p.post_id,p.content,p.visibility,p.parent_post_id,p.created_at,p.edited_at," +
+    "a.user_handle AS author_handle,a.avatar_id AS author_avatar," +
+    "c.slug AS community_slug,c.name AS community_name," +
+    "(SELECT COUNT(*) FROM community_post_reactions r WHERE r.post_id=p.post_id AND r.reaction='like') AS like_count," +
+    "(SELECT COUNT(*) FROM community_posts reply WHERE reply.parent_post_id=p.post_id " +
+    "AND reply.deleted_at IS NULL AND reply.moderation_status='visible') AS reply_count," +
+    "EXISTS(SELECT 1 FROM community_post_reactions mine WHERE mine.post_id=p.post_id " +
+    "AND mine.account_id=? AND mine.reaction='like') AS liked_by_viewer," +
+    "EXISTS(SELECT 1 FROM community_post_bookmarks bookmark WHERE bookmark.post_id=p.post_id " +
+    "AND bookmark.account_id=?) AS bookmarked_by_viewer " +
+    "FROM community_posts p JOIN auth_accounts a ON a.account_id=p.author_account_id " +
+    "LEFT JOIN community_spaces c ON c.space_id=p.space_id " +
     "WHERE " + where + parentClause +
+    " AND (p.space_id IS NULL OR (c.status='active' AND " +
+    "(c.visibility='public' OR EXISTS(SELECT 1 FROM community_memberships cm " +
+    "WHERE cm.space_id=p.space_id AND cm.account_id=? AND cm.membership_status='active'))))" +
+    " AND (p.visibility='public' OR (p.visibility='members' AND EXISTS(" +
+    "SELECT 1 FROM community_memberships pm WHERE pm.space_id=p.space_id " +
+    "AND pm.account_id=? AND pm.membership_status='active')))" +
     " AND p.deleted_at IS NULL AND p.moderation_status='visible' " +
     "AND NOT EXISTS(SELECT 1 FROM community_account_controls ctl WHERE " +
-"(ctl.account_id=? AND ctl.target_account_id=p.author_account_id AND ctl.control_type IN ('block','mute')) OR " +
-"(ctl.account_id=p.author_account_id AND ctl.target_account_id=? AND ctl.control_type='block'))" +
+    "(ctl.account_id=? AND ctl.target_account_id=p.author_account_id AND ctl.control_type IN ('block','mute')) OR " +
+    "(ctl.account_id=p.author_account_id AND ctl.target_account_id=? AND ctl.control_type='block'))" +
     cursorClause +
     " ORDER BY p.created_at DESC,p.post_id DESC LIMIT ?";
-  const args = [...bindings, viewerId, viewerId];
+  const args = [viewerId, viewerId, ...bindings, viewerId, viewerId, viewerId, viewerId];
   if (cursor) args.push(cursor.timestamp, cursor.timestamp, cursor.id);
   args.push(limit + 1);
   const result = await db.prepare(sql).bind(...args).all();
   const rows = result.results || [];
   const hasMore = rows.length > limit;
   const page = rows.slice(0, limit);
-  const items = [];
-  for (const row of page) {
-    const post = await visiblePost(db, row.post_id, account);
-    items.push(await postView(db, post, account));
-  }
   return {
-    items,
+    items: page.map(presentPost),
     nextCursor: hasMore && page.length ? encodeCursor(page[page.length - 1]) : null,
     pageSize: limit,
-    scope: slug ? "community" : parentId ? "replies" : "global",
+    scope,
   };
 }
 
