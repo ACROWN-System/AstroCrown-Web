@@ -651,38 +651,63 @@ async function respondMembershipInvitation(db, account, inviteId, payload) {
     }
     throw fail(409, "This invitation is no longer awaiting a response.");
   }
-  if (payload.action === "accept") {
-    const membership = await membershipFor(db, invitation.space_id, actor.account_id);
-    if (membership?.membership_status === "banned") throw fail(403, "A banned account cannot accept an invitation to this community.");
-  }
+
   const nextStatus = payload.action === "accept" ? "accepted" : "declined";
-  const batch = [
-    db.prepare(
-      "UPDATE community_membership_invitations SET invitation_status=?,responded_at=? " +
-      "WHERE invite_id=? AND invited_account_id=? AND invitation_status='pending' AND expires_at>?"
-    ).bind(nextStatus, now, id, actor.account_id, now),
-  ];
+  let batch;
   if (payload.action === "accept") {
-    batch.push(db.prepare(
-      "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
-      "SELECT space_id,invited_account_id,'active','member',?,? FROM community_membership_invitations " +
-      "WHERE invite_id=? AND invited_account_id=? AND invitation_status='accepted' AND responded_at=? " +
-      "ON CONFLICT(space_id,account_id) DO UPDATE SET membership_status='active',member_role='member',updated_at=excluded.updated_at " +
-      "WHERE community_memberships.membership_status IN ('left','pending')"
-    ).bind(now, now, id, actor.account_id, now));
+    // Check the ban inside the same D1 transaction that changes the invitation.
+    // This closes the gap between a preflight membership read and the write.
+    batch = [
+      db.prepare(
+        "UPDATE community_membership_invitations SET invitation_status='accepted',responded_at=? " +
+        "WHERE invite_id=? AND invited_account_id=? AND invitation_status='pending' AND expires_at>? " +
+        "AND NOT EXISTS(SELECT 1 FROM community_memberships m " +
+        "WHERE m.space_id=community_membership_invitations.space_id AND m.account_id=? AND m.membership_status='banned')"
+      ).bind(now, id, actor.account_id, now, actor.account_id),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,?,'membership_invitation_accepted','invitation',?,?,?,? WHERE changes()=1"
+      ).bind(randomId("audit_"), actor.account_id, id,
+        "Invitation accepted by its intended recipient.",
+        JSON.stringify({ spaceId: invitation.space_id }), now),
+      db.prepare(
+        "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+        "SELECT space_id,invited_account_id,'active','member',?,? FROM community_membership_invitations " +
+        "WHERE invite_id=? AND invited_account_id=? AND invitation_status='accepted' AND responded_at=? " +
+        "AND NOT EXISTS(SELECT 1 FROM community_memberships m " +
+        "WHERE m.space_id=community_membership_invitations.space_id AND m.account_id=community_membership_invitations.invited_account_id AND m.membership_status='banned') " +
+        "ON CONFLICT(space_id,account_id) DO UPDATE SET membership_status='active',member_role='member',updated_at=excluded.updated_at " +
+        "WHERE community_memberships.membership_status IN ('left','pending')"
+      ).bind(now, now, id, actor.account_id, now),
+    ];
+  } else {
+    batch = [
+      db.prepare(
+        "UPDATE community_membership_invitations SET invitation_status='declined',responded_at=? " +
+        "WHERE invite_id=? AND invited_account_id=? AND invitation_status='pending' AND expires_at>?"
+      ).bind(now, id, actor.account_id, now),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,?,'membership_invitation_declined','invitation',?,?,?,? WHERE changes()=1"
+      ).bind(randomId("audit_"), actor.account_id, id,
+        "Invitation declined by its intended recipient.",
+        JSON.stringify({ spaceId: invitation.space_id }), now),
+    ];
   }
-  batch.push(db.prepare(
-    "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
-    "SELECT ?,?,'membership_invitation_" + (payload.action === "accept" ? "accepted" : "declined") + "',?,?,?, ?,? " +
-    "WHERE changes()=1 AND EXISTS(SELECT 1 FROM community_membership_invitations WHERE invite_id=? AND invitation_status=? AND responded_at=?)"
-  ).bind(randomId("audit_"), actor.account_id, "invitation", id,
-    "Invitation " + payload.action + "ed by its recipient.",
-    JSON.stringify({ spaceId: invitation.space_id }), now, id, nextStatus, now));
   await db.batch(batch);
+
   const current = await db.prepare(
     "SELECT invitation_status FROM community_membership_invitations WHERE invite_id=? AND invited_account_id=?"
   ).bind(id, actor.account_id).first();
-  if (current?.invitation_status !== nextStatus) throw fail(409, "The invitation changed before your response could be recorded.");
+  if (current?.invitation_status !== nextStatus) {
+    if (payload.action === "accept") {
+      const currentMembership = await membershipFor(db, invitation.space_id, actor.account_id);
+      if (currentMembership?.membership_status === "banned") {
+        throw fail(403, "A banned account cannot accept an invitation to this community.");
+      }
+    }
+    throw fail(409, "The invitation changed before your response could be recorded.");
+  }
   if (payload.action === "accept") {
     const acceptedMembership = await membershipFor(db, invitation.space_id, actor.account_id);
     if (acceptedMembership?.membership_status !== "active") {

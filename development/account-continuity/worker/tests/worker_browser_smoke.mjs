@@ -579,6 +579,30 @@ async function testCommunityApi(accountIdentifier) {
   const leftPrivateSpace = await postWorkerJson("/api/community/communities/" + privateSlug + "/leave", {});
   assert.equal(leftPrivateSpace.status, 200);
   await setBrowserAccountSession(rootToken);
+  const invitationBlockedByBan = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test banned-recipient acceptance guard"
+  });
+  assert.equal(invitationBlockedByBan.status, 201, JSON.stringify(invitationBlockedByBan.body));
+  const bannedInviteId = invitationBlockedByBan.body.invitation.id;
+  executeLocalD1Fixture(
+    "UPDATE community_memberships SET membership_status='banned',updated_at=" + fixtureNow +
+    " WHERE space_id=" + sqlLiteral(privateSpaceId) + " AND account_id=" + sqlLiteral(blockedAuthorId) + ";",
+    "Ban the synthetic invite recipient before acceptance"
+  );
+  await setBrowserAccountSession(blockedAuthorToken);
+  const bannedInviteAcceptance = await postWorkerJson("/api/community/invitations/" + bannedInviteId + "/respond", { action: "accept" });
+  assert.equal(bannedInviteAcceptance.status, 403, "a banned account must not activate membership by accepting an invitation.");
+  const bannedInviteInbox = await getWorkerJson("/api/community/invitations");
+  assert.equal(bannedInviteInbox.status, 200);
+  assert.ok(bannedInviteInbox.body.invitations.some(item => item.id === bannedInviteId),
+    "the invitation remains pending when acceptance is rejected due to a ban.");
+  await setBrowserAccountSession(rootToken);
+  executeLocalD1Fixture(
+    "UPDATE community_memberships SET membership_status='left',updated_at=" + fixtureNow +
+    " WHERE space_id=" + sqlLiteral(privateSpaceId) + " AND account_id=" + sqlLiteral(blockedAuthorId) + ";",
+    "Restore the synthetic account after the banned-recipient acceptance test"
+  );
+
   const invitationToRevoke = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
     accountId: blockedAuthorId, reason: "Local browser test revocation"
   });
