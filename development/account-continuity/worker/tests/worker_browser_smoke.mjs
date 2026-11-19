@@ -587,7 +587,7 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(resolvedByReporter.status, "resolved");
   assert.equal(resolvedByReporter.resolution, "Resolved in the synthetic local browser test");
   assert.equal(dismissedByReporter.status, "dismissed");
-  await setBrowserAccountSession(rootToken);
+  await setBrowserAccountSession(blockedAuthorToken);
 
   const leftRequestSpace = await postWorkerJson("/api/community/communities/" + requestSlug + "/leave", {});
   assert.equal(leftRequestSpace.status, 200);
