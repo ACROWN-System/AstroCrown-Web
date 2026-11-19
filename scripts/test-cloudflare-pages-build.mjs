@@ -35,6 +35,8 @@ const expectedFiles = [
   "account-continuity/prototype/account-ui.js",
   "account-continuity/prototype/admin-wallet-ui.js",
   "assets/genesis-member-dna.svg",
+  "community-network/community-network.css",
+  "community-network/community-network.js",
   "index.html",
   "privacy-transparency.html",
   "robots.txt",
@@ -50,6 +52,8 @@ const supporterJs = read("supporters/supporters.js");
 const walletAdapters = read("supporters/wallet-provider-adapters.mjs");
 const privacy = read("privacy-transparency.html");
 const accountJs = read("account-continuity/prototype/account-ui.js");
+const communityCss = read("community-network/community-network.css");
+const communityJs = read("community-network/community-network.js");
 const headers = read("_headers");
 const robots = read("robots.txt");
 
@@ -60,6 +64,11 @@ assert.match(homepage, /Privacy &amp; Transparency Centre/);
 assert.match(homepage, /illustrative market values/i);
 assert.match(homepage, /no live services connected/i);
 assert.match(homepage, /You are viewing an unfinished development preview/i);
+assert.match(homepage, /community-network\\/community-network\\.css/);
+assert.match(homepage, /community-network\\/community-network\\.js/);
+assert.match(communityCss, /community-workspace/);
+assert.match(communityJs, /ASTROCROWN_COMMUNITY_STATIC_PREVIEW = true/);
+assert.match(communityJs, /does not include the Community backend/);
 assert.match(homepage, /var workerStagingMode = false;/);
 
 assert.match(accountJs, /var forceBrowserDemo = true;/);

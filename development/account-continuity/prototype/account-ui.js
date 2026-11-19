@@ -551,6 +551,16 @@
     });
   }
 
+  var communityAuthEventState = null;
+  function publishCommunityAuthState(authenticated) {
+    var value = authenticated === true;
+    if (communityAuthEventState === value) return;
+    communityAuthEventState = value;
+    document.dispatchEvent(new CustomEvent("astrocrown:account-status-change", {
+      detail: { authenticated: value }
+    }));
+  }
+
   function syncAccountButton() {
     if (!openButton) return;
     var authenticated = Boolean(accountState && accountState.authenticated === true);
@@ -576,7 +586,7 @@
       openButton.setAttribute("title", "Open your AstroCrown account");
       openButton.setAttribute("aria-haspopup", "dialog");
       openButton.setAttribute("aria-controls", "account-dialog");
-      document.dispatchEvent(new CustomEvent("astrocrown:account-status-change", { detail: { authenticated: true } }));
+      publishCommunityAuthState(true);
       return;
     }
     openButton.classList.remove("is-authenticated");
@@ -590,7 +600,7 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true">' +
         '<circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.6-3.6 2.8-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/>' +
       '</svg><span>Log In</span>';
-    document.dispatchEvent(new CustomEvent("astrocrown:account-status-change", { detail: { authenticated: false } }));
+    publishCommunityAuthState(false);
   }
 
   function renderTabs(selected) {

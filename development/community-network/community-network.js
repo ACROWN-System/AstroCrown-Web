@@ -19,6 +19,17 @@
     feedback.dataset.kind=kind||"info";
     feedback.hidden=!text;
   }
+  if(window.ASTROCROWN_COMMUNITY_STATIC_PREVIEW===true){
+    state.authenticated=false;
+    composer.hidden=true;
+    loginPrompt.hidden=true;
+    invitations.hidden=true;
+    queue.hidden=true;
+    feed.replaceChildren(make("div","community-empty",
+      "This static visual preview does not include the Community backend. Use connected Worker staging to test account-backed posts and membership."));
+    announce("Read-only visual preview · no community API, account data or publishing is connected.","info");
+    return;
+  }
   async function api(path,payload){
     var response;
     try{

@@ -1183,13 +1183,13 @@ try {
   assert.equal(communityAssets[0].status, 200, "the staging asset builder must publish the Community stylesheet.");
   assert.match(communityAssets[0].text, /community-workspace/);
   assert.equal(communityAssets[1].status, 200, "the staging asset builder must publish the Community application script.");
-  assert.match(communityAssets[1].text, /api\\/community\\/communities/);
+  assert.ok(communityAssets[1].text.includes("/api/community/communities/"));
   assert.equal(await evaluate("document.getElementById('community-composer-form').hidden"), true,
     "the unauthenticated homepage must not expose an active post composer.");
   assert.equal(await evaluate("document.getElementById('community-login-prompt').hidden"), false,
     "the unauthenticated homepage must offer the existing AstroCrown Log In flow.");
-  assert.equal(await evaluate("document.querySelectorAll('a[href=\\"#community-network\\"]').length >= 2"), true,
-    "the Community destination must appear in primary and secondary navigation.");
+  const communityNavCount = await evaluate("Array.from(document.querySelectorAll('a')).filter(a => a.getAttribute('href') === '#community-network').length");
+  assert.ok(communityNavCount >= 2, "The Community destination must appear in primary and secondary navigation.");
   console.log("PASS: canonical homepage publishes the native Community section, six seeded community links, scoped staging CSS/JS assets, unauthenticated composer boundary and navigation.");
 
   await trustedClick("#open-account-dialog");
