@@ -454,6 +454,10 @@ async function testCommunityApi(accountIdentifier) {
   const blockedAuthorTokenHash = createHash("sha256").update(blockedAuthorToken).digest("base64url");
   const fixtureNow = Math.floor(Date.now() / 1000);
   const fixtureTimestamp = new Date().toISOString();
+  const requestSlug = "request-" + randomUUID().slice(0, 8);
+  const privateSlug = "private-" + randomUUID().slice(0, 8);
+  const requestSpaceId = "space_request_" + randomUUID().replace(/-/g, "");
+  const privateSpaceId = "space_private_" + randomUUID().replace(/-/g, "");
   executeLocalD1Fixture([
     "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
       [blockedAuthorId,blockedAuthorIdentifier,blockedAuthorHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
@@ -461,7 +465,115 @@ async function testCommunityApi(accountIdentifier) {
       [blockedAuthorTokenHash,blockedAuthorId,randomBytes(16).toString("hex"),null,fixtureNow,fixtureNow+1800].map(value => value === null ? "NULL" : sqlLiteral(value)).join(",") + ");",
     "INSERT INTO community_account_controls(account_id,target_account_id,control_type,created_at) " +
       "SELECT " + sqlLiteral(blockedAuthorId) + ",account_id,'block'," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
-  ].join("\n"), "Create a second local account and a reverse-direction block fixture");
+    "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
+      [requestSpaceId,requestSlug,"Request Workflow Test","Synthetic restricted-space fixture","Test membership request lifecycle","Synthetic local test only","restricted","request","active"].map(sqlLiteral).join(",") +
+      ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
+    "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
+      [privateSpaceId,privateSlug,"Invitation Workflow Test","Synthetic private-space fixture","Test invitation lifecycle","Synthetic local test only","private","invite_only","active"].map(sqlLiteral).join(",") +
+      ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(requestSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(privateSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+  ].join("\n"), "Create synthetic second account and local community membership fixtures");
+
+  // Request-based membership is not active until an owner/moderator approves it.
+  await setBrowserAccountSession(blockedAuthorToken);
+  const requestJoin = await postWorkerJson("/api/community/communities/" + requestSlug + "/join", {});
+  assert.equal(requestJoin.status, 200, JSON.stringify(requestJoin.body));
+  assert.equal(requestJoin.body.membershipStatus, "pending");
+  const prematureRestrictedPost = await postWorkerJson("/api/community/posts", {
+    content: "Should not post while membership is pending", communitySlug: requestSlug
+  });
+  assert.equal(prematureRestrictedPost.status, 403, "pending request membership must not grant posting rights.");
+
+  await setBrowserAccountSession(rootToken);
+  const requestQueue = await getWorkerJson("/api/community/communities/" + requestSlug + "/membership-requests");
+  assert.equal(requestQueue.status, 200, JSON.stringify(requestQueue.body));
+  assert.ok(requestQueue.body.items.some(item => item.accountId === blockedAuthorId));
+  const approvedRequest = await postWorkerJson("/api/community/communities/" + requestSlug + "/members/" + blockedAuthorId + "/decision", {
+    action: "approve", reason: "Local browser test approval"
+  });
+  assert.equal(approvedRequest.status, 200, JSON.stringify(approvedRequest.body));
+  assert.equal(approvedRequest.body.membershipStatus, "active");
+
+  await setBrowserAccountSession(blockedAuthorToken);
+  const restrictedPost = await postWorkerJson("/api/community/posts", {
+    content: "Approved restricted-space post " + randomUUID(), communitySlug: requestSlug
+  });
+  assert.equal(restrictedPost.status, 201, JSON.stringify(restrictedPost.body));
+  const leftRequestSpace = await postWorkerJson("/api/community/communities/" + requestSlug + "/leave", {});
+  assert.equal(leftRequestSpace.status, 200);
+  const requestAgain = await postWorkerJson("/api/community/communities/" + requestSlug + "/join", {});
+  assert.equal(requestAgain.status, 200);
+  assert.equal(requestAgain.body.membershipStatus, "pending");
+
+  await setBrowserAccountSession(rootToken);
+  const rejectedRequest = await postWorkerJson("/api/community/communities/" + requestSlug + "/members/" + blockedAuthorId + "/decision", {
+    action: "reject", reason: "Local browser test rejection"
+  });
+  assert.equal(rejectedRequest.status, 200, JSON.stringify(rejectedRequest.body));
+  assert.equal(rejectedRequest.body.membershipStatus, "left");
+  await setBrowserAccountSession(blockedAuthorToken);
+  const deniedAfterRejection = await postWorkerJson("/api/community/posts", {
+    content: "Should not post after request rejection", communitySlug: requestSlug
+  });
+  assert.equal(deniedAfterRejection.status, 403);
+
+  // Private communities require an account-bound invitation and explicit acceptance.
+  await setBrowserAccountSession(rootToken);
+  const invitationCreated = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test invitation"
+  });
+  assert.equal(invitationCreated.status, 201, JSON.stringify(invitationCreated.body));
+  const invitationId = invitationCreated.body.invitation.id;
+
+  await setBrowserAccountSession(blockedAuthorToken);
+  const invitationInbox = await getWorkerJson("/api/community/invitations");
+  assert.equal(invitationInbox.status, 200, JSON.stringify(invitationInbox.body));
+  assert.ok(invitationInbox.body.invitations.some(item => item.id === invitationId));
+  const acceptedInvitation = await postWorkerJson("/api/community/invitations/" + invitationId + "/respond", { action: "accept" });
+  assert.equal(acceptedInvitation.status, 200, JSON.stringify(acceptedInvitation.body));
+  assert.equal(acceptedInvitation.body.membershipStatus, "active");
+  const privatePost = await postWorkerJson("/api/community/posts", {
+    content: "Private invitation post " + randomUUID(), communitySlug: privateSlug
+  });
+  assert.equal(privatePost.status, 201, JSON.stringify(privatePost.body));
+  const ownerCannotReadPrivatePost = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
+  assert.equal(ownerCannotReadPrivatePost.status, 404, "private community content must remain hidden from non-members.");
+
+  const leftPrivateSpace = await postWorkerJson("/api/community/communities/" + privateSlug + "/leave", {});
+  assert.equal(leftPrivateSpace.status, 200);
+  await setBrowserAccountSession(rootToken);
+  const invitationToRevoke = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test revocation"
+  });
+  assert.equal(invitationToRevoke.status, 201, JSON.stringify(invitationToRevoke.body));
+  const revokedId = invitationToRevoke.body.invitation.id;
+  const revoked = await postWorkerJson("/api/community/invitations/" + revokedId + "/revoke", { reason: "Local browser test revocation" });
+  assert.equal(revoked.status, 200, JSON.stringify(revoked.body));
+  assert.equal(revoked.body.invitationStatus, "revoked");
+  await setBrowserAccountSession(blockedAuthorToken);
+  const revokedAcceptance = await postWorkerJson("/api/community/invitations/" + revokedId + "/respond", { action: "accept" });
+  assert.equal(revokedAcceptance.status, 409, "a revoked invitation must not grant private membership.");
+
+  await setBrowserAccountSession(rootToken);
+  const invitationToExpire = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test expiry"
+  });
+  assert.equal(invitationToExpire.status, 201, JSON.stringify(invitationToExpire.body));
+  const expiredId = invitationToExpire.body.invitation.id;
+  executeLocalD1Fixture(
+    "UPDATE community_membership_invitations SET created_at=" + (fixtureNow - 3600) +
+    ",expires_at=" + (fixtureNow - 1) + " WHERE invite_id=" + sqlLiteral(expiredId) + ";",
+    "Expire a synthetic local community invitation"
+  );
+  await setBrowserAccountSession(blockedAuthorToken);
+  const expiredAcceptance = await postWorkerJson("/api/community/invitations/" + expiredId + "/respond", { action: "accept" });
+  assert.equal(expiredAcceptance.status, 410, "an expired invitation must not grant private membership.");
+
+  // The author-side block below is a separate visibility regression: direct access
+  // stays hidden while the global feed continues to return unrelated content.
   await setBrowserAccountSession(blockedAuthorToken);
   const blockedAuthorPost = await postWorkerJson("/api/community/posts", {
     content: "Blocked author feed-isolation test " + randomUUID()
@@ -480,7 +592,7 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(deleted.body.deleted, true);
   const missingAfterDelete = await getWorkerJson("/api/community/posts/" + post.id);
   assert.equal(missingAfterDelete.status, 404);
-  console.log("PASS: authenticated community directory, global feed, post/reply persistence, reaction idempotency, bookmark toggling, duplicate-report prevention, community membership/posting boundaries, author removal, and feed isolation for author-side blocks.");
+  console.log("PASS: authenticated community directory/feed, post/reply, reactions/bookmarks/reports, request approval/rejection, private invitation inbox/acceptance/revocation/expiry, private-content isolation, posting boundaries, author removal, and author-side-block feed isolation.");
 }
 
 async function signSiwe(account, challenge) {

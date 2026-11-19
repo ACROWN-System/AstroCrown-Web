@@ -516,8 +516,8 @@ async function createMembershipInvitation(db, account, slug, payload, services) 
   const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
   if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
   await requireCommunityManager(db, space, actor, services);
-  if (space.membership_policy !== "invite_only" || space.visibility !== "private") {
-    throw fail(409, "Invitations are currently enabled only for private invite-only communities.");
+  if (space.membership_policy !== "invite_only") {
+    throw fail(409, "Invitations are enabled only for invite-only communities.");
   }
   const targetAccountId = membershipAccountId(payload.accountId);
   if (targetAccountId === actor.account_id) throw fail(400, "You cannot invite your own account.");
