@@ -898,6 +898,7 @@
         <div class="community-heading-actions">
           <button class="community-button" id="community-invitations-button" type="button">My invitations</button>
           <button class="community-button" id="community-my-reports-button" type="button">My reports</button>
+          <button class="community-button" id="community-ownership-transfers-button" type="button" hidden>Ownership transfers</button>
           <button class="community-button" id="community-refresh" type="button">Refresh</button>
         </div>
       </div>
@@ -924,6 +925,7 @@
               <button class="community-button is-primary" id="community-member-action" data-community-action="join" type="button" hidden>Join community</button>
               <button class="community-button" id="community-review-requests" data-community-action="review" type="button" hidden>Review requests</button>
               <button class="community-button" id="community-review-reports" data-community-action="review-reports" type="button" hidden>Review reports</button>
+              <button class="community-button" id="community-transfer-ownership" type="button" hidden>Transfer ownership</button>
             </div>
           </div>
           <p class="community-feedback" id="community-feedback" role="status" aria-live="polite" hidden></p>
@@ -931,6 +933,21 @@
           <div class="community-manager-queue" id="community-manager-queue" hidden></div>
           <div class="community-manager-queue community-report-queue" id="community-report-queue" hidden></div>
           <div class="community-invitations-panel community-own-reports" id="community-own-reports" hidden></div>
+          <section class="community-ownership-panel" id="community-ownership-panel" hidden aria-labelledby="community-ownership-title">
+            <h4 id="community-ownership-title">Community ownership</h4>
+            <form class="community-ownership-form" id="community-ownership-propose-form" hidden>
+              <p class="community-panel-description">Propose a handover to an existing active member. You remain the owner until the proposed successor explicitly accepts.</p>
+              <label for="community-ownership-successor">Successor's AstroCrown account identifier</label>
+              <input class="community-input" id="community-ownership-successor" name="accountIdentifier" type="text" maxlength="100" autocomplete="off" required>
+              <label for="community-ownership-reason">Reason for handover (optional)</label>
+              <textarea class="community-textarea community-ownership-reason" id="community-ownership-reason" name="reason" maxlength="500" rows="2"></textarea>
+              <div class="community-composer-foot">
+                <span>The successor must already be an active member. A pending transfer can be cancelled by the current owner.</span>
+                <button class="community-button is-primary" type="submit">Propose ownership transfer</button>
+              </div>
+            </form>
+            <div id="community-ownership-transfer-list"></div>
+          </section>
           <form class="community-composer" id="community-composer-form" hidden>
             <label for="community-compose-text">Start a discussion</label>
             <textarea class="community-textarea" id="community-compose-text" name="content" maxlength="10000" placeholder="Share a question, observation or piece of research…"></textarea>

@@ -13,7 +13,9 @@
   var feed=$("community-feed-list"),spaceList=$("community-space-list"),composer=$("community-composer-form"),
       loginPrompt=$("community-login-prompt"),feedback=$("community-feedback"),
       invitations=$("community-invitations-panel"),queue=$("community-manager-queue"),
-      reportQueue=$("community-report-queue"),ownReports=$("community-own-reports");
+      reportQueue=$("community-report-queue"),ownReports=$("community-own-reports"),
+      ownershipPanel=$("community-ownership-panel"),ownershipList=$("community-ownership-transfer-list"),
+      ownershipForm=$("community-ownership-propose-form");
 
   function announce(text,kind){
     feedback.textContent=text||"";
@@ -28,7 +30,11 @@
     queue.hidden=true;
     reportQueue.hidden=true;
     ownReports.hidden=true;
+    ownershipPanel.hidden=true;
+    ownershipForm.hidden=true;
     $("community-my-reports-button").hidden=true;
+    $("community-ownership-transfers-button").hidden=true;
+    $("community-transfer-ownership").hidden=true;
     $("community-review-reports").hidden=true;
     feed.replaceChildren(make("div","community-empty",
       "This static visual preview does not include the Community backend. Use connected Worker staging to test account-backed posts and membership."));
@@ -86,7 +92,8 @@
   function renderHeader(){
     var title=$("community-space-heading"),description=$("community-space-description"),
         meta=$("community-space-meta"),memberAction=$("community-member-action"),
-        reviewButton=$("community-review-requests"),reportButton=$("community-review-reports");
+        reviewButton=$("community-review-requests"),reportButton=$("community-review-reports"),
+        transferButton=$("community-transfer-ownership");
     if(!state.community){
       title.textContent="Community-wide feed";
       description.textContent="A shared view of posts published to AstroCrown's open social feed.";
@@ -94,6 +101,8 @@
       memberAction.hidden=true;
       reviewButton.hidden=true;
       reportButton.hidden=!state.authenticated||!state.platformAdmin;
+      transferButton.hidden=true;
+      ownershipForm.hidden=true;
       queue.hidden=true;
       reportQueue.hidden=true;
       return;
@@ -107,6 +116,8 @@
     var manager=state.platformAdmin||["owner","moderator"].includes(space.memberRole);
     reviewButton.hidden=!state.authenticated||!["owner","moderator"].includes(space.memberRole)||space.membershipPolicy!=="request";
     reportButton.hidden=!state.authenticated||!manager;
+    transferButton.hidden=!state.authenticated||space.memberRole!=="owner"||space.membershipStatus!=="active";
+    ownershipForm.hidden=transferButton.hidden;
     if(space.membershipStatus==="active"){
       memberAction.textContent=space.memberRole==="owner"?"Community owner":"Leave community";
       memberAction.disabled=space.memberRole==="owner";
@@ -222,8 +233,9 @@
       state.authenticated=status.authenticated===true;
       state.platformAdmin=status.admin===true;
     }catch(_error){state.authenticated=false;state.platformAdmin=false;}
+    $("community-ownership-transfers-button").hidden=!state.authenticated;
     if(!state.authenticated){
-      invitations.hidden=true;queue.hidden=true;reportQueue.hidden=true;ownReports.hidden=true;
+      invitations.hidden=true;queue.hidden=true;reportQueue.hidden=true;ownReports.hidden=true;ownershipPanel.hidden=true;
     }
     updateComposer();renderHeader();
   }
@@ -318,6 +330,56 @@
     }catch(error){announce(error.message,"error");}
   }
 
+  async function loadOwnershipTransfers(){
+    if(!state.authenticated){openAccount();return;}
+    try{
+      var result=await api("/api/community/ownership-transfers");
+      ownershipForm.hidden=!(state.community&&state.community.membershipStatus==="active"&&state.community.memberRole==="owner");
+      ownershipList.replaceChildren();
+      var incoming=Array.isArray(result.incoming)?result.incoming:[];
+      var outgoing=Array.isArray(result.outgoing)?result.outgoing:[];
+      ownershipList.appendChild(make("h5","","Incoming proposals"));
+      if(!incoming.length)ownershipList.appendChild(make("p","community-panel-description","No pending ownership proposals are waiting for you."));
+      incoming.forEach(function(transfer){
+        var row=make("div","community-transfer-row");
+        row.appendChild(make("strong","","Successor requested for "+transfer.communityName));
+        row.appendChild(make("p","community-transfer-context","Proposed by "+transfer.fromHandle+" · "+formatTime(transfer.createdAt)));
+        if(transfer.reason)row.appendChild(make("p","community-transfer-context","Reason: "+transfer.reason));
+        var reasonLabel=make("label","community-report-reason-label","Response reason (optional)");
+        var reason=make("input","community-input");
+        reason.type="text";reason.maxLength=500;reason.placeholder="Add a short response reason";
+        reason.dataset.transferReason=transfer.id;
+        row.appendChild(reasonLabel);row.appendChild(reason);
+        var actions=make("div","community-request-actions");
+        ["accept","decline"].forEach(function(action){
+          var button=make("button","community-button"+(action==="accept"?" is-primary":""),action==="accept"?"Accept ownership":"Decline");
+          button.type="button";button.dataset.ownershipResponse=action;button.dataset.ownershipId=transfer.id;
+          actions.appendChild(button);
+        });
+        row.appendChild(actions);ownershipList.appendChild(row);
+      });
+
+      ownershipList.appendChild(make("h5","","Outgoing proposals"));
+      if(!outgoing.length)ownershipList.appendChild(make("p","community-panel-description","You have no pending ownership proposals."));
+      outgoing.forEach(function(transfer){
+        var row=make("div","community-transfer-row");
+        row.appendChild(make("strong","","Proposed successor for "+transfer.communityName+": "+transfer.toHandle));
+        row.appendChild(make("p","community-transfer-context","Waiting for explicit acceptance · "+formatTime(transfer.createdAt)));
+        if(transfer.reason)row.appendChild(make("p","community-transfer-context","Reason: "+transfer.reason));
+        var reasonLabel=make("label","community-report-reason-label","Cancellation reason (optional)");
+        var reason=make("input","community-input");
+        reason.type="text";reason.maxLength=500;reason.placeholder="Add a short cancellation reason";
+        reason.dataset.transferCancelReason=transfer.id;
+        row.appendChild(reasonLabel);row.appendChild(reason);
+        var actions=make("div","community-request-actions");
+        var cancel=make("button","community-button is-danger","Cancel proposal");
+        cancel.type="button";cancel.dataset.ownershipCancel=transfer.id;actions.appendChild(cancel);
+        row.appendChild(actions);ownershipList.appendChild(row);
+      });
+      ownershipPanel.hidden=false;
+    }catch(error){announce(error.message,"error");}
+  }
+
   async function loadInvitations(){
     if(!state.authenticated){announce("Log in with your AstroCrown passkey to view invitations.");return;}
     try{
@@ -385,6 +447,35 @@
       catch(error){announce(error.message,"error");}
       return;
     }
+    var ownershipResponse=target.closest("[data-ownership-response]");
+    if(ownershipResponse){
+      var responseReasonField=Array.from(root.querySelectorAll("[data-transfer-reason]"))
+        .find(function(node){return node.dataset.transferReason===ownershipResponse.dataset.ownershipId;});
+      try{
+        var response=await api("/api/community/ownership-transfers/"+encodeURIComponent(ownershipResponse.dataset.ownershipId)+"/respond",{
+          action:ownershipResponse.dataset.ownershipResponse,
+          reason:responseReasonField?responseReasonField.value.trim():""
+        });
+        announce(response.status==="accepted"?"Ownership transfer accepted. You are now the community owner.":"Ownership proposal declined; the current owner remains unchanged.","success");
+        await refreshSpaces();
+        if(state.slug)await loadCommunity(state.slug);
+        await loadOwnershipTransfers();
+      }catch(error){announce(error.message,"error");}
+      return;
+    }
+    var ownershipCancel=target.closest("[data-ownership-cancel]");
+    if(ownershipCancel){
+      var cancelReasonField=Array.from(root.querySelectorAll("[data-transfer-cancel-reason]"))
+        .find(function(node){return node.dataset.transferCancelReason===ownershipCancel.dataset.ownershipCancel;});
+      try{
+        await api("/api/community/ownership-transfers/"+encodeURIComponent(ownershipCancel.dataset.ownershipCancel)+"/cancel",{
+          reason:cancelReasonField?cancelReasonField.value.trim():""
+        });
+        announce("Ownership proposal cancelled. The existing owner remains in place.","success");
+        await loadOwnershipTransfers();
+      }catch(error){announce(error.message,"error");}
+      return;
+    }
     var reportAction=target.closest("[data-report-action]");
     if(reportAction){
       var reasonInput=root.querySelector("[data-report-reason='"+reportAction.dataset.reportId+"']");
@@ -411,6 +502,25 @@
   });
   root.addEventListener("submit",async function(event){
     var form=event.target;
+    if(form.id==="community-ownership-propose-form"){
+      event.preventDefault();
+      if(!state.authenticated){openAccount();return;}
+      if(!state.slug||!state.community||state.community.memberRole!=="owner"||state.community.membershipStatus!=="active"){
+        announce("Only the active community owner can propose an ownership transfer.","error");return;
+      }
+      var successorIdentifier=form.elements.accountIdentifier.value.trim();
+      if(!successorIdentifier){announce("Enter the successor's AstroCrown account identifier.","error");form.elements.accountIdentifier.focus();return;}
+      try{
+        await api("/api/community/communities/"+encodeURIComponent(state.slug)+"/ownership-transfers",{
+          accountIdentifier:successorIdentifier,
+          reason:form.elements.reason.value.trim()
+        });
+        form.reset();
+        announce("Ownership proposal sent. You remain the owner unless the proposed successor accepts.","success");
+        await loadOwnershipTransfers();
+      }catch(error){announce(error.message,"error");}
+      return;
+    }
     if(form.id==="community-composer-form"){
       event.preventDefault();
       if(!state.authenticated){openAccount();return;}
@@ -444,13 +554,16 @@
   });
   document.addEventListener("astrocrown:account-status-change",function(event){
     state.authenticated=Boolean(event.detail&&event.detail.authenticated);
-    if(!state.authenticated){invitations.hidden=true;queue.hidden=true;reportQueue.hidden=true;ownReports.hidden=true;state.platformAdmin=false;}
+    $("community-ownership-transfers-button").hidden=!state.authenticated;
+    if(!state.authenticated){invitations.hidden=true;queue.hidden=true;reportQueue.hidden=true;ownReports.hidden=true;ownershipPanel.hidden=true;state.platformAdmin=false;}
     updateComposer();renderHeader();
     if(state.authenticated)refreshSpaces().then(function(){return state.slug?loadCommunity(state.slug):loadFeed(false);})
       .catch(function(error){announce(error.message,"error");});
   });
   $("community-invitations-button").addEventListener("click",loadInvitations);
   $("community-my-reports-button").addEventListener("click",loadOwnReports);
+  $("community-ownership-transfers-button").addEventListener("click",loadOwnershipTransfers);
+  $("community-transfer-ownership").addEventListener("click",loadOwnershipTransfers);
   $("community-review-reports").addEventListener("click",loadModerationReports);
   $("community-review-requests").addEventListener("click",loadRequests);
   $("community-refresh").addEventListener("click",async function(){
