@@ -464,6 +464,13 @@ function membershipInviteId(value) {
   return value;
 }
 
+function moderationReportId(value) {
+  if (typeof value !== "string" || !/^report_[a-f0-9]{32}$/.test(value)) {
+    throw fail(400, "The moderation report reference is invalid.");
+  }
+  return value;
+}
+
 async function requireCommunityManager(db, space, account, services) {
   const memberManager = await isSpaceModerator(db, space.space_id, account);
   const platformManager = await isPlatformModerator(account, services);
@@ -854,15 +861,162 @@ async function reportPost(db, account, id, payload) {
   const category = payload.category;
   if (!REPORT_CATEGORIES.has(category)) throw fail(400, "Choose a supported report category.");
   const details = cleanText(payload.details || "", MAX_DETAILS_LENGTH, "Report details", true);
+  const report = randomId("report_");
+  const now = Math.floor(Date.now() / 1000);
   try {
-    await db.prepare(
-      "INSERT INTO community_content_reports(report_id,reporter_account_id,target_type,target_id,category,details,created_at) VALUES(?,?,'post',?,?,?,?)"
-    ).bind(randomId("report_"), actor.account_id, id, category, details, Math.floor(Date.now() / 1000)).run();
+    await db.batch([
+      db.prepare(
+        "INSERT INTO community_content_reports(report_id,reporter_account_id,target_type,target_id,category,details,created_at) VALUES(?,?,'post',?,?,?,?)"
+      ).bind(report, actor.account_id, id, category, details, now),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "VALUES(?,?, 'report_submitted','report',?,?,?,?)"
+      ).bind(randomId("audit_"), actor.account_id, report, "Content report submitted by a member.",
+        JSON.stringify({ targetType: "post", targetId: id, category }), now),
+    ]);
   } catch (error) {
     if (/unique|constraint/i.test(String(error?.message || error))) throw fail(409, "A report for this post has already been submitted by this account.");
     throw error;
   }
-  return { submitted: true, reportStatus: "open" };
+  return { reportId: report, submitted: true, reportStatus: "open" };
+}
+
+async function listOwnReports(db, account) {
+  const actor = requireAccount(account);
+  const result = await db.prepare(
+    "SELECT report_id,target_type,target_id,category,details,report_status,created_at,reviewed_at,resolution " +
+    "FROM community_content_reports WHERE reporter_account_id=? ORDER BY created_at DESC,report_id DESC LIMIT 50"
+  ).bind(actor.account_id).all();
+  return {
+    reports: (result.results || []).map(row => ({
+      id: row.report_id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      category: row.category,
+      details: row.details,
+      status: row.report_status,
+      submittedAt: Number(row.created_at),
+      reviewedAt: row.reviewed_at === null ? null : Number(row.reviewed_at),
+      resolution: row.resolution || "",
+    })),
+  };
+}
+
+async function listModerationReports(db, account, communitySlug, services) {
+  const actor = requireAccount(account);
+  let spaceId = null;
+  if (communitySlug) {
+    const space = await spaceBySlug(db, normalizeCommunitySlug(communitySlug));
+    if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
+    await requireCommunityManager(db, space, actor, services);
+    spaceId = space.space_id;
+  } else if (!(await isPlatformModerator(actor, services))) {
+    throw fail(403, "A community manager must select a community; the unscoped moderation queue requires a platform administrator.");
+  }
+
+  const sql =
+    "SELECT r.report_id,r.target_type,r.target_id,r.category,r.details,r.report_status,r.created_at," +
+    "r.reviewed_by_account_id,r.reviewed_at,r.resolution," +
+    "reporter.user_handle AS reporter_handle," +
+    "p.content AS target_content,p.visibility AS target_visibility,p.moderation_status AS target_moderation_status," +
+    "p.deleted_at AS target_deleted_at,author.user_handle AS target_author_handle," +
+    "c.slug AS community_slug,c.name AS community_name " +
+    "FROM community_content_reports r " +
+    "JOIN auth_accounts reporter ON reporter.account_id=r.reporter_account_id " +
+    "LEFT JOIN community_posts p ON r.target_type='post' AND p.post_id=r.target_id " +
+    "LEFT JOIN auth_accounts author ON author.account_id=p.author_account_id " +
+    "LEFT JOIN community_spaces c ON c.space_id=p.space_id " +
+    "WHERE r.target_type='post' AND r.report_status IN ('open','in_review')" +
+    (spaceId ? " AND p.space_id=?" : "") +
+    " ORDER BY CASE r.report_status WHEN 'open' THEN 0 ELSE 1 END,r.created_at ASC,r.report_id ASC LIMIT 100";
+  const result = spaceId
+    ? await db.prepare(sql).bind(spaceId).all()
+    : await db.prepare(sql).all();
+
+  return {
+    reports: (result.results || []).map(row => ({
+      id: row.report_id,
+      targetType: row.target_type,
+      targetId: row.target_id,
+      category: row.category,
+      details: row.details,
+      status: row.report_status,
+      submittedAt: Number(row.created_at),
+      reporter: { handle: row.reporter_handle },
+      target: {
+        contentPreview: row.target_content === null ? "" : String(row.target_content).slice(0, 500),
+        authorHandle: row.target_author_handle || null,
+        visibility: row.target_visibility || null,
+        moderationStatus: row.target_moderation_status || null,
+        deleted: row.target_deleted_at !== null && row.target_deleted_at !== undefined,
+        community: row.community_slug ? { slug: row.community_slug, name: row.community_name } : null,
+        unavailable: row.target_content === null,
+      },
+    })),
+  };
+}
+
+async function transitionModerationReport(db, account, reportRef, payload, services) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["action","reason"], "The moderation report decision");
+  const id = moderationReportId(reportRef);
+  const actions = {
+    start_review: { prior: "open", next: "in_review", event: "report_review_started" },
+    resolve: { prior: "in_review", next: "resolved", event: "report_resolved" },
+    dismiss: { prior: "in_review", next: "dismissed", event: "report_dismissed" },
+  };
+  const transition = actions[payload.action];
+  if (!transition) throw fail(400, "Choose start_review, resolve or dismiss.");
+  const reason = cleanText(payload.reason, 500, "Moderation report reason");
+  const report = await db.prepare(
+    "SELECT r.report_id,r.report_status,r.target_type,r.target_id,p.space_id,c.status AS community_status " +
+    "FROM community_content_reports r " +
+    "LEFT JOIN community_posts p ON r.target_type='post' AND p.post_id=r.target_id " +
+    "LEFT JOIN community_spaces c ON c.space_id=p.space_id " +
+    "WHERE r.report_id=?"
+  ).bind(id).first();
+  if (!report) throw fail(404, "The moderation report could not be found.");
+  if (report.target_type !== "post") throw fail(409, "This moderation report target type is not supported by this review workflow.");
+  if (report.space_id && report.community_status === "active") {
+    await requireCommunityManager(db, { space_id: report.space_id, status: "active" }, actor, services);
+  } else if (!(await isPlatformModerator(actor, services))) {
+    throw fail(403, "A platform administrator is required to review a report for a post without an active community.");
+  }
+  if (report.report_status !== transition.prior) {
+    throw fail(409, "The report is not in the state required for this action; refresh the moderation queue.");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const finalDecision = transition.next === "resolved" || transition.next === "dismissed";
+  const result = await db.batch([
+    db.prepare(
+      "UPDATE community_content_reports SET report_status=?,reviewed_by_account_id=?,reviewed_at=?,resolution=? " +
+      "WHERE report_id=? AND report_status=?"
+    ).bind(
+      transition.next,
+      actor.account_id,
+      finalDecision ? now : null,
+      finalDecision ? reason : "",
+      id,
+      transition.prior
+    ),
+    db.prepare(
+      "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+      "SELECT ?,?,?,?,?,?,?,? WHERE changes()=1"
+    ).bind(
+      randomId("audit_"),
+      actor.account_id,
+      transition.event,
+      "report",
+      id,
+      reason,
+      JSON.stringify({ priorStatus: transition.prior, newStatus: transition.next, targetId: report.target_id }),
+      now
+    ),
+  ]);
+  if (Number(result?.[0]?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The report changed before this action could be recorded; refresh the moderation queue.");
+  }
+  return { reportId: id, status: transition.next, reviewedAt: finalDecision ? now : null };
 }
 
 async function deleteOwnPost(db, account, id) {
@@ -960,6 +1114,16 @@ export async function handleCommunityApi(request, db, account, services = {}) {
       feedUrl.searchParams.set("space", normalizeCommunitySlug(communityFeed[1]));
       return json(200, await listFeed(db, feedUrl, account));
     }
+    if (method === "GET" && path === "/api/community/reports/mine") {
+      requireAccount(account);
+      await limited("community-own-reports", 30, 60);
+      return json(200, await listOwnReports(db, account));
+    }
+    if (method === "GET" && path === "/api/community/moderation/reports") {
+      requireAccount(account);
+      await limited("community-moderation-reports", 30, 60);
+      return json(200, await listModerationReports(db, account, url.searchParams.get("community"), services));
+    }
     if (method === "GET" && path === "/api/community/invitations") {
       requireAccount(account);
       await limited("community-invitations", 30, 60);
@@ -1011,6 +1175,12 @@ export async function handleCommunityApi(request, db, account, services = {}) {
         return json(200, membershipRoute[2] === "join"
           ? await joinCommunity(db, account, membershipRoute[1])
           : await leaveCommunity(db, account, membershipRoute[1]));
+      }
+      const reportTransitionRoute = path.match(/^\/api\/community\/moderation\/reports\/(report_[a-f0-9]{32})\/transition$/);
+      if (reportTransitionRoute) {
+        requireAccount(account);
+        await limited("community-report-transition", 30, 3600);
+        return json(200, await transitionModerationReport(db, account, reportTransitionRoute[1], payload, services));
       }
       const membershipDecisionRoute = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)\/members\/([A-Za-z0-9_-]{1,100})\/decision$/);
       if (membershipDecisionRoute) {
