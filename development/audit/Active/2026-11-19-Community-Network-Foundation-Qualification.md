@@ -5,7 +5,7 @@
 **Status:** BACKEND + COMMUNITY FRONTEND + REPORT REVIEW + VOLUNTARY OWNER TRANSFER QUALIFIED; NOT PRODUCT OR PRODUCTION READY
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Branch:** `feature/community-network-foundation-2026-11-19`  
-**Qualified code/UI commit:** `af93971d1635b80b8ab81e98d740a5c4d8646f4a`
+**Qualified code/UI commit:** `3d76ee6cb38cd062160c07634e4f37c6401a12ca`
 **Base:** `main` at `51da27b004c8f5aa94a37bd90a9521a61bedb565`  
 **Related GitHub pull requests:** [#194 — Community API foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/194); [#170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170)  
 **Information handling:** INTERNAL — repository engineering evidence; synthetic test identities only  
@@ -15,7 +15,7 @@
 
 This record covers the first qualified backend foundation, the first native Community homepage slice, a constrained moderator report-review slice and a voluntary successor-accepted ownership-transfer slice. It does not declare the complete AstroCrown social/community product finished.
 
-Delivered and qualified on code/UI commit `af93971d1635b80b8ab81e98d740a5c4d8646f4a`:
+Delivered and qualified on code/UI commit `3d76ee6cb38cd062160c07634e4f37c6401a12ca`:
 
 - D1 schema and authenticated Worker APIs for community discovery, global/community feeds, post/reply persistence, reactions, bookmarks, block/mute, reports, membership and moderation audit.
 - Manager-reviewed request membership: pending requests, manager-only queue, approve/reject decisions, conditional updates and audit events.
@@ -70,7 +70,7 @@ Product rules applied to this audit:
 - Repository: `ACROWN-System/AstroCrown-Web`
 - PR: [#194 — Community API foundation and first-party homepage interface](https://github.com/ACROWN-System/AstroCrown-Web/pull/194)
 - Branch: `feature/community-network-foundation-2026-11-19`
-- Exact qualified code/UI commit: `af93971d1635b80b8ab81e98d740a5c4d8646f4a`
+- Exact qualified code/UI commit: `3d76ee6cb38cd062160c07634e4f37c6401a12ca`
 - Base branch: `main`; PR #194 is open, draft and unmerged.
 - At this code/UI commit, PR #194 was 36 commits ahead and 0 behind `main`; GitHub reported mergeable=true. This is not an instruction or approval to merge.
 - Product requirements: [PR #170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170), synchronized against current main, still draft, unmerged and mergeable.
@@ -99,17 +99,17 @@ The Community UI uses DOM element creation and `textContent` for server-derived 
 
 The Community feed uses one set-based SELECT rather than a loop calling `visiblePost()` and `postView()` once per returned item. Existing indexes cover global/community feed ordering, parent/reply lookup, reaction lookup, bookmark lookup and membership checks. This reduces D1 request/round-trip overhead without lowering the page size and closes the identified 50-query-per-invocation risk for a 20-post page; it does not remove daily row quotas.
 
-Ownership transfer uses active membership roles as the authority. `created_by_account_id` remains historical creator attribution and is not mutated by handover. The acceptance batch checks the intended recipient, active community, current owner and successor membership; demotes the former owner before promoting the successor to satisfy the single-active-owner partial index; and records an audit event. All statements run in one D1 batch. One pending proposal per community is enforced by a partial unique index. There is currently no automatic expiry for a pending ownership proposal; the owner may cancel and the successor may decline.
+Ownership transfer uses active membership roles as the authority. `created_by_account_id` remains historical creator attribution and is not mutated by handover. The acceptance batch checks the intended recipient, active community, current owner and successor membership; demotes the former owner before promoting the successor to satisfy the single-active-owner partial index; and records an audit event. All statements run in one D1 batch. The acceptance audit insert is additionally gated by `changes()=1` from the immediately preceding successor-promotion statement, so an already-completed/racing request cannot write a duplicate acceptance event after a no-op role update. This is an idempotency guard; dedicated concurrent stress testing remains part of future load/concurrency qualification. One pending proposal per community is enforced by a partial unique index. There is currently no automatic expiry for a pending ownership proposal; the owner may cancel and the successor may decline.
 
 The six seeded initial public spaces are the initial taxonomy only; the taxonomy remains extensible. Request/invite-only membership policies have server-side workflows rather than dead-end status values. Report submission, moderation transitions and reporter-visible outcomes also have a defined backend/UI path; appeals and owner-loss recovery remain open.
 
 ## 5. Verification criteria and results
 
-All results below are tied to exact code/UI commit `af93971d1635b80b8ab81e98d740a5c4d8646f4a`; earlier green checks from prior commits are not substituted for this candidate.
+All results below are tied to exact code/UI commit `3d76ee6cb38cd062160c07634e4f37c6401a12ca`; earlier green checks from prior commits are not substituted for this candidate.
 
 | ID | Criterion | Method / evidence | Result |
 |---|---|---|---|
-| CN-Q-001 | Community migrations apply on isolated D1 | Account Staging Worker Qualification, run `44433801075`, job `135257497863`; migrations 0006 and 0007 applied | PASS |
+| CN-Q-001 | Community migrations apply on isolated D1 | Account Staging Worker Qualification, run `44441123335`, job `135281930391`; migrations 0006, 0007 and 0008 applied to disposable local D1 | PASS |
 | CN-Q-002 | Worker/API invariant and schema tests pass | Same qualification job; 110 Worker invariant tests and 3 schema tests passed | PASS |
 | CN-Q-003 | Feed page hydration avoids N+1 D1 subrequests | 20-post unit test asserts exactly one D1 statement and verifies post fields, viewer flags, block and membership filters | PASS |
 | CN-Q-004 | Global/community feeds, posts, replies, reactions, bookmarks, reports, membership and deletion work through Chrome against local Worker/D1 | Same qualification job; browser smoke reported the full authenticated Community API journey | PASS |
@@ -118,26 +118,26 @@ All results below are tied to exact code/UI commit `af93971d1635b80b8ab81e98d740
 | CN-Q-007 | Author-side block hides the author's content without breaking unrelated feed items | Two-account browser regression: direct post 404, global feed 200, blocked author's post omitted | PASS |
 | CN-Q-008 | Canonical homepage renders Community interface | Chrome verified Community section, six seeded community links, navigation and logged-out composer/login boundary | PASS |
 | CN-Q-009 | Worker staging delivers Community CSS and JavaScript | Browser fetched both asset paths and verified HTTP 200 and expected source markers | PASS |
-| CN-Q-010 | Static Pages preview publishes assets without falsely enabling service | Cloudflare Pages Static Preview Build run `44433801056`; strict asset manifest and tests passed; static-only marker prevents account/API operations | PASS |
+| CN-Q-010 | Static Pages preview publishes assets without falsely enabling service | Cloudflare Pages Static Preview Build run `44441123353`; strict asset manifest and tests passed; static-only marker prevents account/API operations | PASS |
 | CN-Q-011 | Report moderation API lifecycle is authorized and auditable | Chrome API journey exercises reporter status, duplicate report, unauthorized user denial, community queue, platform-wide queue restriction, open→in_review→resolved/dismissed, mandatory reasons and duplicate-final-decision rejection | PASS |
 | CN-Q-012 | Report moderation controls work in the actual Community UI | Chrome selected Aerospace as its owner, opened Review reports, started and resolved a report, then signed in as the reporter and confirmed the outcome in My reports | PASS |
 | CN-Q-013 | Shared AstroCrown passkey account/session is reused | Community checks the existing `/api/account/status`; the same passkey session is used, with no second identity/login | PASS for tested integration |
 | CN-Q-014 | Security and external pipeline gates complete | CodeQL, NOVA RSI Engine CI and External Review Pipeline all succeeded on the exact code/UI commit | PASS |
 | CN-Q-015 | Production deployment, public onboarding, remote D1 migration and real financial/on-chain behavior | Not performed; expressly outside authorization | NOT PERFORMED |
-| CN-Q-016 | Voluntary owner transfer API and transactional invariants | Account Staging Worker Qualification, run `44440670380`; Chrome local D1 journey verifies non-owner denial, active-member successor requirement, one pending transfer, pending-owner leave denial, intended-successor-only acceptance, former-owner demotion, decline, cancellation and no replay | PASS |
+| CN-Q-016 | Voluntary owner transfer API and transactional invariants | Account Staging Worker Qualification, run `44441123335`; Chrome local D1 journey verifies non-owner denial, active-member successor requirement, one pending transfer, pending-owner leave denial, intended-successor-only acceptance, former-owner demotion, decline, cancellation and no replay. Acceptance audit insertion is conditional on the same batch's successful successor promotion | PASS |
 | CN-Q-017 | Ownership transfer controls work in the actual Community UI | Same Chrome run: current owner proposes through the form; successor accepts through incoming proposals; former owner declines a later proposal; current owner cancels a third proposal; server-loaded role controls update after acceptance | PASS |
 
 ### Exact-head hosted workflow evidence
 
-Candidate code/UI commit: `af93971d1635b80b8ab81e98d740a5c4d8646f4a`
+Candidate code/UI commit: `3d76ee6cb38cd062160c07634e4f37c6401a12ca`
 
-- Account Staging Worker Qualification: [run 44440670380](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670380) — success.
-- Cloudflare Pages Static Preview Build: [run 44440670394](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670394) — success.
-- NOVA RSI CodeQL Security Analysis: [run 44440670395](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670395) — success.
-- NOVA RSI Engine CI: [run 44440670603](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670603) — success.
-- External Review Pipeline CI: [run 44440670460](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44440670460) — success.
-- CodeQL check `135280672530` — success.
-- Python CodeQL check `135280415235` — success.
+- Account Staging Worker Qualification: [run 44441123335](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44441123335) — success.
+- Cloudflare Pages Static Preview Build: [run 44441123353](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44441123353) — success.
+- NOVA RSI CodeQL Security Analysis: [run 44441123370](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44441123370) — success.
+- NOVA RSI Engine CI: [run 44441123490](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44441123490) — success.
+- External Review Pipeline CI: [run 44441123494](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44441123494) — success.
+- CodeQL check `135282226186` — success.
+- Python CodeQL check `135281930623` — success.
 
 Worker Qualification completed all steps, including dependency lock/install, Worker invariant tests, schema tests, staging-site build, browser/Worker bundle validation, local D1 migrations, HTTP/Chrome smoke, manual deployment workflow parsing, read-only Cloudflare preflight checks and fail-closed remote-environment verification.
 
@@ -288,10 +288,10 @@ Sources:
 
 ## 9. Workflow anomaly — two push runs with no jobs
 
-The exact push to qualified code/UI commit `af93971d1635b80b8ab81e98d740a5c4d8646f4a` produced two completed failures with empty job arrays:
+The exact push to qualified code/UI commit `3d76ee6cb38cd062160c07634e4f37c6401a12ca` produced two completed failures with empty job arrays:
 
-- `44440664065`, `.github/workflows/python-ci-lock-refresh.yml`, event `push`, zero retrievable jobs.
-- `44440662593`, `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, zero retrievable jobs.
+- `44441115860`, `.github/workflows/python-ci-lock-refresh.yml`, event `push`, zero retrievable jobs.
+- `44441113573`, `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, zero retrievable jobs.
 
 The inspected workflow source does not match these feature-branch push events: the Python lock-refresh workflow has PR path filters, schedule and workflow_dispatch but no push trigger; the prototype test workflow limits push to `main`. The connected job lookup returned empty arrays. That establishes only that no job-level explanation is available; it does not prove GitHub's internal root cause.
 
@@ -326,11 +326,11 @@ No trigger was broadened and no fake job was added to suppress the red indicator
 
 ## 12. Closure and resumption checkpoint
 
-**Current qualified code/UI snapshot:** `af93971d1635b80b8ab81e98d740a5c4d8646f4a`. The Community backend, request membership decisions, private invitation lifecycle including ban-safe transactional acceptance, author-side-block feed isolation, one-statement 20-post feed hydration, first-party homepage UI, report moderation API/UI and voluntary ownership-transfer API/UI all pass exact-head GitHub-hosted tests.
+**Current qualified code/UI snapshot:** `3d76ee6cb38cd062160c07634e4f37c6401a12ca`. The Community backend, request membership decisions, private invitation lifecycle including ban-safe transactional acceptance, author-side-block feed isolation, one-statement 20-post feed hydration, first-party homepage UI, report moderation API/UI and voluntary ownership-transfer API/UI all pass exact-head GitHub-hosted tests.
 
 **Ownership transfer boundary:** the voluntary handover path is qualified, but an automatic timeout for pending proposals and emergency recovery if the active owner becomes unavailable are not implemented. Current creator attribution is preserved. No admin/constitutional override has been invented.
 
-**Pull-request state at the qualified code/UI snapshot:** PR #194 open, draft, unmerged and mergeable; 36 commits ahead and 0 behind `main`. PR #170 open, draft, unmerged and mergeable. Neither has been merged. No production deployment or promotion was performed. This audit revision is documentation-only; fetch the live branch head before making any further code change.
+**Pull-request state at the qualified code/UI snapshot:** PR #194 open, draft, unmerged and mergeable; 38 commits ahead and 0 behind `main`. PR #170 open, draft, unmerged and mergeable. Neither has been merged. No production deployment or promotion was performed. This audit revision is documentation-only; fetch the live branch head before making any further code change.
 
 **Next highest-value work:** define ownership proposal timeout and owner-loss recovery policy; complete manager invitation issuance and community settings UI; define appeal authority/evidence policy before adding appeals; then extend profiles/search/accessibility/permalink safety. The 7-day invitation expiry remains a release policy decision. Daily D1 Free row quotas must be monitored and load-qualified before public activation; the one-query feed regression addresses the distinct per-invocation query budget.
 
