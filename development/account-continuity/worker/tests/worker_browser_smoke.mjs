@@ -607,6 +607,12 @@ async function testCommunityApi(accountIdentifier) {
   await setBrowserAccountSession(blockedAuthorToken);
   const expiredAcceptance = await postWorkerJson("/api/community/invitations/" + expiredId + "/respond", { action: "accept" });
   assert.equal(expiredAcceptance.status, 410, "an expired invitation must not grant private membership.");
+  await setBrowserAccountSession(rootToken);
+  const reinvitedAfterExpiry = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Expired invitation must not block a fresh invitation"
+  });
+  assert.equal(reinvitedAfterExpiry.status, 201, JSON.stringify(reinvitedAfterExpiry.body));
+  assert.notEqual(reinvitedAfterExpiry.body.invitation.id, expiredId);
 
   // The author-side block below is a separate visibility regression: direct access
   // stays hidden while the global feed continues to return unrelated content.

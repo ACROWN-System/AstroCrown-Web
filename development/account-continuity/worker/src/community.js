@@ -527,12 +527,30 @@ async function createMembershipInvitation(db, account, slug, payload, services) 
   }
   const targetAccountId = membershipAccountId(payload.accountId);
   if (targetAccountId === actor.account_id) throw fail(400, "You cannot invite your own account.");
+  const now = Math.floor(Date.now() / 1000);
+  const expiredPending = await db.prepare(
+    "SELECT invite_id FROM community_membership_invitations " +
+    "WHERE space_id=? AND invited_account_id=? AND invitation_status='pending' AND expires_at<=? LIMIT 1"
+  ).bind(space.space_id, targetAccountId, now).first();
+  if (expiredPending) {
+    await db.batch([
+      db.prepare(
+        "UPDATE community_membership_invitations SET invitation_status='expired' " +
+        "WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
+      ).bind(expiredPending.invite_id, now),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,NULL,'membership_invitation_expired','invitation',?,'Invitation expired before a replacement invitation was created.',?,? " +
+        "WHERE changes()=1"
+      ).bind(randomId("audit_"), expiredPending.invite_id,
+        JSON.stringify({ spaceId: space.space_id, targetAccountId }), now),
+    ]);
+  }
   const targetAccount = await db.prepare("SELECT account_id FROM auth_accounts WHERE account_id=?").bind(targetAccountId).first();
   if (!targetAccount) throw fail(404, "The AstroCrown account to invite could not be found.");
   const membership = await membershipFor(db, space.space_id, targetAccountId);
   if (membership?.membership_status === "banned") throw fail(409, "A banned account cannot be invited to this community.");
   if (membership?.membership_status === "active") throw fail(409, "This account is already an active community member.");
-  const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + 7 * 24 * 60 * 60;
   const inviteId = randomId("invite_");
   const reason = cleanText(payload.reason || "Community invitation issued by an authorized manager.", 500, "Invitation reason");
@@ -559,6 +577,26 @@ async function createMembershipInvitation(db, account, slug, payload, services) 
 async function listMembershipInvitations(db, account) {
   const actor = requireAccount(account);
   const now = Math.floor(Date.now() / 1000);
+  const expiredRows = await db.prepare(
+    "SELECT invite_id,space_id FROM community_membership_invitations " +
+    "WHERE invited_account_id=? AND invitation_status='pending' AND expires_at<=? LIMIT 100"
+  ).bind(actor.account_id, now).all();
+  const expireBatch = [];
+  for (const row of expiredRows.results || []) {
+    expireBatch.push(
+      db.prepare(
+        "UPDATE community_membership_invitations SET invitation_status='expired' " +
+        "WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
+      ).bind(row.invite_id, now),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,NULL,'membership_invitation_expired','invitation',?,'Invitation expired and was reconciled when the recipient opened their invitation inbox.',?,? " +
+        "WHERE changes()=1"
+      ).bind(randomId("audit_"), row.invite_id,
+        JSON.stringify({ spaceId: row.space_id, recipientAccountId: actor.account_id }), now)
+    );
+  }
+  if (expireBatch.length) await db.batch(expireBatch);
   const result = await db.prepare(
     "SELECT i.invite_id,i.invitation_status,i.created_at,i.expires_at,i.space_id," +
     "c.slug AS community_slug,c.name AS community_name,a.user_handle AS inviter_handle " +
