@@ -719,62 +719,6 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(reinvitedAfterExpiry.status, 201, JSON.stringify(reinvitedAfterExpiry.body));
   assert.notEqual(reinvitedAfterExpiry.body.invitation.id, expiredId);
 
-  // Exercise the visible moderation controls in Chrome, not only their HTTP routes.
-  // The synthetic primary account is made owner of a seeded public community, and
-  // the synthetic second account reports one of its posts.
-  executeLocalD1Fixture([
-    "UPDATE community_memberships SET membership_status='active',member_role='owner',updated_at=" + fixtureNow +
-      " WHERE space_id=(SELECT space_id FROM community_spaces WHERE slug='aerospace') " +
-      "AND account_id=(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ");",
-    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) VALUES(" +
-      "(SELECT space_id FROM community_spaces WHERE slug='aerospace')," +
-      "(SELECT account_id FROM auth_accounts WHERE account_id=" + sqlLiteral(blockedAuthorId) + ")," +
-      "'active','member'," + fixtureNow + "," + fixtureNow + ") " +
-      "ON CONFLICT(space_id,account_id) DO UPDATE SET membership_status='active',member_role='member',updated_at=excluded.updated_at;",
-  ].join("\n"), "Prepare synthetic owner and member roles for Community moderation UI smoke");
-
-  await setBrowserAccountSession(rootToken);
-  const reportUiTarget = await postWorkerJson("/api/community/posts", {
-    content: "Synthetic Community report UI preview " + randomUUID(), communitySlug: "aerospace"
-  });
-  assert.equal(reportUiTarget.status, 201, JSON.stringify(reportUiTarget.body));
-  await setBrowserAccountSession(blockedAuthorToken);
-  const reportUi = await postWorkerJson("/api/community/posts/" + reportUiTarget.body.post.id + "/report", {
-    category: "other", details: "Exercise the visible review controls in Chrome."
-  });
-  assert.equal(reportUi.status, 201, JSON.stringify(reportUi.body));
-
-  await setBrowserAccountSession(rootToken);
-  await evaluate("document.querySelector('#community-space-list [data-community-slug=aerospace]').click()");
-  await waitFor("community owner opens the aerospace Community page and sees report controls", () =>
-    evaluate("document.getElementById('community-space-heading').textContent === 'Aerospace' && " +
-      "!document.getElementById('community-review-reports').hidden"));
-  await trustedClick("#community-review-reports");
-  await waitFor("the owner sees the submitted report in the moderation UI", () =>
-    evaluate("!document.getElementById('community-report-queue').hidden && " +
-      "document.getElementById('community-report-queue').textContent.includes('Synthetic Community report UI preview')"));
-  const uiReportId = reportUi.body.reportId;
-  await evaluate(
-    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
-      JSON.stringify(uiReportId) + ").value=" + JSON.stringify("Reviewed through the Community UI browser test.")
-  );
-  await trustedClick("#community-report-queue [data-report-action='start_review'][data-report-id='" + uiReportId + "']");
-  await waitFor("report enters review through the visible owner control", () =>
-    evaluate("document.getElementById('community-report-queue').textContent.includes('in review')"));
-  await evaluate(
-    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
-      JSON.stringify(uiReportId) + ").value=" + JSON.stringify("Resolved through the visible Community moderation UI.")
-  );
-  await trustedClick("#community-report-queue [data-report-action='resolve'][data-report-id='" + uiReportId + "']");
-  await waitFor("report leaves the open queue after UI resolution", () =>
-    evaluate("!document.getElementById('community-report-queue').textContent.includes('Synthetic Community report UI preview')"));
-
-  await setBrowserAccountSession(blockedAuthorToken);
-  await trustedClick("#community-my-reports-button");
-  await waitFor("reporter sees the UI moderation outcome in My reports", () =>
-    evaluate("!document.getElementById('community-own-reports').hidden && " +
-      "document.getElementById('community-own-reports').textContent.includes('Resolved through the visible Community moderation UI.')"));
-
   // The author-side block below is a separate visibility regression: direct access
   // stays hidden while the global feed continues to return unrelated content.
   // Apply the block only now so it cannot contaminate the private-community
@@ -803,7 +747,79 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(deleted.body.deleted, true);
   const missingAfterDelete = await getWorkerJson("/api/community/posts/" + post.id);
   assert.equal(missingAfterDelete.status, 404);
-  console.log("PASS: authenticated Community feed/posts/replies, reactions/bookmarks, report submission and visible owner review/resolution UI, reporter-visible outcomes, request approval/rejection, private invitations and isolation, posting boundaries, author removal, and author-side-block feed isolation.");
+  console.log("PASS: authenticated Community backend/API journeys, report submission and status transitions, request approval/rejection, private invitations and isolation, posting boundaries, author removal, and author-side-block feed isolation.");
+  return { rootToken, nonMemberToken, accountIdentifier };
+}
+
+async function testCommunityModerationUi(fixtures) {
+  const { rootToken, nonMemberToken, accountIdentifier } = fixtures;
+  const now = Math.floor(Date.now() / 1000);
+  executeLocalD1Fixture(
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+    "VALUES((SELECT space_id FROM community_spaces WHERE slug='aerospace')," +
+    "(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," +
+    "'active','owner'," + now + "," + now + ") " +
+    "ON CONFLICT(space_id,account_id) DO UPDATE SET membership_status='active',member_role='owner',updated_at=excluded.updated_at;",
+    "Grant a synthetic community-owner role for the report-review UI test"
+  );
+
+  await setBrowserAccountSession(rootToken);
+  const reportTarget = await postWorkerJson("/api/community/posts", {
+    content: "Synthetic Community report UI preview " + randomUUID(),
+    communitySlug: "aerospace"
+  });
+  assert.equal(reportTarget.status, 201, JSON.stringify(reportTarget.body));
+
+  await setBrowserAccountSession(nonMemberToken);
+  const report = await postWorkerJson("/api/community/posts/" + reportTarget.body.post.id + "/report", {
+    category: "other",
+    details: "Exercise the visible review controls after closing the passkey dialog."
+  });
+  assert.equal(report.status, 201, JSON.stringify(report.body));
+  const reportId = report.body.reportId;
+
+  await setBrowserAccountSession(rootToken);
+  const ownerView = await getWorkerJson("/api/community/communities/aerospace");
+  assert.equal(ownerView.status, 200, JSON.stringify(ownerView.body));
+  assert.equal(ownerView.body.memberRole, "owner",
+    "the local D1 fixture must establish a real owner membership before the UI is tested.");
+
+  await evaluate("document.querySelector('#community-space-list [data-community-slug=aerospace]').click()");
+  await waitFor("homepage displays Aerospace as the selected community", () =>
+    evaluate("document.getElementById('community-space-heading').textContent === 'Aerospace'"));
+  await waitFor("the community owner sees Review reports", () =>
+    evaluate("!document.getElementById('community-review-reports').hidden"));
+  await trustedClick("#community-review-reports");
+  await waitFor("the owner sees the submitted report in the moderation UI", () =>
+    evaluate("!document.getElementById('community-report-queue').hidden && " +
+      "document.getElementById('community-report-queue').textContent.includes('Synthetic Community report UI preview')"));
+
+  await evaluate(
+    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
+      JSON.stringify(reportId) + ").value=" +
+      JSON.stringify("Reviewed through the Community UI browser test.")
+  );
+  await trustedClick("#community-report-queue [data-report-action='start_review'][data-report-id='" + reportId + "']");
+  await waitFor("the report enters review through the visible owner control", () =>
+    evaluate("document.getElementById('community-report-queue').textContent.includes('in review')"));
+
+  await evaluate(
+    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
+      JSON.stringify(reportId) + ").value=" +
+      JSON.stringify("Resolved through the visible Community moderation UI.")
+  );
+  await trustedClick("#community-report-queue [data-report-action='resolve'][data-report-id='" + reportId + "']");
+  await waitFor("the report leaves the open queue after UI resolution", () =>
+    evaluate("!document.getElementById('community-report-queue').textContent.includes('Synthetic Community report UI preview')"));
+
+  await setBrowserAccountSession(nonMemberToken);
+  await trustedClick("#community-my-reports-button");
+  await waitFor("the reporter sees the moderator outcome in My reports", () =>
+    evaluate("!document.getElementById('community-own-reports').hidden && " +
+      "document.getElementById('community-own-reports').textContent.includes('Resolved through the visible Community moderation UI.')"));
+
+  await setBrowserAccountSession(rootToken);
+  console.log("PASS: Chrome report moderation UI: owner opens community queue, starts review, resolves with reason, and reporter sees the final outcome in My reports.");
 }
 
 async function signSiwe(account, challenge) {
@@ -1420,13 +1436,18 @@ try {
   assert.equal(account.adminRoleAssigned, false);
   assert.equal(account.admin, false);
 
-  await testCommunityApi(identifier);
+  const communityFixtures = await testCommunityApi(identifier);
 
   await trustedClick("#account-recovery-key-saved");
   await waitFor("offline recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));
   await trustedClick("#open-account-hub");
   await waitFor("ordinary User dashboard", () =>
     evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  await trustedClick("#account-dashboard-home");
+  await waitFor("return from the User dashboard to the homepage", () =>
+    evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open && " +
+      "Boolean(document.getElementById('community-network'))"));
+  await testCommunityModerationUi(communityFixtures);
 
   // A returning member who reloads the root URL with a valid session must
   // resume at the User dashboard instead of seeing the public homepage.
