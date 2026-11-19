@@ -482,6 +482,8 @@ async function testCommunityApi(accountIdentifier) {
   const requestJoin = await postWorkerJson("/api/community/communities/" + requestSlug + "/join", {});
   assert.equal(requestJoin.status, 200, JSON.stringify(requestJoin.body));
   assert.equal(requestJoin.body.membershipStatus, "pending");
+  const nonModeratorQueue = await getWorkerJson("/api/community/communities/" + requestSlug + "/membership-requests");
+  assert.equal(nonModeratorQueue.status, 403, "ordinary members must not read the pending membership queue.");
   const prematureRestrictedPost = await postWorkerJson("/api/community/posts", {
     content: "Should not post while membership is pending", communitySlug: requestSlug
   });
@@ -527,12 +529,28 @@ async function testCommunityApi(accountIdentifier) {
   });
   assert.equal(invitationCreated.status, 201, JSON.stringify(invitationCreated.body));
   const invitationId = invitationCreated.body.invitation.id;
+  const duplicateInvitation = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Duplicate invitation must be rejected"
+  });
+  assert.equal(duplicateInvitation.status, 409, "only one pending invitation per account/community may exist.");
+  const nonInviteeAcceptance = await postWorkerJson("/api/community/invitations/" + invitationId + "/respond", { action: "accept" });
+  assert.equal(nonInviteeAcceptance.status, 404, "a manager must not accept an invitation on behalf of the invited account.");
 
   await setBrowserAccountSession(blockedAuthorToken);
   const invitationInbox = await getWorkerJson("/api/community/invitations");
   assert.equal(invitationInbox.status, 200, JSON.stringify(invitationInbox.body));
   assert.ok(invitationInbox.body.invitations.some(item => item.id === invitationId));
-  const acceptedInvitation = await postWorkerJson("/api/community/invitations/" + invitationId + "/respond", { action: "accept" });
+  const declinedInvitation = await postWorkerJson("/api/community/invitations/" + invitationId + "/respond", { action: "decline" });
+  assert.equal(declinedInvitation.status, 200, JSON.stringify(declinedInvitation.body));
+  assert.equal(declinedInvitation.body.invitationStatus, "declined");
+  await setBrowserAccountSession(rootToken);
+  const acceptedInvitationCreated = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Second invitation for explicit acceptance"
+  });
+  assert.equal(acceptedInvitationCreated.status, 201, JSON.stringify(acceptedInvitationCreated.body));
+  const acceptedInvitationId = acceptedInvitationCreated.body.invitation.id;
+  await setBrowserAccountSession(blockedAuthorToken);
+  const acceptedInvitation = await postWorkerJson("/api/community/invitations/" + acceptedInvitationId + "/respond", { action: "accept" });
   assert.equal(acceptedInvitation.status, 200, JSON.stringify(acceptedInvitation.body));
   assert.equal(acceptedInvitation.body.membershipStatus, "active");
   const privatePost = await postWorkerJson("/api/community/posts", {

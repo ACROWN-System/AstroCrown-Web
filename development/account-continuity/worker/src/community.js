@@ -454,6 +454,9 @@ async function listMembershipRequests(db, account, slug, services) {
   const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
   if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
   await requireCommunityManager(db, space, actor, services);
+  if (space.membership_policy !== "request") {
+    throw fail(409, "This community does not use request-based membership.");
+  }
   const result = await db.prepare(
     "SELECT m.account_id,m.requested_at,m.updated_at,a.user_handle,a.avatar_id " +
     "FROM community_memberships m JOIN auth_accounts a ON a.account_id=m.account_id " +
@@ -478,6 +481,9 @@ async function decideMembershipRequest(db, account, slug, targetId, payload, ser
   const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
   if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
   await requireCommunityManager(db, space, actor, services);
+  if (space.membership_policy !== "request") {
+    throw fail(409, "This community does not use request-based membership.");
+  }
   const targetAccountId = membershipAccountId(targetId);
   if (!["approve","reject"].includes(payload.action)) throw fail(400, "Choose approve or reject for this membership request.");
   const reason = cleanText(
@@ -577,8 +583,9 @@ async function respondMembershipInvitation(db, account, inviteId, payload) {
   if (!["accept","decline"].includes(payload.action)) throw fail(400, "Choose accept or decline for this invitation.");
   const id = membershipInviteId(inviteId);
   const invitation = await db.prepare(
-    "SELECT invite_id,space_id,invited_account_id,invitation_status,expires_at,responded_at " +
-    "FROM community_membership_invitations WHERE invite_id=? AND invited_account_id=?"
+    "SELECT i.invite_id,i.space_id,i.invited_account_id,i.invitation_status,i.expires_at,i.responded_at " +
+    "FROM community_membership_invitations i JOIN community_spaces c ON c.space_id=i.space_id " +
+    "WHERE i.invite_id=? AND i.invited_account_id=? AND c.status='active'"
   ).bind(id, actor.account_id).first();
   if (!invitation) throw fail(404, "The invitation could not be found.");
   const now = Math.floor(Date.now() / 1000);
@@ -623,7 +630,7 @@ async function respondMembershipInvitation(db, account, inviteId, payload) {
   batch.push(db.prepare(
     "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
     "SELECT ?,?,'membership_invitation_" + (payload.action === "accept" ? "accepted" : "declined") + "',?,?,?, ?,? " +
-    "WHERE EXISTS(SELECT 1 FROM community_membership_invitations WHERE invite_id=? AND invitation_status=? AND responded_at=?)"
+    "WHERE changes()=1 AND EXISTS(SELECT 1 FROM community_membership_invitations WHERE invite_id=? AND invitation_status=? AND responded_at=?)"
   ).bind(randomId("audit_"), actor.account_id, "invitation", id,
     "Invitation " + payload.action + "ed by its recipient.",
     JSON.stringify({ spaceId: invitation.space_id }), now, id, nextStatus, now));
