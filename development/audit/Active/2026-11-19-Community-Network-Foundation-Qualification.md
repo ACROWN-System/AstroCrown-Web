@@ -1,11 +1,11 @@
 # Community Network Foundation — Engineering Qualification and Continuity Record
 
 **Record:** CN-AUDIT-2026-11-19-001  
-**Created:** 2026-11-19; revised after frontend qualification on 2026-11-19 (UTC)
+**Created:** 2026-11-19; revised after backend, membership and homepage qualification on 2026-11-19 (UTC)
 **Status:** BACKEND + INITIAL FRONTEND SLICE QUALIFIED ON EXACT HEAD; NOT PRODUCT OR PRODUCTION READY
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Branch:** `feature/community-network-foundation-2026-11-19`  
-**Candidate commit at record revision:** `22764679870d69c27554dcb115e77e6892216ca4`
+**Candidate commit at record revision:** `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6`
 **Base:** `main` at `51da27b004c8f5aa94a37bd90a9521a61bedb565`  
 **Related GitHub pull requests:** [#194 — Community API foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/194); [#170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170)  
 **Information handling:** INTERNAL — repository engineering evidence; synthetic test identities only  
@@ -13,20 +13,22 @@
 
 ## 1. Outcome and scope
 
-This record now covers the first qualified backend foundation **and the first native Community homepage slice**. It does not declare the complete AstroCrown social/community product finished.
+This record covers the first qualified backend foundation **and the first native Community homepage slice**. It does not declare the complete AstroCrown social/community product finished.
 
-Delivered and qualified on the exact candidate commit:
+Delivered and qualified on exact candidate `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6`:
 
 - D1 schema and authenticated Worker APIs for community discovery, global/community feeds, post/reply persistence, reactions, bookmarks, block/mute, reports, membership and moderation audit.
 - Manager-reviewed request membership: pending requests, manager-only queue, approve/reject decisions, conditional updates and audit events.
 - Account-bound private-community invitations: manager issuance, invitee inbox, accept/decline, issuer/manager revocation, expiry reconciliation and audit records. An invitation grants no access until its intended AstroCrown account accepts it.
+- Ban-safe invitation acceptance: the ban predicate is checked within the same D1 batch transaction as the invitation transition, audit event and membership activation. A real-browser regression verifies a banned invitee receives HTTP 403 and the invitation remains pending.
 - Corrected author-side block feed isolation. Hidden posts are omitted from feeds and direct reads remain denied without breaking unrelated feed items.
+- A one-statement feed hydrator. A 20-post page now retrieves post fields, author/community information, counts and viewer flags in one D1 statement, retaining server-side membership, visibility, moderation and block predicates. A unit regression fails if the route returns to per-post D1 reads.
 - First-party Community section in the canonical `development/index.html`: global feed, six seeded community links, group feed, post composer, replies, reactions, bookmarks, report submission, join/request/leave actions, request review and invitation acceptance.
 - Reuses the existing AstroCrown passkey/account session. No separate social identity, password or login system was added.
-- Worker staging and static Pages build allowlists now include only the two explicit Community assets. The standalone static preview injects a no-backend marker and presents a read-only explanation; account-backed Community behavior remains confined to the connected Worker staging environment.
-- Real Chrome tests verify the rendered homepage section, six seeded links, staging CSS/JavaScript delivery, unauthenticated composer boundary, navigation, backend API journeys and private-content isolation.
+- Worker staging and static Pages build allowlists include only the two explicit Community assets. The standalone static preview injects a no-backend marker and presents a read-only explanation; account-backed Community behavior remains confined to the connected Worker staging environment.
+- Real Chrome tests verify the rendered homepage section, six seeded links, staging CSS/JavaScript delivery, unauthenticated composer boundary, navigation, backend API journeys, private-content isolation, invitation ban handling and feed visibility.
 
-Not delivered: private/group chat, file or media uploads, member profile pages, full member search, complete moderation case review and appeals, community owner transfer, invitations issued from the homepage UI, full community creation/settings UI, subgroups/channels, public share cards/permalink safety, polls/proposals/events, binding elections, complete accessibility/performance/load/backup qualification.
+Not delivered: private/group chat, file or media uploads, member profile pages, full member search, complete moderation case review and appeals, community owner transfer, manager invitation issuance from the homepage UI, full community creation/settings UI, subgroups/channels, public share cards/permalink safety, polls/proposals/events, binding elections, complete accessibility/performance/load/backup qualification.
 
 No production deployment, remote D1 migration, public onboarding, payment, wallet transaction, mint, transfer or on-chain action was performed. Both relevant pull requests remain drafts and unmerged.
 
@@ -66,9 +68,10 @@ Product rules applied to this audit:
 - Repository: `ACROWN-System/AstroCrown-Web`
 - PR: [#194 — Community API foundation and first-party homepage interface](https://github.com/ACROWN-System/AstroCrown-Web/pull/194)
 - Branch: `feature/community-network-foundation-2026-11-19`
-- Exact qualified candidate: `22764679870d69c27554dcb115e77e6892216ca4`
-- Base branch: `main`; PR remains open, draft and unmerged.
-- Product requirements: [PR #170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170), synchronized against current main, still draft and unmerged.
+- Exact qualified candidate: `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6`
+- Base branch: `main`; PR #194 is open, draft and unmerged.
+- PR #194 is 19 commits ahead and 0 behind `main`; GitHub reports mergeable=true. This is not an instruction or approval to merge.
+- Product requirements: [PR #170 — Native Community Network and Council requirements](https://github.com/ACROWN-System/AstroCrown-Web/pull/170), synchronized against current main, still draft, unmerged and mergeable.
 - No force push, merge or production promotion was performed.
 
 Principal implementation paths:
@@ -91,38 +94,44 @@ The staging build copies the Community assets into the connected Worker environm
 
 The Community UI uses DOM element creation and `textContent` for server-derived post, reply, member and community text; it does not interpolate untrusted post data into `innerHTML`. The account UI emits an edge-triggered account-status event so Community refreshes only when authentication changes, not on unrelated status refreshes.
 
-The six seeded initial public spaces are the initial taxonomy only; the taxonomy is intended to remain extensible. Request/invite-only membership policies are now backed by server workflows rather than dead-end status values.
+The Community feed now uses a set-based SELECT rather than a loop that called `visiblePost()` and `postView()` once per returned item. Existing indexes cover global/community feed ordering, parent/reply lookup, reaction lookup, bookmark lookup and membership checks. This is important for the no-cost Workers Free query budget and reduces D1 request/round-trip overhead without lowering page size.
+
+The six seeded initial public spaces are the initial taxonomy only; the taxonomy is intended to remain extensible. Request/invite-only membership policies are backed by server workflows rather than dead-end status values.
 
 ## 5. Verification criteria and results
 
-All results below are tied to exact candidate `22764679870d69c27554dcb115e77e6892216ca4`; earlier green checks from prior commits are not substituted for this candidate.
+All results below are tied to exact candidate `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6`; earlier green checks from prior commits are not substituted for this candidate.
 
 | ID | Criterion | Method / evidence | Result |
 |---|---|---|---|
-| CN-Q-001 | Community migrations apply on isolated D1 | Account Staging Worker Qualification, run `44430616998`; local migration step applied migrations 0006 and 0007 | PASS |
-| CN-Q-002 | Worker/API invariant and schema tests pass | Same qualification job; 108 Worker invariant tests passed and 3 schema tests passed | PASS |
-| CN-Q-003 | Global/community feed, posts, replies, reactions, bookmarks, reports, membership and deletion work through Chrome against the local Worker/D1 | Same qualification job; browser smoke reported the full authenticated Community API journey | PASS |
-| CN-Q-004 | Request-based membership has a complete manager decision path | Chrome browser journey: pending request, no posting while pending, manager-only request queue, approve grants access, rejection removes posting access | PASS |
-| CN-Q-005 | Invite-only membership is account-bound and fail-closed | Chrome browser journey: invitee inbox, decline, accept, private member/owner read access, non-member 404, revocation, expiry, and re-invitation after expiry | PASS |
-| CN-Q-006 | Author-side block hides the author's content but cannot break unrelated feed items | Two-account browser regression: direct post 404, overall feed 200, blocked author's post omitted | PASS |
-| CN-Q-007 | Canonical homepage renders native Community interface | Chrome waited for Community section and all six seeded community links; verified Community navigation and logged-out composer/login boundary | PASS |
-| CN-Q-008 | Worker staging delivers the Community CSS and JavaScript | Browser fetches both explicit asset paths and verifies 200 plus expected source markers; the app executes sufficiently to populate the six-community directory | PASS |
-| CN-Q-009 | Static Pages preview publishes assets without falsely enabling the service | Cloudflare Pages Static Preview Build run `44430616751`; strict asset manifest and tests passed; static-only marker ensures no account/API operations | PASS |
-| CN-Q-010 | Shared AstroCrown passkey session is reused | Canonical account UI emits authentication changes; Community checks `/api/account/status`; no second identity or password system | PASS for tested integration |
-| CN-Q-011 | Security and external pipeline gates complete | CodeQL `44430616782`, NOVA RSI Engine CI `44430616851`, External Review Pipeline `44430616870` all succeeded | PASS |
-| CN-Q-012 | Production deployment, public onboarding, remote D1 migration and real financial/on-chain behavior | Not performed; expressly outside authorization | NOT PERFORMED |
+| CN-Q-001 | Community migrations apply on isolated D1 | Account Staging Worker Qualification, run `44431752410`, job `135250562270`; local migrations 0006 and 0007 applied | PASS |
+| CN-Q-002 | Worker/API invariant and schema tests pass | Same qualification job; 109 Worker invariant tests passed and 3 schema tests passed | PASS |
+| CN-Q-003 | Feed page hydration avoids N+1 D1 subrequests | New unit test: “a 20-post global feed hydrates all post fields in one D1 statement”; it asserts exactly one `prepare().all()` call and verifies post fields, viewer flags, block and membership filters | PASS |
+| CN-Q-004 | Global/community feeds, post/reply persistence, reactions, bookmarks, reports, membership and deletion work through Chrome against local Worker/D1 | Same qualification job; browser smoke reported full authenticated Community API journey | PASS |
+| CN-Q-005 | Request membership has a manager decision path | Chrome: pending request, no posting while pending, manager-only request queue, approval grants access, rejection removes posting access | PASS |
+| CN-Q-006 | Invite-only membership is account-bound and fail-closed | Chrome: invitee inbox, decline, accept, private member/owner read access, non-member 404, revocation, expiry, re-invitation after expiry; banned invitee receives 403 and invitation remains pending | PASS |
+| CN-Q-007 | Author-side block hides the author's content without breaking unrelated feed items | Two-account browser regression: direct post 404, global feed 200, blocked author's post omitted | PASS |
+| CN-Q-008 | Canonical homepage renders native Community interface | Chrome waited for Community section and all six seeded community links; verified Community navigation and logged-out composer/login boundary | PASS |
+| CN-Q-009 | Worker staging delivers Community CSS and JavaScript | Browser fetched both explicit asset paths and verified HTTP 200 and expected source markers; app populated the six-community directory | PASS |
+| CN-Q-010 | Static Pages preview publishes assets without falsely enabling service | Cloudflare Pages Static Preview Build run `44431752263`; strict asset manifest and tests passed; static-only marker ensures no account/API operations | PASS |
+| CN-Q-011 | Shared AstroCrown passkey session is reused | Canonical account UI emits authentication changes; Community checks `/api/account/status`; no second identity or password system | PASS for tested integration |
+| CN-Q-012 | Security and external pipeline gates complete | CodeQL `44431752181`, NOVA RSI Engine CI `44431752297`, External Review Pipeline `44431752283` all succeeded | PASS |
+| CN-Q-013 | Production deployment, public onboarding, remote D1 migration and real financial/on-chain behavior | Not performed; expressly outside authorization | NOT PERFORMED |
 
 ### Exact-head hosted workflow evidence
 
-Candidate: `22764679870d69c27554dcb115e77e6892216ca4`
+Candidate: `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6`
 
-- Account Staging Worker Qualification: [run 44430616998](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616998) — success.
-- Cloudflare Pages Static Preview Build: [run 44430616751](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616751) — success.
-- NOVA RSI CodeQL Security Analysis: [run 44430616782](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616782) — success.
-- NOVA RSI Engine CI: [run 44430616851](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616851) — success.
-- External Review Pipeline CI: [run 44430616870](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44430616870) — success.
+- Account Staging Worker Qualification: [run 44431752410](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44431752410) — success.
+- Cloudflare Pages Static Preview Build: [run 44431752263](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44431752263) — success.
+- NOVA RSI CodeQL Security Analysis: [run 44431752181](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44431752181) — success.
+- NOVA RSI Engine CI: [run 44431752297](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44431752297) — success.
+- External Review Pipeline CI: [run 44431752283](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/44431752283) — success.
+- CodeQL check `135250886925` — success.
 
-Worker Qualification includes dependency installation/lock checks, Worker invariant tests, schema tests, staging-site build, browser bundle validation, local D1 migrations, HTTP/Chrome smoke, read-only Cloudflare preflight and fail-closed deployment configuration checks. No live deployment action was authorized or performed.
+Worker Qualification completed every listed step, including dependency lock/install, Worker invariant tests, schema tests, staging build, browser/Worker bundle validation, local D1 migrations, HTTP/Chrome smoke, read-only Cloudflare preflight and fail-closed deployment checks.
+
+The Worker invariant test output reported `# tests 109`, `# pass 109`, `# fail 0`; the schema suite reported 3 passed and 0 failed. The new feed test was `ok 12 - a 20-post global feed hydrates all post fields in one D1 statement`.
 
 The browser log includes these success markers:
 
@@ -130,7 +139,9 @@ The browser log includes these success markers:
 
 `PASS: authenticated community directory/feed, post/reply, reactions/bookmarks/reports, request approval/rejection, private invitation inbox/acceptance/revocation/expiry, private-content isolation, posting boundaries, author removal, and author-side-block feed isolation.`
 
-The standalone Pages build intentionally remains a static read-only visual preview. A passing static build does not imply a live community backend is connected there.
+The same qualification also completed the existing account/passkey/recovery and local admin-wallet test flows. They used local synthetic credentials and test wallets only; no real payment or on-chain action was performed.
+
+The standalone Pages build intentionally remains a static read-only visual preview. A passing static build does not imply a live community backend is connected.
 
 ## 6. Finding CN-F-001 — author-side block could break a feed
 
@@ -141,6 +152,16 @@ The standalone Pages build intentionally remains a static read-only visual previ
 **Remediation:** Feed SQL now excludes both (a) viewer-side block/mute and (b) author-side block. A second synthetic local account authors a post and blocks the original viewer. The browser regression verifies direct detail remains 404 and global feed remains 200 while omitting the post.  
 **Re-test:** Exact-head Worker Qualification run `44426950857` / job `135234130183` passed and emitted the explicit feed-isolation PASS line above.  
 **Result:** CLOSED for this reproduced behavior, subject to future regression if visibility or block semantics change.
+
+## 6.1 Finding CN-F-002 — per-post D1 reads could exceed the Free-tier query budget
+
+**Affected file:** `development/account-continuity/worker/src/community.js`  
+**Observed condition:** `listFeed()` first selected post IDs, then awaited `visiblePost()` and `postView()` for each returned item. This performed multiple D1 calls per post. At the default 20-item page size, a global feed could exceed Cloudflare Workers Free's 50 D1 queries per Worker invocation.  
+**Expected condition:** Feed visibility, author/community details, like/reply counts, viewer reaction/bookmark flags and block filters should be returned by one bounded set-based query.  
+**Impact:** A feed could work in local tests but fail on a real Workers Free invocation as it approaches/exceeds the per-invocation query budget; it also created unnecessary round-trip latency and row-read overhead.  
+**Remediation:** The feed now fetches all page fields in one SQL statement, with correlated count/EXISTS expressions and the same server-side community status, active membership, post visibility, deletion/moderation and block/mute predicates. Existing feed, reply, reaction, bookmark and membership indexes are retained.  
+**Re-test:** On exact candidate `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6`, the Worker invariant suite passed 109/109 tests; its new 20-post unit regression asserts one D1 statement. The actual local D1/Chrome Worker qualification also passed, run `44431752410`.  
+**Result:** CLOSED for the reproduced query-count problem. Daily row-read/write quota and real-user traffic performance remain operational qualification items; one SQL statement does not mean one row read.
 
 ## 7. Open findings and product-completeness gaps
 
@@ -226,16 +247,39 @@ Keep the existing AstroCrown account identity, Worker, D1 migration pattern, ser
 
 The immediate reusable correction is to treat membership, moderation and ownership as complete state machines rather than one-off endpoints. The current `request` and `invite_only` options are premature until those state transitions exist.
 
+### Cloudflare D1 Free-tier constraints and query qualification (verified 2026-11-19)
+
+Cloudflare's official D1 pages, last updated 2026-10-30, specify these Workers Free allowances:
+
+- 5 million rows read per day.
+- 100,000 rows written per day.
+- 5 GB total D1 storage across the account.
+- 10 D1 databases per account and a 500 MB maximum per Free database.
+- 50 D1 queries per Worker invocation on Free (the Paid plan's listed limit is 1,000).
+- A 30-second maximum query/batch duration.
+
+Cloudflare's changelog states that since 2026-09-01 Free-plan queries fail after daily row-read or row-write limits are exceeded, with query operations unavailable until the daily reset at 00:00 UTC; stored data is not affected. These are actual service limits, not merely soft usage targets.
+
+The Community feed previously risked exceeding the 50-query per invocation limit by doing per-post reads. The one-statement feed hydrator closes that specific failure mode. It does **not** prove that a real traffic profile fits the daily 5M-row-read / 100K-row-write quotas. Before public activation, add/verify daily row usage monitoring and alerting, review query-plan/index effectiveness, control abuse with rate limits, and test realistic feed/reaction/report traffic. Do not promise unlimited free operation. Use the free tier as a controlled bootstrap/qualification path and reassess provider economics if product usage/revenue materially grows.
+
+The invitation-inbox expiry reconciler reads at most 100 expired invitations and queues two statements per row (up to 200 statements) in one batch. Cloudflare's D1 Limits page demonstrates that a batch of 2,000 statements counts as one query against the per-invocation query limit. The D1 Database API documents that batch statements run sequentially in one transaction and that any failure aborts/rolls back the full batch. No claim is made that the 2,000-statement example is a guaranteed universal batch maximum; the current code's local 100-row cap bounds this specific operation.
+
+Sources:
+- [Cloudflare D1 Pricing](https://developers.cloudflare.com/d1/platform/pricing/) — 5M rows read/day, 100K rows written/day, 5 GB total storage and database counts.
+- [Cloudflare D1 Limits](https://developers.cloudflare.com/d1/platform/limits/) — database size, query-per-invocation and 30-second limits; batch statement example.
+- [Cloudflare D1 Database Worker API](https://developers.cloudflare.com/d1/worker-api/d1-database/) — transactional `batch()` semantics.
+- [Cloudflare D1 Free-tier daily query enforcement changelog, 2026-09-01](https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/).
+
 ## 9. Workflow anomaly — two push runs with no jobs
 
-The earlier candidate push produced two completed failures with no retrievable jobs:
+The current exact push to candidate `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6` produced two completed failures with empty job arrays:
 
-- `44426941417`, `.github/workflows/python-ci-lock-refresh.yml`, event `push`, zero jobs.
-- `44426939649`, `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, zero jobs.
+- `44431745263`, `.github/workflows/python-ci-lock-refresh.yml`, event `push`, zero retrievable jobs.
+- `44431743593`, `.github/workflows/account-continuity-prototype-tests.yml`, event `push`, zero retrievable jobs.
 
-The inspected source did not match those feature-branch push events: the Python lock-refresh workflow has PR path filters, schedule and workflow_dispatch but no push trigger; the prototype test workflow limits push to `main`. The connected job lookup returned empty arrays. That proves only that no job-level reason was available; it does not prove GitHub's internal root cause.
+The inspected workflow source does not match these feature-branch push events: the Python lock-refresh workflow has PR path filters, schedule and workflow_dispatch but no push trigger; the prototype test workflow limits push to `main`. The connected job lookup returned empty arrays. That establishes only that no job-level explanation is available; it does not prove GitHub's internal root cause.
 
-No trigger was broadened and no fake job was added to suppress the red indicator. The PR-triggered qualification workflows listed in Section 5 are separately green on the current exact head. Keep this anomaly classified as **UNEXPLAINED / NOT A PRODUCT TEST FAILURE** unless a run with job/log evidence identifies its cause.
+No trigger was broadened and no fake job was added to suppress the red indicator. The five PR-triggered qualification workflows listed in Section 5 are separately green on the current exact head. Keep this anomaly classified as **UNEXPLAINED / NOT A PRODUCT TEST FAILURE** unless a run with job/log evidence identifies its cause.
 
 ## 10. Alternatives and decisions
 
@@ -259,24 +303,23 @@ No trigger was broadened and no fake job was added to suppress the red indicator
 5. Extend the Community UI with member profiles, search/discovery, subgroups/channels, pinned posts and additional interaction models only after each is specified and backed by a tested API.
 6. Research chat with Matrix and other mature options; qualify protocol, self-hosting, licensing, no-card cost, encryption/key recovery, abuse operations, data sovereignty and backups before adopting a new service.
 7. Complete permalink/preview safety before external sharing. Keep external networks non-authoritative and optional.
-8. Expand security, privacy, accessibility, responsive, load, rate-limit, concurrency and backup/restore tests. Record each criterion separately; passing the current CI suite is not blanket certification.
-9. Keep polls/proposals distinct from binding elections. Do not implement Council elections until the approved constitution and election threat model are available.
-10. Re-run all relevant tests against each exact new commit. Preserve existing passing evidence and avoid repeating unrelated checks when neither the code nor workflow changed.
+8. Before public deployment on D1 Free, add/verify monitoring and alerts for daily row reads and writes, check the 5M-read / 100K-write / 5GB aggregate quotas and per-database 500MB limit, and test representative traffic. The feed's N+1 subrequest risk is closed, but quota and throughput qualification remains open.
+9. Expand security, privacy, accessibility, responsive, load, rate-limit, concurrency and backup/restore tests. Record each criterion separately; passing the current CI suite is not blanket certification.
+10. Keep polls/proposals distinct from binding elections. Do not implement Council elections until the approved constitution and election threat model are available.
+11. Re-run all relevant tests against each exact new commit. Preserve existing passing evidence and avoid repeating unrelated checks when neither the code nor workflow changed.
 
 ## 12. Closure and resumption checkpoint
 
-**Current work-block result:** the Community backend foundation, request membership decisions, private invitation lifecycle, author-side-block feed isolation and first-party homepage UI all pass exact-head GitHub-hosted tests on `22764679870d69c27554dcb115e77e6892216ca4`.
+**Current work-block result:** the Community backend foundation, request membership decisions, private invitation lifecycle including ban-safe transactional acceptance, author-side-block feed isolation, one-statement 20-post feed hydration and first-party homepage UI all pass exact-head GitHub-hosted tests on `73eebc4434cbf4e59bf4814e70c95ab6a6742ed6`.
 
-**Pull-request state:** PR #194 open, draft, unmerged; PR #170 open, draft, unmerged. GitHub reports PR #194 mergeable, but merge is not authorized. No production deployment or promotion was performed.
+**Pull-request state:** PR #194 open, draft, unmerged and mergeable; PR #170 open, draft, unmerged and mergeable. Neither has been merged. No production deployment or promotion was performed.
 
-**Next highest-value work:** complete report-case moderation and owner transfer only after their decision/appeal/succession rules are explicit; meanwhile improve manager invitation UI, profiles/search, accessibility and privacy-safe permalink behavior. The 7-day invitation expiry remains a release policy decision.
+**Next highest-value work:** complete report-case moderation and owner transfer only after their decision/appeal/succession rules are explicit; meanwhile improve manager invitation UI, profiles/search, accessibility and privacy-safe permalink behavior. The 7-day invitation expiry remains a release policy decision. Daily D1 Free row quotas must be monitored and load-qualified before public activation; the one-query feed regression addresses the distinct per-invocation query budget.
 
 On resumption, fetch the current main and PR heads, read this record, compare the branch before editing, and continue from the exact new head. Do not repeat the already-passing backend/browser/static checks unless a relevant file or workflow changes. If a rule requires owner/constitutional approval, stop at that boundary rather than silently inventing policy.
 
 ## 13. References
 
-- AstroCrown product requirements: [PR #170](https://github.com/ACROWN-System/AstroCrown-Web/pull/170).
-- AstroCrown backend foundation: [PR #194](https://github.com/ACROWN-System/AstroCrown-Web/pull/194).
 - [NIST SP 800-218 SSDF v1.1](https://csrc.nist.gov/pubs/sp/800/218/final).
 - [OWASP ASVS 5.0.0](https://asvs.owasp.org/).
 - [ISO/IEC 25010:2023](https://committee.iso.org/standard/78176.html).
@@ -284,5 +327,9 @@ On resumption, fetch the current main and PR heads, read this record, compare th
 - [Lemmy source repository and license](https://github.com/LemmyNet/lemmy).
 - [Matrix Client-Server specification](https://spec.matrix.org/unstable/client-server-api/index.html).
 - [W3C ActivityPub Recommendation](https://www.w3.org/TR/activitypub/).
+- [Cloudflare D1 Pricing](https://developers.cloudflare.com/d1/platform/pricing/).
+- [Cloudflare D1 Limits](https://developers.cloudflare.com/d1/platform/limits/).
+- [Cloudflare D1 Database Worker API](https://developers.cloudflare.com/d1/worker-api/d1-database/).
+- [Cloudflare D1 Free-tier daily query enforcement changelog, 2026-09-01](https://developers.cloudflare.com/changelog/post/2026-09-01-d1-free-tier-limit-enforcement/).
 
 This record is an engineering qualification and continuity artifact. It is not legal advice, security certification, production approval or evidence that unimplemented product capabilities exist.
