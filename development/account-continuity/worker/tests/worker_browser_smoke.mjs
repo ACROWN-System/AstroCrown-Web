@@ -605,11 +605,20 @@ async function testCommunityApi(accountIdentifier) {
   });
   assert.equal(nonOwnerTransfer.status, 403, "only the current owner may propose ownership transfer.");
 
+  await setBrowserAccountSession(nonMemberToken);
+  const successorJoin = await postWorkerJson("/api/community/communities/" + transferSlug + "/join", {});
+  assert.equal(successorJoin.status, 200, JSON.stringify(successorJoin.body));
+  assert.equal(successorJoin.body.membershipStatus, "active",
+    "the proposed successor must be an active member through the real join workflow.");
+
   await setBrowserAccountSession(rootToken);
   const targetNotMember = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
     accountIdentifier: blockedAuthorIdentifier, reason: "A proposed successor must already be a member"
   });
   assert.equal(targetNotMember.status, 409, "the proposed successor must already be an active community member.");
+  const proposedSuccessorDetail = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(proposedSuccessorDetail.status, 200, JSON.stringify(proposedSuccessorDetail.body));
+  assert.equal(proposedSuccessorDetail.body.memberRole, "owner");
   const transferCreated = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
     accountIdentifier: nonMemberIdentifier, reason: "Synthetic local ownership handover test"
   });
@@ -651,6 +660,10 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(formerOwnerCanLeave.status, 200, "the former owner may leave after the transfer has been accepted.");
 
   // Exercise decline and owner cancellation; neither may change the owner role.
+  await setBrowserAccountSession(rootToken);
+  const formerOwnerRejoin = await postWorkerJson("/api/community/communities/" + transferSlug + "/join", {});
+  assert.equal(formerOwnerRejoin.status, 200, JSON.stringify(formerOwnerRejoin.body));
+  assert.equal(formerOwnerRejoin.body.membershipStatus, "active");
   await setBrowserAccountSession(nonMemberToken);
   const declineTransfer = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
     accountIdentifier, reason: "Synthetic successor-decline lifecycle test"
