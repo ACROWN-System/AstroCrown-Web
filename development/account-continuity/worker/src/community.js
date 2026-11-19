@@ -628,9 +628,15 @@ async function respondMembershipInvitation(db, account, inviteId, payload) {
   if (!invitation) throw fail(404, "The invitation could not be found.");
   const now = Math.floor(Date.now() / 1000);
   if (invitation.invitation_status === "pending" && Number(invitation.expires_at) <= now) {
-    await db.prepare(
-      "UPDATE community_membership_invitations SET invitation_status='expired' WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
-    ).bind(id, now).run();
+    await db.batch([
+      db.prepare(
+        "UPDATE community_membership_invitations SET invitation_status='expired' WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
+      ).bind(id, now),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,NULL,'membership_invitation_expired','invitation',?,'Invitation expired when an account attempted to use it.',?,? WHERE changes()=1"
+      ).bind(randomId("audit_"), id, JSON.stringify({ spaceId: invitation.space_id, recipientAccountId: invitation.invited_account_id }), now),
+    ]);
     throw fail(410, "This community invitation has expired.");
   }
   if (invitation.invitation_status !== "pending") {
@@ -704,9 +710,15 @@ async function revokeMembershipInvitation(db, account, inviteId, payload, servic
   }
   const now = Math.floor(Date.now() / 1000);
   if (invitation.invitation_status === "pending" && Number(invitation.expires_at) <= now) {
-    await db.prepare(
-      "UPDATE community_membership_invitations SET invitation_status='expired' WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
-    ).bind(id, now).run();
+    await db.batch([
+      db.prepare(
+        "UPDATE community_membership_invitations SET invitation_status='expired' WHERE invite_id=? AND invitation_status='pending' AND expires_at<=?"
+      ).bind(id, now),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,NULL,'membership_invitation_expired','invitation',?,'Invitation expired when an account attempted to use it.',?,? WHERE changes()=1"
+      ).bind(randomId("audit_"), id, JSON.stringify({ spaceId: invitation.space_id, recipientAccountId: invitation.invited_account_id }), now),
+    ]);
     throw fail(410, "This community invitation has expired.");
   }
   if (invitation.invitation_status !== "pending") throw fail(409, "Only a pending invitation can be revoked.");
