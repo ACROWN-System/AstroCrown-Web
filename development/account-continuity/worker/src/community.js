@@ -450,6 +450,268 @@ async function leaveCommunity(db, account, slug) {
   return { slug: space.slug, membershipStatus: "left" };
 }
 
+
+function ownershipTransferId(value) {
+  if (typeof value !== "string" || !/^transfer_[a-f0-9]{32}$/.test(value)) {
+    throw fail(400, "The ownership transfer reference is invalid.");
+  }
+  return value;
+}
+
+async function createOwnershipTransfer(db, account, slug, payload) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["accountIdentifier","reason"], "The ownership transfer");
+  const space = await spaceBySlug(db, normalizeCommunitySlug(slug));
+  if (!space || space.status !== "active") throw fail(404, "This community could not be found.");
+
+  const actorMembership = await membershipFor(db, space.space_id, actor.account_id);
+  if (actorMembership?.membership_status !== "active" || actorMembership.member_role !== "owner") {
+    throw fail(403, "Only the active community owner may propose an ownership transfer.");
+  }
+
+  const targetIdentifier = typeof payload.accountIdentifier === "string"
+    ? payload.accountIdentifier.trim()
+    : "";
+  if (!targetIdentifier || targetIdentifier.length > 100 || /[\u0000-\u001f\u007f]/.test(targetIdentifier)) {
+    throw fail(400, "Enter the successor's AstroCrown account identifier.");
+  }
+  const target = await db.prepare(
+    "SELECT account_id,user_handle FROM auth_accounts WHERE account_identifier=?"
+  ).bind(targetIdentifier).first();
+  if (!target) throw fail(404, "The AstroCrown account identifier could not be found.");
+  if (target.account_id === actor.account_id) throw fail(400, "The current owner cannot transfer the community to themselves.");
+
+  const targetMembership = await membershipFor(db, space.space_id, target.account_id);
+  if (!targetMembership || targetMembership.membership_status !== "active" || targetMembership.member_role === "owner") {
+    throw fail(409, "The proposed successor must already be an active member of this community.");
+  }
+
+  const reason = cleanText(
+    payload.reason || "The current owner proposed a voluntary community ownership handover.",
+    500,
+    "Ownership transfer reason"
+  );
+  const now = Math.floor(Date.now() / 1000);
+  const transferId = randomId("transfer_");
+  try {
+    const result = await db.batch([
+      db.prepare(
+        "INSERT INTO community_ownership_transfers(transfer_id,space_id,from_account_id,to_account_id,transfer_status,reason,created_at) " +
+        "SELECT ?,?,?,?,'pending',?,? WHERE EXISTS(" +
+        "SELECT 1 FROM community_spaces c WHERE c.space_id=? AND c.status='active') AND EXISTS(" +
+        "SELECT 1 FROM community_memberships owner WHERE owner.space_id=? AND owner.account_id=? " +
+        "AND owner.membership_status='active' AND owner.member_role='owner') AND EXISTS(" +
+        "SELECT 1 FROM community_memberships successor WHERE successor.space_id=? AND successor.account_id=? " +
+        "AND successor.membership_status='active' AND successor.member_role<>'owner')"
+      ).bind(
+        transferId, space.space_id, actor.account_id, target.account_id, reason, now,
+        space.space_id, space.space_id, actor.account_id, space.space_id, target.account_id
+      ),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,?,'community_ownership_transfer_requested','ownership_transfer',?,?,?,? WHERE changes()=1"
+      ).bind(
+        randomId("audit_"), actor.account_id, transferId, reason,
+        JSON.stringify({ spaceId: space.space_id, fromAccountId: actor.account_id, toAccountId: target.account_id }),
+        now
+      ),
+    ]);
+    if (Number(result?.[0]?.meta?.changes || 0) !== 1) {
+      throw fail(409, "The community or successor membership changed before the transfer could be requested.");
+    }
+  } catch (error) {
+    if (/unique|constraint/i.test(String(error?.message || error))) {
+      throw fail(409, "This community already has a pending ownership transfer. Cancel or decide that transfer first.");
+    }
+    throw error;
+  }
+  return {
+    transfer: {
+      id: transferId,
+      communitySlug: space.slug,
+      communityName: space.name,
+      successorHandle: target.user_handle,
+      status: "pending",
+      createdAt: now,
+      requiresSuccessorAcceptance: true,
+    },
+  };
+}
+
+async function listOwnershipTransfers(db, account) {
+  const actor = requireAccount(account);
+  const result = await db.prepare(
+    "SELECT t.transfer_id,t.space_id,t.from_account_id,t.to_account_id,t.transfer_status,t.reason,t.created_at," +
+    "c.slug AS community_slug,c.name AS community_name," +
+    "source.user_handle AS from_handle,target.user_handle AS to_handle " +
+    "FROM community_ownership_transfers t " +
+    "JOIN community_spaces c ON c.space_id=t.space_id " +
+    "JOIN auth_accounts source ON source.account_id=t.from_account_id " +
+    "JOIN auth_accounts target ON target.account_id=t.to_account_id " +
+    "WHERE t.transfer_status='pending' AND c.status='active' " +
+    "AND (t.from_account_id=? OR t.to_account_id=?) " +
+    "ORDER BY t.created_at DESC,t.transfer_id DESC LIMIT 50"
+  ).bind(actor.account_id, actor.account_id).all();
+  const rows = result.results || [];
+  const map = row => ({
+    id: row.transfer_id,
+    communitySlug: row.community_slug,
+    communityName: row.community_name,
+    fromHandle: row.from_handle,
+    toHandle: row.to_handle,
+    reason: row.reason,
+    status: row.transfer_status,
+    createdAt: Number(row.created_at),
+  });
+  return {
+    incoming: rows.filter(row => row.to_account_id === actor.account_id).map(map),
+    outgoing: rows.filter(row => row.from_account_id === actor.account_id).map(map),
+  };
+}
+
+async function respondOwnershipTransfer(db, account, transferRef, payload) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["action","reason"], "The ownership transfer response");
+  if (!["accept","decline"].includes(payload.action)) throw fail(400, "Choose accept or decline for this ownership transfer.");
+  const id = ownershipTransferId(transferRef);
+  const transfer = await db.prepare(
+    "SELECT t.transfer_id,t.space_id,t.from_account_id,t.to_account_id,t.transfer_status,c.slug,c.status AS community_status " +
+    "FROM community_ownership_transfers t JOIN community_spaces c ON c.space_id=t.space_id " +
+    "WHERE t.transfer_id=? AND t.to_account_id=?"
+  ).bind(id, actor.account_id).first();
+  if (!transfer || transfer.community_status !== "active") throw fail(404, "The ownership transfer could not be found.");
+  if (transfer.transfer_status !== "pending") throw fail(409, "This ownership transfer is no longer awaiting a response.");
+
+  const now = Math.floor(Date.now() / 1000);
+  const responseReason = cleanText(
+    payload.reason || (payload.action === "accept"
+      ? "The proposed successor accepted the community ownership transfer."
+      : "The proposed successor declined the community ownership transfer."),
+    500,
+    "Ownership transfer response reason"
+  );
+
+  if (payload.action === "decline") {
+    const result = await db.batch([
+      db.prepare(
+        "UPDATE community_ownership_transfers SET transfer_status='declined',responded_at=?,response_reason=? " +
+        "WHERE transfer_id=? AND to_account_id=? AND transfer_status='pending' AND EXISTS(" +
+        "SELECT 1 FROM community_spaces c WHERE c.space_id=community_ownership_transfers.space_id AND c.status='active')"
+      ).bind(now, responseReason, id, actor.account_id),
+      db.prepare(
+        "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+        "SELECT ?,?,'community_ownership_transfer_declined','ownership_transfer',?,?,?,? WHERE changes()=1"
+      ).bind(
+        randomId("audit_"), actor.account_id, id, responseReason,
+        JSON.stringify({ spaceId: transfer.space_id, fromAccountId: transfer.from_account_id }),
+        now
+      ),
+    ]);
+    if (Number(result?.[0]?.meta?.changes || 0) !== 1) throw fail(409, "The ownership transfer changed before the response was recorded.");
+    return { transferId: id, status: "declined" };
+  }
+
+  // Acceptance is conditional on the original owner still being the active
+  // owner and the recipient still being an active non-owner member. The D1
+  // batch is one transaction, so role changes and the ownership pointer move
+  // together. Least privilege: the former owner becomes an ordinary member.
+  const result = await db.batch([
+    db.prepare(
+      "UPDATE community_ownership_transfers SET transfer_status='accepted',responded_at=?,response_reason=? " +
+      "WHERE transfer_id=? AND to_account_id=? AND transfer_status='pending' AND EXISTS(" +
+      "SELECT 1 FROM community_spaces c WHERE c.space_id=community_ownership_transfers.space_id AND c.status='active') " +
+      "AND EXISTS(SELECT 1 FROM community_memberships old_owner WHERE old_owner.space_id=community_ownership_transfers.space_id " +
+      "AND old_owner.account_id=community_ownership_transfers.from_account_id AND old_owner.membership_status='active' " +
+      "AND old_owner.member_role='owner') AND EXISTS(SELECT 1 FROM community_memberships successor " +
+      "WHERE successor.space_id=community_ownership_transfers.space_id AND successor.account_id=community_ownership_transfers.to_account_id " +
+      "AND successor.membership_status='active' AND successor.member_role<>'owner')"
+    ).bind(now, responseReason, id, actor.account_id),
+    db.prepare(
+      "UPDATE community_memberships SET member_role=CASE WHEN account_id=? THEN 'member' WHEN account_id=? THEN 'owner' END,updated_at=? " +
+      "WHERE space_id=? AND membership_status='active' AND account_id IN (?,?) AND EXISTS(" +
+      "SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? AND t.transfer_status='accepted' AND t.responded_at=? " +
+      "AND t.from_account_id=? AND t.to_account_id=?)"
+    ).bind(
+      transfer.from_account_id, transfer.to_account_id, now,
+      transfer.space_id, transfer.from_account_id, transfer.to_account_id,
+      id, now, transfer.from_account_id, transfer.to_account_id
+    ),
+    db.prepare(
+      "UPDATE community_spaces SET created_by_account_id=? WHERE space_id=? AND status='active' AND EXISTS(" +
+      "SELECT 1 FROM community_ownership_transfers t WHERE t.transfer_id=? AND t.transfer_status='accepted' AND t.responded_at=? " +
+      "AND t.from_account_id=? AND t.to_account_id=?)"
+    ).bind(transfer.to_account_id, transfer.space_id, id, now, transfer.from_account_id, transfer.to_account_id),
+    db.prepare(
+      "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+      "SELECT ?,?,'community_ownership_transfer_accepted','ownership_transfer',?,?,?,? " +
+      "WHERE EXISTS(SELECT 1 FROM community_memberships owner WHERE owner.space_id=? AND owner.account_id=? " +
+      "AND owner.membership_status='active' AND owner.member_role='member') " +
+      "AND EXISTS(SELECT 1 FROM community_memberships successor WHERE successor.space_id=? AND successor.account_id=? " +
+      "AND successor.membership_status='active' AND successor.member_role='owner') " +
+      "AND EXISTS(SELECT 1 FROM community_spaces c WHERE c.space_id=? AND c.created_by_account_id=?)"
+    ).bind(
+      randomId("audit_"), actor.account_id, id, responseReason,
+      JSON.stringify({ spaceId: transfer.space_id, fromAccountId: transfer.from_account_id, toAccountId: transfer.to_account_id }),
+      now, transfer.space_id, transfer.from_account_id, transfer.space_id, transfer.to_account_id,
+      transfer.space_id, transfer.to_account_id
+    ),
+  ]);
+
+  if (Number(result?.[0]?.meta?.changes || 0) !== 1 ||
+      Number(result?.[1]?.meta?.changes || 0) !== 2 ||
+      Number(result?.[2]?.meta?.changes || 0) !== 1 ||
+      Number(result?.[3]?.meta?.changes || 0) !== 1) {
+    // All preconditions are evaluated in one D1 batch transaction. A failed
+    // conditional transition is surfaced rather than reported as successful.
+    throw fail(409, "The ownership handover could not be completed consistently; refresh the community and transfer status.");
+  }
+  return {
+    transferId: id,
+    status: "accepted",
+    communitySlug: transfer.slug,
+    formerOwnerRole: "member",
+    newOwnerRole: "owner",
+  };
+}
+
+async function cancelOwnershipTransfer(db, account, transferRef, payload) {
+  const actor = requireAccount(account);
+  onlyKeys(payload, ["reason"], "The ownership transfer cancellation");
+  const id = ownershipTransferId(transferRef);
+  const transfer = await db.prepare(
+    "SELECT t.transfer_id,t.space_id,t.from_account_id,t.transfer_status,c.status AS community_status " +
+    "FROM community_ownership_transfers t JOIN community_spaces c ON c.space_id=t.space_id " +
+    "WHERE t.transfer_id=? AND t.from_account_id=?"
+  ).bind(id, actor.account_id).first();
+  if (!transfer || transfer.community_status !== "active") throw fail(404, "The ownership transfer could not be found.");
+  if (transfer.transfer_status !== "pending") throw fail(409, "Only a pending ownership transfer can be cancelled.");
+  const ownerMembership = await membershipFor(db, transfer.space_id, actor.account_id);
+  if (ownerMembership?.membership_status !== "active" || ownerMembership.member_role !== "owner") {
+    throw fail(403, "Only the current active owner may cancel this ownership transfer.");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const reason = cleanText(payload.reason || "The current owner cancelled the proposed ownership transfer.", 500, "Ownership transfer cancellation reason");
+  const result = await db.batch([
+    db.prepare(
+      "UPDATE community_ownership_transfers SET transfer_status='cancelled',cancelled_at=?,response_reason=? " +
+      "WHERE transfer_id=? AND from_account_id=? AND transfer_status='pending' AND EXISTS(" +
+      "SELECT 1 FROM community_memberships owner WHERE owner.space_id=community_ownership_transfers.space_id " +
+      "AND owner.account_id=? AND owner.membership_status='active' AND owner.member_role='owner')"
+    ).bind(now, reason, id, actor.account_id, actor.account_id),
+    db.prepare(
+      "INSERT INTO community_moderation_audit(audit_id,actor_account_id,event_type,target_type,target_id,reason,detail_json,created_at) " +
+      "SELECT ?,?,'community_ownership_transfer_cancelled','ownership_transfer',?,?,?,? WHERE changes()=1"
+    ).bind(
+      randomId("audit_"), actor.account_id, id, reason,
+      JSON.stringify({ spaceId: transfer.space_id }),
+      now
+    ),
+  ]);
+  if (Number(result?.[0]?.meta?.changes || 0) !== 1) throw fail(409, "The ownership transfer changed before cancellation could be recorded.");
+  return { transferId: id, status: "cancelled" };
+}
+
+
 function membershipAccountId(value) {
   if (typeof value !== "string" || !/^[A-Za-z0-9_-]{1,100}$/.test(value)) {
     throw fail(400, "The community member reference is invalid.");
@@ -460,6 +722,13 @@ function membershipAccountId(value) {
 function membershipInviteId(value) {
   if (typeof value !== "string" || !/^invite_[a-f0-9]{32}$/.test(value)) {
     throw fail(400, "The invitation reference is invalid.");
+  }
+  return value;
+}
+
+function ownershipTransferId(value) {
+  if (typeof value !== "string" || !/^transfer_[a-f0-9]{32}$/.test(value)) {
+    throw fail(400, "The ownership transfer reference is invalid.");
   }
   return value;
 }
@@ -1124,6 +1393,11 @@ export async function handleCommunityApi(request, db, account, services = {}) {
       await limited("community-moderation-reports", 30, 60);
       return json(200, await listModerationReports(db, account, url.searchParams.get("community"), services));
     }
+    if (method === "GET" && path === "/api/community/ownership-transfers") {
+      requireAccount(account);
+      await limited("community-ownership-transfers", 30, 60);
+      return json(200, await listOwnershipTransfers(db, account));
+    }
     if (method === "GET" && path === "/api/community/invitations") {
       requireAccount(account);
       await limited("community-invitations", 30, 60);
@@ -1205,6 +1479,24 @@ export async function handleCommunityApi(request, db, account, services = {}) {
         requireAccount(account);
         await limited("membership-invite-revoke", 20, 3600);
         return json(200, await revokeMembershipInvitation(db, account, invitationRevokeRoute[1], payload, services));
+      }
+      const ownershipCreateRoute = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)\/ownership-transfers$/);
+      if (ownershipCreateRoute) {
+        requireAccount(account);
+        await limited("community-ownership-transfer-create", 5, 3600);
+        return json(201, await createOwnershipTransfer(db, account, ownershipCreateRoute[1], payload));
+      }
+      const ownershipRespondRoute = path.match(/^\/api\/community\/ownership-transfers\/(transfer_[a-f0-9]{32})\/respond$/);
+      if (ownershipRespondRoute) {
+        requireAccount(account);
+        await limited("community-ownership-transfer-response", 10, 3600);
+        return json(200, await respondOwnershipTransfer(db, account, ownershipRespondRoute[1], payload));
+      }
+      const ownershipCancelRoute = path.match(/^\/api\/community\/ownership-transfers\/(transfer_[a-f0-9]{32})\/cancel$/);
+      if (ownershipCancelRoute) {
+        requireAccount(account);
+        await limited("community-ownership-transfer-cancel", 10, 3600);
+        return json(200, await cancelOwnershipTransfer(db, account, ownershipCancelRoute[1], payload));
       }
       const roleRoute = path.match(/^\/api\/community\/communities\/([a-z0-9-]+)\/members\/([A-Za-z0-9_-]{1,100})\/role$/);
       if (roleRoute) {
