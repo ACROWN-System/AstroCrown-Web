@@ -745,9 +745,7 @@ async function testCommunityApi(accountIdentifier) {
   assert.equal(reportUi.status, 201, JSON.stringify(reportUi.body));
 
   await setBrowserAccountSession(rootToken);
-  await evaluate(
-    "document.querySelector('#community-space-list [data-community-slug=\\\"aerospace\\\"]').click()"
-  );
+  await evaluate("document.querySelector('#community-space-list [data-community-slug=aerospace]').click()");
   await waitFor("community owner opens the aerospace Community page and sees report controls", () =>
     evaluate("document.getElementById('community-space-heading').textContent === 'Aerospace' && " +
       "!document.getElementById('community-review-reports').hidden"));
@@ -757,15 +755,15 @@ async function testCommunityApi(accountIdentifier) {
       "document.getElementById('community-report-queue').textContent.includes('Synthetic Community report UI preview')"));
   const uiReportId = reportUi.body.reportId;
   await evaluate(
-    "document.querySelector('[data-report-reason=\\\"" + uiReportId + "\\\"]').value=" +
-      JSON.stringify("Reviewed through the Community UI browser test.")
+    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
+      JSON.stringify(uiReportId) + ").value=" + JSON.stringify("Reviewed through the Community UI browser test.")
   );
   await trustedClick("#community-report-queue [data-report-action='start_review'][data-report-id='" + uiReportId + "']");
   await waitFor("report enters review through the visible owner control", () =>
     evaluate("document.getElementById('community-report-queue').textContent.includes('in review')"));
   await evaluate(
-    "document.querySelector('[data-report-reason=\\\"" + uiReportId + "\\\"]').value=" +
-      JSON.stringify("Resolved through the visible Community moderation UI.")
+    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
+      JSON.stringify(uiReportId) + ").value=" + JSON.stringify("Resolved through the visible Community moderation UI.")
   );
   await trustedClick("#community-report-queue [data-report-action='resolve'][data-report-id='" + uiReportId + "']");
   await waitFor("report leaves the open queue after UI resolution", () =>
