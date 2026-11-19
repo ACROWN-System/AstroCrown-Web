@@ -9,10 +9,11 @@
     if(text!==undefined&&text!==null)node.textContent=String(text);
     return node;
   };
-  var state={authenticated:false,spaces:[],slug:null,community:null,items:[],cursor:null,busy:false};
+  var state={authenticated:false,platformAdmin:false,spaces:[],slug:null,community:null,items:[],cursor:null,busy:false};
   var feed=$("community-feed-list"),spaceList=$("community-space-list"),composer=$("community-composer-form"),
       loginPrompt=$("community-login-prompt"),feedback=$("community-feedback"),
-      invitations=$("community-invitations-panel"),queue=$("community-manager-queue");
+      invitations=$("community-invitations-panel"),queue=$("community-manager-queue"),
+      reportQueue=$("community-report-queue"),ownReports=$("community-own-reports");
 
   function announce(text,kind){
     feedback.textContent=text||"";
@@ -25,6 +26,10 @@
     loginPrompt.hidden=true;
     invitations.hidden=true;
     queue.hidden=true;
+    reportQueue.hidden=true;
+    ownReports.hidden=true;
+    $("community-my-reports-button").hidden=true;
+    $("community-review-reports").hidden=true;
     feed.replaceChildren(make("div","community-empty",
       "This static visual preview does not include the Community backend. Use connected Worker staging to test account-backed posts and membership."));
     announce("Read-only visual preview · no community API, account data or publishing is connected.","info");
@@ -81,14 +86,16 @@
   function renderHeader(){
     var title=$("community-space-heading"),description=$("community-space-description"),
         meta=$("community-space-meta"),memberAction=$("community-member-action"),
-        reviewButton=$("community-review-requests");
+        reviewButton=$("community-review-requests"),reportButton=$("community-review-reports");
     if(!state.community){
       title.textContent="Community-wide feed";
       description.textContent="A shared view of posts published to AstroCrown's open social feed.";
       meta.textContent="Global posts · "+state.items.length+" loaded";
       memberAction.hidden=true;
       reviewButton.hidden=true;
+      reportButton.hidden=!state.authenticated||!state.platformAdmin;
       queue.hidden=true;
+      reportQueue.hidden=true;
       return;
     }
     var space=state.community;
@@ -97,7 +104,9 @@
     meta.textContent=space.memberCount+" members · "+(space.visibility==="restricted"?"Restricted":"Public")+
       " · "+(space.membershipPolicy==="request"?"Request to join":"Open membership");
     memberAction.hidden=!state.authenticated;
+    var manager=state.platformAdmin||["owner","moderator"].includes(space.memberRole);
     reviewButton.hidden=!state.authenticated||!["owner","moderator"].includes(space.memberRole)||space.membershipPolicy!=="request";
+    reportButton.hidden=!state.authenticated||!manager;
     if(space.membershipStatus==="active"){
       memberAction.textContent=space.memberRole==="owner"?"Community owner":"Leave community";
       memberAction.disabled=space.memberRole==="owner";
@@ -208,9 +217,14 @@
     renderSpaces();
   }
   async function refreshAccount(){
-    try{var status=await api("/api/account/status");state.authenticated=status.authenticated===true;}
-    catch(_error){state.authenticated=false;}
-    if(!state.authenticated){invitations.hidden=true;queue.hidden=true;}
+    try{
+      var status=await api("/api/account/status");
+      state.authenticated=status.authenticated===true;
+      state.platformAdmin=status.admin===true;
+    }catch(_error){state.authenticated=false;state.platformAdmin=false;}
+    if(!state.authenticated){
+      invitations.hidden=true;queue.hidden=true;reportQueue.hidden=true;ownReports.hidden=true;
+    }
     updateComposer();renderHeader();
   }
   async function loadReplies(postId,target){
@@ -246,6 +260,64 @@
       queue.hidden=false;
     }catch(error){announce(error.message,"error");}
   }
+  async function loadModerationReports(){
+    if(!state.authenticated)return;
+    var path="/api/community/moderation/reports";
+    if(state.slug)path+="?community="+encodeURIComponent(state.slug);
+    try{
+      var result=await api(path);
+      reportQueue.replaceChildren(make("h4","","Moderation report queue"));
+      if(!result.reports.length)reportQueue.appendChild(make("p","community-panel-description","There are no open or in-review reports in this queue."));
+      (result.reports||[]).forEach(function(report){
+        var row=make("div","community-report-row");
+        var header=make("div","community-report-heading");
+        header.appendChild(make("strong","","Reported by "+report.reporter.handle+" · "+report.category));
+        header.appendChild(make("small","",report.status.replace("_"," ")+" · "+formatTime(report.submittedAt)));
+        row.appendChild(header);
+        if(report.target.community)row.appendChild(make("p","community-report-context","in "+report.target.community.name+" · author "+(report.target.authorHandle||"unavailable")));
+        else row.appendChild(make("p","community-report-context","global post · author "+(report.target.authorHandle||"unavailable")));
+        row.appendChild(make("p","community-report-preview",report.target.contentPreview||"The reported post is no longer available."));
+        if(report.target.deleted)row.appendChild(make("p","community-report-context","The author removed this post after it was reported."));
+        var reasonLabel=make("label","community-report-reason-label","Decision reason (required)");
+        var reason=make("input","community-input");
+        reason.type="text";reason.maxLength=500;reason.required=true;
+        reason.placeholder="Record a concise, factual reason for this action";
+        reason.setAttribute("aria-label","Moderation decision reason");
+        reason.dataset.reportReason=report.id;
+        row.appendChild(reasonLabel);row.appendChild(reason);
+        var actions=make("div","community-request-actions");
+        var available=report.status==="open"?["start_review"]:["resolve","dismiss"];
+        available.forEach(function(action){
+          var label=action==="start_review"?"Start review":action==="resolve"?"Resolve":"Dismiss";
+          var button=make("button","community-button"+(action==="dismiss"?" is-danger":" is-primary"),label);
+          button.type="button";button.dataset.reportAction=action;button.dataset.reportId=report.id;
+          actions.appendChild(button);
+        });
+        row.appendChild(actions);
+        reportQueue.appendChild(row);
+      });
+      reportQueue.hidden=false;
+    }catch(error){announce(error.message,"error");}
+  }
+
+  async function loadOwnReports(){
+    if(!state.authenticated){openAccount();return;}
+    try{
+      var result=await api("/api/community/reports/mine");
+      ownReports.replaceChildren(make("h4","","My reports"));
+      if(!result.reports.length)ownReports.appendChild(make("p","community-panel-description","You have not submitted any content reports."));
+      (result.reports||[]).forEach(function(report){
+        var row=make("div","community-own-report-row");
+        row.appendChild(make("strong","","Post report · "+report.category+" · "+report.status.replace("_"," ")));
+        row.appendChild(make("small","",formatTime(report.submittedAt)));
+        if(report.details)row.appendChild(make("p","",report.details));
+        if(report.resolution)row.appendChild(make("p","community-report-resolution","Moderator decision: "+report.resolution));
+        ownReports.appendChild(row);
+      });
+      ownReports.hidden=false;
+    }catch(error){announce(error.message,"error");}
+  }
+
   async function loadInvitations(){
     if(!state.authenticated){announce("Log in with your AstroCrown passkey to view invitations.");return;}
     try{
@@ -279,6 +351,7 @@
       if(type==="refresh"){try{await refreshSpaces();await loadCommunity(state.slug);announce("Community data refreshed.","success");}catch(error){announce(error.message,"error");}return;}
       if(type==="invitations"){await loadInvitations();return;}
       if(type==="review"){await loadRequests();return;}
+      if(type==="review-reports"){await loadModerationReports();return;}
       if(type==="more"&&state.cursor){await loadFeed(true);return;}
       if((type==="join"||type==="leave")&&state.slug){
         if(!state.authenticated){openAccount();return;}
@@ -310,6 +383,21 @@
     if(decision){
       try{await api("/api/community/communities/"+encodeURIComponent(state.slug)+"/members/"+encodeURIComponent(decision.dataset.accountId)+"/decision",{action:decision.dataset.decision});await loadRequests();await refreshSpaces();}
       catch(error){announce(error.message,"error");}
+      return;
+    }
+    var reportAction=target.closest("[data-report-action]");
+    if(reportAction){
+      var reasonInput=root.querySelector("[data-report-reason='"+reportAction.dataset.reportId+"']");
+      var decisionReason=reasonInput?reasonInput.value.trim():"";
+      if(!decisionReason){announce("Enter a decision reason before changing a report.","error");if(reasonInput)reasonInput.focus();return;}
+      try{
+        var decision=await api("/api/community/moderation/reports/"+encodeURIComponent(reportAction.dataset.reportId)+"/transition",{
+          action:reportAction.dataset.reportAction,reason:decisionReason
+        });
+        announce("Report status changed to "+decision.status.replace("_"," ")+".","success");
+        await loadModerationReports();
+        await loadOwnReports();
+      }catch(error){announce(error.message,"error");}
       return;
     }
     var invitation=target.closest("[data-invitation-action]");
@@ -356,12 +444,14 @@
   });
   document.addEventListener("astrocrown:account-status-change",function(event){
     state.authenticated=Boolean(event.detail&&event.detail.authenticated);
-    if(!state.authenticated){invitations.hidden=true;queue.hidden=true;}
+    if(!state.authenticated){invitations.hidden=true;queue.hidden=true;reportQueue.hidden=true;ownReports.hidden=true;state.platformAdmin=false;}
     updateComposer();renderHeader();
     if(state.authenticated)refreshSpaces().then(function(){return state.slug?loadCommunity(state.slug):loadFeed(false);})
       .catch(function(error){announce(error.message,"error");});
   });
   $("community-invitations-button").addEventListener("click",loadInvitations);
+  $("community-my-reports-button").addEventListener("click",loadOwnReports);
+  $("community-review-reports").addEventListener("click",loadModerationReports);
   $("community-review-requests").addEventListener("click",loadRequests);
   $("community-refresh").addEventListener("click",async function(){
     try{await refreshSpaces();await loadCommunity(state.slug);announce("Community data refreshed.","success");}

@@ -897,6 +897,7 @@
         </div>
         <div class="community-heading-actions">
           <button class="community-button" id="community-invitations-button" type="button">My invitations</button>
+          <button class="community-button" id="community-my-reports-button" type="button">My reports</button>
           <button class="community-button" id="community-refresh" type="button">Refresh</button>
         </div>
       </div>
@@ -922,11 +923,14 @@
             <div class="community-panel-actions">
               <button class="community-button is-primary" id="community-member-action" data-community-action="join" type="button" hidden>Join community</button>
               <button class="community-button" id="community-review-requests" data-community-action="review" type="button" hidden>Review requests</button>
+              <button class="community-button" id="community-review-reports" data-community-action="review-reports" type="button" hidden>Review reports</button>
             </div>
           </div>
           <p class="community-feedback" id="community-feedback" role="status" aria-live="polite" hidden></p>
           <div class="community-invitations-panel" id="community-invitations-panel" hidden></div>
           <div class="community-manager-queue" id="community-manager-queue" hidden></div>
+          <div class="community-manager-queue community-report-queue" id="community-report-queue" hidden></div>
+          <div class="community-invitations-panel community-own-reports" id="community-own-reports" hidden></div>
           <form class="community-composer" id="community-composer-form" hidden>
             <label for="community-compose-text">Start a discussion</label>
             <textarea class="community-textarea" id="community-compose-text" name="content" maxlength="10000" placeholder="Share a question, observation or piece of research…"></textarea>
