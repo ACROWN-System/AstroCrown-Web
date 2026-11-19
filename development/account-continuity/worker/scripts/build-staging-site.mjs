@@ -24,6 +24,8 @@ const allowlist = [
   "account-continuity/prototype/security-assurance.html",
   "account-continuity/prototype/terms-of-use.html",
   "account-continuity/prototype/privacy-policy.html",
+  "community-network/community-network.css",
+  "community-network/community-network.js",
 ];
 
 await rm(publicRoot, { recursive: true, force: true });
