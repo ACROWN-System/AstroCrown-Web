@@ -1,0 +1,47 @@
+name: Product Development Memory Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "development/product-memory/**"
+      - "development/README.md"
+      - ".github/workflows/product-memory-validation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "development/product-memory/**"
+      - "development/README.md"
+      - ".github/workflows/product-memory-validation.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: product-memory-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate product memory records and regression tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Compile validator and tests
+        run: python -m py_compile development/product-memory/validate.py development/product-memory/tests/test_product_memory.py
+
+      - name: Run integrity and regression tests
+        run: python -m unittest discover -s development/product-memory/tests -p "test_*.py" -v
+
+      - name: Validate committed product memory registers
+        run: python development/product-memory/validate.py
