@@ -87,12 +87,15 @@ test("Genesis TRON browser proof is pinned to its exact no-index HTTPS URL", () 
 
 test("Genesis TRON proof discovers the official TronLink provider through TIP-6963 before connecting", () => {
   assert.ok(html.includes("function isTronLinkProvider(candidate)"));
+  assert.ok(html.includes("function ensureTronLinkDiscoveryListener()"));
   assert.ok(html.includes("function discoverTronLinkProvider()"));
-  assert.ok(html.includes('window.addEventListener("TIP6963:announceProvider", onAnnounce)'));
+  assert.ok(html.includes('window.addEventListener("TIP6963:announceProvider", event => {'));
+  assert.ok(html.includes("tronLinkDiscoveryListenerInstalled = true;"));
   assert.ok(html.includes('window.dispatchEvent(new Event("TIP6963:requestProvider"))'));
-  assert.ok(html.includes('info.name === "TronLink" || info.rdns === "org.tronlink.www"'));
+  assert.ok(html.includes('info.name !== "TronLink" && info.rdns !== "org.tronlink.www"'));
   assert.ok(html.includes("provider = await discoverTronLinkProvider()"));
   assert.ok(html.includes("}, 1500);"));
+  assert.doesNotMatch(html, /removeEventListener\(["']TIP6963:announceProvider/);
   assert.match(html, /No TronLink provider announced itself to this page/);
 });
 
