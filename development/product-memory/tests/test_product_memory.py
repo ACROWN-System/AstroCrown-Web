@@ -23,7 +23,7 @@ def valid_registers():
         "status": "approved",
         "created_at": TODAY,
         "updated_at": TODAY,
-        "service_pillar": "research",
+        "service_pillar": "research_discovery",
         "problem": "Users need to investigate events.",
         "user_benefit": "They can inspect source-backed findings.",
         "distinctive_value": "The report preserves evidence and uncertainty.",
