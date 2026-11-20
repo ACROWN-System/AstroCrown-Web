@@ -162,3 +162,44 @@ This is a dependency-aware sequence, not a weighted score or a promise that all 
 - Use the minimum complexity that satisfies the requirements.
 - Do not introduce new dependencies before existing free and built-in options are evaluated.
 - Preserve rejected alternatives and superseded decisions so the reasoning history remains understandable.
+
+## 8. Public recognition, benchmarks and competitive visibility
+
+Public recognition is a development consideration, not a substitute for product quality and not a product feature in itself. AstroCrown should be designed so that its quality can be demonstrated to independent evaluators and so that the ecosystem can qualify for relevant public discovery and ranking mechanisms when eligible.
+
+The authoritative opportunity and evidence records remain in `development/verification/`. In particular:
+
+- `07-VISIBILITY-REGISTRY.md` — public discovery, algorithmic ranking, search exposure, editorial coverage, community amplification and institutional reference.
+- `08-CREDIBILITY-REGISTRY.md` — independent evaluation, methodology, reproducible evidence, scope, correction and ongoing assurance.
+- `09-ADOPTION-REGISTRY.md` — adoption mechanisms and the distinction between visibility, credibility and measured adoption.
+- `14-STRATEGIC-PRIORITIZATION.md` — opportunity scheduling by relevance, necessity, feasibility, cost and readiness without using scores as substitutes for evidence.
+- `06-OPPORTUNITY-READINESS.md` — preparation for opportunities whose timing may be unpredictable.
+
+Do not duplicate those registries in the product-memory files. Capability requirements and implementation plans should link to the relevant verification entries.
+
+### Website and digital-experience recognition
+
+Candidate pathways discussed for future qualification include Awwwards, CSS Design Awards and The Webby Awards. They must be researched for current category fit, submission requirements, judging criteria, submission fees, deadlines and eligible public URLs before being entered as active targets. A visual award submission is not a substitute for actual service functionality, accessibility, performance or trustworthiness.
+
+Build the website so that independently verifiable qualities can be demonstrated:
+- performance and Core Web Vitals, using PageSpeed Insights and field data where available;
+- accessibility, with WCAG-based evaluation and reproducible test evidence;
+- usability, responsive behaviour, security and privacy;
+- original design, interaction quality, clear content and working product journeys.
+
+### Public visibility and traffic benchmarks
+
+Potential services such as Similarweb and public accessibility indexes can provide external visibility or comparative signals. Their coverage, estimation methods, eligibility and limitations must be understood before treating a ranking as definitive. Traffic rank is not a quality, security or trust certification.
+
+### Digital-asset and Web3 discovery
+
+CoinGecko, CoinMarketCap and DefiLlama are candidate public discovery/data pathways only when the relevant asset, protocol or product genuinely meets their current listing and data requirements. Listing criteria, evidence, fees (if any), market-data definitions and current acceptance processes must be rechecked from authoritative sources before action. Do not fabricate volume, liquidity, TVL, users, trading activity or other metrics to influence rankings.
+
+### Recognition and public-claim rules
+
+- Target the highest credible position in each applicable category, but never promise a rank, award, viral outcome or timeline.
+- Preserve exact methodology, source, date, scope and limitations for every published score or ranking.
+- Distinguish an award, certification, audit, attestation, market listing, traffic estimate, editorial feature and community metric; they are not interchangeable.
+- Evaluate paid submissions against the $0 development/qualification constraints and do not incur a fee without explicit owner approval.
+- Use public recognition as evidence and distribution opportunity, not as a substitute for user value, independent assurance or adoption measurements.
+
