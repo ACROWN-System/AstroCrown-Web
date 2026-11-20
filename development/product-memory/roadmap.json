@@ -1,0 +1,352 @@
+{
+  "schema_version": 1,
+  "register": "roadmap",
+  "entries": [
+    {
+      "id": "RM-0001",
+      "title": "Complete the homepage and Genesis Programme launch experience",
+      "status": "in_progress",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "launch_critical",
+      "objective": "Finish and qualify the public website and Genesis Programme experience as the immediate user-facing entry points.",
+      "capability_refs": [
+        "CAP-0001"
+      ],
+      "decision_refs": [
+        "DEC-0003"
+      ],
+      "depends_on": [],
+      "entry_gates": [
+        "Current homepage and Genesis requirements reconciled with implementation.",
+        "Existing account, Genesis identity and financial rules reviewed."
+      ],
+      "exit_criteria": [
+        "Approved requirements implemented without unsafe activation of disabled payment routes.",
+        "Desktop and responsive/browser checks pass to the supported verification scope.",
+        "Performance, accessibility, security and regression findings are recorded and remediated or explicitly blocked."
+      ],
+      "blockers": [
+        "Canonical Navigation Protocol and plan template are not currently retrievable through the accessible project repositories; use documented development/audit fallback without claiming protocol conformance."
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "development/index-section/README.md"
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/supporter-programme/GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md"
+        }
+      ],
+      "notes": "This remains the owner's immediate launch priority."
+    },
+    {
+      "id": "RM-0002",
+      "title": "Qualify market data sources, identities and methodology",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "next",
+      "objective": "Select legally and economically viable data providers and define reproducible market data contracts.",
+      "capability_refs": [
+        "CAP-0002",
+        "CAP-0009"
+      ],
+      "decision_refs": [],
+      "depends_on": [],
+      "entry_gates": [
+        "Identify required markets, metrics and coverage.",
+        "Review free-tier, commercial-use, caching and redistribution terms."
+      ],
+      "exit_criteria": [
+        "Provider contract records include exact endpoints, data fields, quota, cost, licence and freshness.",
+        "Metric definitions and asset identity reconciliation are documented.",
+        "Fallback and unavailable-data behavior is tested."
+      ],
+      "blockers": [],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "development/verification/16-INVESTIGATION-BACKLOG.md"
+        }
+      ],
+      "notes": "No market provider is assumed approved merely because a free API exists."
+    },
+    {
+      "id": "RM-0003",
+      "title": "Prototype evidence-linked market investigations",
+      "status": "research_required",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "next",
+      "objective": "Develop a narrowly scoped investigation workflow that connects market observations to evidence, hypotheses, counter-evidence and uncertainty.",
+      "capability_refs": [
+        "CAP-0003",
+        "CAP-0008"
+      ],
+      "decision_refs": [],
+      "depends_on": [
+        "RM-0002"
+      ],
+      "entry_gates": [
+        "Data-source contracts and legal use are qualified.",
+        "Initial asset/network perimeter defined.",
+        "Methodology separates observations, correlations and causal hypotheses."
+      ],
+      "exit_criteria": [
+        "Historical case can be reproduced from preserved sources.",
+        "Competing hypotheses and counter-evidence are visible.",
+        "Independent tests measure source grounding and false-positive behaviour."
+      ],
+      "blockers": [],
+      "evidence": [
+        {
+          "kind": "external_research",
+          "reference": "SRC-0003"
+        }
+      ],
+      "notes": "Do not present an AI-generated causal narrative without evidence."
+    },
+    {
+      "id": "RM-0004",
+      "title": "Build public shareable research and dashboard publishing",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "next",
+      "objective": "Allow users to publish selected research artifacts as useful, attributable and privacy-controlled public pages.",
+      "capability_refs": [
+        "CAP-0010",
+        "CAP-0014"
+      ],
+      "decision_refs": [
+        "DEC-0004"
+      ],
+      "depends_on": [
+        "RM-0003"
+      ],
+      "entry_gates": [
+        "Research artifact schema and provenance exist.",
+        "Privacy, moderation and takedown rules are documented."
+      ],
+      "exit_criteria": [
+        "User explicitly chooses public publication.",
+        "Private wallet and workspace data remain private unless separately disclosed.",
+        "Public page shows author, update time, sources and methodology."
+      ],
+      "blockers": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner direction dated 2026-11-20: consider sharing and adoption mechanisms during development."
+        }
+      ],
+      "notes": "Candidate implementation; public publishing is not approved merely by this roadmap entry."
+    },
+    {
+      "id": "RM-0005",
+      "title": "Build the personal intelligence workspace and read-only blockchain monitoring",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "next",
+      "objective": "Provide user-controlled watchlists, saved research, read-only monitoring and useful alerts.",
+      "capability_refs": [
+        "CAP-0004",
+        "CAP-0005"
+      ],
+      "decision_refs": [],
+      "depends_on": [
+        "RM-0002",
+        "RM-0003"
+      ],
+      "entry_gates": [
+        "Account identity, privacy and permission boundaries reconciled.",
+        "Initial supported chains and data contracts qualified."
+      ],
+      "exit_criteria": [
+        "Saved objects have explicit owner and privacy scope.",
+        "Alerts have deduplication, freshness and delivery tests.",
+        "Read-only analytics do not imply custody or transaction authority."
+      ],
+      "blockers": [],
+      "evidence": [],
+      "notes": "Candidate; no portfolio or wallet data is public by default."
+    },
+    {
+      "id": "RM-0006",
+      "title": "Complete the first-party AstroCrown Community Network",
+      "status": "in_progress",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "next",
+      "objective": "Complete the first-party community product while preserving established identity, moderation and governance boundaries.",
+      "capability_refs": [
+        "CAP-0006"
+      ],
+      "decision_refs": [
+        "DEC-0005"
+      ],
+      "depends_on": [],
+      "entry_gates": [
+        "Draft Community requirements reconciled with owner decisions.",
+        "Moderation, appeals, ownership recovery and community settings policies resolved."
+      ],
+      "exit_criteria": [
+        "Remaining approved member/profile, group and communication journeys are implemented.",
+        "Security, accessibility, load, backup and concurrency tests pass.",
+        "Constitutional governance rules are approved before binding elections activate."
+      ],
+      "blockers": [
+        "GitHub PR #194 is draft and explicitly not production-ready; no production activation is inferred."
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "https://github.com/ACROWN-System/AstroCrown-Web/pull/194"
+        }
+      ],
+      "notes": "The first-party platform direction is approved; the current implementation is a development slice."
+    },
+    {
+      "id": "RM-0007",
+      "title": "Qualify public APIs, developer interfaces and AI-agent integration",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "exploratory",
+      "objective": "Expose stable, provider-neutral AstroCrown intelligence contracts to developers and authorized agents.",
+      "capability_refs": [
+        "CAP-0007",
+        "CAP-0011"
+      ],
+      "decision_refs": [],
+      "depends_on": [
+        "RM-0003",
+        "RM-0004"
+      ],
+      "entry_gates": [
+        "Internal data and research schemas stabilized.",
+        "Authentication, quota, privacy and licensing requirements documented."
+      ],
+      "exit_criteria": [
+        "Versioned API and machine-readable schemas are published.",
+        "Developer quickstart and reproducible examples pass tests.",
+        "Read-only and write-enabled scopes are separated."
+      ],
+      "blockers": [],
+      "evidence": [],
+      "notes": "No provider or MCP dependency is selected by this roadmap entry. Embeddable widgets (CAP-0011) are included in this integration qualification package."
+    },
+    {
+      "id": "RM-0008",
+      "title": "Evaluate the Living Market Laboratory differentiation and feasibility",
+      "status": "research_required",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "exploratory",
+      "objective": "Determine whether a connected market model, autonomous investigation, counterfactual simulation, continuous re-evaluation and public evidence archive can form a defensible AstroCrown product.",
+      "capability_refs": [
+        "CAP-0012"
+      ],
+      "decision_refs": [],
+      "depends_on": [
+        "RM-0002",
+        "RM-0003"
+      ],
+      "entry_gates": [
+        "Competitor capability matrix uses current official sources and real product tests where possible.",
+        "Initial market/system boundaries and evaluation tasks are specified."
+      ],
+      "exit_criteria": [
+        "Existing competitors and adjacent research systems are mapped.",
+        "A smallest useful prototype has deterministic, reproducible evaluation tasks.",
+        "Uniqueness and superiority claims are limited to evidence that survives comparison."
+      ],
+      "blockers": [],
+      "evidence": [
+        {
+          "kind": "external_research",
+          "reference": "SRC-0003"
+        },
+        {
+          "kind": "external_research",
+          "reference": "SRC-0004"
+        }
+      ],
+      "notes": "Candidate concept only; no global uniqueness claim."
+    },
+    {
+      "id": "RM-0009",
+      "title": "Evaluate historical market reconstruction and time-capsule research",
+      "status": "research_required",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "exploratory",
+      "objective": "Determine whether original timestamped data and archived sources are sufficient to reconstruct what was knowable at past dates without look-ahead bias.",
+      "capability_refs": [
+        "CAP-0013"
+      ],
+      "decision_refs": [],
+      "depends_on": [
+        "RM-0002",
+        "RM-0003",
+        "RM-0008"
+      ],
+      "entry_gates": [
+        "Historical source coverage and timestamp semantics documented.",
+        "Historical snapshot retention and correction policy defined."
+      ],
+      "exit_criteria": [
+        "A dated reconstruction can be reproduced without post-cutoff evidence.",
+        "Missing or revised source material is clearly disclosed.",
+        "Look-ahead-bias tests reject future evidence."
+      ],
+      "blockers": [],
+      "evidence": [],
+      "notes": "Candidate research direction only."
+    },
+    {
+      "id": "RM-0010",
+      "title": "Operate the Product Development Memory and its quality gates",
+      "status": "in_progress",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "launch_critical",
+      "objective": "Preserve product intent and approved decisions in a compact repository source of truth, with deterministic checks against record corruption, garbage, duplicate entries, dangling references, loops and regressions.",
+      "capability_refs": [
+        "CAP-0015"
+      ],
+      "decision_refs": [
+        "DEC-0001",
+        "DEC-0002"
+      ],
+      "depends_on": [],
+      "entry_gates": [
+        "Existing project documentation and authority boundaries inspected.",
+        "A timestamped backup exists before substantive modification."
+      ],
+      "exit_criteria": [
+        "Strategy and structured registers are checked into the repository.",
+        "The validator and negative regression suite pass.",
+        "CI runs the exact commands against changed memory files.",
+        "The merge is confirmed on main and the Active Navigation Plan is closed."
+      ],
+      "blockers": [
+        "Canonical NAVIGATION-PROTOCOL.md and NAVIGATION-PLAN-TEMPLATE.md are not retrievable from the currently accessible project repositories; the documented Development & Audit Convention and Active record fallback are being used without claiming canonical protocol conformance."
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "development/DEVELOPMENT-AND-AUDIT-CONVENTION.md"
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/nova-context-memory-optimization/README.md"
+        }
+      ],
+      "notes": "The structural gate does not replace substantive evidence review or owner approval."
+    }
+  ]
+}

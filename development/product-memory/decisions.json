@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "register": "decisions",
+  "entries": [
+    {
+      "id": "DEC-0001",
+      "title": "Establish a repository-backed AstroCrown Product Development Memory",
+      "status": "accepted",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "context": "Important product discoveries and the reasons behind development choices risk being fragmented across conversations and separate technical subsystems.",
+      "decision": "Create a structured, version-controlled product-memory hub that preserves product strategy, capabilities, research evidence, decisions, rationale and roadmap state while linking to existing authoritative records.",
+      "rationale": "A new SI or conversation should recover the important product state from Git without depending on the full conversation history. A clear boundary with existing subsystems prevents duplicate sources of truth.",
+      "alternatives": [
+        "Rely on conversation memory and continuation prompts alone.",
+        "Create one large undifferentiated project-history document.",
+        "Duplicate the existing audit, verification and technical requirements systems."
+      ],
+      "consequences": [
+        "Product ideas can accumulate with explicit status and provenance.",
+        "Decisions and their rationale remain reviewable and supersedable.",
+        "Register validation becomes a mandatory quality gate."
+      ],
+      "if_modified": "Future work can reuse verified product knowledge and trace implementation choices to their reasons.",
+      "if_not_modified": "SIs may repeat research, lose the rationale behind decisions, confuse proposals with approvals or create contradictory product plans.",
+      "capability_refs": [
+        "CAP-0001",
+        "CAP-0014"
+      ],
+      "research_refs": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner request dated 2026-11-20 to create and use the Product Development Memory."
+        }
+      ],
+      "verification": [
+        "All registers pass the deterministic validator.",
+        "Invalid records, duplicate IDs/titles, dangling references and cycles are rejected.",
+        "The repository README links to the memory and explains authority boundaries."
+      ],
+      "owner_approval": {
+        "approved": true,
+        "recorded_on": "2026-11-20",
+        "basis": "The owner explicitly approved the proposed repository-backed Product Development Memory and instructed implementation."
+      },
+      "supersedes": [],
+      "notes": "This decision approves the memory system, not every product idea entered as a candidate."
+    },
+    {
+      "id": "DEC-0002",
+      "title": "Require deterministic integrity gates against garbage entries, looping and regression",
+      "status": "accepted",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "context": "Free-form documentation alone cannot reliably prevent malformed entries, unsupported approvals, duplicate concepts, dangling references or circular dependencies.",
+      "decision": "Use strict JSON registers, controlled statuses and a standard-library validator with duplicate-key detection, exact field allowlists, unique IDs/titles, reference integrity, evidence and approval gates, DAG cycle checks and negative regression tests in CI.",
+      "rationale": "These checks are deterministic, low-cost, repeatable and independent of model interpretation. They fail closed on malformed or unsupported records.",
+      "alternatives": [
+        "Rely on an AI reviewer to notice bad entries.",
+        "Use permissive free-form JSON and periodic manual cleanup.",
+        "Introduce an external database or validation dependency before need is established."
+      ],
+      "consequences": [
+        "New records must meet the schema and provenance rules.",
+        "Cycles and duplicates are rejected before merge.",
+        "A validator defect is itself guarded by regression tests."
+      ],
+      "if_modified": "Bad or structurally unsafe memory entries fail locally and in CI before they are accepted.",
+      "if_not_modified": "The memory may accumulate garbage, contradictions, duplicate ideas, circular dependencies and silent state promotions.",
+      "capability_refs": [
+        "CAP-0001",
+        "CAP-0014"
+      ],
+      "research_refs": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner request dated 2026-11-20 to ensure the established protocol efficiently prevents garbage entry, looping and regression."
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/DEVELOPMENT-AND-AUDIT-CONVENTION.md"
+        }
+      ],
+      "verification": [
+        "Baseline register validation passes.",
+        "Unit tests demonstrate rejection of malformed, duplicate, dangling, unsupported and cyclic records.",
+        "CI executes syntax compilation, the complete test suite and validator."
+      ],
+      "owner_approval": {
+        "approved": true,
+        "recorded_on": "2026-11-20",
+        "basis": "The owner explicitly required operational verification and prevention of garbage entries, looping and regressions."
+      },
+      "supersedes": [],
+      "notes": "The gate is intentionally small and dependency-free; it does not replace substantive human/product review."
+    },
+    {
+      "id": "DEC-0003",
+      "title": "Prioritise completion of the AstroCrown homepage and Genesis Programme experience",
+      "status": "accepted",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "context": "The owner identified the public website and Genesis Programme page as urgent deliverables requiring high visual and functional quality.",
+      "decision": "Keep the homepage and Genesis Programme experience as the immediate product-development priority; do not delay them for speculative future services.",
+      "rationale": "These are the principal public entry points and the current launch/funding journey. Their accuracy, trustworthiness and usability are prerequisites for broader adoption.",
+      "alternatives": [
+        "Build all proposed platform services before finishing the public website.",
+        "Prioritise speculative AI features ahead of the core entry experience."
+      ],
+      "consequences": [
+        "Homepage and Genesis work receive the first implementation and verification attention.",
+        "Future capabilities are recorded and researched without automatically expanding immediate launch scope."
+      ],
+      "if_modified": "Development attention stays aligned with the owner’s immediate launch priority.",
+      "if_not_modified": "The team may fragment effort across future concepts while core public pages remain incomplete.",
+      "capability_refs": [
+        "CAP-0001"
+      ],
+      "research_refs": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner direction in November 2026 to complete the website and Genesis Programme page quickly and to a very high standard."
+        }
+      ],
+      "verification": [
+        "The active implementation roadmap keeps the website and Genesis experience at launch-critical priority.",
+        "Payment and transaction activation remain subject to separate explicit gates."
+      ],
+      "owner_approval": {
+        "approved": true,
+        "recorded_on": "2026-11-20",
+        "basis": "Repeated explicit owner instruction in the current project discussions."
+      },
+      "supersedes": [],
+      "notes": "This is a prioritisation decision, not a claim that the pages are complete."
+    },
+    {
+      "id": "DEC-0004",
+      "title": "Build genuine user value, repeat use and shareability into product design",
+      "status": "accepted",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "context": "The owner directed that attention, public discussion and adoption should be considered during service development rather than as a post-launch marketing exercise.",
+      "decision": "For every major capability, document the user problem, concrete benefit, reason to return, share/discovery mechanism, privacy implications and measurable adoption criteria.",
+      "rationale": "Product utility, retention and user-controlled sharing can create organic distribution; these mechanisms should be designed and tested without promising virality or using deceptive growth tactics.",
+      "alternatives": [
+        "Treat marketing and sharing as a separate post-launch activity.",
+        "Optimize only for first-visit conversion.",
+        "Use artificial urgency, vanity counters or guaranteed-growth claims."
+      ],
+      "consequences": [
+        "Shareability and repeat-use mechanisms become part of capability requirements.",
+        "Public sharing must remain optional and privacy-conscious.",
+        "Adoption is evaluated from observed behaviour, not claims."
+      ],
+      "if_modified": "The team evaluates the full adoption pathway while building each service.",
+      "if_not_modified": "Services may launch with attractive interfaces but no recurring utility or built-in discovery path.",
+      "capability_refs": [
+        "CAP-0014"
+      ],
+      "research_refs": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner direction dated 2026-11-20: consider what will make noise and what should be built into services from the start."
+        }
+      ],
+      "verification": [
+        "Each capability has non-empty user-benefit, repeat-use and distribution fields.",
+        "No public growth, ranking or virality claim is made without evidence."
+      ],
+      "owner_approval": {
+        "approved": true,
+        "recorded_on": "2026-11-20",
+        "basis": "Owner explicitly required attention and adoption considerations to be designed into development."
+      },
+      "supersedes": [],
+      "notes": "This decision does not guarantee viral success or approve any specific referral incentive."
+    },
+    {
+      "id": "DEC-0005",
+      "title": "AstroCrown owns its official community and governance platform",
+      "status": "accepted",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "context": "The owner clarified that external social networks may provide optional sharing surfaces but must not host AstroCrown's official communities or replace its own community system.",
+      "decision": "Develop AstroCrown's own first-party community, specialist-group and governance environment integrated with AstroCrown identity.",
+      "rationale": "A first-party platform preserves control over member identity, community structure, contribution records and future governance. Third-party networks remain optional distribution channels.",
+      "alternatives": [
+        "Use third-party social networks as the official community host.",
+        "Create only external community links without first-party participation."
+      ],
+      "consequences": [
+        "Community functionality must use AstroCrown identity and its own policy controls.",
+        "Governance elections require approved constitutional rules before activation."
+      ],
+      "if_modified": "Community participation and governance remain within AstroCrown's product and policy boundaries.",
+      "if_not_modified": "Official community functions would depend on external platforms and fragmented identity.",
+      "capability_refs": [
+        "CAP-0006"
+      ],
+      "research_refs": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner clarification recorded 2026-11-19: AstroCrown must build its own official social/community/governance platform."
+        }
+      ],
+      "verification": [
+        "The product architecture identifies AstroCrown as the authoritative community platform.",
+        "External platforms are described only as optional user-controlled sharing surfaces."
+      ],
+      "owner_approval": {
+        "approved": true,
+        "recorded_on": "2026-11-20",
+        "basis": "Explicit owner product direction recorded in the prior project discussion."
+      },
+      "supersedes": [],
+      "notes": "This approves product direction, not the production readiness or merger of the current Community implementation PR."
+    }
+  ]
+}
