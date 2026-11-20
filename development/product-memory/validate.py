@@ -486,7 +486,8 @@ def validate_directory(root: Path, repository_root: Path | None = None) -> list[
                 _add(errors, where, "accepted decision requires evidence")
             for evidence in decision.get("evidence", []):
                 if isinstance(evidence, dict) and evidence.get("kind") == "external_research":
-                    source = source_by_id.get(evidence.get("reference"))
+                    source_ref = evidence.get("reference")
+                    source = source_by_id.get(source_ref) if isinstance(source_ref, str) else None
                     if source and source.get("status") not in {"observed", "partial"}:
                         _add(errors, where, "accepted decision cannot rely on candidate, conflicting, stale or superseded research")
         if isinstance(approval, dict) and approval.get("approved") is True and status != "accepted":
