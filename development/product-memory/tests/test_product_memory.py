@@ -309,6 +309,13 @@ class ProductMemoryValidationTests(unittest.TestCase):
         self.write_documents()
         self.assert_invalid("unsupported capability status")
 
+    def test_non_string_nested_evidence_reference_fails_without_crashing(self):
+        self.documents["decisions"]["entries"][0]["evidence"] = [
+            {"kind": "external_research", "reference": ["SRC-0001"]}
+        ]
+        self.write_documents()
+        self.assert_invalid("reference must be a non-empty string")
+
     def test_malformed_repository_url_fails_without_crashing(self):
         self.documents["decisions"]["entries"][0]["evidence"] = [
             {"kind": "repository_record", "reference": "https://[::1/ACROWN-System/AstroCrown-Web/pull/1"}
