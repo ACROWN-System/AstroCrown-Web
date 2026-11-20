@@ -1,10 +1,11 @@
-# Active Navigation Plan — AstroCrown Product Development Memory
+# Completed Navigation Record — AstroCrown Product Development Memory
 
 **Date:** 2026-11-20  
-**Status:** ACTIVE — repository implementation and PR verification in progress  
+**Status:** COMPLETED — Product Development Memory merged and post-merge verified; canonical Navigation Protocol remains unavailable, so conformance to that unavailable protocol is BLOCKED  
 **Repository:** https://github.com/ACROWN-System/AstroCrown-Web  
-**Current implementation branch base:** `e1a374fac74d8bc02c33dec8efc25b1c83504c3a` (after verified PR #191 merge; the initial read-only reconnaissance began at `51da27b004c8f5aa94a37bd90a9521a61bedb565`).  
-**Branch:** `feature/astrocrown-product-development-memory-2026-11-20-v2`
+**Implementation base:** `e1a374fac74d8bc02c33dec8efc25b1c83504c3a` (after PR #191 merge).  
+**Product Memory merge commit:** `a630faf2659dc050c3bba0be31d84e0759d51672`  
+**Post-merge verification:** Jekyll build/deploy, Product Memory validation, OpenSSF Scorecard and workflow analysis all PASS.
 
 ## Objective
 
@@ -33,12 +34,12 @@ It must reject malformed, duplicated, unsupported or cyclic entries through dete
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/verification/README.md
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/nova-context-memory-optimization/README.md
 - [x] https://github.com/ACROWN-System/NOVA/blob/main/NOVA/ROOT-CAUSE-PREVENTION-AND-SHARED-KNOWLEDGE-GOVERNANCE.md
-- [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/ (implemented on the review branch; awaiting merge)
-- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/RECORD-GOVERNANCE.md (implemented on the review branch; awaiting merge)
-- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/validate.py (implemented; exact-head CI pending)
-- [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/tests/ (21+ positive/negative regression tests; exact count to be confirmed by CI)
-- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/.github/workflows/product-memory-validation.yml (read-only, path-scoped, SHA-pinned workflow)
-- [x] https://github.com/ACROWN-System/AstroCrown-Web/pull/195 — open PR; exact-head CI passed; independent Codex review still running.
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/ (merged in PR #195)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/RECORD-GOVERNANCE.md (merged in PR #195)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/validate.py (merged; exact-head CI passed)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/tests/ (31 positive/negative regression tests passed)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/.github/workflows/product-memory-validation.yml (merged; read-only, path-scoped, SHA-pinned workflow)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/pull/195 — merged at `a630faf2659dc050c3bba0be31d84e0759d51672` after exact-head CI and review.
 
 ## Navigation-methodology availability finding
 
@@ -229,28 +230,48 @@ Added the public-recognition and benchmark section to `PRODUCT-STRATEGY-AND-SERV
 
 ---
 
-## Exact-head verification checkpoint
+## Final implementation and post-merge verification
 
-**Pull request:** https://github.com/ACROWN-System/AstroCrown-Web/pull/195  
-**Current candidate head at this checkpoint:** `e2eefdb5955eb5040d6ce715d0018eca7741656d`  
-**Base:** `e1a374fac74d8bc02c33dec8efc25b1c83504c3a`  
-**Branch comparison:** 41 commits ahead, 0 behind; exactly 13 intended files differ from main.
+**Product Memory pull request:** https://github.com/ACROWN-System/AstroCrown-Web/pull/195  
+**Reviewed PR head:** `5ea96996b6979b1dc4a3b7fae93b4c8a6f045632`  
+**Squash merge commit:** `a630faf2659dc050c3bba0be31d84e0759d51672`  
+**Main branch confirmation:** the merge commit is the current `main` HEAD at final verification.  
+**Diff:** 13 intended files; no public homepage, account, wallet, Genesis payment or community runtime code changed.
 
-### Exact-head checks
+### Pre-merge exact-head verification
 
-- Product Development Memory Validation — PASS. Python compilation succeeded; 31 regression tests passed; committed registers validated: 15 capabilities, 5 decisions, 4 research sources, 10 roadmap packages. Output: `Product memory validation PASS: 15 capabilities, 5 decisions, 4 research, 10 roadmap; references and dependency graphs are consistent.`
+- Product Development Memory Validation — PASS: Python compilation, 31 regression tests, and all four register checks.
 - NOVA RSI Engine CI — PASS.
+- NOVA RSI CodeQL Security Analysis — PASS.
 - External Review Pipeline CI — PASS.
-- NOVA RSI CodeQL Security Analysis — RUNNING at the time of this checkpoint.
+- Independent Codex review on commit `ac14770fa7`: “Didn't find any major issues.” The only changes after that reviewed commit were documentation-only strategy/verification-record updates; those were also manually inspected.
+- Mergeability was confirmed; branch comparison was 42 commits ahead, zero behind, with 13 changed files.
 
-The earlier exact-head CodeQL run on the immediately preceding code head passed; the new run is being awaited because the strategy and plan documents changed afterwards. The initial CI failures and their root causes are preserved in the run history and above discoveries. They were corrected rather than masked.
+### Post-merge verification on main
 
-### Review and merge gate
+- Product Development Memory Validation — PASS.
+- Jekyll Pages build — PASS.
+- Pages deployment — PASS.
+- Pages build-status report — PASS.
+- OpenSSF Scorecard — PASS.
+- Merged files were independently fetched from `main`.
+- The development index links to `development/product-memory/`.
+- The four registers contain 15 capabilities, 5 decisions, 4 research records and 10 roadmap packages.
+- The timestamped backup `backup/2026.11.20-17h47mn26sc-system/development/README.md` is byte-for-byte equal to the pre-change `development/README.md` from base commit `e1a374fac74d8bc02c33dec8efc25b1c83504c3a`.
 
-The automated independent Codex code review was explicitly requested for head `e2eefdb5955eb5040d6ce715d0018eca7741656d` and was still reported as RUNNING at the time of this checkpoint. There were no submitted review threads at that inspection; this is not equivalent to a completed review with no findings. Do not merge until the review completes or the review service provides a clear terminal state, then inspect its findings and the final diff again.
+### Publication boundary
 
-No production deployment, mainnet payment activation, wallet transaction, credential change or PR #194 merge is authorized by this work.
+The standard GitHub Pages build and deployment ran as a consequence of the repository's existing post-merge publication process. The merged PR changed only `development/`, `backup/` and `.github/` paths. The Jekyll `_config.yml` excludes all three. No homepage HTML, root public asset, Cloudflare staging configuration, payment route, wallet transaction or production financial activation was changed. The standard Pages build/deployment completed successfully.
+
+### Navigation protocol limitation
+
+The canonical `NAVIGATION-PROTOCOL.md` and `NAVIGATION-PLAN-TEMPLATE.md` remain unavailable in the accessible current repositories and the formerly referenced NOVA-Core location. The task used the inspected AstroCrown Development & Audit Convention and existing Active/Completed audit-record pattern as a documented fallback. Therefore:
+
+- Product Development Memory implementation and its quality gates: **COMPLETED and verified**.
+- Conformance to the unavailable canonical Navigation Protocol/template: **BLOCKED pending recovery of the authoritative documents**.
+
+This distinction is intentional; no substitute protocol was invented and no canonical conformance claim is made.
 
 ## Verification and closure
 
-This plan remains ACTIVE until the exact PR head passes all required checks, the full diff has been reviewed, the PR is merged, and the relevant files plus merge commit are independently confirmed on `main`. Any failure remains FAIL or BLOCKED until root cause and corrective verification are recorded.
+The bounded Product Development Memory objective is complete. Implementation, deterministic validation, the 31-test regression suite, exact-head CI, review, merge and post-merge file verification all passed. The only remaining blocker is external to this completed implementation: retrieval of the canonical Navigation Protocol and plan template. Keep that limitation visible; do not reinterpret it as protocol compliance.
