@@ -10,7 +10,7 @@ from pathlib import Path
 MEMORY_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(MEMORY_DIR))
 
-from validate import validate_directory  # noqa: E402
+from validate import _check_dag, validate_directory  # noqa: E402
 
 
 TODAY = "2026-11-20"
@@ -298,6 +298,48 @@ class ProductMemoryValidationTests(unittest.TestCase):
         self.documents["capabilities"]["entries"][0]["stage"] = "whenever"
         self.write_documents()
         self.assert_invalid("unsupported capability stage")
+
+    def test_non_string_roadmap_id_fails_without_crashing(self):
+        self.documents["roadmap"]["entries"][0]["id"] = ["not", "an", "id"]
+        self.write_documents()
+        self.assert_invalid("id must match RM-NNNN")
+
+    def test_non_string_capability_status_fails_without_crashing(self):
+        self.documents["capabilities"]["entries"][0]["status"] = ["approved"]
+        self.write_documents()
+        self.assert_invalid("unsupported capability status")
+
+    def test_malformed_repository_url_fails_without_crashing(self):
+        self.documents["decisions"]["entries"][0]["evidence"] = [
+            {"kind": "repository_record", "reference": "https://[::1/ACROWN-System/AstroCrown-Web/pull/1"}
+        ]
+        self.write_documents()
+        self.assert_invalid("exact AstroCrown GitHub")
+
+    def test_malformed_research_url_fails_without_crashing(self):
+        self.documents["research"]["entries"][0]["source_url"] = "https://[::1"
+        self.write_documents()
+        self.assert_invalid("valid HTTPS URL")
+
+    def test_completed_capability_requires_repository_implementation_evidence(self):
+        self.documents["capabilities"]["entries"][0]["status"] = "completed"
+        self.write_documents()
+        self.assert_invalid("completed capability requires repository implementation evidence")
+
+    def test_completed_roadmap_requires_repository_evidence(self):
+        self.documents["roadmap"]["entries"][0]["status"] = "completed"
+        self.write_documents()
+        self.assert_invalid("completed roadmap item requires repository implementation or test evidence")
+
+    def test_iterative_cycle_check_handles_long_valid_dependency_chain(self):
+        nodes = {f"NODE-{index}" for index in range(1500)}
+        edges = {
+            f"NODE-{index}": ([f"NODE-{index - 1}"] if index > 0 else [])
+            for index in range(1500)
+        }
+        errors = []
+        _check_dag(nodes, edges, "long dependency chain", errors)
+        self.assertEqual(errors, [])
 
     def test_candidate_cannot_be_silently_marked_approved_without_decision(self):
         cap = self.documents["capabilities"]["entries"][0]
