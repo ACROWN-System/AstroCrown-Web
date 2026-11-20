@@ -10,6 +10,75 @@ function inlineScripts(source) {
   return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(match => match[1]);
 }
 
+function createTronLinkDiscoveryHarness() {
+  const source = inlineScripts(html)[0];
+  const start = source.indexOf("let discoveredTronLinkProvider = null;");
+  const end = source.indexOf("function createNonce()", start);
+  assert.ok(start >= 0 && end > start, "provider-discovery helpers must be present");
+  const helperSource = source.slice(start, end) + "\ndiscoverTronLinkProvider;";
+
+  const listeners = new Map();
+  const timers = new Map();
+  const metrics = { added: 0, removed: 0, requests: 0 };
+  let nextTimerId = 0;
+
+  const fakeWindow = {
+    tron: null,
+    addEventListener(type, listener) {
+      metrics.added += 1;
+      const current = listeners.get(type) || [];
+      current.push(listener);
+      listeners.set(type, current);
+    },
+    removeEventListener(type, listener) {
+      metrics.removed += 1;
+      const current = listeners.get(type) || [];
+      listeners.set(type, current.filter(item => item !== listener));
+    },
+    setTimeout(callback, delay) {
+      const id = ++nextTimerId;
+      timers.set(id, { callback, delay });
+      return id;
+    },
+    clearTimeout(id) {
+      timers.delete(id);
+    },
+    dispatchEvent(event) {
+      if (event.type === "TIP6963:requestProvider") metrics.requests += 1;
+      for (const listener of [...(listeners.get(event.type) || [])]) listener(event);
+      return true;
+    }
+  };
+
+  class FakeEvent {
+    constructor(type) { this.type = type; }
+  }
+
+  const discover = new Script(helperSource).runInNewContext({
+    window: fakeWindow,
+    Event: FakeEvent
+  });
+
+  return {
+    discover,
+    metrics,
+    listeners,
+    announce(info, provider) {
+      const event = {
+        type: "TIP6963:announceProvider",
+        detail: { info, provider }
+      };
+      for (const listener of [...(listeners.get(event.type) || [])]) listener(event);
+    },
+    runNextTimer() {
+      const next = timers.entries().next().value;
+      assert.ok(next, "a discovery timeout must be scheduled");
+      timers.delete(next[0]);
+      next[1].callback();
+    }
+  };
+}
+
 test("Genesis TRON browser proof is pinned to its exact no-index HTTPS URL", () => {
   assert.match(html, /<meta name="robots" content="noindex, nofollow, noarchive">/);
   assert.match(html, /const APPROVED_ORIGIN = "https:\/\/acrown-system\.github\.io"/);
@@ -25,6 +94,57 @@ test("Genesis TRON proof discovers the official TronLink provider through TIP-69
   assert.ok(html.includes("provider = await discoverTronLinkProvider()"));
   assert.ok(html.includes("}, 1500);"));
   assert.match(html, /No TronLink provider announced itself to this page/);
+});
+
+test("TIP-6963 keeps one announcement listener for the page lifetime after discovery", async () => {
+  const harness = createTronLinkDiscoveryHarness();
+  const pending = harness.discover();
+  const provider = { isTronLink: true, request: async () => [] };
+
+  assert.equal(harness.metrics.added, 1);
+  assert.equal(harness.metrics.requests, 1);
+  harness.announce({ name: "TronLink", rdns: "org.tronlink.www" }, provider);
+
+  assert.strictEqual(await pending, provider);
+  assert.equal(harness.metrics.removed, 0);
+  assert.equal(harness.listeners.get("TIP6963:announceProvider").length, 1);
+  assert.strictEqual(await harness.discover(), provider);
+  assert.equal(harness.metrics.added, 1);
+  assert.equal(harness.metrics.requests, 1);
+});
+
+test("TIP-6963 retains late announcements after timeout without accumulating listeners", async () => {
+  const harness = createTronLinkDiscoveryHarness();
+  const firstAttempt = harness.discover();
+
+  assert.equal(harness.metrics.added, 1);
+  harness.runNextTimer();
+  assert.equal(await firstAttempt, null);
+  assert.equal(harness.metrics.removed, 0);
+
+  const lateProvider = { isTronLink: true, request: async () => [] };
+  harness.announce({ name: "TronLink", rdns: "org.tronlink.www" }, lateProvider);
+
+  assert.equal(harness.listeners.get("TIP6963:announceProvider").length, 1);
+  assert.strictEqual(await harness.discover(), lateProvider);
+  assert.equal(harness.metrics.added, 1);
+  assert.equal(harness.metrics.removed, 0);
+  assert.equal(harness.metrics.requests, 1);
+});
+
+test("TIP-6963 coalesces concurrent provider-discovery attempts", async () => {
+  const harness = createTronLinkDiscoveryHarness();
+  const first = harness.discover();
+  const second = harness.discover();
+
+  assert.strictEqual(first, second);
+  assert.equal(harness.metrics.added, 1);
+  assert.equal(harness.metrics.requests, 1);
+
+  const provider = { isTronLink: true, request: async () => [] };
+  harness.announce({ name: "TronLink", rdns: "org.tronlink.www" }, provider);
+  assert.strictEqual(await first, provider);
+  assert.equal(harness.metrics.removed, 0);
 });
 
 test("Genesis TRON proof requires the discovered TronLink provider, address match, and documented Mainnet switch", () => {
