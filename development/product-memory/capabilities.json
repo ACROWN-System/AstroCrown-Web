@@ -1,0 +1,550 @@
+{
+  "schema_version": 1,
+  "register": "capabilities",
+  "entries": [
+    {
+      "id": "CAP-0001",
+      "title": "Complete the AstroCrown homepage and Genesis Programme experience",
+      "status": "approved",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "launch_experience",
+      "problem": "The primary website and Genesis Programme need to become complete, coherent, trustworthy and usable launch entry points.",
+      "user_benefit": "Visitors can understand AstroCrown, use the available services, assess the Genesis Programme accurately and complete only those account or wallet actions that are actually enabled.",
+      "distinctive_value": "A unified AstroCrown experience with a distinctive deep-space identity, transparent evidence boundaries and a clear Genesis Member identity.",
+      "stage": "launch",
+      "repeat_use": "Market and discovery services should give visitors a reason to return; Genesis status and community participation should remain meaningful after first registration.",
+      "distribution_mechanism": "Search-discoverable public pages, shareable content, public Genesis recognition where approved, and accessible service entry points.",
+      "dependencies": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner direction, 2026-11-20: finish the website and Genesis Programme page promptly and to a high standard."
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/index-section/README.md"
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/supporter-programme/GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md"
+        }
+      ],
+      "risks": [
+        "Do not present illustrative market data as live or verified.",
+        "Do not enable Genesis qualifying payments or ACROWN purchases before all owner, technical, treasury, legal and operational gates pass.",
+        "Do not imply planned privileges or future services are already available."
+      ],
+      "acceptance_criteria": [
+        "Homepage and Genesis Programme page have consistent, polished, accessible, responsive experiences.",
+        "All figures, wallet actions, payments, listings and service states accurately reflect verified operational status.",
+        "Core account, wallet and Genesis journeys pass applicable browser, security and regression tests."
+      ],
+      "decision_ref": "DEC-0003",
+      "uniqueness_claim": "not_claimed",
+      "notes": "Approved priority and outcome; exact detailed scope remains governed by existing section and Genesis requirements."
+    },
+    {
+      "id": "CAP-0002",
+      "title": "Market Intelligence",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "market_intelligence",
+      "problem": "Users need a coherent way to understand market conditions and compare assets without navigating disconnected data sources.",
+      "user_benefit": "A reliable market overview, asset directory, sector comparisons, movers and documented market context.",
+      "distinctive_value": "Transparent data provenance, comparable market context and clearly separated observations from interpretation.",
+      "stage": "next",
+      "repeat_use": "Fresh market conditions, asset discovery and comparisons can create recurring utility.",
+      "distribution_mechanism": "Public asset and sector pages with source attribution and shareable links.",
+      "dependencies": [],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "preview/index.html"
+        }
+      ],
+      "risks": [
+        "Market-data licensing and redistribution restrictions.",
+        "Provider cost, rate limits, freshness and inconsistent asset identity.",
+        "Risk of displaying synthetic or stale values as live data."
+      ],
+      "acceptance_criteria": [
+        "Every displayed market metric has a defined source, timestamp, methodology and unavailable-data behavior.",
+        "Data-provider contracts and redistribution rights are qualified before integration.",
+        "Historical and current values are distinguishable."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "The current homepage contains illustrative market content; the existence of the interface does not mean live data is connected."
+    },
+    {
+      "id": "CAP-0003",
+      "title": "Research and Discovery",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "research_discovery",
+      "problem": "Market participants need to investigate assets, protocols, events and ecosystems beyond a price chart.",
+      "user_benefit": "Source-linked project research, tokenomics examination, historical context and comparative analysis.",
+      "distinctive_value": "Research that connects raw observations, source evidence, methodology, competing explanations and uncertainty.",
+      "stage": "next",
+      "repeat_use": "Users can return to investigate new events, compare projects and follow evolving research.",
+      "distribution_mechanism": "Public research dossiers, citations, data visualisations and author-attributed pages.",
+      "dependencies": [
+        "CAP-0002"
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "development/verification/16-INVESTIGATION-BACKLOG.md"
+        }
+      ],
+      "risks": [
+        "Research claims can become outdated or overstate what sources establish.",
+        "Entity resolution and source independence may be incomplete.",
+        "Research quality needs explicit review and correction processes."
+      ],
+      "acceptance_criteria": [
+        "Important claims link to dated primary or otherwise authoritative evidence.",
+        "Conflicts, unknowns and rejected hypotheses remain visible.",
+        "A published research item has a reproducible method and correction history."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate service; scope and first research vertical remain to be validated."
+    },
+    {
+      "id": "CAP-0004",
+      "title": "Personal Intelligence Workspace",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "personal_workspace",
+      "problem": "Users lack a persistent place to organise market interests, research and monitoring preferences across AstroCrown services.",
+      "user_benefit": "Watchlists, saved research, alerts, comparisons and personalised dashboards.",
+      "distinctive_value": "A unified workspace whose privacy controls and provenance are consistent across the platform.",
+      "stage": "next",
+      "repeat_use": "Personal watchlists, saved work and relevant alerts create recurring use.",
+      "distribution_mechanism": "User-controlled public sharing of selected watchlists or dashboards; private data remains private by default.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0003"
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "preview/index.html"
+        }
+      ],
+      "risks": [
+        "Private holdings, wallet addresses and personal research must not leak through public sharing.",
+        "Alerts need reliable freshness and abuse controls.",
+        "Account and recovery boundaries must remain explicit."
+      ],
+      "acceptance_criteria": [
+        "Private data is never published without explicit user action and visible scope.",
+        "Saved objects have stable ownership and access controls.",
+        "Notifications distinguish verified events from inferred signals."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate; the exact account/session implementation must follow the canonical account requirements."
+    },
+    {
+      "id": "CAP-0005",
+      "title": "Blockchain Intelligence",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "blockchain_intelligence",
+      "problem": "Users need to understand on-chain activity and network relationships rather than relying only on market-price movements.",
+      "user_benefit": "Read-only wallet, transfer, contract, protocol and network activity research with explorer-linked evidence.",
+      "distinctive_value": "Cross-chain observation with explicit identity confidence, provenance, limitations and separation of ownership claims from address activity.",
+      "stage": "next",
+      "repeat_use": "Monitoring selected networks, addresses, contracts and protocol events.",
+      "distribution_mechanism": "Shareable read-only investigation reports and network visualisations.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0003"
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "development/verification/16-INVESTIGATION-BACKLOG.md"
+        }
+      ],
+      "risks": [
+        "Address attribution false positives.",
+        "Chain data coverage and provider licensing.",
+        "Sensitive wallet/portfolio privacy.",
+        "Read-only analytics must not accidentally expose transaction execution."
+      ],
+      "acceptance_criteria": [
+        "Every transaction observation links to the canonical explorer and chain.",
+        "Attribution confidence and alternative explanations are disclosed.",
+        "No signing, custody or transaction execution is implied by read-only monitoring."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate service; initial network coverage and providers require qualification."
+    },
+    {
+      "id": "CAP-0006",
+      "title": "AstroCrown First-Party Community and Knowledge Network",
+      "status": "approved",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "community_knowledge",
+      "problem": "AstroCrown needs its own authoritative place for members to publish, discuss, collaborate and participate in specialist communities and governance.",
+      "user_benefit": "First-party profiles, posts, specialist groups, discussions, contribution histories and transparent community processes.",
+      "distinctive_value": "A community and knowledge network integrated with AstroCrown identity, services and governance rather than relying on third-party platforms as the official community.",
+      "stage": "next",
+      "repeat_use": "Ongoing discussions, research collaboration, group activity and member participation.",
+      "distribution_mechanism": "Public posts, public profiles and shareable discussions where user privacy and moderation rules permit.",
+      "dependencies": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner product direction recorded 2026-11-19: AstroCrown must build its own official social, community and governance platform."
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/index.html"
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/account-continuity/worker/src/community.js"
+        }
+      ],
+      "risks": [
+        "Moderation, appeals, privacy and abuse handling require complete policy.",
+        "Council elections require approved constitutional rules.",
+        "The current Community PR is a draft development slice, not production readiness."
+      ],
+      "acceptance_criteria": [
+        "AstroCrown remains the authoritative community platform.",
+        "External social networks are optional sharing surfaces only.",
+        "Identity, moderation, privacy and governance rules are explicit before public activation."
+      ],
+      "decision_ref": "DEC-0005",
+      "uniqueness_claim": "not_claimed",
+      "notes": "Product direction approved; current implementation and remaining requirements are tracked separately in the Community PR and its audit record."
+    },
+    {
+      "id": "CAP-0007",
+      "title": "Developer and Integration Infrastructure",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "developer_integrations",
+      "problem": "External developers, researchers and AI systems may want to consume AstroCrown data and capabilities without using the website UI.",
+      "user_benefit": "Documented APIs, data exports, embeddable components, SDKs and machine-readable interfaces.",
+      "distinctive_value": "Provider-neutral, provenance-preserving interfaces built around AstroCrown's own verified intelligence and methodologies.",
+      "stage": "future",
+      "repeat_use": "External integrations can make AstroCrown useful inside other products and workflows.",
+      "distribution_mechanism": "Developer integrations, embedded widgets and machine-readable research endpoints.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0003",
+        "CAP-0010"
+      ],
+      "evidence": [
+        {
+          "kind": "external_research",
+          "reference": "SRC-0002"
+        }
+      ],
+      "risks": [
+        "API abuse and quota exhaustion.",
+        "Licensing and redistribution rights.",
+        "Data provenance and schema versioning.",
+        "MCP/API responses must not overstate confidence or bypass privacy controls."
+      ],
+      "acceptance_criteria": [
+        "Stable versioned contracts with documented authentication, quotas and provenance.",
+        "Provider and model adapters remain replaceable.",
+        "Read-only and write-capable scopes are separated."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate; implement only after a stable internal service contract exists."
+    },
+    {
+      "id": "CAP-0008",
+      "title": "Why Is This Moving? Evidence-Linked Market Investigation",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "market_intelligence",
+      "problem": "A price move alone does not explain the underlying observable developments or the evidence supporting possible explanations.",
+      "user_benefit": "An investigation that links market changes to on-chain observations, liquidity, protocol events, governance, news and competing explanations.",
+      "distinctive_value": "A user-facing chain from observation to hypothesis, evidence, contradiction, uncertainty and update history.",
+      "stage": "next",
+      "repeat_use": "Users can open investigations when meaningful market events occur and follow subsequent evidence.",
+      "distribution_mechanism": "Interactive evidence maps and shareable investigation dossiers.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0003",
+        "CAP-0005"
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "preview/index.html"
+        },
+        {
+          "kind": "external_research",
+          "reference": "SRC-0003"
+        }
+      ],
+      "risks": [
+        "Correlation is not causation.",
+        "Incomplete data and source dependencies can create false explanations.",
+        "AI-generated narratives must be independently checked."
+      ],
+      "acceptance_criteria": [
+        "Observed facts, correlations, causal hypotheses and unknowns are visually distinct.",
+        "Each claim links to evidence and observation time.",
+        "Competing hypotheses and evidence against the leading explanation are included."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate signature feature; should evolve the existing Influence Map only after data contracts and methodologies are qualified."
+    },
+    {
+      "id": "CAP-0009",
+      "title": "Transparent AstroCrown Market Intelligence Indices",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "market_intelligence",
+      "problem": "Generic sentiment or influence scores are difficult to evaluate when their inputs, methodology and historical revisions are hidden.",
+      "user_benefit": "Reproducible indices with source definitions, weights, methodology versions, data coverage and historical snapshots.",
+      "distinctive_value": "An inspectable methodology that can be independently reconstructed and evaluated.",
+      "stage": "next",
+      "repeat_use": "Historical context and updated market conditions provide recurring utility.",
+      "distribution_mechanism": "Public index pages, datasets, methodology documents and shareable snapshots.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0003"
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "preview/index.html"
+        }
+      ],
+      "risks": [
+        "Indicator selection or weights may be arbitrary.",
+        "Historical data may be revised or incomplete.",
+        "Users may mistake descriptive indicators for forecasts."
+      ],
+      "acceptance_criteria": [
+        "Every calculation is versioned and reproducible.",
+        "Input sources, coverage and transformations are documented.",
+        "No prediction or investment-return guarantee is implied."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate extension of Fear & Greed Consensus and Influence Map concepts; methodology not yet selected."
+    },
+    {
+      "id": "CAP-0010",
+      "title": "Public Shareable Research and Dashboards",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "research_distribution",
+      "problem": "Useful user-created research is often trapped in private workspaces and cannot easily introduce others to its underlying service.",
+      "user_benefit": "Read-only public research pages and dashboards with clear author, date, sources and methodology.",
+      "distinctive_value": "User-created work becomes a durable, attributable and verifiable AstroCrown resource.",
+      "stage": "next",
+      "repeat_use": "Authors can update research; readers can follow topics and create their own investigations.",
+      "distribution_mechanism": "Unique URLs, social previews, embeds and public discovery pages.",
+      "dependencies": [
+        "CAP-0003"
+      ],
+      "evidence": [
+        {
+          "kind": "external_research",
+          "reference": "SRC-0002"
+        }
+      ],
+      "risks": [
+        "Private wallet or portfolio data exposure.",
+        "Public content abuse and unmoderated financial claims.",
+        "Search indexing stale or misleading research."
+      ],
+      "acceptance_criteria": [
+        "Publishing is explicit and scoped; private is the default.",
+        "Public content contains provenance, timestamps and revision state.",
+        "Shared pages are useful without forcing account creation before value is visible."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate growth mechanism; privacy and moderation requirements are mandatory."
+    },
+    {
+      "id": "CAP-0011",
+      "title": "Embeddable AstroCrown Intelligence Widgets",
+      "status": "candidate",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "developer_integrations",
+      "problem": "AstroCrown intelligence cannot reach audiences who primarily consume information on other websites.",
+      "user_benefit": "Third-party publishers can embed selected AstroCrown market summaries, signals and visualisations with source attribution.",
+      "distinctive_value": "AstroCrown-branded intelligence that sends interested readers back to the underlying research.",
+      "stage": "future",
+      "repeat_use": "External publishers can display updated information on their own pages.",
+      "distribution_mechanism": "Embeddable web components or iframe widgets with clear attribution and link-back.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0008",
+        "CAP-0009"
+      ],
+      "evidence": [
+        {
+          "kind": "external_research",
+          "reference": "SRC-0001"
+        },
+        {
+          "kind": "external_research",
+          "reference": "SRC-0002"
+        }
+      ],
+      "risks": [
+        "Embedding provider licensing and attribution terms.",
+        "Cross-origin security, privacy and performance.",
+        "Data costs can scale with external views."
+      ],
+      "acceptance_criteria": [
+        "Widgets expose only data that AstroCrown is authorized to redistribute.",
+        "Attribution, timestamp and link-back are built in.",
+        "Caching and quotas protect provider and infrastructure limits."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "The embed format is established elsewhere; differentiation must come from AstroCrown-owned intelligence, not the existence of an iframe."
+    },
+    {
+      "id": "CAP-0012",
+      "title": "AstroCrown Living Market Laboratory",
+      "status": "research_required",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "flagship_research",
+      "problem": "Users cannot easily explore a continuously updated, connected model of digital-asset events, investigate causal hypotheses, test counterfactuals and see how conclusions change as evidence arrives.",
+      "user_benefit": "A continuously updated research environment linking assets, networks, protocols, events and evidence with agent-assisted investigation and scenario exploration.",
+      "distinctive_value": "Potential integration of a persistent ecosystem model, autonomous evidence-seeking investigation, counterfactual simulation, continuous re-evaluation and a public versioned archive.",
+      "stage": "future",
+      "repeat_use": "Users can follow investigations, test scenarios and revisit updated conclusions as new evidence becomes available.",
+      "distribution_mechanism": "Public investigation timelines, evidence graphs, scenario comparisons and reproducible research dossiers.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0003",
+        "CAP-0005",
+        "CAP-0008",
+        "CAP-0009"
+      ],
+      "evidence": [
+        {
+          "kind": "external_research",
+          "reference": "SRC-0003"
+        },
+        {
+          "kind": "external_research",
+          "reference": "SRC-0004"
+        }
+      ],
+      "risks": [
+        "Several component capabilities already exist in competing products.",
+        "A true digital twin of the entire market is infeasible without explicit scope and data coverage.",
+        "Simulation outputs can be mistaken for predictions.",
+        "Agentic research may produce unsupported conclusions or source loops."
+      ],
+      "acceptance_criteria": [
+        "Define a narrow, measurable initial ecosystem perimeter.",
+        "Preserve source snapshots, temporal cutoffs and provenance.",
+        "Separate observations, hypotheses, simulations and realized outcomes.",
+        "Use independent verification and explicit counter-evidence.",
+        "Benchmark against current competitor capabilities before public differentiation claims."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "unverified",
+      "notes": "High-potential flagship candidate, not an approved implementation requirement and not proven globally unique."
+    },
+    {
+      "id": "CAP-0013",
+      "title": "AstroCrown Market Time Machine",
+      "status": "research_required",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "flagship_research",
+      "problem": "Retrospective analysis can suffer from hindsight bias and data leakage when current conclusions use information unavailable at the historical date.",
+      "user_benefit": "Reconstruct what evidence was available at a chosen historical cutoff and compare the historical analysis with subsequent outcomes.",
+      "distinctive_value": "Time-bounded, provenance-preserving reconstruction that distinguishes what was knowable then from what became known later.",
+      "stage": "future",
+      "repeat_use": "Historical event analysis, model evaluation and research audit.",
+      "distribution_mechanism": "Shareable time-capsule investigations and reproducible historical reports.",
+      "dependencies": [
+        "CAP-0002",
+        "CAP-0003",
+        "CAP-0012"
+      ],
+      "evidence": [],
+      "risks": [
+        "Historical feeds may not preserve their original versions.",
+        "Timestamp granularity and publication-time accuracy may be insufficient.",
+        "Survivorship and look-ahead bias can invalidate conclusions."
+      ],
+      "acceptance_criteria": [
+        "Historical cutoff is enforced across all evidence retrieval.",
+        "Original source timestamps and snapshot versions are preserved.",
+        "Unavailable historical evidence is explicitly marked rather than reconstructed by guesswork."
+      ],
+      "decision_ref": null,
+      "uniqueness_claim": "not_claimed",
+      "notes": "Candidate extension of the Living Market Laboratory; requires historical-data feasibility research."
+    },
+    {
+      "id": "CAP-0014",
+      "title": "Built-In Product Distribution and Adoption Mechanisms",
+      "status": "approved",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "cross_cutting",
+      "problem": "A product that is useful but difficult to discover, share or revisit may fail to achieve meaningful adoption.",
+      "user_benefit": "Users can share useful work, discover public research, follow relevant activity and return to services that evolve over time.",
+      "distinctive_value": "Distribution is designed into services and data architecture rather than treated only as post-launch marketing.",
+      "stage": "all_stages",
+      "repeat_use": "Each service must establish a genuine recurring-use reason appropriate to its purpose.",
+      "distribution_mechanism": "Public service pages, shareable results, public profiles, optional embeds, citations and user-controlled sharing.",
+      "dependencies": [
+        "CAP-0003",
+        "CAP-0006",
+        "CAP-0010",
+        "CAP-0011"
+      ],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner direction, 2026-11-20: consider what creates public attention and adoption during development, not after."
+        }
+      ],
+      "risks": [
+        "Do not promise virality or guaranteed growth.",
+        "Do not use fake urgency, fake counters or deceptive sharing incentives.",
+        "Privacy settings and moderation can limit public propagation by design."
+      ],
+      "acceptance_criteria": [
+        "Each major service records its user value, repeat-use mechanism and distribution mechanism.",
+        "Public sharing is user-controlled and privacy-preserving.",
+        "Adoption performance is measured with real activation, retention, referral and sharing data."
+      ],
+      "decision_ref": "DEC-0004",
+      "uniqueness_claim": "not_claimed",
+      "notes": "Approved cross-cutting design requirement; the specific channels and mechanics remain service-dependent."
+    }
+  ]
+}
