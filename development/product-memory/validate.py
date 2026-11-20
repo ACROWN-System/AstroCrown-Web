@@ -171,7 +171,7 @@ def _check_common(
             _add(errors, where, f"unknown fields (possible garbage): {', '.join(sorted(unknown))}")
 
         identifier = raw.get("id")
-        if not isinstance(identifier, str) or not re.fullmatch(rf"{prefix}-\d{4}", identifier):
+        if not isinstance(identifier, str) or not re.fullmatch(rf"{prefix}-\d{{4}}", identifier):
             _add(errors, where, f"id must match {prefix}-NNNN")
         elif identifier in seen_ids:
             _add(errors, where, f"duplicate identifier {identifier}")
