@@ -309,6 +309,11 @@ class ProductMemoryValidationTests(unittest.TestCase):
         self.write_documents()
         self.assert_invalid("unsupported capability status")
 
+    def test_non_string_linked_research_status_fails_without_crashing(self):
+        self.documents["research"]["entries"][0]["status"] = ["observed"]
+        self.write_documents()
+        self.assert_invalid("accepted decision cannot rely on candidate")
+
     def test_non_string_nested_evidence_reference_fails_without_crashing(self):
         self.documents["decisions"]["entries"][0]["evidence"] = [
             {"kind": "external_research", "reference": ["SRC-0001"]}
