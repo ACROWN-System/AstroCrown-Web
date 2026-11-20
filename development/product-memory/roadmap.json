@@ -204,7 +204,7 @@
       "evidence": [
         {
           "kind": "repository_record",
-          "reference": "GitHub PR #194 — draft Community Network foundation"
+          "reference": "https://github.com/ACROWN-System/AstroCrown-Web/pull/194"
         }
       ],
       "notes": "The first-party platform direction is approved; the current implementation is a development slice."
