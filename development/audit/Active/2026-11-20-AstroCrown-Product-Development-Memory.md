@@ -3,8 +3,8 @@
 **Date:** 2026-11-20  
 **Status:** ACTIVE — repository implementation and PR verification in progress  
 **Repository:** https://github.com/ACROWN-System/AstroCrown-Web  
-**Base revision:** `51da27b004c8f5aa94a37bd90a9521a61bedb565`  
-**Branch:** `feature/astrocrown-product-development-memory-2026-11-20`
+**Current implementation branch base:** `e1a374fac74d8bc02c33dec8efc25b1c83504c3a` (after verified PR #191 merge; the initial read-only reconnaissance began at `51da27b004c8f5aa94a37bd90a9521a61bedb565`).  
+**Branch:** `feature/astrocrown-product-development-memory-2026-11-20-v2`
 
 ## Objective
 
@@ -33,12 +33,12 @@ It must reject malformed, duplicated, unsupported or cyclic entries through dete
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/verification/README.md
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/nova-context-memory-optimization/README.md
 - [x] https://github.com/ACROWN-System/NOVA/blob/main/NOVA/ROOT-CAUSE-PREVENTION-AND-SHARED-KNOWLEDGE-GOVERNANCE.md
-- [ ] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/
-- [ ] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/RECORD-GOVERNANCE.md
-- [ ] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/validate.py
-- [ ] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/tests/
-- [ ] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/.github/workflows/product-memory-validation.yml
-- [ ] https://github.com/ACROWN-System/AstroCrown-Web/pull/
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/ (implemented on the review branch; awaiting merge)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/RECORD-GOVERNANCE.md (implemented on the review branch; awaiting merge)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/validate.py (implemented; exact-head CI pending)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/tests/ (21+ positive/negative regression tests; exact count to be confirmed by CI)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/.github/workflows/product-memory-validation.yml (read-only, path-scoped, SHA-pinned workflow)
+- [ ] Product Development Memory pull request — not yet opened
 
 ## Navigation-methodology availability finding
 
@@ -113,6 +113,43 @@ AstroCrown gains a portable source of product intent and decision rationale, a s
 ## IF not modified
 
 Product strategy and important design rationale remain fragmented across conversations and subsystem documents. New SIs may repeat research, confuse candidate ideas with approved requirements, lose why alternatives were rejected, introduce duplicate or contradictory entries, or create circular dependencies and regressions.
+
+
+### Discovery:
+
+PR #191 was verified and merged after review found a material TIP-6963 lifecycle defect. The product-memory branch initially based on the pre-merge main commit would therefore have been one commit behind and could have included the unrelated PR history if merged carelessly.
+
+#### Evidence:
+
+- PR #191 merged as `e1a374fac74d8bc02c33dec8efc25b1c83504c3a` after all five exact-head checks passed.
+- The original product-memory branch compared as behind/diverged after that merge.
+- The product-memory files were re-created on a new branch directly from the new main commit; the new branch comparison reports 13 intended changed files, 0 commits behind.
+
+### Decision:
+
+Do not merge the old branch. Use `feature/astrocrown-product-development-memory-2026-11-20-v2` based directly on the merged main commit.
+
+### Action:
+
+Recreated the 13 intended product-memory changes on the new branch. Verified the timestamped backup matches the pre-change `development/README.md` byte-for-byte. No Genesis PR files are included in the Product Development Memory diff.
+
+---
+
+### Discovery:
+
+Repository-relative evidence paths must resolve from the repository root rather than from `development/product-memory/` where the JSON registers are stored.
+
+#### Evidence:
+
+The first validator draft used the register directory as the base for resolving repository-relative evidence. Code review identified that this would reject valid paths such as `development/index-section/README.md` during the real CI run.
+
+### Decision:
+
+Separate the register directory from the repository root in the validator. The CLI derives the repository root from the validator's location; unit tests may inject a temporary repository root.
+
+### Action:
+
+Updated the validator and added a positive regression test proving a valid repository-relative file resolves, while the existing negative test continues to reject a missing file.
 
 ## Verification and closure
 
