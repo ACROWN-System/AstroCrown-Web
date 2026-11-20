@@ -123,12 +123,12 @@ def _string_list(
     if not isinstance(value, list) or (nonempty_list and not value):
         _add(errors, where, f"{key} must be a {'non-empty ' if nonempty_list else ''}list")
         return []
-    if any(not isinstance(item, str) or not item.strip() for item in value):
+    valid_items = [item for item in value if isinstance(item, str) and item.strip()]
+    if len(valid_items) != len(value):
         _add(errors, where, f"{key} items must be non-empty strings")
-        return []
-    if unique and len(value) != len(set(value)):
+    if unique and len(valid_items) != len(set(valid_items)):
         _add(errors, where, f"{key} contains duplicate values")
-    return value
+    return valid_items
 
 
 def _valid_date(value: object) -> bool:
@@ -210,7 +210,7 @@ def _validate_evidence(
                 _add(errors, location, f"unknown fields: {', '.join(sorted(unknown))}")
         kind = evidence.get("kind")
         reference = evidence.get("reference")
-        if kind not in EVIDENCE_KINDS:
+        if not isinstance(kind, str) or kind not in EVIDENCE_KINDS:
             _add(errors, location, "kind must be owner_direction, repository_record or external_research")
         if not isinstance(reference, str) or not reference.strip():
             _add(errors, location, "reference must be a non-empty string")
@@ -270,8 +270,8 @@ def validate_directory(root: Path) -> list[str]:
             continue
         if set(document) != {"schema_version", "register", "entries"}:
             _add(errors, filename, "top-level fields must be exactly schema_version, register, entries")
-        if document.get("schema_version") != 1:
-            _add(errors, filename, "schema_version must equal 1")
+        if type(document.get("schema_version")) is not int or document.get("schema_version") != 1:
+            _add(errors, filename, "schema_version must equal integer 1")
         if document.get("register") != register:
             _add(errors, filename, f"register must equal {register!r}")
         entries = document.get("entries")
@@ -316,31 +316,28 @@ def validate_directory(root: Path) -> list[str]:
             "stage", "repeat_use", "distribution_mechanism", "notes",
         ):
             _string(cap, field, where, errors)
-        for field in ("risks", "acceptance_criteria", "dependencies"):
-            _string_list(cap, field, where, errors,
-                         nonempty_list=field in {"risks", "acceptance_criteria"})
-        deps = cap.get("dependencies", [])
-        if not isinstance(deps, list):
-            deps = []
+        _string_list(cap, "risks", where, errors, nonempty_list=True)
+        _string_list(cap, "acceptance_criteria", where, errors, nonempty_list=True)
+        deps = _string_list(cap, "dependencies", where, errors)
         cap_dependency_edges[str(cap.get("id"))] = deps
         for dependency in deps:
             if dependency not in cap_ids:
                 _add(errors, where, f"unknown capability dependency {dependency}")
         decision_ref = cap.get("decision_ref")
         if decision_ref is not None:
-            if decision_ref not in decision_ids:
+            if not isinstance(decision_ref, str) or decision_ref not in decision_ids:
                 _add(errors, where, f"unresolved decision_ref {decision_ref}")
             else:
                 cap_decision_refs.add(decision_ref)
         status = cap.get("status")
-        if status not in CAPABILITY_STATUSES:
+        if not isinstance(status, str) or status not in CAPABILITY_STATUSES:
             _add(errors, where, f"unsupported capability status {status!r}")
         if status in {"approved", "completed"}:
             if not decision_ref:
                 _add(errors, where, f"{status} capability requires an accepted decision_ref")
             if not cap.get("evidence"):
                 _add(errors, where, f"{status} capability requires evidence")
-        if cap.get("uniqueness_claim") not in {"not_claimed", "unverified", "verified"}:
+        if not isinstance(cap.get("uniqueness_claim"), str) or cap.get("uniqueness_claim") not in {"not_claimed", "unverified", "verified"}:
             _add(errors, where, "uniqueness_claim must be not_claimed, unverified or verified")
         used_sources |= _validate_evidence(cap.get("evidence"), where, source_ids, errors)
 
@@ -353,19 +350,21 @@ def validate_directory(root: Path) -> list[str]:
             "context", "decision", "rationale", "if_modified", "if_not_modified", "notes",
         ):
             _string(decision, field, where, errors)
-        for field in ("alternatives", "consequences", "capability_refs", "research_refs", "verification", "supersedes"):
-            _string_list(decision, field, where, errors,
-                         nonempty_list=field in {"alternatives", "consequences", "verification"})
-        for ref in decision.get("capability_refs", []):
+        alternatives = _string_list(decision, "alternatives", where, errors, nonempty_list=True)
+        _string_list(decision, "consequences", where, errors, nonempty_list=True)
+        decision_cap_refs = _string_list(decision, "capability_refs", where, errors)
+        decision_source_refs = _string_list(decision, "research_refs", where, errors)
+        _string_list(decision, "verification", where, errors, nonempty_list=True)
+        supersedes = _string_list(decision, "supersedes", where, errors)
+        for ref in decision_cap_refs:
             if ref not in cap_ids:
                 _add(errors, where, f"unresolved capability reference {ref}")
-        for ref in decision.get("research_refs", []):
+        for ref in decision_source_refs:
             if ref not in source_ids:
                 _add(errors, where, f"unresolved research reference {ref}")
             else:
                 used_sources.add(ref)
-        supersedes = decision.get("supersedes", [])
-        decision_edges[str(decision.get("id"))] = supersedes if isinstance(supersedes, list) else []
+        decision_edges[str(decision.get("id"))] = supersedes
         for ref in decision_edges[str(decision.get("id"))]:
             if ref not in decision_ids:
                 _add(errors, where, f"unresolved superseded decision {ref}")
@@ -380,7 +379,7 @@ def validate_directory(root: Path) -> list[str]:
             if not isinstance(approval.get("basis"), str) or not approval.get("basis", "").strip():
                 _add(errors, where, "owner_approval.basis must be non-empty")
         status = decision.get("status")
-        if status not in DECISION_STATUSES:
+        if not isinstance(status, str) or status not in DECISION_STATUSES:
             _add(errors, where, f"unsupported decision status {status!r}")
         if status == "accepted":
             if not isinstance(approval, dict) or approval.get("approved") is not True:
@@ -397,13 +396,16 @@ def validate_directory(root: Path) -> list[str]:
         where = f"research[{index}]"
         for field in ("publisher", "source_type", "source_url", "accessed_on", "claim_supported", "license_note"):
             _string(source, field, where, errors)
-        for field in ("observations", "limitations", "supports_capabilities", "supports_decisions"):
-            _string_list(source, field, where, errors,
-                         nonempty_list=field in {"observations", "limitations", "supports_capabilities"})
-        if source.get("status") not in RESEARCH_STATUSES:
-            _add(errors, where, f"unsupported research status {source.get('status')!r}")
-        if source.get("source_type") not in SOURCE_TYPES:
-            _add(errors, where, f"unsupported source_type {source.get('source_type')!r}")
+        _string_list(source, "observations", where, errors, nonempty_list=True)
+        _string_list(source, "limitations", where, errors, nonempty_list=True)
+        supported_caps = _string_list(source, "supports_capabilities", where, errors, nonempty_list=True)
+        supported_decisions = _string_list(source, "supports_decisions", where, errors)
+        source_status = source.get("status")
+        source_type = source.get("source_type")
+        if not isinstance(source_status, str) or source_status not in RESEARCH_STATUSES:
+            _add(errors, where, f"unsupported research status {source_status!r}")
+        if not isinstance(source_type, str) or source_type not in SOURCE_TYPES:
+            _add(errors, where, f"unsupported source_type {source_type!r}")
         if not _valid_date(source.get("accessed_on")):
             _add(errors, where, "accessed_on must be ISO YYYY-MM-DD")
         parsed = urlparse(str(source.get("source_url", "")))
@@ -411,36 +413,44 @@ def validate_directory(root: Path) -> list[str]:
             _add(errors, where, "source_url must be a valid HTTPS URL without embedded credentials")
         if not isinstance(source.get("independent_verification"), bool):
             _add(errors, where, "independent_verification must be boolean")
-        for ref in source.get("supports_capabilities", []):
+        for ref in supported_caps:
             if ref not in cap_ids:
                 _add(errors, where, f"unresolved supported capability {ref}")
-        for ref in source.get("supports_decisions", []):
+        for ref in supported_decisions:
             if ref not in decision_ids:
                 _add(errors, where, f"unresolved supported decision {ref}")
+            else:
+                used_decisions.add(ref)
+        if supported_caps or supported_decisions:
+            used_sources.add(str(source.get("id")))
 
     for index, item in enumerate(roadmap):
         where = f"roadmap[{index}]"
         for field in ("objective", "notes"):
             _string(item, field, where, errors)
-        for field in ("capability_refs", "decision_refs", "depends_on", "entry_gates", "exit_criteria", "blockers"):
-            _string_list(item, field, where, errors,
-                         nonempty_list=field in {"capability_refs", "entry_gates", "exit_criteria"})
+        item_cap_refs = _string_list(item, "capability_refs", where, errors, nonempty_list=True)
+        item_decision_refs = _string_list(item, "decision_refs", where, errors)
+        item_dependencies = _string_list(item, "depends_on", where, errors)
+        _string_list(item, "entry_gates", where, errors, nonempty_list=True)
+        _string_list(item, "exit_criteria", where, errors, nonempty_list=True)
+        _string_list(item, "blockers", where, errors)
         status = item.get("status")
-        if status not in ROADMAP_STATUSES:
+        priority = item.get("priority")
+        if not isinstance(status, str) or status not in ROADMAP_STATUSES:
             _add(errors, where, f"unsupported roadmap status {status!r}")
-        if item.get("priority") not in PRIORITIES:
-            _add(errors, where, f"unsupported priority {item.get('priority')!r}")
-        for ref in item.get("capability_refs", []):
+        if not isinstance(priority, str) or priority not in PRIORITIES:
+            _add(errors, where, f"unsupported priority {priority!r}")
+        for ref in item_cap_refs:
             if ref not in cap_ids:
                 _add(errors, where, f"unresolved capability reference {ref}")
             else:
                 cap_roadmap_refs.add(ref)
-        for ref in item.get("decision_refs", []):
+        for ref in item_decision_refs:
             if ref not in decision_ids:
                 _add(errors, where, f"unresolved decision reference {ref}")
             else:
                 used_decisions.add(ref)
-        for ref in item.get("depends_on", []):
+        for ref in item_dependencies:
             if ref not in roadmap_ids:
                 _add(errors, where, f"unresolved roadmap dependency {ref}")
         if status == "completed" and not item.get("evidence"):
@@ -449,8 +459,8 @@ def validate_directory(root: Path) -> list[str]:
 
     roadmap_edges: dict[str, list[str]] = {}
     for item in roadmap:
-        deps = item.get("depends_on", [])
-        roadmap_edges[str(item.get("id"))] = deps if isinstance(deps, list) else []
+        deps = _string_list(item, "depends_on", f"roadmap[{item.get('id')}]", errors)
+        roadmap_edges[str(item.get("id"))] = deps
     _check_dag(roadmap_ids, roadmap_edges, "roadmap dependencies", errors)
 
     for cap_id in sorted(cap_ids - cap_roadmap_refs):
