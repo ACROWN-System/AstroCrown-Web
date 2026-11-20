@@ -231,14 +231,19 @@ def _validate_evidence(
             else:
                 used_sources.add(reference)
         elif kind == "repository_record":
-            try:
-                parsed_reference = urlparse(reference)
-                reference_hostname = parsed_reference.hostname
-            except ValueError:
-                parsed_reference = None
-                reference_hostname = None
+            is_url_reference = re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", reference) is not None
+            if is_url_reference:
+                try:
+                    parsed_reference = urlparse(reference)
+                    reference_hostname = parsed_reference.hostname
+                except ValueError:
+                    parsed_reference = None
+                    reference_hostname = None
 
-            if parsed_reference is not None and parsed_reference.scheme:
+                if parsed_reference is None:
+                    _add(errors, location, "repository_record URL must be a valid exact AstroCrown GitHub record")
+                    continue
+
                 parts = parsed_reference.path.split("/")
                 is_pull = (
                     len(parts) == 5
