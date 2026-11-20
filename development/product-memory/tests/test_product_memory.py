@@ -190,7 +190,7 @@ class ProductMemoryValidationTests(unittest.TestCase):
             {"kind": "owner_direction", "reference": "Owner direction"}
         ]
         self.documents["decisions"]["entries"][0]["evidence"] = [
-            {"kind": "repository_record", "reference": "development/README.md"}
+            {"kind": "owner_direction", "reference": "Owner direction"}
         ]
         self.documents["decisions"]["entries"][0]["research_refs"] = []
         self.documents["research"]["entries"][0]["supports_capabilities"] = []
