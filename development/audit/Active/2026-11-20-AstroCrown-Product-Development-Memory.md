@@ -38,7 +38,7 @@ It must reject malformed, duplicated, unsupported or cyclic entries through dete
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/validate.py (implemented; exact-head CI pending)
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/tests/ (21+ positive/negative regression tests; exact count to be confirmed by CI)
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/.github/workflows/product-memory-validation.yml (read-only, path-scoped, SHA-pinned workflow)
-- [ ] Product Development Memory pull request — not yet opened
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/pull/195 — open PR; exact-head CI passed; independent Codex review still running.
 
 ## Navigation-methodology availability finding
 
@@ -206,6 +206,28 @@ Every nested value must be type-checked before it is used as a dictionary key or
 Added string-type guards for the research reference and linked research status and two negative regression tests. The suite now contains 31 tests. The new exact-head CI run is pending.
 
 ---
+
+## Exact-head verification checkpoint
+
+**Pull request:** https://github.com/ACROWN-System/AstroCrown-Web/pull/195  
+**Reviewed candidate head:** `eab0703bbb4f194cfc9f1dcf0172ded0647c49cc`  
+**Base:** `e1a374fac74d8bc02c33dec8efc25b1c83504c3a`  
+**Branch comparison:** 38 commits ahead, 0 behind; exactly 13 intended files differ from main.
+
+### Exact-head checks
+
+- Product Development Memory Validation — PASS. Python compilation succeeded; 31 regression tests passed; committed registers validated: 15 capabilities, 5 decisions, 4 research sources, 10 roadmap packages. Output: `Product memory validation PASS: 15 capabilities, 5 decisions, 4 research, 10 roadmap; references and dependency graphs are consistent.`
+- NOVA RSI Engine CI — PASS.
+- NOVA RSI CodeQL Security Analysis — PASS.
+- External Review Pipeline CI — PASS.
+
+The initial CI failures and their root causes are preserved in the run history and above discoveries. They were corrected rather than masked. Subsequent exact-head runs all passed.
+
+### Review and merge gate
+
+The automated independent Codex code review was explicitly requested for head `eab0703bbb4f194cfc9f1dcf0172ded0647c49cc` and was still reported as RUNNING at the latest inspection. There were no submitted review threads at that inspection; this is not equivalent to a completed review with no findings. Do not merge until the review completes or the review service provides a clear terminal state, then inspect its findings and the final diff again.
+
+No production deployment, mainnet payment activation, wallet transaction, credential change or PR #194 merge is authorized by this work.
 
 ## Verification and closure
 
