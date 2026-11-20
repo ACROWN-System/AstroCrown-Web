@@ -70,6 +70,13 @@ SOURCE_TYPES = {
     "independent_evaluation", "official_policy",
 }
 PRIORITIES = {"launch_critical", "next", "exploratory"}
+SERVICE_PILLARS = {
+    "launch_experience", "market_intelligence", "research_discovery",
+    "personal_workspace", "blockchain_intelligence", "community_knowledge",
+    "developer_integrations", "flagship_research", "research_distribution",
+    "cross_cutting", "internal_development_capability",
+}
+CAPABILITY_STAGES = {"launch", "next", "future", "all_stages"}
 
 
 class RegisterError(ValueError):
@@ -334,6 +341,10 @@ def validate_directory(root: Path) -> list[str]:
             "stage", "repeat_use", "distribution_mechanism", "notes",
         ):
             _string(cap, field, where, errors)
+        if cap.get("service_pillar") not in SERVICE_PILLARS:
+            _add(errors, where, f"unsupported service_pillar {cap.get('service_pillar')!r}")
+        if cap.get("stage") not in CAPABILITY_STAGES:
+            _add(errors, where, f"unsupported capability stage {cap.get('stage')!r}")
         _string_list(cap, "risks", where, errors, nonempty_list=True)
         _string_list(cap, "acceptance_criteria", where, errors, nonempty_list=True)
         deps = _string_list(cap, "dependencies", where, errors)
@@ -359,6 +370,17 @@ def validate_directory(root: Path) -> list[str]:
                     _add(errors, where, f"{status} capability must reference an accepted, owner-approved decision")
             if not cap.get("evidence"):
                 _add(errors, where, f"{status} capability requires evidence")
+        if cap.get("uniqueness_claim") == "verified":
+            qualifying_source = any(
+                isinstance(evidence, dict)
+                and evidence.get("kind") == "external_research"
+                and isinstance(source_by_id.get(evidence.get("reference")), dict)
+                and source_by_id[evidence.get("reference")].get("status") == "observed"
+                and source_by_id[evidence.get("reference")].get("independent_verification") is True
+                for evidence in (cap.get("evidence") if isinstance(cap.get("evidence"), list) else [])
+            )
+            if not qualifying_source:
+                _add(errors, where, "verified uniqueness claim requires independently verified observed research evidence")
         if not isinstance(cap.get("uniqueness_claim"), str) or cap.get("uniqueness_claim") not in {"not_claimed", "unverified", "verified"}:
             _add(errors, where, "uniqueness_claim must be not_claimed, unverified or verified")
         used_sources |= _validate_evidence(cap.get("evidence"), where, source_ids, root, errors)
