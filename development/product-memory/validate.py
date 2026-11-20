@@ -488,8 +488,10 @@ def validate_directory(root: Path, repository_root: Path | None = None) -> list[
                 if isinstance(evidence, dict) and evidence.get("kind") == "external_research":
                     source_ref = evidence.get("reference")
                     source = source_by_id.get(source_ref) if isinstance(source_ref, str) else None
-                    if source and source.get("status") not in {"observed", "partial"}:
-                        _add(errors, where, "accepted decision cannot rely on candidate, conflicting, stale or superseded research")
+                    if source:
+                        source_status = source.get("status")
+                        if not isinstance(source_status, str) or source_status not in {"observed", "partial"}:
+                            _add(errors, where, "accepted decision cannot rely on candidate, conflicting, stale or superseded research")
         if isinstance(approval, dict) and approval.get("approved") is True and status != "accepted":
             _add(errors, where, "owner-approved decision must use status 'accepted'")
         used_sources |= _validate_evidence(decision.get("evidence"), where, source_ids, repository_root, errors)
