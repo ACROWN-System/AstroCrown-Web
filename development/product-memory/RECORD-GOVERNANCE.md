@@ -89,15 +89,17 @@ The validator rejects:
 - unknown fields and unsupported status values;
 - missing or blank mandatory fields;
 - invalid dates and non-HTTPS external source URLs;
-- malformed or duplicate IDs;
+- malformed or duplicate IDs, including non-string identifiers;
 - duplicate normalized titles inside a register;
+- invalid nested value types and malformed URLs without validator crashes;
 - dangling capability, decision, research or roadmap references;
-- approved capabilities without an accepted decision;
+- approved capabilities without an accepted, owner-approved decision;
+- completed capabilities or roadmap packages without repository implementation/test evidence;
 - accepted decisions without owner approval and evidence;
 - external evidence references to missing source records;
 - orphan research entries not used by another record;
 - capabilities that are not linked to any roadmap package;
-- roadmap dependency and decision-supersession cycles.
+- capability dependency, roadmap dependency and decision-supersession cycles, including long dependency chains without recursion-limit failures.
 
 The validator does not decide whether a research conclusion is substantively correct or whether a feature is commercially valuable. Human and independent evidence review remains necessary.
 
@@ -121,7 +123,9 @@ The validator is tested against intentionally malformed fixtures:
 - orphan source records;
 - roadmap dependency cycle;
 - decision supersession cycle;
-- invalid URLs and dates.
+- invalid URLs and dates;
+- malformed value types and malformed IPv6-style URLs;
+- deep valid dependency chains and completed-state evidence gates.
 
 The same tests and validator run in GitHub Actions when this subsystem or its development index changes. Tests must not be weakened merely to accept a failing record; correct the record or update the rule with documented rationale and regression coverage.
 
