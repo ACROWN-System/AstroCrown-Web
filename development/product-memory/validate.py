@@ -190,7 +190,7 @@ def _check_common(
 
 
 def _validate_evidence(
-    entries: object, where: str, source_ids: set[str], errors: list[str]
+    entries: object, where: str, source_ids: set[str], root: Path, errors: list[str]
 ) -> set[str]:
     used_sources: set[str] = set()
     if not isinstance(entries, list):
@@ -222,6 +222,22 @@ def _validate_evidence(
                 _add(errors, location, f"unresolved research reference {reference}")
             else:
                 used_sources.add(reference)
+        elif kind == "repository_record":
+            parsed_reference = urlparse(reference)
+            if parsed_reference.scheme:
+                allowed_path = parsed_reference.path.startswith("/ACROWN-System/AstroCrown-Web/")
+                allowed_record = any(token in parsed_reference.path for token in ("/pull/", "/blob/", "/tree/", "/commit/"))
+                if parsed_reference.scheme != "https" or parsed_reference.hostname != "github.com" or not allowed_path or not allowed_record:
+                    _add(errors, location, "repository_record URL must point to an exact AstroCrown GitHub pull, file, tree or commit record")
+            else:
+                relative = Path(reference)
+                if relative.is_absolute() or ".." in relative.parts or not relative.parts:
+                    _add(errors, location, "repository_record path must be a safe repository-relative path")
+                else:
+                    repository_root = root.resolve()
+                    candidate = (repository_root / relative).resolve()
+                    if not candidate.is_relative_to(repository_root) or not candidate.is_file():
+                        _add(errors, location, f"repository_record path does not resolve to a file in this repository: {reference}")
     return used_sources
 
 
@@ -292,7 +308,9 @@ def validate_directory(root: Path) -> list[str]:
     cap_ids = {r.get("id") for r in caps if isinstance(r.get("id"), str)}
     decision_ids = {r.get("id") for r in decisions if isinstance(r.get("id"), str)}
     source_ids = {r.get("id") for r in research if isinstance(r.get("id"), str)}
-    roadmap_ids = {r.get("id") for r in roadmap if isinstance(r.get("id"), str)}
+    roadmap_ids = {r.get("id") for r in roadmap}
+    decision_by_id = {r.get("id"): r for r in decisions if isinstance(r.get("id"), str)}
+    source_by_id = {r.get("id"): r for r in research if isinstance(r.get("id"), str)}
 
     all_ids: set[str] = set()
     for register, entries in registers.items():
@@ -335,11 +353,15 @@ def validate_directory(root: Path) -> list[str]:
         if status in {"approved", "completed"}:
             if not decision_ref:
                 _add(errors, where, f"{status} capability requires an accepted decision_ref")
+            elif isinstance(decision_ref, str) and decision_ref in decision_by_id:
+                approval = decision_by_id[decision_ref].get("owner_approval")
+                if decision_by_id[decision_ref].get("status") != "accepted" or not isinstance(approval, dict) or approval.get("approved") is not True:
+                    _add(errors, where, f"{status} capability must reference an accepted, owner-approved decision")
             if not cap.get("evidence"):
                 _add(errors, where, f"{status} capability requires evidence")
         if not isinstance(cap.get("uniqueness_claim"), str) or cap.get("uniqueness_claim") not in {"not_claimed", "unverified", "verified"}:
             _add(errors, where, "uniqueness_claim must be not_claimed, unverified or verified")
-        used_sources |= _validate_evidence(cap.get("evidence"), where, source_ids, errors)
+        used_sources |= _validate_evidence(cap.get("evidence"), where, source_ids, root, errors)
 
     _check_dag(cap_ids, cap_dependency_edges, "capability dependencies", errors)
 
@@ -386,12 +408,18 @@ def validate_directory(root: Path) -> list[str]:
                 _add(errors, where, "accepted decision requires explicit owner approval")
             if not decision.get("evidence"):
                 _add(errors, where, "accepted decision requires evidence")
+            for evidence in decision.get("evidence", []):
+                if isinstance(evidence, dict) and evidence.get("kind") == "external_research":
+                    source = source_by_id.get(evidence.get("reference"))
+                    if source and source.get("status") not in {"observed", "partial"}:
+                        _add(errors, where, "accepted decision cannot rely on candidate, conflicting, stale or superseded research")
         if isinstance(approval, dict) and approval.get("approved") is True and status != "accepted":
             _add(errors, where, "owner-approved decision must use status 'accepted'")
-        used_sources |= _validate_evidence(decision.get("evidence"), where, source_ids, errors)
+        used_sources |= _validate_evidence(decision.get("evidence"), where, source_ids, root, errors)
 
     _check_dag(decision_ids, decision_edges, "decision supersession", errors)
 
+    seen_source_urls: set[str] = set()
     for index, source in enumerate(research):
         where = f"research[{index}]"
         for field in ("publisher", "source_type", "source_url", "accessed_on", "claim_supported", "license_note"):
@@ -411,6 +439,11 @@ def validate_directory(root: Path) -> list[str]:
         parsed = urlparse(str(source.get("source_url", "")))
         if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
             _add(errors, where, "source_url must be a valid HTTPS URL without embedded credentials")
+        else:
+            normalized_url = parsed._replace(scheme="https", netloc=parsed.netloc.lower(), fragment="").geturl().rstrip("/")
+            if normalized_url in seen_source_urls:
+                _add(errors, where, f"duplicate research source URL {normalized_url}")
+            seen_source_urls.add(normalized_url)
         if not isinstance(source.get("independent_verification"), bool):
             _add(errors, where, "independent_verification must be boolean")
         for ref in supported_caps:
@@ -455,7 +488,7 @@ def validate_directory(root: Path) -> list[str]:
                 _add(errors, where, f"unresolved roadmap dependency {ref}")
         if status == "completed" and not item.get("evidence"):
             _add(errors, where, "completed roadmap item requires evidence")
-        used_sources |= _validate_evidence(item.get("evidence"), where, source_ids, errors)
+        used_sources |= _validate_evidence(item.get("evidence"), where, source_ids, root, errors)
 
     roadmap_edges: dict[str, list[str]] = {}
     for item in roadmap:
