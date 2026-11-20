@@ -151,6 +151,44 @@ Separate the register directory from the repository root in the validator. The C
 
 Updated the validator and added a positive regression test proving a valid repository-relative file resolves, while the existing negative test continues to reject a missing file.
 
+### Discovery:
+
+The first PR-specific validation runs exposed genuine quality gaps. The initial unit test run failed because the f-string ID regex interpreted the quantifier braces as an f-string expression; once the baseline fixture was brought under the controlled service-pillar taxonomy, this defect was isolated and corrected. The next run passed all unit tests but rejected the committed data because CAP-0011 (embeddable widgets) was not connected to any roadmap work package.
+
+#### Evidence:
+
+- The failing test run showed all four valid fixture IDs rejected, with the fixture's legacy `research` service-pillar value also outside the controlled taxonomy.
+- The subsequent run showed 22/22 unit tests passing but the register validator rejecting orphan CAP-0011.
+- The fixed exact-head run passed 22/22 tests and register validation after the regex and fixture corrections, and after CAP-0011 was linked to RM-0007.
+
+### Decision:
+
+Do not weaken schema or orphan checks to obtain a green result. Correct the validator bug, align the fixture to the approved taxonomy, and connect the orphan capability to its actual roadmap package.
+
+### Action:
+
+Applied the regex quantifier fix, changed the fixture to `research_discovery`, linked CAP-0011 to the developer/integration roadmap package RM-0007, and confirmed the dedicated workflow passed.
+
+---
+
+### Discovery:
+
+Further source review identified edge cases not represented in the first fixtures: non-string IDs and status values could reach set operations or membership checks; malformed IPv6-style URLs could raise during hostname parsing; recursive graph traversal could hit Python's recursion limit on very long acyclic chains; and completed states only required some evidence, not evidence of actual repository implementation/testing.
+
+#### Evidence:
+
+The validator source was inspected directly after the 22-test pass. These were code-level findings; they had not all been observed as production failures.
+
+### Decision:
+
+Make validation fail closed for malformed values and malformed URLs, replace recursive cycle traversal with iterative topological validation, and require repository evidence before a capability or roadmap package can be marked completed.
+
+### Action:
+
+Updated `validate.py`, added seven regression tests (29 total), and updated `RECORD-GOVERNANCE.md` to document the additional gates. The new exact-head workflow is pending.
+ 
+---
+
 ## Verification and closure
 
 This plan remains ACTIVE until the exact PR head passes all required checks, the full diff has been reviewed, the PR is merged, and the relevant files plus merge commit are independently confirmed on `main`. Any failure remains FAIL or BLOCKED until root cause and corrective verification are recorded.
