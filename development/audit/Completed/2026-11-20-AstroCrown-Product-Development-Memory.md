@@ -4,7 +4,8 @@
 **Status:** COMPLETED — Product Development Memory merged and post-merge verified; canonical Navigation Protocol remains unavailable, so conformance to that unavailable protocol is BLOCKED  
 **Repository:** https://github.com/ACROWN-System/AstroCrown-Web  
 **Implementation base:** `e1a374fac74d8bc02c33dec8efc25b1c83504c3a` (after PR #191 merge).  
-**Product Memory merge commit:** `a630faf2659dc050c3bba0be31d84e0759d51672`
+**Product Memory merge commit:** `a630faf2659dc050c3bba0be31d84e0759d51672`  
+**Post-merge verification:** Jekyll build/deploy, Product Memory validation, OpenSSF Scorecard and workflow analysis all PASS.
 
 ## Objective
 
@@ -34,7 +35,7 @@ It must reject malformed, duplicated, unsupported or cyclic entries through dete
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/nova-context-memory-optimization/README.md
 - [x] https://github.com/ACROWN-System/NOVA/blob/main/NOVA/ROOT-CAUSE-PREVENTION-AND-SHARED-KNOWLEDGE-GOVERNANCE.md
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/ (merged in PR #195)
-- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/RECORD-GOVERNANCE.md (implemented on the review branch; awaiting merge)
+- [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/RECORD-GOVERNANCE.md (merged in PR #195)
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/development/product-memory/validate.py (merged; exact-head CI passed)
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/tree/main/development/product-memory/tests/ (31 positive/negative regression tests passed)
 - [x] https://github.com/ACROWN-System/AstroCrown-Web/blob/main/.github/workflows/product-memory-validation.yml (merged; read-only, path-scoped, SHA-pinned workflow)
