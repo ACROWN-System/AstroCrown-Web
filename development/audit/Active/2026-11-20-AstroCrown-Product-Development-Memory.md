@@ -189,6 +189,24 @@ Updated `validate.py`, added seven regression tests (29 total), and updated `REC
  
 ---
 
+### Discovery:
+
+Final hostile-input review found a nested type-confusion path in accepted-decision evidence evaluation: a non-string evidence reference or a linked research record with a non-string status could reach a dictionary lookup or set membership before the main evidence validator rejected the malformed item.
+
+#### Evidence:
+
+The source-level review traced both values through accepted-decision evidence validation. The initial validator correctly rejected them in the general evidence path, but the earlier accepted-decision pre-check accessed them first.
+
+### Decision:
+
+Every nested value must be type-checked before it is used as a dictionary key or tested against a set. Malformed nested evidence must return validation errors rather than raise an exception.
+
+### Action:
+
+Added string-type guards for the research reference and linked research status and two negative regression tests. The suite now contains 31 tests. The new exact-head CI run is pending.
+
+---
+
 ## Verification and closure
 
 This plan remains ACTIVE until the exact PR head passes all required checks, the full diff has been reviewed, the PR is merged, and the relevant files plus merge commit are independently confirmed on `main`. Any failure remains FAIL or BLOCKED until root cause and corrective verification are recorded.
