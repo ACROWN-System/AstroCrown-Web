@@ -271,6 +271,16 @@ class ProductMemoryValidationTests(unittest.TestCase):
         self.write_documents()
         self.assert_invalid("does not resolve to a file")
 
+    def test_repository_evidence_resolves_from_repository_root(self):
+        source_path = self.root / "development" / "README.md"
+        source_path.parent.mkdir(parents=True)
+        source_path.write_text("# Valid repository evidence\n", encoding="utf-8")
+        self.documents["decisions"]["entries"][0]["evidence"] = [
+            {"kind": "repository_record", "reference": "development/README.md"}
+        ]
+        self.write_documents()
+        self.assertEqual(self.errors(), [])
+
     def test_duplicate_research_source_url_is_rejected(self):
         second = copy.deepcopy(self.documents["research"]["entries"][0])
         second["id"] = "SRC-0002"
