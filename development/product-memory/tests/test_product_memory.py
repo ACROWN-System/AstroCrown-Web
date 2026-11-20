@@ -253,6 +253,42 @@ class ProductMemoryValidationTests(unittest.TestCase):
         self.write_documents()
         self.assert_invalid("items must be non-empty strings")
 
+    def test_approved_capability_cannot_reference_a_proposed_decision(self):
+        self.documents["decisions"]["entries"][0]["status"] = "proposed"
+        self.documents["decisions"]["entries"][0]["owner_approval"]["approved"] = False
+        self.write_documents()
+        self.assert_invalid("must reference an accepted, owner-approved decision")
+
+    def test_accepted_decision_cannot_rely_on_candidate_research(self):
+        self.documents["research"]["entries"][0]["status"] = "candidate"
+        self.write_documents()
+        self.assert_invalid("cannot rely on candidate")
+
+    def test_repository_evidence_must_resolve_to_an_exact_record(self):
+        self.documents["decisions"]["entries"][0]["evidence"] = [
+            {"kind": "repository_record", "reference": "development/MISSING.md"}
+        ]
+        self.write_documents()
+        self.assert_invalid("does not resolve to a file")
+
+    def test_duplicate_research_source_url_is_rejected(self):
+        second = copy.deepcopy(self.documents["research"]["entries"][0])
+        second["id"] = "SRC-0002"
+        second["title"] = "Second title for the same source URL"
+        self.documents["research"]["entries"].append(second)
+        self.write_documents()
+        self.assert_invalid("duplicate research source URL")
+
+    def test_verified_uniqueness_requires_independent_research_evidence(self):
+        self.documents["capabilities"]["entries"][0]["uniqueness_claim"] = "verified"
+        self.write_documents()
+        self.assert_invalid("verified uniqueness claim requires")
+
+    def test_unknown_capability_stage_is_rejected(self):
+        self.documents["capabilities"]["entries"][0]["stage"] = "whenever"
+        self.write_documents()
+        self.assert_invalid("unsupported capability stage")
+
     def test_candidate_cannot_be_silently_marked_approved_without_decision(self):
         cap = self.documents["capabilities"]["entries"][0]
         cap["status"] = "candidate"
