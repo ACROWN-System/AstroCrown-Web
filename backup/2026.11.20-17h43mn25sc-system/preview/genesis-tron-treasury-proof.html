@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#081426">
+  <title>Genesis Programme — TRON Treasury Control Proof</title>
+  <style>
+    :root{color-scheme:dark;--bg:#050914;--panel:#0d1b2e;--line:rgba(153,178,213,.2);--text:#edf2fa;--muted:#aab8cb;--quiet:#7d8da5;--gold:#ffd700;--goldsoft:#ffeaa0;--warn:#ffd24a;--red:#ff9295;--green:#77e6ae}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;padding:30px 16px 48px;background:radial-gradient(ellipse at 15% 0%,rgba(22,52,90,.3),transparent 35rem),linear-gradient(180deg,#050914,#071321 55%,#050914);color:var(--text);font:15px/1.6 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(850px,100%);margin:0 auto}
+    .brand{display:flex;align-items:center;gap:11px;margin:0 0 23px;color:var(--gold);font-size:12px;font-weight:850;letter-spacing:.14em;text-transform:uppercase}
+    .brand-mark{display:grid;place-items:center;width:37px;height:37px;border:1px solid rgba(255,215,0,.36);border-radius:10px;background:rgba(255,215,0,.07);font-size:18px}
+    .panel{padding:clamp(19px,4vw,32px);border:1px solid var(--line);border-radius:17px;background:linear-gradient(145deg,rgba(13,29,50,.97),rgba(7,17,31,.98));box-shadow:0 20px 55px rgba(0,0,0,.28)}
+    h1{margin:0 0 9px;font-size:clamp(25px,4.5vw,37px);line-height:1.12;letter-spacing:-.04em}
+    .intro{margin:0 0 23px;color:var(--muted);font-size:13px}
+    .notice{margin:17px 0;padding:14px 15px;border:1px solid rgba(255,210,74,.32);border-left:4px solid var(--warn);border-radius:10px;background:rgba(255,210,74,.055);color:#dfd3aa;font-size:12px}
+    .notice strong{display:block;margin-bottom:4px;color:#ffe7a0;font-size:12px}
+    .notice.danger{border-color:rgba(255,120,125,.32);border-left-color:var(--red);background:rgba(255,120,125,.055);color:#e6b6b9}
+    .notice.danger strong{color:#ffb8bc}
+    .field{display:grid;gap:7px;margin:19px 0}
+    label{font-size:12px;font-weight:800;color:#dce5f2}
+    input{width:100%;min-height:48px;padding:11px 13px;border:1px solid rgba(153,178,213,.28);border-radius:9px;background:#07111f;color:#fff;font:13px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace}
+    input:focus{outline:2px solid var(--gold);outline-offset:2px}
+    .hint{color:var(--quiet);font-size:11px}
+    .row{display:flex;flex-wrap:wrap;gap:10px;margin-top:17px}
+    button{min-height:43px;padding:0 17px;border:1px solid #ffe45b;border-radius:9px;background:var(--gold);color:#151922;font-size:12px;font-weight:900;cursor:pointer}
+    button.secondary{border-color:var(--line);background:rgba(255,255,255,.045);color:#dbe4f1}
+    button:disabled{opacity:.42;cursor:not-allowed}
+    .status{min-height:25px;margin:15px 0 0;color:#c6d5ea;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .status.good{color:var(--green)}
+    .status.bad{color:var(--red)}
+    .message-wrap{margin-top:22px}
+    .message-wrap h2{margin:0 0 8px;font-size:13px}
+    pre{max-height:350px;overflow:auto;margin:0;padding:15px;border:1px solid var(--line);border-radius:10px;background:#050b15;color:#d7e2f1;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+    .steps{display:grid;gap:9px;margin:23px 0 0;padding:0;list-style:none}
+    .steps li{display:flex;gap:10px;color:var(--muted);font-size:11px}
+    .number{display:grid;place-items:center;flex:0 0 21px;height:21px;border:1px solid rgba(255,215,0,.28);border-radius:6px;color:var(--goldsoft);font-size:10px;font-weight:900}
+    .footer{margin:16px 3px 0;color:var(--quiet);font-size:10px;line-height:1.65}
+    [hidden]{display:none!important}
+    @media(max-width:540px){body{padding:18px 11px 35px}.row button{width:100%}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="brand"><span class="brand-mark">✦</span><span>AstroCrown · Genesis Programme</span></div>
+  <section class="panel">
+    <h1>TRON Treasury Control Proof</h1>
+    <p class="intro">A browser-only proof of control of the dedicated TRON receiving address. It uses one short-lived, off-chain TIP-191 message signature through TronLink.</p>
+
+    <div class="notice danger">
+      <strong>Read before proceeding</strong>
+      TronLink must show a readable message-signing request. Reject and cancel any prompt for a transaction, token approval, transfer, contract interaction, or spending permission. Never enter a seed phrase or private key.
+    </div>
+
+    <div class="field">
+      <label for="target">Genesis public TRON receiving address</label>
+      <input id="target" type="text" inputmode="text" autocomplete="off" spellcheck="false" placeholder="T… (public address only)">
+      <div class="hint">Enter the full Base58Check address beginning with T. Do not enter wallet secrets.</div>
+    </div>
+
+    <div class="notice">
+      <strong>Network and signing scope</strong>
+      The page asks TronLink to select TRON Mainnet (network ID 0x2b6653dc) using its documented network-switch request, then checks the connected Base58 address. It prepares a random five-minute challenge and calls only <code>signMessageV2</code> for an off-chain TIP-191 signature. It makes no transaction, token approval, transfer, contract call, RPC request, or server submission.
+    </div>
+
+    <div class="row">
+      <button id="prepare">Connect Genesis wallet and prepare challenge</button>
+      <button id="sign" disabled>Sign the displayed message</button>
+      <button id="download" class="secondary" disabled>Download proof JSON</button>
+      <button id="restart" class="secondary" hidden>Start again</button>
+    </div>
+    <p id="status" class="status" role="status" aria-live="polite">Checking this page's approved HTTPS origin…</p>
+
+    <div class="message-wrap">
+      <h2>Exact message to be signed</h2>
+      <pre id="message">No challenge has been prepared. The message will appear here before TronLink is asked to sign it.</pre>
+    </div>
+
+    <ul class="steps">
+      <li><span class="number">1</span><span>Confirm the entered public address is the dedicated Genesis TRON receiving address.</span></li>
+      <li><span class="number">2</span><span>Connect TronLink. The page requests TRON Mainnet and checks that the selected account matches the entered address.</span></li>
+      <li><span class="number">3</span><span>Read every line of the displayed message before selecting “Sign the displayed message”.</span></li>
+      <li><span class="number">4</span><span>Download the JSON evidence file and keep it private. The proof remains pending independent offline verification.</span></li>
+    </ul>
+  </section>
+  <p class="footer">This is a static, no-index onboarding tool. The challenge is generated in your browser and is not registered with a server; its nonce and five-minute expiry cannot be server-enforced here. A valid TIP-191 signature demonstrates control of the address at the recorded time only. Because TRON addresses are the same across TRON networks, the signature alone does not prove the network selected; this page records the successful TronLink Mainnet switch request separately. It does not establish legal ownership, continuing custody, treasury operating readiness, or payment acceptance. The ACROWN Genesis Programme remains closed to contributions.</p>
+</main>
+<script>
+"use strict";
+(() => {
+  const APPROVED_ORIGIN = "https://acrown-system.github.io";
+  const APPROVED_PATH = "/AstroCrown-Web/preview/genesis-tron-treasury-proof.html";
+  const MAINNET_CHAIN_ID = "0x2b6653dc";
+  const CHALLENGE_LIFETIME_MS = 5 * 60 * 1000;
+  const elements = {
+    target: document.getElementById("target"),
+    prepare: document.getElementById("prepare"),
+    sign: document.getElementById("sign"),
+    download: document.getElementById("download"),
+    restart: document.getElementById("restart"),
+    status: document.getElementById("status"),
+    message: document.getElementById("message")
+  };
+  let provider = null;
+  let tronWeb = null;
+  let connectedAddress = "";
+  let activeChainId = "";
+  let challenge = null;
+  let proofJson = "";
+
+  function setStatus(message, kind) {
+    elements.status.textContent = message;
+    elements.status.className = "status" + (kind ? " " + kind : "");
+  }
+
+  function validAddress(value) {
+    return typeof value === "string" && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(value);
+  }
+
+  function isTronLinkProvider(candidate) {
+    return !!candidate && candidate.isTronLink === true && typeof candidate.request === "function";
+  }
+
+  function discoverTronLinkProvider() {
+    if (isTronLinkProvider(window.tron)) return Promise.resolve(window.tron);
+
+    return new Promise(resolve => {
+      let settled = false;
+      let timeoutId = null;
+
+      const finish = candidate => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener("TIP6963:announceProvider", onAnnounce);
+        if (timeoutId !== null) window.clearTimeout(timeoutId);
+        resolve(isTronLinkProvider(candidate) ? candidate : null);
+      };
+
+      const onAnnounce = event => {
+        const info = event && event.detail && event.detail.info;
+        const candidate = event && event.detail && event.detail.provider;
+        if (info && (info.name === "TronLink" || info.rdns === "org.tronlink.www") &&
+            isTronLinkProvider(candidate)) {
+          finish(candidate);
+        }
+      };
+
+      window.addEventListener("TIP6963:announceProvider", onAnnounce);
+      timeoutId = window.setTimeout(() => {
+        finish(isTronLinkProvider(window.tron) ? window.tron : null);
+      }, 1500);
+      window.dispatchEvent(new Event("TIP6963:requestProvider"));
+    });
+  }
+
+  function createNonce() {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function createMessage(address, nonce, issuedAt, expirationTime) {
+    const domain = window.location.host;
+    const uri = APPROVED_ORIGIN + APPROVED_PATH;
+    return [
+      domain + " requests a TRON treasury control signature from this account:",
+      address,
+      "",
+      "AstroCrown Genesis Programme — TRON treasury control proof.",
+      "I confirm control of this public TRON address for Genesis Programme treasury onboarding.",
+      "This is an off-chain TIP-191 message signature only. It does not authorize a transaction, token approval, transfer, contract interaction, payment, or spending.",
+      "",
+      "URI: " + uri,
+      "Version: 1",
+      "Network: TRON Mainnet",
+      "Network ID: " + MAINNET_CHAIN_ID,
+      "Nonce: " + nonce,
+      "Issued At: " + issuedAt,
+      "Expiration Time: " + expirationTime,
+      "Request ID: ASTROCROWN-GENESIS-TRON-TREASURY-CONTROL-V1",
+      "Resources:",
+      "- urn:astrocrown:genesis:treasury:tron",
+      ""
+    ].join("\n");
+  }
+
+  function invalidateChallenge(reason) {
+    if (!challenge) return;
+    challenge = null;
+    proofJson = "";
+    elements.sign.disabled = true;
+    elements.download.disabled = true;
+    elements.restart.hidden = false;
+    setStatus(reason + " The prepared challenge has been invalidated; start again before signing.", "bad");
+  }
+
+  function attachWalletListeners(walletProvider) {
+    if (typeof walletProvider.on !== "function") return;
+    walletProvider.on("chainChanged", ({ chainId } = {}) => {
+      activeChainId = typeof chainId === "string" ? chainId : "";
+      if (activeChainId !== MAINNET_CHAIN_ID) {
+        invalidateChallenge("TronLink network changed away from TRON Mainnet.");
+      }
+    });
+    walletProvider.on("accountsChanged", accounts => {
+      const next = Array.isArray(accounts) && typeof accounts[0] === "string" ? accounts[0] : "";
+      if (!next || next !== connectedAddress) {
+        connectedAddress = next;
+        invalidateChallenge("The selected TronLink account changed.");
+      }
+    });
+  }
+
+  function resetProof() {
+    provider = null;
+    tronWeb = null;
+    connectedAddress = "";
+    activeChainId = "";
+    challenge = null;
+    proofJson = "";
+    elements.target.disabled = false;
+    elements.prepare.disabled = false;
+    elements.sign.disabled = true;
+    elements.download.disabled = true;
+    elements.restart.hidden = true;
+    elements.message.textContent = "No challenge has been prepared. The message will appear here before TronLink is asked to sign it.";
+    setStatus("Ready. Enter the public Genesis TRON receiving address.");
+  }
+
+  if (window.location.origin !== APPROVED_ORIGIN || window.location.pathname !== APPROVED_PATH) {
+    elements.prepare.disabled = true;
+    elements.target.disabled = true;
+    setStatus("Blocked: this proof page is not running at its exact approved GitHub Pages URL.", "bad");
+    return;
+  }
+
+  if (!window.isSecureContext || !window.crypto || typeof window.crypto.getRandomValues !== "function") {
+    elements.prepare.disabled = true;
+    setStatus("Blocked: a secure HTTPS browser context with a cryptographic random generator is required.", "bad");
+    return;
+  }
+
+  elements.prepare.addEventListener("click", async () => {
+    elements.prepare.disabled = true;
+    elements.sign.disabled = true;
+    elements.download.disabled = true;
+    challenge = null;
+    proofJson = "";
+    elements.message.textContent = "Connecting TronLink and requesting TRON Mainnet…";
+    try {
+      const targetAddress = elements.target.value.trim();
+      if (!validAddress(targetAddress)) {
+        throw new Error("Enter the complete public TRON address (T followed by 33 Base58 characters).");
+      }
+      setStatus("Looking for the TronLink extension…");
+      provider = await discoverTronLinkProvider();
+      if (!provider) {
+        throw new Error("No TronLink provider announced itself to this page. Confirm TronLink is installed and enabled in this same Edge profile, allow it to run on this site, then reload this page and retry. No wallet connection or signature was requested.");
+      }
+      attachWalletListeners(provider);
+      const accounts = await provider.request({ method: "eth_requestAccounts" });
+      if (!Array.isArray(accounts) || accounts.length !== 1 || typeof accounts[0] !== "string") {
+        throw new Error("TronLink did not return exactly one approved Base58 account.");
+      }
+      connectedAddress = accounts[0];
+      if (connectedAddress !== targetAddress) {
+        throw new Error("The connected TronLink account does not match the entered Genesis receiving address. No signature was requested. Select the Genesis account and retry.");
+      }
+      if (!provider.tronWeb || !provider.tronWeb.trx ||
+          typeof provider.tronWeb.trx.signMessageV2 !== "function" ||
+          typeof provider.tronWeb.trx.verifyMessageV2 !== "function" ||
+          !provider.tronWeb.defaultAddress) {
+        throw new Error("The authorized TronLink provider did not expose the required message-signing and verification methods.");
+      }
+      tronWeb = provider.tronWeb;
+      const switchResult = await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: MAINNET_CHAIN_ID }]
+      });
+      if (switchResult !== null) {
+        throw new Error("TronLink did not confirm the TRON Mainnet network-switch request. No signature was requested.");
+      }
+      activeChainId = MAINNET_CHAIN_ID;
+      if (tronWeb.defaultAddress.base58 !== connectedAddress) {
+        throw new Error("The TronLink selected account changed during network selection. No signature was requested.");
+      }
+
+      const issued = new Date();
+      const expires = new Date(issued.getTime() + CHALLENGE_LIFETIME_MS);
+      const nonce = createNonce();
+      const issuedAt = issued.toISOString();
+      const expirationTime = expires.toISOString();
+      const message = createMessage(connectedAddress, nonce, issuedAt, expirationTime);
+      challenge = Object.freeze({
+        targetAddress,
+        connectedAddress,
+        nonce,
+        issuedAt,
+        expirationTime,
+        message,
+        domain: window.location.host,
+        uri: APPROVED_ORIGIN + APPROVED_PATH,
+        network: "TRON Mainnet",
+        chainId: MAINNET_CHAIN_ID
+      });
+      elements.message.textContent = message;
+      elements.target.disabled = true;
+      elements.sign.disabled = false;
+      setStatus("TronLink approved the connection and Mainnet selection; the selected address matches. Read the complete message. No signature has been requested yet.", "good");
+    } catch (error) {
+      challenge = null;
+      setStatus(error && error.message ? error.message : String(error), "bad");
+      elements.prepare.disabled = false;
+    }
+  });
+
+  elements.sign.addEventListener("click", async () => {
+    elements.sign.disabled = true;
+    try {
+      const signingChallenge = challenge;
+      if (!signingChallenge || !provider || !tronWeb) throw new Error("Prepare a fresh challenge first.");
+      if (Date.now() > Date.parse(signingChallenge.expirationTime)) {
+        challenge = null;
+        throw new Error("The five-minute challenge has expired. Start again to create a fresh one.");
+      }
+      if (activeChainId !== MAINNET_CHAIN_ID || tronWeb.defaultAddress.base58 !== signingChallenge.connectedAddress) {
+        throw new Error("The selected TRON network or account has changed. No signature was requested.");
+      }
+      const signature = await tronWeb.trx.signMessageV2(signingChallenge.message);
+      if (challenge !== signingChallenge) {
+        throw new Error("The challenge was invalidated while TronLink was open. Start again.");
+      }
+      if (Date.now() > Date.parse(signingChallenge.expirationTime)) {
+        challenge = null;
+        throw new Error("The five-minute challenge expired while TronLink was open. Start again to create a fresh one.");
+      }
+      if (activeChainId !== MAINNET_CHAIN_ID || tronWeb.defaultAddress.base58 !== signingChallenge.connectedAddress) {
+        challenge = null;
+        throw new Error("The selected TRON network or account changed while TronLink was open. The signature will not be accepted.");
+      }
+      if (typeof signature !== "string" || !/^0x[0-9a-fA-F]{130}$/.test(signature)) {
+        throw new Error("TronLink returned an unexpected TIP-191 signature format. No proof file was prepared.");
+      }
+      const recoveredAddress = await tronWeb.trx.verifyMessageV2(signingChallenge.message, signature);
+      if (challenge !== signingChallenge) {
+        throw new Error("The challenge was invalidated during local signature recovery. Start again.");
+      }
+      if (Date.now() > Date.parse(signingChallenge.expirationTime)) {
+        challenge = null;
+        throw new Error("The five-minute challenge expired during local signature recovery. Start again to create a fresh one.");
+      }
+      if (activeChainId !== MAINNET_CHAIN_ID || tronWeb.defaultAddress.base58 !== signingChallenge.connectedAddress) {
+        challenge = null;
+        throw new Error("The selected TRON network or account changed during local signature recovery. The proof will not be accepted.");
+      }
+      if (recoveredAddress !== signingChallenge.connectedAddress) {
+        throw new Error("Local signature recovery did not match the connected Genesis address. The proof will not be accepted.");
+      }
+      const evidence = {
+        schemaVersion: "1.0",
+        proofType: "ASTROCROWN_GENESIS_TRON_TREASURY_CONTROL_V1",
+        proofStatus: "PENDING_OFFLINE_VERIFICATION",
+        expectedAddress: signingChallenge.targetAddress,
+        signingAddress: signingChallenge.connectedAddress,
+        recoveredAddress,
+        browserSignatureVerified: true,
+        network: signingChallenge.network,
+        chainId: signingChallenge.chainId,
+        networkSwitchMethod: "wallet_switchEthereumChain",
+        networkSwitchConfirmedByWallet: true,
+        domain: signingChallenge.domain,
+        uri: signingChallenge.uri,
+        nonce: signingChallenge.nonce,
+        issuedAt: signingChallenge.issuedAt,
+        expirationTime: signingChallenge.expirationTime,
+        message: signingChallenge.message,
+        signature,
+        method: "TRON TIP-191 signMessageV2",
+        transactionSent: false,
+        tokenApprovalRequested: false,
+        externalSubmission: false,
+        note: "TronLink message signature recovered locally to the connected Base58 address. Independent offline verification is still required. This attests address control at signing time only."
+      };
+      proofJson = JSON.stringify(evidence, null, 2) + "\n";
+      elements.download.disabled = false;
+      elements.restart.hidden = false;
+      setStatus("TIP-191 signature captured and locally recovered to the Genesis address. No blockchain transaction or token approval was requested. Download the JSON for independent offline verification.", "good");
+    } catch (error) {
+      setStatus(error && error.message ? error.message : String(error), "bad");
+      elements.sign.disabled = true;
+      elements.restart.hidden = false;
+    }
+  });
+
+  elements.download.addEventListener("click", () => {
+    if (!proofJson) return;
+    const blob = new Blob([proofJson], { type: "application/json;charset=utf-8" });
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = "astrocrown-genesis-tron-proof-" + Date.now() + ".json";
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    setStatus("Proof JSON download requested. Keep the file private and attach it for independent offline verification.", "good");
+  });
+
+  elements.restart.addEventListener("click", resetProof);
+  setStatus("Ready. Enter the public Genesis TRON receiving address.");
+})();
+</script>
+</body>
+</html>
