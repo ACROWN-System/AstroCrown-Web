@@ -124,7 +124,7 @@ The validator is tested against intentionally malformed fixtures:
 - roadmap dependency cycle;
 - decision supersession cycle;
 - invalid URLs and dates;
-- malformed value types and malformed IPv6-style URLs;
+- malformed value types, nested evidence references/statuses and malformed IPv6-style URLs;
 - deep valid dependency chains and completed-state evidence gates.
 
 The same tests and validator run in GitHub Actions when this subsystem or its development index changes. Tests must not be weakened merely to accept a failing record; correct the record or update the rule with documented rationale and regression coverage.
