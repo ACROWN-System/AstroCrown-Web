@@ -82,6 +82,18 @@ Owner direction can authorize a decision but is not an external research source.
 - Preserve Git history. Do not delete rejected decisions, research conflicts or important limitations to make the current direction appear cleaner.
 - A completed roadmap item needs evidence and exit criteria; merge alone does not prove product functionality.
 
+### Approval authenticity and human review
+
+The validator checks the structure and consistency of `owner_approval`; it does **not** authenticate the person who entered the field or cryptographically prove that the owner approved the decision. The field is an approval attestation, not a security boundary.
+
+Before accepting a decision:
+- A human reviewer with the appropriate project authority must verify the stated approval basis against the actual owner instruction or an authenticated project approval record.
+- An AI model, SI, contributor or automated test must never create approval by inferring that an idea is desirable, well evidenced or likely to succeed.
+- If owner approval cannot be independently established, keep the decision `proposed` or `deferred`; do not mark it `accepted`.
+- Reviewers should inspect the whole decision diff, its cited evidence and the relevant source records, not merely the JSON validator result.
+
+The current validator is intentionally a deterministic structural gate. It cannot replace GitHub reviewer permissions, repository branch protections or an authenticated owner-approval process. Those repository controls remain part of the authority boundary and must be checked separately.
+
 ## 6. Garbage-entry and duplication controls
 
 The validator rejects:
