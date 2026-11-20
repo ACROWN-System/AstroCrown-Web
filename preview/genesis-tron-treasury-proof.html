@@ -121,40 +121,67 @@
     return typeof value === "string" && /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(value);
   }
 
+  let discoveredTronLinkProvider = null;
+  let tronLinkDiscoveryListenerInstalled = false;
+  let tronLinkDiscoveryPromise = null;
+  let resolveTronLinkDiscovery = null;
+
   function isTronLinkProvider(candidate) {
     return !!candidate && candidate.isTronLink === true && typeof candidate.request === "function";
   }
 
-  function discoverTronLinkProvider() {
-    if (isTronLinkProvider(window.tron)) return Promise.resolve(window.tron);
+  function ensureTronLinkDiscoveryListener() {
+    if (tronLinkDiscoveryListenerInstalled) return;
 
-    return new Promise(resolve => {
+    // TIP-6963 requires the DApp to keep this listener for the lifetime of
+    // the page so later announcements remain observable after initial discovery.
+    window.addEventListener("TIP6963:announceProvider", event => {
+      const info = event && event.detail && event.detail.info;
+      const candidate = event && event.detail && event.detail.provider;
+      if (!info || (info.name !== "TronLink" && info.rdns !== "org.tronlink.www") ||
+          !isTronLinkProvider(candidate)) {
+        return;
+      }
+
+      discoveredTronLinkProvider = candidate;
+      if (resolveTronLinkDiscovery) resolveTronLinkDiscovery(candidate);
+    });
+    tronLinkDiscoveryListenerInstalled = true;
+  }
+
+  function discoverTronLinkProvider() {
+    ensureTronLinkDiscoveryListener();
+
+    if (isTronLinkProvider(window.tron)) return Promise.resolve(window.tron);
+    if (isTronLinkProvider(discoveredTronLinkProvider)) return Promise.resolve(discoveredTronLinkProvider);
+    if (tronLinkDiscoveryPromise) return tronLinkDiscoveryPromise;
+
+    const pending = new Promise(resolve => {
       let settled = false;
       let timeoutId = null;
 
       const finish = candidate => {
         if (settled) return;
         settled = true;
-        window.removeEventListener("TIP6963:announceProvider", onAnnounce);
         if (timeoutId !== null) window.clearTimeout(timeoutId);
+        if (resolveTronLinkDiscovery === finish) resolveTronLinkDiscovery = null;
         resolve(isTronLinkProvider(candidate) ? candidate : null);
       };
 
-      const onAnnounce = event => {
-        const info = event && event.detail && event.detail.info;
-        const candidate = event && event.detail && event.detail.provider;
-        if (info && (info.name === "TronLink" || info.rdns === "org.tronlink.www") &&
-            isTronLinkProvider(candidate)) {
-          finish(candidate);
-        }
-      };
-
-      window.addEventListener("TIP6963:announceProvider", onAnnounce);
+      resolveTronLinkDiscovery = finish;
       timeoutId = window.setTimeout(() => {
-        finish(isTronLinkProvider(window.tron) ? window.tron : null);
+        finish(
+          isTronLinkProvider(window.tron) ? window.tron : discoveredTronLinkProvider
+        );
       }, 1500);
       window.dispatchEvent(new Event("TIP6963:requestProvider"));
     });
+
+    tronLinkDiscoveryPromise = pending;
+    pending.then(() => {
+      if (tronLinkDiscoveryPromise === pending) tronLinkDiscoveryPromise = null;
+    });
+    return pending;
   }
 
   function createNonce() {
