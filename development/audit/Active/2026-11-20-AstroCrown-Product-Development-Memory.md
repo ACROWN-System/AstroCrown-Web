@@ -207,6 +207,28 @@ Added string-type guards for the research reference and linked research status a
 
 ---
 
+### Discovery:
+
+The earlier product discussion also established public recognition and benchmark readiness as a design consideration. The existing verification subsystem already separates visibility, credibility, adoption and strategic prioritisation; duplicating those registries in product memory would create a competing source of truth.
+
+#### Evidence:
+
+- `development/verification/07-VISIBILITY-REGISTRY.md`
+- `development/verification/08-CREDIBILITY-REGISTRY.md`
+- `development/verification/09-ADOPTION-REGISTRY.md`
+- `development/verification/14-STRATEGIC-PRIORITIZATION.md`
+- The current product strategy document now links these records and preserves candidate website awards, technical benchmarks, traffic rankings and Web3 discovery pathways with eligibility/cost/evidence gates.
+
+### Decision:
+
+Keep the actual opportunity register in `development/verification/`. Product strategy must remind future development work to design for verifiable quality and recognition, but must not duplicate or overstate external eligibility.
+
+### Action:
+
+Added the public-recognition and benchmark section to `PRODUCT-STRATEGY-AND-SERVICE-ARCHITECTURE.md`, including candidate Awwwards/CSS Design Awards/Webby routes, PageSpeed/Core Web Vitals and accessibility, Similarweb/public indexes, and CoinGecko/CoinMarketCap/DefiLlama pathways. All require current eligibility and source verification before becoming active targets.
+
+---
+
 ## Exact-head verification checkpoint
 
 **Pull request:** https://github.com/ACROWN-System/AstroCrown-Web/pull/195  
