@@ -218,7 +218,8 @@
       "priority": "exploratory",
       "objective": "Expose stable, provider-neutral AstroCrown intelligence contracts to developers and authorized agents.",
       "capability_refs": [
-        "CAP-0007"
+        "CAP-0007",
+        "CAP-0011"
       ],
       "decision_refs": [],
       "depends_on": [
@@ -236,7 +237,7 @@
       ],
       "blockers": [],
       "evidence": [],
-      "notes": "No provider or MCP dependency is selected by this roadmap entry."
+      "notes": "No provider or MCP dependency is selected by this roadmap entry. Embeddable widgets (CAP-0011) are included in this integration qualification package."
     },
     {
       "id": "RM-0008",
