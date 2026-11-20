@@ -232,22 +232,22 @@ Added the public-recognition and benchmark section to `PRODUCT-STRATEGY-AND-SERV
 ## Exact-head verification checkpoint
 
 **Pull request:** https://github.com/ACROWN-System/AstroCrown-Web/pull/195  
-**Reviewed candidate head:** `eab0703bbb4f194cfc9f1dcf0172ded0647c49cc`  
+**Current candidate head at this checkpoint:** `e2eefdb5955eb5040d6ce715d0018eca7741656d`  
 **Base:** `e1a374fac74d8bc02c33dec8efc25b1c83504c3a`  
-**Branch comparison:** 38 commits ahead, 0 behind; exactly 13 intended files differ from main.
+**Branch comparison:** 41 commits ahead, 0 behind; exactly 13 intended files differ from main.
 
 ### Exact-head checks
 
 - Product Development Memory Validation — PASS. Python compilation succeeded; 31 regression tests passed; committed registers validated: 15 capabilities, 5 decisions, 4 research sources, 10 roadmap packages. Output: `Product memory validation PASS: 15 capabilities, 5 decisions, 4 research, 10 roadmap; references and dependency graphs are consistent.`
 - NOVA RSI Engine CI — PASS.
-- NOVA RSI CodeQL Security Analysis — PASS.
 - External Review Pipeline CI — PASS.
+- NOVA RSI CodeQL Security Analysis — RUNNING at the time of this checkpoint.
 
-The initial CI failures and their root causes are preserved in the run history and above discoveries. They were corrected rather than masked. Subsequent exact-head runs all passed.
+The earlier exact-head CodeQL run on the immediately preceding code head passed; the new run is being awaited because the strategy and plan documents changed afterwards. The initial CI failures and their root causes are preserved in the run history and above discoveries. They were corrected rather than masked.
 
 ### Review and merge gate
 
-The automated independent Codex code review was explicitly requested for head `eab0703bbb4f194cfc9f1dcf0172ded0647c49cc` and was still reported as RUNNING at the latest inspection. There were no submitted review threads at that inspection; this is not equivalent to a completed review with no findings. Do not merge until the review completes or the review service provides a clear terminal state, then inspect its findings and the final diff again.
+The automated independent Codex code review was explicitly requested for head `e2eefdb5955eb5040d6ce715d0018eca7741656d` and was still reported as RUNNING at the time of this checkpoint. There were no submitted review threads at that inspection; this is not equivalent to a completed review with no findings. Do not merge until the review completes or the review service provides a clear terminal state, then inspect its findings and the final diff again.
 
 No production deployment, mainnet payment activation, wallet transaction, credential change or PR #194 merge is authorized by this work.
 
