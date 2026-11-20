@@ -7,6 +7,7 @@ product claim is true; substantive evidence and owner approval remain separate.
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import json
 import re
 import sys
@@ -230,12 +231,39 @@ def _validate_evidence(
             else:
                 used_sources.add(reference)
         elif kind == "repository_record":
-            parsed_reference = urlparse(reference)
-            if parsed_reference.scheme:
-                allowed_path = parsed_reference.path.startswith("/ACROWN-System/AstroCrown-Web/")
-                allowed_record = any(token in parsed_reference.path for token in ("/pull/", "/blob/", "/tree/", "/commit/"))
-                if parsed_reference.scheme != "https" or parsed_reference.hostname != "github.com" or not allowed_path or not allowed_record:
-                    _add(errors, location, "repository_record URL must point to an exact AstroCrown GitHub pull, file, tree or commit record")
+            try:
+                parsed_reference = urlparse(reference)
+                reference_hostname = parsed_reference.hostname
+            except ValueError:
+                parsed_reference = None
+                reference_hostname = None
+
+            if parsed_reference is not None and parsed_reference.scheme:
+                parts = parsed_reference.path.split("/")
+                is_pull = (
+                    len(parts) == 5
+                    and parts[1:4] == ["ACROWN-System", "AstroCrown-Web", "pull"]
+                    and parts[4].isdigit()
+                )
+                is_blob_or_tree = (
+                    len(parts) >= 6
+                    and parts[1:3] == ["ACROWN-System", "AstroCrown-Web"]
+                    and parts[3] in {"blob", "tree"}
+                    and bool(parts[4])
+                    and any(parts[5:])
+                )
+                is_commit = (
+                    len(parts) == 5
+                    and parts[1:4] == ["ACROWN-System", "AstroCrown-Web", "commit"]
+                    and re.fullmatch(r"[0-9a-fA-F]{7,40}", parts[4]) is not None
+                )
+                if (
+                    parsed_reference.scheme != "https"
+                    or reference_hostname is None
+                    or reference_hostname.lower() != "github.com"
+                    or not (is_pull or is_blob_or_tree or is_commit)
+                ):
+                    _add(errors, location, "repository_record URL must be an exact AstroCrown GitHub pull, file, tree or commit record")
             else:
                 relative = Path(reference)
                 if relative.is_absolute() or ".." in relative.parts or not relative.parts:
@@ -251,27 +279,37 @@ def _validate_evidence(
 def _check_dag(
     nodes: set[str], edges: dict[str, list[str]], label: str, errors: list[str]
 ) -> None:
-    visiting: set[str] = set()
-    visited: set[str] = set()
+    """Reject cycles with an iterative O(V + E) topological check.
 
-    def visit(node: str, trail: list[str]) -> None:
-        if node in visited:
-            return
-        if node in visiting:
-            cycle = trail[trail.index(node):] + [node] if node in trail else trail + [node]
-            _add(errors, label, "cycle detected: " + " -> ".join(cycle))
-            return
-        visiting.add(node)
-        trail.append(node)
-        for dependency in edges.get(node, []):
+    Avoid recursive DFS so a long but valid dependency chain cannot exhaust
+    Python's recursion limit.
+    """
+    indegree = {node: 0 for node in nodes}
+    dependents = {node: [] for node in nodes}
+    for item, dependencies in edges.items():
+        if item not in nodes:
+            continue
+        for dependency in dependencies:
             if dependency in nodes:
-                visit(dependency, trail)
-        trail.pop()
-        visiting.remove(node)
-        visited.add(node)
+                dependents[dependency].append(item)
+                indegree[item] += 1
 
-    for node in sorted(nodes):
-        visit(node, [])
+    ready = deque(sorted(node for node, degree in indegree.items() if degree == 0))
+    visited_count = 0
+    while ready:
+        node = ready.popleft()
+        visited_count += 1
+        for dependent in sorted(dependents[node]):
+            indegree[dependent] -= 1
+            if indegree[dependent] == 0:
+                ready.append(dependent)
+
+    if visited_count != len(nodes):
+        remaining = sorted(node for node, degree in indegree.items() if degree > 0)
+        summary = ", ".join(remaining[:20])
+        if len(remaining) > 20:
+            summary += f", ... (+{len(remaining) - 20} more)"
+        _add(errors, label, "cycle detected in dependency graph involving: " + summary)
 
 
 def validate_directory(root: Path, repository_root: Path | None = None) -> list[str]:
@@ -318,7 +356,7 @@ def validate_directory(root: Path, repository_root: Path | None = None) -> list[
     cap_ids = {r.get("id") for r in caps if isinstance(r.get("id"), str)}
     decision_ids = {r.get("id") for r in decisions if isinstance(r.get("id"), str)}
     source_ids = {r.get("id") for r in research if isinstance(r.get("id"), str)}
-    roadmap_ids = {r.get("id") for r in roadmap}
+    roadmap_ids = {r.get("id") for r in roadmap if isinstance(r.get("id"), str)}
     decision_by_id = {r.get("id"): r for r in decisions if isinstance(r.get("id"), str)}
     source_by_id = {r.get("id"): r for r in research if isinstance(r.get("id"), str)}
 
@@ -366,7 +404,7 @@ def validate_directory(root: Path, repository_root: Path | None = None) -> list[
         status = cap.get("status")
         if not isinstance(status, str) or status not in CAPABILITY_STATUSES:
             _add(errors, where, f"unsupported capability status {status!r}")
-        if status in {"approved", "completed"}:
+        if isinstance(status, str) and status in {"approved", "completed"}:
             if not decision_ref:
                 _add(errors, where, f"{status} capability requires an accepted decision_ref")
             elif isinstance(decision_ref, str) and decision_ref in decision_by_id:
@@ -375,6 +413,11 @@ def validate_directory(root: Path, repository_root: Path | None = None) -> list[
                     _add(errors, where, f"{status} capability must reference an accepted, owner-approved decision")
             if not cap.get("evidence"):
                 _add(errors, where, f"{status} capability requires evidence")
+            if status == "completed" and not any(
+                isinstance(item, dict) and item.get("kind") == "repository_record"
+                for item in (cap.get("evidence") if isinstance(cap.get("evidence"), list) else [])
+            ):
+                _add(errors, where, "completed capability requires repository implementation evidence")
         if cap.get("uniqueness_claim") == "verified":
             qualifying_source = any(
                 isinstance(evidence, dict)
@@ -464,8 +507,19 @@ def validate_directory(root: Path, repository_root: Path | None = None) -> list[
             _add(errors, where, f"unsupported source_type {source_type!r}")
         if not _valid_date(source.get("accessed_on")):
             _add(errors, where, "accessed_on must be ISO YYYY-MM-DD")
-        parsed = urlparse(str(source.get("source_url", "")))
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+        try:
+            parsed = urlparse(str(source.get("source_url", "")))
+            source_hostname = parsed.hostname
+        except ValueError:
+            parsed = None
+            source_hostname = None
+        if (
+            parsed is None
+            or parsed.scheme != "https"
+            or source_hostname is None
+            or parsed.username
+            or parsed.password
+        ):
             _add(errors, where, "source_url must be a valid HTTPS URL without embedded credentials")
         else:
             normalized_url = parsed._replace(scheme="https", netloc=parsed.netloc.lower(), fragment="").geturl().rstrip("/")
@@ -514,8 +568,12 @@ def validate_directory(root: Path, repository_root: Path | None = None) -> list[
         for ref in item_dependencies:
             if ref not in roadmap_ids:
                 _add(errors, where, f"unresolved roadmap dependency {ref}")
-        if status == "completed" and not item.get("evidence"):
-            _add(errors, where, "completed roadmap item requires evidence")
+        if status == "completed":
+            evidence_items = item.get("evidence") if isinstance(item.get("evidence"), list) else []
+            if not evidence_items:
+                _add(errors, where, "completed roadmap item requires evidence")
+            if not any(isinstance(evidence, dict) and evidence.get("kind") == "repository_record" for evidence in evidence_items):
+                _add(errors, where, "completed roadmap item requires repository implementation or test evidence")
         used_sources |= _validate_evidence(item.get("evidence"), where, source_ids, repository_root, errors)
 
     roadmap_edges: dict[str, list[str]] = {}
