@@ -341,10 +341,12 @@ def validate_directory(root: Path) -> list[str]:
             "stage", "repeat_use", "distribution_mechanism", "notes",
         ):
             _string(cap, field, where, errors)
-        if cap.get("service_pillar") not in SERVICE_PILLARS:
-            _add(errors, where, f"unsupported service_pillar {cap.get('service_pillar')!r}")
-        if cap.get("stage") not in CAPABILITY_STAGES:
-            _add(errors, where, f"unsupported capability stage {cap.get('stage')!r}")
+        service_pillar = cap.get("service_pillar")
+        capability_stage = cap.get("stage")
+        if not isinstance(service_pillar, str) or service_pillar not in SERVICE_PILLARS:
+            _add(errors, where, f"unsupported service_pillar {service_pillar!r}")
+        if not isinstance(capability_stage, str) or capability_stage not in CAPABILITY_STAGES:
+            _add(errors, where, f"unsupported capability stage {capability_stage!r}")
         _string_list(cap, "risks", where, errors, nonempty_list=True)
         _string_list(cap, "acceptance_criteria", where, errors, nonempty_list=True)
         deps = _string_list(cap, "dependencies", where, errors)
@@ -374,6 +376,7 @@ def validate_directory(root: Path) -> list[str]:
             qualifying_source = any(
                 isinstance(evidence, dict)
                 and evidence.get("kind") == "external_research"
+                and isinstance(evidence.get("reference"), str)
                 and isinstance(source_by_id.get(evidence.get("reference")), dict)
                 and source_by_id[evidence.get("reference")].get("status") == "observed"
                 and source_by_id[evidence.get("reference")].get("independent_verification") is True
