@@ -305,6 +305,47 @@
       "blockers": [],
       "evidence": [],
       "notes": "Candidate research direction only."
+    },
+    {
+      "id": "RM-0010",
+      "title": "Operate the Product Development Memory and its quality gates",
+      "status": "in_progress",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "priority": "launch_critical",
+      "objective": "Preserve product intent and approved decisions in a compact repository source of truth, with deterministic checks against record corruption, garbage, duplicate entries, dangling references, loops and regressions.",
+      "capability_refs": [
+        "CAP-0015"
+      ],
+      "decision_refs": [
+        "DEC-0001",
+        "DEC-0002"
+      ],
+      "depends_on": [],
+      "entry_gates": [
+        "Existing project documentation and authority boundaries inspected.",
+        "A timestamped backup exists before substantive modification."
+      ],
+      "exit_criteria": [
+        "Strategy and structured registers are checked into the repository.",
+        "The validator and negative regression suite pass.",
+        "CI runs the exact commands against changed memory files.",
+        "The merge is confirmed on main and the Active Navigation Plan is closed."
+      ],
+      "blockers": [
+        "Canonical NAVIGATION-PROTOCOL.md and NAVIGATION-PLAN-TEMPLATE.md are not retrievable from the currently accessible project repositories; the documented Development & Audit Convention and Active record fallback are being used without claiming canonical protocol conformance."
+      ],
+      "evidence": [
+        {
+          "kind": "repository_record",
+          "reference": "development/DEVELOPMENT-AND-AUDIT-CONVENTION.md"
+        },
+        {
+          "kind": "repository_record",
+          "reference": "development/nova-context-memory-optimization/README.md"
+        }
+      ],
+      "notes": "The structural gate does not replace substantive evidence review or owner approval."
     }
   ]
 }
