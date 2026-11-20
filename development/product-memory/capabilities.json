@@ -545,6 +545,41 @@
       "decision_ref": "DEC-0004",
       "uniqueness_claim": "not_claimed",
       "notes": "Approved cross-cutting design requirement; the specific channels and mechanics remain service-dependent."
+    },
+    {
+      "id": "CAP-0015",
+      "title": "Product Development Memory and Decision Continuity",
+      "status": "approved",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "service_pillar": "internal_development_capability",
+      "problem": "Product strategy, accepted decisions, candidate capabilities, evidence and implementation rationale can become fragmented across conversations and repository subsystems.",
+      "user_benefit": "Future development agents and maintainers can recover durable product intent, decision reasons, dependencies and unresolved questions from the repository.",
+      "distinctive_value": "A concise structured memory layer with explicit authority boundaries, evidence provenance and deterministic anti-garbage/anti-loop validation.",
+      "stage": "all_stages",
+      "repeat_use": "Every non-trivial product-development task reads and updates the relevant records.",
+      "distribution_mechanism": "Repository-grounded continuity for new conversations, SI providers and maintainers.",
+      "dependencies": [],
+      "evidence": [
+        {
+          "kind": "owner_direction",
+          "reference": "Owner approval, 2026-11-20: create the Product Development Memory and verify its quality controls."
+        }
+      ],
+      "risks": [
+        "Documentation can duplicate other authoritative systems if boundaries are not maintained.",
+        "An AI can still write a substantively incorrect but structurally valid record.",
+        "Overly complex schemas can create friction and discourage useful records."
+      ],
+      "acceptance_criteria": [
+        "All key product capabilities have explicit approval states and rationale.",
+        "Accepted decisions preserve alternatives, consequences and approval provenance.",
+        "Strict validation rejects malformed, duplicated, dangling and cyclic records.",
+        "The memory links to existing sources instead of copying them."
+      ],
+      "decision_ref": "DEC-0001",
+      "uniqueness_claim": "not_claimed",
+      "notes": "Internal development capability; it is not a public user-facing service."
     }
   ]
 }
