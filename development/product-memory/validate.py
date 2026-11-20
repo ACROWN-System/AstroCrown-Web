@@ -274,8 +274,11 @@ def _check_dag(
         visit(node, [])
 
 
-def validate_directory(root: Path) -> list[str]:
+def validate_directory(root: Path, repository_root: Path | None = None) -> list[str]:
     errors: list[str] = []
+    # Register files live in development/product-memory; repository evidence paths
+    # are resolved from the repository root, not from that register directory.
+    repository_root = (repository_root or root).resolve()
     registers: dict[str, list[dict[str, object]]] = {}
 
     for register, (filename, prefix) in REGISTER_FILES.items():
@@ -386,7 +389,7 @@ def validate_directory(root: Path) -> list[str]:
                 _add(errors, where, "verified uniqueness claim requires independently verified observed research evidence")
         if not isinstance(cap.get("uniqueness_claim"), str) or cap.get("uniqueness_claim") not in {"not_claimed", "unverified", "verified"}:
             _add(errors, where, "uniqueness_claim must be not_claimed, unverified or verified")
-        used_sources |= _validate_evidence(cap.get("evidence"), where, source_ids, root, errors)
+        used_sources |= _validate_evidence(cap.get("evidence"), where, source_ids, repository_root, errors)
 
     _check_dag(cap_ids, cap_dependency_edges, "capability dependencies", errors)
 
@@ -440,7 +443,7 @@ def validate_directory(root: Path) -> list[str]:
                         _add(errors, where, "accepted decision cannot rely on candidate, conflicting, stale or superseded research")
         if isinstance(approval, dict) and approval.get("approved") is True and status != "accepted":
             _add(errors, where, "owner-approved decision must use status 'accepted'")
-        used_sources |= _validate_evidence(decision.get("evidence"), where, source_ids, root, errors)
+        used_sources |= _validate_evidence(decision.get("evidence"), where, source_ids, repository_root, errors)
 
     _check_dag(decision_ids, decision_edges, "decision supersession", errors)
 
@@ -513,7 +516,7 @@ def validate_directory(root: Path) -> list[str]:
                 _add(errors, where, f"unresolved roadmap dependency {ref}")
         if status == "completed" and not item.get("evidence"):
             _add(errors, where, "completed roadmap item requires evidence")
-        used_sources |= _validate_evidence(item.get("evidence"), where, source_ids, root, errors)
+        used_sources |= _validate_evidence(item.get("evidence"), where, source_ids, repository_root, errors)
 
     roadmap_edges: dict[str, list[str]] = {}
     for item in roadmap:
@@ -541,7 +544,8 @@ def main(argv: list[str] | None = None) -> int:
         help="directory containing the four JSON registers (default: this script's directory)",
     )
     args = parser.parse_args(argv)
-    errors = validate_directory(args.directory)
+    repository_root = Path(__file__).resolve().parents[2]
+    errors = validate_directory(args.directory, repository_root=repository_root)
     if errors:
         print("Product memory validation FAIL")
         for error in errors:
