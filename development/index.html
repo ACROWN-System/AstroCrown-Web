@@ -530,8 +530,10 @@
     }
   </style>
   <link rel="stylesheet" href="./account-continuity/prototype/account-prototype.css">
+  <link rel="stylesheet" href="./community-network/community-network.css">
   <script src="./account-continuity/prototype/account-ui.js" defer></script>
   <script src="./account-continuity/prototype/admin-wallet-ui.js" defer></script>
+  <script src="./community-network/community-network.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
@@ -594,6 +596,7 @@
           <a href="#development-notice">Development notice <span>↗</span></a>
         </div>
       </div>
+      <div class="menu-slot nav-slot optional-nav"><a class="nav-trigger community-nav-link" href="#community-network">Community</a></div>
       <div class="menu-slot nav-slot mobile-more">
         <button class="nav-trigger" type="button" data-menu="more-menu" aria-expanded="false" aria-controls="more-menu">More <span class="chevron" aria-hidden="true"></span></button>
         <div class="nav-panel" id="more-menu">
@@ -602,6 +605,7 @@
           <a href="#explore">Wallet Tracker concepts <span>↗</span></a>
           <a href="#explore">Token Studio concepts <span>↗</span></a>
           <a href="#explore">NOVA systems <span>↗</span></a>
+          <a href="#community-network">Community <span>↗</span></a>
           <a href="#development-notice">Development notice <span>↗</span></a>
         </div>
       </div>
@@ -884,7 +888,87 @@
       </div>
     </section>
 
-    <footer class="site-footer">
+        <section class="community-workspace" id="community-network" aria-labelledby="community-network-title">
+      <div class="community-heading">
+        <div>
+          <span class="community-kicker">AstroCrown · first-party network</span>
+          <h2 id="community-network-title">Community</h2>
+          <p>One AstroCrown identity across the global feed and specialised communities. AstroCrown itself is the authoritative home for its communities.</p>
+        </div>
+        <div class="community-heading-actions">
+          <button class="community-button" id="community-invitations-button" type="button">My invitations</button>
+          <button class="community-button" id="community-my-reports-button" type="button">My reports</button>
+          <button class="community-button" id="community-ownership-transfers-button" type="button" hidden>Ownership transfers</button>
+          <button class="community-button" id="community-refresh" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="community-layout">
+        <aside class="community-sidebar" aria-label="Community navigation">
+          <p class="community-side-title">Your network</p>
+          <div class="community-space-list">
+            <button class="community-space-button" id="community-global-feed" type="button" aria-current="true">
+              <span class="community-space-copy"><span class="community-space-name">Global feed</span><span class="community-space-note">Posts across AstroCrown</span></span>
+              <span class="community-space-count">All</span>
+            </button>
+          </div>
+          <p class="community-side-title" style="margin-top:16px">Communities</p>
+          <div class="community-space-list" id="community-space-list" aria-label="Specialised communities"></div>
+        </aside>
+        <div class="community-main-panel">
+          <div class="community-panel-header">
+            <div>
+              <h3 id="community-space-heading">Community-wide feed</h3>
+              <p class="community-panel-description" id="community-space-description">Loading AstroCrown communities…</p>
+              <p class="community-panel-meta" id="community-space-meta" aria-live="polite"></p>
+            </div>
+            <div class="community-panel-actions">
+              <button class="community-button is-primary" id="community-member-action" data-community-action="join" type="button" hidden>Join community</button>
+              <button class="community-button" id="community-review-requests" data-community-action="review" type="button" hidden>Review requests</button>
+              <button class="community-button" id="community-review-reports" data-community-action="review-reports" type="button" hidden>Review reports</button>
+              <button class="community-button" id="community-transfer-ownership" type="button" hidden>Transfer ownership</button>
+            </div>
+          </div>
+          <p class="community-feedback" id="community-feedback" role="status" aria-live="polite" hidden></p>
+          <div class="community-invitations-panel" id="community-invitations-panel" hidden></div>
+          <div class="community-manager-queue" id="community-manager-queue" hidden></div>
+          <div class="community-manager-queue community-report-queue" id="community-report-queue" hidden></div>
+          <div class="community-invitations-panel community-own-reports" id="community-own-reports" hidden></div>
+          <section class="community-ownership-panel" id="community-ownership-panel" hidden aria-labelledby="community-ownership-title">
+            <h4 id="community-ownership-title">Community ownership</h4>
+            <form class="community-ownership-form" id="community-ownership-propose-form" hidden>
+              <p class="community-panel-description">Propose a handover to an existing active member. You remain the owner until the proposed successor explicitly accepts.</p>
+              <label for="community-ownership-successor">Successor's AstroCrown account identifier</label>
+              <input class="community-input" id="community-ownership-successor" name="accountIdentifier" type="text" maxlength="100" autocomplete="off" required>
+              <label for="community-ownership-reason">Reason for handover (optional)</label>
+              <textarea class="community-textarea community-ownership-reason" id="community-ownership-reason" name="reason" maxlength="500" rows="2"></textarea>
+              <div class="community-composer-foot">
+                <span>The successor must already be an active member. A pending transfer can be cancelled by the current owner.</span>
+                <button class="community-button is-primary" type="submit">Propose ownership transfer</button>
+              </div>
+            </form>
+            <div id="community-ownership-transfer-list"></div>
+          </section>
+          <form class="community-composer" id="community-composer-form" hidden>
+            <label for="community-compose-text">Start a discussion</label>
+            <textarea class="community-textarea" id="community-compose-text" name="content" maxlength="10000" placeholder="Share a question, observation or piece of research…"></textarea>
+            <div class="community-composer-foot">
+              <span>Separate evidence from interpretation. Media uploads are not enabled in this release.</span>
+              <button class="community-button is-primary" type="submit">Publish post</button>
+            </div>
+          </form>
+          <div class="community-login-prompt" id="community-login-prompt">
+            <span data-community-login-copy>Log in with your AstroCrown passkey to publish, react, reply, bookmark or report.</span>
+            <button class="community-button is-primary" type="button" data-community-action="login">Log In</button>
+          </div>
+          <div class="community-feed-list" id="community-feed-list" aria-live="polite">
+            <div class="community-empty"><strong>Loading the feed…</strong></div>
+          </div>
+          <p class="community-footer-note">Community posts follow server-side visibility and moderation rules. Do not publish personal data, credentials, recovery keys, wallet secrets or confidential information. Private chat, media uploads and binding Council elections are not enabled here.</p>
+        </div>
+      </div>
+    </section>
+
+<footer class="site-footer">
       <div class="footer-main">
         <div class="footer-brand">
           <svg class="footer-mark" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="rgba(255,215,0,.25)"/><path d="M24 6 28 19 42 14 33 24 42 34 28 29 24 42 20 29 6 34 15 24 6 14 20 19Z" fill="#ffd700"/><circle cx="24" cy="24" r="4" fill="#081426"/></svg>
@@ -894,6 +978,7 @@
           <a href="#market-context">Market context</a>
           <a href="#market-directory">Asset directory</a>
           <a href="#explore">Explore ecosystem</a>
+          <a href="#community-network">Community</a>
           <a href="https://github.com/ACROWN-System/AstroCrown-Web" target="_blank" rel="noreferrer">Project repository ↗</a>
           <a href="https://github.com/ACROWN-System/AstroCrown-Web/pull/132" target="_blank" rel="noreferrer">Account roadmap ↗</a>
         </nav>

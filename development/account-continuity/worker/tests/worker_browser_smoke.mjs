@@ -345,6 +345,670 @@ async function getWorkerJson(path) {
     ".then(async r=>({status:r.status,body:await r.json()}))"
   );
 }
+async function testCommunityApi(accountIdentifier) {
+  const discovery = await getWorkerJson("/api/community/communities");
+  assert.equal(discovery.status, 200, JSON.stringify(discovery.body));
+  const slugs = discovery.body.communities.map(item => item.slug);
+  for (const expected of ["finance-tokenomics","aerospace","computing-power-infrastructure","superintelligence-ai-systems","ethics-governance","science-research"]) {
+    assert.ok(slugs.includes(expected), "the initial community directory must include " + expected);
+  }
+
+  const emptyGlobalFeed = await getWorkerJson("/api/community/feed");
+  assert.equal(emptyGlobalFeed.status, 200, JSON.stringify(emptyGlobalFeed.body));
+  assert.equal(emptyGlobalFeed.body.scope, "global");
+
+  const ordinaryCommunityCreation = await postWorkerJson("/api/community/communities", {
+    name: "Unauthorized Community", slug: "unauthorized-community", visibility: "public", membershipPolicy: "open"
+  });
+  assert.equal(ordinaryCommunityCreation.status, 403,
+    "ordinary passkey accounts must not create platform communities without authorized administrator step-up.");
+
+  const marker = "AstroCrown community integration test " + randomUUID();
+  const created = await postWorkerJson("/api/community/posts", { content: marker });
+  assert.equal(created.status, 201, JSON.stringify(created.body));
+  const post = created.body.post;
+  assert.match(post.id, /^post_[a-f0-9]{32}$/);
+  assert.equal(post.content, marker);
+  assert.equal(post.visibility, "public");
+  assert.equal(post.author.handle.length > 0, true);
+
+  const detail = await getWorkerJson("/api/community/posts/" + post.id);
+  assert.equal(detail.status, 200);
+  assert.equal(detail.body.post.content, marker);
+
+  const globalFeed = await getWorkerJson("/api/community/feed?limit=10");
+  assert.equal(globalFeed.status, 200);
+  assert.ok(globalFeed.body.items.some(item => item.id === post.id));
+
+  const reply = await postWorkerJson("/api/community/posts/" + post.id + "/replies", {
+    content: "Reply to " + marker
+  });
+  assert.equal(reply.status, 201, JSON.stringify(reply.body));
+  assert.equal(reply.body.post.parentId, post.id);
+  const replies = await getWorkerJson("/api/community/posts/" + post.id + "/replies");
+  assert.equal(replies.status, 200);
+  assert.ok(replies.body.items.some(item => item.id === reply.body.post.id));
+
+  const reaction = await postWorkerJson("/api/community/posts/" + post.id + "/reactions", { reaction: "like" });
+  assert.equal(reaction.status, 200);
+  assert.equal(reaction.body.post.likedByViewer, true);
+  assert.equal(reaction.body.post.likeCount, 1);
+  const duplicateReaction = await postWorkerJson("/api/community/posts/" + post.id + "/reactions", { reaction: "like" });
+  assert.equal(duplicateReaction.status, 200);
+  assert.equal(duplicateReaction.body.post.likeCount, 1, "duplicate reactions must be idempotent");
+  const removeReaction = await postWorkerJson("/api/community/posts/" + post.id + "/reactions", { reaction: null });
+  assert.equal(removeReaction.status, 200);
+  assert.equal(removeReaction.body.post.likedByViewer, false);
+
+  const bookmark = await postWorkerJson("/api/community/posts/" + post.id + "/bookmark", {});
+  assert.equal(bookmark.status, 200);
+  assert.equal(bookmark.body.post.bookmarkedByViewer, true);
+  const unbookmark = await postWorkerJson("/api/community/posts/" + post.id + "/bookmark", {});
+  assert.equal(unbookmark.status, 200);
+  assert.equal(unbookmark.body.post.bookmarkedByViewer, false);
+
+  const report = await postWorkerJson("/api/community/posts/" + post.id + "/report", {
+    category: "other", details: "Automated local-only test report."
+  });
+  assert.equal(report.status, 201);
+  const duplicateReport = await postWorkerJson("/api/community/posts/" + post.id + "/report", {
+    category: "other", details: "Duplicate local-only test report."
+  });
+  assert.equal(duplicateReport.status, 409, "a reporter must not submit duplicate reports for one target");
+
+  const joined = await postWorkerJson("/api/community/communities/aerospace/join", {});
+  assert.equal(joined.status, 200);
+  assert.equal(joined.body.membershipStatus, "active");
+  const spacePost = await postWorkerJson("/api/community/posts", {
+    content: "Aerospace community test " + randomUUID(), communitySlug: "aerospace"
+  });
+  assert.equal(spacePost.status, 201, JSON.stringify(spacePost.body));
+  assert.equal(spacePost.body.post.community.slug, "aerospace");
+  const spaceFeed = await getWorkerJson("/api/community/communities/aerospace/feed?limit=10");
+  assert.equal(spaceFeed.status, 200);
+  assert.ok(spaceFeed.body.items.some(item => item.id === spacePost.body.post.id));
+
+  const left = await postWorkerJson("/api/community/communities/aerospace/leave", {});
+  assert.equal(left.status, 200);
+  assert.equal(left.body.membershipStatus, "left");
+  const deniedPost = await postWorkerJson("/api/community/posts", {
+    content: "Should not post after leaving", communitySlug: "aerospace"
+  });
+  assert.equal(deniedPost.status, 403, "leaving a community must immediately remove posting authority");
+
+  const selfControl = await postWorkerJson("/api/community/accounts/not-a-valid-target/control", {
+    type: "block", action: "add"
+  });
+  assert.equal(selfControl.status, 404, "account-control routes must not reveal a nonexistent target account");
+
+  // Exercise the reverse-direction block case with a second synthetic local account.
+  // An author blocking the viewer must hide that author's content, but must not
+  // turn one hidden post into a failure for the viewer's entire feed.
+  const rootCookies = await cdp("Network.getCookies", { urls: [baseUrl] });
+  const rootToken = (rootCookies.cookies || []).find(item => item.name === "acrown_account_session" && item.value)?.value;
+  assert.ok(rootToken, "the primary community test account must retain its ordinary session.");
+  const blockedAuthorId = "community-author-" + randomUUID();
+  const blockedAuthorIdentifier = "AC-" + randomBytes(5).toString("hex").toUpperCase();
+  const blockedAuthorHandle = randomBytes(32).toString("base64url");
+  const blockedAuthorToken = randomBytes(32).toString("base64url");
+  const blockedAuthorTokenHash = createHash("sha256").update(blockedAuthorToken).digest("base64url");
+  const nonMemberId = "community-outsider-" + randomUUID();
+  const nonMemberIdentifier = "AC-" + randomBytes(5).toString("hex").toUpperCase();
+  const nonMemberHandle = randomBytes(32).toString("base64url");
+  const nonMemberToken = randomBytes(32).toString("base64url");
+  const nonMemberTokenHash = createHash("sha256").update(nonMemberToken).digest("base64url");
+  const fixtureNow = Math.floor(Date.now() / 1000);
+  const fixtureTimestamp = new Date().toISOString();
+  const requestSlug = "request-" + randomUUID().slice(0, 8);
+  const privateSlug = "private-" + randomUUID().slice(0, 8);
+  const transferSlug = "handover-" + randomUUID().slice(0, 8);
+  const requestSpaceId = "space_request_" + randomUUID().replace(/-/g, "");
+  const privateSpaceId = "space_private_" + randomUUID().replace(/-/g, "");
+  const transferSpaceId = "space_transfer_" + randomUUID().replace(/-/g, "");
+  executeLocalD1Fixture([
+    "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
+      [blockedAuthorId,blockedAuthorIdentifier,blockedAuthorHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
+    "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
+      [blockedAuthorTokenHash,blockedAuthorId,randomBytes(16).toString("hex"),null,fixtureNow,fixtureNow+1800].map(value => value === null ? "NULL" : sqlLiteral(value)).join(",") + ");",
+    "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) VALUES (" +
+      [nonMemberId,nonMemberIdentifier,nonMemberHandle,fixtureTimestamp,"person","","development-terms-2026-10-31-v0.3",fixtureTimestamp,"user"].map(sqlLiteral).join(",") + ");",
+    "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES (" +
+      [nonMemberTokenHash,nonMemberId,randomBytes(16).toString("hex"),null,fixtureNow,fixtureNow+1800].map(value => value === null ? "NULL" : sqlLiteral(value)).join(",") + ");",
+    "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
+      [requestSpaceId,requestSlug,"Request Workflow Test","Synthetic restricted-space fixture","Test membership request lifecycle","Synthetic local test only","restricted","request","active"].map(sqlLiteral).join(",") +
+      ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
+    "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
+      [privateSpaceId,privateSlug,"Invitation Workflow Test","Synthetic private-space fixture","Test invitation lifecycle","Synthetic local test only","private","invite_only","active"].map(sqlLiteral).join(",") +
+      ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
+    "INSERT INTO community_spaces(space_id,slug,name,description,purpose,rules_text,visibility,membership_policy,status,created_by_account_id,created_at,updated_at) VALUES (" +
+      [transferSpaceId,transferSlug,"Ownership Transfer Test","Synthetic public handover fixture","Test ownership succession","Synthetic local test only","public","open","active"].map(sqlLiteral).join(",") +
+      ",(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," + fixtureNow + "," + fixtureNow + ");",
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(requestSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(privateSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(transferSpaceId) + ",account_id,'active','owner'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+      "SELECT " + sqlLiteral(transferSpaceId) + ",account_id,'active','member'," + fixtureNow + "," + fixtureNow + " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(nonMemberIdentifier) + ";",
+  ].join("\n"), "Create synthetic second account, request/private fixtures and owner-transfer fixture");
+
+  // Request-based membership is not active until an owner/moderator approves it.
+  await setBrowserAccountSession(blockedAuthorToken);
+  const requestJoin = await postWorkerJson("/api/community/communities/" + requestSlug + "/join", {});
+  assert.equal(requestJoin.status, 200, JSON.stringify(requestJoin.body));
+  assert.equal(requestJoin.body.membershipStatus, "pending");
+  const nonModeratorQueue = await getWorkerJson("/api/community/communities/" + requestSlug + "/membership-requests");
+  assert.equal(nonModeratorQueue.status, 403, "ordinary members must not read the pending membership queue.");
+  const prematureRestrictedPost = await postWorkerJson("/api/community/posts", {
+    content: "Should not post while membership is pending", communitySlug: requestSlug
+  });
+  assert.equal(prematureRestrictedPost.status, 403, "pending request membership must not grant posting rights.");
+
+  await setBrowserAccountSession(rootToken);
+  const requestQueue = await getWorkerJson("/api/community/communities/" + requestSlug + "/membership-requests");
+  assert.equal(requestQueue.status, 200, JSON.stringify(requestQueue.body));
+  assert.ok(requestQueue.body.items.some(item => item.accountId === blockedAuthorId));
+  const approvedRequest = await postWorkerJson("/api/community/communities/" + requestSlug + "/members/" + blockedAuthorId + "/decision", {
+    action: "approve", reason: "Local browser test approval"
+  });
+  assert.equal(approvedRequest.status, 200, JSON.stringify(approvedRequest.body));
+  assert.equal(approvedRequest.body.membershipStatus, "active");
+
+  await setBrowserAccountSession(blockedAuthorToken);
+  const restrictedPost = await postWorkerJson("/api/community/posts", {
+    content: "Approved restricted-space post " + randomUUID(), communitySlug: requestSlug
+  });
+  assert.equal(restrictedPost.status, 201, JSON.stringify(restrictedPost.body));
+
+  // A community manager may triage reports for their own community, but an
+  // ordinary member cannot inspect or transition that queue.
+  await setBrowserAccountSession(rootToken);
+  const reportTargetA = await postWorkerJson("/api/community/posts", {
+    content: "Synthetic post for report resolution test " + randomUUID(), communitySlug: requestSlug
+  });
+  assert.equal(reportTargetA.status, 201, JSON.stringify(reportTargetA.body));
+  await setBrowserAccountSession(blockedAuthorToken);
+  const reportA = await postWorkerJson("/api/community/posts/" + reportTargetA.body.post.id + "/report", {
+    category: "spam", details: "Synthetic local browser report-resolution test"
+  });
+  assert.equal(reportA.status, 201, JSON.stringify(reportA.body));
+  assert.ok(reportA.body.reportId);
+  const duplicateReportA = await postWorkerJson("/api/community/posts/" + reportTargetA.body.post.id + "/report", {
+    category: "spam", details: "Duplicate report must remain rejected"
+  });
+  assert.equal(duplicateReportA.status, 409);
+  const ordinaryReportQueue = await getWorkerJson("/api/community/moderation/reports?community=" + requestSlug);
+  assert.equal(ordinaryReportQueue.status, 403, "ordinary members must not read a community's moderation queue.");
+  const ordinaryReportTransition = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "start_review", reason: "Unauthorized local report review attempt"
+  });
+  assert.equal(ordinaryReportTransition.status, 403, "ordinary members must not change report status.");
+  const reporterOwnReportBefore = await getWorkerJson("/api/community/reports/mine");
+  assert.equal(reporterOwnReportBefore.status, 200);
+  assert.equal(reporterOwnReportBefore.body.reports.find(item => item.id === reportA.body.reportId).status, "open");
+
+  await setBrowserAccountSession(rootToken);
+  const unscopedManagerQueue = await getWorkerJson("/api/community/moderation/reports");
+  assert.equal(unscopedManagerQueue.status, 403, "a community manager cannot read the unscoped platform-wide queue.");
+  const reportQueue = await getWorkerJson("/api/community/moderation/reports?community=" + requestSlug);
+  assert.equal(reportQueue.status, 200, JSON.stringify(reportQueue.body));
+  assert.ok(reportQueue.body.reports.some(item => item.id === reportA.body.reportId));
+  const reportStarted = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "start_review", reason: "Assigned to the community moderation queue"
+  });
+  assert.equal(reportStarted.status, 200, JSON.stringify(reportStarted.body));
+  assert.equal(reportStarted.body.status, "in_review");
+  const reportResolved = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "resolve", reason: "Resolved in the synthetic local browser test"
+  });
+  assert.equal(reportResolved.status, 200, JSON.stringify(reportResolved.body));
+  assert.equal(reportResolved.body.status, "resolved");
+  const duplicateResolution = await postWorkerJson("/api/community/moderation/reports/" + reportA.body.reportId + "/transition", {
+    action: "dismiss", reason: "A final report decision cannot be changed by a second transition"
+  });
+  assert.equal(duplicateResolution.status, 409);
+
+  const reportTargetB = await postWorkerJson("/api/community/posts", {
+    content: "Synthetic post for report dismissal test " + randomUUID(), communitySlug: requestSlug
+  });
+  assert.equal(reportTargetB.status, 201, JSON.stringify(reportTargetB.body));
+  await setBrowserAccountSession(blockedAuthorToken);
+  const reportB = await postWorkerJson("/api/community/posts/" + reportTargetB.body.post.id + "/report", {
+    category: "other", details: "Synthetic local browser report-dismissal test"
+  });
+  assert.equal(reportB.status, 201, JSON.stringify(reportB.body));
+  await setBrowserAccountSession(rootToken);
+  const reportBStarted = await postWorkerJson("/api/community/moderation/reports/" + reportB.body.reportId + "/transition", {
+    action: "start_review", reason: "Assigned to the community moderation queue"
+  });
+  assert.equal(reportBStarted.status, 200, JSON.stringify(reportBStarted.body));
+  const reportDismissed = await postWorkerJson("/api/community/moderation/reports/" + reportB.body.reportId + "/transition", {
+    action: "dismiss", reason: "The synthetic test report does not require content action"
+  });
+  assert.equal(reportDismissed.status, 200, JSON.stringify(reportDismissed.body));
+  assert.equal(reportDismissed.body.status, "dismissed");
+  await setBrowserAccountSession(blockedAuthorToken);
+  const reporterOwnReportsAfter = await getWorkerJson("/api/community/reports/mine");
+  assert.equal(reporterOwnReportsAfter.status, 200, JSON.stringify(reporterOwnReportsAfter.body));
+  const resolvedByReporter = reporterOwnReportsAfter.body.reports.find(item => item.id === reportA.body.reportId);
+  const dismissedByReporter = reporterOwnReportsAfter.body.reports.find(item => item.id === reportB.body.reportId);
+  assert.equal(resolvedByReporter.status, "resolved");
+  assert.equal(resolvedByReporter.resolution, "Resolved in the synthetic local browser test");
+  assert.equal(dismissedByReporter.status, "dismissed");
+
+  // Ownership transfer is a two-party handover. The existing owner remains
+  // owner until the successor accepts; the former owner is then demoted.
+  await setBrowserAccountSession(nonMemberToken);
+  const nonOwnerTransfer = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier: blockedAuthorIdentifier, reason: "A non-owner must not transfer a community"
+  });
+  assert.equal(nonOwnerTransfer.status, 403, "only the current owner may propose ownership transfer.");
+
+  await setBrowserAccountSession(nonMemberToken);
+  const successorJoin = await postWorkerJson("/api/community/communities/" + transferSlug + "/join", {});
+  assert.equal(successorJoin.status, 200, JSON.stringify(successorJoin.body));
+  assert.equal(successorJoin.body.membershipStatus, "active",
+    "the proposed successor must be an active member through the real join workflow.");
+
+  await setBrowserAccountSession(rootToken);
+  const targetNotMember = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier: blockedAuthorIdentifier, reason: "A proposed successor must already be a member"
+  });
+  assert.equal(targetNotMember.status, 409, "the proposed successor must already be an active community member.");
+  const proposedSuccessorDetail = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(proposedSuccessorDetail.status, 200, JSON.stringify(proposedSuccessorDetail.body));
+  assert.equal(proposedSuccessorDetail.body.memberRole, "owner");
+  const transferCreated = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier: nonMemberIdentifier, reason: "Synthetic local ownership handover test"
+  });
+  assert.equal(transferCreated.status, 201, JSON.stringify(transferCreated.body));
+  const transferId = transferCreated.body.transfer.id;
+  assert.equal(transferCreated.body.transfer.status, "pending");
+  const pendingTransferLeave = await postWorkerJson("/api/community/communities/" + transferSlug + "/leave", {});
+  assert.equal(pendingTransferLeave.status, 409, "the current owner cannot leave before successor acceptance.");
+  const ownerTransferList = await getWorkerJson("/api/community/ownership-transfers");
+  assert.equal(ownerTransferList.status, 200);
+  assert.ok(ownerTransferList.body.outgoing.some(item => item.id === transferId));
+
+  await setBrowserAccountSession(blockedAuthorToken);
+  const wrongRecipientAccept = await postWorkerJson("/api/community/ownership-transfers/" + transferId + "/respond", {
+    action: "accept"
+  });
+  assert.equal(wrongRecipientAccept.status, 404, "only the intended successor may accept the transfer.");
+  const transferSpaceJoin = await postWorkerJson("/api/community/communities/" + transferSlug + "/join", {});
+  assert.equal(transferSpaceJoin.status, 200);
+  assert.equal(transferSpaceJoin.body.membershipStatus, "active");
+
+  await setBrowserAccountSession(nonMemberToken);
+  const successorInbox = await getWorkerJson("/api/community/ownership-transfers");
+  assert.equal(successorInbox.status, 200);
+  assert.ok(successorInbox.body.incoming.some(item => item.id === transferId));
+  const acceptedTransfer = await postWorkerJson("/api/community/ownership-transfers/" + transferId + "/respond", {
+    action: "accept", reason: "Successor explicitly accepts responsibility in the local browser test"
+  });
+  assert.equal(acceptedTransfer.status, 200, JSON.stringify(acceptedTransfer.body));
+  assert.equal(acceptedTransfer.body.status, "accepted");
+  const acceptedAgain = await postWorkerJson("/api/community/ownership-transfers/" + transferId + "/respond", { action: "accept" });
+  assert.equal(acceptedAgain.status, 409, "an accepted handover cannot be replayed.");
+
+  await setBrowserAccountSession(rootToken);
+  const formerOwnerDetail = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(formerOwnerDetail.status, 200);
+  assert.equal(formerOwnerDetail.body.memberRole, "member", "the former owner is demoted to ordinary-member privilege.");
+  const formerOwnerCanLeave = await postWorkerJson("/api/community/communities/" + transferSlug + "/leave", {});
+  assert.equal(formerOwnerCanLeave.status, 200, "the former owner may leave after the transfer has been accepted.");
+
+  // Exercise decline and owner cancellation; neither may change the owner role.
+  await setBrowserAccountSession(rootToken);
+  const formerOwnerRejoin = await postWorkerJson("/api/community/communities/" + transferSlug + "/join", {});
+  assert.equal(formerOwnerRejoin.status, 200, JSON.stringify(formerOwnerRejoin.body));
+  assert.equal(formerOwnerRejoin.body.membershipStatus, "active");
+  await setBrowserAccountSession(nonMemberToken);
+  const declineTransfer = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier, reason: "Synthetic successor-decline lifecycle test"
+  });
+  assert.equal(declineTransfer.status, 201, JSON.stringify(declineTransfer.body));
+  const declineId = declineTransfer.body.transfer.id;
+  await setBrowserAccountSession(rootToken);
+  const declined = await postWorkerJson("/api/community/ownership-transfers/" + declineId + "/respond", {
+    action: "decline", reason: "The proposed successor declines in the local test."
+  });
+  assert.equal(declined.status, 200, JSON.stringify(declined.body));
+  assert.equal(declined.body.status, "declined");
+  await setBrowserAccountSession(nonMemberToken);
+  const cancelledTransfer = await postWorkerJson("/api/community/communities/" + transferSlug + "/ownership-transfers", {
+    accountIdentifier, reason: "Synthetic owner-cancellation lifecycle test"
+  });
+  assert.equal(cancelledTransfer.status, 201, JSON.stringify(cancelledTransfer.body));
+  const cancelledId = cancelledTransfer.body.transfer.id;
+  const cancelled = await postWorkerJson("/api/community/ownership-transfers/" + cancelledId + "/cancel", {
+    reason: "The current owner cancels this handover in the local test."
+  });
+  assert.equal(cancelled.status, 200, JSON.stringify(cancelled.body));
+  assert.equal(cancelled.body.status, "cancelled");
+  const activeOwnerAfterCancellation = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(activeOwnerAfterCancellation.status, 200);
+  assert.equal(activeOwnerAfterCancellation.body.memberRole, "owner");
+  const noPendingTransfers = await getWorkerJson("/api/community/ownership-transfers");
+  assert.equal(noPendingTransfers.status, 200);
+  assert.equal(noPendingTransfers.body.incoming.some(item => item.id === cancelledId), false);
+  await setBrowserAccountSession(blockedAuthorToken);
+
+  const leftRequestSpace = await postWorkerJson("/api/community/communities/" + requestSlug + "/leave", {});
+  assert.equal(leftRequestSpace.status, 200);
+  const requestAgain = await postWorkerJson("/api/community/communities/" + requestSlug + "/join", {});
+  assert.equal(requestAgain.status, 200);
+  assert.equal(requestAgain.body.membershipStatus, "pending");
+
+  await setBrowserAccountSession(rootToken);
+  const rejectedRequest = await postWorkerJson("/api/community/communities/" + requestSlug + "/members/" + blockedAuthorId + "/decision", {
+    action: "reject", reason: "Local browser test rejection"
+  });
+  assert.equal(rejectedRequest.status, 200, JSON.stringify(rejectedRequest.body));
+  assert.equal(rejectedRequest.body.membershipStatus, "left");
+  await setBrowserAccountSession(blockedAuthorToken);
+  const deniedAfterRejection = await postWorkerJson("/api/community/posts", {
+    content: "Should not post after request rejection", communitySlug: requestSlug
+  });
+  assert.equal(deniedAfterRejection.status, 403);
+
+  // Private communities require an account-bound invitation and explicit acceptance.
+  await setBrowserAccountSession(rootToken);
+  const invitationCreated = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test invitation"
+  });
+  assert.equal(invitationCreated.status, 201, JSON.stringify(invitationCreated.body));
+  const invitationId = invitationCreated.body.invitation.id;
+  const duplicateInvitation = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Duplicate invitation must be rejected"
+  });
+  assert.equal(duplicateInvitation.status, 409, "only one pending invitation per account/community may exist.");
+  const nonInviteeAcceptance = await postWorkerJson("/api/community/invitations/" + invitationId + "/respond", { action: "accept" });
+  assert.equal(nonInviteeAcceptance.status, 404, "a manager must not accept an invitation on behalf of the invited account.");
+
+  await setBrowserAccountSession(blockedAuthorToken);
+  const invitationInbox = await getWorkerJson("/api/community/invitations");
+  assert.equal(invitationInbox.status, 200, JSON.stringify(invitationInbox.body));
+  assert.ok(invitationInbox.body.invitations.some(item => item.id === invitationId));
+  const declinedInvitation = await postWorkerJson("/api/community/invitations/" + invitationId + "/respond", { action: "decline" });
+  assert.equal(declinedInvitation.status, 200, JSON.stringify(declinedInvitation.body));
+  assert.equal(declinedInvitation.body.invitationStatus, "declined");
+  await setBrowserAccountSession(rootToken);
+  const acceptedInvitationCreated = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Second invitation for explicit acceptance"
+  });
+  assert.equal(acceptedInvitationCreated.status, 201, JSON.stringify(acceptedInvitationCreated.body));
+  const acceptedInvitationId = acceptedInvitationCreated.body.invitation.id;
+  await setBrowserAccountSession(blockedAuthorToken);
+  const acceptedInvitation = await postWorkerJson("/api/community/invitations/" + acceptedInvitationId + "/respond", { action: "accept" });
+  assert.equal(acceptedInvitation.status, 200, JSON.stringify(acceptedInvitation.body));
+  assert.equal(acceptedInvitation.body.membershipStatus, "active");
+  const privatePost = await postWorkerJson("/api/community/posts", {
+    content: "Private invitation post " + randomUUID(), communitySlug: privateSlug
+  });
+  assert.equal(privatePost.status, 201, JSON.stringify(privatePost.body));
+  const invitedMemberCanRead = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
+  assert.equal(invitedMemberCanRead.status, 200, "an accepted invite must grant the invited member access.");
+  await setBrowserAccountSession(rootToken);
+  const ownerCanReadPrivatePost = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
+  assert.equal(ownerCanReadPrivatePost.status, 200, "the active private-community owner must retain access.");
+  await setBrowserAccountSession(nonMemberToken);
+  const nonMemberCannotReadPrivatePost = await getWorkerJson("/api/community/posts/" + privatePost.body.post.id);
+  assert.equal(nonMemberCannotReadPrivatePost.status, 404, "private content must remain hidden from an unrelated authenticated account.");
+  const nonMemberCannotReadPrivateFeed = await getWorkerJson("/api/community/communities/" + privateSlug + "/feed");
+  assert.equal(nonMemberCannotReadPrivateFeed.status, 404, "private community feed must remain hidden from an unrelated authenticated account.");
+  await setBrowserAccountSession(blockedAuthorToken);
+
+  const leftPrivateSpace = await postWorkerJson("/api/community/communities/" + privateSlug + "/leave", {});
+  assert.equal(leftPrivateSpace.status, 200);
+  await setBrowserAccountSession(rootToken);
+  const invitationBlockedByBan = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test banned-recipient acceptance guard"
+  });
+  assert.equal(invitationBlockedByBan.status, 201, JSON.stringify(invitationBlockedByBan.body));
+  const bannedInviteId = invitationBlockedByBan.body.invitation.id;
+  executeLocalD1Fixture(
+    "UPDATE community_memberships SET membership_status='banned',updated_at=" + fixtureNow +
+    " WHERE space_id=" + sqlLiteral(privateSpaceId) + " AND account_id=" + sqlLiteral(blockedAuthorId) + ";",
+    "Ban the synthetic invite recipient before acceptance"
+  );
+  await setBrowserAccountSession(blockedAuthorToken);
+  const bannedInviteAcceptance = await postWorkerJson("/api/community/invitations/" + bannedInviteId + "/respond", { action: "accept" });
+  assert.equal(bannedInviteAcceptance.status, 403, "a banned account must not activate membership by accepting an invitation.");
+  const bannedInviteInbox = await getWorkerJson("/api/community/invitations");
+  assert.equal(bannedInviteInbox.status, 200);
+  assert.ok(bannedInviteInbox.body.invitations.some(item => item.id === bannedInviteId),
+    "the invitation remains pending when acceptance is rejected due to a ban.");
+  await setBrowserAccountSession(rootToken);
+  executeLocalD1Fixture(
+    "UPDATE community_memberships SET membership_status='left',updated_at=" + fixtureNow +
+    " WHERE space_id=" + sqlLiteral(privateSpaceId) + " AND account_id=" + sqlLiteral(blockedAuthorId) + ";",
+    "Restore the synthetic account after the banned-recipient acceptance test"
+  );
+  const bannedInvitationRevoked = await postWorkerJson("/api/community/invitations/" + bannedInviteId + "/revoke", {
+    reason: "Close the synthetic banned-recipient test invitation"
+  });
+  assert.equal(bannedInvitationRevoked.status, 200, JSON.stringify(bannedInvitationRevoked.body));
+  assert.equal(bannedInvitationRevoked.body.invitationStatus, "revoked");
+
+  const invitationToRevoke = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test revocation"
+  });
+  assert.equal(invitationToRevoke.status, 201, JSON.stringify(invitationToRevoke.body));
+  const revokedId = invitationToRevoke.body.invitation.id;
+  const revoked = await postWorkerJson("/api/community/invitations/" + revokedId + "/revoke", { reason: "Local browser test revocation" });
+  assert.equal(revoked.status, 200, JSON.stringify(revoked.body));
+  assert.equal(revoked.body.invitationStatus, "revoked");
+  await setBrowserAccountSession(blockedAuthorToken);
+  const revokedAcceptance = await postWorkerJson("/api/community/invitations/" + revokedId + "/respond", { action: "accept" });
+  assert.equal(revokedAcceptance.status, 409, "a revoked invitation must not grant private membership.");
+
+  await setBrowserAccountSession(rootToken);
+  const invitationToExpire = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Local browser test expiry"
+  });
+  assert.equal(invitationToExpire.status, 201, JSON.stringify(invitationToExpire.body));
+  const expiredId = invitationToExpire.body.invitation.id;
+  executeLocalD1Fixture(
+    "UPDATE community_membership_invitations SET created_at=" + (fixtureNow - 3600) +
+    ",expires_at=" + (fixtureNow - 1) + " WHERE invite_id=" + sqlLiteral(expiredId) + ";",
+    "Expire a synthetic local community invitation"
+  );
+  await setBrowserAccountSession(blockedAuthorToken);
+  const expiredAcceptance = await postWorkerJson("/api/community/invitations/" + expiredId + "/respond", { action: "accept" });
+  assert.equal(expiredAcceptance.status, 410, "an expired invitation must not grant private membership.");
+  await setBrowserAccountSession(rootToken);
+  const reinvitedAfterExpiry = await postWorkerJson("/api/community/communities/" + privateSlug + "/invitations", {
+    accountId: blockedAuthorId, reason: "Expired invitation must not block a fresh invitation"
+  });
+  assert.equal(reinvitedAfterExpiry.status, 201, JSON.stringify(reinvitedAfterExpiry.body));
+  assert.notEqual(reinvitedAfterExpiry.body.invitation.id, expiredId);
+
+  // The author-side block below is a separate visibility regression: direct access
+  // stays hidden while the global feed continues to return unrelated content.
+  // Apply the block only now so it cannot contaminate the private-community
+  // owner-visibility assertions above.
+  executeLocalD1Fixture(
+    "INSERT INTO community_account_controls(account_id,target_account_id,control_type,created_at) " +
+    "SELECT " + sqlLiteral(blockedAuthorId) + ",account_id,'block'," + fixtureNow +
+    " FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ";",
+    "Apply the author-side block only for the final feed-isolation regression"
+  );
+  await setBrowserAccountSession(blockedAuthorToken);
+  const blockedAuthorPost = await postWorkerJson("/api/community/posts", {
+    content: "Blocked author feed-isolation test " + randomUUID()
+  });
+  assert.equal(blockedAuthorPost.status, 201, JSON.stringify(blockedAuthorPost.body));
+  await setBrowserAccountSession(rootToken);
+  const hiddenPostDetail = await getWorkerJson("/api/community/posts/" + blockedAuthorPost.body.post.id);
+  assert.equal(hiddenPostDetail.status, 404, "an author-side block must continue to hide direct post access.");
+  const feedAfterAuthorBlock = await getWorkerJson("/api/community/feed?limit=50");
+  assert.equal(feedAfterAuthorBlock.status, 200, JSON.stringify(feedAfterAuthorBlock.body));
+  assert.equal(feedAfterAuthorBlock.body.items.some(item => item.id === blockedAuthorPost.body.post.id), false,
+    "a feed must omit content from an author who blocked the viewer without failing unrelated feed items.");
+
+  const deleted = await postWorkerJson("/api/community/posts/" + post.id + "/delete", {});
+  assert.equal(deleted.status, 200);
+  assert.equal(deleted.body.deleted, true);
+  const missingAfterDelete = await getWorkerJson("/api/community/posts/" + post.id);
+  assert.equal(missingAfterDelete.status, 404);
+  console.log("PASS: authenticated Community API journeys, request/invitation state machines, accepted/declined/cancelled owner handovers, report moderation, feed privacy, posting boundaries and author removal.");
+  return { rootToken, nonMemberToken, accountIdentifier, nonMemberIdentifier, transferSlug };
+}
+
+async function testCommunityOwnershipUi(fixtures) {
+  const { rootToken, nonMemberToken, accountIdentifier, nonMemberIdentifier, transferSlug } = fixtures;
+
+  // The API journey leaves nonMember as the current owner and root as an
+  // active ordinary member. Exercise every ownership control in the real UI.
+  await setBrowserAccountSession(nonMemberToken);
+  await trustedClick("#community-refresh");
+  await waitFor("ownership fixture community appears in the directory", () =>
+    evaluate("Boolean(document.querySelector('#community-space-list [data-community-slug=" + transferSlug + "]'))"));
+  await evaluate("document.querySelector('#community-space-list [data-community-slug=" + transferSlug + "]').click()");
+  await waitFor("the current owner sees Transfer ownership", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === false"));
+
+  await trustedClick("#community-transfer-ownership");
+  await waitFor("ownership form is visible to the current owner", () =>
+    evaluate("!document.getElementById('community-ownership-propose-form').hidden"));
+  await evaluate(
+    "document.getElementById('community-ownership-successor').value=" + JSON.stringify(accountIdentifier)
+  );
+  await trustedClick("#community-ownership-propose-form button[type=submit]");
+  await waitFor("outgoing ownership proposal appears in the owner UI", () =>
+    evaluate("!document.getElementById('community-ownership-panel').hidden && " +
+      "document.getElementById('community-ownership-transfer-list').textContent.includes('Proposed successor for Ownership Transfer Test')"));
+
+  // Switch to the intended successor. Refresh uses the real account cookie and
+  // server membership response to hide the owner-only action.
+  await setBrowserAccountSession(rootToken);
+  await trustedClick("#community-refresh");
+  await waitFor("ordinary successor view does not display owner-only controls", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === true"));
+  await trustedClick("#community-ownership-transfers-button");
+  await waitFor("successor sees the incoming ownership proposal", () =>
+    evaluate("document.getElementById('community-ownership-transfer-list').textContent.includes('Successor requested for Ownership Transfer Test')"));
+  await trustedClick("#community-ownership-transfer-list [data-ownership-response=accept]");
+  await waitFor("successor becomes owner after clicking Accept ownership", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === false"));
+  const acceptedDetail = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(acceptedDetail.status, 200, JSON.stringify(acceptedDetail.body));
+  assert.equal(acceptedDetail.body.memberRole, "owner");
+
+  // The new owner proposes again; the former owner declines through the UI.
+  await trustedClick("#community-transfer-ownership");
+  await evaluate(
+    "document.getElementById('community-ownership-successor').value=" + JSON.stringify(nonMemberIdentifier)
+  );
+  await trustedClick("#community-ownership-propose-form button[type=submit]");
+  await waitFor("the new owner sees a second outgoing proposal", () =>
+    evaluate("document.getElementById('community-ownership-transfer-list').textContent.includes('Proposed successor for Ownership Transfer Test')"));
+  await setBrowserAccountSession(nonMemberToken);
+  await trustedClick("#community-refresh");
+  await waitFor("the former owner is now an ordinary member", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === true"));
+  await trustedClick("#community-ownership-transfers-button");
+  await waitFor("former owner sees the second incoming proposal", () =>
+    evaluate("document.getElementById('community-ownership-transfer-list').textContent.includes('Successor requested for Ownership Transfer Test')"));
+  await trustedClick("#community-ownership-transfer-list [data-ownership-response=decline]");
+  const retainedOwner = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(retainedOwner.status, 200);
+  assert.equal(retainedOwner.body.memberRole, "member");
+
+  // Propose once more and cancel from the current owner's outgoing queue.
+  await setBrowserAccountSession(rootToken);
+  await trustedClick("#community-refresh");
+  await waitFor("current owner regains transfer controls", () =>
+    evaluate("document.getElementById('community-transfer-ownership').hidden === false"));
+  await trustedClick("#community-transfer-ownership");
+  await evaluate(
+    "document.getElementById('community-ownership-successor').value=" + JSON.stringify(nonMemberIdentifier)
+  );
+  await trustedClick("#community-ownership-propose-form button[type=submit]");
+  await waitFor("cancellable outgoing proposal is displayed", () =>
+    evaluate("document.querySelector('#community-ownership-transfer-list [data-ownership-cancel]') !== null"));
+  await trustedClick("#community-ownership-transfer-list [data-ownership-cancel]");
+  await waitFor("cancellation removes the proposal from the outgoing queue", () =>
+    evaluate("!document.getElementById('community-ownership-transfer-list').textContent.includes('Proposed successor for Ownership Transfer Test')"));
+  const retainedAfterCancel = await getWorkerJson("/api/community/communities/" + transferSlug);
+  assert.equal(retainedAfterCancel.status, 200);
+  assert.equal(retainedAfterCancel.body.memberRole, "owner");
+  console.log("PASS: Chrome ownership UI: owner proposes to an active member, successor accepts, former owner declines a later proposal, and current owner cancels another proposal.");
+}
+
+async function testCommunityModerationUi(fixtures) {
+  const { rootToken, nonMemberToken, accountIdentifier } = fixtures;
+  const now = Math.floor(Date.now() / 1000);
+  executeLocalD1Fixture(
+    "INSERT INTO community_memberships(space_id,account_id,membership_status,member_role,requested_at,updated_at) " +
+    "VALUES((SELECT space_id FROM community_spaces WHERE slug='aerospace')," +
+    "(SELECT account_id FROM auth_accounts WHERE account_identifier=" + sqlLiteral(accountIdentifier) + ")," +
+    "'active','owner'," + now + "," + now + ") " +
+    "ON CONFLICT(space_id,account_id) DO UPDATE SET membership_status='active',member_role='owner',updated_at=excluded.updated_at;",
+    "Grant a synthetic community-owner role for the report-review UI test"
+  );
+
+  await setBrowserAccountSession(rootToken);
+  const reportTarget = await postWorkerJson("/api/community/posts", {
+    content: "Synthetic Community report UI preview " + randomUUID(),
+    communitySlug: "aerospace"
+  });
+  assert.equal(reportTarget.status, 201, JSON.stringify(reportTarget.body));
+
+  await setBrowserAccountSession(nonMemberToken);
+  const report = await postWorkerJson("/api/community/posts/" + reportTarget.body.post.id + "/report", {
+    category: "other",
+    details: "Exercise the visible review controls after closing the passkey dialog."
+  });
+  assert.equal(report.status, 201, JSON.stringify(report.body));
+  const reportId = report.body.reportId;
+
+  await setBrowserAccountSession(rootToken);
+  const ownerView = await getWorkerJson("/api/community/communities/aerospace");
+  assert.equal(ownerView.status, 200, JSON.stringify(ownerView.body));
+  assert.equal(ownerView.body.memberRole, "owner",
+    "the local D1 fixture must establish a real owner membership before the UI is tested.");
+
+  await evaluate("document.querySelector('#community-space-list [data-community-slug=aerospace]').click()");
+  await waitFor("homepage displays Aerospace as the selected community", () =>
+    evaluate("document.getElementById('community-space-heading').textContent === 'Aerospace'"));
+  await waitFor("the community owner sees Review reports", () =>
+    evaluate("!document.getElementById('community-review-reports').hidden"));
+  await trustedClick("#community-review-reports");
+  await waitFor("the owner sees the submitted report in the moderation UI", () =>
+    evaluate("!document.getElementById('community-report-queue').hidden && " +
+      "document.getElementById('community-report-queue').textContent.includes('Synthetic Community report UI preview')"));
+
+  await evaluate(
+    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
+      JSON.stringify(reportId) + ").value=" +
+      JSON.stringify("Reviewed through the Community UI browser test.")
+  );
+  await trustedClick("#community-report-queue [data-report-action='start_review'][data-report-id='" + reportId + "']");
+  await waitFor("the report enters review through the visible owner control", () =>
+    evaluate("document.getElementById('community-report-queue').textContent.includes('in review')"));
+
+  await evaluate(
+    "Array.from(document.querySelectorAll('[data-report-reason]')).find(node => node.dataset.reportReason === " +
+      JSON.stringify(reportId) + ").value=" +
+      JSON.stringify("Resolved through the visible Community moderation UI.")
+  );
+  await trustedClick("#community-report-queue [data-report-action='resolve'][data-report-id='" + reportId + "']");
+  await waitFor("the report leaves the open queue after UI resolution", () =>
+    evaluate("!document.getElementById('community-report-queue').textContent.includes('Synthetic Community report UI preview')"));
+
+  await setBrowserAccountSession(nonMemberToken);
+  await trustedClick("#community-my-reports-button");
+  await waitFor("the reporter sees the moderator outcome in My reports", () =>
+    evaluate("!document.getElementById('community-own-reports').hidden && " +
+      "document.getElementById('community-own-reports').textContent.includes('Resolved through the visible Community moderation UI.')"));
+
+  await setBrowserAccountSession(rootToken);
+  console.log("PASS: Chrome report moderation UI: owner opens community queue, starts review, resolves with reason, and reporter sees the final outcome in My reports.");
+}
+
 async function signSiwe(account, challenge) {
   assert.equal(challenge.status, 200, JSON.stringify(challenge.body));
   assert.equal(challenge.body.transactionAuthorized, false);
@@ -872,6 +1536,28 @@ try {
     }
   }
 
+  await waitFor("first-party Community directory loads on the canonical homepage", () =>
+    evaluate("Boolean(document.getElementById('community-network')) && " +
+      "document.querySelectorAll('#community-space-list [data-community-slug]').length === 6 && " +
+      "Boolean(document.getElementById('community-global-feed'))"));
+  const communityAssets = await evaluate(
+    "Promise.all([" +
+    "fetch('/community-network/community-network.css',{cache:'no-store'}).then(async r=>({status:r.status,text:await r.text()}))," +
+    "fetch('/community-network/community-network.js',{cache:'no-store'}).then(async r=>({status:r.status,text:await r.text()}))" +
+    "])"
+  );
+  assert.equal(communityAssets[0].status, 200, "the staging asset builder must publish the Community stylesheet.");
+  assert.match(communityAssets[0].text, /community-workspace/);
+  assert.equal(communityAssets[1].status, 200, "the staging asset builder must publish the Community application script.");
+  assert.ok(communityAssets[1].text.includes("/api/community/communities/"));
+  assert.equal(await evaluate("document.getElementById('community-composer-form').hidden"), true,
+    "the unauthenticated homepage must not expose an active post composer.");
+  assert.equal(await evaluate("document.getElementById('community-login-prompt').hidden"), false,
+    "the unauthenticated homepage must offer the existing AstroCrown Log In flow.");
+  const communityNavCount = await evaluate("Array.from(document.querySelectorAll('a')).filter(a => a.getAttribute('href') === '#community-network').length");
+  assert.ok(communityNavCount >= 2, "The Community destination must appear in primary and secondary navigation.");
+  console.log("PASS: canonical homepage publishes the native Community section, six seeded community links, scoped staging CSS/JS assets, unauthenticated composer boundary and navigation.");
+
   await trustedClick("#open-account-dialog");
   await waitFor("account sign-in modal", () => evaluate("Boolean(document.getElementById('account-dialog')?.open)"));
   assert.equal(await evaluate("Boolean(document.getElementById('account-email'))"), false);
@@ -937,12 +1623,19 @@ try {
   assert.equal(account.adminRoleAssigned, false);
   assert.equal(account.admin, false);
 
+  const communityFixtures = await testCommunityApi(identifier);
 
   await trustedClick("#account-recovery-key-saved");
   await waitFor("offline recovery key acknowledgement", () => evaluate("!document.getElementById('open-account-hub').disabled"));
   await trustedClick("#open-account-hub");
   await waitFor("ordinary User dashboard", () =>
     evaluate("!document.getElementById('account-dashboard').hidden && Boolean(document.getElementById('account-signout'))"));
+  await trustedClick("#account-dashboard-home");
+  await waitFor("return from the User dashboard to the homepage", () =>
+    evaluate("document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open && " +
+      "Boolean(document.getElementById('community-network'))"));
+  await testCommunityModerationUi(communityFixtures);
+  await testCommunityOwnershipUi(communityFixtures);
 
   // A returning member who reloads the root URL with a valid session must
   // resume at the User dashboard instead of seeing the public homepage.

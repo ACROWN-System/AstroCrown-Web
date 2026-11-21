@@ -84,6 +84,15 @@ accountJs = accountJs
   .replaceAll("./account-continuity/prototype/privacy-policy.html", "./privacy-transparency.html");
 write("account-continuity/prototype/account-ui.js", accountJs);
 copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-continuity/prototype/admin-wallet-ui.js");
+copy("development/community-network/community-network.css", "community-network/community-network.css");
+let communityPreviewJs = read("development/community-network/community-network.js");
+communityPreviewJs = replaceExactlyOnce(
+  communityPreviewJs,
+  "(function () {",
+  "(function () {\n  window.ASTROCROWN_COMMUNITY_STATIC_PREVIEW = true;",
+  "backend-free static Community preview guard"
+);
+write("community-network/community-network.js", communityPreviewJs);
 
 // Self-contained education and Genesis Programme previews. Its wallet JS
 // permits only user-initiated off-chain ownership messages when the separate

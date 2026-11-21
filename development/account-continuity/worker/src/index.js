@@ -9,6 +9,7 @@ import { decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
 import { supporterStatusResponse } from "./supporters.js";
 import { handleGenesisWalletApi } from "./genesis.js";
+import { handleCommunityApi } from "./community.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -1950,6 +1951,19 @@ async function communications(db, request) {
 async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
+  if (url.pathname.startsWith("/api/community/")) {
+    const account = await activeAccount(db, request);
+    const communityResponse = await handleCommunityApi(request, db, account, {
+      isPlatformAdmin: async () => {
+        if (!account) return false;
+        const state = await summary(db, account);
+        return state.adminRoleAssigned === true && state.adminSessionAuthorized === true;
+      },
+      rateLimit: async (action, maximum, seconds) =>
+        rateLimit(db, env, request, "community-" + action, account?.account_id || "public", maximum, seconds),
+    });
+    if (communityResponse) return communityResponse;
+  }
   if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
   if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
