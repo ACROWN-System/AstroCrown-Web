@@ -11,5 +11,5 @@ cryptography==50.0.2
 pyOpenSSL==26.4.0
 pyasn1==0.6.5
 pyasn1-modules==0.4.2
-pycparser==2.23
+pycparser==3.12
 webauthn==3.0.1
