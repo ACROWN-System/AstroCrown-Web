@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#081426">
+<title>AstroCrown — Announcement Band Editor Prototype</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#101e30;--panel2:#14243a;--line:#2b405a;--ink:#eef4ff;--muted:#9eb0c8;--accent:#78b9ff;--warn:#f6d58b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer;color:var(--ink);background:#1b3049;border:1px solid #39516e;border-radius:8px;padding:8px 10px}button:hover{background:#25415f}button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--accent);outline-offset:2px}button:disabled{opacity:.45;cursor:not-allowed}
+header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}h1{font-size:20px;margin:0}h2{font-size:15px;margin:0 0 12px}p{margin:6px 0}.muted{color:var(--muted)}.status{color:var(--warn);font-weight:650}.layout{display:grid;grid-template-columns:minmax(190px,230px) minmax(300px,1fr) minmax(230px,290px);gap:14px;padding:14px;align-items:start}.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0}.stack{display:grid;gap:10px}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.row>*{min-width:0}.library button{width:100%;text-align:left}.small{font-size:12px}.divider{border:0;border-top:1px solid var(--line);margin:14px 0}
+.canvas-wrap{overflow:auto;border:1px solid var(--line);border-radius:10px;background:#050b14;padding:10px}.canvas{position:relative;width:100%;min-width:280px;height:140px;background:linear-gradient(115deg,#142b48,#081522);border:1px dashed #56708c;overflow:hidden;isolation:isolate}.canvas-label{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.canvas-element{position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;overflow:visible;touch-action:none;user-select:none;cursor:move;border:1px solid transparent;border-radius:5px;padding:5px;white-space:pre-wrap;overflow-wrap:anywhere}.canvas-element.selected{border:1px solid var(--accent);outline:1px solid #78b9ff80}.canvas-element.shape{background:linear-gradient(135deg,#2b5d8c,#18314b);border-color:#5d8db7}.canvas-element.media{background:repeating-linear-gradient(135deg,#20354b,#20354b 10px,#17283b 10px,#17283b 20px);border:1px dashed #9eb0c8;color:#d5e2f2}.handle{position:absolute;width:10px;height:10px;background:#e8f4ff;border:2px solid #2874b9;border-radius:2px;padding:0;z-index:3;touch-action:none}.nw{left:-5px;top:-5px;cursor:nwse-resize}.n{left:calc(50% - 5px);top:-5px;cursor:ns-resize}.ne{right:-5px;top:-5px;cursor:nesw-resize}.e{right:-5px;top:calc(50% - 5px);cursor:ew-resize}.se{right:-5px;bottom:-5px;cursor:nwse-resize}.s{left:calc(50% - 5px);bottom:-5px;cursor:ns-resize}.sw{left:-5px;bottom:-5px;cursor:nesw-resize}.w{left:-5px;top:calc(50% - 5px);cursor:ew-resize}.resize-band{height:16px;width:100%;display:block;cursor:ns-resize;background:linear-gradient(transparent 6px,#56708c 6px,#56708c 8px,transparent 8px);touch-action:none}.resize-band:focus-visible{outline:2px solid var(--accent)}.carousel-actions{display:flex;justify-content:center;align-items:center;gap:9px;margin-top:10px}.carousel-action{width:38px;height:38px;display:grid;place-items:center;padding:0;border-radius:50%;font-size:21px;line-height:1}.direction-dots{display:inline-flex;align-items:center;justify-content:center;gap:4px;width:16px;height:16px}.direction-dot{display:block;width:4px;height:4px;border-radius:50%;background:#a9c9ef}.direction-btn[data-direction="left-to-right"] .direction-dot:first-child,.direction-btn[data-direction="top-to-bottom"] .direction-dot:first-child,.direction-btn[data-direction="right-to-left"] .direction-dot:first-child,.direction-btn[data-direction="bottom-to-top"] .direction-dot:first-child{background:var(--accent);box-shadow:0 0 5px #78b9ff80}.direction-btn[data-direction="right-to-left"] .direction-dots{flex-direction:row-reverse}.direction-btn[data-direction="top-to-bottom"] .direction-dots{flex-direction:column}.direction-btn[data-direction="bottom-to-top"] .direction-dots{flex-direction:column-reverse}.scene-navigator{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:5px}.scene-nav-btn{min-width:35px;height:30px;padding:0 9px;font-size:17px}.scene-counter{min-width:54px;text-align:center;color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}.scene-link-list{display:grid;gap:9px}.scene-link-row{display:grid;gap:7px;padding:10px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.018)}.scene-link-head{font-weight:700;font-size:12px;color:#dce8f8}.scene-link-toggle{display:flex;align-items:center;gap:7px;color:var(--ink);font-size:12px}.scene-link-toggle input{width:auto}.scene-link-url[hidden]{display:none}
+.schedule-panel{margin:0 14px 18px}.schedule-layout{display:grid;grid-template-columns:minmax(260px,.9fr) minmax(280px,1.1fr);gap:18px;align-items:start}.schedule-fields{display:grid;gap:11px}.schedule-agenda{min-width:0}.schedule-list{display:grid;gap:9px}.schedule-empty{padding:14px;border:1px dashed var(--line-strong);border-radius:9px;color:var(--muted);font-size:12px}.schedule-item{display:grid;gap:6px;border:1px solid var(--line);border-radius:10px;padding:11px;background:rgba(255,255,255,.018)}.schedule-item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.schedule-item-name{font-size:13px;font-weight:700;overflow-wrap:anywhere}.schedule-item-meta{color:var(--muted);font-size:12px}.calendar-widget{margin:0 0 18px}.calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0}.calendar-toolbar h3{margin:0;font-size:15px;text-align:center;flex:1}.calendar-nav{display:flex;align-items:center;gap:5px}.calendar-nav button{min-width:34px;min-height:32px;padding:4px 8px}.calendar-weekdays,.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.calendar-weekday{padding:5px 1px;text-align:center;color:var(--muted);font-size:10px;font-weight:750}.calendar-day,.calendar-empty{min-width:0;min-height:78px;border:1px solid var(--line);border-radius:7px;background:#091525;padding:5px;display:flex;flex-direction:column;align-items:stretch;gap:4px;text-align:left;overflow:hidden}.calendar-day:hover{border-color:#58779b;background:#11253d}.calendar-day[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px #78b9ff60}.calendar-day.is-today .calendar-day-number{color:var(--gold);font-weight:850}.calendar-day-number{font-size:11px;font-weight:700;color:#dfe9f8}.calendar-event-list{display:grid;gap:3px;min-width:0}.calendar-event{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-radius:4px;padding:2px 3px;font-size:9px;line-height:1.25;background:#18354f;color:#dcecff}.calendar-event.close{background:#3c2d1e;color:#ffe1b8}.calendar-event.default{background:#28314a;color:#d8dcff}.calendar-more{font-size:9px;color:var(--muted)}.calendar-empty[hidden]{display:none}.calendar-day:focus-visible{outline:2px solid var(--accent);outline-offset:1px}@media(max-width:520px){.calendar-weekdays,.calendar-grid{gap:2px}.calendar-day,.calendar-empty{min-height:66px;padding:3px}.calendar-event{font-size:8px;padding:2px}.calendar-day-number{font-size:10px}.calendar-toolbar h3{font-size:13px}}.schedule-feedback{min-height:18px;font-size:12px;color:var(--muted)}.schedule-feedback[data-state="error"]{color:#ff9295}.schedule-feedback[data-state="success"]{color:#78e6b2}.schedule-dialog-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:18px;background:rgba(1,5,11,.82)}.schedule-dialog-backdrop[hidden]{display:none}.schedule-dialog{width:min(100%,460px);background:#101e30;border:1px solid #3e5a7c;border-radius:14px;padding:20px;box-shadow:0 20px 70px #000b}.schedule-dialog h2{font-size:18px;margin:0 0 8px}.schedule-dialog p{color:#b9c9dd}.schedule-dialog-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.schedule-dialog-actions button{flex:1 1 130px}
+@media(max-width:760px){.schedule-layout{grid-template-columns:1fr}.schedule-panel{margin:0 9px 12px}}.layers{display:grid;gap:6px}.layer{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px;align-items:center}.layer .select-layer{text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.layer button{padding:6px 8px}.field{display:grid;gap:4px}.field label{font-size:12px;color:var(--muted)}input,textarea,select{width:100%;min-width:0;background:#081522;color:var(--ink);border:1px solid #39516e;border-radius:7px;padding:8px}input[type=color]{padding:2px;height:38px}input[type=checkbox]{width:auto}textarea{resize:vertical;min-height:70px}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hint{font-size:12px;color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap}.danger{border-color:#805050}.menu{position:fixed;z-index:20;display:none;background:#13243a;border:1px solid #4c6685;border-radius:9px;padding:6px;box-shadow:0 8px 30px #0008;min-width:130px}.menu.open{display:grid;gap:5px}.menu button{text-align:left}.notice{padding:10px 14px;background:#17263a;border-bottom:1px solid var(--line);color:#dce8f8}.pill{border:1px solid #6a5c37;color:var(--warn);border-radius:99px;padding:3px 8px;font-size:11px}.save-status{font-size:12px;color:var(--muted);max-width:285px}.save-status[data-state="dirty"],.save-status[data-state="busy"]{color:var(--warn)}.save-status[data-state="saved"]{color:#78e6b2}.save-status[data-state="error"]{color:#ff9295}
+@media(max-width:950px){.layout{grid-template-columns:minmax(160px,220px) minmax(0,1fr)}.properties{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:14px}.properties>h2{grid-column:1/-1}}
+@media(max-width:620px){header{padding:14px}.layout{grid-template-columns:1fr;padding:9px}.properties{grid-template-columns:1fr}.canvas{min-width:280px}.panel{padding:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>AstroCrown — Announcement Band Editor</h1><p class="muted small">Development prototype · local draft only</p></div>
+  <div class="row"><span class="pill">NOT PUBLISHED</span><span id="saveStatus" class="save-status" data-state="busy" role="status" aria-live="polite">Connecting to local Python backend…</span><button id="reloadDraftBtn" type="button">Reload saved draft</button><button id="saveDraftBtn" type="button" disabled>Save draft</button><button id="undoBtn" type="button" disabled>Undo removal</button></div>
+</header>
+<div class="notice"><strong>Local development only:</strong> this editor loads and saves a draft through the Python service to a JSON file on this computer. Nothing is published. Authentication is not implemented; keep the Python server bound to this computer and never expose it to a network.</div>
+<main class="layout">
+  <section class="panel library" aria-labelledby="libraryTitle">
+    <h2 id="libraryTitle">1. Element Library</h2>
+    <p class="hint">Add an element; existing content stays in place.</p>
+    <div class="stack">
+      <button type="button" data-add="text">＋ Add text</button>
+      <button type="button" data-add="shape">＋ Add shape</button>
+      <button type="button" data-add="media">＋ Add media placeholder</button>
+    </div>
+    <hr class="divider">
+    <h2>Band size</h2>
+    <div class="stack">
+      <label class="field"><span class="hint">Preset</span><select id="preset"><option value="36">Compact · 36 px</option><option value="56">Standard · 56 px</option><option value="120" selected>Media-rich · 120 px</option><option value="160">Expanded · 160 px</option></select></label>
+      <label class="field"><span class="hint">Custom height: <output id="heightValue">120</output> px</span><input id="heightInput" type="range" min="36" max="240" step="4" value="120"></label>
+      <p class="hint">Drag the lower edge of the canvas to resize. Changes are draft-only.</p>
+    </div>
+  </section>
+  <section class="panel" aria-labelledby="canvasTitle">
+    <div class="canvas-label"><div><h2 id="canvasTitle">2. Announcement Band Canvas</h2><p class="hint">Select an element to edit. Drag to move; use eight handles to resize.</p></div><span class="pill">DRAFT</span></div>
+    <div class="canvas-wrap"><div id="bandCanvas" class="canvas" role="group" aria-label="Announcement band editing canvas"></div></div>
+    <button id="resizeBand" class="resize-band" type="button" aria-label="Resize announcement band height with arrow keys" title="Drag to resize band; use arrow keys when focused"></button>
+    <div class="carousel-actions" aria-label="Carousel scene controls">
+      <button id="addSceneBtn" class="carousel-action" type="button" aria-label="Add scene" title="Add scene">+</button>
+      <button id="directionBtn" class="carousel-action direction-btn" type="button" data-direction="left-to-right" aria-label="Direction: left to right" title="Direction: left to right"><span class="direction-dots" aria-hidden="true"><span class="direction-dot"></span><span class="direction-dot"></span><span class="direction-dot"></span></span></button>
+      <button id="deleteSceneBtn" class="carousel-action danger" type="button" aria-label="Delete selected scene" title="Delete selected scene">−</button>
+    </div>
+    <div class="scene-navigator" aria-label="Carousel scene navigation">
+      <button id="prevSceneBtn" class="scene-nav-btn" type="button" aria-label="Previous scene" disabled>‹</button>
+      <span id="sceneCounter" class="scene-counter" role="status" aria-live="polite">1 / 1</span>
+      <button id="nextSceneBtn" class="scene-nav-btn" type="button" aria-label="Next scene" disabled>›</button>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><span class="hint" id="canvasSize">Band: 100% wide</span><span class="hint">Canvas zoom: 100% (not published size)</span></div>
+    <hr class="divider">
+    <h2>Layers</h2><div id="layers" class="layers" aria-label="Element layers"></div>
+    <p class="hint">Use the layer controls to select, hide, or reorder elements. Keyboard: arrow keys move the selected element; Shift + arrow moves farther; Delete removes it; Ctrl/Cmd + Z undoes removal.</p>
+  </section>
+  <section class="panel properties" aria-labelledby="propertiesTitle">
+    <h2 id="propertiesTitle">3. Layers and Properties</h2>
+    <h2>Banner being edited</h2>
+    <div class="stack">
+      <div class="field"><label for="bannerSelect">Banner</label><select id="bannerSelect" disabled></select></div>
+      <div class="field"><label for="bannerName">Banner name</label><input id="bannerName" maxlength="120" disabled></div>
+      <button id="newBannerBtn" type="button" disabled>＋ New banner</button>
+    </div>
+    <hr class="divider">
+    <div id="emptyProperties" class="hint">Select an element on the canvas or in Layers to edit its properties.</div>
+    <div id="propertiesForm" class="stack" hidden>
+      <div class="field"><label for="elementName">Element label</label><input id="elementName" maxlength="80"></div>
+      <div class="field" id="textField"><label for="elementText">Editable text</label><textarea id="elementText" maxlength="500"></textarea></div>
+      <div class="grid2">
+        <div class="field"><label for="elementX">X position (%)</label><input id="elementX" type="number" min="0" max="100" step="1"></div>
+        <div class="field"><label for="elementY">Y position (%)</label><input id="elementY" type="number" min="0" max="100" step="1"></div>
+        <div class="field"><label for="elementW">Width (%)</label><input id="elementW" type="number" min="5" max="100" step="1"></div>
+        <div class="field"><label for="elementH">Height (%)</label><input id="elementH" type="number" min="5" max="100" step="1"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="elementColor">Element color</label><input id="elementColor" type="color" value="#e8f1ff"></div>
+        <div class="field"><label for="elementFont">Text size (px)</label><input id="elementFont" type="number" min="10" max="48" value="16"></div>
+      </div>
+      <div class="actions"><button id="hideBtn" type="button">Hide element</button><button id="deleteBtn" class="danger" type="button">Delete element</button></div>
+      <p class="hint">Text remains editable content. Media is a placeholder only; no file is uploaded or stored.</p>
+    </div>
+    <hr class="divider">
+    <h2>Carousel links</h2>
+    <p class="hint">Each scene has its own optional link. Enable it to reveal that scene's destination URL.</p>
+    <div id="sceneLinks" class="scene-link-list" aria-label="Per-scene link settings"></div>
+    <hr class="divider">
+    <div class="field"><label for="bandColor">Band base color</label><input id="bandColor" type="color" value="#10243b"></div>
+    <p class="hint">This is a local editing prototype, not an authenticated admin system or publishing interface.</p>
+  </section>
+</main>
+<section class="panel schedule-panel" aria-labelledby="scheduleTitle">
+  <div class="canvas-label">
+    <div><h2 id="scheduleTitle">Banner Schedule &amp; Calendar</h2><p class="hint">Create temporary announcements or schedule a banner to become the new default. Saving here only saves a local draft; it does not publish or activate the public website.</p></div>
+    <span class="pill">DRAFT</span>
+  </div>
+  <div class="schedule-layout">
+    <div class="schedule-fields">
+      <div class="field"><label for="scheduleBannerSelect">Banner to schedule</label><select id="scheduleBannerSelect" disabled></select></div>
+      <div class="field"><label for="scheduleOpenAt">Open — date and time</label><input id="scheduleOpenAt" type="datetime-local" disabled required></div>
+      <label class="scene-link-toggle"><input id="scheduleCloseEnabled" type="checkbox" disabled> Set a closing time</label>
+      <div id="scheduleCloseField" class="field" hidden><label for="scheduleCloseAt">Close — date and time</label><input id="scheduleCloseAt" type="datetime-local" disabled></div>
+      <p class="hint" id="scheduleTimezone">Times are interpreted in your browser's local time zone.</p>
+      <div class="actions"><button id="addScheduleBtn" type="button" disabled>Add schedule to draft</button></div>
+      <p id="scheduleFeedback" class="schedule-feedback" data-state="idle" role="status" aria-live="polite">Load the saved draft to manage schedules.</p>
+    </div>
+    <div class="schedule-agenda">
+      <div class="calendar-widget" aria-labelledby="calendarMonthTitle">
+        <div class="calendar-toolbar">
+          <div class="calendar-nav"><button id="calendarPrevMonth" type="button" aria-label="Previous month">‹</button></div>
+          <h3 id="calendarMonthTitle" aria-live="polite">October 2026</h3>
+          <div class="calendar-nav"><button id="calendarToday" type="button">Today</button><button id="calendarNextMonth" type="button" aria-label="Next month">›</button></div>
+        </div>
+        <div class="calendar-weekdays" aria-label="Days of the week">
+          <div class="calendar-weekday">Mon</div><div class="calendar-weekday">Tue</div><div class="calendar-weekday">Wed</div><div class="calendar-weekday">Thu</div><div class="calendar-weekday">Fri</div><div class="calendar-weekday">Sat</div><div class="calendar-weekday">Sun</div>
+        </div>
+        <div id="calendarGrid" class="calendar-grid" role="group" aria-label="Scheduled banner calendar date buttons"></div>
+        <p class="hint">Open and Close markers use your displayed time zone. Select a day to fill the schedule's Open date; this does not create a schedule.</p>
+      </div>
+      <h2>Scheduled banners</h2>
+      <p class="hint">Temporary banners return to the effective default at Close. Open-ended entries become the new default at Open after explicit confirmation.</p>
+      <div id="scheduleList" class="schedule-list" aria-label="Scheduled banner agenda"><div class="schedule-empty">No scheduled banners yet.</div></div>
+    </div>
+  </div>
+</section>
+<div id="openEndedScheduleDialog" class="schedule-dialog-backdrop" hidden>
+  <section class="schedule-dialog" role="dialog" aria-modal="true" aria-labelledby="openEndedTitle" aria-describedby="openEndedDescription" tabindex="-1">
+    <h2 id="openEndedTitle">No closing time set</h2>
+    <p id="openEndedDescription">This banner will become the new default at its scheduled Open time and remain the default until another default change is scheduled. The current default will be retained for recovery.</p>
+    <div class="schedule-dialog-actions">
+      <button id="confirmDefaultScheduleBtn" type="button">Confirm and set as default</button>
+      <button id="addScheduleCloseBtn" type="button">Add a closing time</button>
+      <button id="cancelOpenEndedScheduleBtn" type="button" class="danger">Cancel</button>
+    </div>
+  </section>
+</div>
+<div id="contextMenu" class="menu" role="menu" aria-label="Element actions">
+  <button id="contextSelect" type="button" role="menuitem">Select</button>
+  <button id="contextDelete" type="button" role="menuitem">Delete</button>
+</div>
+<script>
+(function(){
+  "use strict";
+  const canvas=document.getElementById("bandCanvas");
+  const layers=document.getElementById("layers");
+  const form=document.getElementById("propertiesForm");
+  const empty=document.getElementById("emptyProperties");
+  const menu=document.getElementById("contextMenu");
+  const $=id=>document.getElementById(id);
+  let nextId=2, selectedId=1, bandHeight=120, removed=null, contextId=null;
+  let activeBannerId=null, activeSlotId=null, carouselDirection="left-to-right";
+  let scheduleTargetBannerId=null, pendingOpenEndedSchedule=null;
+  const initialCalendarDate=new Date();
+  let calendarMonth=new Date(initialCalendarDate.getFullYear(),initialCalendarDate.getMonth(),1,12,0,0);
+  let selectedOpenDate=null;
+  const MAX_SCENES=10;
+  const DIRECTION_CYCLE=["left-to-right","top-to-bottom","right-to-left","bottom-to-top"];
+  const elements=[{id:1,type:"text",name:"Announcement message",text:"AstroCrown · Discovery and opportunities",x:4,y:25,w:62,h:48,color:"#e8f1ff",font:16,hidden:false}];
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,Number(v)||0));
+  const selected=()=>elements.find(e=>e.id===selectedId)||null;
+  let backendState=null, backendRevision=null, backendAvailable=false;
+  let hasUnsavedChanges=false, saveConflict=false, isBusy=false, applyingSavedState=false;
+  let editGeneration=0;
+
+  function setPersistenceStatus(message,state){
+    $("saveStatus").textContent=message;
+    $("saveStatus").dataset.state=state;
+  }
+  function refreshPersistenceControls(){
+    $("saveDraftBtn").disabled=!backendAvailable||!backendRevision||!hasUnsavedChanges||isBusy||saveConflict;
+    $("reloadDraftBtn").disabled=isBusy;
+  }
+  function markDirty(){
+    if(applyingSavedState)return;
+    storeActiveComposition(backendState);
+    editGeneration++;
+    hasUnsavedChanges=true;
+    if(saveConflict){
+      setPersistenceStatus("A newer saved version exists. Your edits remain here; reload before saving again.","error");
+    }else{
+      setPersistenceStatus(isBusy?"Changes made while saving — check status when saving finishes":"Unsaved changes — not saved","dirty");
+    }
+    refreshPersistenceControls();
+  }
+  function defaultElements(){
+    return [{id:1,type:"text",name:"Announcement message",text:"AstroCrown · Discovery and opportunities",x:4,y:25,w:62,h:48,color:"#e8f1ff",font:16,hidden:false}];
+  }
+  function activeBanner(state=backendState){
+    return state&&Array.isArray(state.banners)?state.banners.find(item=>item&&item.id===activeBannerId)||null:null;
+  }
+  function activeSlot(state=backendState){
+    const banner=activeBanner(state);
+    return banner&&Array.isArray(banner.slots)?banner.slots.find(item=>item&&item.id===activeSlotId)||null:null;
+  }
+  function storeActiveComposition(state=backendState){
+    const slot=activeSlot(state);
+    if(!slot)return;
+    slot.composition={band_height:bandHeight,band_color:$("bandColor").value,elements:elements.map(item=>({...item}))};
+  }
+  function loadSlotComposition(slot){
+    const composition=slot&&slot.composition&&typeof slot.composition==="object"?slot.composition:{};
+    const height=Number(composition.band_height);
+    bandHeight=Number.isFinite(height)?clamp(height,36,240):120;
+    const color=typeof composition.band_color==="string"&&/^#[0-9a-f]{6}$/i.test(composition.band_color)?composition.band_color:"#10243b";
+    $("bandColor").value=color;
+    const source=Array.isArray(composition.elements)?composition.elements:defaultElements();
+    const seen=new Set();
+    const loaded=source.map((raw,index)=>{
+      if(!raw||typeof raw!=="object"||!["text","shape","media"].includes(raw.type))return null;
+      let id=Number(raw.id);
+      if(!Number.isSafeInteger(id)||id<1||seen.has(id)){id=index+1;while(seen.has(id))id+=1;}
+      seen.add(id);
+      const width=clamp(raw.w,5,100);
+      const heightPct=clamp(raw.h,5,100);
+      const x=clamp(raw.x,0,100-width);
+      const y=clamp(raw.y,0,100-heightPct);
+      const validColor=typeof raw.color==="string"&&/^#[0-9a-f]{6}$/i.test(raw.color)?raw.color:"#e8f1ff";
+      return {id,type:raw.type,name:String(raw.name||"Untitled element").slice(0,80),text:String(raw.text||"").slice(0,500),x,y,w:width,h:heightPct,color:validColor,font:clamp(raw.font,10,48),hidden:raw.hidden===true};
+    }).filter(Boolean);
+    elements.splice(0,elements.length,...loaded);
+    nextId=Math.max(0,...elements.map(item=>item.id))+1;
+    selectedId=elements.length?elements[0].id:null;
+    removed=null;
+  }
+  function renderSceneControls(){
+    const banner=activeBanner();
+    const slots=banner&&Array.isArray(banner.slots)?banner.slots:[];
+    const index=slots.findIndex(slot=>slot.id===activeSlotId);
+    const direction=banner&&DIRECTION_CYCLE.includes(banner.carousel_direction)?banner.carousel_direction:"left-to-right";
+    const directionText=direction.replace(/-/g," ");
+    $("directionBtn").dataset.direction=direction;
+    $("directionBtn").setAttribute("aria-label","Direction: "+directionText);
+    $("directionBtn").title="Direction: "+directionText+" (click to change)";
+    $("sceneCounter").textContent=(index>=0?index+1:0)+" / "+slots.length;
+    $("prevSceneBtn").disabled=index<=0;
+    $("nextSceneBtn").disabled=index<0||index>=slots.length-1;
+    $("addSceneBtn").disabled=!backendAvailable||slots.length>=MAX_SCENES;
+    $("deleteSceneBtn").disabled=!backendAvailable||slots.length<=1;
+    $("prevSceneBtn").disabled=!backendAvailable||index<=0;
+    $("nextSceneBtn").disabled=!backendAvailable||index<0||index>=slots.length-1;
+    $("directionBtn").disabled=!backendAvailable||!banner;
+  }
+  function renderSceneLinks(){
+    const root=$("sceneLinks");
+    root.replaceChildren();
+    const banner=activeBanner();
+    const slots=banner&&Array.isArray(banner.slots)?banner.slots:[];
+    slots.forEach((slot,index)=>{
+      const row=document.createElement("div");
+      row.className="scene-link-row";
+      row.dataset.sceneId=slot.id;
+      const heading=document.createElement("div");
+      heading.className="scene-link-head";
+      heading.textContent="Scene "+(index+1)+(slot.id===activeSlotId?" · Editing":"");
+      const label=document.createElement("label");
+      label.className="scene-link-toggle";
+      const checkbox=document.createElement("input");
+      checkbox.type="checkbox";
+      checkbox.checked=slot.add_link===true;
+      checkbox.dataset.sceneLinkToggle=slot.id;
+      label.append(checkbox,document.createTextNode("Add link"));
+      checkbox.setAttribute("aria-label","Add link for scene "+(index+1));
+      checkbox.addEventListener("change",()=>{
+        const enableLink=checkbox.checked;
+        slot.add_link=enableLink;
+        if(!slot.add_link)slot.destination_url="";
+        markDirty();
+        renderSceneLinks();
+        const next=Array.from(root.querySelectorAll("[data-scene-link-toggle]"))
+          .find(node=>node.dataset.sceneLinkToggle===slot.id);
+        if(enableLink){
+          const destination=Array.from(root.querySelectorAll("[data-scene-link-url]"))
+            .find(node=>node.dataset.sceneLinkUrl===slot.id);
+          if(destination)destination.focus();
+        }else if(next){next.focus()}
+      });
+      const field=document.createElement("div");
+      field.className="field scene-link-url";
+      field.hidden=!slot.add_link;
+      const urlLabel=document.createElement("label");
+      urlLabel.textContent="Destination URL";
+      urlLabel.htmlFor="scene-url-"+slot.id;
+      const input=document.createElement("input");
+      input.type="url";
+      input.id=urlLabel.htmlFor;
+      input.placeholder="/releases or https://example.com/...";
+      input.value=slot.destination_url||"";
+      input.dataset.sceneLinkUrl=slot.id;
+      input.setAttribute("aria-label","Destination URL for scene "+(index+1));
+      input.addEventListener("change",()=>{
+        slot.destination_url=input.value.trim();
+        markDirty();
+      });
+      field.append(urlLabel,input);
+      row.append(heading,label,field);
+      root.appendChild(row);
+    });
+  }
+  function renderBannerPicker(){
+    const selector=$("bannerSelect");
+    const previous=selector.value;
+    selector.replaceChildren();
+    const banners=backendState&&Array.isArray(backendState.banners)?backendState.banners:[];
+    banners.forEach(banner=>{
+      const option=document.createElement("option");
+      option.value=banner.id;
+      option.textContent=banner.name+(banner.id===backendState.default_banner_id?" · Current default":"");
+      selector.appendChild(option);
+    });
+    selector.value=banners.some(item=>item.id===activeBannerId)?activeBannerId:(banners[0]?.id||"");
+    const banner=activeBanner();
+    $("bannerName").value=banner?banner.name:"";
+    selector.disabled=!backendAvailable||banners.length===0;
+    $("bannerName").disabled=!backendAvailable||!banner;
+    $("newBannerBtn").disabled=!backendAvailable||banners.length>=100;
+  }
+  function switchBanner(bannerId){
+    const banner=backendState&&backendState.banners.find(item=>item.id===bannerId);
+    if(!banner||banner.id===activeBannerId)return;
+    storeActiveComposition();
+    activeBannerId=banner.id;
+    activeSlotId=banner.slots[0].id;
+    carouselDirection=banner.carousel_direction||"left-to-right";
+    loadSlotComposition(banner.slots[0]);
+    closeMenu();
+    render();
+    renderBannerPicker();
+  }
+  function createBanner(){
+    if(!backendAvailable||!backendState||backendState.banners.length>=100)return;
+    storeActiveComposition();
+    let number=1;
+    while(backendState.banners.some(item=>item.id==="banner-"+number))number++;
+    const id="banner-"+number;
+    const banner={
+      id,
+      name:"New scheduled banner "+number,
+      carousel_direction:"left-to-right",
+      slots:[{
+        id:"slot-1",
+        add_link:false,
+        destination_url:"",
+        composition:{band_height:bandHeight,band_color:$("bandColor").value,elements:[]}
+      }]
+    };
+    backendState.banners.push(banner);
+    activeBannerId=id;
+    activeSlotId="slot-1";
+    scheduleTargetBannerId=id;
+    carouselDirection="left-to-right";
+    loadSlotComposition(banner.slots[0]);
+    markDirty();
+    render();
+    renderBannerPicker();
+    renderScheduleBannerPicker();
+    renderScheduleList();
+    $("bannerName").focus();
+  }
+  function localDateTimeToIso(value){
+    if(typeof value!=="string"||!value.trim())throw new Error("Choose a date and time.");
+    const date=new Date(value);
+    if(Number.isNaN(date.getTime()))throw new Error("The selected date and time is invalid.");
+    const pad=(number)=>String(number).padStart(2,"0");
+    const offset=-date.getTimezoneOffset();
+    const sign=offset>=0?"+":"-";
+    const absolute=Math.abs(offset);
+    const zone=sign+pad(Math.floor(absolute/60))+":"+pad(absolute%60);
+    return date.getFullYear()+"-"+pad(date.getMonth()+1)+"-"+pad(date.getDate())+"T"+pad(date.getHours())+":"+pad(date.getMinutes())+":00"+zone;
+  }
+  function localTimeZone(){
+    try{return Intl.DateTimeFormat().resolvedOptions().timeZone||"browser local time";}
+    catch{return "browser local time";}
+  }
+  function displayScheduleTime(value){
+    try{return new Date(value).toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"})+" ("+localTimeZone()+")";}
+    catch{return value;}
+  }
+  function renderScheduleBannerPicker(){
+    const selector=$("scheduleBannerSelect");
+    const previous=scheduleTargetBannerId||selector.value;
+    selector.replaceChildren();
+    const banners=backendState&&Array.isArray(backendState.banners)?backendState.banners:[];
+    banners.forEach(banner=>{
+      const option=document.createElement("option");
+      option.value=banner.id;
+      option.textContent=banner.name+(banner.id===backendState.default_banner_id?" · Current default":"");
+      selector.appendChild(option);
+    });
+    scheduleTargetBannerId=banners.some(item=>item.id===previous)?previous:(activeBannerId||backendState?.default_banner_id||"");
+    selector.value=scheduleTargetBannerId;
+    selector.disabled=!backendAvailable||banners.length===0;
+      $("scheduleOpenAt").disabled=!backendAvailable||banners.length===0;
+    $("scheduleCloseEnabled").disabled=!backendAvailable||banners.length===0;
+    $("scheduleCloseAt").disabled=!backendAvailable||!$("scheduleCloseEnabled").checked||banners.length===0;
+    $("addScheduleBtn").disabled=!backendAvailable||banners.length===0;
+    $("scheduleTimezone").textContent="Time zone: "+localTimeZone()+". Entered times are converted to ISO-8601 with an explicit UTC offset.";
+  }
+  function renderScheduleList(){
+    const root=$("scheduleList");
+    root.replaceChildren();
+    const schedules=backendState&&Array.isArray(backendState.schedules)?backendState.schedules:[];
+    const banners=backendState&&Array.isArray(backendState.banners)?backendState.banners:[];
+    const sorted=[...schedules].sort((a,b)=>String(a.opens_at).localeCompare(String(b.opens_at)));
+    if(!sorted.length){
+      const emptyState=document.createElement("div");
+      emptyState.className="schedule-empty";
+      emptyState.textContent="No scheduled banners yet.";
+      root.appendChild(emptyState);
+      renderCalendar();
+      return;
+    }
+    sorted.forEach(schedule=>{
+      const banner=banners.find(item=>item.id===schedule.banner_id);
+      const item=document.createElement("article");
+      item.className="schedule-item";
+      item.dataset.scheduleId=schedule.id;
+      const top=document.createElement("div");
+      top.className="schedule-item-top";
+      const name=document.createElement("div");
+      name.className="schedule-item-name";
+      name.textContent=banner?banner.name:"Missing banner";
+      const type=document.createElement("span");
+      type.className="pill";
+      type.textContent=schedule.closes_at?"TEMPORARY":"NEW DEFAULT";
+      top.append(name,type);
+      const open=document.createElement("div");
+      open.className="schedule-item-meta";
+      open.textContent="Open: "+displayScheduleTime(schedule.opens_at);
+      const close=document.createElement("div");
+      close.className="schedule-item-meta";
+      close.textContent=schedule.closes_at?"Close: "+displayScheduleTime(schedule.closes_at):"No closing time — becomes default at Open";
+      const remove=document.createElement("button");
+      remove.type="button";
+      remove.className="danger";
+      remove.textContent="Remove from draft";
+      remove.setAttribute("aria-label","Remove schedule for "+(banner?banner.name:"missing banner"));
+      remove.addEventListener("click",()=>{
+        if(!window.confirm("Remove this schedule from the local draft? The banner definition will be retained."))return;
+        backendState.schedules=backendState.schedules.filter(item=>item.id!==schedule.id);
+        markDirty();
+        render();
+        renderScheduleList();
+        setScheduleFeedback("Schedule removed from the local draft. Save draft to persist the change.","success");
+      });
+      item.append(top,open,close,remove);
+      root.appendChild(item);
+    });
+    renderCalendar();
+  }
+  function localCalendarDateKey(date){
+    const pad=value=>String(value).padStart(2,"0");
+    return date.getFullYear()+"-"+pad(date.getMonth()+1)+"-"+pad(date.getDate());
+  }
+  function localCalendarTime(value){
+    const date=new Date(value);
+    return Number.isNaN(date.getTime())?"":date.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+  }
+  function renderCalendar(){
+    const title=$("calendarMonthTitle");
+    const grid=$("calendarGrid");
+    if(!title||!grid)return;
+    const year=calendarMonth.getFullYear(),month=calendarMonth.getMonth();
+    const firstDay=new Date(year,month,1,12,0,0);
+    title.textContent=firstDay.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+    grid.replaceChildren();
+
+    const banners=backendState&&Array.isArray(backendState.banners)?backendState.banners:[];
+    const schedules=backendState&&Array.isArray(backendState.schedules)?backendState.schedules:[];
+    const eventsByDate=new Map();
+    function addMarker(value,marker){
+      const date=new Date(value);
+      if(Number.isNaN(date.getTime()))return;
+      const key=localCalendarDateKey(date);
+      if(!eventsByDate.has(key))eventsByDate.set(key,[]);
+      eventsByDate.get(key).push({...marker,sortTime:date.getTime()});
+    }
+    schedules.forEach(schedule=>{
+      const banner=banners.find(item=>item.id===schedule.banner_id);
+      const name=banner?banner.name:"Missing banner";
+      addMarker(schedule.opens_at,{
+        kind:schedule.closes_at?"open":"default",
+        label:(schedule.closes_at?"Open":"Default")+" · "+localCalendarTime(schedule.opens_at),
+        title:name+" — "+(schedule.closes_at?"opens":"becomes default")+" at "+displayScheduleTime(schedule.opens_at)
+      });
+      if(schedule.closes_at){
+        addMarker(schedule.closes_at,{
+          kind:"close",
+          label:"Close · "+localCalendarTime(schedule.closes_at),
+          title:name+" — closes at "+displayScheduleTime(schedule.closes_at)
+        });
+      }
+    });
+    eventsByDate.forEach(items=>items.sort((a,b)=>a.sortTime-b.sortTime));
+
+    const leadingCells=(firstDay.getDay()+6)%7; // Monday-first grid.
+    const dayCount=new Date(year,month+1,0).getDate();
+    const todayKey=localCalendarDateKey(new Date());
+    const inputValue=$("scheduleOpenAt").value;
+    const selectedDate=selectedOpenDate||(inputValue?inputValue.slice(0,10):"");
+
+    for(let i=0;i<leadingCells;i++){
+      const empty=document.createElement("div");
+      empty.className="calendar-empty";
+      empty.setAttribute("aria-hidden","true");
+      grid.appendChild(empty);
+    }
+    for(let day=1;day<=dayCount;day++){
+      const date=new Date(year,month,day,12,0,0);
+      const key=localCalendarDateKey(date);
+      const markers=eventsByDate.get(key)||[];
+      const cell=document.createElement("button");
+      cell.type="button";
+      cell.className="calendar-day"+(key===todayKey?" is-today":"");
+      cell.dataset.date=key;
+      cell.setAttribute("aria-pressed",String(key===selectedDate));
+      const markerDetails=markers.map(marker=>marker.title).join("; ");
+      cell.setAttribute("aria-label",date.toLocaleDateString(undefined,{
+        weekday:"long",month:"long",day:"numeric",year:"numeric"
+      })+(markers.length?". Scheduled events: "+markerDetails:"")+". Select as Open date.");
+      const number=document.createElement("span");
+      number.className="calendar-day-number";
+      number.textContent=String(day);
+      cell.appendChild(number);
+      if(markers.length){
+        const markerList=document.createElement("span");
+        markerList.className="calendar-event-list";
+        markers.slice(0,2).forEach(marker=>{
+          const badge=document.createElement("span");
+          badge.className="calendar-event "+marker.kind;
+          badge.textContent=marker.label;
+          badge.title=marker.title;
+          markerList.appendChild(badge);
+        });
+        if(markers.length>2){
+          const more=document.createElement("span");
+          more.className="calendar-more";
+          more.textContent="+"+(markers.length-2)+" more";
+          markerList.appendChild(more);
+        }
+        cell.appendChild(markerList);
+      }
+      cell.addEventListener("click",()=>{
+        const current=$("scheduleOpenAt").value;
+        const time=current.includes("T")?current.split("T")[1]:"18:00";
+        selectedOpenDate=key;
+        $("scheduleOpenAt").value=key+"T"+time;
+        setScheduleFeedback(
+          "Open date set to "+date.toLocaleDateString(undefined,{dateStyle:"medium"})+". No schedule has been created yet.",
+          "idle"
+        );
+        renderCalendar();
+        $("scheduleOpenAt").focus();
+      });
+      grid.appendChild(cell);
+    }
+    const usedCells=leadingCells+dayCount;
+    const trailingCells=(7-(usedCells%7))%7;
+    for(let i=0;i<trailingCells;i++){
+      const empty=document.createElement("div");
+      empty.className="calendar-empty";
+      empty.setAttribute("aria-hidden","true");
+      grid.appendChild(empty);
+    }
+  }
+  function setScheduleFeedback(message,state="idle"){
+    $("scheduleFeedback").textContent=message;
+    $("scheduleFeedback").dataset.state=state;
+  }
+  function scheduleOverlapError(opensAt,closesAt,confirmedDefault){
+    const nextOpen=new Date(opensAt).getTime();
+    const nextClose=closesAt?new Date(closesAt).getTime():null;
+    const schedules=backendState&&Array.isArray(backendState.schedules)?backendState.schedules:[];
+    if(nextClose!==null){
+      for(const current of schedules){
+        if(!current.closes_at)continue;
+        const oldOpen=new Date(current.opens_at).getTime();
+        const oldClose=new Date(current.closes_at).getTime();
+        if(nextOpen<oldClose&&oldOpen<nextClose)return "This temporary event overlaps another temporary banner. Adjust its opening or closing time.";
+      }
+    }else if(confirmedDefault){
+      const duplicate=schedules.some(current=>!current.closes_at&&new Date(current.opens_at).getTime()===nextOpen);
+      if(duplicate)return "Another default change already has this exact opening time.";
+    }
+    return "";
+  }
+  function scheduleId(){
+    let index=1;
+    while(backendState.schedules.some(item=>item.id==="schedule-"+index))index++;
+    return "schedule-"+index;
+  }
+  function addScheduleRecord(pending,confirmedDefaultChange){
+    const banner=backendState&&backendState.banners.find(item=>item.id===pending.bannerId);
+    if(!banner){setScheduleFeedback("Choose a banner that still exists in the draft.","error");return false;}
+    const conflict=scheduleOverlapError(pending.opensAt,pending.closesAt,confirmedDefaultChange);
+    if(conflict){setScheduleFeedback(conflict,"error");return false;}
+    const record={
+      id:scheduleId(),
+      banner_id:pending.bannerId,
+      opens_at:pending.opensAt,
+      closes_at:pending.closesAt,
+      confirmed_default_change:confirmedDefaultChange
+    };
+    backendState.schedules.push(record);
+    markDirty();
+    render();
+    renderScheduleList();
+    setScheduleFeedback(
+      pending.closesAt
+        ?"Temporary banner schedule added to the draft. Save draft to retain it; nothing has been published."
+        :"Open-ended default change added to the draft. It takes effect at Open only after a future publishing/scheduling system applies it; nothing has been published.",
+      "success"
+    );
+    return true;
+  }
+  function hideOpenEndedDialog(){
+    $("openEndedScheduleDialog").hidden=true;
+    pendingOpenEndedSchedule=null;
+  }
+  function requestAddSchedule(){
+    if(!backendAvailable||!backendState)return;
+    const bannerId=$("scheduleBannerSelect").value;
+    if(!bannerId||!backendState.banners.some(item=>item.id===bannerId)){
+      setScheduleFeedback("Choose a banner to schedule.","error");
+      return;
+    }
+    let opensAt,closesAt=null;
+    try{
+      opensAt=localDateTimeToIso($("scheduleOpenAt").value);
+      if($("scheduleCloseEnabled").checked){
+        closesAt=localDateTimeToIso($("scheduleCloseAt").value);
+        if(new Date(closesAt).getTime()<=new Date(opensAt).getTime()){
+          setScheduleFeedback("Close must be later than Open.","error");
+          return;
+        }
+      }
+    }catch(error){
+      setScheduleFeedback(String(error.message||"Enter valid schedule times."),"error");
+      return;
+    }
+    const conflict=scheduleOverlapError(opensAt,closesAt,!closesAt);
+    if(conflict){setScheduleFeedback(conflict,"error");return;}
+    const pending={bannerId,opensAt,closesAt};
+    if(closesAt){
+      addScheduleRecord(pending,false);
+      return;
+    }
+    pendingOpenEndedSchedule=pending;
+    $("openEndedScheduleDialog").hidden=false;
+    $("confirmDefaultScheduleBtn").focus();
+  }
+  function confirmOpenEndedSchedule(){
+    if(!pendingOpenEndedSchedule)return;
+    const pending=pendingOpenEndedSchedule;
+    if(addScheduleRecord(pending,true)){
+      hideOpenEndedDialog();
+      $("addScheduleBtn").focus();
+    }
+  }
+  function addClosingTimeFromDialog(){
+    hideOpenEndedDialog();
+    $("scheduleCloseEnabled").checked=true;
+    $("scheduleCloseField").hidden=false;
+    $("scheduleCloseAt").disabled=!backendAvailable;
+    $("scheduleCloseAt").focus();
+    setScheduleFeedback("Add a Close time, then select Add schedule to draft. No schedule has been added yet.","idle");
+  }
+  function cancelOpenEndedSchedule(){
+    hideOpenEndedDialog();
+    setScheduleFeedback("No schedule change was made.","idle");
+    $("addScheduleBtn").focus();
+  }
+  function selectScene(slotId){
+    const banner=activeBanner();
+    if(!banner)return;
+    const slot=banner.slots.find(item=>item.id===slotId);
+    if(!slot||slot.id===activeSlotId)return;
+    storeActiveComposition();
+    activeSlotId=slot.id;
+    loadSlotComposition(slot);
+    closeMenu();
+    render();
+  }
+  function addScene(){
+    const banner=activeBanner();
+    if(!banner||banner.slots.length>=MAX_SCENES)return;
+    storeActiveComposition();
+    let number=1;
+    while(banner.slots.some(slot=>slot.id==="slot-"+number))number++;
+    const slot={id:"slot-"+number,add_link:false,destination_url:"",composition:{band_height:bandHeight,band_color:$("bandColor").value,elements:[]}};
+    banner.slots.push(slot);
+    activeSlotId=slot.id;
+    elements.splice(0,elements.length);
+    selectedId=null;
+    removed=null;
+    markDirty();
+    render();
+  }
+  function deleteScene(){
+    const banner=activeBanner();
+    if(!banner||banner.slots.length<=1)return;
+    const index=banner.slots.findIndex(slot=>slot.id===activeSlotId);
+    if(index<0)return;
+    if(!window.confirm("Delete scene "+(index+1)+"? Only this scene and its own link will be removed."))return;
+    storeActiveComposition();
+    banner.slots.splice(index,1);
+    activeSlotId=banner.slots[Math.min(index,banner.slots.length-1)].id;
+    loadSlotComposition(activeSlot());
+    markDirty();
+    render();
+  }
+  function cycleDirection(){
+    const banner=activeBanner();
+    if(!banner)return;
+    const current=DIRECTION_CYCLE.indexOf(banner.carousel_direction||"left-to-right");
+    const direction=DIRECTION_CYCLE[(current+1)%DIRECTION_CYCLE.length];
+    banner.carousel_direction=direction;
+    carouselDirection=direction;
+    markDirty();
+    renderSceneControls();
+  }
+  function applyPersistedState(state){
+    if(!state||!Array.isArray(state.banners)||!state.default_banner_id)throw new Error("The saved response does not contain a valid banner state.");
+    const banner=state.banners.find(item=>item&&item.id===state.default_banner_id);
+    const slot=banner&&Array.isArray(banner.slots)?banner.slots[0]:null;
+    if(!slot)throw new Error("The saved default banner does not contain an editable slot.");
+    activeBannerId=banner.id;
+    activeSlotId=slot.id;
+    scheduleTargetBannerId=backendState&&backendState.banners.some(item=>item.id===scheduleTargetBannerId)?scheduleTargetBannerId:banner.id;
+    carouselDirection=banner.carousel_direction||"left-to-right";
+    loadSlotComposition(slot);
+    render();
+    renderBannerPicker();
+    renderScheduleBannerPicker();
+    renderScheduleList();
+  }
+  function buildPersistedState(){
+    if(!backendState)throw new Error("Load the saved state before saving.");
+    const next=JSON.parse(JSON.stringify(backendState));
+    if(!activeSlot(next))throw new Error("The active scene no longer exists in the saved draft.");
+    storeActiveComposition(next);
+    return next;
+  }
+  async function readResponse(response){
+    const payload=await response.json().catch(()=>({}));
+    if(!response.ok){
+      const error=new Error(String(payload.message||payload.error||("HTTP "+response.status)));
+      error.status=response.status;
+      error.payload=payload;
+      throw error;
+    }
+    return payload;
+  }
+  async function loadSavedDraft(confirmDiscard){
+    if(isBusy)return;
+    if(confirmDiscard&&hasUnsavedChanges&&!window.confirm("Reload the saved draft and discard the unsaved edits in this browser? This cannot be undone."))return;
+    isBusy=true;
+    setPersistenceStatus("Loading saved draft…","busy");
+    refreshPersistenceControls();
+    try{
+      const response=await fetch("/api/state",{method:"GET",cache:"no-store",headers:{"Accept":"application/json"}});
+      const payload=await readResponse(response);
+      if(!payload.state||typeof payload.revision!=="string")throw new Error("The Python service returned an incomplete saved-state response.");
+      backendState=payload.state;
+      backendRevision=payload.revision;
+      backendAvailable=true;
+      applyPersistedState(payload.state);
+      hasUnsavedChanges=false;
+      saveConflict=false;
+      editGeneration=0;
+      setPersistenceStatus("Saved draft loaded. Nothing is published.","saved");
+    }catch(error){
+      backendAvailable=false;
+      setPersistenceStatus("Cannot reach the local Python service. Your current preview remains in memory; changes are not saved.","error");
+    }finally{
+      isBusy=false;
+      refreshPersistenceControls();
+    }
+  }
+  async function saveDraft(){
+    if(isBusy||!backendAvailable||!backendRevision||saveConflict||!hasUnsavedChanges)return;
+    isBusy=true;
+    const generationAtStart=editGeneration;
+    setPersistenceStatus("Saving draft to this computer…","busy");
+    refreshPersistenceControls();
+    try{
+      const state=buildPersistedState();
+      const response=await fetch("/api/state",{method:"PUT",cache:"no-store",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify({revision:backendRevision,state})});
+      const payload=await response.json().catch(()=>({}));
+      if(response.status===409){
+        saveConflict=true;
+        backendAvailable=true;
+        setPersistenceStatus("Save conflict: a newer saved version exists. Your edits remain here; reload to review it before saving again.","error");
+        return;
+      }
+      if(!response.ok)throw new Error(String(payload.message||payload.error||("HTTP "+response.status)));
+      if(!payload.state||typeof payload.revision!=="string")throw new Error("The Python service returned an incomplete save response.");
+      backendState=payload.state;
+      backendRevision=payload.revision;
+      backendAvailable=true;
+      saveConflict=false;
+      if(editGeneration===generationAtStart){
+        hasUnsavedChanges=false;
+        setPersistenceStatus("Draft saved on this computer. Not published.","saved");
+      }else{
+        hasUnsavedChanges=true;
+        setPersistenceStatus("A draft snapshot was saved; newer edits still need saving.","dirty");
+      }
+    }catch(error){
+      setPersistenceStatus("Save failed: "+String(error.message||"local service error")+". Your edits remain in this browser.","error");
+    }finally{
+      isBusy=false;
+      refreshPersistenceControls();
+    }
+  }
+  $("saveDraftBtn").addEventListener("click",saveDraft);
+  $("reloadDraftBtn").addEventListener("click",()=>loadSavedDraft(true));
+  $("bannerSelect").addEventListener("change",()=>switchBanner($("bannerSelect").value));
+  $("bannerName").addEventListener("change",()=>{
+    const banner=activeBanner();
+    if(!banner)return;
+    banner.name=$("bannerName").value.trim().slice(0,120)||"Untitled banner";
+    $("bannerName").value=banner.name;
+    markDirty();
+    renderBannerPicker();
+    renderScheduleBannerPicker();
+    renderScheduleList();
+  });
+  $("newBannerBtn").addEventListener("click",createBanner);
+  $("scheduleBannerSelect").addEventListener("change",()=>{scheduleTargetBannerId=$("scheduleBannerSelect").value;});
+  $("calendarPrevMonth").addEventListener("click",()=>{
+    calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()-1,1,12,0,0);
+    renderCalendar();
+  });
+  $("calendarNextMonth").addEventListener("click",()=>{
+    calendarMonth=new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,1,12,0,0);
+    renderCalendar();
+  });
+  $("calendarToday").addEventListener("click",()=>{
+    const now=new Date();
+    calendarMonth=new Date(now.getFullYear(),now.getMonth(),1,12,0,0);
+    renderCalendar();
+  });
+  $("scheduleOpenAt").addEventListener("change",()=>{
+    const value=$("scheduleOpenAt").value;
+    if(value){
+      selectedOpenDate=value.slice(0,10);
+      const parts=selectedOpenDate.split("-").map(Number);
+      calendarMonth=new Date(parts[0],parts[1]-1,1,12,0,0);
+    }else{
+      selectedOpenDate=null;
+    }
+    renderCalendar();
+  });
+  $("scheduleCloseEnabled").addEventListener("change",()=>{
+    $("scheduleCloseField").hidden=!$("scheduleCloseEnabled").checked;
+    $("scheduleCloseAt").disabled=!backendAvailable||!$("scheduleCloseEnabled").checked;
+    if(!$("scheduleCloseEnabled").checked)$("scheduleCloseAt").value="";
+  });
+  $("addScheduleBtn").addEventListener("click",requestAddSchedule);
+  $("confirmDefaultScheduleBtn").addEventListener("click",confirmOpenEndedSchedule);
+  $("addScheduleCloseBtn").addEventListener("click",addClosingTimeFromDialog);
+  $("cancelOpenEndedScheduleBtn").addEventListener("click",cancelOpenEndedSchedule);
+  $("openEndedScheduleDialog").addEventListener("click",event=>{
+    if(event.target===$("openEndedScheduleDialog"))cancelOpenEndedSchedule();
+  });
+  $("openEndedScheduleDialog").addEventListener("keydown",event=>{
+    if(event.key==="Escape"){event.preventDefault();cancelOpenEndedSchedule();}
+  });
+  $("addSceneBtn").addEventListener("click",addScene);
+  $("deleteSceneBtn").addEventListener("click",deleteScene);
+  $("directionBtn").addEventListener("click",cycleDirection);
+  $("prevSceneBtn").addEventListener("click",()=>{
+    const banner=activeBanner();if(!banner)return;
+    const index=banner.slots.findIndex(slot=>slot.id===activeSlotId);
+    if(index>0)selectScene(banner.slots[index-1].id);
+  });
+  $("nextSceneBtn").addEventListener("click",()=>{
+    const banner=activeBanner();if(!banner)return;
+    const index=banner.slots.findIndex(slot=>slot.id===activeSlotId);
+    if(index>=0&&index<banner.slots.length-1)selectScene(banner.slots[index+1].id);
+  });
+  function closeMenu(restoreFocus=false){
+    const previousId=contextId;
+    menu.classList.remove("open");contextId=null;
+    if(restoreFocus&&previousId!==null){
+      const target=canvas.querySelector('[data-id="'+previousId+'"]');
+      if(target)target.focus();
+      else focusLayerControl(previousId,"select");
+    }
+  }
+  function focusLayerControl(elementId,action){
+    const target=Array.from(layers.querySelectorAll("[data-layer-element-id]"))
+      .find(node=>node.dataset.layerElementId===String(elementId)&&node.dataset.layerAction===action);
+    if(target){target.focus();return}
+    if(action==="select")layers.querySelector(".select-layer")?.focus();
+  }
+  function openContextMenu(elementId,x,y){
+    contextId=elementId;selectedId=elementId;render();
+    menu.classList.add("open");
+    menu.style.left=Math.max(0,Math.min(x,window.innerWidth-menu.offsetWidth-8))+"px";
+    menu.style.top=Math.max(0,Math.min(y,window.innerHeight-menu.offsetHeight-8))+"px";
+    const first=menu.querySelector('[role="menuitem"]');
+    if(first)first.focus();
+  }
+  function render(){
+    canvas.style.height=bandHeight+"px";
+    canvas.style.background=$("bandColor").value;
+    canvas.replaceChildren();
+    elements.forEach(e=>{
+      if(e.hidden)return;
+      const el=document.createElement("div");
+      el.className="canvas-element "+e.type+(e.id===selectedId?" selected":"");
+      el.dataset.id=String(e.id);el.tabIndex=0;
+      el.setAttribute("role","group");
+      el.setAttribute("aria-label",e.name+(e.id===selectedId?", selected":"")+". Focus this element to move it with arrow keys; resize with the Width and Height fields.");
+      el.style.left=e.x+"%";el.style.top=e.y+"%";el.style.width=e.w+"%";el.style.height=e.h+"%";
+      el.style.color=e.color;el.style.fontSize=e.font+"px";
+      if(e.type==="text"){el.textContent=e.text;el.style.background="transparent";}
+      else if(e.type==="shape"){el.textContent=e.name;el.style.background=e.color;}
+      else{el.textContent="▧ "+e.name+" · media placeholder";el.style.background="repeating-linear-gradient(135deg,#20354b,#20354b 10px,#17283b 10px,#17283b 20px)";}
+      el.addEventListener("click",()=>{selectedId=e.id;render()});
+      el.addEventListener("keydown",ev=>{if(ev.key==="Enter"||ev.key===" "){ev.preventDefault();selectedId=e.id;render();const focused=canvas.querySelector('[data-id="'+e.id+'"]');if(focused)focused.focus()}});
+      el.addEventListener("contextmenu",ev=>{ev.preventDefault();openContextMenu(e.id,ev.clientX,ev.clientY)});
+      el.addEventListener("pointerdown",ev=>{if(ev.target!==el)return;if(ev.button!==0)return;selectedId=e.id;beginPointer(ev,e,"move");});
+      if(e.id===selectedId) addHandles(el,e);
+      canvas.appendChild(el);
+    });
+    renderLayers();renderProperties();renderSceneControls();renderSceneLinks();
+    $("heightValue").textContent=String(bandHeight);$("heightInput").value=String(bandHeight);
+    $("canvasSize").textContent="Band: "+Math.round(canvas.clientWidth)+" × "+bandHeight+" px preview";
+    $("undoBtn").disabled=!removed;
+    refreshPersistenceControls();
+  }
+  function addHandles(el,e){
+    ["nw","n","ne","e","se","s","sw","w"].forEach(pos=>{
+      const h=document.createElement("div");h.className="handle "+pos;h.setAttribute("aria-hidden","true");
+      h.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation();beginPointer(ev,e,pos)});
+      el.appendChild(h);
+    });
+  }
+  function beginPointer(ev,e,mode){
+    if(ev.button!==0)return;ev.preventDefault();selectedId=e.id;closeMenu();
+    const rect=canvas.getBoundingClientRect(),startX=ev.clientX,startY=ev.clientY;
+    const original={x:e.x,y:e.y,w:e.w,h:e.h};
+    const move=mv=>{
+      const dx=(mv.clientX-startX)/Math.max(1,rect.width)*100;
+      const dy=(mv.clientY-startY)/Math.max(1,rect.height)*100;
+      if(mode==="move"){e.x=clamp(original.x+dx,0,100-e.w);e.y=clamp(original.y+dy,0,100-e.h);}
+      else{
+        if(mode.includes("w")){e.x=clamp(original.x+dx,0,original.x+original.w-5);e.w=clamp(original.w-dx,5,100-e.x);}
+        if(mode.includes("e"))e.w=clamp(original.w+dx,5,100-e.x);
+        if(mode.includes("n")){e.y=clamp(original.y+dy,0,original.y+original.h-5);e.h=clamp(original.h-dy,5,100-e.y);}
+        if(mode.includes("s"))e.h=clamp(original.h+dy,5,100-e.y);
+      }
+      markDirty();render();
+    };
+    const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up);render()};
+    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
+  }
+  function renderLayers(){
+    layers.replaceChildren();
+    [...elements].reverse().forEach(e=>{
+      const row=document.createElement("div");row.className="layer";
+      const choose=document.createElement("button");choose.type="button";choose.className="select-layer";choose.dataset.layerElementId=String(e.id);choose.dataset.layerAction="select";choose.textContent=(e.hidden?"◌ ":"◉ ")+e.name;choose.setAttribute("aria-pressed",String(e.id===selectedId));choose.addEventListener("click",()=>{selectedId=e.id;render();focusLayerControl(e.id,"select")});
+      const visibility=document.createElement("button");visibility.type="button";visibility.dataset.layerElementId=String(e.id);visibility.dataset.layerAction="visibility";visibility.textContent=e.hidden?"Show":"Hide";visibility.setAttribute("aria-label",(e.hidden?"Show ":"Hide ")+e.name);visibility.addEventListener("click",()=>{e.hidden=!e.hidden;markDirty();render();focusLayerControl(e.id,"visibility")});
+      const order=document.createElement("button");order.type="button";order.dataset.layerElementId=String(e.id);order.dataset.layerAction="order";order.textContent="↑";order.setAttribute("aria-label","Move "+e.name+" forward");order.addEventListener("click",()=>{const i=elements.findIndex(x=>x.id===e.id);if(i>=0&&i<elements.length-1){[elements[i],elements[i+1]]=[elements[i+1],elements[i]];markDirty();render();focusLayerControl(e.id,"order")}});
+      row.append(choose,visibility,order);layers.appendChild(row);
+    });
+  }
+  function renderProperties(){
+    const e=selected();form.hidden=!e;empty.hidden=!!e;if(!e)return;
+    $("elementName").value=e.name;$("elementText").value=e.text||"";$("textField").hidden=e.type!=="text";
+    $("elementX").value=e.x;$("elementY").value=e.y;$("elementW").value=e.w;$("elementH").value=e.h;
+    $("elementColor").value=e.color;$("elementFont").value=e.font;
+    $("hideBtn").textContent=e.hidden?"Show element":"Hide element";
+  }
+  function updateField(id,fn){$(id).addEventListener("change",()=>{const e=selected();if(!e)return;fn(e,$(id).value);markDirty();render()})}
+  updateField("elementName",(e,v)=>e.name=v.trim()||"Untitled element");
+  updateField("elementText",(e,v)=>e.text=v);
+  updateField("elementX",(e,v)=>e.x=clamp(v,0,100-e.w));
+  updateField("elementY",(e,v)=>e.y=clamp(v,0,100-e.h));
+  updateField("elementW",(e,v)=>e.w=clamp(v,5,100-e.x));
+  updateField("elementH",(e,v)=>e.h=clamp(v,5,100-e.y));
+  updateField("elementColor",(e,v)=>e.color=v);
+  updateField("elementFont",(e,v)=>e.font=clamp(v,10,48));
+  function add(type){
+    const e={id:nextId++,type,name:type==="text"?"New text":type==="shape"?"Accent shape":"Media placeholder",text:type==="text"?"Edit this message": "",x:8+(elements.length%4)*4,y:18+(elements.length%3)*8,w:type==="shape"?22:45,h:type==="shape"?55:52,color:type==="shape"?"#3b79ad":"#e8f1ff",font:16,hidden:false};
+    elements.push(e);selectedId=e.id;markDirty();render();
+  }
+  document.querySelectorAll("[data-add]").forEach(b=>b.addEventListener("click",()=>add(b.dataset.add)));
+  function removeSelected(){const i=elements.findIndex(e=>e.id===selectedId);if(i<0)return;removed={element:elements[i],index:i};elements.splice(i,1);selectedId=elements.length?elements[elements.length-1].id:null;closeMenu();markDirty();render()}
+  $("deleteBtn").addEventListener("click",removeSelected);
+  $("hideBtn").addEventListener("click",()=>{const e=selected();if(e){e.hidden=!e.hidden;markDirty();render()}});
+  $("undoBtn").addEventListener("click",()=>{if(!removed)return;elements.splice(Math.min(removed.index,elements.length),0,removed.element);selectedId=removed.element.id;removed=null;markDirty();render()});
+  $("bandColor").addEventListener("input",()=>{markDirty();render()});
+  $("preset").addEventListener("change",()=>{bandHeight=Number($("preset").value);markDirty();render()});
+  $("heightInput").addEventListener("input",()=>{bandHeight=Number($("heightInput").value);markDirty();$("heightValue").textContent=String(bandHeight);$("preset").value=["36","56","120","160"].includes(String(bandHeight))?String(bandHeight):"120";canvas.style.height=bandHeight+"px";$("canvasSize").textContent="Band: "+Math.round(canvas.clientWidth)+" × "+bandHeight+" px preview"});
+  $("resizeBand").addEventListener("pointerdown",ev=>{
+    if(ev.button!==0)return;ev.preventDefault();const y=ev.clientY,start=bandHeight;
+    const move=mv=>{bandHeight=clamp(start+mv.clientY-y,36,240);markDirty();render()};
+    const up=()=>{window.removeEventListener("pointermove",move);window.removeEventListener("pointerup",up)};
+    window.addEventListener("pointermove",move);window.addEventListener("pointerup",up,{once:true});
+  });
+  $("resizeBand").addEventListener("keydown",ev=>{if(ev.key==="ArrowUp"||ev.key==="ArrowDown"){ev.preventDefault();bandHeight=clamp(bandHeight+(ev.key==="ArrowUp"?4:-4),36,240);markDirty();render()}});
+  $("contextSelect").addEventListener("click",()=>{
+    const id=contextId;if(id!==null)selectedId=id;
+    closeMenu(false);render();
+    const target=id===null?null:canvas.querySelector('[data-id="'+id+'"]');
+    if(target)target.focus();
+  });
+  $("contextDelete").addEventListener("click",()=>{
+    const id=contextId;if(id!==null)selectedId=id;
+    closeMenu(false);removeSelected();
+    if(id!==null)focusLayerControl(id,"select");
+  });
+  menu.addEventListener("keydown",ev=>{
+    const items=Array.from(menu.querySelectorAll('[role="menuitem"]:not(:disabled)'));
+    const index=items.indexOf(document.activeElement);
+    if(ev.key==="Escape"){ev.preventDefault();closeMenu(true);return}
+    if(!items.length)return;
+    let next=null;
+    if(ev.key==="ArrowDown")next=(index+1)%items.length;
+    else if(ev.key==="ArrowUp")next=(index-1+items.length)%items.length;
+    else if(ev.key==="Home")next=0;
+    else if(ev.key==="End")next=items.length-1;
+    if(next!==null){ev.preventDefault();items[next].focus()}
+  });
+  document.addEventListener("pointerdown",ev=>{if(!menu.contains(ev.target)&&!ev.target.closest(".canvas-element"))closeMenu(false)});
+  document.addEventListener("keydown",ev=>{
+    const openEndedDialog=$("openEndedScheduleDialog");
+    if(!openEndedDialog.hidden&&ev.key==="Tab"){
+      const focusable=Array.from(openEndedDialog.querySelectorAll("button:not(:disabled)"));
+      const first=focusable[0],last=focusable[focusable.length-1];
+      if(!openEndedDialog.contains(document.activeElement)){
+        ev.preventDefault();if(first)first.focus();return;
+      }
+      if(ev.shiftKey&&document.activeElement===first){
+        ev.preventDefault();if(last)last.focus();return;
+      }
+      if(!ev.shiftKey&&document.activeElement===last){
+        ev.preventDefault();if(first)first.focus();return;
+      }
+    }
+    if(ev.key==="Escape"){
+      if(!$("openEndedScheduleDialog").hidden){cancelOpenEndedSchedule();return;}
+      if(menu.classList.contains("open")){closeMenu(true);return;}
+      closeMenu(false);return;
+    }
+    const e=selected();if(!e||/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))return;
+    if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==="z"){ev.preventDefault();if(removed)$("undoBtn").click();return}
+    if(ev.key==="Delete"&&(document.activeElement===document.body||document.activeElement.classList.contains("canvas-element"))){removeSelected();return}
+    const step=ev.shiftKey?5:1;
+    if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(ev.key)&&document.activeElement.classList.contains("canvas-element")){
+      ev.preventDefault();if(ev.key==="ArrowLeft")e.x=clamp(e.x-step,0,100-e.w);if(ev.key==="ArrowRight")e.x=clamp(e.x+step,0,100-e.w);if(ev.key==="ArrowUp")e.y=clamp(e.y-step,0,100-e.h);if(ev.key==="ArrowDown")e.y=clamp(e.y+step,0,100-e.h);markDirty();render();const moved=canvas.querySelector('[data-id="'+e.id+'"]');if(moved)moved.focus();
+    }
+    if((ev.shiftKey&&ev.key==="F10")||ev.key==="ContextMenu"){
+      if(document.activeElement.classList.contains("canvas-element")){ev.preventDefault();openContextMenu(e.id,20,20)}
+    }
+  });
+  render();
+  loadSavedDraft(false);
+})();
+</script>
+</body>
+</html>
