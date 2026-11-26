@@ -41,7 +41,7 @@
           "id": "primary-wallet-account",
           "name": "AstroCrown wallet-only account creation and sign-in",
           "status": "FOR DEVELOPMENT · READ ONLY",
-          "details": "The approved primary-wallet identity system is being implemented and qualified. General AstroCrown wallet-only account creation and sign-in are not yet enabled in this staging release."
+          "details": "Primary-wallet account APIs for Ethereum Mainnet, TRON Mainnet and Solana Mainnet are implemented in the local Worker qualification candidate and pass synthetic-signature API tests. Physical-wallet/provider browser qualification and exact remote staging deployment remain outstanding. No live sign-in service is enabled by this page."
         },
         {
           "id": "community",
@@ -123,13 +123,13 @@
           "id": "wallet-login",
           "name": "Primary-wallet account creation and sign-in",
           "status": "FOR DEVELOPMENT · READ ONLY",
-          "details": "Wallet-only authentication is the approved account model. Its general account APIs and end-to-end browser flow are not yet qualified for this staging deployment."
+          "details": "Primary-wallet account APIs for Ethereum Mainnet, TRON Mainnet and Solana Mainnet are implemented in the local Worker qualification candidate and pass synthetic-signature API tests. Physical-wallet/provider browser qualification and exact remote staging deployment remain outstanding. No live sign-in service is enabled by this page."
         },
         {
           "id": "user-dashboard",
           "name": "User dashboard and personal profile",
           "status": "FOR DEVELOPMENT · READ ONLY",
-          "details": "The full wallet-bound member dashboard, profile and connected-wallet experience are still being developed."
+          "details": "The initial dashboard identifies the primary wallet and wallet-provider recovery model. Full profile management, wallet-bound session controls and connected transaction-wallet management remain under development."
         },
         {
           "id": "badges",
@@ -152,7 +152,7 @@
           "id": "admin-access",
           "name": "Administrator access and governance controls",
           "status": "FOR DEVELOPMENT · READ ONLY",
-          "details": "Wallet-primary account integration, owner bootstrap, governance controls and production authorization remain under development and qualification."
+          "details": "The wallet-primary account integration foundation is implemented locally. Owner bootstrap, complete governance controls, production authorization, independent wallet/provider review and remote deployment qualification remain outstanding."
         }
       ]
     },
