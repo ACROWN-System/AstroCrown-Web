@@ -1018,7 +1018,7 @@ try {
       "const scripts=Array.from(document.scripts).map(x=>x.src).filter(x=>x.includes('page-entry'));" +
       "let saved=null;try{saved=JSON.parse(localStorage.getItem('astro-page-notice:account')||'null')}catch(e){}" +
       "return JSON.stringify({url:location.href,readyState:document.readyState," +
-      "pageMeta:document.querySelector('meta[name=\\"astro-page-id\\"]')?.content||null," +
+      "pageMeta:document.querySelector('meta[name=astro-page-id]')?.content||null," +
       "strip:s?.textContent||null,dialogOpen:!!d?.open,dialogPage:d?.dataset.pageNoticePageId||null," +
       "dialogText:d?.innerText?.slice(0,500)||null,nativeNoticeOpen:!!document.getElementById('development-notice')?.open," +
       "saved,noticeScripts:scripts,bodyClass:document.body.className})})()");
