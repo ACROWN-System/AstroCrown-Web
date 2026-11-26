@@ -16,6 +16,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   const noticeScript = await readPublic("page-entry/page-entry-notice.js");
   const noticeCss = await readPublic("page-entry/page-entry-notice.css");
   const registry = JSON.parse(await readPublic("page-entry/feature-status.json"));
+  const workerSource = await readFile(resolve(workerRoot, "src", "index.js"), "utf8");
   const walletAssurance = await readPublic("account-continuity/prototype/wallet-identity-assurance.html");
   const accountUi = await readPublic("account-continuity/prototype/account-ui.js");
 
@@ -36,11 +37,19 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeCss, /astro-entry-notice/);
 
   assert.equal(registry.notice_version, "2026-11-26-public-test-v2");
+  assert.match(workerSource, new RegExp('const STAGING_NOTICE_VERSION = "' + registry.notice_version + '"'));
+  for (const pageId of ["genesis", "account", "admin"]) {
+    assert.match(workerSource, new RegExp('version: "' + registry.pages[pageId].version + '"'));
+  }
   assert.match(registry.global_notice.acknowledgement, /I confirm that I have read and understood/);
   for (const [pageId, page] of Object.entries(registry.pages)) {
     assert.ok(page.version, pageId + " must have a notice version");
     assert.ok(page.title, pageId + " must have a title");
     assert.ok(page.delivery && ["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(page.delivery.status));
+    assert.equal(page.delivery.scope, "page_delivery", pageId + " must distinguish delivery from feature readiness");
+    if (page.delivery.status === "LIVE · STAGING" || page.delivery.status === "LIVE · MAINNET") {
+      assert.equal(page.delivery.environment, "staging".replace("staging", page.delivery.environment));
+    }
     assert.ok(Array.isArray(page.features) && page.features.length > 0);
     for (const feature of page.features) {
       assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(feature.status));
