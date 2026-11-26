@@ -227,11 +227,9 @@ async function createSession(db, accountId, now) {
   const token = base64url(randomBytes(32));
   const tokenHash = await digest(token);
   const expires = now + SESSION_SECONDS;
-  const sessionRef = hex(randomBytes(16));
   const result = await db.prepare(
-    "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
-    "VALUES(?,?,?,NULL,?,?)"
-  ).bind(tokenHash, accountId, sessionRef, now, expires).run();
+    "INSERT INTO auth_sessions(token_hash,account_id,created_at,expires_at) VALUES(?,?,?,?)"
+  ).bind(tokenHash, accountId, now, expires).run();
   if (Number(result.meta?.changes || 0) !== 1) throw fail(503, "The primary-wallet session could not be created.");
   return { token, expires };
 }
@@ -254,12 +252,10 @@ async function verifyRegistration(db, env, request, payload, config) {
   const accountId = "acc_" + base64url(randomBytes(18));
   const identifier = "AC-" + hex(randomBytes(5)).toUpperCase();
   const memberName = createDefaultMemberName(identifier);
-  const userHandle = base64url(randomBytes(16));
   const walletId = hex(randomBytes(16));
   const token = base64url(randomBytes(32));
   const tokenHash = await digest(token);
   const expires = now + SESSION_SECONDS;
-  const sessionRef = hex(randomBytes(16));
   const created = new Date(now * 1000).toISOString();
   const marker = challenge.used_at;
   let results;
@@ -268,16 +264,16 @@ async function verifyRegistration(db, env, request, payload, config) {
       db.prepare(
         "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,member_name,member_name_normalized,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
         "VALUES(?,?,?,?,?,?,'person',?,?,?,'user')"
-      ).bind(accountId, identifier, userHandle, memberName, memberName.toLowerCase(), created, challenge.referral_id || "", TERMS_VERSION, created),
+      ).bind(accountId, identifier, accountId, memberName, memberName.toLowerCase(), created, challenge.referral_id || "", TERMS_VERSION, created),
       db.prepare(
         "INSERT INTO auth_primary_wallets(wallet_id,account_id,network,address,address_normalized,proof_method,linked_at,active) " +
         "SELECT ?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_wallet_challenges WHERE challenge_id=? AND used_at=?)"
       ).bind(walletId, accountId, challenge.network, challenge.address, challenge.address_normalized,
         proofMethod(challenge.network), now, challenge.challenge_id, marker),
       db.prepare(
-        "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
-        "SELECT ?,?,?,NULL,?,? WHERE EXISTS(SELECT 1 FROM auth_primary_wallets WHERE account_id=? AND active=1)"
-      ).bind(tokenHash, accountId, sessionRef, now, expires, accountId),
+        "INSERT INTO auth_sessions(token_hash,account_id,created_at,expires_at) " +
+        "SELECT ?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_primary_wallets WHERE account_id=? AND active=1)"
+      ).bind(tokenHash, accountId, now, expires, accountId),
       db.prepare(
         "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
         "SELECT ?,?,'account_created_with_primary_wallet',?,? WHERE EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash=?)"
