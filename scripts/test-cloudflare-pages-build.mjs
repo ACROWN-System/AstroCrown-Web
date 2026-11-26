@@ -81,6 +81,7 @@ assert.match(pageNoticeJs, /Before you continue/);
 assert.match(pageNoticeJs, /acknowledgement\.disabled = true/);
 assert.match(pageNoticeJs, /acknowledgement\.disabled = false/);
 assert.match(pageNoticeJs, /pageNoticeReady/);
+assert.match(pageNoticeJs, /adminDashboard && !adminDashboard\.hidden/);
 assert.match(pageNoticeJs, /function bindNativeNoticeAcknowledgement/);
 assert.match(pageNoticeJs, /if \(pageId === "home" \|\| \(nativeNotice && nativeNotice.open\)\)/);
 assert.match(pageNoticeJs, /noticeVersion: pageVersion/);
