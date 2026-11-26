@@ -997,8 +997,6 @@
 
   });
 
-  content.addEventListener("change"  });
-
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
