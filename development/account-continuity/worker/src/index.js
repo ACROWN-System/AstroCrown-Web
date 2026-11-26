@@ -2027,6 +2027,26 @@ async function communications(db, request) {
 async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
+  // A passkey-authenticated session from the superseded account model must
+  // not survive into the wallet-primary staging release. Wallet-created
+  // sessions deliberately store authenticated_credential_id as NULL.
+  if (
+    env.ENVIRONMENT === "staging" &&
+    (url.pathname.startsWith("/api/account/") || url.pathname.startsWith("/api/admin/")) &&
+    db
+  ) {
+    const legacySession = await activeAccount(db, request);
+    if (legacySession && legacySession.authenticated_credential_id) {
+      const token = cookie(request, SESSION_COOKIE);
+      if (token) {
+        await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await hashText(token)).run();
+      }
+      return json(401, {
+        authenticated: false,
+        error: "This session used the retired passkey account model and has been revoked. Sign in again with your primary identity wallet.",
+      }, { "Set-Cookie": clearCookie(new URL(config.origin)) });
+    }
+  }
   if (env.ENVIRONMENT === "staging" && isSupersededPasskeyRoute(url.pathname)) {
     return json(410, {
       error: "Passkey-first account authentication and offline recovery-key login have been superseded by AstroCrown's wallet-only primary identity. That replacement account flow is not yet enabled in this staging release.",
