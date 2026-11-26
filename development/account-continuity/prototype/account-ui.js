@@ -40,8 +40,8 @@
     window.location.protocol === "https:" && liveTestHost;
   var browserPreviewMode = forceBrowserDemo ||
     (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);
-  var walletPrimaryUiMode = (typeof workerStagingMode !== "undefined" && workerStagingMode) ||
-    browserPreviewMode || liveTestMode;
+  // Wallet ownership is the only supported ordinary-account authentication mode.
+  var walletPrimaryUiMode = true;
   // Built-in glyphs only: no user-uploaded image, remote URL or third-party asset.
   // The server independently validates the selected identifier.
   var avatarOptions = {
@@ -680,7 +680,8 @@
         adminWalletAuthenticated: false,
         adminSessionAuthorized: false,
         admin: false,
-        passkeyAvailable: false,
+        walletAuthenticationAvailable: false,
+        walletAuthenticationNetworks: ["ethereum", "tron", "solana"],
         activeSessionCount: 0,
         scope: "hosted-preview-no-authentication"
       };
@@ -689,7 +690,7 @@
       return { authenticated: false, message: "No account session exists in this hosted preview." };
     }
     throw new Error(
-      "The hosted HTML preview is a read-only interface demonstration. It cannot create accounts, store credentials or perform passkey authentication. Use the local loopback server for real WebAuthn tests."
+      "The hosted HTML preview is read-only. Use the qualified AstroCrown Worker to create an account or sign in with a wallet."
     );
   }
 
@@ -768,7 +769,7 @@
   }
 
   function renderWalletPrimaryStatus() {
-    var enabled = typeof workerStagingMode !== "undefined" && workerStagingMode && accountState.walletAuthenticationAvailable === true;
+    var enabled = accountState.walletAuthenticationAvailable === true;
     var controls = mode === "create"
       ? '<form id="account-wallet-register-form" class="account-form" autocomplete="off">' +
           '<label class="account-field" for="account-wallet-network">Primary identity network' +
@@ -795,7 +796,7 @@
       '<div class="account-provider-note"><strong>Your sovereignty comes with sovereign responsibilities.</strong><br>Your primary wallet is the sole identity and recovery anchor. Use the wallet provider’s own recovery process to restore the same wallet. AstroCrown will never request or store a seed phrase or private key.</div>' +
       '<p class="account-provider-note">Wallet proof is an off-chain message signature only. It does not submit a transaction, approve a contract, transfer assets or pay gas. Only Ethereum Mainnet, TRON Mainnet and Solana Mainnet are currently supported by this qualification; Bitcoin support is not enabled.</p>' +
       (!enabled
-        ? '<p class="account-dialog-description">Wallet-only account access is not enabled in this read-only preview. Use the local passkey route only for historical regression testing.</p>'
+        ? '<p class="account-dialog-description">Wallet-only account access is not enabled on this read-only preview. Account creation and sign-in require the qualified AstroCrown Worker.</p>'
         : '<p class="account-dialog-description">This wallet-primary account implementation is a staging qualification candidate. Use a wallet containing no real assets and review every message before signing. No account service is approved for production.</p>') +
       '<p class="account-signin-help"><a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Test Terms &amp; Conditions</a> · <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Notice</a></p>';
   }
@@ -841,7 +842,7 @@
     if (walletPrimaryUiMode) {
       content.innerHTML = renderDevelopmentNotice() +
         '<p class="account-dialog-description">AstroCrown cannot reset, replace or recover your primary wallet. Use the wallet provider’s own recovery process to restore the same wallet.</p>' +
-        '<p class="account-provider-note">Never share your seed phrase, private key or wallet recovery secret with AstroCrown, NOVA, administrators, support staff or anyone else. Wallet-only account recovery is part of the approved design but is not yet enabled in this public test release.</p>' +
+        '<p class="account-provider-note">Never share your seed phrase, private key or wallet recovery secret with AstroCrown, NOVA, administrators, support staff or anyone else. Restore access by recovering the same wallet through its provider. AstroCrown cannot reset the wallet or recover the account using a different wallet.</p>' +
         '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>';
       return;
     }
