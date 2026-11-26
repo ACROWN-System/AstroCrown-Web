@@ -39,6 +39,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /acknowledgement\.disabled = false/);
   assert.match(noticeScript, /pageNoticeReady/);
   assert.match(noticeScript, /adminDashboard && !adminDashboard\.hidden/);
+  assert.match(noticeScript, /new MutationObserver\(reconcilePageEntry\)/);
   assert.match(noticeScript, /function bindNativeNoticeAcknowledgement/);
   assert.match(noticeScript, /if \(pageId === "home" \|\| \(nativeNotice && nativeNotice.open\)\)/);
   assert.match(noticeScript, /noticeVersion: pageVersion/);
