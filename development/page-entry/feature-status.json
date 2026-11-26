@@ -178,7 +178,7 @@
       ]
     },
     "community": {
-      "version": "2026-11-26-community-v1",
+      "version": "2026-11-26-community-v2",
       "title": "AstroCrown Community",
       "delivery": {
         "status": "FOR DEVELOPMENT · READ ONLY",
@@ -195,7 +195,7 @@
       ]
     },
     "nova": {
-      "version": "2026-11-26-nova-v1",
+      "version": "2026-11-26-nova-v2",
       "title": "Chat with NOVA",
       "delivery": {
         "status": "FOR DEVELOPMENT · READ ONLY",
@@ -212,7 +212,7 @@
       ]
     },
     "council": {
-      "version": "2026-11-26-council-v1",
+      "version": "2026-11-26-council-v2",
       "title": "AstroCrown Council",
       "delivery": {
         "status": "FOR DEVELOPMENT · READ ONLY",
@@ -229,7 +229,7 @@
       ]
     },
     "trade-bots": {
-      "version": "2026-11-26-trade-bots-v1",
+      "version": "2026-11-26-trade-bots-v2",
       "title": "Trade Bots",
       "delivery": {
         "status": "FOR DEVELOPMENT · READ ONLY",
