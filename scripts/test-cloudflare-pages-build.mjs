@@ -146,7 +146,7 @@ assert.match(walletAssurance, /name="astro-page-id" content="account"/);
 assert.match(walletAssurance, /primary wallet is your account identity/i);
 assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
 assert.match(accountJs, /hosted-preview-no-authentication/);
-assert.match(accountJs, /read-only interface demonstration/);
+assert.match(accountJs, /hosted HTML preview is read-only/);
 
 assert.match(supporterPage, /noindex, nofollow, noarchive/i);
 assert.match(supporterPage, /USDT qualifying payments and ACROWN purchases are not enabled/i);
