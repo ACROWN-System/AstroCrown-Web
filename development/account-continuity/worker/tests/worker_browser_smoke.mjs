@@ -212,6 +212,19 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
       "!document.getElementById('admin-dashboard').hidden"
     )
   );
+  const adminNoticeState = await waitFor("Admin page-entry notice readiness", async () =>
+    evaluate("(() => {const d=document.querySelector('.astro-entry-notice');" +
+      "if(d?.open && document.querySelector('.astro-entry-notice-ack input')) return 'open';" +
+      "const saved=JSON.parse(localStorage.getItem('astro-page-notice:admin')||'null');" +
+      "return saved?.version==='2026-11-26-admin-v1' ? 'acknowledged' : null;})()")
+  );
+  if (adminNoticeState === "open") {
+    await trustedClick(".astro-entry-notice-ack input");
+    await trustedClick(".astro-entry-notice-continue");
+    await waitFor("Admin page-entry notice acknowledgement", async () =>
+      evaluate("!document.querySelector('.astro-entry-notice[open]')")
+    );
+  }
   assert.equal(
     await evaluate("document.querySelectorAll('#admin-dashboard-content [data-admin-wallet-revoke=\"true\"]').length"),
     0,
