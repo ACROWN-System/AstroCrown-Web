@@ -10,6 +10,7 @@ import { getAddress, isAddress, recoverMessageAddress } from "viem";
 import { supporterStatusResponse } from "./supporters.js";
 import { handleGenesisWalletApi } from "./genesis.js";
 import { issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge, isQualifiedAccountRuntime, isLoopbackDevelopmentOrigin } from "./wallet-auth.js";
+import { createDefaultMemberName, normalizeMemberName } from "./member-name.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -366,6 +367,7 @@ async function summary(db, account) {
     authenticated: true,
     email: null,
     accountIdentifier: account.account_identifier,
+    memberName: account.member_name || createDefaultMemberName(account.account_identifier),
     authMethod: primaryWallet ? "primary-wallet" : "webauthn",
     primaryWallet: primaryWallet ? {
       network: primaryWallet.network,
@@ -1750,15 +1752,16 @@ async function verifyRegistration(db, env, request, payload, config) {
   const created = new Date().toISOString();
   const expires = now + SESSION_SECONDS;
   const metadata = JSON.parse(challenge.payload_json || "{}");
+  const memberName = createDefaultMemberName(challenge.account_identifier);
   const marker = b64u(bytes(18));
   const passkeyRef = hex(bytes(16));
   const sessionRef = hex(bytes(16));
   const queries = [
     db.prepare(
-      "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
-      "SELECT ?,?,?,?,'person',?,?,?,'user' WHERE EXISTS " +
+      "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,member_name,member_name_normalized,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
+      "SELECT ?,?,?,?,?,?,'person',?,?,?,'user' WHERE EXISTS " +
       "(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'registration' AND used_at IS NULL AND expires_at > ?)"
-    ).bind(challenge.account_id, challenge.account_identifier, challenge.user_handle, created, metadata.referralId || "", TERMS_VERSION, created, challengeId, now),
+    ).bind(challenge.account_id, challenge.account_identifier, challenge.user_handle, memberName, memberName.toLowerCase(), created, metadata.referralId || "", TERMS_VERSION, created, challengeId, now),
     db.prepare(
       "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND used_at IS NULL AND EXISTS(SELECT 1 FROM auth_accounts WHERE account_id = ?)"
     ).bind(marker, challengeId, challenge.account_id),
@@ -2015,6 +2018,7 @@ async function status(db, request, env, config) {
     passkeyAvailable: env?.ENVIRONMENT === "local" && isLoopbackDevelopmentOrigin(config?.origin) && new URL(request.url).origin === config.origin,
     walletAuthenticationAvailable: isQualifiedAccountRuntime(env, config, request),
     walletAuthenticationNetworks: ["ethereum", "tron", "solana"],
+    memberName: null,
     emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
     activeSessionCount: 0, securityManagementAvailable: false, scope: "staging-test-account-only",
@@ -2024,6 +2028,85 @@ async function logout(db, request, config) {
   const token = cookie(request, SESSION_COOKIE);
   if (token) await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await hashText(token)).run();
   return json(200, { authenticated: false, message: "You are signed out." }, { "Set-Cookie": clearCookie(new URL(config.origin)) });
+}
+function parseMemberNamePayload(payload) {
+  if (!payload || Object.keys(payload).length !== 1 ||
+      !Object.prototype.hasOwnProperty.call(payload, "memberName")) {
+    throw fail(400, "Provide a member name only.");
+  }
+  const parsed = normalizeMemberName(payload.memberName);
+  if (!parsed) {
+    throw fail(400, "Use 3–20 characters: start with a letter and use only English letters, numbers or underscores. That name may also be reserved.");
+  }
+  return parsed;
+}
+async function checkMemberName(db, env, request, payload) {
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before checking a member name.");
+  const parsed = parseMemberNamePayload(payload);
+  await rateLimit(db, env, request, "member-name-availability", account.account_id, 30, 600);
+  const currentNormalized = account.member_name_normalized ||
+    String(account.member_name || createDefaultMemberName(account.account_identifier)).toLowerCase();
+  if (parsed.normalized === currentNormalized) {
+    return json(200, {
+      valid: true,
+      available: true,
+      unchanged: true,
+      memberName: account.member_name || createDefaultMemberName(account.account_identifier),
+      message: "This is your current member name.",
+    });
+  }
+  const existing = await db.prepare(
+    "SELECT 1 AS present FROM auth_accounts WHERE member_name_normalized = ? AND account_id <> ? LIMIT 1"
+  ).bind(parsed.normalized, account.account_id).first();
+  return json(200, {
+    valid: true,
+    available: !existing,
+    unchanged: false,
+    memberName: parsed.memberName,
+    message: existing ? "That member name is already taken. Please choose another." : "Username available. You can apply this name.",
+  });
+}
+async function applyMemberName(db, env, request, payload) {
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in before changing your member name.");
+  const parsed = parseMemberNamePayload(payload);
+  await rateLimit(db, env, request, "member-name-apply", account.account_id, 10, 3600);
+  const currentNormalized = account.member_name_normalized ||
+    String(account.member_name || createDefaultMemberName(account.account_identifier)).toLowerCase();
+  if (parsed.normalized === currentNormalized) return json(200, await summary(db, account));
+  const now = new Date().toISOString();
+  try {
+    const results = await db.batch([
+      db.prepare(
+        "UPDATE auth_accounts SET member_name = ?, member_name_normalized = ? WHERE account_id = ?"
+      ).bind(parsed.memberName, parsed.normalized, account.account_id),
+      db.prepare(
+        "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
+        "SELECT ?,?,'member_name_changed',?,? WHERE EXISTS(" +
+        "SELECT 1 FROM auth_accounts WHERE account_id = ? AND member_name_normalized = ?)"
+      ).bind(b64u(bytes(16)), account.account_id, now,
+        "from=" + (account.member_name || createDefaultMemberName(account.account_identifier)) + ";to=" + parsed.memberName,
+        account.account_id, parsed.normalized),
+    ]);
+    if (!Array.isArray(results) || results.length !== 2 ||
+        Number(results[0]?.meta?.changes || 0) !== 1 ||
+        Number(results[1]?.meta?.changes || 0) !== 1) {
+      throw fail(409, "The member name was not changed. Refresh your account and try again.");
+    }
+  } catch (error) {
+    if (error?.status) throw error;
+    if (/UNIQUE constraint failed|member_name_normalized/i.test(String(error?.message || error))) {
+      throw fail(409, "That member name has just been claimed by another member. Please choose another.");
+    }
+    throw error;
+  }
+  const token = cookie(request, SESSION_COOKIE);
+  const updated = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + token },
+  }));
+  if (!updated) throw fail(401, "Your account session ended. Sign in again.");
+  return json(200, await summary(db, updated));
 }
 async function avatar(db, request, payload) {
   const account = await activeAccount(db, request);
@@ -2091,6 +2174,8 @@ async function api(request, env, config) {
   if (request.method === "GET" || request.method === "HEAD") throw fail(404, "The account endpoint does not exist.");
   if (request.method !== "POST") throw fail(405, "The account endpoint requires POST.");
   const payload = await bodyJson(request);
+  if (url.pathname === "/api/account/member-name/check") return checkMemberName(db, env, request, payload);
+  if (url.pathname === "/api/account/member-name/apply") return applyMemberName(db, env, request, payload);
   if (url.pathname === "/api/wallet-auth/challenge") return issuePrimaryWalletChallenge(db, env, request, payload, config);
   if (url.pathname === "/api/wallet-auth/verify") return verifyPrimaryWalletChallenge(db, env, request, payload, config);
   if (url.pathname === "/api/staging/acknowledge") {
