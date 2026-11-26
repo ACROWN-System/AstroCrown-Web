@@ -270,7 +270,11 @@
         body: payload === undefined ? undefined : JSON.stringify(payload)
       });
     } catch (_error) {
-      throw new Error(liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command.");
+      throw new Error(
+        (typeof workerStagingMode !== "undefined" && workerStagingMode)
+          ? "The AstroCrown staging account service is not responding. The account has not been changed."
+          : (liveTestMode ? "The temporary HTTPS test service is not responding." : "The local AstroCrown account Worker is not responding.")
+      );
     }
     var data;
     try { data = await response.json(); }
@@ -374,10 +378,11 @@
 
   function renderDevelopmentNotice() {
     if (browserPreviewMode) return "";
-    var noticeMode = walletPrimaryUiMode ? "wallet-primary-public-test" : "local-passkey-regression";
-    var noticeText = walletPrimaryUiMode
-      ? "ASTROCROWN LIVE PUBLIC TEST — Temporary public test environment. Public submissions may be visible to anyone on the internet. Use invented, non-identifying details. Never disclose personal information, production credentials, seed phrases, private keys or wallet recovery secrets. Only explicitly marked LIVE features are functional in their named environment."
-      : "LOCAL PASSKEY REGRESSION TEST ONLY — This local route preserves the superseded passkey prototype for historical automated regression work. It is not the active AstroCrown account sign-in design or a public account service.";
+    var staging = typeof workerStagingMode !== "undefined" && workerStagingMode;
+    var noticeMode = staging ? "wallet-primary-public-test" : "wallet-primary-local-test";
+    var noticeText = staging
+      ? "ASTROCROWN LIVE PUBLIC TEST — Use invented, non-identifying details. Public submissions may be visible to anyone on the internet. Never disclose personal information, production credentials, seed phrases, private keys or wallet recovery secrets. Only explicitly marked LIVE features are functional in their named environment."
+      : "LOCAL WALLET ACCOUNT TEST ONLY — This local service verifies wallet ownership using off-chain messages. Use a wallet you control and synthetic account details only. No transaction, approval or payment is requested.";
     return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' + noticeMode + '">' +
       noticeText + '</p>';
   }
