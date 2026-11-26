@@ -58,7 +58,7 @@
     summary.appendChild(element("h3", "", "Operational status · " + page.title));
     var delivery = element("div");
     delivery.appendChild(statusBadge(page.delivery.status));
-    delivery.appendChild(element("p", "", page.delivery.details));
+    delivery.appendChild(element("p", "", "Page delivery status only. Feature operation is classified separately below. " + page.delivery.details));
     summary.appendChild(delivery);
 
     var list = element("ul", "astro-page-status-list");
@@ -255,7 +255,7 @@
     var existingStrip = document.querySelector(".astro-page-status-strip");
     if (existingStrip) existingStrip.remove();
     var strip = element("div", "astro-page-status-strip");
-    strip.appendChild(element("span", "", page.title + " status"));
+    strip.appendChild(element("span", "", page.title + " · page delivery"));
     strip.appendChild(statusBadge(page.delivery.status));
     var note = element("span", "", "Feature availability is shown separately below and in this page's entry notice.");
     strip.appendChild(note);
