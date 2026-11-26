@@ -1,4 +1,4 @@
-# Active Navigation Plan — Optional Wallet Authentication Lab
+# Historical Prototype Record — Retired Optional Wallet Authentication Lab
 
 > **SUPERSEDED PROTOTYPE PLAN (26 November 2026).** This plan concerns a standalone SIWE wallet-capability lab that has been retired. AstroCrown's current ordinary account identity is wallet-primary within the single account Worker; do not recreate a second login lab from this record. See [the primary identity architecture](../../account-continuity/PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [Worker implementation status](../../account-continuity/worker/README.md).
 
@@ -112,13 +112,13 @@ Pause before the user step if:
 - the prototype can bind beyond loopback, or tests cannot prove it remains local;
 - exact-head CI fails or a test is being weakened merely to fit the implementation.
 
-A real-wallet interaction is optional and should be requested only when validating a specific wallet-dependent feature warrants it; it is not the next step for ordinary account authentication. AUTH-001 remains an independent blocker for future public/editor integration and deployment.
+The optional real-wallet experiment and AUTH-001 blocker statements above belong to the original lab plan and are not current work instructions. The lab is retired. Current account wallet proof is implemented only inside the single wallet-primary Worker and remains subject to its separate release gates; see [the current Worker README](../../account-continuity/worker/README.md).
 
-## 9. Result and handoff
+## 9. Historical result and handoff
 
-Current result: **LOCAL-ONLY EOA/SIWE WALLET-CAPABILITY LAB IMPLEMENTED; TEST WALLET NOT USED; NOT THE ORDINARY LOGIN PATH**.
+Historical result at the time: **LOCAL-ONLY EOA/SIWE WALLET-CAPABILITY LAB IMPLEMENTED; TEST WALLET NOT USED; NOT THE ORDINARY LOGIN PATH**. The standalone lab was subsequently retired from the active workspace under PR #198 and is not a current optional-login subsystem.
 
-- Prototype source and 17 offline/loopback tests are under `development/auth-prototype/`; the browser UI is a separate same-origin page.
+- At the historical snapshot, prototype source and 17 offline/loopback tests were under `development/auth-prototype/`; that active directory was later removed. The earlier material remains preserved in the immutable dated backup.
 - [Local Wallet Authentication Prototype Tests #22](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/39397576898) passed on exact code head `3e5689e93bd5ad42547636f07c494ca6b2372d60`. Python compilation, browser JavaScript syntax, all 17 unit/HTTP tests, the headless-browser wallet UI smoke test, and the static no-transaction/no-relay check passed.
 - The 17-test suite covers successful EOA verification, wrong signer, tampered message, replay, expiry, address/chain validation, nonce structure, session expiry/logout, direct top-level browser navigation without an Origin header, wrong Host/Origin/fetch-site, malformed ECDSA signature normalization, request-body/method constraints, loopback-only bind and response security headers, and the absence of the contract-wallet RPC fallback on the EOA path.
 - The headless-browser smoke test passed direct navigation, confirmed that page load does not prompt the wallet, simulated explicit account connection and a second explicit sign click, compared the wallet request against the exact displayed SIWE message bytes and selected address, then confirmed rejection of an intentionally invalid signature with no resulting session. This is a mock-wallet UI test, not a real wallet-compatibility result.

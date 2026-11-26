@@ -1,4 +1,4 @@
-# Active Architecture Plan — Authentication Separation and Optional Wallet Access
+# Historical Architecture Plan — Authentication Separation and Optional Wallet Access
 
 > **HISTORICAL OWNER-DECISION SNAPSHOT — SUPERSEDED (26 November 2026).** The 21 October 2026 decision recorded here separated ordinary account authentication from optional wallet access. The owner subsequently changed the ordinary account model to one wallet-primary identity per account, reaffirmed on 26 November 2026. This document preserves the earlier decision and its reasoning only; it is not current authority. See [the current primary identity architecture](../../account-continuity/PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md).
 
@@ -149,9 +149,9 @@ Initial roles to test remain: **Owner/Security Administrator**, **Editor**, **Pu
 
 **IF the prior wallet-first direction were retained:** unfamiliar wallet UX could make users distrust or abandon registration; lack of wallet support could block ordinary use; wallet compromise could spill into unrelated app access; and changing the model later could require account migration and recovery work.
 
-## 8. Current result and stop condition
+## 8. Historical result and stop condition as of 21 October 2026
 
-- Authentication direction: **OWNER-APPROVED — ordinary account authentication is separate from crypto-wallet access.**
+- Authentication direction at that date: **OWNER-APPROVED — ordinary account authentication was separate from crypto-wallet access.** This was later superseded by the wallet-primary owner decision.
 - Former wallet-first proposal: **SUPERSEDED by the 2026-10-21 decision.**
 - WebAuthn/passkeys: **LEADING CANDIDATE; not selected or implemented yet.** Portability, device support, non-biometric access and recovery remain to be tested.
 - Recovery codes / multi-authenticator / total-loss recovery: **CANDIDATES; not implemented or approved.**
@@ -161,4 +161,4 @@ Initial roles to test remain: **Owner/Security Administrator**, **Editor**, **Pu
 - Production authentication, account recovery, role storage, publishing, hosting and durable storage: **NOT IMPLEMENTED / NOT APPROVED.**
 - Production changes: **NONE**.
 
-The next implementation should prototype ordinary account authentication without a wallet, independently of the SIWE lab. Use a familiar first interaction; offer username/handle plus password (rather than an impossible identifier-free password) and any social provider only after its real integration and strict $0 eligibility are verified. Show a recovery method during setup and use non-blocking, dismissible security-setting reminders for additional backups. For administrators, any one of up to three registered wallets provides sign-in; loss of all wallets goes to Imperial HSIAN review. Include recovery tests before promotion. Keep all development work under `development/`; do not merge or deploy on the strength of wallet-lab CI alone.
+The next-step recommendations in this 21 October 2026 record proposed ordinary account authentication without a wallet and considered username/password, social-provider and separate wallet-capability paths. Those recommendations were superseded by the owner's subsequent decision to use one wallet-primary identity per ordinary account. They are preserved as decision history only. Do not implement them as current tasks; use [the current primary identity architecture](../../account-continuity/PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [Worker README](../../account-continuity/worker/README.md).

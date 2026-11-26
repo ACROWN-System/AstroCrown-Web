@@ -13,7 +13,7 @@ AstroCrown's shared browser-test website is to be built as a **production-shaped
 
 The purpose of staging is to expose deployment, runtime, persistence, security, migration, origin, browser and operational defects while they are still inexpensive to correct. The staging deployment should therefore reproduce the public deployment architecture rather than approximate it through a different server or temporary network path.
 
-This decision accepts the architectural principle. It does **not** select Cloudflare, GitHub Pages, a particular Worker runtime, D1, a production domain or any paid service. The hosting/runtime decision remains blocked until the exact stack is tested against the adopted passkey requirements and the strict $0/no-card constraint.
+This decision records the production-shaped staging principle. The current development implementation uses Cloudflare Workers with D1 and is locally qualified under PR #198; no remote staging deployment or remote D1 migration has been performed. Remote platform eligibility, the strict $0/no-card condition, and any staging deployment still require separate verification and explicit owner authorization. This document does not authorize provisioning, deployment or paid services.
 
 ## 2. Environment model
 
@@ -70,7 +70,7 @@ Generate disposable test passkeys and recovery keys specifically for the staging
 
 Use separate randomly generated secret values for each environment. Staging secrets must be revocable and replaceable without affecting production. Keep secrets out of Git, Git history, source maps, HTML, logs, screenshots, CI output, pull-request descriptions and downloadable test reports. Deployment credentials must be least-privilege and may be supplied through a local authenticated CLI or a separately approved CI secret; never store provider master/API keys in the repository.
 
-## 5. Candidate $0 platform — qualification only
+## 5. Historical $0 platform qualification notes — pre-Worker implementation
 
 Cloudflare Workers Free plus static assets and D1 is a candidate for a deployed, same-origin staging architecture. The present published limits are useful for a small test system but are not permanent guarantees:
 
@@ -86,9 +86,9 @@ Official references:
 - https://developers.cloudflare.com/d1/platform/pricing/
 - https://developers.cloudflare.com/d1/reference/faq/
 
-### 5.1 Material blockers before selecting Workers + D1
+### 5.1 Historical blockers recorded before the Worker/D1 implementation
 
-The current account backend is not Worker-ready unchanged: it is a Python ThreadingHTTPServer, opens a local sqlite3 file and contains process-oriented lifecycle assumptions. A Worker implementation requires an HTTP fetch/request handler and an asynchronous binding-backed data adapter (for D1 or another approved store). Existing domain rules, API contracts and schema semantics should be preserved, but runtime and storage adapters must be made explicit and tested.
+Historical pre-Worker assessment: the earlier local reference prototype used Python `ThreadingHTTPServer` and SQLite and could not be deployed unchanged to a Worker runtime. PR #198 has since added the wallet-primary JavaScript Worker and D1 schema/migration path. The current implementation and its local qualification boundaries are documented in [the account Worker README](worker/README.md); remote staging and remote D1 migration remain unperformed.
 
 The current Python WebAuthn verifier is pinned to webauthn 3.0.1 with cryptography and pyOpenSSL dependencies. Cloudflare Python Workers execute through Pyodide and document support for pure-Python and PyEmscripten packages. Package compatibility and the required versions have not been proven. Do not assume that a regular CPython Linux wheel can be used in the Worker runtime.
 
@@ -237,7 +237,10 @@ This design does not authorize remote deployment by itself. The workflow remains
 - Test direct API access without acknowledgement, mainnet-chain attempts, missing/invalid staging configuration, rate-limit exhaustion, database quota exhaustion and reset/deletion behavior. These must fail safely without paid fallback, production access or real-asset handling.
 - Do not announce a public staging URL until the actual remote deployment, public-entry behavior, account API/database, testnet controls and real-browser acceptance checks have passed.
 
-### 8.5 Current evidence-based status
+### 8.5 Historical public-staging and passkey-era status snapshot — 8 November 2026
+
+> The following records the state of the earlier staging/passkey implementation on 8 November 2026. It is retained as historical evidence only. In particular, references below to passkey registration, recovery keys, PR #141 and the prior staging implementation are not current account instructions or current PR status.
+
 
 **Implementation status after the 2026-11-08 public-staging work:**
 
@@ -262,3 +265,18 @@ Still not remotely qualified:
 - Public mode has route-specific rate limits and provider quotas, but this does not establish resistance to every distributed abuse or denial-of-service scenario. Monitor usage and maintain a safe mechanism to return the staging mode to restricted if the service is abused or quotas threaten essential tests. No paid fallback is permitted.
 
 Accordingly, the live-public notice copy, explicit public staging mode and server-verified acknowledgement are **IMPLEMENTED IN THE DEVELOPMENT BRANCH**; their latest hosted CI and local runtime checks must pass before merge. The remote public staging deployment, cross-device browser qualification, testnet transaction capability and complete platform features remain **NOT DEPLOYED / NOT QUALIFIED**.
+
+### 8.6 Current architecture and release status — 26 November 2026
+
+The current ordinary-account identity model is wallet-primary and is governed by [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [the account Worker README](worker/README.md). The previous passkey-first implementation, offline recovery-key route and standalone SIWE lab are superseded or retired; do not reactivate them as alternative account paths.
+
+PR #198 provides the following development-branch capabilities and boundaries:
+
+- One primary identity wallet per ordinary account, using locally qualified Ethereum EIP-191, TRON TIP-191 and Solana Ed25519 off-chain proofs. Bitcoin/BIP-322 is not enabled.
+- Local Worker/D1 qualification, including one-use origin/address/network/purpose-bound challenge verification, session lifecycle, member-name assignment and uniqueness, page-acknowledgement cookies, Genesis read-only status and deployment-boundary checks.
+- A shared page-entry notice and feature-status registry. Until the exact build is remotely deployed and verified, pages/features remain **FOR DEVELOPMENT · READ ONLY**. A local build or CI pass is not evidence of live staging delivery.
+- Physical-wallet and broad provider/device/browser compatibility checks, independent security review, and remote staging operation remain release gates.
+- No Cloudflare deployment, remote D1 migration, billing change, infrastructure provisioning, or payment activation has been performed by this work. Genesis remains PRELAUNCH; qualifying payments, purchases, entitlement crediting and token delivery remain disabled.
+
+The exact current evidence is the PR #198 Checks tab and its linked workflow runs. CI establishes only the automated local scope described by each workflow; it is not remote deployment evidence, physical-wallet compatibility, independent security review or production authorization.
+

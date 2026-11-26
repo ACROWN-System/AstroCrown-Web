@@ -8,9 +8,9 @@
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Pull request:** [#141 — Passkey-first account foundation; optional wallet backup](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)
 
-## 1. Governing account decision
+## 1. Historical governing account decision as of 4 November 2026
 
-The only active account-authentication and recovery design is [Passkey-First Account Authentication and Recovery Requirements](../../account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md).
+At the time of this 4 November 2026 snapshot, the governing account-authentication and recovery design was the [Passkey-First Account Authentication and Recovery Requirements](../../account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). That decision was subsequently superseded by the owner's wallet-primary decision. It is retained here only to explain the historical implementation and evidence; it is not current account authority.
 
 - WebAuthn passkeys are the primary account authenticator for ordinary users and administrators.
 - Discoverable passkey sign-in does not require an email address, username prompt or password.
@@ -19,9 +19,9 @@ The only active account-authentication and recovery design is [Passkey-First Acc
 - Wallet authentication remains separate. The current EVM/SIWE implementation is used for administrator wallet enrollment and short-lived privileged step-up; it is not the ordinary account authenticator. Optional ordinary-account wallet backup remains unimplemented.
 - Account identity, sessions, roles and permissions are independent of wallet addresses and passkey credential identifiers.
 
-## 2. Current local prototype capabilities
+## 2. Historical local prototype capabilities as of 4 November 2026
 
-The loopback prototype under `development/account-continuity/prototype/` currently includes:
+At that historical snapshot, the loopback prototype under `development/account-continuity/prototype/` included:
 
 - WebAuthn discoverable registration and sign-in, server-side challenge lifecycle, origin/RP checks, user-verification requirements and credential signature verification through the pinned open-source relying-party library.
 - A one-time 256-bit offline recovery key, shown once; only a salted one-way verifier is stored. Successful recovery consumes the previous key, requires a replacement passkey, revokes prior passkeys and sessions, rotates the recovery key and records an audit event.
@@ -146,7 +146,7 @@ Do not modify, delete, rewrite, rename, relocate or compact immutable historical
 
 Passing CI alone is not sufficient. This document does not authorize a merge, paid service, provider lock-in, public deployment or public account onboarding.
 
-## 6. Production readiness blockers
+## 6. Historical production-readiness blockers recorded on 4 November 2026
 
 Before any real-user onboarding, the project still requires:
 
@@ -162,7 +162,7 @@ Before any real-user onboarding, the project still requires:
 
 The implementation and its browser/API regression tests are maintained in PR #141. Current exact-head workflow results must be read from the PR's Checks tab and the linked GitHub Actions runs; a previous green result must not be carried forward to a later commit without checking that exact commit.
 
-This is the current implementation/status summary. Earlier account-flow, email-provider and hosting experiments are not current product requirements or provider selections.
+This paragraph records the passkey-era implementation status at the time of the dated evidence snapshot. It does not describe the current wallet-primary implementation. Earlier account-flow, email-provider and hosting experiments are not current product requirements or provider selections.
 
 ### Exact current-head verification refresh — 2026-11-04
 

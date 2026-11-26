@@ -3,7 +3,7 @@
 > **Historical proposal and authority correction — 26 November 2026:** This broad roadmap preserves earlier account-continuity, privacy, eligibility and community-participation proposals. It is not the current account sign-in, identity or recovery specification. The current ordinary-account authority is [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md), with implementation boundaries in [the Worker README](worker/README.md). The former passkey-first model and proposals for multiple account authenticators/recovery routes are superseded and must not be implemented as alternate login paths. The remaining privacy, fairness and data-minimization principles may inform future work only where they do not conflict with current owner-approved requirements. No unimplemented proposal in this roadmap is an approved feature or operational capability.
 
 
-> **Authentication authority (2026-11-04):** this document is broad ecosystem context, not an account sign-in specification. The sole governing account-authentication and recovery design is [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). Earlier password/email/provider experiments are not current implementation directions.
+> **Historical authentication authority — 4 November 2026:** this proposal originally deferred account sign-in design to a passkey-first requirements record. That authority was superseded when the owner adopted wallet-primary identity. The paragraph is preserved as a dated decision-history note only. Current authority: [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [the account Worker status](worker/README.md).
 
 **Status:** DEVELOPMENT-ONLY ARCHITECTURE PROPOSAL — NOT IMPLEMENTED  
 **Last updated:** 2026-10-16  
@@ -639,10 +639,12 @@ Create a **Requirements and Threat Model Register** before coding account creati
 Only after that register is reviewed should implementation work start. Each implementation should have its own dated plan, branch, exact source-of-truth contract, test plan, evidence, impact analysis, review and explicit promotion decision.
 
 
-## Current account-authentication status — 2026-11-04
+## Historical account-authentication status — 4 November 2026 snapshot
 
-This roadmap remains broad ecosystem context, not the active account-authentication specification. The current local account prototype uses WebAuthn passkeys for registration and discoverable sign-in, plus a user-held one-time offline recovery key. Account identity, sessions and roles remain independent of wallet addresses. The separate EVM/SIWE capability is reserved for administrator wallet enrollment and step-up; optional ordinary-account wallet backup is not yet implemented.
+The statements in this section describe the account prototype at the time of the 4 November 2026 record. They are retained as historical implementation context and are not current identity, sign-in or recovery instructions.
 
-The account flow does not request an email address, password or phone number. Email verification, email password-reset and external email delivery are not account capabilities or recovery dependencies.
+At that time, the local prototype used WebAuthn passkeys for registration and discoverable sign-in, plus a user-held one-time offline recovery key. Account identity, sessions and roles were kept independent of wallet addresses. A separate EVM/SIWE capability was used for administrator wallet enrollment and step-up; optional ordinary-account wallet backup had not been implemented.
 
-This is a loopback-only local prototype, not a production account service. Public onboarding remains blocked pending a verified HTTPS relying-party origin, durable production storage, backup/restore, complete authenticator/session lifecycle controls, privacy/legal approval, independent security review and operational recovery. See the [current implementation status](../audit/Active/2026-11-04-Passkey-First-Account-Implementation-Status.md) and the governing [passkey-first requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md).
+The historical account flow did not request an email address, password or phone number. Those statements describe that earlier prototype, not the later wallet-primary account design.
+
+The prototype was loopback-only and was not a production account service. Its remaining release blockers applied to that superseded implementation. The current wallet-primary architecture and actual Worker implementation boundaries are documented in [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [the current Worker README](worker/README.md).

@@ -1,4 +1,4 @@
-# Active Navigation Plan — Python CI Dependency Hash-Lock Qualification
+# Historical Evidence Record — Retired Python CI Dependency Hash-Lock Qualification
 
 > **HISTORICAL SUPPLY-CHAIN SNAPSHOT — RETIRED PYTHON AUTH STACKS (26 November 2026).** This qualification covered Python WebAuthn/SIWE prototype dependencies, locks and workflows that have since been retired from the active workspace. It remains as dated evidence of that former dependency setup only. It is not the current dependency inventory or a current CI qualification; see [the dependency policy](../../dependencies/README.md).
 
