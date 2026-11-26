@@ -102,6 +102,7 @@
     var content = dialog.querySelector(".development-notice-content");
     if (!content) return false;
     var acknowledgement = dialog.querySelector("#development-notice-acknowledged");
+    var loading = dialog.querySelector("#development-notice-status-loading");
     if (acknowledgement) acknowledgement.disabled = true;
     if (!content.querySelector(".astro-entry-notice-header")) {
       var header = element("div", "astro-entry-notice-header");
@@ -120,6 +121,7 @@
       content.insertBefore(header, content.firstChild);
     }
     if (content.querySelector(".astro-page-status-summary")) {
+      if (loading) loading.remove();
       if (acknowledgement) acknowledgement.disabled = false;
       dialog.dataset.pageNoticeReady = "true";
       return true;
@@ -136,6 +138,7 @@
     content.insertBefore(instructions, content.querySelector(".development-notice-ack"));
     var walletRisk = element("p", "astro-entry-notice-risk", globalNotice.wallet_safety);
     content.insertBefore(walletRisk, content.querySelector(".development-notice-ack"));
+    if (loading) loading.remove();
     dialog.dataset.pageNoticeReady = "true";
     if (acknowledgement) acknowledgement.disabled = false;
     return true;
