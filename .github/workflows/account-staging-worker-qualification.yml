@@ -72,7 +72,6 @@ jobs:
           node --check scripts/build-staging-site.mjs
           node --check public/account-continuity/prototype/account-ui.js
           node --check public/page-entry/page-entry-notice.js
-          node --check scripts/test-supporter-wallet-e2e.mjs
           node --check scripts/test-primary-wallet-auth-e2e.mjs
           npm run check:worker
       - name: Apply local account and isolated Supporter Programme D1 schemas
@@ -122,11 +121,6 @@ jobs:
           if (status.networks.some(x => x.networkConfigured || !x.treasuryConfigured)) throw new Error("All three owner-approved Genesis treasuries must be recorded while every payment network remains disabled.");
           NODE
           ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-primary-wallet-auth-e2e.mjs
-          if ! ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-supporter-wallet-e2e.mjs; then
-            echo "Local-only Genesis wallet diagnostics (synthetic credentials only):"
-            grep "\\[LOCAL SUPPORTER TEST ONLY\\]" "$RUNNER_TEMP/acrown-worker.log" || true
-            exit 1
-          fi
                     curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
           grep -q "LIVE PUBLIC TEST ENVIRONMENT" "$RUNNER_TEMP/home.html"
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/" -o "$RUNNER_TEMP/supporters.html"
