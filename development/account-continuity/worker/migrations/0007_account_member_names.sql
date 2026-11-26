@@ -11,4 +11,4 @@ SET member_name = 'Crown_' || substr(account_identifier, 4),
 WHERE member_name IS NULL OR member_name_normalized IS NULL;
 
 CREATE UNIQUE INDEX IF NOT EXISTS auth_accounts_member_name_normalized_uq
-  ON auth_accounts(member_name_normalized);
+  ON auth_accounts(member_name_normalized COLLATE NOCASE);
