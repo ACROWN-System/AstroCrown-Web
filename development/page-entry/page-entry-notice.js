@@ -87,7 +87,21 @@
     var dialog = document.getElementById("development-notice");
     if (!dialog) return false;
     var content = dialog.querySelector(".development-notice-content");
-    if (!content || content.querySelector(".astro-page-status-summary")) return true;
+    if (!content) return false;
+    if (!content.querySelector(".astro-entry-notice-header")) {
+      var header = element("div", "astro-entry-notice-header");
+      header.appendChild(element("h2", "", "Before you continue"));
+      var close = element("button", "astro-entry-notice-close", "×");
+      close.type = "button";
+      close.title = "Leave the homepage and open the AstroCrown Information Centre";
+      close.setAttribute("aria-label", "Leave the homepage and open the AstroCrown Information Centre");
+      close.addEventListener("click", function () {
+        window.location.assign("/privacy-transparency.html");
+      });
+      header.appendChild(close);
+      content.insertBefore(header, content.firstChild);
+    }
+    if (content.querySelector(".astro-page-status-summary")) return true;
     var intro = content.querySelector(".development-notice-intro");
     var anchor = intro ? intro.nextSibling : (content.children[0] || null);
     var kicker = element("p", "astro-entry-notice-kicker", globalNotice.heading);
