@@ -1,4 +1,4 @@
-import { normalizeWalletAddress, verifyWalletSignature } from "./supporters.js";
+import { normalizeWalletAddress, verifyWalletSignature } from "./wallet-proof.js";
 import { createDefaultMemberName } from "./member-name.js";
 
 const SESSION_COOKIE = "acrown_account_session";
