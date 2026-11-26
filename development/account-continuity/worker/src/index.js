@@ -271,6 +271,22 @@ async function hasPageAcknowledgement(request, env, pageId) {
   const expected = await hmac(secret, "astro-page-notice-ack\0" + signed);
   return equalConstantTime(parts[5], expected);
 }
+async function pageAcknowledgementStatus(request, env, pageId) {
+  if (!["home", "legal", "genesis", "account", "admin"].includes(pageId)) {
+    throw fail(400, "The page acknowledgement status request has an invalid page ID.");
+  }
+  const globalAcknowledged = await hasStagingAcknowledgement(request, env);
+  const pageAcknowledged = PAGE_ACK_CONFIG[pageId]
+    ? await hasPageAcknowledgement(request, env, pageId)
+    : true;
+  return json(200, {
+    acknowledged: globalAcknowledged && pageAcknowledged,
+    globalAcknowledged,
+    pageAcknowledged,
+    globalVersion: STAGING_NOTICE_VERSION,
+    pageVersion: PAGE_ACK_CONFIG[pageId]?.version || null,
+  });
+}
 async function rateLimit(db, env, request, action, subject, maximum, seconds) {
   const secret = env.RATE_LIMIT_HMAC_KEY || (env.ENVIRONMENT === "local" ? "local-development-only-not-for-staging" : "");
   if (!secret) throw fail(503, "The staging rate-limit key is not configured.");
@@ -2159,6 +2175,9 @@ async function api(request, env, config) {
   if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
+  if (url.pathname === "/api/staging/acknowledgement-status" && request.method === "GET") {
+    return pageAcknowledgementStatus(request, env, url.searchParams.get("pageId") || "");
+  }
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request, env, config);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
@@ -2225,6 +2244,7 @@ async function staticAssets(request, env) {
 export {
   createPageAcknowledgement,
   hasPageAcknowledgement,
+  pageAcknowledgementStatus,
   isSupersededPasskeyRoute,
   isSupersededPasskeySession,
   status,
@@ -2260,6 +2280,7 @@ export default {
           env.ENVIRONMENT === "staging" &&
           pathname !== "/api/staging/acknowledge" &&
           pathname !== "/api/staging/page-acknowledge" &&
+          pathname !== "/api/staging/acknowledgement-status" &&
           pathname !== "/api/supporters/status" &&
           pathname !== "/api/genesis/status" &&
           pathname !== "/api/genesis/directory" &&
