@@ -2,19 +2,21 @@
 
 **Document ID:** ACW-ACCOUNT-REQ-001  
 **Date:** 2026-10-26  
-**Status:** ACTIVE DESIGN / DEVELOPMENT-ONLY — NOT A PRODUCTION AUTHORIZATION  
+**Status:** ACTIVE ACCOUNT / DASHBOARD / GOVERNANCE REQUIREMENTS; HISTORICAL AUTHENTICATION DETAILS SUPERSEDED — DEVELOPMENT-ONLY  
 **Parent work:** [PR #141 — account entry and optional-wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
-**Authentication authority:** [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). This is the sole governing account-authentication design.  
+**Authentication authority:** [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md). This is the current governing general-account identity and sign-in architecture. The passkey-first record below is historical and superseded for active account authentication.  
 **Long-term context:** [Account Continuity and Privacy-Preserving Access Roadmap](ACCOUNT-CONTINUITY-AND-PRIVACY-PRESERVING-ACCESS-ROADMAP.md)  
 **Administrative wallet architecture:** [NOVA Administrative Smart-Account and Transaction-Enforcement Specification](NOVA-ADMINISTRATIVE-SMART-ACCOUNT-SECURITY-SPEC.md)
 
+> **Owner authentication decision reaffirmed 26 November 2026:** AstroCrown deliberately changed the ordinary account sign-in model to wallet-only primary identity. The primary identity wallet is the sole account sign-in, account-authority and recovery anchor. Auxiliary transaction wallets are not alternate logins. Passkey-first registration/sign-in, the old optional-wallet backup model and offline recovery-key login described in the historical sections below are not active product requirements and must not be reintroduced. This supersession does not remove the still-applicable account-ID, user/admin workspace, role-delegation, privacy, audit and permission boundaries unless an individual requirement conflicts with the newer primary-wallet architecture.
+>
 ## 1. Purpose
 
 Define one understandable account foundation for ordinary users and administrators without mixing account identity, authentication, authorization, wallet control, eligibility, recovery or financial authority. The development prototype is for interaction and requirements testing only. It must not be exposed as production authentication.
 
-**Target principle (updated 2026-11-03):** every account uses WebAuthn public-key authentication as its primary sign-in method; a crypto wallet is optional and may be registered as an additional backup authenticator. AstroCrown stores public credential material only, not users' private authentication keys. Account recovery uses a user-held, offline, single-use recovery key. No email, password, SMS, paid identity provider or operator reset backdoor is required. Administrative authority remains separately granted and server-enforced.
+**Current target principle (reaffirmed 2026-11-26):** every AstroCrown account has exactly one primary identity wallet. That wallet alone signs in, authorizes account-level changes and anchors recovery. Wallet proof is a fresh, domain-bound, purpose-bound off-chain message signature; it is not a blockchain transaction. No passkey, email, password, SMS or separate recovery key is an alternative account-login/recovery authority. Auxiliary wallets are transaction-only and never become another account identity. Administrative authority remains separately granted and server-enforced.
 
-## 2. Decisions already established
+## 2. Historical passkey-era decisions — superseded where they concern authentication
 
 1. **Account authentication:** use WebAuthn passkeys for registration and sign-in, with the one-time offline recovery-key ceremony for recovery. Email addresses, passwords, email verification, email password-reset, SMS and third-party identity providers are not part of the account-authentication or recovery model.
 2. Account creation requires WebAuthn passkey registration and explicit acknowledgement of the Terms/Privacy versions shown to the user. Email address and phone number are not required or used as account identifiers or recovery factors. Referral ID remains optional and inert. Any future email-based communications/newsletter feature must be separately optional, consented and isolated from authentication/recovery.
@@ -64,9 +66,9 @@ Each wallet enrollment must require:
 
 For admin access, require ordinary account authentication **and** a fresh valid signature from one of the account's enrolled external authentication wallets. This signature proves control of the authenticator; it does not authorize arbitrary blockchain transactions or bypass NOVA's operations-account policy. Critical actions (role changes, new-wallet enrollment/replacement, changing recovery/ownership authority, publishing sensitive content or security settings) require reauthentication/step-up as defined in the final threat model. Revoke previous admin sessions after recovery or role changes. Administrative blockchain operations must be requested through the separate NOVA operations smart account and pass its mandatory pre-execution validation.
 
-## 4. Ordinary-user journeys
+## 4. Ordinary-user journeys — apply the wallet-primary authority above
 
-### 4.1 Registration
+### 4.1 Account creation — current wallet-primary requirement
 
 - Required WebAuthn discoverable public-key credential registration with user verification. No email address, password or SMS number is required. The authenticator retains the private key; AstroCrown stores the public key and minimum credential metadata only.
 - Explicit acknowledgement of the Terms and Privacy versions shown to the user.
@@ -75,7 +77,7 @@ For admin access, require ordinary account authentication **and** a fresh valid 
 - The account must be reported as authenticator-enrolled only after the server has successfully verified the WebAuthn registration ceremony and bound the credential to the newly created account.
 - Never describe email/SMS as an account login or recovery mechanism. A future communications feature must not be represented as active unless its separate service is configured and qualified.
 
-### 4.2 Sign-in and session
+### 4.2 Sign-in and session — current wallet-primary requirement
 
 - Neutral authentication error messages; rate limit credential attempts and account creation.
 - Verify WebAuthn assertions using a maintained, reviewed server-side relying-party library; do not implement CBOR/COSE, authenticator-data parsing or signature verification from scratch. Generate random, short-lived, single-use challenges bound to ceremony, account/session, RP ID and exact origin. See the passkey-first authentication plan.
@@ -96,7 +98,7 @@ Its modular sections should include, as the corresponding products are implement
 - **Transactions & personal activity:** the user's own transaction workflows, confirmations, history and relevant records when the underlying services exist. Apply the same eligibility checks, fees, limits, confirmations and fraud/risk controls regardless of whether the account also has an administrator role. No transaction or asset function may be represented as operational before its backend and controls are implemented.
 - **Profile:** minimal public/private account preferences and currently supported avatar choices.
 - **Security & sessions:** current authentication state and only those recovery/reset/session-management operations that are backed by tested server behavior.
-- **Connected wallets:** empty by default. Ask for wallet access only when a specific user-facing feature requires proof of wallet control; a connected wallet never confers administrator rights.
+- **Primary identity wallet:** exactly one verified primary wallet anchors account identity, sign-in and recovery. It is not optional for an AstroCrown account. **Auxiliary transaction wallets:** may be connected only when a feature needs them to send or receive assets; they cannot sign in, recover the primary identity or gain account authority.
 - **Preferences:** separate newsletter consent and other nonessential preferences.
 - **Referral:** show an unverified value without reward/eligibility claims until real referral rules exist.
 - **Privacy & data:** export, closure or deletion controls only when their complete behavior is implemented and tested.
