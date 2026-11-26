@@ -40,6 +40,8 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /acknowledgement\.disabled = false/);
   assert.match(noticeScript, /pageNoticeReady/);
   assert.match(noticeScript, /function closeSupersededPageNotice/);
+  assert.match(noticeScript, /if \(pageId === "home"\)/);
+  assert.match(noticeScript, /if \(nativeNotice && nativeNotice\.open\) nativeNotice\.close\(\)/);
   assert.match(noticeScript, /closeSupersededPageNotice\(pageId, nextPageId\)/);
   assert.match(noticeScript, /dialog\.dataset\.pageNoticePageId = page\.id/);
   assert.match(noticeScript, /adminDashboard && !adminDashboard\.hidden/);
