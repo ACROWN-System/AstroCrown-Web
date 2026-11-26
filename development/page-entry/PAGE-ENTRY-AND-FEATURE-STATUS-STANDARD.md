@@ -48,7 +48,8 @@ A DEVNET label cannot be issued without:
 - exact network name and network identifier;
 - official testnet faucet URL or address, verified against the network operator's current documentation;
 - supported test-token identity and warning that it has no mainnet value;
-- explicit statement of whether the feature is read-only, signs a message, or submits a test transaction;
+- explicit statement of whether the feature is read-only, signs an off-chain message, or submits a test transaction;
+- clear warning that wallet connection and off-chain authentication signatures are not transactions;
 - tests proving that the relevant client and server reject mainnet when a testnet is intended.
 
 A faucet is a source of test tokens, never a payment destination. Do not invent, guess or reuse a faucet address across networks.
@@ -59,7 +60,7 @@ As of this standard's initial registry, no general site feature is marked DEVNET
 
 The public-test warning must clearly state that public submissions may be visible to anyone on the internet; visitors must use invented, non-identifying details and never disclose personal/sensitive information, production credentials, seed phrases, private keys or wallet recovery secrets.
 
-Wallet connection and off-chain message signing are distinct from blockchain transactions. An ownership signature must be explicitly described as an off-chain proof, not a token approval, transfer, payment, gas action or spending authorization.
+Wallet connection and off-chain message signing are distinct from blockchain transactions. An ownership signature must be explicitly described as an off-chain proof, not a token approval, transfer, payment, gas action or spending authorization. A development transaction may proceed only when the exact feature is marked DEVNET, the wallet is confirmed on the named development network, and verified test-token faucet information is shown. Real-value transactions require an explicitly qualified LIVE · MAINNET label; LIVE · STAGING is never a mainnet authorization.
 
 AstroCrown's current approved general account direction is wallet-only primary identity. The primary wallet is the sole account login and recovery authority. Auxiliary transaction wallets cannot sign in or recover the primary identity. This direction is not represented as operational until the exact account API, wallet-family adapters, browser journeys, abuse controls, account/session lifecycle and adversarial tests pass.
 
