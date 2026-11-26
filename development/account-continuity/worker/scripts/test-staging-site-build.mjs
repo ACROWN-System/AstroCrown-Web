@@ -70,6 +70,11 @@ test("Worker staging build publishes shared page-notice assets and injects the m
     assert.ok(page.title, pageId + " must have a title");
     assert.ok(page.delivery && ["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(page.delivery.status));
     assert.equal(page.delivery.scope, "page_delivery", pageId + " must distinguish delivery from feature readiness");
+    if (["home", "genesis", "account", "admin", "legal"].includes(pageId)) {
+      assert.equal(page.delivery.status, "FOR DEVELOPMENT · READ ONLY",
+        pageId + " must not be labelled LIVE before its remote staging deployment is verified");
+      assert.match(page.delivery.details, /first remote Cloudflare Pages or Worker staging deployment has not been verified/i);
+    }
     if (page.delivery.status === "LIVE · STAGING" || page.delivery.status === "LIVE · MAINNET") {
       assert.equal(page.delivery.environment, page.delivery.status === "LIVE · STAGING" ? "staging" : "mainnet");
     }
