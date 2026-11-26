@@ -73,7 +73,7 @@ const pageNoticeJs = read("page-entry/page-entry-notice.js");
 const pageNoticeCss = read("page-entry/page-entry-notice.css");
 const featureStatus = JSON.parse(read("page-entry/feature-status.json"));
 assert.match(pageNoticeJs, /Before you continue/);
-assert.match(pageNoticeJs, /globalNotice\\.acknowledgement/);
+assert.match(pageNoticeJs, /globalNotice\.acknowledgement/);
 assert.match(pageNoticeCss, /astro-entry-notice/);
 assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v2");
 assert.match(featureStatus.global_notice.acknowledgement, /I confirm that I have read and understood/);
