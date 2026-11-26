@@ -192,6 +192,12 @@
     var continueButton = dialog.querySelector("#development-notice-continue");
     if (!acknowledgement || !continueButton) return;
     dialog.dataset.pageNoticeAckBound = "true";
+    if (dialog.dataset.pageNoticeAckChangeBound !== "true") {
+      acknowledgement.addEventListener("change", function () {
+        continueButton.disabled = acknowledgement.checked !== true;
+      });
+      dialog.dataset.pageNoticeAckChangeBound = "true";
+    }
     continueButton.addEventListener("click", async function (event) {
       event.preventDefault();
       event.stopImmediatePropagation();
