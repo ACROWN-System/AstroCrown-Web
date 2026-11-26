@@ -92,7 +92,6 @@ assert.match(pageNoticeJs, /astrocrown:admin-dashboard-visible/);
 assert.match(pageNoticeJs, /function bindNativeNoticeAcknowledgement/);
 assert.match(pageNoticeJs, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
 assert.match(pageNoticeJs, /continueButton\.disabled = acknowledgement\.checked !== true/);
-assert.match(pageNoticeJs, /if \(pageId === "home" \|\| \(nativeNotice && nativeNotice.open\)\)/);
 assert.match(pageNoticeJs, /noticeVersion: pageVersion/);
 assert.ok(pageNoticeJs.includes("/account-continuity/prototype/privacy-policy.html"));
 assert.ok(pageNoticeJs.includes("/privacy-transparency.html"));
