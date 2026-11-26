@@ -1,0 +1,62 @@
+version: 1
+last_updated: 2026-10-02
+repository:
+  name: ACROWN-System/AstroCrown-Web
+  branch_at_baseline: main
+source_authority: repository-first
+
+evidence_state:
+  enum:
+    - VERIFIED
+    - DERIVED
+    - CANDIDATE
+    - UNKNOWN
+    - BLOCKED
+
+operational_status:
+  enum:
+    - Not Investigated
+    - Researching
+    - Candidate
+    - Planned
+    - In Progress
+    - Submitted
+    - Passed
+    - Failed
+    - Expired
+    - Superseded
+    - Blocked
+
+rules:
+  preserve_unknown: true
+  preserve_conflict: true
+  never_convert_blocked_to_pass: true
+  never_use_ranking_as_verification: true
+  no_cost_invention: true
+  external_authority_not_replicated_internally: true
+  maintain_provenance: true
+  trigger_before_schedule: true
+
+initial_entities_source:
+  file: development/verification/02-ENTITY-REGISTRY.md
+  note: >
+    The detailed entity table is authoritative for the October 2 baseline.
+    This tracker is the operational control layer and must not silently
+    duplicate or contradict the detailed registry.
+
+review_cycle:
+  source_refresh: date-dependent
+  methodology_change: immediate_review
+  repository_architecture_change: review_affected_paths
+  contract_or_production_change: review_security_scope
+  regulatory_change: immediate_review
+  listing_criteria_change: review_submission_package
+
+required_record_fields:
+  - id
+  - status
+  - evidence_state
+  - source_records
+  - last_verified
+  - next_review
+  - open_questions

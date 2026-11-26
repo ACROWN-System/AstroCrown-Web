@@ -1,7 +1,10 @@
-# Active Navigation Plan — Python CI Dependency Hash-Lock Qualification
+# Historical Evidence Record — Retired Python CI Dependency Hash-Lock Qualification
+
+> **HISTORICAL SUPPLY-CHAIN SNAPSHOT — RETIRED PYTHON AUTH STACKS (26 November 2026).** This qualification covered Python WebAuthn/SIWE prototype dependencies, locks and workflows that have since been retired from the active workspace. It remains as dated evidence of that former dependency setup only. It is not the current dependency inventory or a current CI qualification; see [the dependency policy](../../dependencies/README.md).
+
 
 **Date:** 2026-11-04  
-**Status:** **TWO CI INSTALL PATHS CONVERTED TO HASH-VERIFIED, WHEEL-ONLY LOCKS; ARTIFACT INSTALLATION QUALIFIED; DEFAULT-BRANCH SCORECARD RE-SCAN PENDING**  
+**Status:** HISTORICAL DEPENDENCY-LOCK QUALIFICATION — covered retired Python WebAuthn/SIWE prototype stacks; not the current dependency inventory.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related PR:** [#141 — Passkey-first account foundation; optional wallet backup (draft)](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)

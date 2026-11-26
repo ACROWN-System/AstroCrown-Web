@@ -1,7 +1,10 @@
 # AstroCrown Account System — Worker Feature-Parity Plan
 
+> **HISTORICAL FEATURE-PARITY BASELINE — PASSKEY-ERA (26 November 2026).** This plan was assessed against the earlier passkey-first local prototype. The account identity and recovery model has since changed to wallet-primary, and the current Worker has been advanced under PR #198. Reassess any still-open feature gaps against [current account requirements](../../account-continuity/USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) and [current Worker status](../../account-continuity/worker/README.md); do not treat this dated plan's passkey/recovery statements as current requirements.
+
+
 **Review date:** 2026-11-06  
-**Status:** SCOPE RECORDED / CURRENT WORKER CORE QUALIFICATION PASSED / FULL ACCOUNT FEATURE PARITY NOT IMPLEMENTED / REMOTE STAGING NOT DEPLOYED  
+**Status:** HISTORICAL PASSKEY-ERA FEATURE-PARITY BASELINE — open gaps must be reassessed against the current wallet-primary Worker.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Parent work:** [PR #141 — Passkey-first account foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
 **Baseline branch head reviewed:** `267fe4a9f034fbfd994faaf114f3d893913f68e3`
@@ -12,7 +15,10 @@ Continue the account system as a complete, coherent product capability rather th
 
 This plan records the verified gaps between the broader local reference prototype and the narrower JavaScript Worker/D1 qualification port. It does not authorize a merge, a provider commitment, a Cloudflare deployment, paid services, public onboarding or the use of real account data.
 
-## 2. Governing decisions retained
+## 2. Historical governing decisions and implementation baseline — 6 November 2026
+
+> The requirements, architecture claims and test results below describe the passkey-era baseline assessed on 6 November 2026. They are historical evidence, not current direction. The owner subsequently adopted wallet-primary identity, and PR #198 advanced the single Worker implementation. Do not use the passkey requirements or this dated gap list as current implementation instructions.
+
 
 1. **Passkey-first account identity.** WebAuthn discoverable passkeys are the primary authenticator for ordinary and administrator accounts. Email, password, SMS, hosted identity providers and email-based recovery are not required and must not be reintroduced as account dependencies.
 2. **Recovery is independent of wallet ownership.** The account receives a high-entropy, single-use offline recovery key. Its raw value is displayed once; only a salted one-way verifier is stored. Successful recovery consumes the previous key, requires a replacement passkey, revokes prior account sessions/credentials as defined by the recovery policy, and issues a replacement key once.
@@ -22,14 +28,14 @@ This plan records the verified gaps between the broader local reference prototyp
 6. **One shared User dashboard, one separately gated Administrator dashboard.** An administrator retains ordinary User dashboard access. The Administrator entry is shown only when the backend confirms the role; entering the separate Administrator dashboard additionally requires the enrolled administrator-wallet proof and current server authorization.
 7. **Strict $0/no-card qualification.** No paid plan, billing method, paid identity/email provider, commercial RPC or other paid dependency may be activated as part of this work. Missing quota, account eligibility or configuration must fail closed.
 
-The controlling requirements remain:
+At the time of this 6 November 2026 snapshot, the controlling requirements were:
 - `development/account-continuity/PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md`
 - `development/account-continuity/USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md`
 - `development/account-continuity/NOVA-ADMINISTRATIVE-SMART-ACCOUNT-SECURITY-SPEC.md`
 
 The future NOVA administrative operations smart account is a distinct transaction-enforcement system. It is not a substitute for an external administrator identity wallet or the user's own optional wallet backup, and its production/on-chain activation remains separately gated.
 
-## 3. Verified implementation baseline
+## 3. Historical verified implementation baseline — 6 November 2026
 
 ### 3.1 Worker/D1 qualification port
 
@@ -228,7 +234,10 @@ Only after the Worker/D1 lifecycle and UI parity tests pass:
 - No merge, main-branch publication, remote D1 creation, account Worker deployment, production DNS/domain change, billing method, paid service or public account onboarding is authorized by this plan.
 - If a technical requirement cannot be met within the $0/no-card constraint or current provider capability, record it as BLOCKED instead of silently selecting a paid substitute or weakening security.
 
-## 6. Current release boundary
+## 6. Historical release boundary as at 6 November 2026
+
+> The status statements in this section are frozen to the 6 November 2026 passkey-era review. The current wallet-primary Worker has since been advanced under PR #198; consult [the current Worker README](../../account-continuity/worker/README.md) and [current account requirements](../../account-continuity/USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) instead.
+
 
 The local Worker/D1 ordinary-account security lifecycle (**Block A**), RBAC core (**Block B**), EOA EVM/SIWE administrator-wallet enrollment and ten-minute step-up (**Block C**), scoped shared-header/Administrator UI integration (**Block E**) and negative all-wallet-loss self-service recovery boundary have passed their exact-head GitHub-hosted local qualification. The all-wallet-loss safeguard is implemented, but its owner-authorized recovery operation is not. The first-administrator bootstrap and its independent owner proof remain blocked; no real account has yet been appointed administrator, and no remote D1 or deployment exists. The next work is to complete the owner-controlled bootstrap/recovery design gate and the remaining Block E dashboard/API parity and click-through tests; Block D optional ordinary-user wallet backup and Block F deployed staging remain separate gates. The overall account system is still **not feature-complete, not remotely deployed and not production-ready**.
 

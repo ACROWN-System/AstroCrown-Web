@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Why wallet? · AstroCrown</title>
+  <style>
+    :root{color-scheme:dark;--gold:#ffd700;--ink:#f2f5fb;--muted:#aab8cb;--line:rgba(153,178,213,.22)}
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 15% 0%,rgba(22,52,90,.35),transparent 32rem),linear-gradient(145deg,#071322,#030811 70%);color:var(--ink);font:14px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{width:min(900px,calc(100% - 28px));margin:38px auto 70px}
+    .topline{height:3px;border-radius:9px;background:linear-gradient(90deg,transparent,var(--gold) 18%,#7b6a21 62%,transparent);margin-bottom:24px}
+    .eyebrow{color:#d7c46a;font-size:10px;letter-spacing:.13em;font-weight:850;text-transform:uppercase}
+    h1{margin:8px 0 12px;font-size:clamp(28px,5vw,44px);line-height:1.12;letter-spacing:-.04em}
+    h2{margin:0 0 8px;font-size:17px}
+    p{color:var(--muted);margin:8px 0 13px}
+    section{margin:16px 0;border:1px solid var(--line);border-radius:14px;padding:18px;background:linear-gradient(145deg,rgba(15,31,52,.9),rgba(5,12,23,.94))}
+    .status{border-color:rgba(179,190,208,.33);background:rgba(179,190,208,.055)}
+    .status strong{color:#e7edf6}
+    ul{color:var(--muted);padding-left:20px;margin:8px 0}
+    li{margin:6px 0}
+    strong{color:#e7edf6}
+    a{color:#ffe58a;text-underline-offset:3px}
+    .footer{margin-top:22px;padding-top:17px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between}
+    @media(max-width:640px){main{margin-top:24px}section{padding:15px}}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="topline"></div>
+    <div class="eyebrow">AstroCrown · Account identity</div>
+    <h1>Why wallet?</h1>
+    <p>AstroCrown's approved account model places control of the account identity with the person who controls its primary cryptocurrency wallet. The wallet is not an optional decoration or merely a transaction connection: it is the account's identity and sign-in authority.</p>
+    <section class="status">
+      <strong>Current status: FOR DEVELOPMENT · READ ONLY</strong>
+      <p>The wallet-only account creation and sign-in system is the approved design, but its general AstroCrown account APIs and end-to-end browser flow have not yet passed staging qualification. This page explains the intended model; it does not enable account creation or sign-in.</p>
+    </section>
+    <section>
+      <h2>Your primary wallet is your account identity</h2>
+      <ul>
+        <li>One primary identity wallet authenticates/signs in to the AstroCrown account.</li>
+        <li>It authorizes account-level changes and remains the account's identity and recovery anchor.</li>
+        <li>Account access can be restored only by recovering control of that same primary wallet through its own wallet recovery mechanism.</li>
+        <li>AstroCrown cannot recover a lost primary wallet, replace it with a new wallet, transfer its identity or move wallet-bound badges and attributable history to another wallet.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>What signing in asks you to do</h2>
+      <p>AstroCrown will issue a fresh, short-lived, domain-bound challenge. Your selected wallet will be asked to sign an off-chain message proving control of the address. The server will verify the signature before creating an account session.</p>
+      <p>This ownership proof is not a blockchain transaction. It must not request a token approval, transfer, payment, gas expenditure or permission to spend assets. Read the exact message shown by your wallet and reject any prompt that does not match the purpose shown by AstroCrown.</p>
+    </section>
+    <section>
+      <h2>Primary identity wallet and auxiliary transaction wallets</h2>
+      <p>The primary identity wallet and transaction wallets have different authority:</p>
+      <ul>
+        <li>The primary wallet signs in and authorizes account-level actions.</li>
+        <li>Auxiliary wallets may be connected when a feature needs to send or receive an asset. They do not create another account, cannot sign in, cannot recover the primary identity and do not inherit account permissions.</li>
+        <li>The wallet that actually holds the asset must independently approve and sign its outgoing transaction. An AstroCrown account session cannot spend from an auxiliary wallet.</li>
+        <li>AstroCrown must never ask for or store a seed phrase, private key, extended private key or signing secret.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>Wallet support is qualified by network and capability</h2>
+      <p>EVM networks, Solana, TRON and Bitcoin use different address, signature and transaction protocols. Wallet-provider and chain adapters must be qualified separately. A wallet is not considered supported for every operation merely because it can connect or display an address.</p>
+      <p>No balance, minimum holding, deposit, stake, payment or on-chain transaction is required just to prove ownership and sign in.</p>
+    </section>
+    <section>
+      <h2>Recovery responsibility</h2>
+      <p>Your wallet provider's own recovery process is the recovery route for your primary identity wallet. Keep its recovery material private and stored securely. Do not share it with AstroCrown, NOVA, administrators, support staff or anyone claiming to help recover your account.</p>
+      <p>If the primary wallet and all of its recovery capability are permanently lost, access to that wallet-bound AstroCrown identity may also be permanently lost. This is a deliberate sovereignty trade-off, not a support process AstroCrown can override.</p>
+    </section>
+    <div class="footer">
+      <a href="/">Return to AstroCrown</a>
+      <a href="/account-continuity/prototype/terms-of-use.html">Terms of Use</a>
+      <a href="/account-continuity/prototype/privacy-policy.html">Privacy Policy</a>
+    </div>
+  </main>
+</body>
+</html>

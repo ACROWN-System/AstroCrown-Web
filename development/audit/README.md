@@ -1,5 +1,8 @@
 # AstroCrown Web Audit
 
+> **Historical-record rule:** The `Active/` path contains dated audit plans and evidence snapshots, some of which may have been superseded by later owner decisions or implementations. The status and supersession notice inside each record govern its current relevance; directory placement alone does not make an older record current. Preserve historical evidence and do not reuse it as current qualification when its scope or implementation has changed.
+
+
 This directory contains development-stage audit records and verification evidence.
 
 ## Structure

@@ -1,11 +1,13 @@
 # Passkey-First Account Authentication and Recovery Requirements
 
 **Decision date:** 2026-11-03  
-**Status:** OWNER-ACCEPTED DESIGN DIRECTION / PARTIALLY IMPLEMENTED IN LOCAL LOOPBACK PROTOTYPE / NOT PRODUCTION  
-**Scope:** AstroCrown ordinary-user and administrator account authentication  
+**Status:** SUPERSEDED AS THE ACTIVE ACCOUNT-AUTHENTICATION DESIGN ON 18 NOVEMBER 2026  
+**Scope:** Historical passkey-first account-authentication design for AstroCrown ordinary users and administrators  
 **Parent:** [PR #141 — account foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
 **Related requirements:** [User and Administrator Account Requirements](USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md)
 
+> **Supersession notice — 26 November 2026:** The owner reaffirmed that AstroCrown deliberately changed its general account sign-in model to **wallet-only primary identity**. This document is retained as historical design and implementation provenance, not as active authentication authority. Do not implement or expose passkey-first sign-in, passkey account creation, passkey recovery or offline recovery-key login as an alternative to the primary wallet. The controlling architecture is [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md). The wallet-only account journey is not yet operational merely because this superseding decision is adopted.
+>
 ## 1. Adopted principle
 
 Adopt a passwordless, public-key-based account model:

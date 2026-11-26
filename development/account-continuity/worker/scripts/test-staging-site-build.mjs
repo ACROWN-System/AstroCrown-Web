@@ -10,6 +10,113 @@ async function readPublic(path) {
   return readFile(resolve(publicRoot, path), "utf8");
 }
 
+test("Worker staging build publishes shared page-notice assets and injects the mandatory Genesis page gate", async () => {
+  const homepage = await readPublic("index.html");
+  const genesis = await readPublic("supporters/index.html");
+  const noticeScript = await readPublic("page-entry/page-entry-notice.js");
+  const noticeCss = await readPublic("page-entry/page-entry-notice.css");
+  const registry = JSON.parse(await readPublic("page-entry/feature-status.json"));
+  const workerSource = await readFile(resolve(workerRoot, "src", "index.js"), "utf8");
+  const walletAssurance = await readPublic("account-continuity/prototype/wallet-identity-assurance.html");
+  const accountUi = await readPublic("account-continuity/prototype/account-ui.js");
+
+  assert.match(homepage, /name="astro-page-id" content="home"/);
+  assert.match(homepage, /id="development-notice-acknowledged" type="checkbox" disabled/);
+  assert.match(homepage, /id="development-notice-status-loading"/);
+  assert.match(homepage, /Log In\/Sign Up/);
+  assert.match(homepage, /page-entry\/page-entry-notice\.js/);
+  assert.match(homepage, /LIVE PUBLIC TEST ENVIRONMENT/);
+  assert.match(genesis, /name="astro-page-id" content="genesis"/);
+  assert.match(genesis, /page-entry\/page-entry-notice\.js/);
+  assert.match(walletAssurance, /name="astro-page-id" content="account"/);
+  assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
+  assert.match(accountUi, /function renderWalletPrimaryStatus\(\)/);
+  assert.match(accountUi, /Sign in with primary wallet/);
+  assert.match(accountUi, /Create account with primary wallet/);
+  assert.match(accountUi, /finishPrimaryWalletAuthentication/);
+  assert.match(accountUi, /EIP-1193 wallet/);
+  assert.match(accountUi, /Solana Mainnet/);
+  assert.match(accountUi, /astrocrown:admin-dashboard-visible/);
+  assert.match(accountUi, /Why wallet\?/);
+  assert.match(accountUi, /typeof workerStagingMode/);
+  assert.match(noticeScript, /Before you continue/);
+  assert.match(noticeScript, /async function isAcknowledged/);
+  assert.match(noticeScript, /if \(isWorkerStagingRuntime\(\)/);
+  assert.match(noticeScript, /\["home", "genesis", "account", "admin"\]\.indexOf\(pageId\) !== -1/);
+  assert.match(noticeScript, /\/api\/staging\/acknowledgement-status\?pageId=/);
+  assert.match(noticeScript, /\/api\/account\/acknowledgement-status/);
+  assert.match(noticeScript, /\/api\/genesis\/acknowledgement-status/);
+  assert.match(noticeScript, /\/api\/admin\/acknowledgement-status/);
+  assert.match(noticeScript, /noticeRequestGeneration/);
+  assert.match(noticeScript, /if \(nativeNotice && !nativeNotice\.open\)/);
+  assert.match(workerSource, /function pageAcknowledgementStatus/);
+  assert.match(workerSource, /\/api\/account\/acknowledgement-status/);
+  assert.match(workerSource, /\/api\/genesis\/acknowledgement-status/);
+  assert.match(workerSource, /\/api\/admin\/acknowledgement-status/);
+  assert.match(noticeScript, /acknowledgement\.disabled = true/);
+  assert.match(noticeScript, /acknowledgement\.disabled = false/);
+  assert.match(noticeScript, /pageNoticeReady/);
+  assert.match(noticeScript, /function closeSupersededPageNotice/);
+  assert.match(noticeScript, /if \(pageId === "home"\)/);
+  assert.match(noticeScript, /if \(nativeNotice && nativeNotice\.open\) nativeNotice\.close\(\)/);
+  assert.match(noticeScript, /closeSupersededPageNotice\(pageId, nextPageId\)/);
+  assert.match(noticeScript, /dialog\.dataset\.pageNoticePageId = page\.id/);
+  assert.match(noticeScript, /adminDashboard && !adminDashboard\.hidden/);
+  assert.match(noticeScript, /new MutationObserver\(reconcilePageEntry\)/);
+  assert.match(noticeScript, /astrocrown:admin-dashboard-visible/);
+  assert.match(noticeScript, /function bindNativeNoticeAcknowledgement/);
+  assert.match(noticeScript, /if \(dialog\.isConnected\) dialog\.remove\(\)/);
+  assert.match(noticeScript, /astrocrown:page-notice-acknowledged/);
+  assert.match(noticeScript, /rememberAcknowledgement\(page\.id, page\.version, globalVersion\)/);
+  assert.doesNotMatch(noticeScript.slice(noticeScript.indexOf("function buildDialog"), noticeScript.indexOf("function showPageNotice")), /registry\.notice_version/);
+  assert.match(noticeScript, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
+  assert.match(noticeScript, /continueButton\.disabled = acknowledgement\.checked !== true/);
+  assert.match(noticeScript, /noticeVersion: pageVersion/);
+  assert.ok(noticeScript.includes("/account-continuity/prototype/privacy-policy.html"));
+  assert.ok(noticeScript.includes("/privacy-transparency.html"));
+  assert.match(noticeScript, /globalNotice\.acknowledgement/);
+  assert.match(noticeScript, /\/api\/staging\/page-acknowledge/);
+  assert.match(noticeCss, /astro-entry-notice/);
+
+  assert.equal(registry.notice_version, "2026-11-26-public-test-v5");
+  assert.match(registry.global_notice.wallet_safety, /A development transaction is permitted only when the exact feature is explicitly marked DEVNET/);
+  assert.match(registry.global_notice.wallet_safety, /Real-value transactions are permitted only when the exact feature is explicitly marked LIVE · MAINNET/);
+  assert.match(workerSource, new RegExp('const STAGING_NOTICE_VERSION = "' + registry.notice_version + '"'));
+  for (const pageId of ["genesis", "account", "admin"]) {
+    assert.match(workerSource, new RegExp('version: "' + registry.pages[pageId].version + '"'));
+  }
+  assert.match(registry.global_notice.acknowledgement, /I confirm that I have read and understood/);
+  for (const [pageId, page] of Object.entries(registry.pages)) {
+    assert.ok(page.version, pageId + " must have a notice version");
+    assert.ok(page.title, pageId + " must have a title");
+    assert.ok(page.delivery && ["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(page.delivery.status));
+    assert.equal(page.delivery.scope, "page_delivery", pageId + " must distinguish delivery from feature readiness");
+    if (["home", "genesis", "account", "admin", "legal"].includes(pageId)) {
+      assert.equal(page.delivery.status, "FOR DEVELOPMENT · READ ONLY",
+        pageId + " must not be labelled LIVE before its remote staging deployment is verified");
+      assert.match(page.delivery.details, /first remote Cloudflare Pages or Worker staging deployment has not been verified/i);
+    }
+    if (page.delivery.status === "LIVE · STAGING" || page.delivery.status === "LIVE · MAINNET") {
+      assert.equal(page.delivery.environment, page.delivery.status === "LIVE · STAGING" ? "staging" : "mainnet");
+    }
+    assert.ok(Array.isArray(page.features) && page.features.length > 0);
+    for (const feature of page.features) {
+      assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(feature.status));
+      if (feature.status === "LIVE · STAGING" || feature.status === "LIVE · MAINNET") {
+        assert.ok(feature.environment, feature.id + " must identify its LIVE environment");
+      }
+      if (feature.status === "DEVNET") {
+        assert.ok(feature.network && feature.network_id !== undefined && feature.test_asset,
+          feature.id + " must identify its exact devnet, network ID and test asset");
+        assert.ok(feature.faucet && (
+          (typeof feature.faucet.url === "string" && /^https:\/\//.test(feature.faucet.url)) ||
+          (typeof feature.faucet.address === "string" && feature.faucet.address.trim())
+        ), feature.id + " must provide a verified faucet URL or address");
+      }
+    }
+  }
+});
+
 test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));

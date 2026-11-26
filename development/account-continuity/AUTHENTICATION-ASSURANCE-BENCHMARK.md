@@ -1,7 +1,10 @@
 # AstroCrown Authentication Assurance Benchmark (AAAB)
 
+> **HISTORICAL BENCHMARK — NOT THE CURRENT ACCOUNT AUTHENTICATION PROFILE (26 November 2026).** This specification tests the retired passkey/WebAuthn and offline recovery-key prototype. AstroCrown's current ordinary-account design is wallet-primary and is governed by [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [the account Worker README](worker/README.md). Do not use this document to qualify, advertise or reintroduce passkey authentication. A new wallet-primary assurance profile must be written and tested against the current implementation before any assurance or maturity claim.
+
+
 **Record date:** 2026-11-03  
-**Status:** Initial benchmark specification; maturity labels require exact completed evidence.  
+**Status:** HISTORICAL PASSKEY-SPECIFIC BENCHMARK; NOT A QUALIFICATION PROFILE FOR THE CURRENT WALLET-PRIMARY ACCOUNT.  
 **Scope:** Account authentication, passkey lifecycle, offline recovery and separate administrator wallet step-up. Not a benchmark of the whole exchange, website, wallet or infrastructure.
 
 ## Purpose and boundaries

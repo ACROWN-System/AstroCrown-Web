@@ -166,7 +166,6 @@ function assertSentinelConfig(config) {
   }
   if (stage.vars?.ENVIRONMENT !== "staging") fail("The staging environment marker is not exact.");
   if (stage.vars?.STAGING_ACCESS_MODE !== "public") fail("Staging must explicitly select the qualified public-access mode.");
-  if (stage.vars?.RP_ID !== "SET_BEFORE_DEPLOY") fail("The staging RP ID is no longer the expected non-deployable sentinel.");
   if (stage.vars?.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") fail("The staging origin is no longer the expected non-deployable sentinel.");
   if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") {
     fail("The checked-in staging D1 ID is not the expected sentinel. Review the configuration manually.");
@@ -426,7 +425,6 @@ function writeRemoteConfig(sourceConfig, subdomain, databaseId, supportersDataba
   const scriptName = stage.name;
   const host = scriptName + "." + subdomain + ".workers.dev";
   const origin = "https://" + host;
-  stage.vars.RP_ID = host;
   stage.vars.EXPECTED_ORIGIN = origin;
   stage.d1_databases[0].database_id = databaseId;
   stage.d1_databases[1].database_id = supportersDatabaseId;
@@ -452,17 +450,22 @@ async function smokeTest(origin) {
     !homepage.includes("openly available to anyone on the internet")
   ) fail("Public staging homepage is missing the live-environment marker or public safety notice.");
 
-  const publicSupportersStatus = await fetch(origin + "/api/supporters/status", { signal: AbortSignal.timeout(30000) });
+  const publicSupportersStatus = await fetch(origin + "/api/genesis/status", { signal: AbortSignal.timeout(30000) });
   if (publicSupportersStatus.status !== 200) {
     fail("The read-only public Genesis Programme status endpoint must be available without account acknowledgement (HTTP " + publicSupportersStatus.status + ").");
   }
   const publicSupportersPayload = await publicSupportersStatus.json();
   if (
+    publicSupportersPayload.environment !== "MAINNET" ||
     publicSupportersPayload.programme?.status !== "PRELAUNCH" ||
     publicSupportersPayload.paymentAcceptance?.enabled !== false ||
-    publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false
+    publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false ||
+    publicSupportersPayload.purchaseAllowance?.automaticTokenIssuance !== false ||
+    !Array.isArray(publicSupportersPayload.networks) ||
+    publicSupportersPayload.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
+    publicSupportersPayload.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== true)
   ) {
-    fail("The public Genesis Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
+    fail("The public Genesis Programme status must show three-network PRELAUNCH with payment intake disabled.");
   }
 
   const beforeAcknowledgement = await fetch(origin + "/api/account/status", { signal: AbortSignal.timeout(30000) });
@@ -476,7 +479,7 @@ async function smokeTest(origin) {
       Origin: origin,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ noticeVersion: "2026-11-08-public-test-v1" }),
+    body: JSON.stringify({ noticeVersion: "2026-11-26-public-test-v5" }),
     signal: AbortSignal.timeout(30000),
   });
   if (acknowledgement.status !== 200) fail("Remote staging notice acknowledgement failed (HTTP " + acknowledgement.status + ").");
@@ -490,41 +493,14 @@ async function smokeTest(origin) {
   const statusResponse = await fetch(origin + "/api/account/status", { headers, signal: AbortSignal.timeout(30000) });
   if (statusResponse.status !== 200) fail("Remote staging account-status check after acknowledgement failed (HTTP " + statusResponse.status + ").");
   const status = await statusResponse.json();
-  if (status.authenticated !== false || status.passkeyAvailable !== true || status.mlDsaRegistrationAvailable !== true) {
-    fail("Remote staging account-status response did not meet the required passkey/ML-DSA-44 qualification.");
+  if (status.authenticated !== false || status.walletAuthenticationAvailable !== true ||
+      status.walletAuthenticationNetworks?.join(",") !== "ethereum,tron,solana") {
+    fail("Remote staging did not advertise the exact wallet-primary account networks.");
   }
   if (status.scope !== "staging-test-account-only") fail("Remote account status is missing the staging-only scope marker.");
 
-  const diagnosticsResponse = await fetch(origin + "/api/diagnostics/runtime", { headers, signal: AbortSignal.timeout(30000) });
-  if (diagnosticsResponse.status !== 200) fail("Remote staging runtime-diagnostics check failed (HTTP " + diagnosticsResponse.status + ").");
-  const diagnostics = await diagnosticsResponse.json();
-  const mldsa44 = diagnostics.webCryptoMlDsaSupport?.["ML-DSA-44"];
-  if (!mldsa44?.sign || !mldsa44?.verify || !diagnostics.simpleWebAuthnSupportedRegistrationAlgorithms?.includes(-48)) {
-    fail("Remote Worker does not support and advertise ML-DSA-44 as required. Keep staging closed and investigate; do not fall back silently.");
-  }
-
-  const supportersResponse = await fetch(origin + "/api/supporters/status", {
-    headers,
-    signal: AbortSignal.timeout(30000),
-  });
-  if (supportersResponse.status !== 200) {
-    fail("The isolated Genesis Programme status endpoint failed (HTTP " + supportersResponse.status + ").");
-  }
-  const supporters = await supportersResponse.json();
-  if (
-    supporters.environment !== "MAINNET" ||
-    supporters.programme?.status !== "PRELAUNCH" ||
-    supporters.paymentAcceptance?.enabled !== false ||
-    supporters.paymentAcceptance?.contributionsAccepted !== false ||
-    supporters.purchaseAllowance?.automaticTokenIssuance !== false ||
-    !Array.isArray(supporters.networks) ||
-    supporters.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
-    supporters.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== true)
-  ) {
-    fail("The isolated Genesis Programme status must report three-network PRELAUNCH with all payment intake disabled.");
-  }
-
-  const negative = await fetch(origin + "/api/passkeys/authentication/options", {
+  const supporters = publicSupportersPayload;
+  const negative = await fetch(origin + "/api/wallet-auth/challenge", {
     method: "POST",
     headers: {
       Origin: "https://untrusted.invalid",
@@ -534,7 +510,7 @@ async function smokeTest(origin) {
     signal: AbortSignal.timeout(30000),
   });
   if (negative.status !== 403) fail("Remote staging did not reject a wrong-Origin account request with HTTP 403.");
-  return { status, diagnostics, supporters };
+  return { status, supporters };
 }
 
 async function reportWorkersUsageModel(accountId) {
@@ -641,27 +617,23 @@ async function main() {
   console.log("Installing the staging-only rate-limit and acknowledgement-signing key.");
   await setSecret("RATE_LIMIT_HMAC_KEY", rateLimitKey);
 
-  console.log("Checking public homepage access, required notice acknowledgement, the account API, ML-DSA-44 and wrong-Origin rejection.");
+  console.log("Checking public homepage access, required notice acknowledgement, wallet-primary account status and wrong-Origin rejection.");
   const evidence = await smokeTest(configInfo.origin);
 
   console.log("");
   console.log("REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED");
   console.log("Staging URL: " + configInfo.origin + "/");
   console.log("Access mode: public live test environment; visitors see the mandatory safety notice before account services.");
-  console.log("Account API: server-enforced staging acknowledgement and per-IP passkey/recovery rate limits are active.");
+  console.log("Account API: wallet-primary identity, one-use origin-bound challenges and server-side rate limits are active.");
   console.log("Account D1 database name: " + databaseName);
   console.log("Account D1 database ID: " + state.databaseId);
   console.log("Supporter Programme D1 database name: " + supportersDatabaseName);
   console.log("Supporter Programme D1 database ID: " + supportersState.databaseId);
   console.log("Supporter Programme status: PRELAUNCH; mainnet payment acceptance remains disabled.");
-  console.log("ML-DSA-44 sign: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].sign);
-  console.log("ML-DSA-44 verify: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].verify);
-  console.log("ML-DSA-44 algorithm -48 advertised first: " + evidence.diagnostics.pqcRegistrationAlgorithmAdvertised);
   console.log("");
   console.log("This is only initial deployment smoke evidence, not full remote account qualification.");
-  console.log("A real remote browser must still prove registration, discoverable sign-in, sign-out, recovery, old-key rejection, key rotation and replacement-passkey sign-in.");
-  console.log("Claim ML-DSA-44 for a remote credential only after the actual stored COSE algorithm is -48 and a later assertion verifies on this deployed Worker.");
-  console.log("Use synthetic data only. The one-time recovery key is displayed by the site and must be kept offline.");
+  console.log("Before any real-user use, independently qualify physical wallet providers and browser/device compatibility on the exact staging origin.");
+  console.log("Use a wallet you control and synthetic account details only. Review the exact domain, network, address and off-chain message before signing.");
   console.log("This script does not enable billing, add a payment method, deploy production, or delete resources after a failed run.");
   console.log("Record three-pass cleanup and the provider's retention quarantine before closing this staging environment.");
 }

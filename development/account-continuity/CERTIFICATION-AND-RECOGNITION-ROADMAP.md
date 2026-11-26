@@ -1,7 +1,10 @@
 # Authentication Certification, Membership and Recognition Roadmap
 
+> **HISTORICAL RESEARCH — PASSKEY / FIDO-SPECIFIC (26 November 2026).** This research was prepared for the retired WebAuthn/passkey account prototype. It does not establish that AstroCrown is a FIDO member, eligible for a programme, certified or entitled to use a FIDO mark. The active ordinary-account design is wallet-primary, not a WebAuthn relying-party product. No membership, certification, payment, mark use or external representation is authorized by this historical planning record. Reassess any future recognition route against the then-current product and official programme requirements before taking action.
+
+
 **Research snapshot:** 2026-11-03  
-**Status:** Planning and evidence preparation only. No membership, mark use, paid test, certification or independent assessment has been purchased or claimed.  
+**Status:** HISTORICAL FIDO / PASSKEY RECOGNITION RESEARCH ONLY. No membership, mark use, paid test, certification or independent assessment has been purchased or claimed.  
 **Current budget:** $0 for preparation; paid actions require separate funded approval.
 
 ## 1. What applies to AstroCrown

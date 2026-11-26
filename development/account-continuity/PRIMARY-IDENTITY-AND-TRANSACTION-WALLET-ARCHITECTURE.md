@@ -1,8 +1,8 @@
 # Primary Identity and Auxiliary Transaction Wallet Architecture
 
-**Owner direction recorded:** 18 November 2026  
-**Status:** Architecture decision for future AstroCrown account, exchange and swap development.  
-**Relationship to Genesis:** Compatible with the wallet-first Genesis identity. This document extends the model beyond Genesis payment wallets; it does not activate payments or authorize custody.
+**Owner direction recorded:** 18 November 2026; reaffirmed 26 November 2026  
+**Status:** Current governing AstroCrown account-identity and wallet-authority architecture; implementation and qualification remain in progress.  
+**Relationship to Genesis:** Compatible with and extends the wallet-first Genesis identity beyond Genesis payment wallets. It does not activate payments, authorize custody or make general wallet-only account sign-in operational.
 
 ## 1. Decision
 
@@ -168,3 +168,10 @@ No payment acceptance, account wallet limit, Bitcoin adapter, exchange route, sw
 - Bitcoin BIP-322 Generic Signed Message Format: https://github.com/bitcoin/bips/blob/master/bip-0322.mediawiki
 - Bitcoin BIP-174 Partially Signed Bitcoin Transaction Format: https://github.com/bitcoin/bips/blob/master/bip-0174.mediawiki
 - Solana message signing and authentication: https://solana.com/docs/frontend/messages-and-auth
+
+
+## Implementation status — 26 November 2026
+
+The Worker repository now contains an initial ordinary-account primary-wallet implementation candidate for Ethereum Mainnet (EIP-191), TRON Mainnet (TIP-191) and Solana Mainnet (Ed25519): one primary wallet per account, exact-origin/purpose/network/address-bound short-lived challenges, one-use consumption, server-side signature verification, and a normal account session. Registration requires the current Terms and Privacy acknowledgement. The browser confirms mainnet context where supported by the injected wallet and the API verifies the returned signature. No private key, seed phrase, token approval, transaction, payment, gas or balance is requested or stored.
+
+This increment does not yet implement Bitcoin/BIP-322, account-primary-wallet rotation, auxiliary transaction-wallet management, complete wallet-session security controls, broad multi-provider selection, physical-wallet compatibility evidence, or independent penetration review. The active feature status remains FOR DEVELOPMENT · READ ONLY until the exact assets are deployed and remotely verified. A passing local Worker qualification is not remote runtime or production evidence.

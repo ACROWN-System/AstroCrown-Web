@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "notice_version": "2026-11-26-public-test-v5",
+  "acknowledgement_ttl_seconds": 43200,
+  "global_notice": {
+    "heading": "ASTROCROWN LIVE PUBLIC TEST",
+    "introduction": "You are accessing the AstroCrown public test environment. Public submissions may be visible to anyone on the internet. Anyone who can view a public submission may copy, save, screenshot, quote or redistribute it; removing it from AstroCrown cannot remove copies made elsewhere. Never disclose personal information, production credentials, seed phrases, private keys or wallet recovery secrets.",
+    "rules": [
+      "Only features explicitly marked LIVE are functional, and each LIVE label must identify its environment, such as LIVE · STAGING or LIVE · MAINNET.",
+      "DEVNET features operate only on their named development network. Their notice must identify the network and provide its verified test-token faucet link or address. Test tokens have no mainnet value.",
+      "FOR DEVELOPMENT · READ ONLY features are previews. They do not provide operational transactions or state-changing functionality.",
+      "An unlabelled feature must be treated as FOR DEVELOPMENT · READ ONLY. A wallet connection or off-chain ownership signature does not by itself mean that payments or transactions are enabled.",
+      "Anyone who can view a public submission may copy, save, screenshot, quote or redistribute it. Removing it from AstroCrown cannot remove copies made elsewhere."
+    ],
+    "wallet_safety": "Wallet connection and off-chain ownership signatures are not blockchain transactions. An ownership proof must not request gas, token approval, transfer or payment. A development transaction is permitted only when the exact feature is explicitly marked DEVNET, your wallet visibly reports the exact named development network, and any test assets come from the verified faucet shown by AstroCrown; test tokens have no mainnet value. Real-value transactions are permitted only when the exact feature is explicitly marked LIVE · MAINNET and you have independently checked the network, asset, amount and destination. LIVE · STAGING does not mean mainnet functionality. Never reveal a seed phrase, private key, wallet recovery secret or other wallet secret.",
+    "acknowledgement": "I confirm that I have read and understood this notice, the operational status of this page and the risks associated with using it."
+  },
+  "pages": {
+    "home": {
+      "version": "2026-11-26-home-v2",
+      "title": "AstroCrown homepage",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
+      },
+      "features": [
+        {
+          "id": "market-context",
+          "name": "Market context and market figures",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Displayed market totals, sentiment values, rankings and changes are illustrative. No approved live market-data provider is connected to this page."
+        },
+        {
+          "id": "asset-directory",
+          "name": "Asset directory and discovery cards",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The current directory uses local sample data. Listings, filters and discovery cards must not be treated as live market coverage or active services."
+        },
+        {
+          "id": "primary-wallet-account",
+          "name": "AstroCrown wallet-only account creation and sign-in",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Primary-wallet account APIs for Ethereum Mainnet, TRON Mainnet and Solana Mainnet are implemented in the local Worker qualification candidate and pass synthetic-signature API tests. Physical-wallet/provider browser qualification and exact remote staging deployment remain outstanding. No live sign-in service is enabled by this page."
+        },
+        {
+          "id": "community",
+          "name": "AstroCrown Community",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The first-party community implementation remains a development build and is not approved for public operational use."
+        },
+        {
+          "id": "nova",
+          "name": "Chat with NOVA",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The NOVA-facing member service is not yet operational on this website."
+        },
+        {
+          "id": "council",
+          "name": "Council",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Council pages and binding governance actions are not yet operational. Constitutional approval and service qualification are required before activation."
+        },
+        {
+          "id": "trade-bots",
+          "name": "Trade bots, Swap and Trade",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Trading, bot execution, swap, custody and asset-movement services are not enabled by this page."
+        }
+      ]
+    },
+    "genesis": {
+      "version": "2026-11-26-genesis-v2",
+      "title": "Genesis Programme",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
+      },
+      "features": [
+        {
+          "id": "genesis-wallet-identity",
+          "name": "Genesis primary-wallet identity",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The wallet-native identity and linked-address experience is undergoing exact staging-build and wallet-provider qualification. Do not assume a connection or signature grants payment eligibility."
+        },
+        {
+          "id": "genesis-payments",
+          "name": "Genesis qualifying payments",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Qualifying-payment acceptance is disabled. Do not send USDT or any other asset to a displayed address."
+        },
+        {
+          "id": "acrown-floor-purchase",
+          "name": "ACROWN floor-price purchases and delivery",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Purchase quotes, entitlement crediting and ACROWN delivery are not enabled in this staging release."
+        },
+        {
+          "id": "genesis-member-badge",
+          "name": "Genesis Member qualification and badge",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The badge is awarded only after approved qualification conditions and independently verified final payment evidence. The current preview does not award it."
+        },
+        {
+          "id": "genesis-directory",
+          "name": "Genesis public payment directory",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The directory is an interface and data-model preview; it does not indicate that qualifying payments are being accepted."
+        }
+      ]
+    },
+    "account": {
+      "version": "2026-11-26-account-v3",
+      "title": "AstroCrown account",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
+      },
+      "features": [
+        {
+          "id": "wallet-login",
+          "name": "Primary-wallet account creation and sign-in",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Primary-wallet account APIs for Ethereum Mainnet, TRON Mainnet and Solana Mainnet are implemented in the local Worker qualification candidate and pass synthetic-signature API tests. Physical-wallet/provider browser qualification and exact remote staging deployment remain outstanding. No live sign-in service is enabled by this page."
+        },
+        {
+          "id": "user-dashboard",
+          "name": "User dashboard and personal profile",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The local account candidate provides a primary-wallet identity overview, automatic unique default member name, authenticated name availability checks, case-insensitive unique name application and a customizable profile name. Wallet-bound session controls, fuller profile management, connected transaction-wallet management and remote staging verification remain outstanding. Community-wide name display is a separate future integration, not a prerequisite for the account profile."
+        },
+        {
+          "id": "public-member-name",
+          "name": "Unique public member name and customization",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The local Worker candidate assigns a unique Crown_ default name and supports authenticated availability checks and atomic member-name changes. Physical wallet/provider browser testing, remote migration, deployment and post-deployment verification remain outstanding. Community posts and member lists are future consumers of this field, not prerequisites for the account profile feature."
+        },
+        {
+          "id": "badges",
+          "name": "Achievement and badge highlighting",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Badge ownership, highlighting and community display must be backed by the authoritative account and badge registry before activation."
+        }
+      ]
+    },
+    "admin": {
+      "version": "2026-11-26-admin-v2",
+      "title": "Administrator dashboard",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
+      },
+      "features": [
+        {
+          "id": "admin-access",
+          "name": "Administrator access and governance controls",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The wallet-primary account integration foundation is implemented locally. Owner bootstrap, complete governance controls, production authorization, independent wallet/provider review and remote deployment qualification remain outstanding."
+        }
+      ]
+    },
+    "legal": {
+      "version": "2026-11-26-legal-v2",
+      "title": "AstroCrown information and policy pages",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
+      },
+      "features": [
+        {
+          "id": "policy-pages",
+          "name": "Information and policy documents",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "These documents are provided for development review. They must not be interpreted as confirmation that the complete production legal or compliance framework has been approved."
+        }
+      ]
+    },
+    "community": {
+      "version": "2026-11-26-community-v2",
+      "title": "AstroCrown Community",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Community page is deployed yet. This is a planned first-party service, not an operational community destination."
+      },
+      "features": [
+        {
+          "id": "community-network",
+          "name": "Community feeds, groups and member interactions",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The first-party community implementation is a development slice. Moderation, appeals, privacy, chat, load, backup and governance qualification remain outstanding."
+        }
+      ]
+    },
+    "nova": {
+      "version": "2026-11-26-nova-v2",
+      "title": "Chat with NOVA",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Chat with NOVA page is deployed yet. This is a planned service, not an operational chat destination."
+      },
+      "features": [
+        {
+          "id": "nova-chat",
+          "name": "Chat and NOVA-integrated services",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "No operational NOVA member chat or live service is enabled by this page."
+        }
+      ]
+    },
+    "council": {
+      "version": "2026-11-26-council-v2",
+      "title": "AstroCrown Council",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Council page is deployed yet. This is a planned service; no binding governance actions are available."
+      },
+      "features": [
+        {
+          "id": "council-governance",
+          "name": "Council membership and governance",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Binding elections, representation and constitutional governance must not activate until the relevant rules and systems are approved and qualified."
+        }
+      ]
+    },
+    "trade-bots": {
+      "version": "2026-11-26-trade-bots-v2",
+      "title": "Trade Bots",
+      "delivery": {
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Trade Bots page is deployed yet. Trading automation, swap and transaction execution are not enabled."
+      },
+      "features": [
+        {
+          "id": "trade-bots",
+          "name": "Trading automation and bots",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "No live trading, swap, custody, order routing or asset transfer is enabled by this page."
+        }
+      ]
+    }
+  }
+}

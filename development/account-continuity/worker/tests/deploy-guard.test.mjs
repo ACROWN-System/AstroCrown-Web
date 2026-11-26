@@ -52,10 +52,12 @@ test("new D1 identity is persisted exclusively before database setup continues",
   assert.match(deployScript, /Do not retry database creation/);
 });
 
-test("remote smoke checks are not represented as full account qualification", () => {
+test("remote smoke checks are not represented as full wallet-account qualification", () => {
   assert.match(deployScript, /REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED/);
   assert.match(deployScript, /not full remote account qualification/);
-  assert.match(deployScript, /actual stored COSE algorithm is -48/);
+  assert.match(deployScript, /walletAuthenticationAvailable/);
+  assert.match(deployScript, /\/api\/wallet-auth\/challenge/);
+  assert.doesNotMatch(deployScript, /ML-DSA|COSE algorithm|passkey|recovery key/i);
 });
 
 

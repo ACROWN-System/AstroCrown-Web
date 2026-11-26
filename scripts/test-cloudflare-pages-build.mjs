@@ -32,10 +32,14 @@ const expectedFiles = [
   "_headers",
   "_redirects",
   "account-continuity/prototype/account-prototype.css",
+  "account-continuity/prototype/wallet-identity-assurance.html",
   "account-continuity/prototype/account-ui.js",
   "account-continuity/prototype/admin-wallet-ui.js",
   "assets/genesis-member-dna.svg",
   "index.html",
+  "page-entry/feature-status.json",
+  "page-entry/page-entry-notice.css",
+  "page-entry/page-entry-notice.js",
   "privacy-transparency.html",
   "robots.txt",
   "supporters/index.html",
@@ -49,6 +53,7 @@ const supporterPage = read("supporters/index.html");
 const supporterJs = read("supporters/supporters.js");
 const walletAdapters = read("supporters/wallet-provider-adapters.mjs");
 const privacy = read("privacy-transparency.html");
+const walletAssurance = read("account-continuity/prototype/wallet-identity-assurance.html");
 const accountJs = read("account-continuity/prototype/account-ui.js");
 const headers = read("_headers");
 const robots = read("robots.txt");
@@ -61,10 +66,87 @@ assert.match(homepage, /illustrative market values/i);
 assert.match(homepage, /no live services connected/i);
 assert.match(homepage, /You are viewing an unfinished development preview/i);
 assert.match(homepage, /var workerStagingMode = false;/);
+assert.match(homepage, /name="astro-page-id" content="home"/);
+assert.match(homepage, /id="development-notice-acknowledged" type="checkbox" disabled/);
+assert.match(homepage, /id="development-notice-status-loading"/);
+assert.match(homepage, /Log In\/Sign Up/);
+assert.match(homepage, /page-entry\/page-entry-notice\.js/);
+assert.match(supporterPage, /name="astro-page-id" content="genesis"/);
+assert.match(supporterPage, /page-entry\/page-entry-notice\.js/);
+assert.match(privacy, /name="astro-page-id" content="legal"/);
+const pageNoticeJs = read("page-entry/page-entry-notice.js");
+const pageNoticeCss = read("page-entry/page-entry-notice.css");
+const featureStatus = JSON.parse(read("page-entry/feature-status.json"));
+assert.match(pageNoticeJs, /Before you continue/);
+assert.match(pageNoticeJs, /acknowledgement\.disabled = true/);
+assert.match(pageNoticeJs, /acknowledgement\.disabled = false/);
+assert.match(pageNoticeJs, /pageNoticeReady/);
+assert.match(pageNoticeJs, /function closeSupersededPageNotice/);
+assert.match(pageNoticeJs, /if \(pageId === "home"\)/);
+assert.match(pageNoticeJs, /if \(nativeNotice && nativeNotice\.open\) nativeNotice\.close\(\)/);
+assert.match(pageNoticeJs, /closeSupersededPageNotice\(pageId, nextPageId\)/);
+assert.match(pageNoticeJs, /dialog\.dataset\.pageNoticePageId = page\.id/);
+assert.match(pageNoticeJs, /adminDashboard && !adminDashboard\.hidden/);
+assert.match(pageNoticeJs, /new MutationObserver\(reconcilePageEntry\)/);
+assert.match(pageNoticeJs, /astrocrown:admin-dashboard-visible/);
+assert.match(pageNoticeJs, /function bindNativeNoticeAcknowledgement/);
+assert.match(pageNoticeJs, /if \(dialog\.isConnected\) dialog\.remove\(\)/);
+assert.match(pageNoticeJs, /astrocrown:page-notice-acknowledged/);
+assert.match(pageNoticeJs, /rememberAcknowledgement\(page\.id, page\.version, globalVersion\)/);
+assert.doesNotMatch(pageNoticeJs.slice(pageNoticeJs.indexOf("function buildDialog"), pageNoticeJs.indexOf("function showPageNotice")), /registry\.notice_version/);
+assert.match(pageNoticeJs, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
+assert.match(pageNoticeJs, /continueButton\.disabled = acknowledgement\.checked !== true/);
+assert.match(pageNoticeJs, /noticeVersion: pageVersion/);
+assert.ok(pageNoticeJs.includes("/account-continuity/prototype/privacy-policy.html"));
+assert.ok(pageNoticeJs.includes("/privacy-transparency.html"));
+assert.match(pageNoticeJs, /globalNotice\.acknowledgement/);
+assert.match(pageNoticeCss, /astro-entry-notice/);
+assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v5");
+assert.match(featureStatus.global_notice.introduction, /Public submissions may be visible to anyone on the internet/);
+assert.match(featureStatus.global_notice.wallet_safety, /A development transaction is permitted only when the exact feature is explicitly marked DEVNET/);
+assert.match(featureStatus.global_notice.wallet_safety, /Real-value transactions are permitted only when the exact feature is explicitly marked LIVE · MAINNET/);
+assert.ok(featureStatus.global_notice.rules.some(rule => /copy, save, screenshot, quote or redistribute/.test(rule)));
+assert.match(homepage, new RegExp(featureStatus.notice_version));
+assert.match(featureStatus.global_notice.acknowledgement, /I confirm that I have read and understood/);
+assert.ok(featureStatus.pages.home && featureStatus.pages.genesis && featureStatus.pages.account);
+for (const page of Object.values(featureStatus.pages)) {
+  assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(page.delivery.status));
+  if (["home", "genesis", "account", "admin", "legal"].includes(page.title === "AstroCrown homepage" ? "home" :
+      page.title === "Genesis Programme" ? "genesis" :
+      page.title === "AstroCrown account" ? "account" :
+      page.title === "Administrator dashboard" ? "admin" :
+      page.title === "AstroCrown information and policy pages" ? "legal" : "")) {
+    assert.equal(page.delivery.status, "FOR DEVELOPMENT · READ ONLY");
+    assert.match(page.delivery.details, /first remote Cloudflare Pages or Worker staging deployment has not been verified/i);
+  }
+  for (const feature of page.features) {
+    assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(feature.status));
+    if (feature.status === "DEVNET") {
+      assert.ok(feature.network && feature.network_id !== undefined && feature.test_asset);
+    assert.ok(feature.faucet && (
+      (typeof feature.faucet.url === "string" && /^https:\/\//.test(feature.faucet.url)) ||
+      (typeof feature.faucet.address === "string" && feature.faucet.address.trim())
+    ));
+    }
+  }
+}
 
 assert.match(accountJs, /var forceBrowserDemo = true;/);
+assert.match(accountJs, /function renderWalletPrimaryStatus\(\)/);
+assert.match(accountJs, /var walletPrimaryUiMode = true;/);
+assert.match(accountJs, /var enabled = accountState.walletAuthenticationAvailable === true;/);
+assert.doesNotMatch(accountJs, /account-passkey-signin|registerWithPasskey|recoverWithPasskey/);
+assert.match(accountJs, /browserPreviewMode/);
+assert.match(accountJs, /Sign in with primary wallet/);
+assert.match(accountJs, /Create account with primary wallet/);
+assert.match(accountJs, /finishPrimaryWalletAuthentication/);
+assert.match(accountJs, /astrocrown:admin-dashboard-visible/);
+assert.match(accountJs, /Why wallet\?/);
+assert.match(walletAssurance, /name="astro-page-id" content="account"/);
+assert.match(walletAssurance, /primary wallet is your account identity/i);
+assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
 assert.match(accountJs, /hosted-preview-no-authentication/);
-assert.match(accountJs, /read-only interface demonstration/);
+assert.match(accountJs, /hosted HTML preview is read-only/);
 
 assert.match(supporterPage, /noindex, nofollow, noarchive/i);
 assert.match(supporterPage, /USDT qualifying payments and ACROWN purchases are not enabled/i);
