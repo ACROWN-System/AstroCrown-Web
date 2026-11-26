@@ -1,4 +1,5 @@
 import { normalizeWalletAddress, verifyWalletSignature } from "./supporters.js";
+import { createDefaultMemberName } from "./member-name.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -252,6 +253,7 @@ async function verifyRegistration(db, env, request, payload, config) {
   const now = Math.floor(Date.now() / 1000);
   const accountId = "acc_" + base64url(randomBytes(18));
   const identifier = "AC-" + hex(randomBytes(5)).toUpperCase();
+  const memberName = createDefaultMemberName(identifier);
   const userHandle = base64url(randomBytes(16));
   const walletId = hex(randomBytes(16));
   const token = base64url(randomBytes(32));
@@ -264,9 +266,9 @@ async function verifyRegistration(db, env, request, payload, config) {
   try {
     results = await db.batch([
       db.prepare(
-        "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
-        "VALUES(?,?,?,?,'person',?,?,?,'user')"
-      ).bind(accountId, identifier, userHandle, created, challenge.referral_id || "", TERMS_VERSION, created),
+        "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,member_name,member_name_normalized,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
+        "VALUES(?,?,?,?,?,?,'person',?,?,?,'user')"
+      ).bind(accountId, identifier, userHandle, memberName, memberName.toLowerCase(), created, challenge.referral_id || "", TERMS_VERSION, created),
       db.prepare(
         "INSERT INTO auth_primary_wallets(wallet_id,account_id,network,address,address_normalized,proof_method,linked_at,active) " +
         "SELECT ?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_wallet_challenges WHERE challenge_id=? AND used_at=?)"
@@ -294,6 +296,7 @@ async function verifyRegistration(db, env, request, payload, config) {
     intent: "register",
     authMethod: "primary-wallet",
     accountIdentifier: identifier,
+    memberName,
     primaryWallet: { network: challenge.network, address: challenge.address, proofMethod: proofMethod(challenge.network) },
     sessionExpiresAt: new Date(expires * 1000).toISOString(),
     transactionAuthorized: false,
