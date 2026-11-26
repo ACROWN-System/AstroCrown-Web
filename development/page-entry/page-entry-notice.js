@@ -333,8 +333,8 @@
       if (!acknowledgement.checked || proceed.disabled) return;
       proceed.disabled = true;
       feedback.textContent = "";
-      if (runtimeNeedsServerAcknowledgement(page.id)) {
-        try {
+      try {
+        if (runtimeNeedsServerAcknowledgement(page.id)) {
           var globalResponse = await fetch("/api/staging/acknowledge", {
             method: "POST",
             credentials: "same-origin",
@@ -355,20 +355,23 @@
           });
           var result = await response.json();
           if (!response.ok || result.acknowledged !== true || result.noticeVersion !== page.version) {
-            throw new Error(result.error || "The page acknowledgement could not be recorded.");
+            throw new Error(result.error || "The page-specific acknowledgement could not be recorded.");
           }
-        } catch (error) {
-          feedback.textContent = error && error.message
-            ? error.message
-            : "The acknowledgement could not be recorded. Please try again.";
-          proceed.disabled = false;
-          return;
         }
+        rememberAcknowledgement(page.id, page.version, registry.notice_version);
+        if (typeof dialog.close === "function" && dialog.open) dialog.close();
+        if (dialog.isConnected) dialog.remove();
+        document.dispatchEvent(new CustomEvent("astrocrown:page-notice-acknowledged", {
+          detail: { pageId: page.id, noticeVersion: page.version, globalVersion: registry.notice_version }
+        }));
+      } catch (error) {
+        feedback.textContent = error && error.message
+          ? error.message
+          : "The acknowledgement could not be recorded. Please try again.";
+        proceed.disabled = false;
       }
-      rememberAcknowledgement(page.id, page.version, registry.notice_version);
-      dialog.close();
-      dialog.remove();
     });
+
     return dialog;
   }
 
