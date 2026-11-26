@@ -746,7 +746,7 @@
   }
 
   function renderWalletPrimaryStatus() {
-    var enabled = typeof workerStagingMode !== "undefined" && workerStagingMode && accountState.walletAuthenticationAvailable !== false;
+    var enabled = typeof workerStagingMode !== "undefined" && workerStagingMode && accountState.walletAuthenticationAvailable === true;
     var controls = mode === "create"
       ? '<form id="account-wallet-register-form" class="account-form" autocomplete="off">' +
           '<label class="account-field" for="account-wallet-network">Primary identity network' +
@@ -1329,7 +1329,7 @@
       syncAccountButton();
       return accountState;
     } catch (_error) {
-      accountState = { authenticated: false };
+      accountState = { authenticated: false, walletAuthenticationAvailable: false };
       syncAccountButton();
       return accountState;
     }
