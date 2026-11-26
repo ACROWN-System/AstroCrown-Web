@@ -27,10 +27,10 @@ test("staging artifact replaces the visual-preview notice with live public-test 
   assert.match(html, /Test accounts and records are temporary/i);
   assert.match(html, /may be reset or deleted without notice/);
 
-  assert.match(html, /Default-to-public rule/);
-  assert.match(html, /openly available to anyone on the internet/);
+  const registry = JSON.parse(await readFile(resolve(workerRoot, "public", "page-entry", "feature-status.json"), "utf8"));
+  assert.match(registry.global_notice.introduction, /Public submissions may be visible to anyone on the internet/);
+  assert.ok(registry.global_notice.rules.some(rule => /copy, save, screenshot, quote or redistribute/.test(rule)));
   assert.match(html, /including visitors without accounts/);
-  assert.match(html, /read, copy, save, screenshot, index, quote or redistribute/);
   assert.match(html, /personal, identifying, sensitive, confidential or third-party information/);
   assert.match(html, /provider-managed backups/);
 
