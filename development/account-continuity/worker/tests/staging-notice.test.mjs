@@ -59,7 +59,7 @@ test("staging safety notice is a mandatory first-visit gate with server acknowle
   assert.match(html, /acknowledgement\.addEventListener\("change"/);
   assert.match(html, /acknowledgementPending/);
   assert.match(html, /fetch\("\/api\/staging\/acknowledge"/);
-  assert.match(html, /2026-11-26-public-test-v4/);
+  assert.match(html, /2026-11-26-public-test-v5/);
   assert.match(html, /openNotice\(\);/);
   assert.match(html, /reopen-development-notice/);
 });
