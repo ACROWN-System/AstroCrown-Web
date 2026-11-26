@@ -944,7 +944,7 @@
       setMemberNameStatus("This is your current member name.", "available", false);
       return;
     }
-    if (/[\\u0000-\\u001F\\u007F]/.test(proposedName) ||
+    if (/[\u0000-\u001F\u007F]/.test(proposedName) ||
         !/^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(normalizedProposedName)) {
       setMemberNameStatus("Use 3–20 characters: start with a letter and use only letters, numbers or underscores.", "invalid", false);
       return;
