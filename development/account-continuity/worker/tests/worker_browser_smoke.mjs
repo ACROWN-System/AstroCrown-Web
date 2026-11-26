@@ -1000,16 +1000,30 @@ try {
   await waitFor("authenticated root reload resumes at User dashboard", () =>
     evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 30000);
 
-  const accountNoticeState = await waitFor("Account page-entry notice readiness", async () =>
-    evaluate("(() => {" +
-      "const strip=document.querySelector('.astro-page-status-strip')?.textContent||'';" +
-      "if(!strip.includes('AstroCrown account')) return null;" +
-      "const dialog=document.querySelector('.astro-entry-notice[open]');" +
-      "if(dialog?.dataset.pageNoticePageId==='account' && dialog.querySelector('.astro-entry-notice-ack input')) return 'open';" +
-      "const saved=JSON.parse(localStorage.getItem('astro-page-notice:account')||'null');" +
-      "return saved?.version==='2026-11-26-account-v2' && saved?.globalVersion==='2026-11-26-public-test-v5' ? 'acknowledged' : null;" +
-    "})()")
-  );
+  let accountNoticeState;
+  try {
+    accountNoticeState = await waitFor("Account page-entry notice readiness", async () =>
+      evaluate("(() => {" +
+        "const strip=document.querySelector('.astro-page-status-strip')?.textContent||'';" +
+        "if(!strip.includes('AstroCrown account')) return null;" +
+        "const dialog=document.querySelector('.astro-entry-notice[open]');" +
+        "if(dialog?.dataset.pageNoticePageId==='account' && dialog.querySelector('.astro-entry-notice-ack input')) return 'open';" +
+        "const saved=JSON.parse(localStorage.getItem('astro-page-notice:account')||'null');" +
+        "return saved?.version==='2026-11-26-account-v2' && saved?.globalVersion==='2026-11-26-public-test-v5' ? 'acknowledged' : null;" +
+      "})()")
+    );
+  } catch (error) {
+    const debug = await evaluate("(() => {const d=document.querySelector('.astro-entry-notice');" +
+      "const s=document.querySelector('.astro-page-status-strip');" +
+      "const scripts=Array.from(document.scripts).map(x=>x.src).filter(x=>x.includes('page-entry'));" +
+      "let saved=null;try{saved=JSON.parse(localStorage.getItem('astro-page-notice:account')||'null')}catch(e){}" +
+      "return JSON.stringify({url:location.href,readyState:document.readyState," +
+      "pageMeta:document.querySelector('meta[name=\\"astro-page-id\\"]')?.content||null," +
+      "strip:s?.textContent||null,dialogOpen:!!d?.open,dialogPage:d?.dataset.pageNoticePageId||null," +
+      "dialogText:d?.innerText?.slice(0,500)||null,nativeNoticeOpen:!!document.getElementById('development-notice')?.open," +
+      "saved,noticeScripts:scripts,bodyClass:document.body.className})})()");
+    throw new Error(error.message + " · Account page-notice diagnostics: " + debug);
+  }
   if (accountNoticeState === "open") {
     await trustedClick(".astro-entry-notice[open] .astro-entry-notice-ack input");
     await trustedClick(".astro-entry-notice[open] .astro-entry-notice-continue");
