@@ -369,7 +369,7 @@ export async function issuePrimaryWalletChallenge(db, env, request, payload, con
   return issueChallenge(db, env, request, payload, config, payload.intent);
 }
 export async function verifyPrimaryWalletChallenge(db, env, request, payload, config) {
-  assertWalletAuthEnvironment(env);
+  assertWalletAuthEnvironment(env, config, request);
   if (!db) throw fail(503, "The account database is not bound.");
   if (payload?.intent === "register") return verifyRegistration(db, env, request, payload, config);
   if (payload?.intent === "login") return verifyLogin(db, env, request, payload, config);
