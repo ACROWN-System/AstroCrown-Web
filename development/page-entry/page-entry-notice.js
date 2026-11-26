@@ -96,7 +96,10 @@
       close.title = "Leave the homepage and open the AstroCrown Information Centre";
       close.setAttribute("aria-label", "Leave the homepage and open the AstroCrown Information Centre");
       close.addEventListener("click", function () {
-        window.location.assign("/privacy-transparency.html");
+        var workerRuntime = document.querySelector('meta[name="astro-account-runtime"]');
+        window.location.assign(workerRuntime && workerRuntime.content === "worker-staging"
+          ? "/account-continuity/prototype/privacy-policy.html"
+          : "/privacy-transparency.html");
       });
       header.appendChild(close);
       content.insertBefore(header, content.firstChild);
