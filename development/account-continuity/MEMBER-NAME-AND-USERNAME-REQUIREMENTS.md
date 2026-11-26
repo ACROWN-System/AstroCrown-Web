@@ -50,6 +50,6 @@ A successful change is included in the account status response and recorded in t
 
 ## 6. Public display and integration boundary
 
-The User dashboard uses the public member name as its primary visible identity. When the first-party Community implementation is integrated with the wallet-primary account branch, community posts, replies, membership lists and member directories must read this same authoritative field rather than a random internal WebAuthn user handle. Genesis recognition is a separate qualification and badge; a member name alone never grants Genesis status.
+The User dashboard uses the public member name as its primary visible identity. The first-party Community service is a future consumer of this account field, not a prerequisite for the account or profile feature. When Community is developed and integrated with the wallet-primary account model, posts, replies, membership lists and member directories must read this same authoritative field rather than create a parallel identity or use an internal account handle. Genesis recognition is a separate qualification and badge; a member name alone never grants Genesis status.
 
-The account feature remains development-only until its migration, API/browser qualification, community integration, remote staging verification and overall release gates pass.
+The account/member-name feature can be qualified and activated independently of Community. It remains development-only until its database migration, authenticated API and physical-wallet/browser qualification, exact remote staging deployment and post-deployment verification pass. Community display is a later integration and is not a release gate for the User dashboard member name.
