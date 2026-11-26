@@ -14,14 +14,14 @@ const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
 const CHALLENGE_SECONDS = 300;
 const MAX_BODY_BYTES = 65536;
-const STAGING_NOTICE_VERSION = "2026-11-26-public-test-v4";
+const STAGING_NOTICE_VERSION = "2026-11-26-public-test-v5";
 const STAGING_ACK_COOKIE = "acrown_staging_notice_ack";
 const STAGING_ACK_SECONDS = 12 * 60 * 60;
 const PAGE_ACK_SECONDS = 12 * 60 * 60;
 const PAGE_ACK_CONFIG = {
-  genesis: { version: "2026-11-26-genesis-v1", cookie: "acrown_page_ack_genesis", path: "/api/genesis" },
-  account: { version: "2026-11-26-account-v1", cookie: "acrown_page_ack_account", path: "/api/account" },
-  admin: { version: "2026-11-26-admin-v1", cookie: "acrown_page_ack_admin", path: "/api/admin" },
+  genesis: { version: "2026-11-26-genesis-v2", cookie: "acrown_page_ack_genesis", path: "/api/genesis" },
+  account: { version: "2026-11-26-account-v2", cookie: "acrown_page_ack_account", path: "/api/account" },
+  admin: { version: "2026-11-26-admin-v2", cookie: "acrown_page_ack_admin", path: "/api/admin" },
 };
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
 const AVATARS = ["person", "crown", "star", "moon", "orbit", "shield"];
