@@ -934,16 +934,18 @@
     var input = document.getElementById("account-member-name-input");
     if (!input) return;
     var proposedName = input.value;
+    var normalizedProposedName = proposedName.normalize("NFKC").trim();
     var sequence = ++memberNameCheckSequence;
     availableMemberName = "";
     memberNameApplyEnabled = false;
     if (memberNameCheckTimer) window.clearTimeout(memberNameCheckTimer);
     var currentName = String(accountState.memberName || "");
-    if (proposedName.trim().toLowerCase() === currentName.toLowerCase()) {
+    if (normalizedProposedName.toLowerCase() === currentName.toLowerCase()) {
       setMemberNameStatus("This is your current member name.", "available", false);
       return;
     }
-    if (!/^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(proposedName.trim())) {
+    if (/[\\u0000-\\u001F\\u007F]/.test(proposedName) ||
+        !/^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(normalizedProposedName)) {
       setMemberNameStatus("Use 3–20 characters: start with a letter and use only letters, numbers or underscores.", "invalid", false);
       return;
     }
@@ -1636,9 +1638,9 @@
     }
     if (button.id === "account-member-name-apply") {
       var nameInput = document.getElementById("account-member-name-input");
-      var requestedName = nameInput ? nameInput.value.trim() : "";
+      var requestedName = nameInput ? nameInput.value.normalize("NFKC").trim() : "";
       if (!memberNameApplyEnabled || !availableMemberName ||
-          requestedName.toLowerCase() !== availableMemberName.toLowerCase()) {
+          requestedName !== availableMemberName) {
         setMemberNameStatus("Check the name again before applying it.", "checking", false);
         return;
       }
