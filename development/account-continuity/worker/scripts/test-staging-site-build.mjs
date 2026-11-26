@@ -50,6 +50,8 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /function bindNativeNoticeAcknowledgement/);
   assert.match(noticeScript, /if \(dialog\.isConnected\) dialog\.remove\(\)/);
   assert.match(noticeScript, /astrocrown:page-notice-acknowledged/);
+  assert.match(noticeScript, /rememberAcknowledgement\(page\.id, page\.version, globalVersion\)/);
+  assert.doesNotMatch(noticeScript.slice(noticeScript.indexOf("function buildDialog"), noticeScript.indexOf("function showPageNotice")), /registry\.notice_version/);
   assert.match(noticeScript, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
   assert.match(noticeScript, /continueButton\.disabled = acknowledgement\.checked !== true/);
   assert.match(noticeScript, /noticeVersion: pageVersion/);
