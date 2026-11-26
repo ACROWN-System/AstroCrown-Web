@@ -358,11 +358,11 @@
             throw new Error(result.error || "The page-specific acknowledgement could not be recorded.");
           }
         }
-        rememberAcknowledgement(page.id, page.version, registry.notice_version);
+        rememberAcknowledgement(page.id, page.version, globalVersion);
         if (typeof dialog.close === "function" && dialog.open) dialog.close();
         if (dialog.isConnected) dialog.remove();
         document.dispatchEvent(new CustomEvent("astrocrown:page-notice-acknowledged", {
-          detail: { pageId: page.id, noticeVersion: page.version, globalVersion: registry.notice_version }
+          detail: { pageId: page.id, noticeVersion: page.version, globalVersion: globalVersion }
         }));
       } catch (error) {
         feedback.textContent = error && error.message
