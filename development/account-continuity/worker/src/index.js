@@ -582,7 +582,7 @@ async function issueAdminWalletEnrollmentChallenge(db, env, request, payload, co
   const historyCount = Number(countRow?.history_count || 0);
   if (activeCount >= 3) throw fail(409, "This administrator account already has three active wallets.");
   if (historyCount > 0 && activeCount === 0) {
-    throw fail(409, "All previously enrolled administrator wallets are inactive. A separate owner-authorized recovery review is required; ordinary passkey sign-in cannot register a replacement wallet.");
+    throw fail(409, "All previously enrolled administrator wallets are inactive. A separate owner-authorized recovery review is required; ordinary primary-wallet sign-in alone cannot register a replacement administrator wallet.");
   }
   const existing = await db.prepare(
     "SELECT account_id,active FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE"
@@ -2064,7 +2064,7 @@ async function api(request, env, config) {
   }
   if (env.ENVIRONMENT === "staging" && isSupersededPasskeyRoute(url.pathname)) {
     return json(410, {
-      error: "Passkey-first account authentication and offline recovery-key login have been superseded by AstroCrown's wallet-only primary identity. That replacement account flow is not yet enabled in this staging release.",
+      error: "Passkey-first account authentication and offline recovery-key login are retired. Use the primary-wallet account flow at /api/wallet-auth/*; there is no passkey, email, password or offline recovery-key login fallback.",
     });
   }
   if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
