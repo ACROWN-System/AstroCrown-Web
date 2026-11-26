@@ -113,7 +113,7 @@
     return workerRuntime && ["genesis", "account", "admin"].indexOf(pageId) !== -1;
   }
 
-  function buildDialog(page, globalNotice) {
+  function buildDialog(page, globalNotice, globalVersion) {
     var dialog = element("dialog", "astro-entry-notice");
     dialog.setAttribute("aria-labelledby", "astro-entry-notice-title");
     dialog.setAttribute("aria-modal", "true");
@@ -184,7 +184,7 @@
             credentials: "same-origin",
             cache: "no-store",
             headers: { "Accept": "application/json", "Content-Type": "application/json" },
-            body: JSON.stringify({ noticeVersion: "2026-11-26-public-test-v2" })
+            body: JSON.stringify({ noticeVersion: globalVersion })
           });
           var globalResult = await globalResponse.json();
           if (!globalResponse.ok || globalResult.acknowledged !== true) {
@@ -224,7 +224,7 @@
       return;
     }
     if (isAcknowledged(page.id || pageId, page.version, registry.notice_version)) return;
-    var dialog = buildDialog(Object.assign({ id: pageId }, page), registry.global_notice);
+    var dialog = buildDialog(Object.assign({ id: pageId }, page), registry.global_notice, registry.notice_version);
     if (typeof dialog.showModal === "function") dialog.showModal();
     else {
       dialog.setAttribute("open", "");
