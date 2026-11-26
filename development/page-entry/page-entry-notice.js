@@ -35,7 +35,24 @@
     return PAGE_HASHES[hash] || defaultId;
   }
 
-  function isAcknowledged(pageId, version, globalVersion) {
+  async function isAcknowledged(pageId, version, globalVersion) {
+    if (isWorkerStagingRuntime()) {
+      try {
+        var response = await fetch(
+          "/api/staging/acknowledgement-status?pageId=" + encodeURIComponent(pageId),
+          { credentials: "same-origin", cache: "no-store", headers: { "Accept": "application/json" } }
+        );
+        if (!response.ok) return false;
+        var result = await response.json();
+        return result.acknowledged === true &&
+          result.globalVersion === globalVersion &&
+          (result.pageVersion === null || result.pageVersion === version);
+      } catch (_error) {
+        // A server verification failure must reopen the notice, never trust
+        // a stale browser-local acknowledgement as a replacement.
+        return false;
+      }
+    }
     try {
       var value = JSON.parse(window.localStorage.getItem("astro-page-notice:" + pageId) || "null");
       return Boolean(value && value.version === version && value.globalVersion === globalVersion &&
@@ -375,12 +392,34 @@
     return dialog;
   }
 
-  function showPageNotice(registry, pageId) {
+  var noticeRequestGeneration = 0;
+
+  async function showPageNotice(registry, pageId) {
     var page = registry.pages[pageId] || registry.pages.legal;
     if (!page) return;
+    var generation = ++noticeRequestGeneration;
     var nativeNotice = document.getElementById("development-notice");
+    var acknowledged = await isAcknowledged(page.id || pageId, page.version, registry.notice_version);
+    if (generation !== noticeRequestGeneration) return;
+
+    if (acknowledged) {
+      if (pageId === "home") {
+        if (nativeNotice && nativeNotice.open) nativeNotice.close();
+      } else if (nativeNotice && nativeNotice.open) {
+        nativeNotice.close();
+      }
+      return;
+    }
+
     if (pageId === "home") {
-      enhanceHomepageNotice(page, registry.global_notice, registry.notice_version, pageId);
+      if (!enhanceHomepageNotice(page, registry.global_notice, registry.notice_version, pageId)) return;
+      if (nativeNotice && !nativeNotice.open) {
+        if (typeof nativeNotice.showModal === "function") nativeNotice.showModal();
+        else {
+          nativeNotice.setAttribute("open", "");
+          document.body.classList.add("astro-entry-notice-open");
+        }
+      }
       return;
     }
     // The native homepage warning is only the homepage's notice. For a direct
@@ -389,7 +428,6 @@
     // Do not reuse an open native home dialog: it can retain stale page handlers
     // and make a later authorized route appear to have two stacked acknowledgements.
     if (nativeNotice && nativeNotice.open) nativeNotice.close();
-    if (isAcknowledged(page.id || pageId, page.version, registry.notice_version)) return;
     var dialog = buildDialog(Object.assign({ id: pageId }, page), registry.global_notice, registry.notice_version);
     if (typeof dialog.showModal === "function") dialog.showModal();
     else {
