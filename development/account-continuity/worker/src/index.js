@@ -9,7 +9,7 @@ import { decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
 import { supporterStatusResponse } from "./supporters.js";
 import { handleGenesisWalletApi } from "./genesis.js";
-import { issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge } from "./wallet-auth.js";
+import { issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge, isQualifiedAccountRuntime, isLoopbackDevelopmentOrigin } from "./wallet-auth.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -1995,7 +1995,7 @@ async function diagnostics() {
     note: "SimpleWebAuthn offers ML-DSA-44 first when the runtime supports verification. A real authenticator must register a credential whose stored COSE alg is -48 and later complete a valid assertion before that account is counted as post-quantum.",
   };
 }
-async function status(db, request, env) {
+async function status(db, request, env, config) {
   let account = await activeAccount(db, request);
   const clearLegacySession = isSupersededPasskeySession(env, account);
   if (account && !clearLegacySession) return json(200, await summary(db, account));
@@ -2012,9 +2012,8 @@ async function status(db, request, env) {
     authenticated: false, avatarId: "person", role: "user", adminRoleAssigned: false,
     adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
     admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
-    passkeyAvailable: env?.ENVIRONMENT === "local",
-    walletAuthenticationAvailable: env?.ENVIRONMENT === "local" ||
-      (env?.ENVIRONMENT === "staging" && typeof env?.RATE_LIMIT_HMAC_KEY === "string" && env.RATE_LIMIT_HMAC_KEY.length >= 32),
+    passkeyAvailable: env?.ENVIRONMENT === "local" && isLoopbackDevelopmentOrigin(config?.origin) && new URL(request.url).origin === config.origin,
+    walletAuthenticationAvailable: isQualifiedAccountRuntime(env, config, request),
     walletAuthenticationNetworks: ["ethereum", "tron", "solana"],
     emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
@@ -2041,6 +2040,11 @@ async function communications(db, request) {
 async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
+  const accountApiPath = url.pathname.startsWith("/api/account/") ||
+    url.pathname.startsWith("/api/admin/") || url.pathname.startsWith("/api/wallet-auth/");
+  if (accountApiPath && !isQualifiedAccountRuntime(env, config, request)) {
+    return json(404, { error: "The account service is not enabled for this runtime or request origin." });
+  }
   // A passkey-authenticated session from the superseded account model must
   // not survive into the wallet-primary staging release. Wallet-created
   // sessions deliberately store authenticated_credential_id as NULL.
@@ -2072,7 +2076,7 @@ async function api(request, env, config) {
   if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
-  if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request, env);
+  if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request, env, config);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
   if (url.pathname === "/api/admin/wallet-options" && request.method === "GET") return adminWalletOptions(db, request);
