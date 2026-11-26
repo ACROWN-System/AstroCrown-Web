@@ -67,6 +67,7 @@ assert.match(homepage, /no live services connected/i);
 assert.match(homepage, /You are viewing an unfinished development preview/i);
 assert.match(homepage, /var workerStagingMode = false;/);
 assert.match(homepage, /name="astro-page-id" content="home"/);
+assert.match(homepage, /Log In\/Sign Up/);
 assert.match(homepage, /page-entry\/page-entry-notice\.js/);
 assert.match(supporterPage, /name="astro-page-id" content="genesis"/);
 assert.match(supporterPage, /page-entry\/page-entry-notice\.js/);
