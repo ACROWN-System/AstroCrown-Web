@@ -159,7 +159,7 @@ async function issueChallenge(db, env, request, payload, config, intent) {
   const now = Math.floor(Date.now() / 1000);
   const expires = now + CHALLENGE_SECONDS;
   const challengeId = "wac_" + base64url(randomBytes(18));
-  const nonce = base64url(randomBytes(18));
+  const nonce = hex(randomBytes(18));
   const issuedAt = new Date(now * 1000).toISOString();
   const expiresAt = new Date(expires * 1000).toISOString();
   const message = createPrimaryWalletMessage({
@@ -331,13 +331,23 @@ async function verifyLogin(db, env, request, payload, config) {
     transactionAuthorized: false,
   }, { "Set-Cookie": sessionCookie(session.token, config.origin) });
 }
+function assertWalletAuthEnvironment(env) {
+  if (!env || !["local", "staging"].includes(env.ENVIRONMENT)) {
+    throw fail(404, "Primary-wallet account authentication is not enabled in this environment.");
+  }
+}
 export async function issuePrimaryWalletChallenge(db, env, request, payload, config) {
+  assertWalletAuthEnvironment(env);
   if (!db) throw fail(503, "The account database is not bound.");
+  if (!payload || !["register", "login"].includes(payload.intent)) {
+    throw fail(400, "Choose primary-wallet registration or sign-in.");
+  }
   return issueChallenge(db, env, request, payload, config, payload.intent);
 }
 export async function verifyPrimaryWalletChallenge(db, env, request, payload, config) {
+  assertWalletAuthEnvironment(env);
   if (!db) throw fail(503, "The account database is not bound.");
-  if (payload.intent === "register") return verifyRegistration(db, env, request, payload, config);
-  if (payload.intent === "login") return verifyLogin(db, env, request, payload, config);
+  if (payload?.intent === "register") return verifyRegistration(db, env, request, payload, config);
+  if (payload?.intent === "login") return verifyLogin(db, env, request, payload, config);
   throw fail(400, "Choose primary-wallet registration or sign-in.");
 }
