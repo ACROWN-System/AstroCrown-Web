@@ -36,6 +36,8 @@
     window.location.protocol === "https:" && liveTestHost;
   var browserPreviewMode = forceBrowserDemo ||
     (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);
+  var walletPrimaryUiMode = (typeof workerStagingMode !== "undefined" && workerStagingMode) ||
+    browserPreviewMode || liveTestMode;
   // Built-in glyphs only: no user-uploaded image, remote URL or third-party asset.
   // The server independently validates the selected identifier.
   var avatarOptions = {
@@ -600,10 +602,10 @@
 
   function renderDevelopmentNotice() {
     if (browserPreviewMode) return "";
-    var noticeMode = liveTestMode ? "https-live-test" : "local-passkey-test";
-    var noticeText = liveTestMode
-      ? "TEMPORARY HTTPS LIVE TEST — Use only invented test details and a new passkey created for this temporary hostname. Never use production account data, personal recovery keys, wallet secrets or real assets. This is not a production service."
-      : "LOCAL PASSKEY TEST — WebAuthn is verified by this computer's local AstroCrown server. No email, SMS or external identity provider is used. Not production authentication.";
+    var noticeMode = walletPrimaryUiMode ? "wallet-primary-public-test" : "local-passkey-regression";
+    var noticeText = walletPrimaryUiMode
+      ? "ASTROCROWN LIVE PUBLIC TEST — Temporary public test environment. Public submissions may be visible to anyone on the internet. Use invented, non-identifying details. Never disclose personal information, production credentials, seed phrases, private keys or wallet recovery secrets. Only explicitly marked LIVE features are functional in their named environment."
+      : "LOCAL PASSKEY REGRESSION TEST ONLY — This local route preserves the superseded passkey prototype for historical automated regression work. It is not the active AstroCrown account sign-in design or a public account service.";
     return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' + noticeMode + '">' +
       noticeText + '</p>';
   }
@@ -614,12 +616,14 @@
         '<button class="account-primary" type="button" disabled>Sign in with wallet</button>' +
         '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
         '<div class="account-provider-note"><strong>Your sovereignty comes with sovereign responsibilities.</strong><br>Your primary wallet is the key to your AstroCrown identity. If you permanently lose access to it and its own recovery method, AstroCrown cannot restore or transfer your identity, badges or account history.</div>' +
+        '<p class="account-signin-help"><a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Test Terms &amp; Conditions</a> · <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Notice</a></p>' +
         '<p class="account-dialog-description">Wallet-only account creation and sign-in are approved for AstroCrown but are still being implemented and qualified. They are not enabled in this public test release.</p>' +
+        '<p class="account-signin-feedback">Need guidance? <a href="./privacy-transparency.html">Visit the AstroCrown Information Centre</a>. Direct feedback and private case services are not yet available in this public test.</p>' +
       '</div>';
   }
 
   function renderSignIn() {
-    if ((typeof workerStagingMode !== "undefined" && workerStagingMode) || browserPreviewMode) {
+    if (walletPrimaryUiMode) {
       renderWalletPrimaryStatus();
       return;
     }
@@ -635,7 +639,7 @@
   }
 
   function renderCreate() {
-    if ((typeof workerStagingMode !== "undefined" && workerStagingMode) || browserPreviewMode) {
+    if (walletPrimaryUiMode) {
       renderWalletPrimaryStatus();
       return;
     }
@@ -656,7 +660,7 @@
   }
 
   function renderRecover() {
-    if ((typeof workerStagingMode !== "undefined" && workerStagingMode) || browserPreviewMode) {
+    if (walletPrimaryUiMode) {
       content.innerHTML = renderDevelopmentNotice() +
         '<p class="account-dialog-description">AstroCrown cannot reset, replace or recover your primary wallet. Use the wallet provider’s own recovery process to restore the same wallet.</p>' +
         '<p class="account-provider-note">Never share your seed phrase, private key or wallet recovery secret with AstroCrown, NOVA, administrators, support staff or anyone else. Wallet-only account recovery is part of the approved design but is not yet enabled in this public test release.</p>' +
