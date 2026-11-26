@@ -1,5 +1,8 @@
 # Active Architecture Plan — Authentication Separation and Optional Wallet Access
 
+> **HISTORICAL OWNER-DECISION SNAPSHOT — SUPERSEDED (26 November 2026).** The 21 October 2026 decision recorded here separated ordinary account authentication from optional wallet access. The owner subsequently changed the ordinary account model to one wallet-primary identity per account, reaffirmed on 26 November 2026. This document preserves the earlier decision and its reasoning only; it is not current authority. See [the current primary identity architecture](../../account-continuity/PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md).
+
+
 **Date:** 2026-10-21  
 **Status:** ACTIVE — 2026-10-21 owner decision supersedes wallet-first proposal; ordinary account authentication is separate from optional wallet access; public/editor integration and deployment remain BLOCKED  
 **Repository:** `ACROWN-System/AstroCrown-Web`  

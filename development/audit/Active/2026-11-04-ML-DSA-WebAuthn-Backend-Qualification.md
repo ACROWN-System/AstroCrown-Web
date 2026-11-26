@@ -1,5 +1,8 @@
 # Active Navigation Plan — ML-DSA WebAuthn Backend Qualification
 
+> **HISTORICAL EXPERIMENT — RETIRED WEBAuthn / ML-DSA PROFILE (26 November 2026).** The experimental ML-DSA-WebAuthn code and tests described here belonged to the superseded passkey-first account prototype and have been removed from the active workspace. Results are retained as historical backend experiment evidence only. They do not qualify the current wallet-primary account, do not demonstrate browser/authenticator interoperability, and must not be represented as an active feature.
+
+
 **Date:** 2026-11-04  
 **Status:** **BACKEND ML-DSA SIGNATURE VERIFICATION QUALIFIED IN AUTOMATED TESTS; REAL BROWSER/AUTHENTICATOR INTEROPERABILITY BLOCKED / NOT TESTED**  
 **Repository:** `ACROWN-System/AstroCrown-Web`  

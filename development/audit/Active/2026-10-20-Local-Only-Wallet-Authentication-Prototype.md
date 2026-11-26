@@ -1,5 +1,8 @@
 # Active Navigation Plan — Optional Wallet Authentication Lab
 
+> **SUPERSEDED PROTOTYPE PLAN (26 November 2026).** This plan concerns a standalone SIWE wallet-capability lab that has been retired. AstroCrown's current ordinary account identity is wallet-primary within the single account Worker; do not recreate a second login lab from this record. See [the primary identity architecture](../../account-continuity/PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [Worker implementation status](../../account-continuity/worker/README.md).
+
+
 **Date:** 2026-10-21  
 **Status:** ACTIVE AS A TEST-ONLY WALLET-CAPABILITY LAB — this is not ordinary AstroCrown account authentication; exact-head checks must be rerun after this decision-alignment update; production integration remains BLOCKED  
 **Repository:** `ACROWN-System/AstroCrown-Web`  

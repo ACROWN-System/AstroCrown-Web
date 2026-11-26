@@ -1,5 +1,8 @@
 # AstroCrown Account System — Worker Feature-Parity Plan
 
+> **HISTORICAL FEATURE-PARITY BASELINE — PASSKEY-ERA (26 November 2026).** This plan was assessed against the earlier passkey-first local prototype. The account identity and recovery model has since changed to wallet-primary, and the current Worker has been advanced under PR #198. Reassess any still-open feature gaps against [current account requirements](../../account-continuity/USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md) and [current Worker status](../../account-continuity/worker/README.md); do not treat this dated plan's passkey/recovery statements as current requirements.
+
+
 **Review date:** 2026-11-06  
 **Status:** SCOPE RECORDED / CURRENT WORKER CORE QUALIFICATION PASSED / FULL ACCOUNT FEATURE PARITY NOT IMPLEMENTED / REMOTE STAGING NOT DEPLOYED  
 **Repository:** `ACROWN-System/AstroCrown-Web`  

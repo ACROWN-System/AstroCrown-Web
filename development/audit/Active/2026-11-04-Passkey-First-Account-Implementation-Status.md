@@ -1,5 +1,8 @@
 # Passkey-First Account Implementation Status and Release Boundary
 
+> **SUPERSEDED IMPLEMENTATION SNAPSHOT (26 November 2026).** This record describes the earlier passkey-first local prototype and its historical qualification. The owner changed the ordinary account model to wallet-primary; see [Primary Identity and Auxiliary Transaction Wallet Architecture](../../account-continuity/PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [current Worker status](../../account-continuity/worker/README.md). Its test results do not describe the current implementation or authorize any deployment.
+
+
 **Review date:** 2026-11-04  
 **Status:** LOCAL WORKER + D1 ACCOUNT QUALIFICATION PASSED / ML-DSA-44 BROWSER VIRTUAL-AUTHENTICATOR E2E PASSED / REMOTE HOSTING AND $0 ACCOUNT ELIGIBILITY NOT YET QUALIFIED / NOT PRODUCTION  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
