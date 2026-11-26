@@ -80,6 +80,8 @@ assert.ok(pageNoticeJs.includes("/privacy-transparency.html"));
 assert.match(pageNoticeJs, /globalNotice\.acknowledgement/);
 assert.match(pageNoticeCss, /astro-entry-notice/);
 assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v2");
+assert.match(featureStatus.global_notice.introduction, /Public submissions may be visible to anyone on the internet/);
+assert.ok(featureStatus.global_notice.rules.some(rule => /copy, save, screenshot, quote or redistribute/.test(rule)));
 assert.match(homepage, new RegExp(featureStatus.notice_version));
 assert.match(featureStatus.global_notice.acknowledgement, /I confirm that I have read and understood/);
 assert.ok(featureStatus.pages.home && featureStatus.pages.genesis && featureStatus.pages.account);
