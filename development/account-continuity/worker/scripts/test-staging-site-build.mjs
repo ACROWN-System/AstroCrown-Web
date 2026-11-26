@@ -61,8 +61,12 @@ test("Worker staging build publishes shared page-notice assets and injects the m
         assert.ok(feature.environment, feature.id + " must identify its LIVE environment");
       }
       if (feature.status === "DEVNET") {
-        assert.ok(feature.network && feature.faucet && /^https:\/\//.test(feature.faucet.url),
-          feature.id + " must identify its devnet and verified faucet URL");
+        assert.ok(feature.network && feature.network_id !== undefined && feature.test_asset,
+          feature.id + " must identify its exact devnet, network ID and test asset");
+        assert.ok(feature.faucet && (
+          (typeof feature.faucet.url === "string" && /^https:\/\//.test(feature.faucet.url)) ||
+          (typeof feature.faucet.address === "string" && feature.faucet.address.trim())
+        ), feature.id + " must provide a verified faucet URL or address");
       }
     }
   }
