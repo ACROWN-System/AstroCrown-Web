@@ -83,7 +83,11 @@ async function trustedClick(selector) {
     " const r = element.getBoundingClientRect();" +
     " const x=r.left+r.width/2,y=r.top+r.height/2,hit=document.elementFromPoint(x,y);" +
     " return {x,y,width:r.width,height:r.height,viewportWidth:innerWidth,viewportHeight:innerHeight," +
-    "hitTag:hit?.tagName||'',hitId:hit?.id||'',hitInside:!!hit&&(hit===element||element.contains(hit))}; })()"
+    "targetTag:element.tagName||'',targetId:element.id||'',targetClass:typeof element.className==='string'?element.className:''," +
+    "targetText:(element.textContent||'').trim().slice(0,120),targetHtml:element.outerHTML.slice(0,500)," +
+    "hitTag:hit?.tagName||'',hitId:hit?.id||'',hitClass:typeof hit?.className==='string'?hit.className:''," +
+    "hitText:(hit?.textContent||'').trim().slice(0,120),hitHtml:hit?.outerHTML?.slice(0,500)||'', " +
+    "hitInside:!!hit&&(hit===element||element.contains(hit))}; })()"
   );
   if (!point.width || !point.height || point.x < 0 || point.y < 0 ||
       point.x >= point.viewportWidth || point.y >= point.viewportHeight || !point.hitInside) {
