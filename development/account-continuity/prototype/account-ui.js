@@ -608,7 +608,21 @@
       noticeText + '</p>';
   }
 
+  function renderWalletPrimaryStatus() {
+    content.innerHTML = renderDevelopmentNotice() +
+      '<div class="account-form">' +
+        '<button class="account-primary" type="button" disabled>Sign in with wallet</button>' +
+        '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
+        '<div class="account-provider-note"><strong>Your sovereignty comes with sovereign responsibilities.</strong><br>Your primary wallet is the key to your AstroCrown identity. If you permanently lose access to it and its own recovery method, AstroCrown cannot restore or transfer your identity, badges or account history.</div>' +
+        '<p class="account-dialog-description">Wallet-only account creation and sign-in are approved for AstroCrown but are still being implemented and qualified. They are not enabled in this public test release.</p>' +
+      '</div>';
+  }
+
   function renderSignIn() {
+    if (workerStagingMode || browserPreviewMode) {
+      renderWalletPrimaryStatus();
+      return;
+    }
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
       '<div class="account-form">' +
         '<button class="account-primary" type="button" id="account-passkey-signin"' +
@@ -621,6 +635,10 @@
   }
 
   function renderCreate() {
+    if (workerStagingMode || browserPreviewMode) {
+      renderWalletPrimaryStatus();
+      return;
+    }
     content.innerHTML = renderTabs("create") + renderDevelopmentNotice() +
       '<p class="account-dialog-description">Create your account by registering a passkey. The private key stays with your authenticator.</p>' +
       '<form id="account-create-form" class="account-form" autocomplete="off">' +
@@ -638,6 +656,13 @@
   }
 
   function renderRecover() {
+    if (workerStagingMode || browserPreviewMode) {
+      content.innerHTML = renderDevelopmentNotice() +
+        '<p class="account-dialog-description">AstroCrown cannot reset, replace or recover your primary wallet. Use the wallet provider’s own recovery process to restore the same wallet.</p>' +
+        '<p class="account-provider-note">Never share your seed phrase, private key or wallet recovery secret with AstroCrown, NOVA, administrators, support staff or anyone else. Wallet-only account recovery is part of the approved design but is not yet enabled in this public test release.</p>' +
+        '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>';
+      return;
+    }
     content.innerHTML = renderDevelopmentNotice() +
       '<p class="account-dialog-description">Your offline recovery key is a one-time backup for regaining access if you lose your passkey. Enter your account identifier and the currently valid unused key you saved to register a replacement passkey.</p>' +
       '<form id="account-recovery-form" class="account-form" autocomplete="off">' +
