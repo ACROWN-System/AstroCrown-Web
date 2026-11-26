@@ -965,12 +965,12 @@
       var adminAccessDescription = adminSessionVerified
         ? "The server currently confirms a wallet-verified administrator session. Continue through the administrator access dialog to open the separate administrator dashboard."
         : adminWalletRecoveryRequired
-          ? "All previously enrolled administrator wallets are now inactive. Your ordinary passkey account and User dashboard remain available, but signing in with a passkey or connecting a new wallet cannot restore administrator access. A separate owner-authorized recovery review is required; this staging interface does not offer a self-service reset."
+          ? "All previously enrolled administrator wallets are now inactive. Your ordinary primary-wallet identity and User dashboard remain available, but signing in with a passkey or connecting a new wallet cannot restore administrator access. A separate owner-authorized recovery review is required; this staging interface does not offer a self-service reset."
           : walletCount > 0
             ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
               escapeHtml(String(walletCount)) +
               " registered administrator wallets, then review a one-time signature request. It is not a blockchain transaction."
-            : "This existing account has been granted the administrator role, but has not enrolled an administrator wallet yet. The user-selected backup wallet and administrator wallet remain separate purposes.";
+            : "This existing account has been granted the administrator role, but has not enrolled an administrator wallet yet. The primary identity wallet and administrator access wallet remain separate purposes.";
       adminCard =
         '<section class="account-dashboard-card account-admin-access-card">' +
           '<h2>Administrator access</h2>' +
