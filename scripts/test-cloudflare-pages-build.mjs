@@ -92,6 +92,8 @@ assert.match(pageNoticeJs, /astrocrown:admin-dashboard-visible/);
 assert.match(pageNoticeJs, /function bindNativeNoticeAcknowledgement/);
 assert.match(pageNoticeJs, /if \(dialog\.isConnected\) dialog\.remove\(\)/);
 assert.match(pageNoticeJs, /astrocrown:page-notice-acknowledged/);
+assert.match(pageNoticeJs, /rememberAcknowledgement\(page\.id, page\.version, globalVersion\)/);
+assert.doesNotMatch(pageNoticeJs.slice(pageNoticeJs.indexOf("function buildDialog"), pageNoticeJs.indexOf("function showPageNotice")), /registry\.notice_version/);
 assert.match(pageNoticeJs, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
 assert.match(pageNoticeJs, /continueButton\.disabled = acknowledgement\.checked !== true/);
 assert.match(pageNoticeJs, /noticeVersion: pageVersion/);
