@@ -213,16 +213,31 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
     )
   );
   const adminNoticeState = await waitFor("Admin page-entry notice readiness", async () =>
-    evaluate("(() => {const d=document.querySelector('.astro-entry-notice');" +
-      "if(d?.open && document.querySelector('.astro-entry-notice-ack input')) return 'open';" +
+    evaluate("(() => {" +
+      "const strip=document.querySelector('.astro-page-status-strip')?.textContent||'';" +
+      "if(!strip.includes('Administrator dashboard')) return null;" +
+      "const dynamic=document.querySelector('.astro-entry-notice');" +
+      "const native=document.getElementById('development-notice');" +
+      "if((dynamic?.open && dynamic.querySelector('.astro-entry-notice-ack input')) ||" +
+      "   (native?.open && native.querySelector('.development-notice-ack input'))) return 'open';" +
       "const saved=JSON.parse(localStorage.getItem('astro-page-notice:admin')||'null');" +
-      "return saved?.version==='2026-11-26-admin-v1' ? 'acknowledged' : null;})()")
+      "return saved?.version==='2026-11-26-admin-v1' && saved?.globalVersion==='2026-11-26-public-test-v4' ? 'acknowledged' : null;" +
+    "})()")
   );
   if (adminNoticeState === "open") {
-    await trustedClick(".astro-entry-notice-ack input");
-    await trustedClick(".astro-entry-notice-continue");
+    const acknowledgementSelector = await evaluate(
+      "document.querySelector('.astro-entry-notice[open] .astro-entry-notice-ack input') ? " +
+      "'.astro-entry-notice[open] .astro-entry-notice-ack input' : " +
+      "'#development-notice[open] .development-notice-ack input'"
+    );
+    const continueSelector = await evaluate(
+      "document.querySelector('.astro-entry-notice[open] .astro-entry-notice-continue') ? " +
+      "'.astro-entry-notice[open] .astro-entry-notice-continue' : '#development-notice[open] #development-notice-continue'"
+    );
+    await trustedClick(acknowledgementSelector);
+    await trustedClick(continueSelector);
     await waitFor("Admin page-entry notice acknowledgement", async () =>
-      evaluate("!document.querySelector('.astro-entry-notice[open]')")
+      evaluate("!document.querySelector('.astro-entry-notice[open]') && !document.querySelector('#development-notice[open]')")
     );
   }
   assert.equal(
