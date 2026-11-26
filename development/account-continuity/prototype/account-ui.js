@@ -525,9 +525,12 @@
         params: [adapters.encodeEvmPersonalSignMessage(challengeEvm.message), address]
       });
       var verifiedAccounts = await evm.request({ method: "eth_accounts" });
+      var verifiedChain = await evm.request({ method: "eth_chainId" });
       if (!Array.isArray(verifiedAccounts) || !verifiedAccounts.some(function (item) {
         return String(item).toLowerCase() === String(address).toLowerCase();
-      })) throw new Error("The active Ethereum account changed while signing. No account session was created.");
+      }) || String(verifiedChain).toLowerCase() !== "0x1") {
+        throw new Error("The active Ethereum account or network changed while signing. No account session was created.");
+      }
       var evmResult = await requestJson("/api/wallet-auth/verify", {
         intent: intent, challengeId: challengeEvm.challengeId, signature: signature
       });
@@ -743,7 +746,7 @@
   }
 
   function renderWalletPrimaryStatus() {
-    var enabled = workerStagingMode && accountState.walletAuthenticationAvailable !== false;
+    var enabled = typeof workerStagingMode !== "undefined" && workerStagingMode && accountState.walletAuthenticationAvailable !== false;
     var controls = mode === "create"
       ? '<form id="account-wallet-register-form" class="account-form" autocomplete="off">' +
           '<label class="account-field" for="account-wallet-network">Primary identity network' +
