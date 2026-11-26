@@ -38,6 +38,9 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /acknowledgement\.disabled = true/);
   assert.match(noticeScript, /acknowledgement\.disabled = false/);
   assert.match(noticeScript, /pageNoticeReady/);
+  assert.match(noticeScript, /function bindNativeNoticeAcknowledgement/);
+  assert.match(noticeScript, /if \(pageId === "home" \|\| \(nativeNotice && nativeNotice.open\)\)/);
+  assert.match(noticeScript, /noticeVersion: pageVersion/);
   assert.ok(noticeScript.includes("/account-continuity/prototype/privacy-policy.html"));
   assert.ok(noticeScript.includes("/privacy-transparency.html"));
   assert.match(noticeScript, /globalNotice\.acknowledgement/);
