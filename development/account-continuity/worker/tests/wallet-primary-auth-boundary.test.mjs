@@ -81,7 +81,7 @@ test("status revokes a legacy staging passkey session while keeping wallet regis
   const request = new Request("https://accounts.astrocrown.example/api/account/status", {
     headers: { Cookie: "acrown_account_session=legacy-session-token" },
   });
-  const response = await status(db, request, { ENVIRONMENT: "staging" });
+  const response = await status(db, request, { ENVIRONMENT: "staging", RATE_LIMIT_HMAC_KEY: "test-only-rate-limit-key-".repeat(3) });
   const body = await response.json();
   assert.equal(response.status, 200);
   assert.equal(body.authenticated, false);
