@@ -901,6 +901,49 @@
     var activeSessionCount = Math.max(1, Number(accountState.activeSessionCount || 1));
     var passkeyCount = Math.max(0, Number(accountState.passkeyCount || 0));
     var postQuantumPasskeyCount = Math.max(0, Number(accountState.postQuantumPasskeyCount || 0));
+    var walletIdentity = accountState.authMethod === "primary-wallet";
+    var primaryWallet = accountState.primaryWallet || {};
+    var walletNetworkLabel = primaryWallet.network === "ethereum" ? "Ethereum Mainnet"
+      : primaryWallet.network === "tron" ? "TRON Mainnet"
+      : primaryWallet.network === "solana" ? "Solana Mainnet" : "Unsupported or unavailable";
+    var securityCard = walletIdentity
+      ? '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' +
+          '<span class="account-dashboard-status">Primary wallet identity</span>' +
+          '<p class="account-dashboard-value">' + escapeHtml(walletNetworkLabel) + '</p>' +
+          '<p class="account-dashboard-value">Primary address: ' + escapeHtml(primaryWallet.address || "Unavailable") + '</p>' +
+          '<p>This wallet is the sole identity and account sign-in anchor. Its ownership was verified by an origin-bound off-chain message signature. No blockchain transaction, token approval, asset transfer or gas payment was made.</p>' +
+          '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
+          '<p>Auxiliary transaction wallets, when introduced, will remain separate from account identity and cannot sign in or recover this account.</p>' +
+          '<a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Read wallet identity assurance</a></section>'
+      : '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' +
+          '<span class="account-dashboard-status">WebAuthn passkey authentication</span>' +
+          '<p class="account-dashboard-value">Registered passkeys: ' + String(passkeyCount) + '</p>' +
+          '<p class="account-dashboard-value">Post-quantum ML-DSA passkeys: ' + String(postQuantumPasskeyCount) + '</p>' +
+          '<p>' + (postQuantumPasskeyCount > 0
+            ? 'At least one active credential is recorded with an ML-DSA public-key algorithm. This confirms the credential type stored by this local prototype; it is not FIDO certification or a complete post-quantum security claim.'
+            : 'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.') + '</p>' +
+          '<p>The authenticator keeps your private key. AstroCrown verifies a fresh challenge using the registered public credential. No email, password, SMS or external identity provider is used for this account sign-in.</p>' +
+          '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
+          (accountState.securityManagementAvailable === true
+            ? '<p>Manage registered passkeys, sign-in sessions and the offline recovery key. Sensitive changes require a fresh passkey verification.</p><button class="account-primary" type="button" id="account-security-manage">Manage account security</button><div id="account-security-panel" class="account-security-panel" hidden></div>'
+            : '<p>Detailed passkey and session management is not available in this account backend yet. Do not rely on this prototype for real assets.</p>') +
+          '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+          '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>';
+    var transactionWalletCard = walletIdentity
+      ? '<section class="account-dashboard-card"><h2>Transaction wallets</h2><p class="account-dashboard-value">Separate from primary identity</p><p>Additional transaction-wallet connections are not enabled in this release. When implemented, each wallet will require its own ownership proof and will not be able to sign in, recover or replace your primary identity.</p></section>'
+      : '<section class="account-dashboard-card"><h2>Optional wallet backup</h2><p class="account-dashboard-value">Not required</p><p>A user-controlled wallet may be enrolled as an additional authenticator in a later implementation. Ordinary account access does not require a wallet, balance, deposit or blockchain transaction.</p></section>';
+    var accountRecoveryCard = walletIdentity
+      ? '<section class="account-dashboard-card"><h2>Account recovery</h2><p class="account-dashboard-value">Primary wallet provider recovery only</p><p>Restore access to the same primary wallet through its own provider recovery process. AstroCrown cannot reset, replace, transfer or recover the wallet or move the identity, badges or account history to a different address. Never share a seed phrase or private key.</p></section>'
+      : '<section class="account-dashboard-card"><h2>Account recovery</h2>' +
+          '<p class="account-dashboard-value">' + (accountState.recoveryKeyAvailable === true ? 'One-time offline recovery key is active' : 'No active recovery key is registered') + '</p>' +
+          '<p>Your recovery key is displayed only when first issued or replaced after recovery. AstroCrown stores only a salted one-way verifier. Keep the key and account identifier offline; loss of all passkeys and the key can mean permanent account loss.</p>' +
+          '</section>';
+    var dashboardNotice = walletIdentity
+      ? '<div class="account-dashboard-notice"><strong>AstroCrown User dashboard.</strong> This is the shared member workspace for ordinary members and administrators. Your primary wallet authenticates this ordinary account; administrator authority remains separately assigned by the system and separately verified with an enrolled administrator wallet. The wider service catalogue and transaction workflows are not enabled in this staging qualification.</div>'
+      : '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype tests account access and settings only. Transactions and the wider service catalog are not enabled. The passkey and recovery-key implementation remains a development prototype, not production authentication.</div>';
+    var authenticationLabel = walletIdentity
+      ? 'Signed in with primary wallet · ' + walletNetworkLabel
+      : 'Signed in with passkey · local development account';
     var communicationCounts = accountState.communicationsUnreadCounts || {};
     var unreadCommunicationCount = Math.max(0, Number(communicationCounts.alerts || 0)) +
       Math.max(0, Number(communicationCounts.messages || 0));
@@ -953,42 +996,26 @@
         '</section>';
     }
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype tests account access and settings only. Transactions and the wider service catalog are not enabled. The passkey and recovery-key implementation remains a development prototype, not production authentication.</div>' +
+      dashboardNotice +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
         '</div>' +
-        '<div class="account-dashboard-welcome-copy"><strong>' + identifier + '</strong><span>Signed in with passkey · local development account</span></div>' +
+        '<div class="account-dashboard-welcome-copy"><strong>' + identifier + '</strong><span>' + escapeHtml(authenticationLabel) + '</span></div>' +
       '</div>' +
       '<div class="account-dashboard-grid">' +
         '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">' + String(unreadCommunicationCount) + ' pending</p><p>Important account alerts and private in-app messages are kept in one place, with separate sections and acknowledgement/read status.</p><button class="account-primary" type="button" id="open-account-communications">Open communications</button></section>' +
         '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and transactions belong to this User dashboard and remain subject to the same member rules for every account.</p><p>Transaction workflows and other service modules are not enabled in this account prototype.</p></section>' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' +
-          '<span class="account-dashboard-status">WebAuthn passkey authentication</span>' +
-          '<p class="account-dashboard-value">Registered passkeys: ' + String(passkeyCount) + '</p>' +
-          '<p class="account-dashboard-value">Post-quantum ML-DSA passkeys: ' + String(postQuantumPasskeyCount) + '</p>' +
-          '<p>' + (postQuantumPasskeyCount > 0
-            ? 'At least one active credential is recorded with an ML-DSA public-key algorithm. This confirms the credential type stored by this local prototype; it is not FIDO certification or a complete post-quantum security claim.'
-            : 'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.') + '</p>' +
-          '<p>The authenticator keeps your private key. AstroCrown verifies a fresh challenge using the registered public credential. No email, password, SMS or external identity provider is used for this account sign-in.</p>' +
-          '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
-          (accountState.securityManagementAvailable === true
-            ? '<p>Manage registered passkeys, sign-in sessions and the offline recovery key. Sensitive changes require a fresh passkey verification.</p><button class="account-primary" type="button" id="account-security-manage">Manage account security</button><div id="account-security-panel" class="account-security-panel" hidden></div>'
-            : '<p>Detailed passkey and session management is not available in this account backend yet. Do not rely on this prototype for real assets.</p>') +
-          '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
-          '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
-        '<section class="account-dashboard-card"><h2>Optional wallet backup</h2><p class="account-dashboard-value">Not required</p><p>A user-controlled wallet may be enrolled as an additional authenticator in a later implementation. Ordinary account access does not require a wallet, balance, deposit or blockchain transaction.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Account recovery</h2>' +
-          '<p class="account-dashboard-value">' + (accountState.recoveryKeyAvailable === true ? 'One-time offline recovery key is active' : 'No active recovery key is registered') + '</p>' +
-          '<p>Your recovery key is displayed only when first issued or replaced after recovery. AstroCrown stores only a salted one-way verifier. Keep the key and account identifier offline; loss of all passkeys and the key can mean permanent account loss.</p>' +
-          '</section>' +
+        securityCard +
+        transactionWalletCard +
+        accountRecoveryCard +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
         '<section class="account-dashboard-card"><h2>Account data</h2><p>Email address and phone number are not collected for account authentication. Terms acceptance is recorded by the local test backend.</p></section>' +
         '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
         adminCard +
       '</div>' +
-      '<div class="account-dashboard-actions"><p>Administrator functions remain separately gated. Your account passkey does not itself grant administrator privileges.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
+      '<div class="account-dashboard-actions"><p>Administrator functions remain separately gated. Your ordinary primary identity does not itself grant administrator privileges.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
     if (pendingAdminWalletMessage) {
       var walletNotice = document.createElement("p");
       walletNotice.className = "account-dashboard-notice";
