@@ -40,6 +40,18 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(accountUi, /Why wallet\?/);
   assert.match(accountUi, /typeof workerStagingMode/);
   assert.match(noticeScript, /Before you continue/);
+  assert.match(noticeScript, /async function isAcknowledged/);
+  assert.match(noticeScript, /if \(isWorkerStagingRuntime\(\)\)/);
+  assert.match(noticeScript, /\/api\/staging\/acknowledgement-status\?pageId=/);
+  assert.match(noticeScript, /\/api\/account\/acknowledgement-status/);
+  assert.match(noticeScript, /\/api\/genesis\/acknowledgement-status/);
+  assert.match(noticeScript, /\/api\/admin\/acknowledgement-status/);
+  assert.match(noticeScript, /noticeRequestGeneration/);
+  assert.match(noticeScript, /if \(nativeNotice && !nativeNotice\.open\)/);
+  assert.match(workerSource, /function pageAcknowledgementStatus/);
+  assert.match(workerSource, /\/api\/account\/acknowledgement-status/);
+  assert.match(workerSource, /\/api\/genesis\/acknowledgement-status/);
+  assert.match(workerSource, /\/api\/admin\/acknowledgement-status/);
   assert.match(noticeScript, /acknowledgement\.disabled = true/);
   assert.match(noticeScript, /acknowledgement\.disabled = false/);
   assert.match(noticeScript, /pageNoticeReady/);
