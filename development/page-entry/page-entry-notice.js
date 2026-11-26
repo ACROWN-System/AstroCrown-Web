@@ -24,7 +24,15 @@
   }
 
   function currentPageId(defaultId) {
-    return PAGE_HASHES[window.location.hash.toLowerCase()] || defaultId;
+    var hash = window.location.hash.toLowerCase();
+    if (hash === "#admin") {
+      var adminDashboard = document.getElementById("admin-dashboard");
+      // The SPA may temporarily visit #admin while checking an unauthorized
+      // route and immediately return to the User dashboard. Do not show an
+      // Admin-page notice until the authorized Admin workspace is actually visible.
+      return adminDashboard && !adminDashboard.hidden ? "admin" : "account";
+    }
+    return PAGE_HASHES[hash] || defaultId;
   }
 
   function isAcknowledged(pageId, version, globalVersion) {
