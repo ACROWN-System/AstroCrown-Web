@@ -225,7 +225,7 @@ async function testAdminWalletDashboardUi(rootAccount, secondWalletAccount) {
       "if((dynamic?.open && dynamic.querySelector('.astro-entry-notice-ack input')) ||" +
       "   (native?.open && native.querySelector('.development-notice-ack input'))) return 'open';" +
       "const saved=JSON.parse(localStorage.getItem('astro-page-notice:admin')||'null');" +
-      "return saved?.version==='2026-11-26-admin-v1' && saved?.globalVersion==='2026-11-26-public-test-v4' ? 'acknowledged' : null;" +
+      "return saved?.version==='2026-11-26-admin-v2' && saved?.globalVersion==='2026-11-26-public-test-v5' ? 'acknowledged' : null;" +
     "})()")
   );
   if (adminNoticeState === "open") {
@@ -1007,7 +1007,7 @@ try {
       "const dialog=document.querySelector('.astro-entry-notice[open]');" +
       "if(dialog?.dataset.pageNoticePageId==='account' && dialog.querySelector('.astro-entry-notice-ack input')) return 'open';" +
       "const saved=JSON.parse(localStorage.getItem('astro-page-notice:account')||'null');" +
-      "return saved?.version==='2026-11-26-account-v1' && saved?.globalVersion==='2026-11-26-public-test-v4' ? 'acknowledged' : null;" +
+      "return saved?.version==='2026-11-26-account-v2' && saved?.globalVersion==='2026-11-26-public-test-v5' ? 'acknowledged' : null;" +
     "})()")
   );
   if (accountNoticeState === "open") {
