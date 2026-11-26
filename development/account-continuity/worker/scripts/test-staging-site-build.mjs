@@ -10,6 +10,42 @@ async function readPublic(path) {
   return readFile(resolve(publicRoot, path), "utf8");
 }
 
+test("Worker staging build publishes shared page-notice assets and injects the mandatory Genesis page gate", async () => {
+  const homepage = await readPublic("index.html");
+  const genesis = await readPublic("supporters/index.html");
+  const noticeScript = await readPublic("page-entry/page-entry-notice.js");
+  const noticeCss = await readPublic("page-entry/page-entry-notice.css");
+  const registry = JSON.parse(await readPublic("page-entry/feature-status.json"));
+
+  assert.match(homepage, /name="astro-page-id" content="home"/);
+  assert.match(homepage, /page-entry\/page-entry-notice\.js/);
+  assert.match(homepage, /LIVE PUBLIC TEST ENVIRONMENT/);
+  assert.match(genesis, /name="astro-page-id" content="genesis"/);
+  assert.match(genesis, /page-entry\/page-entry-notice\.js/);
+  assert.match(noticeScript, /Before you continue/);
+  assert.match(noticeScript, /I confirm that I have read and understood/);
+  assert.match(noticeScript, /\/api\/staging\/page-acknowledge/);
+  assert.match(noticeCss, /astro-entry-notice/);
+
+  assert.equal(registry.notice_version, "2026-11-26-public-test-v2");
+  for (const [pageId, page] of Object.entries(registry.pages)) {
+    assert.ok(page.version, pageId + " must have a notice version");
+    assert.ok(page.title, pageId + " must have a title");
+    assert.ok(page.delivery && ["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(page.delivery.status));
+    assert.ok(Array.isArray(page.features) && page.features.length > 0);
+    for (const feature of page.features) {
+      assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(feature.status));
+      if (feature.status === "LIVE · STAGING" || feature.status === "LIVE · MAINNET") {
+        assert.ok(feature.environment, feature.id + " must identify its LIVE environment");
+      }
+      if (feature.status === "DEVNET") {
+        assert.ok(feature.network && feature.faucet && /^https:\/\//.test(feature.faucet.url),
+          feature.id + " must identify its devnet and verified faucet URL");
+      }
+    }
+  }
+});
+
 test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
