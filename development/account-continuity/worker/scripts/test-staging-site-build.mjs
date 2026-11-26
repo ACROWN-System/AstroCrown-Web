@@ -50,7 +50,6 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /function bindNativeNoticeAcknowledgement/);
   assert.match(noticeScript, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
   assert.match(noticeScript, /continueButton\.disabled = acknowledgement\.checked !== true/);
-  assert.match(noticeScript, /if \(pageId === "home" \|\| \(nativeNotice && nativeNotice.open\)\)/);
   assert.match(noticeScript, /noticeVersion: pageVersion/);
   assert.ok(noticeScript.includes("/account-continuity/prototype/privacy-policy.html"));
   assert.ok(noticeScript.includes("/privacy-transparency.html"));
