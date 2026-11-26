@@ -5,6 +5,7 @@ import { issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge, isQualifiedA
 import { createDefaultMemberName, normalizeMemberName } from "./member-name.js";
 
 const SESSION_COOKIE = "acrown_account_session";
+const ADMIN_CHALLENGE_SECONDS = 300;
 const MAX_BODY_BYTES = 65536;
 const STAGING_NOTICE_VERSION = "2026-11-26-public-test-v5";
 const STAGING_ACK_COOKIE = "acrown_staging_notice_ack";
@@ -66,6 +67,12 @@ function equalConstantTime(a, b) {
   const n = Math.max(a.length, b.length);
   for (let i = 0; i < n; i += 1) diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
   return diff === 0;
+}
+function accountId(value) {
+  if (typeof value !== "string") throw fail(400, "Enter the AstroCrown account identifier shown after registration.");
+  const candidate = value.trim().toUpperCase();
+  if (!/^AC-[A-F0-9]{10}$/.test(candidate)) throw fail(400, "Enter the AstroCrown account identifier shown after registration.");
+  return candidate;
 }
 function cookie(request, name) {
   const all = request.headers.get("Cookie") || "";
@@ -269,7 +276,9 @@ async function activeAccount(db, request) {
   const now = Math.floor(Date.now() / 1000);
   const row = await db.prepare(
     "SELECT a.*, s.expires_at, s.admin_wallet_address, s.admin_authenticated_at, s.admin_expires_at " +
-    "FROM auth_sessions s JOIN auth_accounts a ON a.account_id = s.account_id WHERE s.token_hash = ? AND s.expires_at > ?"
+    "FROM auth_sessions s JOIN auth_accounts a ON a.account_id = s.account_id " +
+    "WHERE s.token_hash = ? AND s.expires_at > ? " +
+    "AND EXISTS(SELECT 1 FROM auth_primary_wallets w WHERE w.account_id = a.account_id AND w.active = 1)"
   ).bind(tokenHash, now).first();
   if (!row) await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
   return row || null;
@@ -559,7 +568,7 @@ async function issueAdminWalletEnrollmentChallenge(db, env, request, payload, co
   if (!token) throw fail(401, "The ordinary account session is no longer active.");
   const sessionHash = await hashText(token);
   const now = Math.floor(Date.now() / 1000);
-  const expires = now + CHALLENGE_SECONDS;
+  const expires = now + ADMIN_CHALLENGE_SECONDS;
   const challengeId = b64u(bytes(24));
   const nonce = hex(bytes(16));
   const issuedAt = new Date(now * 1000).toISOString();
@@ -724,7 +733,7 @@ async function issueAdminWalletChallenge(db, env, request, payload, config) {
   if (!token) throw fail(401, "The ordinary account session is no longer active.");
   const sessionHash = await hashText(token);
   const now = Math.floor(Date.now() / 1000);
-  const expires = now + CHALLENGE_SECONDS;
+  const expires = now + ADMIN_CHALLENGE_SECONDS;
   const challengeId = b64u(bytes(24));
   const nonce = hex(bytes(16));
   const issuedAt = new Date(now * 1000).toISOString();
