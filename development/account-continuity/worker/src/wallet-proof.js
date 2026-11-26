@@ -153,3 +153,5 @@ export async function verifyWalletSignature(challenge, signature) {
   }
   return false;
 }
+
+export { base58Encode };
