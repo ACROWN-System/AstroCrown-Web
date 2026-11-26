@@ -38,7 +38,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /\/api\/staging\/page-acknowledge/);
   assert.match(noticeCss, /astro-entry-notice/);
 
-  assert.equal(registry.notice_version, "2026-11-26-public-test-v2");
+  assert.equal(registry.notice_version, "2026-11-26-public-test-v3");
   assert.match(workerSource, new RegExp('const STAGING_NOTICE_VERSION = "' + registry.notice_version + '"'));
   for (const pageId of ["genesis", "account", "admin"]) {
     assert.match(workerSource, new RegExp('version: "' + registry.pages[pageId].version + '"'));
