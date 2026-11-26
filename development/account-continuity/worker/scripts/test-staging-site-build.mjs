@@ -21,6 +21,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   const accountUi = await readPublic("account-continuity/prototype/account-ui.js");
 
   assert.match(homepage, /name="astro-page-id" content="home"/);
+  assert.match(homepage, /id="development-notice-acknowledged" type="checkbox" disabled/);
   assert.match(homepage, /Log In\/Sign Up/);
   assert.match(homepage, /page-entry\/page-entry-notice\.js/);
   assert.match(homepage, /LIVE PUBLIC TEST ENVIRONMENT/);
@@ -33,6 +34,9 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(accountUi, /Why wallet\?/);
   assert.match(accountUi, /typeof workerStagingMode/);
   assert.match(noticeScript, /Before you continue/);
+  assert.match(noticeScript, /acknowledgement\.disabled = true/);
+  assert.match(noticeScript, /acknowledgement\.disabled = false/);
+  assert.match(noticeScript, /pageNoticeReady/);
   assert.ok(noticeScript.includes("/account-continuity/prototype/privacy-policy.html"));
   assert.ok(noticeScript.includes("/privacy-transparency.html"));
   assert.match(noticeScript, /globalNotice\.acknowledgement/);
