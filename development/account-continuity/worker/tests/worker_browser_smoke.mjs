@@ -996,6 +996,23 @@ try {
   await waitFor("authenticated root reload resumes at User dashboard", () =>
     evaluate("window.location.hash === '#account' && !document.getElementById('account-dashboard').hidden && !document.getElementById('account-dialog')?.open"), 30000);
 
+  const accountNoticeState = await waitFor("Account page-entry notice readiness", async () =>
+    evaluate("(() => {" +
+      "const strip=document.querySelector('.astro-page-status-strip')?.textContent||'';" +
+      "if(!strip.includes('AstroCrown account')) return null;" +
+      "const dialog=document.querySelector('.astro-entry-notice[open]');" +
+      "if(dialog?.dataset.pageNoticePageId==='account' && dialog.querySelector('.astro-entry-notice-ack input')) return 'open';" +
+      "const saved=JSON.parse(localStorage.getItem('astro-page-notice:account')||'null');" +
+      "return saved?.version==='2026-11-26-account-v1' && saved?.globalVersion==='2026-11-26-public-test-v4' ? 'acknowledged' : null;" +
+    "})()")
+  );
+  if (accountNoticeState === "open") {
+    await trustedClick(".astro-entry-notice[open] .astro-entry-notice-ack input");
+    await trustedClick(".astro-entry-notice[open] .astro-entry-notice-continue");
+    await waitFor("Account page-entry notice acknowledgement", async () =>
+      evaluate("!document.querySelector('.astro-entry-notice[open]')")
+    );
+  }
   const stagingDashboard = await evaluate("document.getElementById('account-dashboard').innerText");
   assert.match(stagingDashboard, /Alerts & Messages[\s\S]*Disabled in this staging qualification/);
   assert.equal(await evaluate("Boolean(document.getElementById('open-account-communications'))"), false,
