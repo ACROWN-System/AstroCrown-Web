@@ -31,6 +31,27 @@ function replaceExactlyOnce(source, search, replacement, description) {
   }
   return source.slice(0, first) + replacement + source.slice(first + search.length);
 }
+function injectPageEntryNotice(html, pageId) {
+  if (!html.includes('name="astro-page-id"')) {
+    html = replaceExactlyOnce(
+      html,
+      "</head>",
+      '  <meta name="astro-page-id" content="' + pageId + '">' + String.fromCharCode(10) +
+      '  <link rel="stylesheet" href="/page-entry/page-entry-notice.css">' + String.fromCharCode(10) +
+      "</head>",
+      "page entry notice metadata and stylesheet",
+    );
+  }
+  if (!html.includes('/page-entry/page-entry-notice.js')) {
+    html = replaceExactlyOnce(
+      html,
+      "</body>",
+      '  <script src="/page-entry/page-entry-notice.js" defer></script>' + String.fromCharCode(10) + "</body>",
+      "page entry notice script",
+    );
+  }
+  return html;
+}
 
 fs.rmSync(DIST, { recursive: true, force: true });
 fs.mkdirSync(DIST, { recursive: true });
@@ -65,10 +86,14 @@ const accountPreviewGuard = [
   '</style>'
 ].join("\n");
 homepage = replaceExactlyOnce(homepage, "</head>", accountPreviewGuard + "\n</head>", "homepage preview guard");
+homepage = injectPageEntryNotice(homepage, "home");
 write("index.html", homepage);
 
-// Copy only the three account assets referenced by the homepage. Force the
+// Copy only the explicitly allowlisted account and status-notice assets. Force the
 // account UI into its in-memory, unauthenticated, read-only hosted demo mode.
+copy("development/page-entry/page-entry-notice.css", "page-entry/page-entry-notice.css");
+copy("development/page-entry/page-entry-notice.js", "page-entry/page-entry-notice.js");
+copy("development/page-entry/feature-status.json", "page-entry/feature-status.json");
 copy("development/account-continuity/prototype/account-prototype.css", "account-continuity/prototype/account-prototype.css");
 let accountJs = read("development/account-continuity/prototype/account-ui.js");
 accountJs = replaceExactlyOnce(
@@ -88,8 +113,8 @@ copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-con
 // Self-contained education and Genesis Programme previews. Its wallet JS
 // permits only user-initiated off-chain ownership messages when the separate
 // Genesis Worker is present; no transaction or payment method is called.
-write("privacy-transparency.html", read("preview/privacy-transparency.html"));
-write("supporters/index.html", read("preview/supporters/index.html"));
+write("privacy-transparency.html", injectPageEntryNotice(read("preview/privacy-transparency.html"), "legal"));
+write("supporters/index.html", injectPageEntryNotice(read("preview/supporters/index.html"), "genesis"));
 copy("preview/supporters/supporters.js", "supporters/supporters.js");
 // Required local dependency of the Genesis browser module. It is an allowlisted
 // provider adapter only; no network transfer or payment method is invoked here.
