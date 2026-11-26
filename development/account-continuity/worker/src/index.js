@@ -1306,6 +1306,7 @@ export {
   status,
   PAGE_ACK_CONFIG,
   b64u as base64url,
+  accountId as validateAccountIdentifier,
   equalConstantTime,
   validateAdminReason,
   validateAdminPermissions,
