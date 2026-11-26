@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createPageAcknowledgement,
+  createStagingAcknowledgement,
   hasPageAcknowledgement,
+  pageAcknowledgementStatus,
 } from "../src/index.js";
 
 const env = {
@@ -70,6 +72,48 @@ test("page acknowledgement rejects missing, altered, wrong-page and expired evid
     headers: { Cookie: name + "=" + expired },
   });
   assert.equal(await hasPageAcknowledgement(expiredRequest, env, "account"), false);
+});
+
+test("the acknowledgement status endpoint verifies HttpOnly server cookies rather than browser storage", async () => {
+  const url = "https://astrocrown.example/api/staging/acknowledgement-status?pageId=account";
+  const missing = await pageAcknowledgementStatus(new Request(url), env, "account");
+  const missingResult = await missing.json();
+  assert.equal(missingResult.acknowledged, false);
+  assert.equal(missingResult.globalAcknowledged, false);
+  assert.equal(missingResult.pageAcknowledged, false);
+
+  const globalResponse = await createStagingAcknowledgement(env, {
+    noticeVersion: "2026-11-26-public-test-v5",
+  }, config);
+  const globalCookie = globalResponse.headers.get("Set-Cookie").split(";")[0];
+  const globalOnly = await pageAcknowledgementStatus(new Request(url, {
+    headers: { Cookie: globalCookie },
+  }), env, "account");
+  const globalOnlyResult = await globalOnly.json();
+  assert.equal(globalOnlyResult.globalAcknowledged, true);
+  assert.equal(globalOnlyResult.pageAcknowledged, false);
+  assert.equal(globalOnlyResult.acknowledged, false);
+
+  const pageResponse = await createPageAcknowledgement(env, {
+    pageId: "account",
+    noticeVersion: "2026-11-26-account-v3",
+  }, config);
+  const pageCookie = pageResponse.headers.get("Set-Cookie").split(";")[0];
+  const both = await pageAcknowledgementStatus(new Request(url, {
+    headers: { Cookie: globalCookie + "; " + pageCookie },
+  }), env, "account");
+  const bothResult = await both.json();
+  assert.equal(bothResult.acknowledged, true);
+  assert.equal(bothResult.globalVersion, "2026-11-26-public-test-v5");
+  assert.equal(bothResult.pageVersion, "2026-11-26-account-v3");
+
+  const home = await pageAcknowledgementStatus(new Request(
+    "https://astrocrown.example/api/staging/acknowledgement-status?pageId=home",
+    { headers: { Cookie: globalCookie } }
+  ), env, "home");
+  const homeResult = await home.json();
+  assert.equal(homeResult.acknowledged, true);
+  assert.equal(homeResult.pageVersion, null);
 });
 
 test("unknown page IDs and stale notice versions fail closed", async () => {
