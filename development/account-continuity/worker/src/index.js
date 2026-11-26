@@ -14,9 +14,15 @@ const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
 const CHALLENGE_SECONDS = 300;
 const MAX_BODY_BYTES = 65536;
-const STAGING_NOTICE_VERSION = "2026-11-08-public-test-v1";
+const STAGING_NOTICE_VERSION = "2026-11-26-public-test-v2";
 const STAGING_ACK_COOKIE = "acrown_staging_notice_ack";
 const STAGING_ACK_SECONDS = 12 * 60 * 60;
+const PAGE_ACK_SECONDS = 12 * 60 * 60;
+const PAGE_ACK_CONFIG = {
+  genesis: { version: "2026-11-26-genesis-v1", cookie: "acrown_page_ack_genesis", path: "/api/genesis" },
+  account: { version: "2026-11-26-account-v1", cookie: "acrown_page_ack_account", path: "/api/account" },
+  admin: { version: "2026-11-26-admin-v1", cookie: "acrown_page_ack_admin", path: "/api/admin" },
+};
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
 const AVATARS = ["person", "crown", "star", "moon", "orbit", "shield"];
 const PQ_ALGS = [-48, -49, -50];
@@ -205,6 +211,56 @@ async function hasStagingAcknowledgement(request, env) {
   const signed = parts.slice(0, 4).join(".");
   const expected = await hmac(secret, "astro-staging-notice-ack\0" + signed);
   return equalConstantTime(parts[4], expected);
+}
+async function createPageAcknowledgement(env, payload, config) {
+  if (!payload || Object.keys(payload).length !== 2 ||
+      typeof payload.pageId !== "string" ||
+      typeof payload.noticeVersion !== "string") {
+    throw fail(400, "The page acknowledgement request is invalid.");
+  }
+  const rule = PAGE_ACK_CONFIG[payload.pageId];
+  if (!rule || payload.noticeVersion !== rule.version) {
+    throw fail(400, "The page notice version is invalid or outdated.");
+  }
+  const secret = env.RATE_LIMIT_HMAC_KEY || (env.ENVIRONMENT === "local" ? "local-development-only-not-for-staging" : "");
+  if (secret.length < 32) throw fail(503, "The page acknowledgement service is not configured.");
+  const expires = Math.floor(Date.now() / 1000) + PAGE_ACK_SECONDS;
+  const nonce = b64u(bytes(18));
+  const signed = ["v1", payload.pageId, rule.version, expires, nonce].join(".");
+  const signature = await hmac(secret, "astro-page-notice-ack\0" + signed);
+  const value = signed + "." + signature;
+  const cookieValue = rule.cookie + "=" + value +
+    "; Path=" + rule.path + "; Max-Age=" + PAGE_ACK_SECONDS + "; HttpOnly; SameSite=Strict" +
+    (new URL(config.origin).protocol === "https:" ? "; Secure" : "");
+  return json(200, {
+    acknowledged: true,
+    pageId: payload.pageId,
+    noticeVersion: rule.version,
+    expiresAt: new Date(expires * 1000).toISOString(),
+  }, { "Set-Cookie": cookieValue });
+}
+async function hasPageAcknowledgement(request, env, pageId) {
+  if (env.ENVIRONMENT !== "staging") return true;
+  const rule = PAGE_ACK_CONFIG[pageId];
+  const secret = env.RATE_LIMIT_HMAC_KEY || "";
+  if (!rule || secret.length < 32) return false;
+  const value = cookie(request, rule.cookie) || "";
+  const parts = value.split(".");
+  if (
+    parts.length !== 6 ||
+    parts[0] !== "v1" ||
+    parts[1] !== pageId ||
+    parts[2] !== rule.version ||
+    !/^\d{10}$/.test(parts[3]) ||
+    !/^[A-Za-z0-9_-]{20,}$/.test(parts[4]) ||
+    !/^[A-Za-z0-9_-]{20,}$/.test(parts[5])
+  ) return false;
+  const expires = Number(parts[3]);
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(expires) || expires <= now || expires > now + PAGE_ACK_SECONDS + 60) return false;
+  const signed = parts.slice(0, 5).join(".");
+  const expected = await hmac(secret, "astro-page-notice-ack\0" + signed);
+  return equalConstantTime(parts[5], expected);
 }
 async function rateLimit(db, env, request, action, subject, maximum, seconds) {
   const secret = env.RATE_LIMIT_HMAC_KEY || (env.ENVIRONMENT === "local" ? "local-development-only-not-for-staging" : "");
@@ -1973,6 +2029,10 @@ async function api(request, env, config) {
     await rateLimit(db, env, request, "staging-notice-acknowledgement", "public", 60, 3600);
     return createStagingAcknowledgement(env, payload, config);
   }
+  if (url.pathname === "/api/staging/page-acknowledge") {
+    await rateLimit(db, env, request, "staging-page-notice-acknowledgement", payload.pageId || "invalid", 30, 3600);
+    return createPageAcknowledgement(env, payload, config);
+  }
   if (url.pathname === "/api/admin/wallet-enrollment-challenge") return issueAdminWalletEnrollmentChallenge(db, env, request, payload, config);
   if (url.pathname === "/api/admin/wallet-enrollment-verify") return verifyAdminWalletEnrollment(db, env, request, payload);
   if (url.pathname === "/api/admin/wallet-challenge") return issueAdminWalletChallenge(db, env, request, payload, config);
@@ -2010,6 +2070,9 @@ async function staticAssets(request, env) {
   return new Response(asset.body, { status: asset.status, statusText: asset.statusText, headers });
 }
 export {
+  createPageAcknowledgement,
+  hasPageAcknowledgement,
+  PAGE_ACK_CONFIG,
   b64u as base64url,
   unb64u as fromBase64url,
   equalConstantTime,
@@ -2040,12 +2103,28 @@ export default {
         if (
           env.ENVIRONMENT === "staging" &&
           pathname !== "/api/staging/acknowledge" &&
+          pathname !== "/api/staging/page-acknowledge" &&
           pathname !== "/api/supporters/status" &&
           pathname !== "/api/genesis/status" &&
           pathname !== "/api/genesis/directory" &&
           !(await hasStagingAcknowledgement(request, env))
         ) {
           return json(428, { error: "Acknowledge the current AstroCrown public-staging safety notice before using account services." });
+        }
+        const protectedPage = pathname.startsWith("/api/genesis/") ? "genesis"
+          : pathname.startsWith("/api/admin/") ? "admin"
+            : pathname.startsWith("/api/account/") ? "account" : null;
+        const requiresPageAcknowledgement = protectedPage === "genesis"
+          ? request.method !== "GET"
+          : protectedPage === "account"
+            ? request.method !== "GET"
+            : protectedPage === "admin";
+        if (
+          env.ENVIRONMENT === "staging" &&
+          requiresPageAcknowledgement &&
+          !(await hasPageAcknowledgement(request, env, protectedPage))
+        ) {
+          return json(428, { error: "Acknowledge the current page-specific operational status and risk notice before using this service." });
         }
         return await api(request, env, config);
       }
