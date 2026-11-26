@@ -57,7 +57,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /\/api\/staging\/page-acknowledge/);
   assert.match(noticeCss, /astro-entry-notice/);
 
-  assert.equal(registry.notice_version, "2026-11-26-public-test-v4");
+  assert.equal(registry.notice_version, "2026-11-26-public-test-v5");
   assert.match(registry.global_notice.wallet_safety, /A development transaction is permitted only when the exact feature is explicitly marked DEVNET/);
   assert.match(registry.global_notice.wallet_safety, /Real-value transactions are permitted only when the exact feature is explicitly marked LIVE · MAINNET/);
   assert.match(workerSource, new RegExp('const STAGING_NOTICE_VERSION = "' + registry.notice_version + '"'));
