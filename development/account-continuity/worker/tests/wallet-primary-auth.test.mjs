@@ -3,7 +3,7 @@ import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import { keccak256, toBytes } from "viem";
 import { createPrimaryWalletMessage, issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge, isQualifiedAccountRuntime } from "../src/wallet-auth.js";
-import { base58Encode, normalizeWalletAddress, verifyWalletSignature } from "../src/supporters.js";
+import { base58Encode, normalizeWalletAddress, verifyWalletSignature } from "../src/wallet-proof.js";
 
 const ORIGIN = "https://accounts.astrocrown.example";
 const issuedAt = "2026-11-26T10:00:00.000Z";
