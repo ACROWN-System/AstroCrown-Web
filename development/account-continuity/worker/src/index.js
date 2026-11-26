@@ -103,7 +103,7 @@ function configuration(env, request) {
   if (!env.DB) throw fail(503, "The account database is not bound.");
   if (!["local", "staging"].includes(env.ENVIRONMENT)) throw fail(503, "The account environment is not configured.");
   const origin = String(env.EXPECTED_ORIGIN || "");
-  if (!origin || /SET_BEFORE_DEPLOY|example\\.invalid|REPLACE/i.test(origin)) {
+  if (!origin || origin.includes("SET_BEFORE_DEPLOY") || origin.includes(".invalid") || /REPLACE/i.test(origin)) {
     throw fail(503, "The account origin is not configured.");
   }
   let parsed;
