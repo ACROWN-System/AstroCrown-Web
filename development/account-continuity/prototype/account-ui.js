@@ -759,7 +759,7 @@
             '<input id="account-wallet-terms" type="checkbox" required>' +
             '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> and <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
           '</label>' +
-          '<button class="account-primary" type="submit" id="account-wallet-auth"' + (enabled ? '' : ' disabled') + '>Create account with primary wallet</button>' +
+          '<button class="account-primary" type="submit" id="account-wallet-register"' + (enabled ? '' : ' disabled') + '>Create account with primary wallet</button>' +
         '</form>'
       : '<div class="account-form">' +
           '<label class="account-field" for="account-wallet-network">Primary identity network' +
