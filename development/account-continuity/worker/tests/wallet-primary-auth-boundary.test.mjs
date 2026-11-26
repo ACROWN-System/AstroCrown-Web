@@ -26,6 +26,8 @@ test("wallet-primary identity, status, Genesis and separately governed admin wal
     "/api/account/status",
     "/api/account/avatar",
     "/api/account/logout",
+    "/api/wallet-auth/challenge",
+    "/api/wallet-auth/verify",
     "/api/genesis/identity/challenge",
     "/api/genesis/identity/verify",
     "/api/admin/wallet-challenge",
