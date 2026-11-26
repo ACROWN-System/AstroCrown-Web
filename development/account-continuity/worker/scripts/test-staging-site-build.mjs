@@ -16,12 +16,20 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   const noticeScript = await readPublic("page-entry/page-entry-notice.js");
   const noticeCss = await readPublic("page-entry/page-entry-notice.css");
   const registry = JSON.parse(await readPublic("page-entry/feature-status.json"));
+  const walletAssurance = await readPublic("account-continuity/prototype/wallet-identity-assurance.html");
+  const accountUi = await readPublic("account-continuity/prototype/account-ui.js");
 
   assert.match(homepage, /name="astro-page-id" content="home"/);
   assert.match(homepage, /page-entry\/page-entry-notice\.js/);
   assert.match(homepage, /LIVE PUBLIC TEST ENVIRONMENT/);
   assert.match(genesis, /name="astro-page-id" content="genesis"/);
   assert.match(genesis, /page-entry\/page-entry-notice\.js/);
+  assert.match(walletAssurance, /name="astro-page-id" content="account"/);
+  assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
+  assert.match(accountUi, /function renderWalletPrimaryStatus\(\)/);
+  assert.match(accountUi, /Sign in with wallet/);
+  assert.match(accountUi, /Why wallet\?/);
+  assert.match(accountUi, /typeof workerStagingMode/);
   assert.match(noticeScript, /Before you continue/);
   assert.match(noticeScript, /globalNotice\.acknowledgement/);
   assert.match(noticeScript, /\/api\/staging\/page-acknowledge/);
