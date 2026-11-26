@@ -1996,8 +1996,18 @@ async function diagnostics() {
   };
 }
 async function status(db, request, env) {
-  const account = await activeAccount(db, request);
-  if (account) return json(200, await summary(db, account));
+  let account = await activeAccount(db, request);
+  const clearLegacySession = isSupersededPasskeySession(env, account);
+  if (account && !clearLegacySession) return json(200, await summary(db, account));
+  const responseHeaders = {};
+  if (clearLegacySession) {
+    const token = cookie(request, SESSION_COOKIE);
+    if (token) {
+      await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await hashText(token)).run();
+    }
+    responseHeaders["Set-Cookie"] = clearCookie(new URL(request.url));
+    account = null;
+  }
   return json(200, {
     authenticated: false, avatarId: "person", role: "user", adminRoleAssigned: false,
     adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
@@ -2008,7 +2018,7 @@ async function status(db, request, env) {
     emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
     activeSessionCount: 0, securityManagementAvailable: false, scope: "staging-test-account-only",
-  });
+  }, responseHeaders);
 }
 async function logout(db, request, config) {
   const token = cookie(request, SESSION_COOKIE);
@@ -2035,7 +2045,9 @@ async function api(request, env, config) {
   // sessions deliberately store authenticated_credential_id as NULL.
   if (
     env.ENVIRONMENT === "staging" &&
-    (url.pathname.startsWith("/api/account/") || url.pathname.startsWith("/api/admin/")) &&
+    ((url.pathname.startsWith("/api/account/") &&
+      !["/api/account/status", "/api/account/logout"].includes(url.pathname)) ||
+      url.pathname.startsWith("/api/admin/")) &&
     db
   ) {
     const legacySession = await activeAccount(db, request);
