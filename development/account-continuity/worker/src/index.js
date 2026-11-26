@@ -1999,7 +1999,7 @@ async function status(db, request, env) {
     authenticated: false, avatarId: "person", role: "user", adminRoleAssigned: false,
     adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
     admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
-    passkeyAvailable: env?.ENVIRONMENT !== "staging",
+    passkeyAvailable: env?.ENVIRONMENT === "local",
     walletAuthenticationAvailable: ["local", "staging"].includes(env?.ENVIRONMENT),
     walletAuthenticationNetworks: ["ethereum", "tron", "solana"],
     emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
