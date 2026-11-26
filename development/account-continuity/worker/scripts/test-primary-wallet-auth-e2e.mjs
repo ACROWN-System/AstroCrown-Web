@@ -52,6 +52,11 @@ async function challenge(intent, signer = wallet) {
   assert.equal(result.response.status, 200, JSON.stringify(result.body));
   assert.equal(result.body.intent, intent);
   assert.equal(result.body.network, "ethereum");
+  assert.equal(result.response.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(result.response.headers.get("referrer-policy"), "no-referrer");
+  assert.equal(result.response.headers.get("x-frame-options"), "DENY");
+  assert.equal(result.response.headers.get("permissions-policy"), "camera=(), microphone=(), geolocation=()");
+  assert.equal(result.response.headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains");
   assert.equal(result.body.transactionAuthorized, false);
   assert.match(result.body.message, /Chain ID: 1/);
   assert.match(result.body.message, /off-chain message signature only/);
