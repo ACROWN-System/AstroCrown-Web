@@ -376,10 +376,16 @@
     var page = registry.pages[pageId] || registry.pages.legal;
     if (!page) return;
     var nativeNotice = document.getElementById("development-notice");
-    if (pageId === "home" || (nativeNotice && nativeNotice.open)) {
+    if (pageId === "home") {
       enhanceHomepageNotice(page, registry.global_notice, registry.notice_version, pageId);
       return;
     }
+    // The native homepage warning is only the homepage's notice. For a direct
+    // deep link or SPA entry into another page, replace it with one unified
+    // page-specific dialog containing the global warning and that page's risks.
+    // Do not reuse an open native home dialog: it can retain stale page handlers
+    // and make a later authorized route appear to have two stacked acknowledgements.
+    if (nativeNotice && nativeNotice.open) nativeNotice.close();
     if (isAcknowledged(page.id || pageId, page.version, registry.notice_version)) return;
     var dialog = buildDialog(Object.assign({ id: pageId }, page), registry.global_notice, registry.notice_version);
     if (typeof dialog.showModal === "function") dialog.showModal();
