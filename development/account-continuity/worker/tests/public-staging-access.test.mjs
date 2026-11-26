@@ -8,7 +8,7 @@ import {
 
 const origin = "https://astrocrown-account-staging-staging.example.workers.dev";
 const secret = "test-only-hmac-key-".padEnd(40, "x");
-const noticeVersion = "2026-11-26-public-test-v4";
+const noticeVersion = "2026-11-26-public-test-v5";
 
 test("public staging is reachable without a shared Basic Auth password when its abuse-control key exists", () => {
   const request = new Request(origin + "/");
