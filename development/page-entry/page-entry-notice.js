@@ -101,6 +101,8 @@
     if (!dialog) return false;
     var content = dialog.querySelector(".development-notice-content");
     if (!content) return false;
+    var acknowledgement = dialog.querySelector("#development-notice-acknowledged");
+    if (acknowledgement) acknowledgement.disabled = true;
     if (!content.querySelector(".astro-entry-notice-header")) {
       var header = element("div", "astro-entry-notice-header");
       header.appendChild(element("h2", "", "Before you continue"));
@@ -117,7 +119,11 @@
       header.appendChild(close);
       content.insertBefore(header, content.firstChild);
     }
-    if (content.querySelector(".astro-page-status-summary")) return true;
+    if (content.querySelector(".astro-page-status-summary")) {
+      if (acknowledgement) acknowledgement.disabled = false;
+      dialog.dataset.pageNoticeReady = "true";
+      return true;
+    }
     var intro = content.querySelector(".development-notice-intro");
     var anchor = intro ? intro.nextSibling : (content.children[0] || null);
     var kicker = element("p", "astro-entry-notice-kicker", globalNotice.heading);
@@ -130,6 +136,8 @@
     content.insertBefore(instructions, content.querySelector(".development-notice-ack"));
     var walletRisk = element("p", "astro-entry-notice-risk", globalNotice.wallet_safety);
     content.insertBefore(walletRisk, content.querySelector(".development-notice-ack"));
+    dialog.dataset.pageNoticeReady = "true";
+    if (acknowledgement) acknowledgement.disabled = false;
     return true;
   }
 
