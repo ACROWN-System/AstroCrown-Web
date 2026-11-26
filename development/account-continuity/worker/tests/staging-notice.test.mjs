@@ -34,10 +34,12 @@ test("staging artifact replaces the visual-preview notice with live public-test 
   assert.match(html, /personal, identifying, sensitive, confidential or third-party information/);
   assert.match(html, /provider-managed backups/);
 
-  assert.match(html, /separate disposable wallet and valueless test tokens/);
-  assert.match(html, /feature is clearly marked as enabled/);
-  assert.match(html, /mainnet/);
-  assert.match(html, /seed phrase, private key, recovery phrase/);
+  assert.match(html, /Only features explicitly marked LIVE with their environment are functional/);
+  assert.match(html, /DEVNET features are restricted to their named test network and verified faucet/);
+  assert.match(html, /FOR DEVELOPMENT · READ ONLY features do not provide operational transactions/);
+  assert.match(html, /off-chain ownership message is not a blockchain transaction/);
+  assert.match(html, /seed phrase, private key, wallet recovery phrase/);
+  assert.doesNotMatch(html, /separate disposable wallet/);
 
   assert.doesNotMatch(html, /Visual review build/);
   assert.doesNotMatch(html, /visual review only/);
@@ -56,7 +58,7 @@ test("staging safety notice is a mandatory first-visit gate with server acknowle
   assert.match(html, /acknowledgement\.addEventListener\("change"/);
   assert.match(html, /acknowledgementPending/);
   assert.match(html, /fetch\("\/api\/staging\/acknowledge"/);
-  assert.match(html, /2026-11-08-public-test-v1/);
+  assert.match(html, /2026-11-26-public-test-v2/);
   assert.match(html, /openNotice\(\);/);
   assert.match(html, /reopen-development-notice/);
 });
