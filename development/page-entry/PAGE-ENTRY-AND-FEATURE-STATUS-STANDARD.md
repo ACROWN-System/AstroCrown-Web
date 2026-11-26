@@ -23,7 +23,7 @@ The notice includes:
 
 The X control must not silently bypass a mandatory notice. On secondary pages it returns the visitor to the homepage. Escape/cancel does not dismiss the notice. On the homepage, the acknowledgement remains the route to enter the site.
 
-The system may remember acknowledgement for 12 hours for the same page and notice version. A material change to notice content, feature status, network, risk or page behavior requires a new version and fresh acknowledgement. Browser-side memory is a convenience only; it is not account authorization.
+The system may remember acknowledgement for 12 hours for the same page version and global public-test notice version. A material change to notice content, feature status, network, risk or page behavior requires a new version and fresh acknowledgement. The homepage's global notice version also versions its page-status summary; any material homepage status change must therefore advance both the registry notice version and the Worker's signed global acknowledgement version. Browser-side memory is a convenience only; it is not account authorization.
 
 For protected Worker APIs, page-specific acknowledgements are verified by short-lived, signed, HttpOnly, SameSite cookies scoped to the relevant API path. Server checks remain authoritative. The page acknowledgement is not a login, account permission, transaction approval, legal waiver or consent to unrelated processing.
 
@@ -93,4 +93,4 @@ A CI pass qualifies only what that exact workflow actually tests. A static build
 
 ## 8. Initial status
 
-The first central register identifies page delivery as LIVE · STAGING while marking current market data, generic wallet-only account sign-in, dashboards, Genesis identity/payment/purchase/member badge, community, NOVA, Council and Trade Bots as FOR DEVELOPMENT · READ ONLY. This is intentional: the existing website is hosted, but those features have not all passed their respective release gates.
+The first central register identifies the actually served homepage, Genesis route, account/admin interface and information page as LIVE · STAGING for page delivery only. It marks current market data, generic wallet-only account sign-in, dashboards, Genesis identity/payment/purchase/member badge, community, NOVA, Council and Trade Bots as FOR DEVELOPMENT · READ ONLY. Dedicated Community, NOVA, Council and Trade Bots routes are not yet deployed. This is intentional: website hosting does not prove that the product features or service destinations are operational.
