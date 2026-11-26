@@ -861,3 +861,59 @@
   .account-security-pending-passkey > button { flex:1 1 100%;width:100%; }
   .account-security-panel > button { width:100%; }
 }
+
+
+/* Unique public member-name editor: server-confirmed availability controls Apply. */
+.account-member-name-card .account-member-name-field {
+  display:grid;
+  gap:7px;
+  margin:12px 0 5px;
+  color:#c7d4e5;
+  font-size:10px;
+  font-weight:750;
+}
+.account-member-name-field input {
+  width:100%;
+  min-width:0;
+  min-height:42px;
+  padding:10px 12px;
+  border:1px solid rgba(153,178,213,.28);
+  border-radius:8px;
+  background:rgba(3,9,17,.62);
+  color:#f2f5fb;
+  font:inherit;
+  font-size:13px;
+  letter-spacing:.01em;
+}
+.account-member-name-field input:focus {
+  outline:2px solid rgba(255,215,0,.58);
+  outline-offset:2px;
+}
+.account-member-name-status {
+  min-height:1.5em;
+  margin:7px 0 9px!important;
+  color:#9aa9be!important;
+  font-size:11px!important;
+  line-height:1.5!important;
+}
+.account-member-name-status[data-state="available"] { color:#63e6a7!important; }
+.account-member-name-status[data-state="unavailable"],
+.account-member-name-status[data-state="invalid"],
+.account-member-name-status[data-state="error"] { color:#ff858d!important; }
+.account-member-name-status[data-state="checking"] { color:#aab8cb!important; }
+.account-member-name-apply { width:100%; transition:opacity .16s ease,filter .16s ease,background-color .16s ease; }
+.account-member-name-apply:disabled {
+  opacity:.38;
+  filter:saturate(.35);
+  cursor:not-allowed;
+  box-shadow:none;
+}
+.account-member-name-apply:not(:disabled) {
+  opacity:1;
+  filter:none;
+  cursor:pointer;
+}
+.account-member-name-hint { color:#7f91a9!important;font-size:10px!important; }
+@media(max-width:640px) {
+  .account-member-name-field input { min-height:44px; }
+}
