@@ -23,11 +23,12 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(genesis, /name="astro-page-id" content="genesis"/);
   assert.match(genesis, /page-entry\/page-entry-notice\.js/);
   assert.match(noticeScript, /Before you continue/);
-  assert.match(noticeScript, /I confirm that I have read and understood/);
+  assert.match(noticeScript, /globalNotice\\.acknowledgement/);
   assert.match(noticeScript, /\/api\/staging\/page-acknowledge/);
   assert.match(noticeCss, /astro-entry-notice/);
 
   assert.equal(registry.notice_version, "2026-11-26-public-test-v2");
+  assert.match(registry.global_notice.acknowledgement, /I confirm that I have read and understood/);
   for (const [pageId, page] of Object.entries(registry.pages)) {
     assert.ok(page.version, pageId + " must have a notice version");
     assert.ok(page.title, pageId + " must have a title");
