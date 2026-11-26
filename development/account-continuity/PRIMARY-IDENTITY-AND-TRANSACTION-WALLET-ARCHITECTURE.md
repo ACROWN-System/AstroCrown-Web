@@ -1,8 +1,8 @@
 # Primary Identity and Auxiliary Transaction Wallet Architecture
 
-**Owner direction recorded:** 18 November 2026  
-**Status:** Architecture decision for future AstroCrown account, exchange and swap development.  
-**Relationship to Genesis:** Compatible with the wallet-first Genesis identity. This document extends the model beyond Genesis payment wallets; it does not activate payments or authorize custody.
+**Owner direction recorded:** 18 November 2026; reaffirmed 26 November 2026  
+**Status:** Current governing AstroCrown account-identity and wallet-authority architecture; implementation and qualification remain in progress.  
+**Relationship to Genesis:** Compatible with and extends the wallet-first Genesis identity beyond Genesis payment wallets. It does not activate payments, authorize custody or make general wallet-only account sign-in operational.
 
 ## 1. Decision
 
