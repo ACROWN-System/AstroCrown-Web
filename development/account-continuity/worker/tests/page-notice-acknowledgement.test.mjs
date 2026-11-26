@@ -44,11 +44,17 @@ test("page acknowledgement rejects missing, altered, wrong-page and expired evid
   }, config);
   const setCookie = response.headers.get("Set-Cookie");
   const cookiePair = setCookie.split(";")[0];
+  assert.match(setCookie, /Path=\/api\//);
   const validRequest = new Request("https://astrocrown.example/api/account/profile", {
     method: "POST",
     headers: { Cookie: cookiePair },
   });
   assert.equal(await hasPageAcknowledgement(validRequest, env, "account"), true);
+  const walletAuthRequest = new Request("https://astrocrown.example/api/wallet-auth/challenge", {
+    method: "POST",
+    headers: { Cookie: cookiePair },
+  });
+  assert.equal(await hasPageAcknowledgement(walletAuthRequest, env, "account"), true);
   assert.equal(await hasPageAcknowledgement(new Request(validRequest.url), env, "account"), false);
 
   const [name, value] = cookiePair.split("=");
