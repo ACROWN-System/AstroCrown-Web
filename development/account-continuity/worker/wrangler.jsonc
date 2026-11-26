@@ -29,8 +29,6 @@
   ],
   "vars": {
     "ENVIRONMENT": "local",
-    "RP_NAME": "AstroCrown",
-    "RP_ID": "localhost",
     "EXPECTED_ORIGIN": "http://localhost:8787"
   },
   "env": {
@@ -40,8 +38,6 @@
       "vars": {
         "ENVIRONMENT": "staging",
         "STAGING_ACCESS_MODE": "public",
-        "RP_NAME": "AstroCrown",
-        "RP_ID": "SET_BEFORE_DEPLOY",
         "EXPECTED_ORIGIN": "https://SET_BEFORE_DEPLOY.invalid"
       },
       "d1_databases": [
