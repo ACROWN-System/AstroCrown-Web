@@ -854,7 +854,14 @@ try {
       } else if (message.method === "Network.loadingFailed") {
         if (message.params?.type === "XHR" || message.params?.type === "Fetch") apiEvents.push({loadingFailed:true,errorText:message.params.errorText,requestId:message.params.requestId});
       } else if (message.method === "Runtime.exceptionThrown") {
-        apiEvents.push({browserException:message.params.exceptionDetails?.text || "uncaught browser exception"});
+        const details = message.params.exceptionDetails || {};
+        apiEvents.push({
+          browserException: details.text || "uncaught browser exception",
+          description: details.exception?.description || "",
+          lineNumber: details.lineNumber,
+          url: details.url || "",
+          stack: details.stackTrace?.callFrames?.slice(0, 4) || [],
+        });
       }
       return;
     }
@@ -1026,10 +1033,26 @@ try {
   }
   if (accountNoticeState === "open") {
     await trustedClick(".astro-entry-notice[open] .astro-entry-notice-ack input");
-    await trustedClick(".astro-entry-notice[open] .astro-entry-notice-continue");
-    await waitFor("Account page-entry notice acknowledgement", async () =>
-      evaluate("!document.querySelector('.astro-entry-notice[open]')")
+    await waitFor("Account notice checkbox enables Continue", async () =>
+      evaluate("(() => {const d=document.querySelector('.astro-entry-notice[open]');" +
+        "const a=d?.querySelector('.astro-entry-notice-ack input');" +
+        "const b=d?.querySelector('.astro-entry-notice-continue');" +
+        "return !!a?.checked && !!b && !b.disabled;})()")
     );
+    await trustedClick(".astro-entry-notice[open] .astro-entry-notice-continue");
+    try {
+      await waitFor("Account page-entry notice acknowledgement", async () =>
+        evaluate("!document.querySelector('.astro-entry-notice[open]')"), 5000
+      );
+    } catch (error) {
+      const state = await evaluate("(() => {const d=document.querySelector('.astro-entry-notice');" +
+        "const saved=JSON.parse(localStorage.getItem('astro-page-notice:account')||'null');" +
+        "return JSON.stringify({open:!!d?.open,connected:!!d?.isConnected,pageId:d?.dataset.pageNoticePageId||null," +
+        "checked:!!d?.querySelector('.astro-entry-notice-ack input')?.checked," +
+        "continueDisabled:!!d?.querySelector('.astro-entry-notice-continue')?.disabled," +
+        "feedback:d?.querySelector('.astro-entry-notice-feedback')?.textContent||null,saved})})()");
+      throw new Error(error.message + " · Account notice post-ack state: " + state);
+    }
   }
   const stagingDashboard = await evaluate("document.getElementById('account-dashboard').innerText");
   assert.match(stagingDashboard, /Alerts & Messages[\s\S]*Disabled in this staging qualification/);
