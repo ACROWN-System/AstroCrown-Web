@@ -133,8 +133,13 @@ for (const relativePath of allowlist) {
     await writeFile(destination, html, "utf8");
   } else if (relativePath.endsWith("/account-ui.js")) {
     let js = await readFile(source, "utf8");
-    const runtimeGuard = /  var liveTestMode = queryParams\\.get\\("account-live-test"\\) === "1" &&\\n    window\\.location\\.protocol === "https:" && liveTestHost;\\n  var browserPreviewMode = forceBrowserDemo \\|\\|\\n    \\(!liveTestMode && loopbackHosts\\.indexOf\\(window\\.location\\.hostname\\) === -1\\);/;
-    const revisedGuard = [
+    const original = [
+      '  var liveTestMode = queryParams.get("account-live-test") === "1" &&',
+      '    window.location.protocol === "https:" && liveTestHost;',
+      '  var browserPreviewMode = forceBrowserDemo ||',
+      '    (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);'
+    ].join("\n");
+    const revised = [
       '  var liveTestMode = queryParams.get("account-live-test") === "1" &&',
       '    window.location.protocol === "https:" && liveTestHost;',
       '  var runtimeMarker = document.querySelector(\'meta[name="astro-account-runtime"]\');',
@@ -142,11 +147,11 @@ for (const relativePath of allowlist) {
       '    window.location.protocol === "https:");',
       '  var browserPreviewMode = forceBrowserDemo ||',
       '    (!liveTestMode && !workerStagingMode && loopbackHosts.indexOf(window.location.hostname) === -1);'
-    ].join("\\n");
-    if (!runtimeGuard.test(js)) {
+    ].join("\n");
+    if (!js.includes(original)) {
       throw new Error("Account UI runtime guard changed; refusing to publish without review.");
     }
-    js = js.replace(runtimeGuard, revisedGuard);
+    js = js.replace(original, revised);
     await writeFile(destination, js, "utf8");
   } else if (relativePath.endsWith("wallet-identity-assurance.html")) {
     let html = await readFile(source, "utf8");
