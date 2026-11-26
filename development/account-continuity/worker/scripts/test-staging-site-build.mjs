@@ -48,7 +48,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
     assert.ok(page.delivery && ["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(page.delivery.status));
     assert.equal(page.delivery.scope, "page_delivery", pageId + " must distinguish delivery from feature readiness");
     if (page.delivery.status === "LIVE · STAGING" || page.delivery.status === "LIVE · MAINNET") {
-      assert.equal(page.delivery.environment, "staging".replace("staging", page.delivery.environment));
+      assert.equal(page.delivery.environment, page.delivery.status === "LIVE · STAGING" ? "staging" : "mainnet");
     }
     assert.ok(Array.isArray(page.features) && page.features.length > 0);
     for (const feature of page.features) {
