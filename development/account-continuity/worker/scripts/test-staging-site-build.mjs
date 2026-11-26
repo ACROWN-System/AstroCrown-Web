@@ -48,6 +48,8 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /new MutationObserver\(reconcilePageEntry\)/);
   assert.match(noticeScript, /astrocrown:admin-dashboard-visible/);
   assert.match(noticeScript, /function bindNativeNoticeAcknowledgement/);
+  assert.match(noticeScript, /if \(dialog\.isConnected\) dialog\.remove\(\)/);
+  assert.match(noticeScript, /astrocrown:page-notice-acknowledged/);
   assert.match(noticeScript, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
   assert.match(noticeScript, /continueButton\.disabled = acknowledgement\.checked !== true/);
   assert.match(noticeScript, /noticeVersion: pageVersion/);
