@@ -46,6 +46,7 @@ const allowlist = [
   "account-continuity/prototype/security-assurance.html",
   "account-continuity/prototype/terms-of-use.html",
   "account-continuity/prototype/privacy-policy.html",
+  "account-continuity/prototype/wallet-identity-assurance.html",
   "page-entry/page-entry-notice.css",
   "page-entry/page-entry-notice.js",
   "page-entry/feature-status.json",
@@ -186,6 +187,10 @@ for (const relativePath of allowlist) {
       'throw new Error(workerStagingMode ? "The AstroCrown staging account service is not responding. The test account has not been changed." : (liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command."));'
     );
     await writeFile(destination, js, "utf8");
+  } else if (relativePath.endsWith("wallet-identity-assurance.html")) {
+    let html = await readFile(source, "utf8");
+    html = injectPageEntryNotice(html, "account");
+    await writeFile(destination, html, "utf8");
   } else if (relativePath.endsWith(".html")) {
     let html = await readFile(source, "utf8");
     html = injectPageEntryNotice(html, "legal");
