@@ -27,10 +27,10 @@
     return PAGE_HASHES[window.location.hash.toLowerCase()] || defaultId;
   }
 
-  function isAcknowledged(pageId, version) {
+  function isAcknowledged(pageId, version, globalVersion) {
     try {
       var value = JSON.parse(window.localStorage.getItem("astro-page-notice:" + pageId) || "null");
-      return Boolean(value && value.version === version &&
+      return Boolean(value && value.version === version && value.globalVersion === globalVersion &&
         Number.isFinite(value.acknowledgedAt) &&
         Date.now() - value.acknowledgedAt >= 0 &&
         Date.now() - value.acknowledgedAt < ACK_TTL_MS);
@@ -39,10 +39,11 @@
     }
   }
 
-  function rememberAcknowledgement(pageId, version) {
+  function rememberAcknowledgement(pageId, version, globalVersion) {
     try {
       window.localStorage.setItem("astro-page-notice:" + pageId, JSON.stringify({
         version: version,
+        globalVersion: globalVersion,
         acknowledgedAt: Date.now()
       }));
     } catch (_error) {
@@ -208,7 +209,7 @@
           return;
         }
       }
-      rememberAcknowledgement(page.id, page.version);
+      rememberAcknowledgement(page.id, page.version, registry.notice_version);
       dialog.close();
       dialog.remove();
     });
@@ -222,7 +223,7 @@
       enhanceHomepageNotice(page, registry.global_notice);
       return;
     }
-    if (isAcknowledged(page.id || pageId, page.version)) return;
+    if (isAcknowledged(page.id || pageId, page.version, registry.notice_version)) return;
     var dialog = buildDialog(Object.assign({ id: pageId }, page), registry.global_notice);
     if (typeof dialog.showModal === "function") dialog.showModal();
     else {
