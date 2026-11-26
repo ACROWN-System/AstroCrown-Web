@@ -133,58 +133,20 @@ for (const relativePath of allowlist) {
     await writeFile(destination, html, "utf8");
   } else if (relativePath.endsWith("/account-ui.js")) {
     let js = await readFile(source, "utf8");
-    const original = '  var liveTestMode = queryParams.get("account-live-test") === "1" &&\n    window.location.protocol === "https:" && liveTestHost;\n  var browserPreviewMode = forceBrowserDemo ||\n    (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);';
-    const revised = '  var liveTestMode = queryParams.get("account-live-test") === "1" &&\n    window.location.protocol === "https:" && liveTestHost;\n  var runtimeMarker = document.querySelector(\'meta[name="astro-account-runtime"]\');\n  var workerStagingMode = Boolean(runtimeMarker && runtimeMarker.content === "worker-staging" &&\n    window.location.protocol === "https:");\n  var browserPreviewMode = forceBrowserDemo ||\n    (!liveTestMode && !workerStagingMode && loopbackHosts.indexOf(window.location.hostname) === -1);';
-
-    if (!js.includes(original)) {
+    const runtimeGuard = /  var liveTestMode = queryParams\\.get\\("account-live-test"\\) === "1" &&\\n    window\\.location\\.protocol === "https:" && liveTestHost;\\n  var browserPreviewMode = forceBrowserDemo \\|\\|\\n    \\(!liveTestMode && loopbackHosts\\.indexOf\\(window\\.location\\.hostname\\) === -1\\);/;
+    const revisedGuard = [
+      '  var liveTestMode = queryParams.get("account-live-test") === "1" &&',
+      '    window.location.protocol === "https:" && liveTestHost;',
+      '  var runtimeMarker = document.querySelector(\'meta[name="astro-account-runtime"]\');',
+      '  var workerStagingMode = Boolean(runtimeMarker && runtimeMarker.content === "worker-staging" &&',
+      '    window.location.protocol === "https:");',
+      '  var browserPreviewMode = forceBrowserDemo ||',
+      '    (!liveTestMode && !workerStagingMode && loopbackHosts.indexOf(window.location.hostname) === -1);'
+    ].join("\\n");
+    if (!runtimeGuard.test(js)) {
       throw new Error("Account UI runtime guard changed; refusing to publish without review.");
     }
-    js = js.replace(original, revised);
-    js = js.replace(
-      'var noticeMode = liveTestMode ? "https-live-test" : "local-passkey-test";',
-      'var noticeMode = workerStagingMode ? "worker-staging" : (liveTestMode ? "https-live-test" : "local-passkey-test");'
-    );
-    js = js.replace(
-      'var noticeText = liveTestMode',
-      'var noticeText = workerStagingMode ? "ASTROCROWN LIVE PUBLIC TEST — Temporary test account only. Public submissions may be visible to anyone on the internet; use invented details and never use production credentials, personal information, recovery keys, wallet secrets or real assets." : liveTestMode'
-    );
-    const oldSigninCase = '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
-    const newSigninCase = '<p class="account-signin-feedback">Feedback and case access are not enabled in this staging qualification.</p>';
-    const oldDashboardCase = '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>';
-    const newDashboardCase = '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Not included in this staging qualification. This test environment is limited to ordinary account registration, sign-in and recovery.</p></section>';
-    if (!js.includes(oldSigninCase) || !js.includes(oldDashboardCase)) {
-      throw new Error("The account UI case-portal entry points changed; refusing to publish broken staging links.");
-    }
-    js = js.replace(oldSigninCase, newSigninCase).replace(oldDashboardCase, newDashboardCase);
-    const oldCommunicationsCard = '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">\' + String(unreadCommunicationCount) + \' pending</p><p>Important account alerts and private in-app messages are kept in one place, with separate sections and acknowledgement/read status.</p><button class="account-primary" type="button" id="open-account-communications">Open communications</button></section>';
-    const newCommunicationsCard = '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">Disabled in this staging qualification</p><p>Account communications are not part of this test release. Email and SMS delivery are not configured; no messages or alerts are sent.</p></section>';
-    if (!js.includes(oldCommunicationsCard)) throw new Error("The communications dashboard card changed; refusing to publish a non-working control.");
-    js = js.replace(oldCommunicationsCard, newCommunicationsCard);
-    js = js.replaceAll("local development account", "staging test account");
-    const oldMlDsaStatus = "'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.'";
-    const newMlDsaStatus = "'ML-DSA-44 ' + (accountState.mlDsaRegistrationAvailable ? 'is supported for verification by this runtime and is offered first during registration. ' : 'is not supported for verification by this runtime and cannot be offered here. ') + 'The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.'";
-    if (!js.includes(oldMlDsaStatus)) throw new Error("The ML-DSA status copy changed; refusing to publish an unqualified security statement.");
-    js = js.replace(oldMlDsaStatus, newMlDsaStatus);
-    js = js.replace(
-      "This local prototype does not grant production access or administrator privileges.",
-      "This staging test account does not grant production access or administrator privileges."
-    );
-    js = js.replace(
-      "The local server keeps your session until it expires or you sign out.",
-      "The staging service keeps your session until it expires or you sign out."
-    );
-    js = js.replace(
-      "<strong>Development User dashboard.</strong>",
-      "<strong>Staging User dashboard.</strong>"
-    );
-    js = js.replace(
-      "This local prototype tests account access and settings only.",
-      "This staging qualification tests account access and settings only."
-    );
-    js = js.replace(
-      'throw new Error(liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command.");',
-      'throw new Error(workerStagingMode ? "The AstroCrown staging account service is not responding. The test account has not been changed." : (liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command."));'
-    );
+    js = js.replace(runtimeGuard, revisedGuard);
     await writeFile(destination, js, "utf8");
   } else if (relativePath.endsWith("wallet-identity-assurance.html")) {
     let html = await readFile(source, "utf8");
