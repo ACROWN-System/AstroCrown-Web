@@ -78,6 +78,7 @@ assert.match(pageNoticeJs, /Before you continue/);
 assert.match(pageNoticeJs, /globalNotice\.acknowledgement/);
 assert.match(pageNoticeCss, /astro-entry-notice/);
 assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v2");
+assert.match(homepage, new RegExp(featureStatus.notice_version));
 assert.match(featureStatus.global_notice.acknowledgement, /I confirm that I have read and understood/);
 assert.ok(featureStatus.pages.home && featureStatus.pages.genesis && featureStatus.pages.account);
 for (const page of Object.values(featureStatus.pages)) {
