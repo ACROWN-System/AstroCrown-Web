@@ -257,8 +257,20 @@
     }, true);
   }
 
+  function closeSupersededPageNotice(previousPageId, nextPageId) {
+    if (!previousPageId || previousPageId === nextPageId) return;
+    var openNotice = document.querySelector(".astro-entry-notice[open]");
+    if (openNotice) {
+      openNotice.close();
+      openNotice.remove();
+    }
+  }
+
   function buildDialog(page, globalNotice, globalVersion) {
     var dialog = element("dialog", "astro-entry-notice");
+    dialog.dataset.pageNoticePageId = page.id || "";
+    dialog.dataset.pageNoticePageVersion = page.version || "";
+    dialog.dataset.pageNoticeGlobalVersion = globalVersion || "";
     dialog.setAttribute("aria-labelledby", "astro-entry-notice-title");
     dialog.setAttribute("aria-modal", "true");
     var inner = element("div", "astro-entry-notice-inner");
@@ -433,6 +445,7 @@
     function reconcilePageEntry() {
       var nextPageId = currentPageId(defaultId);
       if (nextPageId !== pageId) {
+        closeSupersededPageNotice(pageId, nextPageId);
         pageId = nextPageId;
         insertPageStatusStrip(registry, pageId);
         showPageNotice(registry, pageId);
