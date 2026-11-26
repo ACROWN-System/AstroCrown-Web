@@ -4,7 +4,7 @@
 
 
 **Date:** 2026-11-04  
-**Status:** **BACKEND ML-DSA SIGNATURE VERIFICATION QUALIFIED IN AUTOMATED TESTS; REAL BROWSER/AUTHENTICATOR INTEROPERABILITY BLOCKED / NOT TESTED**  
+**Status:** HISTORICAL WEBAuthn EXPERIMENT — implementation retired; results retained as dated backend test evidence only.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related PR:** [#141 — Passkey-first account foundation; optional wallet backup (draft)](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)

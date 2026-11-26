@@ -4,7 +4,7 @@
 
 
 **Research snapshot:** 2026-11-03  
-**Status:** Planning and evidence preparation only. No membership, mark use, paid test, certification or independent assessment has been purchased or claimed.  
+**Status:** HISTORICAL FIDO / PASSKEY RECOGNITION RESEARCH ONLY. No membership, mark use, paid test, certification or independent assessment has been purchased or claimed.  
 **Current budget:** $0 for preparation; paid actions require separate funded approval.
 
 ## 1. What applies to AstroCrown

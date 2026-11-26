@@ -4,7 +4,7 @@
 
 
 **Review date:** 2026-11-04  
-**Status:** LOCAL WORKER + D1 ACCOUNT QUALIFICATION PASSED / ML-DSA-44 BROWSER VIRTUAL-AUTHENTICATOR E2E PASSED / REMOTE HOSTING AND $0 ACCOUNT ELIGIBILITY NOT YET QUALIFIED / NOT PRODUCTION  
+**Status:** HISTORICAL PASSKEY-FIRST IMPLEMENTATION SNAPSHOT — superseded by the wallet-primary account architecture; not current qualification or release evidence.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Pull request:** [#141 — Passkey-first account foundation; optional wallet backup](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)
 

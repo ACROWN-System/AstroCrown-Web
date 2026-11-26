@@ -4,7 +4,7 @@
 
 
 **Review date:** 2026-11-06  
-**Status:** SCOPE RECORDED / CURRENT WORKER CORE QUALIFICATION PASSED / FULL ACCOUNT FEATURE PARITY NOT IMPLEMENTED / REMOTE STAGING NOT DEPLOYED  
+**Status:** HISTORICAL PASSKEY-ERA FEATURE-PARITY BASELINE — open gaps must be reassessed against the current wallet-primary Worker.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Parent work:** [PR #141 — Passkey-first account foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
 **Baseline branch head reviewed:** `267fe4a9f034fbfd994faaf114f3d893913f68e3`

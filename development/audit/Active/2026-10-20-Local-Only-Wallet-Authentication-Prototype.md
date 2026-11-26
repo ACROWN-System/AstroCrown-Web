@@ -4,7 +4,7 @@
 
 
 **Date:** 2026-10-21  
-**Status:** ACTIVE AS A TEST-ONLY WALLET-CAPABILITY LAB — this is not ordinary AstroCrown account authentication; exact-head checks must be rerun after this decision-alignment update; production integration remains BLOCKED  
+**Status:** SUPERSEDED — standalone SIWE wallet-capability lab retired from the active workspace; historical record only.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related architecture record:** [Provider-Independent Wallet Authentication Plan](2026-10-20-Provider-Independent-Wallet-Authentication-Plan.md)  

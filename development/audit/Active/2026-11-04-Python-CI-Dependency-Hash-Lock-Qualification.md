@@ -4,7 +4,7 @@
 
 
 **Date:** 2026-11-04  
-**Status:** **TWO CI INSTALL PATHS CONVERTED TO HASH-VERIFIED, WHEEL-ONLY LOCKS; ARTIFACT INSTALLATION QUALIFIED; DEFAULT-BRANCH SCORECARD RE-SCAN PENDING**  
+**Status:** HISTORICAL DEPENDENCY-LOCK QUALIFICATION — covered retired Python WebAuthn/SIWE prototype stacks; not the current dependency inventory.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related PR:** [#141 — Passkey-first account foundation; optional wallet backup (draft)](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)

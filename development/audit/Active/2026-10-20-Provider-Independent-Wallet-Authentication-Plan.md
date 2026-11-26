@@ -4,7 +4,7 @@
 
 
 **Date:** 2026-10-21  
-**Status:** ACTIVE — 2026-10-21 owner decision supersedes wallet-first proposal; ordinary account authentication is separate from optional wallet access; public/editor integration and deployment remain BLOCKED  
+**Status:** SUPERSEDED — the 21 October 2026 decision is historical; ordinary account identity is now wallet-primary.  
 **Repository:** `ACROWN-System/AstroCrown-Web`  
 **Working branch:** `docs/provider-independent-wallet-auth-plan-2026-10-20`  
 **Related editor prototype:** [Draft PR #140 — Build development-only announcement editor with Python draft backend](https://github.com/ACROWN-System/AstroCrown-Web/pull/140)  

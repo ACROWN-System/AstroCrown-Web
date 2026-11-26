@@ -4,7 +4,7 @@
 
 
 **Record date:** 2026-11-03  
-**Status:** Initial benchmark specification; maturity labels require exact completed evidence.  
+**Status:** HISTORICAL PASSKEY-SPECIFIC BENCHMARK; NOT A QUALIFICATION PROFILE FOR THE CURRENT WALLET-PRIMARY ACCOUNT.  
 **Scope:** Account authentication, passkey lifecycle, offline recovery and separate administrator wallet step-up. Not a benchmark of the whole exchange, website, wallet or infrastructure.
 
 ## Purpose and boundaries
