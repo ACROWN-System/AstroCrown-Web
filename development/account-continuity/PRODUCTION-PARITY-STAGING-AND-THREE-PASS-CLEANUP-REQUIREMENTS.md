@@ -1,8 +1,11 @@
 # Production-Parity Staging and Three-Pass Cleanup Requirements
 
+> **Architecture update — 26 November 2026:** The production-parity, isolated staging, synthetic-data, immutable-artifact, release-gate and three-pass cleanup principles in this record remain relevant. The account-authentication details that prescribe WebAuthn/passkeys, an offline recovery key, a WebAuthn RP ID/library or ML-DSA WebAuthn are historical and superseded. AstroCrown's current ordinary account model is wallet-primary and is governed by [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) and [the current Worker status](worker/README.md). PR #198 contains local Worker/D1 qualification only; remote staging deployment and remote D1 migration have not been performed. Do not implement the superseded authentication steps below as current requirements.
+
+
 **Decision date:** 2026-11-04  
-**Status:** OWNER-ACCEPTED ARCHITECTURAL DIRECTION / HOSTING RUNTIME NOT YET QUALIFIED  
-**Scope:** AstroCrown public website and passkey-first account subsystem
+**Status:** OWNER-ACCEPTED STAGING-PARITY AND THREE-PASS CLEANUP PRINCIPLES / PASSKEY-SPECIFIC DETAILS SUPERSEDED / REMOTE RUNTIME NOT VERIFIED  
+**Scope:** AstroCrown public website and current wallet-primary account subsystem; historical passkey-specific implementation notes are retained for provenance only
 
 ## 1. Accepted architectural direction
 
