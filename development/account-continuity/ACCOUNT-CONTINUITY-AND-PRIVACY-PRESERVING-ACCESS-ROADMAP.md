@@ -1,5 +1,8 @@
 # Account Continuity and Privacy-Preserving Access Roadmap
 
+> **Historical proposal and authority correction — 26 November 2026:** This broad roadmap preserves earlier account-continuity, privacy, eligibility and community-participation proposals. It is not the current account sign-in, identity or recovery specification. The current ordinary-account authority is [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md), with implementation boundaries in [the Worker README](worker/README.md). The former passkey-first model and proposals for multiple account authenticators/recovery routes are superseded and must not be implemented as alternate login paths. The remaining privacy, fairness and data-minimization principles may inform future work only where they do not conflict with current owner-approved requirements. No unimplemented proposal in this roadmap is an approved feature or operational capability.
+
+
 > **Authentication authority (2026-11-04):** this document is broad ecosystem context, not an account sign-in specification. The sole governing account-authentication and recovery design is [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). Earlier password/email/provider experiments are not current implementation directions.
 
 **Status:** DEVELOPMENT-ONLY ARCHITECTURE PROPOSAL — NOT IMPLEMENTED  
