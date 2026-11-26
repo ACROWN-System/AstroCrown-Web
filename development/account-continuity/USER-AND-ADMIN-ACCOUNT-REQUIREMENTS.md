@@ -35,7 +35,9 @@ Define one understandable account foundation for ordinary users and administrato
 Keep the following separate in both data model and code:
 
 - **Account:** stable, randomly generated internal ID and account lifecycle; never derived from a wallet address, passkey credential ID, email address or phone number.
-- **Authenticator:** a registered WebAuthn passkey is the primary account authenticator; an independently controlled wallet signature may be registered as an optional backup. A user-held one-time offline recovery key is the last-resort recovery method.
+- **Primary identity wallet:** the sole wallet-authorized account identity, sign-in authority and recovery anchor. Its provider's own recovery method is the recovery route.  
+- **Auxiliary transaction wallet:** a wallet connected for a specific send/receive workflow. It is not an authenticator, alternate account identity or recovery method.  
+- **Historical passkey credentials:** retained only in the previous local prototype and its regression evidence; they are not active AstroCrown account sign-in or recovery mechanisms.
 - **Wallet link:** optional record of an address and proof-of-control for a defined feature; not an account ID and not an authorization by itself.
 - **Role and permissions:** assigned by an authorized provisioning process and checked on the server for every privileged operation.
 - **Session:** server-created and revocable; never trusted from a client-supplied role or local storage value.
@@ -70,22 +72,26 @@ For admin access, require ordinary account authentication **and** a fresh valid 
 
 ### 4.1 Account creation — current wallet-primary requirement
 
-- Required WebAuthn discoverable public-key credential registration with user verification. No email address, password or SMS number is required. The authenticator retains the private key; AstroCrown stores the public key and minimum credential metadata only.
+- The user selects a compatible primary wallet and proves control through a fresh, purpose-bound, domain-bound, expiring, single-use off-chain message challenge. The primary wallet address and its network-specific identity become the account's identity anchor after the server verifies the proof.
+- Account creation must not request a blockchain transaction, token approval, payment, deposit, stake, gas expenditure, balance check or proof of funds. The signed challenge must state that it is an off-chain ownership proof only.
+- Create a stable random AstroCrown account ID and bind it to the verified primary wallet identity. Do not derive account identity from a passkey credential, email address, phone number or auxiliary transaction wallet.
 - Explicit acknowledgement of the Terms and Privacy versions shown to the user.
-- Referral ID optional and inert until its verification/anti-abuse policy is implemented.
-- No marketing/newsletter email capability is currently included. Any future communication or marketing channel requires a separate approved scope, explicit consent and its own delivery, unsubscribe, privacy and abuse controls.
-- The account must be reported as authenticator-enrolled only after the server has successfully verified the WebAuthn registration ceremony and bound the credential to the newly created account.
-- Never describe email/SMS as an account login or recovery mechanism. A future communications feature must not be represented as active unless its separate service is configured and qualified.
+- Referral ID remains optional and inert until its verification/anti-abuse policy is implemented.
+- No email, password, passkey, SMS, email verification, third-party identity provider or separate one-time recovery-key login is part of the current account-creation or authentication model.
+- No marketing/newsletter email capability is currently included. Any future communications or marketing channel requires a separate approved scope, explicit consent and its own delivery, unsubscribe, privacy and abuse controls.
+- Do not report the account as created/authenticated until the server verifies the primary-wallet challenge, applies uniqueness and replay controls, and successfully creates the identity and session records.
 
 ### 4.2 Sign-in and session — current wallet-primary requirement
 
-- Neutral authentication error messages; rate limit credential attempts and account creation.
-- Verify WebAuthn assertions using a maintained, reviewed server-side relying-party library; do not implement CBOR/COSE, authenticator-data parsing or signature verification from scratch. Generate random, short-lived, single-use challenges bound to ceremony, account/session, RP ID and exact origin. See the passkey-first authentication plan.
-- Create a fresh, cryptographically random server-side session on successful authentication; do not reuse a pre-authentication session.
+- Sign-in reconnects the same primary identity wallet and verifies a fresh challenge. Do not accept an auxiliary transaction wallet as an alternate login or silently create a second account when an unknown wallet connects.
+- Challenge messages must bind the exact AstroCrown origin/domain, wallet address, chain/network, challenge purpose, nonce, issue/expiry time and any relevant account/session. Each challenge is single-use; reject replay, cross-origin, cross-chain, substituted-purpose, expired and invalid signatures.
+- Use the appropriate chain-native off-chain message proof. Do not assume EVM SIWE, Solana signing, TRON signing and Bitcoin message proofs are interchangeable. Qualify provider and chain adapters individually.
+- Create a fresh, cryptographically random server-side session only after the primary-wallet proof is verified. Do not reuse a pre-authentication session.
 - Use HTTPS, Secure/HttpOnly/SameSite cookies in production, CSRF protections appropriate to the architecture, server-side session validation, documented inactivity and absolute lifetimes, revocation and safe logout.
-- Avoid logging passwords, cookies, tokens, reset links, wallet signatures used as bearer secrets or recovery material.
-- Let users view and revoke sessions where the capability is implemented. A UI-only “session list” is not sufficient.
-- Require a fresh WebAuthn proof before adding/revoking authenticators, replacing the recovery key, changing sensitive account settings or performing other high-impact changes. Wallet proofs must be purpose-bound and cannot substitute for WebAuthn unless a future decision explicitly allows it.
+- Apply neutral authentication errors and server-side rate limits to account creation, challenge issue/verification and wallet-provider abuse. Avoid leaking whether a wallet identity exists.
+- Never log reusable session tokens, private wallet material, seed phrases or recovery secrets. A wallet signature is evidence for its one specific challenge, not a bearer session token.
+- Account-level changes must be authorized by the primary identity wallet/session using a fresh purpose-bound proof where required. An auxiliary transaction wallet cannot authorize account changes or recover the primary identity.
+- The primary wallet's own recovery mechanism is the only account-identity recovery route. AstroCrown, support staff, NOVA and administrators cannot reset or replace the primary wallet or transfer its identity to another address.
 
 ### 4.3 User dashboard — common member workspace
 
@@ -120,7 +126,7 @@ A regular account and an administrator account must not receive different versio
 
 ### 5.2 Admin access and dashboard
 
-- Normal WebAuthn passkey sign-in authenticates the underlying User account first. The user does not create a second administrator account or replace the User dashboard.
+- The primary identity wallet authenticates the underlying User account first. The user does not create a second administrator account or replace the User dashboard.
 - Only after the server confirms that an authorized administrator has granted the existing account its administrator role does the **Administrator access** entry appear in that account's User dashboard. Ordinary users never see the entry or a disabled placeholder.
 - The entry is primarily the administrator-wallet verification gate: the user is already signed in to the ordinary account, then proves control of an enrolled wallet. If no wallet is enrolled yet, the entry guides the newly appointed administrator through a separate self-enrolment/proof step. Wallet connection alone is insufficient; a fresh signature from one of up to three enrolled wallets is required for the short-lived administrator step-up.
 - The entry must communicate the wallet-verification step (for example, **Verify wallet & open administrator dashboard**); once a valid step-up already exists, the action may simply read **Open administrator dashboard**. Cancelling the confirmation must not request a wallet. The server rechecks the account session and role before starting/reusing step-up.
@@ -579,9 +585,9 @@ Do not refactor this working prototype into a general multichain wallet system a
 - [ ] Astro-Wallet remains a separate future project decision and cannot become a blocker to completion of the present account/dashboard foundation.
 
 
-## 19. Passkey-first account authentication and offline recovery — owner-accepted 2026-11-03
+## 19. Historical passkey-first account authentication and offline recovery — superseded 2026-11-26
 
-The owner has approved replacing the email/password-first account direction with WebAuthn public-key authentication. The implementation target, protocol controls, optional wallet backup, user-held recovery key, $0-first provider boundary and acceptance tests are defined in [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md).
+This section records the owner-approved 3 November 2026 design and the earlier local implementation. It is retained for historical provenance only. On 18 November 2026, reaffirmed 26 November 2026, the owner deliberately changed general AstroCrown account authentication to wallet-only primary identity. The passkey-primary, optional-wallet-backup and offline recovery-key-login model below is superseded and must not guide current implementation. The implementation target, protocol controls, optional wallet backup, user-held recovery key, $0-first provider boundary and acceptance tests are defined in [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md).
 
 Decision summary:
 
@@ -595,7 +601,7 @@ Decision summary:
 - This does not authorize Astro-Wallet, custody, a key vault, multichain wallet refactoring, payments, MPC/TSS or post-quantum work. PR #141 remains draft, open, unmerged and undeployed.
 
 
-## 20. Passkey and offline recovery local implementation record — 2026-11-03
+## 20. Historical passkey and offline recovery local implementation record — 2026-11-03 (superseded for active account login)
 
 ### Implemented in the loopback prototype
 
