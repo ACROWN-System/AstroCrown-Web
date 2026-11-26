@@ -68,13 +68,26 @@
       item.appendChild(statusBadge(feature.status));
       item.appendChild(element("p", "", feature.details));
       if (feature.status === "DEVNET") {
-        var network = element("p", "", "Network: " + feature.network + " · Faucet: ");
-        var link = element("a", "", feature.faucet.label || feature.faucet.url);
-        link.href = feature.faucet.url;
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        network.appendChild(link);
-        item.appendChild(network);
+        var networkDetails = "Network: " + feature.network;
+        if (feature.network_id !== undefined && feature.network_id !== null) {
+          networkDetails += " · Network ID: " + feature.network_id;
+        }
+        if (feature.test_asset) networkDetails += " · Test asset: " + feature.test_asset;
+        item.appendChild(element("p", "", networkDetails));
+        var faucetLine = element("p");
+        faucetLine.appendChild(element("span", "", "Official faucet: "));
+        if (feature.faucet && typeof feature.faucet.url === "string" && /^https:\/\//.test(feature.faucet.url)) {
+          var link = element("a", "", feature.faucet.label || feature.faucet.url);
+          link.href = feature.faucet.url;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          faucetLine.appendChild(link);
+        } else if (feature.faucet && typeof feature.faucet.address === "string" && feature.faucet.address.trim()) {
+          faucetLine.appendChild(element("code", "", feature.faucet.address));
+        } else {
+          faucetLine.appendChild(element("span", "", "Not supplied; this feature must not be used until verified faucet details are published."));
+        }
+        item.appendChild(faucetLine);
         item.appendChild(element("p", "", "Test tokens have no mainnet value."));
       }
       list.appendChild(item);
