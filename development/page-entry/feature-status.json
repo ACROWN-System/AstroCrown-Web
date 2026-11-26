@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "notice_version": "2026-11-26-public-test-v2",
+  "acknowledgement_ttl_seconds": 43200,
+  "global_notice": {
+    "heading": "ASTROCROWN LIVE PUBLIC TEST",
+    "introduction": "You are accessing the AstroCrown public test environment. Public submissions may be visible to anyone on the internet. Never disclose personal information, production credentials, seed phrases, private keys or wallet recovery secrets.",
+    "rules": [
+      "Only features explicitly marked LIVE are functional, and each LIVE label must identify its environment, such as LIVE · STAGING or LIVE · MAINNET.",
+      "DEVNET features operate only on their named development network. Their notice must identify the network and provide its verified test-token faucet link or address. Test tokens have no mainnet value.",
+      "FOR DEVELOPMENT · READ ONLY features are previews. They do not provide operational transactions or state-changing functionality.",
+      "An unlabelled feature must be treated as FOR DEVELOPMENT · READ ONLY. A wallet connection or off-chain ownership signature does not by itself mean that payments or transactions are enabled."
+    ],
+    "wallet_safety": "A wallet ownership message is not a blockchain transaction. Review the exact message shown by your wallet and never disclose a seed phrase, private key or recovery secret. Never approve a token or send assets unless the specific feature is explicitly marked LIVE · MAINNET and you have independently checked the network, asset, amount and destination.",
+    "acknowledgement": "I confirm that I have read and understood this notice, the operational status of this page and the risks associated with using it."
+  },
+  "pages": {
+    "home": {
+      "version": "2026-11-26-home-v1",
+      "title": "AstroCrown homepage",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "This homepage is reachable through the AstroCrown staging website. This label describes page delivery only; it does not mean that the services or data shown here are operational."
+      },
+      "features": [
+        {
+          "id": "market-context",
+          "name": "Market context and market figures",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Displayed market totals, sentiment values, rankings and changes are illustrative. No approved live market-data provider is connected to this page."
+        },
+        {
+          "id": "asset-directory",
+          "name": "Asset directory and discovery cards",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The current directory uses local sample data. Listings, filters and discovery cards must not be treated as live market coverage or active services."
+        },
+        {
+          "id": "primary-wallet-account",
+          "name": "AstroCrown wallet-only account creation and sign-in",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The approved primary-wallet identity system is being implemented and qualified. General AstroCrown wallet-only account creation and sign-in are not yet enabled in this staging release."
+        },
+        {
+          "id": "community",
+          "name": "AstroCrown Community",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The first-party community implementation remains a development build and is not approved for public operational use."
+        },
+        {
+          "id": "nova",
+          "name": "Chat with NOVA",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The NOVA-facing member service is not yet operational on this website."
+        },
+        {
+          "id": "council",
+          "name": "Council",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Council pages and binding governance actions are not yet operational. Constitutional approval and service qualification are required before activation."
+        },
+        {
+          "id": "trade-bots",
+          "name": "Trade bots, Swap and Trade",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Trading, bot execution, swap, custody and asset-movement services are not enabled by this page."
+        }
+      ]
+    },
+    "genesis": {
+      "version": "2026-11-26-genesis-v1",
+      "title": "Genesis Programme",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "The Genesis Programme page is served from the AstroCrown staging website. Page delivery does not imply that payment, purchase or entitlement functions are enabled."
+      },
+      "features": [
+        {
+          "id": "genesis-wallet-identity",
+          "name": "Genesis primary-wallet identity",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The wallet-native identity and linked-address experience is undergoing exact staging-build and wallet-provider qualification. Do not assume a connection or signature grants payment eligibility."
+        },
+        {
+          "id": "genesis-payments",
+          "name": "Genesis qualifying payments",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Qualifying-payment acceptance is disabled. Do not send USDT or any other asset to a displayed address."
+        },
+        {
+          "id": "acrown-floor-purchase",
+          "name": "ACROWN floor-price purchases and delivery",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Purchase quotes, entitlement crediting and ACROWN delivery are not enabled in this staging release."
+        },
+        {
+          "id": "genesis-member-badge",
+          "name": "Genesis Member qualification and badge",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The badge is awarded only after approved qualification conditions and independently verified final payment evidence. The current preview does not award it."
+        },
+        {
+          "id": "genesis-directory",
+          "name": "Genesis public payment directory",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The directory is an interface and data-model preview; it does not indicate that qualifying payments are being accepted."
+        }
+      ]
+    },
+    "account": {
+      "version": "2026-11-26-account-v1",
+      "title": "AstroCrown account",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "The account interface is reachable in the staging website. This does not mean that the approved wallet-only account lifecycle is available."
+      },
+      "features": [
+        {
+          "id": "wallet-login",
+          "name": "Primary-wallet account creation and sign-in",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Wallet-only authentication is the approved account model. Its general account APIs and end-to-end browser flow are not yet qualified for this staging deployment."
+        },
+        {
+          "id": "user-dashboard",
+          "name": "User dashboard and personal profile",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The full wallet-bound member dashboard, profile and connected-wallet experience are still being developed."
+        },
+        {
+          "id": "badges",
+          "name": "Achievement and badge highlighting",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Badge ownership, highlighting and community display must be backed by the authoritative account and badge registry before activation."
+        }
+      ]
+    },
+    "admin": {
+      "version": "2026-11-26-admin-v1",
+      "title": "Administrator dashboard",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "The staging website can serve the administrator interface. This is not an authorization to use operational administrative functions."
+      },
+      "features": [
+        {
+          "id": "admin-access",
+          "name": "Administrator access and governance controls",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Wallet-primary account integration, owner bootstrap, governance controls and production authorization remain under development and qualification."
+        }
+      ]
+    },
+    "legal": {
+      "version": "2026-11-26-legal-v1",
+      "title": "AstroCrown information and policy pages",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "This information page is served from the staging website. Check each document's stated version and status."
+      },
+      "features": [
+        {
+          "id": "policy-pages",
+          "name": "Information and policy documents",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "These documents are provided for development review. They must not be interpreted as confirmation that the complete production legal or compliance framework has been approved."
+        }
+      ]
+    },
+    "community": {
+      "version": "2026-11-26-community-v1",
+      "title": "AstroCrown Community",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "Any community preview served in staging is a development surface, not an operational public community."
+      },
+      "features": [
+        {
+          "id": "community-network",
+          "name": "Community feeds, groups and member interactions",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The first-party community implementation is a development slice. Moderation, appeals, privacy, chat, load, backup and governance qualification remain outstanding."
+        }
+      ]
+    },
+    "nova": {
+      "version": "2026-11-26-nova-v1",
+      "title": "Chat with NOVA",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "Any NOVA interface served in staging is a development surface."
+      },
+      "features": [
+        {
+          "id": "nova-chat",
+          "name": "Chat and NOVA-integrated services",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "No operational NOVA member chat or live service is enabled by this page."
+        }
+      ]
+    },
+    "council": {
+      "version": "2026-11-26-council-v1",
+      "title": "AstroCrown Council",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "This page is a development surface and has no binding governance authority."
+      },
+      "features": [
+        {
+          "id": "council-governance",
+          "name": "Council membership and governance",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "Binding elections, representation and constitutional governance must not activate until the relevant rules and systems are approved and qualified."
+        }
+      ]
+    },
+    "trade-bots": {
+      "version": "2026-11-26-trade-bots-v1",
+      "title": "Trade Bots",
+      "delivery": {
+        "status": "LIVE · STAGING",
+        "environment": "staging",
+        "details": "Any Trade Bots page served in staging is a development surface."
+      },
+      "features": [
+        {
+          "id": "trade-bots",
+          "name": "Trading automation and bots",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "No live trading, swap, custody, order routing or asset transfer is enabled by this page."
+        }
+      ]
+    }
+  }
+}
