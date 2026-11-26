@@ -39,7 +39,9 @@ function json(status, body, headers = {}) {
   h.set("X-Content-Type-Options", "nosniff");
   h.set("Referrer-Policy", "no-referrer");
   h.set("X-Frame-Options", "DENY");
+  h.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   h.set("Cross-Origin-Resource-Policy", "same-origin");
+  h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   return new Response(JSON.stringify(body), { status, headers: h });
 }
 async function rateLimit(db, env, request, action, subject, maximum, seconds) {
