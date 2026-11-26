@@ -21,7 +21,8 @@
       "delivery": {
         "status": "LIVE · STAGING",
         "environment": "staging",
-        "details": "This homepage is reachable through the AstroCrown staging website. This label describes page delivery only; it does not mean that the services or data shown here are operational."
+        "details": "This homepage is reachable through the AstroCrown staging website. This label describes page delivery only; it does not mean that the services or data shown here are operational.",
+        "scope": "page_delivery"
       },
       "features": [
         {
@@ -74,7 +75,8 @@
       "delivery": {
         "status": "LIVE · STAGING",
         "environment": "staging",
-        "details": "The Genesis Programme page is served from the AstroCrown staging website. Page delivery does not imply that payment, purchase or entitlement functions are enabled."
+        "details": "The Genesis Programme page is served from the AstroCrown staging website. Page delivery does not imply that payment, purchase or entitlement functions are enabled.",
+        "scope": "page_delivery"
       },
       "features": [
         {
@@ -115,7 +117,8 @@
       "delivery": {
         "status": "LIVE · STAGING",
         "environment": "staging",
-        "details": "The account interface is reachable in the staging website. This does not mean that the approved wallet-only account lifecycle is available."
+        "details": "The account interface is reachable in the staging website. This does not mean that the approved wallet-only account lifecycle is available.",
+        "scope": "page_delivery"
       },
       "features": [
         {
@@ -144,7 +147,8 @@
       "delivery": {
         "status": "LIVE · STAGING",
         "environment": "staging",
-        "details": "The staging website can serve the administrator interface. This is not an authorization to use operational administrative functions."
+        "details": "The staging website can serve the administrator interface. This is not an authorization to use operational administrative functions.",
+        "scope": "page_delivery"
       },
       "features": [
         {
@@ -161,7 +165,8 @@
       "delivery": {
         "status": "LIVE · STAGING",
         "environment": "staging",
-        "details": "This information page is served from the staging website. Check each document's stated version and status."
+        "details": "This information page is served from the staging website. Check each document's stated version and status.",
+        "scope": "page_delivery"
       },
       "features": [
         {
@@ -176,9 +181,9 @@
       "version": "2026-11-26-community-v1",
       "title": "AstroCrown Community",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "Any community preview served in staging is a development surface, not an operational public community."
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Community page is deployed yet. This is a planned first-party service, not an operational community destination."
       },
       "features": [
         {
@@ -193,9 +198,9 @@
       "version": "2026-11-26-nova-v1",
       "title": "Chat with NOVA",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "Any NOVA interface served in staging is a development surface."
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Chat with NOVA page is deployed yet. This is a planned service, not an operational chat destination."
       },
       "features": [
         {
@@ -210,9 +215,9 @@
       "version": "2026-11-26-council-v1",
       "title": "AstroCrown Council",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "This page is a development surface and has no binding governance authority."
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Council page is deployed yet. This is a planned service; no binding governance actions are available."
       },
       "features": [
         {
@@ -227,9 +232,9 @@
       "version": "2026-11-26-trade-bots-v1",
       "title": "Trade Bots",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "Any Trade Bots page served in staging is a development surface."
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "No dedicated Trade Bots page is deployed yet. Trading automation, swap and transaction execution are not enabled."
       },
       "features": [
         {
