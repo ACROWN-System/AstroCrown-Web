@@ -38,7 +38,7 @@ Only the following labels are permitted:
 | **DEVNET** | The feature operates only on its named development/test network. Its notice must identify the network, chain/network ID as appropriate, test asset and an exact verified official faucet link or address. Test tokens have no mainnet value. |
 | **FOR DEVELOPMENT · READ ONLY** | A prototype, design, research or preview surface. It may display information but must not perform live transactions, payments or operational state changes. |
 
-No other wording may silently substitute for these labels. Status is assigned per feature, not per page. A page-delivery badge such as LIVE · STAGING describes only that the page is being served; the notice must say so explicitly and must show every feature's separate status.
+No other wording may silently substitute for these labels. Status is assigned per feature, not per page. A page-delivery badge such as LIVE · STAGING may be used only after the exact page build has actually been deployed to, and independently opened on, its named remote staging origin. A successful local build, CI artifact, Pages configuration, queued deployment, or GitHub Pages prototype is not proof that the Cloudflare Pages staging origin is live. The notice must distinguish page delivery from feature operation and show every feature's separate status.
 
 **Unlabelled means FOR DEVELOPMENT · READ ONLY.** An unknown, expired, missing, malformed or unverified status record must fail closed to that status. Never infer LIVE from a working link, successful wallet connection, API response, deployed Worker, database presence, CI pass or visual appearance alone.
 
@@ -94,4 +94,4 @@ A CI pass qualifies only what that exact workflow actually tests. A static build
 
 ## 8. Initial status
 
-The first central register identifies the actually served homepage, Genesis route, account/admin interface and information page as LIVE · STAGING for page delivery only. It marks current market data, generic wallet-only account sign-in, dashboards, Genesis identity/payment/purchase/member badge, community, NOVA, Council and Trade Bots as FOR DEVELOPMENT · READ ONLY. Dedicated Community, NOVA, Council and Trade Bots routes are not yet deployed. This is intentional: website hosting does not prove that the product features or service destinations are operational.
+The current central register marks the homepage, Genesis route, account/admin interface and information page as FOR DEVELOPMENT · READ ONLY for page delivery. Their allowlisted bundle is built and tested in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. All individual features that have not passed their own release gates also remain FOR DEVELOPMENT · READ ONLY. Dedicated Community, NOVA, Council and Trade Bots routes are not yet deployed.
