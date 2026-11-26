@@ -27,6 +27,10 @@
   var focusBeforeOpen = null;
   var busy = false;
   var pendingAdminWalletMessage = null;
+  var memberNameApplyEnabled = false;
+  var memberNameCheckSequence = 0;
+  var memberNameCheckTimer = null;
+  var availableMemberName = "";
   var termsVersion = "development-terms-2026-10-31-v0.3";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var queryParams = new URLSearchParams(window.location.search);
@@ -698,7 +702,8 @@
           element.id === "open-account-hub" &&
           (successKind === "signup" || successKind === "recovery") &&
           !recoveryKeyAcknowledged;
-        element.disabled = value ||
+        var memberNameDisabled = element.id === "account-member-name-apply" && !memberNameApplyEnabled;
+        element.disabled = value || memberNameDisabled ||
           element.dataset.originalDisabled === "true" ||
           recoveryAcknowledgementPending;
       });
@@ -912,9 +917,62 @@
       '</div>';
   }
 
+  function setMemberNameStatus(message, kind, canApply) {
+    memberNameApplyEnabled = canApply === true;
+    var status = document.getElementById("account-member-name-status");
+    if (status) {
+      status.textContent = message || "";
+      status.dataset.state = kind || "info";
+    }
+    var button = document.getElementById("account-member-name-apply");
+    if (button) button.disabled = busy || !memberNameApplyEnabled;
+  }
+
+  function scheduleMemberNameAvailabilityCheck() {
+    var input = document.getElementById("account-member-name-input");
+    if (!input) return;
+    var proposedName = input.value;
+    var sequence = ++memberNameCheckSequence;
+    availableMemberName = "";
+    memberNameApplyEnabled = false;
+    if (memberNameCheckTimer) window.clearTimeout(memberNameCheckTimer);
+    var currentName = String(accountState.memberName || "");
+    if (proposedName.trim().toLowerCase() === currentName.toLowerCase()) {
+      setMemberNameStatus("This is your current member name.", "available", false);
+      return;
+    }
+    if (!/^[A-Za-z][A-Za-z0-9_]{2,19}$/.test(proposedName.trim())) {
+      setMemberNameStatus("Use 3–20 characters: start with a letter and use only letters, numbers or underscores.", "invalid", false);
+      return;
+    }
+    setMemberNameStatus("Checking username availability…", "checking", false);
+    memberNameCheckTimer = window.setTimeout(async function () {
+      try {
+        var result = await requestJson("/api/account/member-name/check", { memberName: proposedName });
+        if (sequence !== memberNameCheckSequence) return;
+        if (result.available === true && result.unchanged !== true) {
+          availableMemberName = result.memberName;
+          setMemberNameStatus("Username available. You can apply this name.", "available", true);
+        } else if (result.unchanged === true) {
+          setMemberNameStatus("This is your current member name.", "available", false);
+        } else {
+          setMemberNameStatus("Username is already taken. Please choose another.", "unavailable", false);
+        }
+      } catch (error) {
+        if (sequence !== memberNameCheckSequence) return;
+        setMemberNameStatus(error.message || "Could not verify this username. Try again.", "error", false);
+      }
+    }, 350);
+  }
+
   function renderAccountDashboard() {
     if (!accountState || !accountState.authenticated) return;
+    memberNameCheckSequence += 1;
+    availableMemberName = "";
+    memberNameApplyEnabled = false;
+    if (memberNameCheckTimer) window.clearTimeout(memberNameCheckTimer);
     var identifier = escapeHtml(accountState.accountIdentifier || "AstroCrown member");
+    var memberName = escapeHtml(accountState.memberName || "AstroCrown member");
     var referral = accountState.referralId
       ? escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(unverified; no reward is applied)</span>'
       : 'Not supplied';
@@ -1021,9 +1079,10 @@
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
         '</div>' +
-        '<div class="account-dashboard-welcome-copy"><strong>' + identifier + '</strong><span>' + escapeHtml(authenticationLabel) + '</span></div>' +
+        '<div class="account-dashboard-welcome-copy"><strong>' + memberName + '</strong><span>' + escapeHtml(authenticationLabel) + ' · Account ID ' + identifier + '</span></div>' +
       '</div>' +
       '<div class="account-dashboard-grid">' +
+        '<section class="account-dashboard-card account-member-name-card"><h2>Your public member name</h2><p>This unique name identifies you across AstroCrown. It is separate from your account ID and primary wallet address.</p><label class="account-member-name-field" for="account-member-name-input">Member name<input id="account-member-name-input" type="text" maxlength="20" minlength="3" autocomplete="off" autocapitalize="none" spellcheck="false" value="' + memberName + '" aria-describedby="account-member-name-status"></label><p id="account-member-name-status" class="account-member-name-status" data-state="info" role="status" aria-live="polite">Enter a new name to check whether it is available.</p><button class="account-primary account-member-name-apply" type="button" id="account-member-name-apply" disabled>Apply name</button><p class="account-member-name-hint">3–20 characters. Start with a letter; use letters, numbers and underscores. Names are unique regardless of capitalization.</p></section>' +
         '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">' + String(unreadCommunicationCount) + ' pending</p><p>Important account alerts and private in-app messages are kept in one place, with separate sections and acknowledgement/read status.</p><button class="account-primary" type="button" id="open-account-communications">Open communications</button></section>' +
         '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and transactions belong to this User dashboard and remain subject to the same member rules for every account.</p><p>Transaction workflows and other service modules are not enabled in this account prototype.</p></section>' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
@@ -1558,6 +1617,12 @@
     }
   });
 
+  dashboardContent.addEventListener("input", function (event) {
+    if (event.target && event.target.id === "account-member-name-input") {
+      scheduleMemberNameAvailabilityCheck();
+    }
+  });
+
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
@@ -1565,6 +1630,35 @@
         button.dataset.securityAction !== "acknowledge-recovery-key") {
       var pendingFeedback = document.getElementById("account-security-feedback");
       if (pendingFeedback) pendingFeedback.textContent = "Save and acknowledge the one-time recovery key before making another security change.";
+      return;
+    }
+    if (button.id === "account-member-name-apply") {
+      var nameInput = document.getElementById("account-member-name-input");
+      var requestedName = nameInput ? nameInput.value.trim() : "";
+      if (!memberNameApplyEnabled || !availableMemberName ||
+          requestedName.toLowerCase() !== availableMemberName.toLowerCase()) {
+        setMemberNameStatus("Check the name again before applying it.", "checking", false);
+        return;
+      }
+      memberNameApplyEnabled = false;
+      availableMemberName = "";
+      setMemberNameStatus("Applying your member name…", "checking", false);
+      setBusy(true);
+      try {
+        accountState = await requestJson("/api/account/member-name/apply", { memberName: requestedName });
+        syncAccountButton();
+        renderAccountDashboard();
+        setMemberNameStatus("Your member name has been updated.", "available", false);
+      } catch (error) {
+        var taken = /just been claimed|already taken|unique/i.test(error.message || "");
+        setMemberNameStatus(
+          taken ? "Username is already taken. Please choose another." : (error.message || "Your member name could not be updated."),
+          taken ? "unavailable" : "error",
+          false
+        );
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "account-security-manage") {
