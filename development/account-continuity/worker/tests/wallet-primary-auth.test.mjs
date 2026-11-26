@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
+import { keccak256, toBytes } from "viem";
 import { createPrimaryWalletMessage, issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge } from "../src/wallet-auth.js";
-import { verifyWalletSignature } from "../src/supporters.js";
+import { base58Encode, normalizeWalletAddress, verifyWalletSignature } from "../src/supporters.js";
 
 const ORIGIN = "https://accounts.astrocrown.example";
 const issuedAt = "2026-11-26T10:00:00.000Z";
@@ -79,4 +80,51 @@ test("Ethereum wallet message nonce uses the EIP-4361 alphanumeric nonce charact
   });
   const nonce = message.match(/^Nonce: ([A-Za-z0-9]+)$/m);
   assert.ok(nonce, "SIWE-style nonce must be alphanumeric");
+});
+
+test("TRON TIP-191 message signatures are verified against the canonical Base58Check account", async () => {
+  const wallet = privateKeyToAccount("0x0000000000000000000000000000000000000000000000000000000000000001");
+  const payload = new Uint8Array([0x41, ...toBytes(wallet.address)]);
+  const first = new Uint8Array(await crypto.subtle.digest("SHA-256", payload));
+  const second = new Uint8Array(await crypto.subtle.digest("SHA-256", first));
+  const address = base58Encode(new Uint8Array([...payload, ...second.slice(0, 4)]));
+  const normalized = await normalizeWalletAddress("tron", address);
+  assert.equal(normalized.address, address);
+
+  const message = createPrimaryWalletMessage({
+    origin: ORIGIN, network: "tron", address, intent: "login",
+    challengeId: "wac_abcdefghijklmnopqrstuv", nonce: "0123456789abcdefABCDEF",
+    issuedAt, expiresAt,
+  });
+  const prefix = "\x19TRON Signed Message:\n" + String(new TextEncoder().encode(message).length);
+  const hash = keccak256(new Uint8Array([...toBytes(prefix), ...toBytes(message)]));
+  const signature = await wallet.sign({ hash });
+  assert.equal(await verifyWalletSignature({
+    network: "tron", address_normalized: address, message,
+  }, signature), true);
+  assert.equal(await verifyWalletSignature({
+    network: "tron", address_normalized: address, message: message + " altered",
+  }, signature), false);
+});
+
+test("Solana Ed25519 message signatures are verified against the canonical 32-byte public key", async () => {
+  const pair = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
+  const publicKey = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
+  const address = base58Encode(publicKey);
+  const normalized = await normalizeWalletAddress("solana", address);
+  assert.equal(normalized.address, address);
+
+  const message = createPrimaryWalletMessage({
+    origin: ORIGIN, network: "solana", address, intent: "login",
+    challengeId: "wac_abcdefghijklmnopqrstuv", nonce: "0123456789abcdefABCDEF",
+    issuedAt, expiresAt,
+  });
+  const signature = new Uint8Array(await crypto.subtle.sign("Ed25519", pair.privateKey, new TextEncoder().encode(message)));
+  const encoded = Buffer.from(signature).toString("base64url");
+  assert.equal(await verifyWalletSignature({
+    network: "solana", address_normalized: address, message,
+  }, encoded), true);
+  assert.equal(await verifyWalletSignature({
+    network: "solana", address_normalized: address, message: message + " altered",
+  }, encoded), false);
 });
