@@ -1,5 +1,5 @@
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
-import { supporterStatusResponse } from "./supporters.js";
+import { genesisProgrammeStatusResponse } from "./genesis-status.js";
 import { handleGenesisWalletApi } from "./genesis.js";
 import { issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge, isQualifiedAccountRuntime, isLoopbackDevelopmentOrigin } from "./wallet-auth.js";
 import { createDefaultMemberName, normalizeMemberName } from "./member-name.js";
@@ -1232,7 +1232,7 @@ async function api(request, env, config) {
   if (accountApiPath && !isQualifiedAccountRuntime(env, config, request)) {
     return json(404, { error: "The account service is not enabled for this runtime or request origin." });
   }
-  if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
+  if (url.pathname === "/api/genesis/status" && request.method === "GET") return genesisProgrammeStatusResponse(env);
   if (url.pathname === "/api/genesis/acknowledgement-status" && request.method === "GET") {
     return pageAcknowledgementStatus(request, env, "genesis");
   }
@@ -1340,7 +1340,6 @@ export default {
           !isAcknowledgementStatusPath &&
           pathname !== "/api/staging/acknowledge" &&
           pathname !== "/api/staging/page-acknowledge" &&
-          pathname !== "/api/supporters/status" &&
           pathname !== "/api/genesis/status" &&
           pathname !== "/api/genesis/directory" &&
           !(await hasStagingAcknowledgement(request, env))
