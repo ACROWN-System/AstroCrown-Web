@@ -92,7 +92,8 @@ for (const page of Object.values(featureStatus.pages)) {
 
 assert.match(accountJs, /var forceBrowserDemo = true;/);
 assert.match(accountJs, /function renderWalletPrimaryStatus\(\)/);
-assert.match(accountJs, /workerStagingMode \|\| browserPreviewMode/);
+assert.match(accountJs, /typeof workerStagingMode/);
+assert.match(accountJs, /browserPreviewMode/);
 assert.match(accountJs, /Sign in with wallet/);
 assert.match(accountJs, /Why wallet\?/);
 assert.match(walletAssurance, /name="astro-page-id" content="account"/);
