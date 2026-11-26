@@ -338,10 +338,10 @@ function assertWalletAuthEnvironment(env) {
 }
 export async function issuePrimaryWalletChallenge(db, env, request, payload, config) {
   assertWalletAuthEnvironment(env);
-  if (!db) throw fail(503, "The account database is not bound.");
   if (!payload || !["register", "login"].includes(payload.intent)) {
     throw fail(400, "Choose primary-wallet registration or sign-in.");
   }
+  if (!db) throw fail(503, "The account database is not bound.");
   return issueChallenge(db, env, request, payload, config, payload.intent);
 }
 export async function verifyPrimaryWalletChallenge(db, env, request, payload, config) {
