@@ -22,6 +22,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
 
   assert.match(homepage, /name="astro-page-id" content="home"/);
   assert.match(homepage, /id="development-notice-acknowledged" type="checkbox" disabled/);
+  assert.match(homepage, /id="development-notice-status-loading"/);
   assert.match(homepage, /Log In\/Sign Up/);
   assert.match(homepage, /page-entry\/page-entry-notice\.js/);
   assert.match(homepage, /LIVE PUBLIC TEST ENVIRONMENT/);
