@@ -43,7 +43,6 @@ const allowlist = [
   "account-continuity/prototype/account-prototype.css",
   "account-continuity/prototype/account-ui.js",
   "account-continuity/prototype/admin-wallet-ui.js",
-  "account-continuity/prototype/security-assurance.html",
   "account-continuity/prototype/terms-of-use.html",
   "account-continuity/prototype/privacy-policy.html",
   "account-continuity/prototype/wallet-identity-assurance.html",
