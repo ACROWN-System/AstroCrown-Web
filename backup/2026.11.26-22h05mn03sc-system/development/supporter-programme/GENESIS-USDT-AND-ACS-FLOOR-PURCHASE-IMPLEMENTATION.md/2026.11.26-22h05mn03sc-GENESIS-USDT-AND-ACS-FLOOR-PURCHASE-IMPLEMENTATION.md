@@ -1,0 +1,188 @@
+# Genesis Programme — USDT Receipt and ACS Floor-Price Purchase Integration
+
+**Status:** implementation specification; not an activation decision  
+**Date:** 2026-11-17  
+**Repository:** ACROWN-System/AstroCrown-Web
+
+This specification defines the intended end-to-end payment and ACROWN delivery behavior. It does not enable mainnet payment acceptance, approve new economic terms, prove control of a treasury address, or authorize a token transfer or mint.
+
+
+> **Authoritative owner amendment — 18 November 2026:** The primary wallet is the sole Genesis identity, login authority and recovery anchor; it does not own a personal purchase allowance. Qualifying payments add capacity to one shared Genesis-programme-wide USDT purchase-allowance pool. Any primary-wallet identity registered before the permanent registration cutoff may buy from the entire remaining shared pool; one wallet may use all of it if desired and inventory permits. All Genesis activity pauses exactly 24 hours before the scheduled official ACROWN launch, and new primary-wallet registration closes permanently at that cutoff. At official ACROWN launch, the Genesis Programme resumes for pre-freeze registered identities under the existing programme rules. Those members may continue purchasing remaining Genesis rights and ACROWN at the ACS floor price; no new Genesis identities are accepted. The shared programme-wide timer starts at ACROWN launch and displays **180 days of inactivity**. Every completed, finalized purchase of remaining Genesis rights (a qualifying-payment credit) or ACROWN at the ACS floor price resets that same global timer to 180 days of inactivity from finalization. It is not a personal timer. Every additional network address must independently prove control before it can be used; unlinked one-time payment sources are not accepted. Wallet linking pauses during the 24-hour pre-launch freeze and resumes for existing identities after ACROWN launch. Use **qualifying payment**, **programme-wide purchase allowance**, **floor-price purchase** and **Genesis Member** in product language. Public explorer links expose the complete source address and on-chain history, and this must be disclosed before payment. Future member privileges remain planned until separately approved. The complete authoritative design is [MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md](./MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md) and [GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md](./GENESIS-WALLET-FIRST-IDENTITY-AND-MEMBER-EXPERIENCE.md).
+
+
+## 1. Supported payment asset and receiving networks
+
+The initial payment asset is USD₮ (USDT), using the canonical token on each supported mainnet:
+
+| Network | Token standard | Canonical USDT identifier | Genesis receiving address |
+|---|---|---|---|
+| Ethereum Mainnet | ERC-20 | 0xdAC17F958D2ee523a2206206994597C13D831ec7 | 0xbbb77071149a5F113Df15E78c58518917afa950A |
+| TRON Mainnet | TRC-20 | TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t | TAKHQcuJ3RLsZZxCorWc3rav6M28dS6VTR |
+| Solana Mainnet | SPL | Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB | AWyq9E7Wsdjv9VyoTs84XGiubQGZM7fETnZ8ddfArwkG |
+
+USDT uses six decimal places on these rails, subject to live on-chain verification before activation.
+
+"All supported assets" in this first release means the same USD₮ asset across these three chain-specific token implementations. It does not mean native ETH, TRX, SOL, BTC, other stablecoins, arbitrary SPL/ERC-20/TRC-20 tokens, wrapped assets, or bridged representations. A new asset requires its own canonical identifier, decimals, destination, valuation source, finality policy, reconciliation tests, and explicit approval.
+
+Every receiving address is an owner-supplied public destination. Recording an address or validating its syntax is not proof of signing control, custody, recoverability, token-account readiness, or authority to spend the funds. All three network configuration rows remain disabled until their own verification gates pass.
+
+## 2. Two distinct participant stages
+
+The programme model separates qualifying payments from ACROWN floor-price purchases while maintaining one shared purchase pool:
+
+1. **Qualifying payment / shared-pool credit.** An eligible wallet identity registered before the permanent freeze sends the exact USDT amount in a chain-specific qualifying-payment intent to the designated Genesis receiving address. The service verifies the actual token transfer and finality, then credits the calculated USDT purchase allowance to the single programme-wide pool—not to a personal wallet balance.
+2. **Later ACROWN floor-price purchase.** Any eligible pre-freeze registered wallet may select a USDT purchase value up to the entire remaining shared programme allowance, even if that value exceeds the qualifying payments made by that wallet. The service quotes the corresponding ACROWN quantity at the contemporaneous, approved ACS pure floor, creates a separate exact USDT purchase intent addressed directly to the approved ACS reserve destination counted in V, verifies the purchase payment, and only then arranges ACROWN delivery to the participant's independently verified Solana wallet.
+
+A Genesis qualifying payment is not itself an ACROWN purchase, does not automatically issue or transfer tokens, and is not automatically added to ACS reserve value V. It funds the Genesis Programme's planned launch of the complete AstroCrown website frontend and backend. The later floor-price purchase is a separate transaction; its exact USDT principal must be received in full by the approved ACS reserve destination and counted in V. The participant interface must show both transactions, their distinct destinations, exact amounts, fee responsibilities, receipts and balances before either transfer is confirmed. The proposed declining global tiers are 30×, 25×, 20×, 15× and 10× across successive USDT 10,000 qualifying-payment tranches, targeting USDT 50,000 of Genesis qualifying payments and up to USDT 1,000,000 of aggregate USDT-denominated purchase allowance. The detailed global allocation rules are in [MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md](./MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md).
+
+## 2A. Participant network-fee responsibility and full-principal rule
+
+For every participant-originated Genesis qualifying payment and every later ACROWN floor-price purchase, the registered wallet owner pays the blockchain network fee separately from the USDT principal. The fee is paid in the selected chain's required native fee asset or network resources (for example, ETH, TRX or SOL where applicable). No participant network fee may be deducted from the USDT principal, added to the principal, sponsored by the programme, or netted against the amount credited.
+
+Before signing, the interface must separately show:
+- the exact USDT amount and six-decimal base-unit amount authorized by the intent;
+- the exact network, canonical USDT token, registered source address and receiving destination;
+- the payment purpose (Genesis qualifying payment versus ACROWN floor-price purchase);
+- the current network-fee estimate and fee asset/resource, clearly labelled as separate from the USDT principal;
+- a warning that the fee estimate can change and the wallet's own confirmation prompt is authoritative;
+- the requirement that the registered wallet owner maintain sufficient fee balance/resources and may cancel before signing.
+
+The verifier must require that the finalized transfer delivers the exact USDT principal to the exact intent destination. If a route, intermediary or provider deducts a withdrawal/service fee from the USDT amount so that the destination receives less than the authorized principal, the payment must remain uncredited/rejected under the exact-amount rules. Do not compensate by silently increasing the requested USDT amount.
+
+**Reserve integrity:** the destination for an ACROWN floor-price purchase is a separately verified ACS reserve destination whose value is counted in V; it is not the Genesis website-launch treasury and not the ACROWN inventory/delivery wallet. The full received USDT purchase principal is included in V under the approved ACS valuation method. With F = V/C, participant network fees are outside the purchase principal and must not reduce V. Any project-side operating or treasury-management cost must have a separately approved source and accounting treatment outside this principal. The Genesis qualifying payment instead goes in full to the Genesis Programme treasury for the planned website frontend/backend launch; it does not automatically increase ACS reserve V.
+
+No fee is subtracted from the quoted ACS pure floor. Do not add gas, processor fees, a service margin or a percentage haircut to the purchase principal. No live route may be activated until this exact-principal and fee-disclosure behavior is tested end to end for each supported rail.
+
+## 3. Contribution receipt and allowance credit
+
+For each contribution, the backend must create a single-use intent binding all of the following:
+
+- authenticated, active, verified Genesis participant;
+- independently verified source/payment wallet and network;
+- exact canonical USDT token identifier and six-decimal base-unit amount;
+- exact Genesis destination for that network;
+- unique intent ID, creation time, expiry, and immutable programme-rules version.
+
+The participant must initiate the transfer from their wallet and review the exact destination and amount. The website must not request an unlimited token approval. No payment button may imply that an amount has been received before chain verification.
+
+A contribution is eligible for credit only after the chain-specific verifier confirms the successful finalized transfer, exact token, sender, destination, amount, transaction identity, and event/transfer index. Verification must reject partial payments, overpayments, wrong assets, wrong networks, wrong destinations, expired intents, replayed transactions, failed transactions, and ambiguous or reorganized chain state. A transaction/event identity is credited at most once.
+
+The initial verification requirements are:
+
+- **Ethereum:** successful receipt on Ethereum Mainnet; exact ERC-20 contract; matching Transfer event, sender, treasury destination and amount; canonical finalized/safe block policy.
+- **TRON:** successful TRON Mainnet transaction; exact TRC-20 contract; matching Transfer event, sender, treasury destination and amount; solidified/finalized block evidence.
+- **Solana:** finalized successful transaction; exact USDT mint and token program; source token account owned by the verified participant wallet; destination token account owned by the Genesis treasury address; exact token delta and transaction/inner-instruction evidence. A token-account address must not be mistaken for the wallet-owner address.
+
+Use two independently operated RPC sources for transaction and finality verification on each chain. If sources disagree, required evidence is missing, the transaction is not finalized, or a provider is unavailable, the service must remain fail-closed and leave the contribution uncredited for reconciliation.
+
+Allowance credit is a single atomic, idempotent operation: record the immutable contribution, append the entitlement event, and update the participant's earned allowance together. It must not be possible to create a contribution record without its matching allowance event or to credit the same transfer twice.
+
+## 4. ACS pure-floor purchase price
+
+The latest retrievable ACS core/governance scaffold establishes the pure-floor convention:
+
+- Pure floor: F_pure = V_reserves / Q_defended.
+- Q_defended is configured as circulating supply.
+- The core function accepts reserve value denominated in BTC, so the floor output is BTC per ACROWN when its inputs are expressed in those units.
+- The official pure floor excludes fees. Venue execution triggers may subtract fixed fees, percentage fees, gas and slippage, but those fee-adjusted triggers are not the official floor.
+
+For a USDT-denominated Genesis purchase, the quote therefore needs a contemporaneous, approved BTC/USDT conversion:
+
+USDT price per ACROWN = F_pure (BTC per ACROWN) × approved BTC/USDT quote.
+
+The USDT due for a selected ACROWN quantity must be computed using exact integer/rational arithmetic and the approved ACROWN token decimals. Floating-point arithmetic is not acceptable for payment, entitlement, or settlement amounts. The exact rounding rule, quote precision, oracle quorum, divergence tolerance, maximum source age, and quote validity period must be fixed in a newly qualified ACS/Genesis rules version before activation; this specification does not invent those values.
+
+Each immutable purchase quote must preserve at least:
+
+- ACS engine release and governance-config version/digest;
+- reserve valuation snapshot ID and timestamp;
+- each approved reserve constituent, quantity, valuation source, price, and timestamp;
+- total reserve value in the ACS common BTC numeraire;
+- defended quantity and circulating-supply source/snapshot;
+- resulting pure floor in BTC per ACROWN;
+- BTC/USDT oracle sources, values, timestamps, quorum and divergence result;
+- resulting USDT-per-ACROWN price and exact USDT base-unit total;
+- ACROWN amount and decimals, Genesis delivery wallet, payment network and destination;
+- quote creation/expiry and the immutable rule/rounding version.
+
+A quote must be rejected when the ACS release is unapproved, any required reserve or supply input is stale or incomplete, oracle quorum is not met, the feeds diverge outside the approved tolerance, the supply snapshot is inconsistent, or the quote has expired. Recompute a new quote; never silently reprice an already confirmed purchase.
+
+**Do not apply the provisional 35% roof-price uplift to a Genesis participant's purchase.** The roof price is a separate sell-side liquidity policy and its 35% baseline remains provisional pending renewed economic and Monte Carlo qualification. A Genesis participant's purchase quote uses the approved pure floor, not the roof and not an external venue's fee-adjusted execution trigger.
+
+### ACS source basis and qualification status
+
+The retrievable ACS core repository currently defines the pure floor in its README and in the core LCR function; its NOVA config sets pure/no-fees mode and circulating supply as defended quantity. The corresponding governance scaffold is marked approved on 2025-09-01. These are traceable source references for the mathematical convention, not evidence that a 2026 live reserve inventory, oracle configuration, or operational price feed has been requalified.
+
+- ACS core README: https://github.com/haanmetric-wq/AstroCrown-ACS.core/blob/0d9c35a7bc13f8e5387b8e843f98342011ec2c97/README.md
+- ACS core LCR function: https://github.com/haanmetric-wq/AstroCrown-ACS.core/blob/0d9c35a7bc13f8e5387b8e843f98342011ec2c97/src/lcr.py
+- ACS pure-floor configuration: https://github.com/haanmetric-wq/AstroCrown-ACS.core/blob/0d9c35a7bc13f8e5387b8e843f98342011ec2c97/config/NOVA_CONFIG.yml
+- Governance-approved scaffold: https://github.com/haanmetric-wq/AstroCrown-ACS.governance/blob/1e0710e560b65c6fe0d29b038c0b11199557260e/configs/NOVA_CONFIG_APPROVED.yml
+
+A renewed 2026 ACS release, reserve valuation model, supply snapshot source, oracle configuration and qualification evidence are required before a live floor quote can be produced. The existing Python scaffold uses floating-point values and is not itself a production settlement implementation.
+
+## 5. Purchase, payment and delivery sequence
+
+The 24-hour pre-launch freeze and permanent registration closure are governed by [MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md](./MAINNET-PAYMENT-AND-ENTITLEMENT-ARCHITECTURE.md). After official ACROWN launch, the Genesis Programme resumes for identities registered before the cutoff under the existing programme rules; new primary-wallet registration remains closed. Members may continue acquiring remaining Genesis purchase rights and purchasing ACROWN at the ACS floor price. The shared programme-wide timer starts at ACROWN launch and displays 180 days of inactivity. Each completed, finalized purchase of remaining Genesis rights (recorded as a qualifying-payment credit) or ACROWN at the ACS floor price resets the same programme-wide timer from its finalization time. There are no personal balances or individual timers; any eligible registered wallet may use the full remaining shared allowance. A pending, finalized-but-undelivered ACROWN purchase remains auditable and must not be silently expired.
+
+After receiving a valid quote, the participant must explicitly confirm:
+
+- selected ACROWN quantity and amount requested from the remaining programme-wide allowance;
+- floor-price version and quote expiry;
+- exact USDT amount, chain, token and Genesis destination;
+- their registered Solana ACROWN delivery wallet;
+- that the purchase is separate from their earlier contribution.
+
+The backend reserves the requested amount against the one programme-wide pool and any applicable ACROWN inventory atomically, for a short bounded period. The reservation must be released on expiry, rejection or verified payment failure. Concurrent purchases from different wallets must not overspend the shared allowance, approved programme cap or available ACROWN inventory. There is no personal allowance check.
+
+The purchase payment is another exact USDT transfer and requires the same chain-specific token, sender, destination, amount, uniqueness and finality checks as a contribution. The purchase must reference its quote and its own unique payment intent. This requires a dedicated purchase-intent record or equivalent schema extension: the current contribution-intent table must not be reused to disguise a purchase as a contribution.
+
+Only after the purchase payment is finalized and reconciled may the system create an ACROWN delivery instruction. Delivery must go from the approved ACROWN inventory/seller source to the participant's separately verified Solana delivery wallet. No automatic minting is implied or authorized by a contribution or purchase allowance.
+
+The delivery verifier must confirm the exact ACROWN mint, token program, source, recipient wallet owner, amount, successful transaction and finalized signature. For Solana, it must verify the destination token account is for the approved ACROWN mint and is owned by the participant's registered delivery wallet. The participant's purchase is marked settled only after this verification. A pending, failed, ambiguous or mismatched transfer remains visibly pending/blocked and enters reconciliation; it must never be shown as delivered merely because a transaction was submitted.
+
+The Genesis USDT receiving wallet and the ACROWN inventory/delivery wallet are distinct operational roles. The implementation must not infer that a USDT receiving address holds ACROWN or that an ACROWN inventory wallet is authorized to receive participant USDT.
+
+## 6. Required records and audit controls
+
+The schema now includes migration `0005_genesis_global_allowance_and_launch_freeze.sql`: a single global allowance state, immutable programme-wide allowance events, and the ACROWN launch / pre-launch registration-freeze control record. The legacy per-wallet `genesis_wallet_entitlements` table is retained only for schema-history compatibility and is blocked from new inserts/updates. Before purchase execution is implemented, add a versioned migration for purchase intents and complete floor-quote evidence, including the exact receiving destination, participant wallet, quote digest/snapshot, expiry, rules version, payment transaction/event identity and reservation status.
+
+The service must preserve:
+
+- immutable original chain evidence and provider-agreement/source digest;
+- a unique constraint on each network + transaction hash/signature + transfer/event index;
+- idempotent processing and safe retry behavior;
+- atomic programme-wide allowance reservation/consumption and inventory reservation, shared across every eligible registered wallet;
+- append-only financial events and compensating corrections rather than editing confirmed history;
+- explicit states for created, submitted, verifying, payment-confirmed, delivery-pending, settled, rejected, expired, blocked and reconciliation-required;
+- a participant receipt that links contribution, allowance, purchase quote, purchase payment and ACROWN delivery without exposing other participants' private records.
+
+The service must never store or request participant seed phrases or private keys. Treasury and ACROWN inventory signing authority must use separately qualified owner-controlled custody/signing arrangements; wallet-control proof alone is not transaction authority.
+
+## 7. Activation gates
+
+Keep every network disabled and payment acceptance false until all applicable gates pass:
+
+1. **Treasury control:** verify the Ethereum, TRON and Solana Genesis receiving addresses on the correct mainnets using fresh, domain-bound proof challenges and an offline review trail. The current Ethereum/TRON proof artifacts do not by themselves record server-verified custody; the Solana treasury proof flow is still required.
+2. **Inbound asset correctness:** independently verify each canonical USDT token identifier, six-decimal precision, network identity, receiving address and Solana treasury token-account readiness against live mainnet data.
+3. **Finality and reconciliation:** qualify two independent RPC sources, chain-specific finality/reorg handling, Transfer evidence, duplicate detection and failure/retry behavior for each chain. The local parser foundation is documented in [GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md](./GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md); it is not the production RPC or settlement service.
+4. **Programme terms:** approve the existing qualifying-payment multiplier, minimum qualifying-payment threshold, any qualifying-payment ceiling, global USDT-denominated purchase-allowance cap or no-cap policy, and exact rounding rules. Confirm the permanent 24-hour pre-launch registration freeze and the programme-wide rolling timer of 180 days of inactivity, starting at official ACROWN launch and resetting after each completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price. The five-tier schedule and 25:1 illustration remain subject to approval and publication before the relevant qualifying payments are accepted.
+5. **ACS floor:** publish a renewed qualified ACS version covering reserve constituents and quantities, common numeraire, circulating-supply source, oracle quorum, feed tolerance/staleness, price snapshot, rounding and quote expiry.
+6. **ACROWN delivery:** identify the deployed Solana ACROWN mint, token program and decimals; verify available inventory; prove control of the delivery source; qualify the signer/approval procedure; and test finality and recipient-owner checks. No mint address or delivery authority may be guessed.
+7. **End-to-end qualification:** run local deterministic tests and controlled testnet simulations for each chain, then verify contribution credit, purchase quoting, payment reconciliation, allowance reservation, inventory reservation, failed delivery, retry, duplicate and compensation scenarios.
+8. **Operational and legal review:** qualify custody, incident response, accounting, participant terms, disclosures, jurisdictional eligibility and production secrets before any mainnet activation.
+
+Activation is an explicit owner-governed step after evidence review. Before the scheduled ACROWN launch, the owner must schedule and enforce the permanent 24-hour Genesis freeze. After the cutoff, no new primary-wallet identities are accepted. At official ACROWN launch, existing pre-freeze identities resume the Genesis Programme under its existing rules; floor-price ACROWN purchases execute when the ACS floor-purchase facility is operational. Merging code, recording an address, passing local tests or deploying a Worker must never activate payment acceptance automatically.
+
+## 8. Current implementation boundary
+
+At the time of this specification:
+
+- the three owner-supplied USDT receiving addresses and canonical token identifiers are recorded in the proposed configuration;
+- all three networks remain disabled;
+- registration and off-chain wallet ownership proofs exist, with Solana-only ACROWN delivery-wallet roles;
+- deterministic allowance arithmetic and database structures exist;
+- a local read-only evidence normalizer now parses synthetic Ethereum ERC-20, TRON TRC-20 and Solana SPL USDT transfer evidence and requires two normalized RPC observations to agree; its result explicitly has `creditApplied: false`. See [GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md](./GENESIS-PAYMENT-EVIDENCE-VERIFICATION.md);
+- there is no production RPC client/registry, payment-intent API, chain settlement/reconciliation service, floor-price quote service, purchase-intent service, inventory reservation service or ACROWN delivery service;
+- there is no qualified 2026 ACS price snapshot provider in the Genesis Worker and no verified ACROWN mint/inventory/signer configuration.
+
+The parser accepts trusted chain observations as inputs; it does not fetch RPC data, establish RPC independence by itself, create payment records, credit entitlement, or serve an HTTP route. Automated tests use synthetic fixtures, not live mainnet transactions. No remote D1 migration, remote Worker deployment, mainnet payment, payment acceptance, token approval, transfer, mint or treasury activation is performed by this specification.

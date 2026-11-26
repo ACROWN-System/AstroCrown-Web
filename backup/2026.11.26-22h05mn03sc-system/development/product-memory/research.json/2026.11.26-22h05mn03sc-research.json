@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "register": "research",
+  "entries": [
+    {
+      "id": "SRC-0001",
+      "title": "TradingView chart widgets and market overview components",
+      "status": "observed",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "publisher": "TradingView",
+      "source_type": "official_product_documentation",
+      "source_url": "https://www.tradingview.com/widget-docs/widgets/charts/",
+      "accessed_on": "2026-11-20",
+      "claim_supported": "TradingView documents embeddable chart, symbol overview, mini chart, market summary and market overview widgets for use on external websites.",
+      "observations": [
+        "Embeddable financial widgets are an established distribution pattern.",
+        "A widget can extend an existing publisher's site while linking users to a third-party market-data product."
+      ],
+      "limitations": [
+        "This documents a competitor capability, not evidence that AstroCrown has permission to redistribute TradingView or other provider data.",
+        "A familiar embed format is not itself a distinctive advantage.",
+        "The source is official product documentation, not independent proof of performance or adoption impact."
+      ],
+      "supports_capabilities": [
+        "CAP-0011"
+      ],
+      "supports_decisions": [],
+      "independent_verification": false,
+      "license_note": "Review current widget terms, attribution requirements, data licensing and commercial conditions before any integration."
+    },
+    {
+      "id": "SRC-0002",
+      "title": "TradingView widget integration formats and onboarding",
+      "status": "observed",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "publisher": "TradingView",
+      "source_type": "official_product_documentation",
+      "source_url": "https://en.tradingview.com/widget-docs/getting-started/",
+      "accessed_on": "2026-11-20",
+      "claim_supported": "TradingView documents widgets supplied as HTML snippets or React components with built-in data, and describes charts, tickers, calendars and watchlists as embeddable components.",
+      "observations": [
+        "Embedded market components can be delivered through standard web integration patterns.",
+        "Widget data-source and redistribution terms are separate from the technical embedding mechanism."
+      ],
+      "limitations": [
+        "Marketing and integration documentation does not independently establish usage or conversion outcomes.",
+        "AstroCrown should build its own intellectual value rather than assuming a widget library is differentiating."
+      ],
+      "supports_capabilities": [
+        "CAP-0007",
+        "CAP-0010",
+        "CAP-0011"
+      ],
+      "supports_decisions": [],
+      "independent_verification": false,
+      "license_note": "No adoption or redistribution permission is inferred from the existence of the documentation."
+    },
+    {
+      "id": "SRC-0003",
+      "title": "Bitquery AI on-chain investigations",
+      "status": "observed",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "publisher": "Bitquery",
+      "source_type": "competitor_product",
+      "source_url": "https://www.bitquery.io/solutions/ai-investigations",
+      "accessed_on": "2026-11-20",
+      "claim_supported": "Bitquery publicly describes an AI investigation product for blockchain questions, fund tracing, wallet attribution, multichain analysis, visualisations and reports with linked transaction evidence, confidence and caveats.",
+      "observations": [
+        "AI-assisted blockchain investigation and auditable reporting already exist in the market.",
+        "The vendor describes alternative tracing methodologies and second-opinion review as product capabilities."
+      ],
+      "limitations": [
+        "This is vendor-published product material and is not independent verification of the advertised accuracy or coverage.",
+        "AstroCrown must not claim the broad idea of AI blockchain investigation is unique.",
+        "Exact capabilities, pricing, chain coverage and product availability should be rechecked before a competitive decision."
+      ],
+      "supports_capabilities": [
+        "CAP-0005",
+        "CAP-0008",
+        "CAP-0012"
+      ],
+      "supports_decisions": [],
+      "independent_verification": false,
+      "license_note": "No software, data or service licence permission is inferred."
+    },
+    {
+      "id": "SRC-0004",
+      "title": "Nansen AI and on-chain intelligence positioning",
+      "status": "partial",
+      "created_at": "2026-11-20",
+      "updated_at": "2026-11-20",
+      "publisher": "Nansen",
+      "source_type": "competitor_product",
+      "source_url": "https://nansen.ai/",
+      "accessed_on": "2026-11-20",
+      "claim_supported": "Nansen's public homepage markets AI-enabled on-chain intelligence and agentic trading alongside its labelled-wallet data.",
+      "observations": [
+        "AI-enabled on-chain intelligence is already a competitive product direction.",
+        "A broad claim that an AI-powered blockchain assistant is new would be unsafe."
+      ],
+      "limitations": [
+        "The homepage is marketing material and does not fully specify the current agent capabilities, methodology, supported chains or performance.",
+        "A deeper feature-by-feature competitor review is required before approving Living Market Laboratory differentiation."
+      ],
+      "supports_capabilities": [
+        "CAP-0005",
+        "CAP-0008",
+        "CAP-0012"
+      ],
+      "supports_decisions": [],
+      "independent_verification": false,
+      "license_note": "No data access, redistribution or commercial rights are inferred."
+    }
+  ]
+}
