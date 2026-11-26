@@ -32,6 +32,7 @@ const expectedFiles = [
   "_headers",
   "_redirects",
   "account-continuity/prototype/account-prototype.css",
+  "account-continuity/prototype/wallet-identity-assurance.html",
   "account-continuity/prototype/account-ui.js",
   "account-continuity/prototype/admin-wallet-ui.js",
   "assets/genesis-member-dna.svg",
@@ -52,6 +53,7 @@ const supporterPage = read("supporters/index.html");
 const supporterJs = read("supporters/supporters.js");
 const walletAdapters = read("supporters/wallet-provider-adapters.mjs");
 const privacy = read("privacy-transparency.html");
+const walletAssurance = read("account-continuity/prototype/wallet-identity-assurance.html");
 const accountJs = read("account-continuity/prototype/account-ui.js");
 const headers = read("_headers");
 const robots = read("robots.txt");
@@ -89,6 +91,13 @@ for (const page of Object.values(featureStatus.pages)) {
 }
 
 assert.match(accountJs, /var forceBrowserDemo = true;/);
+assert.match(accountJs, /function renderWalletPrimaryStatus\(\)/);
+assert.match(accountJs, /workerStagingMode \|\| browserPreviewMode/);
+assert.match(accountJs, /Sign in with wallet/);
+assert.match(accountJs, /Why wallet\?/);
+assert.match(walletAssurance, /name="astro-page-id" content="account"/);
+assert.match(walletAssurance, /primary wallet is your account identity/i);
+assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
 assert.match(accountJs, /hosted-preview-no-authentication/);
 assert.match(accountJs, /read-only interface demonstration/);
 
