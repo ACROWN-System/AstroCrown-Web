@@ -114,6 +114,34 @@ test("the acknowledgement status endpoint verifies HttpOnly server cookies rathe
   const homeResult = await home.json();
   assert.equal(homeResult.acknowledged, true);
   assert.equal(homeResult.pageVersion, null);
+
+  const genesisResponse = await createPageAcknowledgement(env, {
+    pageId: "genesis",
+    noticeVersion: "2026-11-26-genesis-v2",
+  }, config);
+  const genesisCookie = genesisResponse.headers.get("Set-Cookie").split(";")[0];
+  const genesis = await pageAcknowledgementStatus(new Request(
+    "https://astrocrown.example/api/genesis/acknowledgement-status",
+    { headers: { Cookie: globalCookie + "; " + genesisCookie } }
+  ), env, "genesis");
+  assert.equal((await genesis.json()).acknowledged, true);
+
+  const adminResponse = await createPageAcknowledgement(env, {
+    pageId: "admin",
+    noticeVersion: "2026-11-26-admin-v2",
+  }, config);
+  const adminCookie = adminResponse.headers.get("Set-Cookie").split(";")[0];
+  const admin = await pageAcknowledgementStatus(new Request(
+    "https://astrocrown.example/api/admin/acknowledgement-status",
+    { headers: { Cookie: globalCookie + "; " + adminCookie } }
+  ), env, "admin");
+  assert.equal((await admin.json()).acknowledged, true);
+
+  const wrongScopeGenesis = await pageAcknowledgementStatus(new Request(
+    "https://astrocrown.example/api/genesis/acknowledgement-status",
+    { headers: { Cookie: globalCookie + "; " + adminCookie } }
+  ), env, "genesis");
+  assert.equal((await wrongScopeGenesis.json()).acknowledged, false);
 });
 
 test("unknown page IDs and stale notice versions fail closed", async () => {
