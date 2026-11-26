@@ -63,6 +63,20 @@ async function challenge(intent, signer = wallet) {
   return result.body;
 }
 
+const wrongOrigin = await fetch(origin + "/api/wallet-auth/challenge", {
+  method: "POST",
+  headers: {
+    "Origin": "https://untrusted.invalid",
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+  },
+  body: JSON.stringify({
+    intent: "register", network: "ethereum", address: wallet.address,
+    termsAccepted: true, termsVersion: "development-terms-2026-10-31-v0.3",
+  }),
+});
+assert.equal(wrongOrigin.status, 403, "a foreign origin must not issue an account wallet challenge");
+
 const invalidTerms = await post("/api/wallet-auth/challenge", {
   intent: "register", network: "ethereum", address: wallet.address,
   termsAccepted: true, termsVersion: "stale-terms",
