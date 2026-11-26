@@ -129,13 +129,13 @@
           "id": "user-dashboard",
           "name": "User dashboard and personal profile",
           "status": "FOR DEVELOPMENT · READ ONLY",
-          "details": "The local account candidate provides a primary-wallet identity overview, automatic unique default member name, authenticated name availability checks, case-insensitive unique name application and a customizable profile name. Wallet-bound session controls, fuller profile management, connected transaction-wallet management, community-wide name display and remote staging verification remain outstanding."
+          "details": "The local account candidate provides a primary-wallet identity overview, automatic unique default member name, authenticated name availability checks, case-insensitive unique name application and a customizable profile name. Wallet-bound session controls, fuller profile management, connected transaction-wallet management and remote staging verification remain outstanding. Community-wide name display is a separate future integration, not a prerequisite for the account profile."
         },
         {
           "id": "public-member-name",
           "name": "Unique public member name and customization",
           "status": "FOR DEVELOPMENT · READ ONLY",
-          "details": "The local Worker candidate assigns a unique Crown_ default name and supports authenticated availability checks and atomic member-name changes. Browser/provider testing, remote migration and deployment, and integration into the first-party community's posts and member lists remain outstanding."
+          "details": "The local Worker candidate assigns a unique Crown_ default name and supports authenticated availability checks and atomic member-name changes. Physical wallet/provider browser testing, remote migration, deployment and post-deployment verification remain outstanding. Community posts and member lists are future consumers of this field, not prerequisites for the account profile feature."
         },
         {
           "id": "badges",
