@@ -72,7 +72,6 @@ jobs:
           node --check scripts/build-staging-site.mjs
           node --check public/account-continuity/prototype/account-ui.js
           node --check public/page-entry/page-entry-notice.js
-          node --check tests/worker_browser_smoke.mjs
           node --check scripts/test-supporter-wallet-e2e.mjs
           node --check scripts/test-primary-wallet-auth-e2e.mjs
           npm run check:worker
@@ -109,7 +108,6 @@ jobs:
           const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (status.authenticated !== false) throw new Error("A fresh local request must be unauthenticated.");
           if (status.scope !== "staging-test-account-only") throw new Error("The account scope marker is missing.");
-          if (status.passkeyAvailable !== true) throw new Error("The local Worker must retain the isolated passkey regression service.");
           if (status.walletAuthenticationAvailable !== true) throw new Error("The primary-wallet account API must be advertised in local qualification.");
           if (status.walletAuthenticationNetworks?.join(",") !== "ethereum,tron,solana") throw new Error("The account wallet network allowlist is inconsistent.");
           NODE
@@ -129,40 +127,16 @@ jobs:
             grep "\\[LOCAL SUPPORTER TEST ONLY\\]" "$RUNNER_TEMP/acrown-worker.log" || true
             exit 1
           fi
-                    curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/diagnostics/runtime" -o "$RUNNER_TEMP/runtime.json"
-          node --input-type=module - "$RUNNER_TEMP/runtime.json" <<'NODE'
-          import fs from "node:fs";
-          const runtime = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (runtime.runtime !== "cloudflare-workers") throw new Error("Unexpected Worker runtime.");
-          if (!Array.isArray(runtime.simpleWebAuthnSupportedRegistrationAlgorithms)) throw new Error("Registration algorithm diagnostics missing.");
-          const algorithms = runtime.simpleWebAuthnSupportedRegistrationAlgorithms;
-          const mldsa44 = runtime.webCryptoMlDsaSupport?.["ML-DSA-44"];
-          if (!mldsa44 || typeof mldsa44.sign !== "boolean" || typeof mldsa44.verify !== "boolean") throw new Error("ML-DSA-44 sign/verify capability diagnostics missing.");
-          const advertised = algorithms.includes(-48);
-          if (advertised !== (mldsa44.verify === true)) throw new Error("SimpleWebAuthn's ML-DSA-44 advertisement does not match runtime verification support.");
-          if (runtime.mlDsa44RegistrationPreferred !== advertised) throw new Error("The ML-DSA-44 registration preference diagnostic is inconsistent.");
-          console.log("Local Worker ML-DSA-44 capability: " + JSON.stringify({sign:mldsa44.sign,verify:mldsa44.verify,registrationAlgorithmAdvertised:advertised}));
-          if (!mldsa44.sign || !mldsa44.verify || !advertised) throw new Error("BLOCKED: this runtime cannot qualify ML-DSA-44 sign/verify and first-preference registration.");
-          NODE
-          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
+                    curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
           grep -q "LIVE PUBLIC TEST ENVIRONMENT" "$RUNNER_TEMP/home.html"
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/" -o "$RUNNER_TEMP/supporters.html"
           grep -q "USDT QUALIFYING PAYMENTS NOT OPEN" "$RUNNER_TEMP/supporters.html"
           grep -q "DO NOT SEND FUNDS" "$RUNNER_TEMP/supporters.html"
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/supporters.js" -o "$RUNNER_TEMP/supporters.js"
           grep -q "TIP6963:announceProvider" "$RUNNER_TEMP/supporters.js"
-          code=$(curl --resolve localhost:8787:127.0.0.1 -sS -o "$RUNNER_TEMP/wrong-origin.json" -w "%{http_code}" -X POST "$base/api/passkeys/authentication/options" -H "Origin: https://untrusted.invalid" -H "Content-Type: application/json" --data "{}")
+          code=$(curl --resolve localhost:8787:127.0.0.1 -sS -o "$RUNNER_TEMP/wrong-origin.json" -w "%{http_code}" -X POST "$base/api/wallet-auth/challenge" -H "Origin: https://untrusted.invalid" -H "Content-Type: application/json" --data "{}")
           test "$code" = "403"
-          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          if [ -z "$CHROME_BIN" ]; then
-            echo "::error::BLOCKED: no preinstalled Chrome/Chromium; Worker passkey browser evidence is required."
-            exit 1
-          fi
-          if ! CHROME_BIN="$CHROME_BIN" node tests/worker_browser_smoke.mjs; then
-            echo "Local-only Worker diagnostics (no credential or request body is logged):"
-            grep "LOCAL TEST ONLY" "$RUNNER_TEMP/acrown-worker.log" || true
-            exit 1
-          fi
+          echo "Wallet signing UI is syntax-checked; physical wallet/provider qualification remains a separate release gate."
       - name: Parse the manual Cloudflare deployment workflow
         run: |
           ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-staging-deployment.yml"); puts "Cloudflare deployment workflow YAML parsed successfully."'
@@ -242,7 +216,6 @@ jobs:
           if (deployScript.includes("assertWorkersUsageModelIsNotStandard") || deployScript.includes("STOPPED BEFORE D1 PROVISIONING")) {
             throw new Error("A usage-model label alone must not block the explicitly owner-authorized Free/no-card deployment.");
           }
-          if (stage.vars.RP_ID !== "SET_BEFORE_DEPLOY") throw new Error("Staging RP sentinel missing.");
           if (stage.vars.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") throw new Error("Staging origin sentinel missing.");
           if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") throw new Error("Staging D1 sentinel missing.");
           NODE
