@@ -74,6 +74,7 @@ jobs:
           node --check public/page-entry/page-entry-notice.js
           node --check tests/worker_browser_smoke.mjs
           node --check scripts/test-supporter-wallet-e2e.mjs
+          node --check scripts/test-primary-wallet-auth-e2e.mjs
           npm run check:worker
       - name: Apply local account and isolated Supporter Programme D1 schemas
         run: |
@@ -108,7 +109,9 @@ jobs:
           const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
           if (status.authenticated !== false) throw new Error("A fresh local request must be unauthenticated.");
           if (status.scope !== "staging-test-account-only") throw new Error("The account scope marker is missing.");
-          if (status.passkeyAvailable !== true) throw new Error("The Worker did not report its passkey service.");
+          if (status.passkeyAvailable !== true) throw new Error("The local Worker must retain the isolated passkey regression service.");
+          if (status.walletAuthenticationAvailable !== true) throw new Error("The primary-wallet account API must be advertised in local qualification.");
+          if (status.walletAuthenticationNetworks?.join(",") !== "ethereum,tron,solana") throw new Error("The account wallet network allowlist is inconsistent.");
           NODE
           curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/genesis/status" -o "$RUNNER_TEMP/genesis-status.json"
           node --input-type=module - "$RUNNER_TEMP/genesis-status.json" <<'NODE'
@@ -120,6 +123,7 @@ jobs:
           if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Genesis Programme must expose the exact three-network allowlist.");
           if (status.networks.some(x => x.networkConfigured || !x.treasuryConfigured)) throw new Error("All three owner-approved Genesis treasuries must be recorded while every payment network remains disabled.");
           NODE
+          ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-primary-wallet-auth-e2e.mjs
           if ! ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-supporter-wallet-e2e.mjs; then
             echo "Local-only Genesis wallet diagnostics (synthetic credentials only):"
             grep "\\[LOCAL SUPPORTER TEST ONLY\\]" "$RUNNER_TEMP/acrown-worker.log" || true
