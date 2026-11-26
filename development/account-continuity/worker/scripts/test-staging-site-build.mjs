@@ -31,7 +31,11 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(walletAssurance, /name="astro-page-id" content="account"/);
   assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
   assert.match(accountUi, /function renderWalletPrimaryStatus\(\)/);
-  assert.match(accountUi, /Sign in with wallet/);
+  assert.match(accountUi, /Sign in with primary wallet/);
+  assert.match(accountUi, /Create account with primary wallet/);
+  assert.match(accountUi, /finishPrimaryWalletAuthentication/);
+  assert.match(accountUi, /EIP-1193 wallet/);
+  assert.match(accountUi, /Solana Mainnet/);
   assert.match(accountUi, /astrocrown:admin-dashboard-visible/);
   assert.match(accountUi, /Why wallet\?/);
   assert.match(accountUi, /typeof workerStagingMode/);
