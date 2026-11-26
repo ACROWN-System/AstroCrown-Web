@@ -36,7 +36,8 @@
   }
 
   async function isAcknowledged(pageId, version, globalVersion) {
-    if (isWorkerStagingRuntime()) {
+    if (isWorkerStagingRuntime() &&
+        ["home", "genesis", "account", "admin"].indexOf(pageId) !== -1) {
       try {
         var statusPath = pageId === "genesis" ? "/api/genesis/acknowledgement-status"
           : pageId === "admin" ? "/api/admin/acknowledgement-status"
