@@ -111,7 +111,7 @@
       ]
     },
     "account": {
-      "version": "2026-11-26-account-v2",
+      "version": "2026-11-26-account-v3",
       "title": "AstroCrown account",
       "delivery": {
         "status": "FOR DEVELOPMENT · READ ONLY",
@@ -129,7 +129,13 @@
           "id": "user-dashboard",
           "name": "User dashboard and personal profile",
           "status": "FOR DEVELOPMENT · READ ONLY",
-          "details": "The initial dashboard identifies the primary wallet and wallet-provider recovery model. Full profile management, wallet-bound session controls and connected transaction-wallet management remain under development."
+          "details": "The local account candidate provides a primary-wallet identity overview, automatic unique default member name, authenticated name availability checks, case-insensitive unique name application and a customizable profile name. Wallet-bound session controls, fuller profile management, connected transaction-wallet management, community-wide name display and remote staging verification remain outstanding."
+        },
+        {
+          "id": "public-member-name",
+          "name": "Unique public member name and customization",
+          "status": "FOR DEVELOPMENT · READ ONLY",
+          "details": "The local Worker candidate assigns a unique Crown_ default name and supports authenticated availability checks and atomic member-name changes. Browser/provider testing, remote migration and deployment, and integration into the first-party community's posts and member lists remain outstanding."
         },
         {
           "id": "badges",
