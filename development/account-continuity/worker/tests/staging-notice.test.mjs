@@ -31,7 +31,7 @@ test("staging artifact replaces the visual-preview notice with live public-test 
   assert.match(registry.global_notice.introduction, /Public submissions may be visible to anyone on the internet/);
   assert.ok(registry.global_notice.rules.some(rule => /copy, save, screenshot, quote or redistribute/.test(rule)));
   assert.match(html, /including visitors without accounts/);
-  assert.match(html, /personal, identifying, sensitive, confidential or third-party information/);
+  assert.match(html, /personal, sensitive, confidential or third-party information/);
   assert.match(html, /provider-managed backups/);
 
   assert.match(html, /Only features explicitly marked LIVE with their environment are functional/);
