@@ -556,8 +556,12 @@
         intent: intent, network: network, address: address
       }));
       signature = await tronWeb.trx.signMessageV2(challengeTron.message);
-      if (!tronWeb.defaultAddress || tronWeb.defaultAddress.base58 !== address) {
-        throw new Error("The active TRON account changed while signing. No account session was created.");
+      var tronFinalUrl;
+      try { tronFinalUrl = new URL(tronWeb.fullNode && tronWeb.fullNode.host || ""); } catch (_error) { tronFinalUrl = null; }
+      if (!tronWeb.defaultAddress || tronWeb.defaultAddress.base58 !== address ||
+          !tronFinalUrl || tronFinalUrl.protocol !== "https:" || tronFinalUrl.hostname !== "api.trongrid.io" ||
+          tronWeb.fullNode.host !== tronHost) {
+        throw new Error("The active TRON account or Mainnet endpoint changed while signing. No account session was created.");
       }
       return requestJson("/api/wallet-auth/verify", {
         intent: intent, challengeId: challengeTron.challengeId, signature: signature
@@ -584,6 +588,19 @@
       });
       if (!Array.isArray(signed) || !signed[0] || !signed[0].signature) {
         throw new Error("The Solana wallet did not return a supported message signature.");
+      }
+      var returnedSolanaAccount = signed[0].account;
+      if (returnedSolanaAccount && (
+        returnedSolanaAccount.address !== address || !adapters.isSolanaMainnet(returnedSolanaAccount)
+      )) {
+        throw new Error("The Solana wallet changed accounts or network while signing. No account session was created.");
+      }
+      var solanaAfterSign = await solana.features["standard:connect"].connect();
+      var stillConnectedSolana = solanaAfterSign.accounts && solanaAfterSign.accounts.find(function (item) {
+        return item.address === address && adapters.isSolanaMainnet(item);
+      });
+      if (!stillConnectedSolana) {
+        throw new Error("The primary Solana wallet or Mainnet connection changed while signing. No account session was created.");
       }
       signature = encodeBase64urlBytes(signed[0].signature);
       return requestJson("/api/wallet-auth/verify", {
