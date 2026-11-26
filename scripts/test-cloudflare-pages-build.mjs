@@ -97,7 +97,7 @@ assert.ok(pageNoticeJs.includes("/account-continuity/prototype/privacy-policy.ht
 assert.ok(pageNoticeJs.includes("/privacy-transparency.html"));
 assert.match(pageNoticeJs, /globalNotice\.acknowledgement/);
 assert.match(pageNoticeCss, /astro-entry-notice/);
-assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v4");
+assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v5");
 assert.match(featureStatus.global_notice.introduction, /Public submissions may be visible to anyone on the internet/);
 assert.match(featureStatus.global_notice.wallet_safety, /A development transaction is permitted only when the exact feature is explicitly marked DEVNET/);
 assert.match(featureStatus.global_notice.wallet_safety, /Real-value transactions are permitted only when the exact feature is explicitly marked LIVE · MAINNET/);
