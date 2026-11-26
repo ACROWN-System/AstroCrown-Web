@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "notice_version": "2026-11-26-public-test-v4",
+  "notice_version": "2026-11-26-public-test-v5",
   "acknowledgement_ttl_seconds": 43200,
   "global_notice": {
     "heading": "ASTROCROWN LIVE PUBLIC TEST",
@@ -17,13 +17,12 @@
   },
   "pages": {
     "home": {
-      "version": "2026-11-26-home-v1",
+      "version": "2026-11-26-home-v2",
       "title": "AstroCrown homepage",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "This homepage is reachable through the AstroCrown staging website. This label describes page delivery only; it does not mean that the services or data shown here are operational.",
-        "scope": "page_delivery"
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
       },
       "features": [
         {
@@ -71,13 +70,12 @@
       ]
     },
     "genesis": {
-      "version": "2026-11-26-genesis-v1",
+      "version": "2026-11-26-genesis-v2",
       "title": "Genesis Programme",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "The Genesis Programme page is served from the AstroCrown staging website. Page delivery does not imply that payment, purchase or entitlement functions are enabled.",
-        "scope": "page_delivery"
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
       },
       "features": [
         {
@@ -113,13 +111,12 @@
       ]
     },
     "account": {
-      "version": "2026-11-26-account-v1",
+      "version": "2026-11-26-account-v2",
       "title": "AstroCrown account",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "The account interface is reachable in the staging website. This does not mean that the approved wallet-only account lifecycle is available.",
-        "scope": "page_delivery"
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
       },
       "features": [
         {
@@ -143,13 +140,12 @@
       ]
     },
     "admin": {
-      "version": "2026-11-26-admin-v1",
+      "version": "2026-11-26-admin-v2",
       "title": "Administrator dashboard",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "The staging website can serve the administrator interface. This is not an authorization to use operational administrative functions.",
-        "scope": "page_delivery"
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
       },
       "features": [
         {
@@ -161,13 +157,12 @@
       ]
     },
     "legal": {
-      "version": "2026-11-26-legal-v1",
+      "version": "2026-11-26-legal-v2",
       "title": "AstroCrown information and policy pages",
       "delivery": {
-        "status": "LIVE · STAGING",
-        "environment": "staging",
-        "details": "This information page is served from the staging website. Check each document's stated version and status.",
-        "scope": "page_delivery"
+        "status": "FOR DEVELOPMENT · READ ONLY",
+        "scope": "page_delivery",
+        "details": "The allowlisted static/Worker page bundle is currently built and locally qualified in CI, but its first remote Cloudflare Pages or Worker staging deployment has not been verified. The separately hosted GitHub Pages prototype preview is not this exact build. Do not treat page delivery as live until the exact build is deployed and independently checked on its staging origin."
       },
       "features": [
         {
