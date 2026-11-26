@@ -2172,11 +2172,24 @@ async function api(request, env, config) {
     });
   }
   if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
+  if (url.pathname === "/api/genesis/acknowledgement-status" && request.method === "GET") {
+    return pageAcknowledgementStatus(request, env, "genesis");
+  }
   if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
   if (url.pathname === "/api/staging/acknowledgement-status" && request.method === "GET") {
-    return pageAcknowledgementStatus(request, env, url.searchParams.get("pageId") || "");
+    const pageId = url.searchParams.get("pageId") || "";
+    if (pageId !== "home" && pageId !== "legal") {
+      throw fail(400, "The global acknowledgement status route only accepts homepage or policy-page IDs.");
+    }
+    return pageAcknowledgementStatus(request, env, pageId);
+  }
+  if (url.pathname === "/api/account/acknowledgement-status" && request.method === "GET") {
+    return pageAcknowledgementStatus(request, env, "account");
+  }
+  if (url.pathname === "/api/admin/acknowledgement-status" && request.method === "GET") {
+    return pageAcknowledgementStatus(request, env, "admin");
   }
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request, env, config);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
@@ -2276,11 +2289,17 @@ export default {
       if (new URL(request.url).pathname.startsWith("/api/")) {
         const pathname = new URL(request.url).pathname;
         checkOrigin(request, config);
+        const isAcknowledgementStatusPath = [
+          "/api/staging/acknowledgement-status",
+          "/api/account/acknowledgement-status",
+          "/api/genesis/acknowledgement-status",
+          "/api/admin/acknowledgement-status",
+        ].includes(pathname);
         if (
           env.ENVIRONMENT === "staging" &&
+          !isAcknowledgementStatusPath &&
           pathname !== "/api/staging/acknowledge" &&
           pathname !== "/api/staging/page-acknowledge" &&
-          pathname !== "/api/staging/acknowledgement-status" &&
           pathname !== "/api/supporters/status" &&
           pathname !== "/api/genesis/status" &&
           pathname !== "/api/genesis/directory" &&
@@ -2298,6 +2317,7 @@ export default {
             : protectedPage === "admin";
         if (
           env.ENVIRONMENT === "staging" &&
+          !isAcknowledgementStatusPath &&
           requiresPageAcknowledgement &&
           !(await hasPageAcknowledgement(request, env, protectedPage))
         ) {
