@@ -114,6 +114,10 @@ copy("development/account-continuity/prototype/admin-wallet-ui.js", "account-con
 // permits only user-initiated off-chain ownership messages when the separate
 // Genesis Worker is present; no transaction or payment method is called.
 write("privacy-transparency.html", injectPageEntryNotice(read("preview/privacy-transparency.html"), "legal"));
+write(
+  "account-continuity/prototype/wallet-identity-assurance.html",
+  injectPageEntryNotice(read("development/account-continuity/prototype/wallet-identity-assurance.html"), "account")
+);
 write("supporters/index.html", injectPageEntryNotice(read("preview/supporters/index.html"), "genesis"));
 copy("preview/supporters/supporters.js", "supporters/supporters.js");
 // Required local dependency of the Genesis browser module. It is an allowlisted
