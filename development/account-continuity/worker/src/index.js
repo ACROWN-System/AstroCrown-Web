@@ -2137,6 +2137,7 @@ export {
   hasPageAcknowledgement,
   isSupersededPasskeyRoute,
   isSupersededPasskeySession,
+  status,
   PAGE_ACK_CONFIG,
   b64u as base64url,
   unb64u as fromBase64url,
