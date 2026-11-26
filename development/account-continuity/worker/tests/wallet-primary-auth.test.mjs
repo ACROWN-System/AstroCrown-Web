@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
-import { createPrimaryWalletMessage } from "../src/wallet-auth.js";
+import { createPrimaryWalletMessage, issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge } from "../src/wallet-auth.js";
 import { verifyWalletSignature } from "../src/supporters.js";
 
 const ORIGIN = "https://accounts.astrocrown.example";
@@ -52,4 +52,31 @@ test("unsupported networks, invalid intents and non-origin URL components fail c
   assert.throws(() => createPrimaryWalletMessage({ ...base, network: "bitcoin" }), /complete supported primary-wallet challenge/i);
   assert.throws(() => createPrimaryWalletMessage({ ...base, intent: "transaction" }), /complete supported primary-wallet challenge/i);
   assert.throws(() => createPrimaryWalletMessage({ ...base, origin: ORIGIN + "/unexpected" }), /exact origin/i);
+});
+
+test("wallet authentication routes fail closed outside local and staging environments", async () => {
+  const request = new Request(ORIGIN + "/api/wallet-auth/challenge", {
+    method: "POST",
+    headers: { Origin: ORIGIN, "Content-Type": "application/json" },
+    body: JSON.stringify({ intent: "register" }),
+  });
+  await assert.rejects(
+    issuePrimaryWalletChallenge(null, { ENVIRONMENT: "production" }, request, {}, { origin: ORIGIN }),
+    (error) => error && error.status === 404,
+  );
+  await assert.rejects(
+    verifyPrimaryWalletChallenge(null, { ENVIRONMENT: "production" }, request, {}, { origin: ORIGIN }),
+    (error) => error && error.status === 404,
+  );
+});
+
+test("Ethereum wallet message nonce uses the EIP-4361 alphanumeric nonce character set", () => {
+  const wallet = privateKeyToAccount("0x0000000000000000000000000000000000000000000000000000000000000001");
+  const message = createPrimaryWalletMessage({
+    origin: ORIGIN, network: "ethereum", address: wallet.address, intent: "login",
+    challengeId: "wac_abcdefghijklmnopqrstuv", nonce: "0123456789abcdefABCDEF",
+    issuedAt, expiresAt,
+  });
+  const nonce = message.match(/^Nonce: ([A-Za-z0-9]+)$/m);
+  assert.ok(nonce, "SIWE-style nonce must be alphanumeric");
 });
