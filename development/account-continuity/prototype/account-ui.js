@@ -888,6 +888,8 @@
         '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
         (walletAuth && created
           ? '<section class="account-recovery-key-panel"><h3>Primary wallet identity established</h3>' +
+              '<p>Default member name: <strong>' + escapeHtml(accountState.memberName || "Not yet available") + '</strong></p>' +
+              '<p>You can customize this unique public name from your User dashboard.</p>' +
               '<p>Account identifier: <strong>' + escapeHtml(accountState.accountIdentifier || "") + '</strong></p>' +
               '<p>Primary wallet: ' + escapeHtml(accountState.primaryWallet && accountState.primaryWallet.network || "") + ' · ' + escapeHtml(accountState.primaryWallet && accountState.primaryWallet.address || "") + '</p>' +
               '<p>Keep control of this same wallet using the wallet provider’s own recovery method. AstroCrown cannot reset or transfer the identity.</p></section>'
