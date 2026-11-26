@@ -141,115 +141,92 @@ A regular account and an administrator account must not receive different versio
 
 No email-only override, routine password reset, first-new-wallet login or unreviewed account recreation may restore admin access. Require a documented Imperial HSIAN recovery procedure with identity/authority evidence appropriate to the threat, independent review where practical, user notification and/or delay when justified, revocation of prior sessions and wallet records, controlled re-enrollment, and an audit record. Restoration of account access, admin privilege, publishing rights, financial/payout permissions and access to sensitive data are separate decisions. The exact evidence and review process remains a production blocker until tested and approved.
 
-## 6. Security assurance page
+## 6. Wallet identity assurance page
 
-The sign-in form's Security assurance link must open a separate page containing the current evidence and limitations for this exact prototype. It must clearly distinguish:
-- controls implemented and tested in the local prototype;
-- controls tested only in automated tests;
-- controls not implemented;
-- external review/certification status (currently none for this prototype); and
-- production blockers.
+The account dialog links to a separate wallet identity assurance page. It must describe the actual wallet-only model and distinguish locally qualified behavior from remote staging, production and independent security evidence.
 
-It must not claim “secure”, “fully protected”, certified, production-ready, or complete. The page must distinguish: (a) retired email/password prototype code, retained only for explicitly opted-in historical regression tests, from the current default passkey-first implementation; (b) the implemented local WebAuthn/passkey and offline recovery-key flows from production authentication infrastructure and still-missing multi-authenticator/session-management capabilities; (c) the local EVM/SIWE administrator-wallet enrollment and step-up from any future Bitcoin, Solana or other wallet-family adapter; (d) local SQLite accounts/sessions and owner-operated bootstrap from production identity/governance infrastructure; and (e) automated tests from independent security review. The passkey/recovery API and Chrome virtual-authenticator paths are implemented and passed the five tracked workflows on exact branch commit `8509b64086a09ac3cfc7eea82977c27e8e6a2fd8`; this is prototype evidence only. Production HTTPS hosting, durable shared storage, multi-authenticator/session-management UI, formal all-authenticator-loss behavior, approved legal policies and independent security review remain outstanding. Keep the page separate from Terms of Use and Privacy Policy.
+The page must state clearly:
 
-## 7. Threat model
+- Exactly one primary wallet owns an ordinary account identity and is the only account login/recovery authority.
+- Current ordinary-account signing adapters are Ethereum Mainnet (EIP-191), TRON Mainnet (TIP-191) and Solana Mainnet (Ed25519).
+- The browser requests an off-chain ownership message signature only. It does not request a transaction, token approval, transfer, deposit, gas payment or balance check.
+- Account access can be restored only by recovering control of that same wallet through its wallet provider. AstroCrown, administrators and NOVA cannot reset or replace the wallet or transfer its identity to another address.
+- Auxiliary transaction wallets are not needed for ordinary account creation, sign-in or member-name changes; their future transaction workflows are separate and are not enabled by this account feature.
+- Local Worker/D1 tests use synthetic credentials. They do not establish physical-wallet compatibility, remote staging operation, production security certification or independent penetration-test evidence.
 
-| Threat / failure | Required protection / verification |
+Do not claim “secure”, “fully protected”, certified, production-ready or complete. State the remaining browser/provider qualification and independent security-review gaps. Keep wallet identity assurance separate from Terms of Use and Privacy Policy.
+
+## 7. Current wallet-account threat model
+
+| Threat / failure | Required reduction or verification |
 |---|---|
-| User self-assigns admin role | Backend-owned roles; no public role mutation; direct API negative tests |
-| Administrator without appointment permission grants an admin role | Exact `admin.roles.grant` permission enforced by the backend; active wallet step-up; negative API test |
-| Grantor self-promotes or expands own authority | Self-grant forbidden; only explicitly delegable permissions may be assigned; audited negative tests |
-| Admin role is granted but UI hides or prematurely exposes admin entry | Entry appears only after server-confirmed role assignment; user wallet proof remains a separate gate |
-| Administrator role changes ordinary-user capabilities or transaction rules | User dashboard is role-neutral; admin receives the same member capabilities and ordinary transaction controls; negative tests verify admin-only scope does not leak into member transactions |
-| Administrator acts as another member | No implicit impersonation; any future support/intervention path requires a separately authorized, scoped, visible and audited workflow |
-| Passkey/device compromise or malicious origin script | WebAuthn RP/origin binding, user verification, secure origin, CSP/XSS controls, authenticator revocation, session protection and independent testing |
-| Account/credential enumeration | Discoverable credentials, neutral failure behavior, rate limiting and server-side authorization without revealing account existence |
-| Session fixation or theft | New random session after auth, server-side validation/revocation, HTTPS Secure cookie, lifetimes, no-store and logout invalidation |
-| CSRF / cross-origin request | Exact origin/CSRF controls suited to deployment; tests for missing/invalid origin and cookie behavior |
-| Recovery key theft or guessing | CSPRNG 128-bit project target, offline custody guidance, hashed verifier, strict throttling, single-use consumption, replacement and no email/SMS override |
-| Wallet spoofing or replay | Signed short-lived nonce challenge, origin/domain binding, address/signature verification, expiry/replay rejection and server-side account/role check |
-| First-wallet takeover | No role derived from wallet connection; admin role is provisioned independently; wallet enrollment requires existing privilege |
-| All admin wallets lost | Explicit recovery ceremony; no email-only or first-wallet bypass; session/old-wallet revocation and auditable replacement |
-| Support/NOVA overreach | Least privilege, human authority for exceptional promotion, actions logged; NOVA cannot self-authorize |
-| Malicious user input / stored XSS | Output escaping, CSP review, upload policy if avatars are introduced, hostile fields used in regression tests |
-| Privacy leakage | Minimal collection, private reports, no secret/token logging, no public wallet-to-account linking by default |
-| Operational/provider outage | Ordinary browsing must remain available; auth failure is explicit; no false “signed in” state or silent insecure fallback |
-| Honest user mistake | Explain failed/blocked states; provide accessible recovery path without publicly accusing the user or demanding unnecessary sensitive identity data |
+| Fake wallet provider or wrong signer | Verify the signature server-side against the address, chain, purpose and exact challenge. Never trust a client-supplied “connected” flag. |
+| Challenge replay or substitution | Use a cryptographically random, short-lived, single-use challenge; bind it to the exact origin, network, address, intent and request. Consume it once. |
+| Wrong site or origin | Require the exact configured HTTPS origin in staging, same-origin requests and server-side origin checks. Local exceptions are restricted to loopback. |
+| Wrong chain or changed account during signing | Check the supported mainnet context before and after signing where the provider exposes it; fail closed if account/network changes. The server also verifies the signature using the requested network adapter. |
+| Signature interpreted as a transaction | Accept only the chain-specific message-signing method. Do not call transaction, approval, transfer or send methods in ordinary account authentication. |
+| Theft of an application session | Generate a random short-lived session token, store only its hash, set an HttpOnly/SameSite=Strict cookie and Secure on HTTPS, enforce expiry, and revoke on logout. |
+| Cross-origin request or CSRF | Require the exact Origin, reject cross-origin requests, use same-origin cookies and restrict state-changing APIs to the required methods and content type. |
+| Account or name enumeration / abuse | Rate-limit registration, sign-in and member-name checks; use neutral failures where appropriate; enforce uniqueness and authorization on the server. |
+| Stored or reflected script injection | Escape member-controlled text on output, avoid user-supplied image URLs or HTML, review Content Security Policy and keep the static asset allowlist narrow. |
+| Primary-wallet loss or compromise | The wallet provider owns wallet recovery. If the primary wallet and its recovery capability are permanently lost, the account may also be permanently inaccessible. There is no staff, email, passkey, second-wallet or recovery-key bypass. |
+| Administrator self-appointment or privilege escalation | Keep role assignment server-owned and separate from ordinary account registration. Require the existing permission and separate administrator-wallet verification. |
+| Unavailable wallet provider or chain adapter | Fail explicitly. Do not silently switch network, signer, wallet or authentication method. |
 
-## 8. Standards and evidence baseline
+The security controls above are implementation requirements, not proof of security or formal conformance. Test negative paths on the exact release candidate.
 
-Use current versions for requirements traceability; record exact clauses when a test is designed:
-- NIST SP 800-63B-4 (2025), Digital Identity Guidelines: Authentication and Authenticator Management.
-- OWASP Application Security Verification Standard (ASVS) 5.0.0, especially authentication and session management.
-- OWASP Passkey Security, Session Management and broader ASVS authentication/access-control guidance.
-- W3C WebAuthn Level 3 Recommendation (2026-08-25) as the primary public-key account-authentication standard; local user verification must not be biometric-only.
-- EIP-4361 / Sign-In with Ethereum for wallet proof-of-control only if the reviewed wallet lab is integrated.
+## 8. Standards and protocol references
 
-These are engineering references, not proof of conformity, certification or security. Each requirement needs a test and evidence on the candidate commit.
+Use the applicable standards and chain-native signing specifications as engineering inputs:
 
-References:
-- NIST SP 800-63B-4: https://csrc.nist.gov/pubs/sp/800/63/B/4/final
-- OWASP ASVS 5.0.0 session management: https://github.com/OWASP/ASVS/blob/master/5.0/en/0x16-V7-Session-Management.md
-- OWASP Password Storage Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
-- OWASP Session Management Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html
-- OWASP Authentication Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html
-- W3C WebAuthn Level 3: https://www.w3.org/TR/2026/REC-webauthn-3-20260825/
-- EIP-4361: https://eips.ethereum.org/EIPS/eip-4361
+- OWASP Application Security Verification Standard (ASVS) 5.0.0, especially session management, access control, input validation and secure configuration.
+- OWASP Session Management and Authentication Cheat Sheets for cookie, session and request-handling controls.
+- EIP-191 for Ethereum signed-message verification. EIP-4361/SIWE remains a distinct administrator-wallet flow; it is not a second ordinary-account login path.
+- TRON's wallet message-signing convention used by `signMessageV2` (TIP-191-compatible verification).
+- Ed25519 verification for Solana wallet-standard message signing.
+- NIST SP 800-63B-4 and W3C WebAuthn are retained as historical/design references only where applicable; WebAuthn/passkey registration, sign-in and offline recovery-key ceremonies are not part of the current ordinary-account system.
 
-## 9. Phased implementation plan
+These references do not imply certification, formal conformance or an independent review.
 
-### Phase 1 — Local account journey and UI prototype
-- [x] Implement and test the Log In / Sign Up fields and account-entry flow.
-- [x] Add the separate Security assurance page/link.
-- [x] Add the success state, signed-in circular account control and modular User dashboard foundation/navigation.
-- [ ] Add user-facing service and personal transaction modules to the User dashboard as their backend, authorization, confirmation and activity-history requirements are implemented; ordinary and administrator accounts must use the same member workflows.
-- [x] Keep optional wallet access separate from ordinary account registration and sign-in.
-- [x] Keep the browser preview disposable and memory-only; keep the Python/SQLite server bound to loopback.
-- [x] Keep production-only or unavailable features clearly distinguished from working local prototype controls. This does not make the browser preview a real account service.
+## 9. Minimal implementation and release sequence
 
-### Phase 2 — Local user-lifecycle backend prototype
-- [x] Implement the local SQLite account/session schema, server-side role model and registration default of `user`; registration input cannot grant administrator authority.
-- [x] Account registration, discoverable sign-in and offline recovery use the passkey-first model; no email address, email-verification flow, password reset or outbound email service is required.
-- [ ] Complete broader adversarial review and coverage for deployment-specific CSRF, session fixation, XSS/CSP, recovery and operational failure cases.
-- [ ] Qualify real provider delivery only when a controlled sender domain and credentials are available. No paid plan, card, trial, automatic upgrade or paid fallback is permitted; until then, keep real delivery disabled.
+### Phase 1 — Wallet-owned account and profile
+- [x] One primary wallet per ordinary account; Ethereum Mainnet, TRON Mainnet and Solana Mainnet proof adapters.
+- [x] Origin-, network-, address- and purpose-bound one-use challenge and server-side signature verification.
+- [x] Random account ID, short-lived server session and hashed session-token storage.
+- [x] Automatic unique default public member name and authenticated availability/apply endpoints.
+- [x] Server-enforced member-name uniqueness and conflict handling.
+- [x] No email, password, SMS, passkey, offline recovery key, second login wallet, minimum balance, transaction or payment requirement.
 
-### Phase 3 — Local administrator and wallet-authentication lab
-- [x] Reuse the shared local SIWE verifier instead of duplicating signature verification.
-- [x] Keep owner-operated local CLI provisioning/revocation as an explicitly confirmed first-admin bootstrap/test adapter; it is not routine administrator appointment, and its actor label is not authentication.
-- [x] Implement loopback administrator-to-administrator appointment with distinct `admin.roles.grant` permission, wallet step-up, no self-grant, no permission escalation, reason and audit record; an administrator without the exact permission is denied.
-- [x] Separate role appointment from target-owned first-wallet enrolment; the target signs a one-time enrollment challenge, then signs a second fresh challenge for administrator session step-up.
-- [x] Store a maximum of three administrator wallet addresses per account. A fresh signature from one enrolled wallet authorizes only the already-authenticated account's short-lived step-up; initial enrollment requires the separately assigned role plus the ordinary account session.
-- [x] Bind short-lived challenges to the account and exact session; reject expired/reused challenges, cross-account/session use, unregistered wallets and invalid signers.
-- [x] Add a maximum ten-minute administrator step-up and a separate administrator view; server endpoints independently enforce administrator authorization.
-- [x] Require an active verified administrator step-up and a separate signature from the proposed wallet before enrolling an additional wallet; initial enrollment is separately gated by the existing role and ordinary account session. Adding a wallet invalidates the previous step-up.
-- [ ] Resolve the minimum enrolled-wallet count before production activation (two independently controlled wallets remains a proposal, not a final decision).
-- [ ] Specify and test Imperial HSIAN recovery after all administrator wallets are lost.
-- [ ] Independently review the local provisioning trust boundary and administrator step-up threat model; production administrator authority remains blocked.
+### Phase 2 — Remove retired paths
+- [x] Remove the old passkey/WebAuthn runtime and dependency from the Worker.
+- [x] Remove the retired passkey credentials, challenge, recovery-key and WebAuthn step-up tables from the disposable account schema.
+- [x] Remove passkey sign-in, extra-passkey management and recovery-key screens from the active account UI.
+- [x] Remove the old Supporter account/login API from the Worker while retaining the isolated Genesis status service and Genesis preview.
+- [x] Keep account identity and Genesis payment/accounting records in separate databases.
 
-### Phase 4 — Production decision
-- [ ] Resolve AUTH-001: authoritative website/origin, backend route, storage, hosting and deployment ownership.
-- [ ] Choose a maintained production runtime/storage/secret approach using the least complex suitable option and verified cost/terms.
-- [ ] Complete production HTTPS/cookie/CSRF/security headers, WebAuthn RP/origin verification, passkey lifecycle, recovery-key operations, data retention/deletion/export, audit logging and incident procedure. Email/SMS account verification and reset are not production requirements.
-- [ ] Review legal Terms/Privacy, newsletter consent, user support and applicable jurisdiction requirements.
-- [ ] Complete threat-model test suite, accessible/browser compatibility review and independent security review.
-- [ ] Promote only through a separate verified pull request; never publish this prototype by copying it directly to the root homepage.
+### Phase 3 — Remote staging qualification
+- [ ] Merge the reviewed current PR after its exact-head checks and review are complete.
+- [ ] Run the GET-only Cloudflare Account 02 preflight on `main`.
+- [ ] Owner independently confirms Workers Free/D1 Free, no active paid subscription, no required or attached payment method, and no paid fallback.
+- [ ] Verify the already-named staging Worker and exact staging origin; apply the isolated D1 migrations only through the manually authorized workflow.
+- [ ] Test real physical wallets and browsers on the exact staging origin for each supported chain; verify registration, sign-in, logout, name availability and name changes.
+- [ ] Complete independent security review and operational backup/restore checks before any production decision.
 
-## 10. Current evidence and status
+Community, auxiliary transaction-wallet management, Bitcoin/BIP-322, primary-wallet rotation and future service modules are separate work. None is a prerequisite for the ordinary account's unique public member name.
 
-- Draft PR #141 contains the ordinary-account entry flow, the current User dashboard foundation (profile, security/session, wallet-information, preference and case-portal links), the separate Administrator dashboard, loopback SQLite server, disposable browser-memory preview, optional Referral ID, separately recorded newsletter preference, and Terms/Privacy development drafts.
-- The User dashboard is the common member workspace for both ordinary and administrator accounts. The current account prototype does not yet implement AstroCrown financial transactions or the full catalog of user services; these must be added as member-facing modules without changing access merely because an account also has the admin role. Administrative operations remain separate.
-- The current local server implements passkey-first account registration/sign-in and the offline recovery-key replacement ceremony. Email is not a sign-up, sign-in or recovery factor. The optional ordinary-account wallet backup remains unimplemented; the existing EVM/SIWE path is only for administrator enrollment and step-up. The complete current implementation state and release blockers are maintained in [the active passkey-first implementation status](../audit/Active/2026-11-04-Passkey-First-Account-Implementation-Status.md).
-- The local server owns account roles and defaults registrations to `user`. The owner-operated local CLI remains a development-only first-admin bootstrap adapter. Routine in-product local appointment and revocation use distinct `admin.roles.grant` and `admin.roles.revoke` permissions, a fresh wallet-verified session, permission-specific delegation limits, target-account validation and audit records. The target enrols their own first wallet and then signs a separate step-up challenge. These local endpoints do not provide production provisioning, owner governance, production account infrastructure or all-wallet-loss recovery.
-- A local case-management/recovery-request prototype is also present; its local test behavior must not be confused with a staffed production support operation or the formal Imperial HSIAN recovery procedure.
-- The separate `development/auth-prototype/` remains an isolated SIWE/EIP-4361 experiment and is not the authority for account roles.
-- The current public-host homepage/root publication path remains a separate deployment gate; a prototype test does not prove public account service deployment.
-- Exact-head automated verification: all five tracked workflows passed on `8509b64086a09ac3cfc7eea82977c27e8e6a2fd8` on 2026-11-02 UTC / 2026-11-03 India time: [Local Account Continuity](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360712), [External Review Pipeline](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360765), [Local Wallet Authentication](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360796), [NOVA RSI Engine CI](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360753) and [NOVA RSI CodeQL](https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360846). CodeQL reported no new alerts in code changed by the pull request. These results verify the specified prototype checks only; they are not independent review or release approval.
-- No production authentication, legal, security or recovery capability may be inferred from the prototype CI result.
+## 10. Current evidence and status — 26 November 2026
+
+- PR #198 contains the wallet-primary Worker, account migration, unique member-name feature, shared wallet-proof verifier and separate read-only Genesis status module.
+- The Worker no longer carries the old WebAuthn/passkey account routes, offline recovery-key runtime, or old Supporter registration/login API.
+- The account UI has one ordinary-account path: create an account with the selected primary wallet or sign in with that same wallet. The User dashboard identifies that wallet and the unique public member name.
+- The static Genesis Programme preview and wallet-provider adapters remain because the Genesis preview still uses them. The Genesis database remains isolated; qualifying payment acceptance, ACROWN purchase settlement and token delivery are still disabled.
+- The exact PR head is still development code. Passing local Worker/D1 tests is not evidence of a remote deployment, physical-wallet compatibility or production approval.
+- The feature-status registry remains **FOR DEVELOPMENT · READ ONLY**. No Cloudflare deployment, remote D1 migration, billing change or public real-user onboarding has been performed.
 
 ## 11. Next action
 
-Keep the User dashboard common to ordinary users and administrators. The local prototype foundation now includes permission-checked appointment and revocation, the separate owner bootstrap path, target-owned first-wallet enrolment, fresh wallet step-up, permission-gated dashboard controls and negative authorization tests. The next work is adversarial/security review, production-specific identity/governance and recovery design, and manual acceptance. Add member services and transactions only when their backend behavior, authorization, confirmations and user-facing controls are implemented and tested. Complete the remaining security assurance, threat-model and production gates before any public activation. Keep PR #141 in draft until current-head verification and review gates are satisfied.
-
+Finish exact-head CI and review for PR #198, then follow the guarded, main-only staging procedure. Do not add another wallet, another authentication provider, another database or another security layer merely to support ordinary account access. First verify whether an existing component already provides the required behavior. Promote the account to **LIVE · STAGING** only after the exact remote Worker, D1 schema and physical-wallet journeys have been independently verified.
 
 ## 12. Administrator appointment and wallet-gated entry — 2026-11-02
 
