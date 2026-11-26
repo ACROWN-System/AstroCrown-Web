@@ -96,7 +96,7 @@
     return summary;
   }
 
-  function enhanceHomepageNotice(page, globalNotice) {
+  function enhanceHomepageNotice(page, globalNotice, globalVersion, pageId) {
     var dialog = document.getElementById("development-notice");
     if (!dialog) return false;
     var content = dialog.querySelector(".development-notice-content");
@@ -124,6 +124,7 @@
       if (loading) loading.remove();
       if (acknowledgement) acknowledgement.disabled = false;
       dialog.dataset.pageNoticeReady = "true";
+      bindNativeNoticeAcknowledgement(dialog, pageId, page.version, globalVersion);
       return true;
     }
     var intro = content.querySelector(".development-notice-intro");
@@ -141,17 +142,83 @@
     if (loading) loading.remove();
     dialog.dataset.pageNoticeReady = "true";
     if (acknowledgement) acknowledgement.disabled = false;
+    bindNativeNoticeAcknowledgement(dialog, pageId, page.version, globalVersion);
     return true;
   }
 
-  function runtimeNeedsServerAcknowledgement(pageId) {
+  function isWorkerStagingRuntime() {
     var accountRuntime = document.querySelector('meta[name="astro-account-runtime"]');
     var genesisRuntime = document.querySelector('meta[name="astro-supporter-runtime"]');
-    var workerRuntime = Boolean(
-      (accountRuntime && accountRuntime.content === "worker-staging") ||
-      (genesisRuntime && genesisRuntime.content === "worker-staging")
+    return Boolean(
+      window.location.protocol === "https:" &&
+      ((accountRuntime && accountRuntime.content === "worker-staging") ||
+       (genesisRuntime && genesisRuntime.content === "worker-staging"))
     );
-    return workerRuntime && ["genesis", "account", "admin"].indexOf(pageId) !== -1;
+  }
+
+  function runtimeNeedsServerAcknowledgement(pageId) {
+    return isWorkerStagingRuntime() && ["genesis", "account", "admin"].indexOf(pageId) !== -1;
+  }
+
+  function bindNativeNoticeAcknowledgement(dialog, pageId, pageVersion, globalVersion) {
+    if (dialog.dataset.pageNoticeAckBound === pageId + ":" + pageVersion + ":" + globalVersion) return;
+    var acknowledgement = dialog.querySelector("#development-notice-acknowledged");
+    var continueButton = dialog.querySelector("#development-notice-continue");
+    if (!acknowledgement || !continueButton) return;
+    dialog.dataset.pageNoticeAckBound = pageId + ":" + pageVersion + ":" + globalVersion;
+    continueButton.addEventListener("click", async function (event) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!acknowledgement.checked || continueButton.disabled) return;
+      continueButton.disabled = true;
+      acknowledgement.disabled = true;
+      var originalLabel = continueButton.textContent;
+      continueButton.textContent = "Confirming acknowledgement…";
+      var feedback = dialog.querySelector("#development-notice-feedback") || element("p", "astro-entry-notice-feedback");
+      feedback.id = "development-notice-feedback";
+      feedback.setAttribute("role", "status");
+      feedback.setAttribute("aria-live", "polite");
+      if (!feedback.parentNode) continueButton.parentNode.insertBefore(feedback, continueButton);
+      feedback.textContent = "";
+      try {
+        if (isWorkerStagingRuntime()) {
+          var globalResponse = await fetch("/api/staging/acknowledge", {
+            method: "POST",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify({ noticeVersion: globalVersion })
+          });
+          var globalResult = await globalResponse.json();
+          if (!globalResponse.ok || globalResult.acknowledged !== true) {
+            throw new Error(globalResult.error || "The public-test acknowledgement could not be recorded.");
+          }
+          if (["genesis", "account", "admin"].indexOf(pageId) !== -1) {
+            var pageResponse = await fetch("/api/staging/page-acknowledge", {
+              method: "POST",
+              credentials: "same-origin",
+              cache: "no-store",
+              headers: { "Accept": "application/json", "Content-Type": "application/json" },
+              body: JSON.stringify({ pageId: pageId, noticeVersion: pageVersion })
+            });
+            var pageResult = await pageResponse.json();
+            if (!pageResponse.ok || pageResult.acknowledged !== true || pageResult.noticeVersion !== pageVersion) {
+              throw new Error(pageResult.error || "The page-specific acknowledgement could not be recorded.");
+            }
+          }
+        }
+        rememberAcknowledgement(pageId, pageVersion, globalVersion);
+        if (typeof dialog.close === "function" && dialog.open) dialog.close();
+        else dialog.removeAttribute("open");
+      } catch (error) {
+        feedback.textContent = error && error.message
+          ? error.message
+          : "The acknowledgement could not be recorded. Please try again.";
+        acknowledgement.disabled = false;
+        continueButton.disabled = !acknowledgement.checked;
+        continueButton.textContent = originalLabel;
+      }
+    }, true);
   }
 
   function buildDialog(page, globalNotice, globalVersion) {
@@ -260,8 +327,9 @@
   function showPageNotice(registry, pageId) {
     var page = registry.pages[pageId] || registry.pages.legal;
     if (!page) return;
-    if (pageId === "home") {
-      enhanceHomepageNotice(page, registry.global_notice);
+    var nativeNotice = document.getElementById("development-notice");
+    if (pageId === "home" || (nativeNotice && nativeNotice.open)) {
+      enhanceHomepageNotice(page, registry.global_notice, registry.notice_version, pageId);
       return;
     }
     if (isAcknowledged(page.id || pageId, page.version, registry.notice_version)) return;
