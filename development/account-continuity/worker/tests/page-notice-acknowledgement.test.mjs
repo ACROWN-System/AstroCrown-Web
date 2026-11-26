@@ -40,7 +40,7 @@ test("page acknowledgement is signed, scoped to the page and version, and HttpOn
 test("page acknowledgement rejects missing, altered, wrong-page and expired evidence", async () => {
   const response = await createPageAcknowledgement(env, {
     pageId: "account",
-    noticeVersion: "2026-11-26-account-v2",
+    noticeVersion: "2026-11-26-account-v3",
   }, config);
   const setCookie = response.headers.get("Set-Cookie");
   const cookiePair = setCookie.split(";")[0];
