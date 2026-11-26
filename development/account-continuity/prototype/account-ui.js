@@ -480,6 +480,138 @@
     if (successAction) successAction.focus();
   }
 
+  function encodeBase64urlBytes(bytes) {
+    var binary = "";
+    for (var i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+  }
+
+  async function obtainPrimaryWalletProof(intent, network, payload) {
+    var adapters = await import("/supporters/wallet-provider-adapters.mjs");
+    var address = "";
+    var signature = "";
+    if (network === "ethereum") {
+      var evmProviders = [];
+      if (window.ethereum && Array.isArray(window.ethereum.providers)) {
+        evmProviders = window.ethereum.providers.filter(function (item) {
+          return item && typeof item.request === "function";
+        });
+      } else if (window.ethereum && typeof window.ethereum.request === "function") {
+        evmProviders = [window.ethereum];
+      }
+      adapters.discoverDirectEvmProviders(window).forEach(function (entry) {
+        if (entry.provider && evmProviders.indexOf(entry.provider) === -1) evmProviders.push(entry.provider);
+      });
+      if (!evmProviders.length) throw new Error("No compatible EVM wallet was detected. Install or unlock an EIP-1193 wallet, then try again.");
+      if (evmProviders.length > 1) throw new Error("More than one EVM wallet is injected. Temporarily disable the others or choose a single default provider before continuing.");
+      var evm = evmProviders[0];
+      var accounts = await evm.request({ method: "eth_requestAccounts" });
+      if (!Array.isArray(accounts) || typeof accounts[0] !== "string") throw new Error("The wallet did not return an Ethereum account.");
+      address = accounts[0];
+      var chainId = await evm.request({ method: "eth_chainId" });
+      if (String(chainId).toLowerCase() !== "0x1") throw new Error("Switch your wallet to Ethereum Mainnet (Chain ID 1). No transaction will be submitted.");
+      var challengeEvm = await requestJson("/api/wallet-auth/challenge", Object.assign({}, payload, {
+        intent: intent, network: network, address: address
+      }));
+      var currentAccounts = await evm.request({ method: "eth_accounts" });
+      var currentChain = await evm.request({ method: "eth_chainId" });
+      if (!Array.isArray(currentAccounts) || !currentAccounts.some(function (item) {
+        return String(item).toLowerCase() === String(address).toLowerCase();
+      }) || String(currentChain).toLowerCase() !== "0x1") {
+        throw new Error("The active Ethereum account or network changed. Start the wallet sign-in again.");
+      }
+      signature = await evm.request({
+        method: "personal_sign",
+        params: [adapters.encodeEvmPersonalSignMessage(challengeEvm.message), address]
+      });
+      var verifiedAccounts = await evm.request({ method: "eth_accounts" });
+      if (!Array.isArray(verifiedAccounts) || !verifiedAccounts.some(function (item) {
+        return String(item).toLowerCase() === String(address).toLowerCase();
+      })) throw new Error("The active Ethereum account changed while signing. No account session was created.");
+      var evmResult = await requestJson("/api/wallet-auth/verify", {
+        intent: intent, challengeId: challengeEvm.challengeId, signature: signature
+      });
+      return evmResult;
+    }
+
+    if (network === "tron") {
+      var tronEntries = adapters.discoverDirectTronProviders(window);
+      if (!tronEntries.length) throw new Error("No compatible TRON wallet was detected. Connect a supported TronLink-compatible wallet and try again.");
+      if (tronEntries.length > 1) throw new Error("More than one TRON wallet is injected. Temporarily disable the others before continuing.");
+      var tronEntry = tronEntries[0];
+      if (!adapters.hasTronMessageSigner(tronEntry.tronWeb)) throw new Error("This TRON wallet does not expose the required off-chain signMessageV2 method.");
+      await tronEntry.provider.request({ method: tronEntry.connectMethod });
+      var tronWeb = tronEntry.tronWeb;
+      address = tronWeb.defaultAddress && tronWeb.defaultAddress.base58 || "";
+      var tronHost = tronWeb.fullNode && tronWeb.fullNode.host || "";
+      var tronUrl;
+      try { tronUrl = new URL(tronHost); } catch (_error) { tronUrl = null; }
+      if (!address || !tronUrl || tronUrl.protocol !== "https:" || tronUrl.hostname !== "api.trongrid.io") {
+        throw new Error("The connected TRON wallet could not verify the approved TRON Mainnet endpoint. No signature was requested.");
+      }
+      var challengeTron = await requestJson("/api/wallet-auth/challenge", Object.assign({}, payload, {
+        intent: intent, network: network, address: address
+      }));
+      signature = await tronWeb.trx.signMessageV2(challengeTron.message);
+      if (!tronWeb.defaultAddress || tronWeb.defaultAddress.base58 !== address) {
+        throw new Error("The active TRON account changed while signing. No account session was created.");
+      }
+      return requestJson("/api/wallet-auth/verify", {
+        intent: intent, challengeId: challengeTron.challengeId, signature: signature
+      });
+    }
+
+    if (network === "solana") {
+      var solanaEntries = adapters.discoverDirectSolanaWallets(window);
+      if (!solanaEntries.length) throw new Error("No compatible Solana Wallet Standard message-signing wallet was detected.");
+      if (solanaEntries.length > 1) throw new Error("More than one supported Solana wallet is injected. Temporarily disable the others before continuing.");
+      var solana = solanaEntries[0];
+      var connected = await solana.features["standard:connect"].connect();
+      var solanaAccount = connected.accounts && connected.accounts[0];
+      if (!solanaAccount || !adapters.isSolanaMainnet(solanaAccount)) {
+        throw new Error("The connected Solana wallet did not prove Solana Mainnet. Switch to Mainnet and reconnect.");
+      }
+      address = solanaAccount.address;
+      var challengeSolana = await requestJson("/api/wallet-auth/challenge", Object.assign({}, payload, {
+        intent: intent, network: network, address: address
+      }));
+      var signed = await solana.features["solana:signMessage"].signMessage({
+        account: solanaAccount,
+        message: new TextEncoder().encode(challengeSolana.message)
+      });
+      if (!Array.isArray(signed) || !signed[0] || !signed[0].signature) {
+        throw new Error("The Solana wallet did not return a supported message signature.");
+      }
+      signature = encodeBase64urlBytes(signed[0].signature);
+      return requestJson("/api/wallet-auth/verify", {
+        intent: intent, challengeId: challengeSolana.challengeId, signature: signature
+      });
+    }
+    throw new Error("Choose a supported network: Ethereum Mainnet, TRON Mainnet or Solana Mainnet.");
+  }
+
+  async function finishPrimaryWalletAuthentication(intent, payload) {
+    await obtainPrimaryWalletProof(intent, document.getElementById("account-wallet-network").value, payload);
+    var refreshed = await requestJson("/api/account/status");
+    if (refreshed.authenticated !== true || refreshed.authMethod !== "primary-wallet" || !refreshed.primaryWallet) {
+      throw new Error("The wallet proof was accepted but the account session could not be independently confirmed.");
+    }
+    accountState = refreshed;
+    successKind = intent === "register" ? "wallet-register" : "wallet-login";
+    recoveryKeyAcknowledged = true;
+    syncAccountButton();
+    if (intent === "login") {
+      mode = "signin";
+      if (dialog.open) closeDialog();
+      navigateToAccount();
+      return;
+    }
+    mode = "success";
+    render();
+    var successAction = document.getElementById("open-account-hub");
+    if (successAction) successAction.focus();
+  }
+
   async function requestJson(path, payload) {
     if (browserPreviewMode) return browserPreviewRequest(path, payload || {});
     var response;
@@ -611,15 +743,36 @@
   }
 
   function renderWalletPrimaryStatus() {
-    content.innerHTML = renderDevelopmentNotice() +
-      '<div class="account-form">' +
-        '<button class="account-primary" type="button" disabled>Sign in with wallet</button>' +
-        '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
-        '<div class="account-provider-note"><strong>Your sovereignty comes with sovereign responsibilities.</strong><br>Your primary wallet is the key to your AstroCrown identity. If you permanently lose access to it and its own recovery method, AstroCrown cannot restore or transfer your identity, badges or account history.</div>' +
-        '<p class="account-signin-help"><a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Test Terms &amp; Conditions</a> · <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Notice</a></p>' +
-        '<p class="account-dialog-description">Wallet-only account creation and sign-in are approved for AstroCrown but are still being implemented and qualified. They are not enabled in this public test release.</p>' +
-        '<p class="account-signin-feedback">Need guidance? <a href="./privacy-transparency.html">Visit the AstroCrown Information Centre</a>. Direct feedback and private case services are not yet available in this public test.</p>' +
-      '</div>';
+    var enabled = workerStagingMode && accountState.walletAuthenticationAvailable !== false;
+    var controls = mode === "create"
+      ? '<form id="account-wallet-register-form" class="account-form" autocomplete="off">' +
+          '<label class="account-field" for="account-wallet-network">Primary identity network' +
+            '<select id="account-wallet-network" name="network"><option value="ethereum">Ethereum Mainnet</option><option value="tron">TRON Mainnet</option><option value="solana">Solana Mainnet</option></select>' +
+          '</label>' +
+          '<label class="account-field" for="account-wallet-referral">Referral ID (Optional)' +
+            '<input id="account-wallet-referral" name="referralId" maxlength="64" autocomplete="off" placeholder="Enter referral ID...">' +
+          '</label>' +
+          '<label class="account-consent account-terms-consent" for="account-wallet-terms">' +
+            '<input id="account-wallet-terms" type="checkbox" required>' +
+            '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> and <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
+          '</label>' +
+          '<button class="account-primary" type="submit" id="account-wallet-auth"' + (enabled ? '' : ' disabled') + '>Create account with primary wallet</button>' +
+        '</form>'
+      : '<div class="account-form">' +
+          '<label class="account-field" for="account-wallet-network">Primary identity network' +
+            '<select id="account-wallet-network" name="network"><option value="ethereum">Ethereum Mainnet</option><option value="tron">TRON Mainnet</option><option value="solana">Solana Mainnet</option></select>' +
+          '</label>' +
+          '<button class="account-primary" type="button" id="account-wallet-auth" data-intent="login"' + (enabled ? '' : ' disabled') + '>Sign in with primary wallet</button>' +
+        '</div>';
+    content.innerHTML = renderTabs(mode) + renderDevelopmentNotice() +
+      controls +
+      '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
+      '<div class="account-provider-note"><strong>Your sovereignty comes with sovereign responsibilities.</strong><br>Your primary wallet is the sole identity and recovery anchor. Use the wallet provider’s own recovery process to restore the same wallet. AstroCrown will never request or store a seed phrase or private key.</div>' +
+      '<p class="account-provider-note">Wallet proof is an off-chain message signature only. It does not submit a transaction, approve a contract, transfer assets or pay gas. Only Ethereum Mainnet, TRON Mainnet and Solana Mainnet are currently supported by this qualification; Bitcoin support is not enabled.</p>' +
+      (!enabled
+        ? '<p class="account-dialog-description">Wallet-only account access is not enabled in this read-only preview. Use the local passkey route only for historical regression testing.</p>'
+        : '<p class="account-dialog-description">This wallet-primary account implementation is a staging qualification candidate. Use a wallet containing no real assets and review every message before signing. No account service is approved for production.</p>') +
+      '<p class="account-signin-help"><a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Test Terms &amp; Conditions</a> · <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Notice</a></p>';
   }
 
   function renderSignIn() {
@@ -683,18 +836,24 @@
   }
 
   function renderSuccess() {
-    var created = successKind === "signup";
+    var walletAuth = successKind === "wallet-register" || successKind === "wallet-login";
+    var created = successKind === "signup" || successKind === "wallet-register";
     var recovered = successKind === "recovery";
-    var needsRecoveryKeyAcknowledgement = created || recovered;
-    var heading = created ? "Your passkey account is ready"
+    var needsRecoveryKeyAcknowledgement = (created || recovered) && !walletAuth;
+    var heading = walletAuth && created ? "Your AstroCrown account is ready"
+      : created ? "Your passkey account is ready"
       : recovered ? "Your account has been recovered"
       : "You're signed in";
-    var message = created
-      ? "Your AstroCrown account was created using a passkey. Your authenticator keeps the private key; AstroCrown stores the public credential needed for verification."
-      : recovered
-        ? "Recovery succeeded. Your previous passkeys and active sessions were revoked. The old recovery key has been consumed."
-        : "You are signed in to AstroCrown with your passkey. This local prototype does not grant production access or administrator privileges.";
-    var persistenceNote = "You can close this window without signing out. The local server keeps your session until it expires or you sign out.";
+    var message = walletAuth
+      ? "Your primary wallet has been verified and is now the sole identity and sign-in anchor for this AstroCrown account. No transaction, token approval or payment was made."
+      : created
+        ? "Your AstroCrown account was created using a passkey. Your authenticator keeps the private key; AstroCrown stores the public credential needed for verification."
+        : recovered
+          ? "Recovery succeeded. Your previous passkeys and active sessions were revoked. The old recovery key has been consumed."
+          : "You are signed in to AstroCrown with your passkey. This local prototype does not grant production access or administrator privileges.";
+    var persistenceNote = walletAuth
+      ? "Your session remains active until it expires or you sign out. Account identity recovery depends on restoring access to this same wallet through its provider."
+      : "You can close this window without signing out. The local server keeps your session until it expires or you sign out.";
     var recoveryKey = accountState && typeof accountState.oneTimeRecoveryKey === "string"
       ? accountState.oneTimeRecoveryKey : "";
     content.innerHTML =
@@ -702,6 +861,12 @@
         '<div class="account-success-mark" aria-hidden="true">✓</div>' +
         '<h3 class="account-success-heading">' + escapeHtml(heading) + '</h3>' +
         '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
+        (walletAuth && created
+          ? '<section class="account-recovery-key-panel"><h3>Primary wallet identity established</h3>' +
+              '<p>Account identifier: <strong>' + escapeHtml(accountState.accountIdentifier || "") + '</strong></p>' +
+              '<p>Primary wallet: ' + escapeHtml(accountState.primaryWallet && accountState.primaryWallet.network || "") + ' · ' + escapeHtml(accountState.primaryWallet && accountState.primaryWallet.address || "") + '</p>' +
+              '<p>Keep control of this same wallet using the wallet provider’s own recovery method. AstroCrown cannot reset or transfer the identity.</p></section>'
+          : '') +
         (needsRecoveryKeyAcknowledgement
           ? '<section class="account-recovery-key-panel">' +
               '<h3>Save your account identifier and offline recovery key</h3>' +
@@ -1156,7 +1321,8 @@
   }
 
   function closeDialog() {
-    if (mode === "success" && successKind !== "signin" && !recoveryKeyAcknowledged) {
+    if (mode === "success" && (successKind === "signup" || successKind === "recovery") &&
+        accountState.authMethod !== "primary-wallet" && !recoveryKeyAcknowledged) {
       showFeedback("Save the one-time offline recovery key and confirm before closing this screen.", "error");
       return;
     }
@@ -1179,6 +1345,28 @@
     if (!(form instanceof HTMLFormElement)) return;
     event.preventDefault();
     if (busy) return;
+
+    if (form.id === "account-wallet-register-form") {
+      var walletTerms = document.getElementById("account-wallet-terms");
+      if (!walletTerms || walletTerms.checked !== true) {
+        showFeedback("Accept the Terms of Use and Privacy Policy before creating an account.", "error");
+        if (walletTerms) walletTerms.focus();
+        return;
+      }
+      setBusy(true);
+      try {
+        await finishPrimaryWalletAuthentication("register", {
+          termsAccepted: true,
+          termsVersion: termsVersion,
+          referralId: formValue(form, "referralId")
+        });
+      } catch (error) {
+        showFeedback(error.message || "Primary-wallet account creation could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
 
     if (form.id === "account-create-form") {
       var termsInput = form.elements.namedItem("termsAccepted");
@@ -1241,6 +1429,17 @@
       setMode(button.dataset.accountMode);
       return;
     }
+    if (button.id === "account-wallet-auth") {
+      setBusy(true);
+      try {
+        await finishPrimaryWalletAuthentication(button.dataset.intent || "login", {});
+      } catch (error) {
+        showFeedback(error.message || "Primary-wallet sign-in could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
     if (button.id === "account-passkey-signin") {
       setBusy(true);
       try {
@@ -1284,7 +1483,8 @@
       return;
     }
     if (button.id === "open-account-hub") {
-      if ((successKind === "signup" || successKind === "recovery") && !recoveryKeyAcknowledged) {
+      if ((successKind === "signup" || successKind === "recovery") &&
+          accountState.authMethod !== "primary-wallet" && !recoveryKeyAcknowledged) {
         showFeedback("Confirm that you saved the offline recovery key before continuing.", "error");
         return;
       }
