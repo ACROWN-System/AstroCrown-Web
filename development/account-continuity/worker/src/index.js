@@ -2000,7 +2000,7 @@ async function status(db, request, env) {
     adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
     admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
     passkeyAvailable: env?.ENVIRONMENT !== "staging",
-    walletAuthenticationAvailable: true,
+    walletAuthenticationAvailable: ["local", "staging"].includes(env?.ENVIRONMENT),
     walletAuthenticationNetworks: ["ethereum", "tron", "solana"],
     emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
