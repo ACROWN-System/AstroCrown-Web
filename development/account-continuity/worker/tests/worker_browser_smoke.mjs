@@ -861,6 +861,8 @@ try {
 
   const noticeOpen = await evaluate("Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)");
   if (noticeOpen) {
+    await waitFor("homepage page-status notice rendering", () =>
+      evaluate("document.getElementById('development-notice')?.dataset.pageNoticeReady === 'true'"), 30000);
     if (await evaluate("Boolean(document.getElementById('development-notice-acknowledged'))") &&
         !(await evaluate("document.getElementById('development-notice-acknowledged').checked"))) {
       await trustedClick("#development-notice-acknowledged");
@@ -954,6 +956,8 @@ try {
     "Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)"
   );
   if (returningNoticeOpen) {
+    await waitFor("returning homepage page-status notice rendering", () =>
+      evaluate("document.getElementById('development-notice')?.dataset.pageNoticeReady === 'true'"), 30000);
     if (!(await evaluate("document.getElementById('development-notice-acknowledged').checked"))) {
       await trustedClick("#development-notice-acknowledged");
     }
@@ -1084,6 +1088,8 @@ try {
     "Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)"
   );
   if (secondNoticeOpen) {
+    await waitFor("second homepage page-status notice rendering", () =>
+      evaluate("document.getElementById('development-notice')?.dataset.pageNoticeReady === 'true'"), 30000);
     if (!(await evaluate("document.getElementById('development-notice-acknowledged').checked"))) {
       await trustedClick("#development-notice-acknowledged");
     }
@@ -1228,6 +1234,8 @@ try {
     "Boolean(document.getElementById('development-notice') && document.getElementById('development-notice').open)"
   );
   if (sessionReloadNoticeOpen) {
+    await waitFor("session-reload page-status notice rendering", () =>
+      evaluate("document.getElementById('development-notice')?.dataset.pageNoticeReady === 'true'"), 30000);
     if (!(await evaluate("document.getElementById('development-notice-acknowledged').checked"))) {
       await trustedClick("#development-notice-acknowledged");
     }
