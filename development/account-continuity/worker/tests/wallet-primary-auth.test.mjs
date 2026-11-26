@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { privateKeyToAccount } from "viem/accounts";
 import { keccak256, toBytes } from "viem";
-import { createPrimaryWalletMessage, issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge } from "../src/wallet-auth.js";
+import { createPrimaryWalletMessage, issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge, isQualifiedAccountRuntime } from "../src/wallet-auth.js";
 import { base58Encode, normalizeWalletAddress, verifyWalletSignature } from "../src/supporters.js";
 
 const ORIGIN = "https://accounts.astrocrown.example";
@@ -127,4 +127,38 @@ test("Solana Ed25519 message signatures are verified against the canonical 32-by
   assert.equal(await verifyWalletSignature({
     network: "solana", address_normalized: address, message: message + " altered",
   }, encoded), false);
+});
+
+test("account authentication requires a loopback local origin or HTTPS staging origin with abuse controls", () => {
+  const localRequest = new Request("http://localhost:8787/api/wallet-auth/challenge");
+  assert.equal(isQualifiedAccountRuntime(
+    { ENVIRONMENT: "local" }, { origin: "http://localhost:8787" }, localRequest
+  ), true);
+  assert.equal(isQualifiedAccountRuntime(
+    { ENVIRONMENT: "local" }, { origin: "http://localhost:8787" },
+    new Request("https://public.example/api/wallet-auth/challenge")
+  ), false);
+  assert.equal(isQualifiedAccountRuntime(
+    { ENVIRONMENT: "local" }, { origin: "https://public.example" },
+    new Request("https://public.example/api/wallet-auth/challenge")
+  ), false);
+  assert.equal(isQualifiedAccountRuntime(
+    { ENVIRONMENT: "staging", RATE_LIMIT_HMAC_KEY: "x".repeat(64) },
+    { origin: "https://staging.example" },
+    new Request("https://staging.example/api/wallet-auth/challenge")
+  ), true);
+  assert.equal(isQualifiedAccountRuntime(
+    { ENVIRONMENT: "staging" }, { origin: "https://staging.example" },
+    new Request("https://staging.example/api/wallet-auth/challenge")
+  ), false);
+  assert.equal(isQualifiedAccountRuntime(
+    { ENVIRONMENT: "staging", RATE_LIMIT_HMAC_KEY: "x".repeat(64) },
+    { origin: "http://staging.example" },
+    new Request("http://staging.example/api/wallet-auth/challenge")
+  ), false);
+  assert.equal(isQualifiedAccountRuntime(
+    { ENVIRONMENT: "production", RATE_LIMIT_HMAC_KEY: "x".repeat(64) },
+    { origin: "https://astrocrown.example" },
+    new Request("https://astrocrown.example/api/wallet-auth/challenge")
+  ), false);
 });
