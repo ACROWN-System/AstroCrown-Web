@@ -110,8 +110,18 @@
     var content = dialog.querySelector(".development-notice-content");
     if (!content) return false;
     var acknowledgement = dialog.querySelector("#development-notice-acknowledged");
+    var continueButton = dialog.querySelector("#development-notice-continue");
     var loading = dialog.querySelector("#development-notice-status-loading");
-    if (acknowledgement) acknowledgement.disabled = true;
+    if (!acknowledgement || !continueButton) return false;
+
+    acknowledgement.disabled = true;
+    acknowledgement.checked = false;
+    continueButton.disabled = true;
+    dialog.dataset.pageNoticePageId = pageId;
+    dialog.dataset.pageNoticePageVersion = page.version;
+    dialog.dataset.pageNoticeGlobalVersion = globalVersion;
+    dialog.dataset.pageNoticeReady = "false";
+
     if (!content.querySelector(".astro-entry-notice-header")) {
       var header = element("div", "astro-entry-notice-header");
       header.appendChild(element("h2", "", "Before you continue"));
@@ -128,15 +138,21 @@
       header.appendChild(close);
       content.insertBefore(header, content.firstChild);
     }
-    if (content.querySelector(".astro-page-status-summary")) {
-      if (loading) loading.remove();
-      if (acknowledgement) acknowledgement.disabled = false;
-      dialog.dataset.pageNoticeReady = "true";
-      bindNativeNoticeAcknowledgement(dialog, pageId, page.version, globalVersion);
-      return true;
-    }
+
+    // Rebuild every page-specific block when the open global notice is reused
+    // for another SPA route. A previous page's status or acknowledgement must
+    // never be carried into a different page.
+    [
+      ".astro-entry-notice-kicker",
+      ".astro-page-status-summary",
+      ".astro-entry-notice-rules",
+      ".astro-entry-notice-risk"
+    ].forEach(function (selector) {
+      content.querySelectorAll(selector).forEach(function (node) { node.remove(); });
+    });
+
     var intro = content.querySelector(".development-notice-intro");
-    var anchor = intro ? intro.nextSibling : (content.children[0] || null);
+    var anchor = intro ? intro.nextSibling : (content.querySelector(".astro-entry-notice-header")?.nextSibling || content.firstChild);
     var kicker = element("p", "astro-entry-notice-kicker", globalNotice.heading);
     content.insertBefore(kicker, anchor);
     content.insertBefore(buildStatusSummary(page, globalNotice), kicker.nextSibling);
@@ -147,10 +163,12 @@
     content.insertBefore(instructions, content.querySelector(".development-notice-ack"));
     var walletRisk = element("p", "astro-entry-notice-risk", globalNotice.wallet_safety);
     content.insertBefore(walletRisk, content.querySelector(".development-notice-ack"));
+
     if (loading) loading.remove();
     dialog.dataset.pageNoticeReady = "true";
-    if (acknowledgement) acknowledgement.disabled = false;
-    bindNativeNoticeAcknowledgement(dialog, pageId, page.version, globalVersion);
+    acknowledgement.disabled = false;
+    acknowledgement.dispatchEvent(new Event("change", { bubbles: true }));
+    bindNativeNoticeAcknowledgement(dialog);
     return true;
   }
 
@@ -168,16 +186,20 @@
     return isWorkerStagingRuntime() && ["genesis", "account", "admin"].indexOf(pageId) !== -1;
   }
 
-  function bindNativeNoticeAcknowledgement(dialog, pageId, pageVersion, globalVersion) {
-    if (dialog.dataset.pageNoticeAckBound === pageId + ":" + pageVersion + ":" + globalVersion) return;
+  function bindNativeNoticeAcknowledgement(dialog) {
+    if (dialog.dataset.pageNoticeAckBound === "true") return;
     var acknowledgement = dialog.querySelector("#development-notice-acknowledged");
     var continueButton = dialog.querySelector("#development-notice-continue");
     if (!acknowledgement || !continueButton) return;
-    dialog.dataset.pageNoticeAckBound = pageId + ":" + pageVersion + ":" + globalVersion;
+    dialog.dataset.pageNoticeAckBound = "true";
     continueButton.addEventListener("click", async function (event) {
       event.preventDefault();
       event.stopImmediatePropagation();
       if (!acknowledgement.checked || continueButton.disabled) return;
+      var pageId = dialog.dataset.pageNoticePageId || "home";
+      var pageVersion = dialog.dataset.pageNoticePageVersion || "";
+      var globalVersion = dialog.dataset.pageNoticeGlobalVersion || "";
+      if (!pageVersion || !globalVersion) return;
       continueButton.disabled = true;
       acknowledgement.disabled = true;
       var originalLabel = continueButton.textContent;
