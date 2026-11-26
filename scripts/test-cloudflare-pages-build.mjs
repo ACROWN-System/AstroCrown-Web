@@ -82,6 +82,8 @@ assert.match(pageNoticeJs, /acknowledgement\.disabled = true/);
 assert.match(pageNoticeJs, /acknowledgement\.disabled = false/);
 assert.match(pageNoticeJs, /pageNoticeReady/);
 assert.match(pageNoticeJs, /function closeSupersededPageNotice/);
+assert.match(pageNoticeJs, /if \(pageId === "home"\)/);
+assert.match(pageNoticeJs, /if \(nativeNotice && nativeNotice\.open\) nativeNotice\.close\(\)/);
 assert.match(pageNoticeJs, /closeSupersededPageNotice\(pageId, nextPageId\)/);
 assert.match(pageNoticeJs, /dialog\.dataset\.pageNoticePageId = page\.id/);
 assert.match(pageNoticeJs, /adminDashboard && !adminDashboard\.hidden/);
