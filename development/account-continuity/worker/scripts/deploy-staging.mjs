@@ -450,17 +450,22 @@ async function smokeTest(origin) {
     !homepage.includes("openly available to anyone on the internet")
   ) fail("Public staging homepage is missing the live-environment marker or public safety notice.");
 
-  const publicSupportersStatus = await fetch(origin + "/api/supporters/status", { signal: AbortSignal.timeout(30000) });
+  const publicSupportersStatus = await fetch(origin + "/api/genesis/status", { signal: AbortSignal.timeout(30000) });
   if (publicSupportersStatus.status !== 200) {
     fail("The read-only public Genesis Programme status endpoint must be available without account acknowledgement (HTTP " + publicSupportersStatus.status + ").");
   }
   const publicSupportersPayload = await publicSupportersStatus.json();
   if (
+    publicSupportersPayload.environment !== "MAINNET" ||
     publicSupportersPayload.programme?.status !== "PRELAUNCH" ||
     publicSupportersPayload.paymentAcceptance?.enabled !== false ||
-    publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false
+    publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false ||
+    publicSupportersPayload.purchaseAllowance?.automaticTokenIssuance !== false ||
+    !Array.isArray(publicSupportersPayload.networks) ||
+    publicSupportersPayload.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
+    publicSupportersPayload.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== true)
   ) {
-    fail("The public Genesis Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
+    fail("The public Genesis Programme status must show three-network PRELAUNCH with payment intake disabled.");
   }
 
   const beforeAcknowledgement = await fetch(origin + "/api/account/status", { signal: AbortSignal.timeout(30000) });
@@ -494,27 +499,7 @@ async function smokeTest(origin) {
   }
   if (status.scope !== "staging-test-account-only") fail("Remote account status is missing the staging-only scope marker.");
 
-  const supportersResponse = await fetch(origin + "/api/supporters/status", {
-    headers,
-    signal: AbortSignal.timeout(30000),
-  });
-  if (supportersResponse.status !== 200) {
-    fail("The isolated Genesis Programme status endpoint failed (HTTP " + supportersResponse.status + ").");
-  }
-  const supporters = await supportersResponse.json();
-  if (
-    supporters.environment !== "MAINNET" ||
-    supporters.programme?.status !== "PRELAUNCH" ||
-    supporters.paymentAcceptance?.enabled !== false ||
-    supporters.paymentAcceptance?.contributionsAccepted !== false ||
-    supporters.purchaseAllowance?.automaticTokenIssuance !== false ||
-    !Array.isArray(supporters.networks) ||
-    supporters.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
-    supporters.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== true)
-  ) {
-    fail("The isolated Genesis Programme status must report three-network PRELAUNCH with all payment intake disabled.");
-  }
-
+  const supporters = publicSupportersPayload;
   const negative = await fetch(origin + "/api/wallet-auth/challenge", {
     method: "POST",
     headers: {
