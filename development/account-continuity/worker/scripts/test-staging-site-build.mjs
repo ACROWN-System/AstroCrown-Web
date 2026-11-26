@@ -39,6 +39,9 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /acknowledgement\.disabled = true/);
   assert.match(noticeScript, /acknowledgement\.disabled = false/);
   assert.match(noticeScript, /pageNoticeReady/);
+  assert.match(noticeScript, /function closeSupersededPageNotice/);
+  assert.match(noticeScript, /closeSupersededPageNotice\(pageId, nextPageId\)/);
+  assert.match(noticeScript, /dialog\.dataset\.pageNoticePageId = page\.id/);
   assert.match(noticeScript, /adminDashboard && !adminDashboard\.hidden/);
   assert.match(noticeScript, /new MutationObserver\(reconcilePageEntry\)/);
   assert.match(noticeScript, /astrocrown:admin-dashboard-visible/);
