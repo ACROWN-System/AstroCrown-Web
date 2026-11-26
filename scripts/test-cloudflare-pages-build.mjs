@@ -92,7 +92,11 @@ for (const page of Object.values(featureStatus.pages)) {
   for (const feature of page.features) {
     assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(feature.status));
     if (feature.status === "DEVNET") {
-      assert.ok(feature.network && feature.faucet && /^https:\/\//.test(feature.faucet.url));
+      assert.ok(feature.network && feature.network_id !== undefined && feature.test_asset);
+    assert.ok(feature.faucet && (
+      (typeof feature.faucet.url === "string" && /^https:\/\//.test(feature.faucet.url)) ||
+      (typeof feature.faucet.address === "string" && feature.faucet.address.trim())
+    ));
     }
   }
 }
