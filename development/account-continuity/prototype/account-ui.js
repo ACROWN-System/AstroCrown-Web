@@ -619,7 +619,7 @@
   }
 
   function renderSignIn() {
-    if (workerStagingMode || browserPreviewMode) {
+    if ((typeof workerStagingMode !== "undefined" && workerStagingMode) || browserPreviewMode) {
       renderWalletPrimaryStatus();
       return;
     }
@@ -635,7 +635,7 @@
   }
 
   function renderCreate() {
-    if (workerStagingMode || browserPreviewMode) {
+    if ((typeof workerStagingMode !== "undefined" && workerStagingMode) || browserPreviewMode) {
       renderWalletPrimaryStatus();
       return;
     }
@@ -656,7 +656,7 @@
   }
 
   function renderRecover() {
-    if (workerStagingMode || browserPreviewMode) {
+    if ((typeof workerStagingMode !== "undefined" && workerStagingMode) || browserPreviewMode) {
       content.innerHTML = renderDevelopmentNotice() +
         '<p class="account-dialog-description">AstroCrown cannot reset, replace or recover your primary wallet. Use the wallet provider’s own recovery process to restore the same wallet.</p>' +
         '<p class="account-provider-note">Never share your seed phrase, private key or wallet recovery secret with AstroCrown, NOVA, administrators, support staff or anyone else. Wallet-only account recovery is part of the approved design but is not yet enabled in this public test release.</p>' +
