@@ -89,6 +89,13 @@ function accountId(value) {
   if (!/^AC-[A-F0-9]{10}$/.test(candidate)) throw fail(400, "Enter the AstroCrown account identifier shown after registration.");
   return candidate;
 }
+function isSupersededPasskeyRoute(pathname) {
+  return pathname.startsWith("/api/passkeys/") ||
+    pathname.startsWith("/api/account/recovery/") ||
+    pathname.startsWith("/api/account/security/step-up/") ||
+    pathname.startsWith("/api/account/security/passkeys/") ||
+    pathname.startsWith("/api/account/security/recovery/");
+}
 function recoveryKey(value) {
   if (typeof value !== "string" || !/^ACR1-[A-Za-z0-9_-]{43}$/.test(value.trim())) throw fail(401, "Account recovery could not be started. Check the account identifier and recovery key.");
   return value.trim();
@@ -2006,6 +2013,11 @@ async function communications(db, request) {
 async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
+  if (env.ENVIRONMENT === "staging" && isSupersededPasskeyRoute(url.pathname)) {
+    return json(410, {
+      error: "Passkey-first account authentication and offline recovery-key login have been superseded by AstroCrown's wallet-only primary identity. That replacement account flow is not yet enabled in this staging release.",
+    });
+  }
   if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
   if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
@@ -2072,6 +2084,7 @@ async function staticAssets(request, env) {
 export {
   createPageAcknowledgement,
   hasPageAcknowledgement,
+  isSupersededPasskeyRoute,
   PAGE_ACK_CONFIG,
   b64u as base64url,
   unb64u as fromBase64url,
