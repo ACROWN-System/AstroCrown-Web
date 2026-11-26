@@ -411,6 +411,7 @@
       }
     }
     window.addEventListener("hashchange", reconcilePageEntry);
+    document.addEventListener("astrocrown:admin-dashboard-visible", reconcilePageEntry);
     var adminDashboard = document.getElementById("admin-dashboard");
     if (adminDashboard && typeof MutationObserver === "function") {
       var adminVisibilityObserver = new MutationObserver(reconcilePageEntry);
