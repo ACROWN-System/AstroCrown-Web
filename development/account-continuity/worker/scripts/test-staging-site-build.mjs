@@ -41,7 +41,8 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(accountUi, /typeof workerStagingMode/);
   assert.match(noticeScript, /Before you continue/);
   assert.match(noticeScript, /async function isAcknowledged/);
-  assert.match(noticeScript, /if \(isWorkerStagingRuntime\(\)\)/);
+  assert.match(noticeScript, /if \(isWorkerStagingRuntime\(\)/);
+  assert.match(noticeScript, /\["home", "genesis", "account", "admin"\]\.indexOf\(pageId\) !== -1/);
   assert.match(noticeScript, /\/api\/staging\/acknowledgement-status\?pageId=/);
   assert.match(noticeScript, /\/api\/account\/acknowledgement-status/);
   assert.match(noticeScript, /\/api\/genesis\/acknowledgement-status/);
