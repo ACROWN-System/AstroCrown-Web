@@ -87,8 +87,10 @@
     if (!dialog) return false;
     var content = dialog.querySelector(".development-notice-content");
     if (!content || content.querySelector(".astro-page-status-summary")) return true;
+    var intro = content.querySelector(".development-notice-intro");
+    var anchor = intro ? intro.nextSibling : (content.children[0] || null);
     var kicker = element("p", "astro-entry-notice-kicker", globalNotice.heading);
-    content.insertBefore(kicker, content.children[1] || null);
+    content.insertBefore(kicker, anchor);
     content.insertBefore(buildStatusSummary(page, globalNotice), kicker.nextSibling);
     var instructions = element("ul", "astro-entry-notice-rules");
     globalNotice.rules.forEach(function (rule) {
@@ -116,7 +118,9 @@
     dialog.setAttribute("aria-modal", "true");
     var inner = element("div", "astro-entry-notice-inner");
     var header = element("div", "astro-entry-notice-header");
-    header.appendChild(element("h2", "", "Before you continue"));
+    var heading = element("h2", "", "Before you continue");
+    heading.id = "astro-entry-notice-title";
+    header.appendChild(heading);
     var close = element("button", "astro-entry-notice-close", "×");
     close.type = "button";
     close.setAttribute("aria-label", "Leave this page and return to the AstroCrown homepage");
@@ -174,6 +178,17 @@
       feedback.textContent = "";
       if (runtimeNeedsServerAcknowledgement(page.id)) {
         try {
+          var globalResponse = await fetch("/api/staging/acknowledge", {
+            method: "POST",
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: { "Accept": "application/json", "Content-Type": "application/json" },
+            body: JSON.stringify({ noticeVersion: "2026-11-26-public-test-v2" })
+          });
+          var globalResult = await globalResponse.json();
+          if (!globalResponse.ok || globalResult.acknowledged !== true) {
+            throw new Error(globalResult.error || "The public-test acknowledgement could not be recorded.");
+          }
           var response = await fetch("/api/staging/page-acknowledge", {
             method: "POST",
             credentials: "same-origin",
@@ -218,7 +233,9 @@
 
   function insertPageStatusStrip(registry, pageId) {
     var page = registry.pages[pageId] || registry.pages.legal;
-    if (!page || document.querySelector(".astro-page-status-strip")) return;
+    if (!page) return;
+    var existingStrip = document.querySelector(".astro-page-status-strip");
+    if (existingStrip) existingStrip.remove();
     var strip = element("div", "astro-page-status-strip");
     strip.appendChild(element("span", "", page.title + " status"));
     strip.appendChild(statusBadge(page.delivery.status));
