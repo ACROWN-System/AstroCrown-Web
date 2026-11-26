@@ -133,7 +133,9 @@ for (const page of Object.values(featureStatus.pages)) {
 
 assert.match(accountJs, /var forceBrowserDemo = true;/);
 assert.match(accountJs, /function renderWalletPrimaryStatus\(\)/);
-assert.match(accountJs, /typeof workerStagingMode/);
+assert.match(accountJs, /var walletPrimaryUiMode = true;/);
+assert.match(accountJs, /var enabled = accountState.walletAuthenticationAvailable === true;/);
+assert.doesNotMatch(accountJs, /account-passkey-signin|registerWithPasskey|recoverWithPasskey/);
 assert.match(accountJs, /browserPreviewMode/);
 assert.match(accountJs, /Sign in with primary wallet/);
 assert.match(accountJs, /Create account with primary wallet/);
