@@ -14,13 +14,13 @@ const config = { origin: "https://astrocrown.example" };
 test("page acknowledgement is signed, scoped to the page and version, and HttpOnly", async () => {
   const response = await createPageAcknowledgement(env, {
     pageId: "genesis",
-    noticeVersion: "2026-11-26-genesis-v1",
+    noticeVersion: "2026-11-26-genesis-v2",
   }, config);
   assert.equal(response.status, 200);
   const result = await response.json();
   assert.equal(result.acknowledged, true);
   assert.equal(result.pageId, "genesis");
-  assert.equal(result.noticeVersion, "2026-11-26-genesis-v1");
+  assert.equal(result.noticeVersion, "2026-11-26-genesis-v2");
 
   const setCookie = response.headers.get("Set-Cookie");
   assert.match(setCookie, /^acrown_page_ack_genesis=/);
@@ -40,7 +40,7 @@ test("page acknowledgement is signed, scoped to the page and version, and HttpOn
 test("page acknowledgement rejects missing, altered, wrong-page and expired evidence", async () => {
   const response = await createPageAcknowledgement(env, {
     pageId: "account",
-    noticeVersion: "2026-11-26-account-v1",
+    noticeVersion: "2026-11-26-account-v2",
   }, config);
   const setCookie = response.headers.get("Set-Cookie");
   const cookiePair = setCookie.split(";")[0];
@@ -68,7 +68,7 @@ test("page acknowledgement rejects missing, altered, wrong-page and expired evid
 
 test("unknown page IDs and stale notice versions fail closed", async () => {
   await assert.rejects(
-    createPageAcknowledgement(env, { pageId: "payments", noticeVersion: "2026-11-26-genesis-v1" }, config),
+    createPageAcknowledgement(env, { pageId: "payments", noticeVersion: "2026-11-26-genesis-v2" }, config),
     /page notice version is invalid or outdated/i,
   );
   await assert.rejects(
