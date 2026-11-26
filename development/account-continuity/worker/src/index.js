@@ -291,6 +291,9 @@ async function createChallenge(db, item) {
     item.userHandle || null, JSON.stringify(item.payload || {}), item.now, item.now + CHALLENGE_SECONDS
   ).run();
 }
+function isSupersededPasskeySession(env, account) {
+  return env?.ENVIRONMENT === "staging" && Boolean(account?.authenticated_credential_id);
+}
 async function activeAccount(db, request) {
   const token = cookie(request, SESSION_COOKIE);
   if (!token) return null;
@@ -2036,7 +2039,7 @@ async function api(request, env, config) {
     db
   ) {
     const legacySession = await activeAccount(db, request);
-    if (legacySession && legacySession.authenticated_credential_id) {
+    if (isSupersededPasskeySession(env, legacySession)) {
       const token = cookie(request, SESSION_COOKIE);
       if (token) {
         await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(await hashText(token)).run();
@@ -2121,6 +2124,7 @@ export {
   createPageAcknowledgement,
   hasPageAcknowledgement,
   isSupersededPasskeyRoute,
+  isSupersededPasskeySession,
   PAGE_ACK_CONFIG,
   b64u as base64url,
   unb64u as fromBase64url,
