@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "notice_version": "2026-11-26-public-test-v3",
+  "notice_version": "2026-11-26-public-test-v4",
   "acknowledgement_ttl_seconds": 43200,
   "global_notice": {
     "heading": "ASTROCROWN LIVE PUBLIC TEST",
