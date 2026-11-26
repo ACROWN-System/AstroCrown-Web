@@ -37,7 +37,7 @@ test("staging artifact replaces the visual-preview notice with live public-test 
   assert.match(html, /Only features explicitly marked LIVE with their environment are functional/);
   assert.match(html, /DEVNET features are restricted to their named test network and verified faucet/);
   assert.match(html, /FOR DEVELOPMENT · READ ONLY features do not provide operational transactions/);
-  assert.match(html, /off-chain ownership message is not a blockchain transaction/);
+  assert.match(html, /off-chain ownership signature is not a blockchain transaction/);
   assert.match(html, /A development transaction is permitted only when the exact feature is explicitly marked DEVNET/);
   assert.match(html, /seed phrase, private key, wallet recovery phrase/);
   assert.doesNotMatch(html, /separate disposable wallet/);
