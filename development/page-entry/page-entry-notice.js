@@ -402,14 +402,23 @@
     var pageId = currentPageId(defaultId);
     insertPageStatusStrip(registry, pageId);
     showPageNotice(registry, pageId);
-    window.addEventListener("hashchange", function () {
+    function reconcilePageEntry() {
       var nextPageId = currentPageId(defaultId);
       if (nextPageId !== pageId) {
         pageId = nextPageId;
         insertPageStatusStrip(registry, pageId);
         showPageNotice(registry, pageId);
       }
-    });
+    }
+    window.addEventListener("hashchange", reconcilePageEntry);
+    var adminDashboard = document.getElementById("admin-dashboard");
+    if (adminDashboard && typeof MutationObserver === "function") {
+      var adminVisibilityObserver = new MutationObserver(reconcilePageEntry);
+      adminVisibilityObserver.observe(adminDashboard, {
+        attributes: true,
+        attributeFilter: ["hidden"]
+      });
+    }
   }
 
   if (document.readyState === "loading") {
