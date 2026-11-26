@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
-  <title>Security assurance · AstroCrown account prototype</title>
+  <title>Historical passkey prototype record · AstroCrown</title>
   <style>
     :root { color-scheme:dark; --gold:#ffd700; --ink:#f2f5fb; --muted:#aab8cb; --line:rgba(153,178,213,.22); }
     * { box-sizing:border-box; }
@@ -33,11 +33,16 @@
   <main>
     <div class="topline"></div>
     <div class="eyebrow">AstroCrown · Account access</div>
-    <h1>Security assurance</h1>
-    <p>This page explains why AstroCrown uses passkeys, what the local prototype verifies, which evidence exists, and where the security and certification boundaries remain. It is separate from the Terms of Use and Privacy Policy.</p>
+    <h1>Historical passkey prototype record</h1>
+    <section class="status">
+      <strong>Superseded as the active account sign-in design on 18 November 2026.</strong>
+      <p>AstroCrown deliberately changed to wallet-only primary identity. This page preserves evidence and limitations from the earlier local passkey prototype; it does not describe the current sign-in method and must not be used as active account-authentication guidance.</p>
+      <p><a href="./wallet-identity-assurance.html">Read the current “Why wallet?” explanation.</a></p>
+    </section>
+    <p>This historical record explains what the earlier local passkey prototype implemented and tested. It is separate from the Terms of Use and Privacy Policy.
 
     <section>
-      <h2>Why passkeys?</h2>
+      <h2>Historical design: why passkeys were previously evaluated</h2>
       <p><strong>Sign in without a password.</strong> Your device or security key creates a public/private key pair for AstroCrown. The private key stays with your authenticator. When you sign in, AstroCrown sends a fresh challenge and verifies the signed response with the public key registered to your account.</p>
       <ul>
         <li>Your authenticator performs local user verification, such as a device PIN or biometric unlock. AstroCrown does not receive your biometric sample or device PIN.</li>
@@ -49,7 +54,7 @@
     </section>
 
     <div class="status">
-      <strong>Status: Development prototype only — local passkey/recovery development test.</strong>
+      <strong>Historical status: Development prototype only — passkey login is not the current AstroCrown account model.</strong>
       <p>WebAuthn passkey registration/sign-in and one-time offline recovery are implemented for loopback testing. This is not production authentication, an independent security audit, a certification or a guarantee of account recovery. Do not use real credentials, personal recovery material, real wallets or valuable assets.</p>
     </div>
 
