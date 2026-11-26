@@ -21,7 +21,7 @@ const STAGING_ACK_SECONDS = 12 * 60 * 60;
 const PAGE_ACK_SECONDS = 12 * 60 * 60;
 const PAGE_ACK_CONFIG = {
   genesis: { version: "2026-11-26-genesis-v2", cookie: "acrown_page_ack_genesis", path: "/api/genesis" },
-  account: { version: "2026-11-26-account-v2", cookie: "acrown_page_ack_account", path: "/api/account" },
+  account: { version: "2026-11-26-account-v2", cookie: "acrown_page_ack_account", path: "/api/" },
   admin: { version: "2026-11-26-admin-v2", cookie: "acrown_page_ack_admin", path: "/api/admin" },
 };
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
