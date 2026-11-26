@@ -4,12 +4,13 @@
   "acknowledgement_ttl_seconds": 43200,
   "global_notice": {
     "heading": "ASTROCROWN LIVE PUBLIC TEST",
-    "introduction": "You are accessing the AstroCrown public test environment. Public submissions may be visible to anyone on the internet. Never disclose personal information, production credentials, seed phrases, private keys or wallet recovery secrets.",
+    "introduction": "You are accessing the AstroCrown public test environment. Public submissions may be visible to anyone on the internet. Anyone who can view a public submission may copy, save, screenshot, quote or redistribute it; removing it from AstroCrown cannot remove copies made elsewhere. Never disclose personal information, production credentials, seed phrases, private keys or wallet recovery secrets.",
     "rules": [
       "Only features explicitly marked LIVE are functional, and each LIVE label must identify its environment, such as LIVE · STAGING or LIVE · MAINNET.",
       "DEVNET features operate only on their named development network. Their notice must identify the network and provide its verified test-token faucet link or address. Test tokens have no mainnet value.",
       "FOR DEVELOPMENT · READ ONLY features are previews. They do not provide operational transactions or state-changing functionality.",
-      "An unlabelled feature must be treated as FOR DEVELOPMENT · READ ONLY. A wallet connection or off-chain ownership signature does not by itself mean that payments or transactions are enabled."
+      "An unlabelled feature must be treated as FOR DEVELOPMENT · READ ONLY. A wallet connection or off-chain ownership signature does not by itself mean that payments or transactions are enabled.",
+      "Anyone who can view a public submission may copy, save, screenshot, quote or redistribute it. Removing it from AstroCrown cannot remove copies made elsewhere."
     ],
     "wallet_safety": "A wallet ownership message is not a blockchain transaction. Review the exact message shown by your wallet and never disclose a seed phrase, private key or recovery secret. Never approve a token or send assets unless the specific feature is explicitly marked LIVE · MAINNET and you have independently checked the network, asset, amount and destination.",
     "acknowledgement": "I confirm that I have read and understood this notice, the operational status of this page and the risks associated with using it."
