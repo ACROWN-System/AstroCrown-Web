@@ -107,6 +107,14 @@ assert.match(featureStatus.global_notice.acknowledgement, /I confirm that I have
 assert.ok(featureStatus.pages.home && featureStatus.pages.genesis && featureStatus.pages.account);
 for (const page of Object.values(featureStatus.pages)) {
   assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(page.delivery.status));
+  if (["home", "genesis", "account", "admin", "legal"].includes(page.title === "AstroCrown homepage" ? "home" :
+      page.title === "Genesis Programme" ? "genesis" :
+      page.title === "AstroCrown account" ? "account" :
+      page.title === "Administrator dashboard" ? "admin" :
+      page.title === "AstroCrown information and policy pages" ? "legal" : "")) {
+    assert.equal(page.delivery.status, "FOR DEVELOPMENT · READ ONLY");
+    assert.match(page.delivery.details, /first remote Cloudflare Pages or Worker staging deployment has not been verified/i);
+  }
   for (const feature of page.features) {
     assert.ok(["LIVE · STAGING", "LIVE · MAINNET", "DEVNET", "FOR DEVELOPMENT · READ ONLY"].includes(feature.status));
     if (feature.status === "DEVNET") {
