@@ -38,10 +38,15 @@
   async function isAcknowledged(pageId, version, globalVersion) {
     if (isWorkerStagingRuntime()) {
       try {
-        var response = await fetch(
-          "/api/staging/acknowledgement-status?pageId=" + encodeURIComponent(pageId),
-          { credentials: "same-origin", cache: "no-store", headers: { "Accept": "application/json" } }
-        );
+        var statusPath = pageId === "genesis" ? "/api/genesis/acknowledgement-status"
+          : pageId === "admin" ? "/api/admin/acknowledgement-status"
+          : pageId === "account" ? "/api/account/acknowledgement-status"
+          : "/api/staging/acknowledgement-status?pageId=" + encodeURIComponent(pageId);
+        var response = await fetch(statusPath, {
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: { "Accept": "application/json" }
+        });
         if (!response.ok) return false;
         var result = await response.json();
         return result.acknowledged === true &&
