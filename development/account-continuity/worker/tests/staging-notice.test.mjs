@@ -53,7 +53,7 @@ test("staging safety notice is a mandatory first-visit gate with server acknowle
   assert.match(html, /<dialog id="development-notice"/);
   assert.match(html, /id="development-notice-acknowledged" type="checkbox"/);
   assert.match(html, /id="development-notice-continue" type="button" disabled/);
-  assert.match(html, /Continue to public test environment/);
+  assert.match(html, /Continue to AstroCrown/);
   assert.match(html, /notice\.addEventListener\("cancel", function \(event\) \{\s*event\.preventDefault\(\);/);
   assert.match(html, /acknowledgement\.addEventListener\("change"/);
   assert.match(html, /acknowledgementPending/);
