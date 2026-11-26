@@ -32,6 +32,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
   assert.match(accountUi, /function renderWalletPrimaryStatus\(\)/);
   assert.match(accountUi, /Sign in with wallet/);
+  assert.match(accountUi, /astrocrown:admin-dashboard-visible/);
   assert.match(accountUi, /Why wallet\?/);
   assert.match(accountUi, /typeof workerStagingMode/);
   assert.match(noticeScript, /Before you continue/);
@@ -40,6 +41,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(noticeScript, /pageNoticeReady/);
   assert.match(noticeScript, /adminDashboard && !adminDashboard\.hidden/);
   assert.match(noticeScript, /new MutationObserver\(reconcilePageEntry\)/);
+  assert.match(noticeScript, /astrocrown:admin-dashboard-visible/);
   assert.match(noticeScript, /function bindNativeNoticeAcknowledgement/);
   assert.match(noticeScript, /if \(pageId === "home" \|\| \(nativeNotice && nativeNotice.open\)\)/);
   assert.match(noticeScript, /noticeVersion: pageVersion/);
