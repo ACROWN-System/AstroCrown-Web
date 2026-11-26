@@ -79,7 +79,7 @@ assert.ok(pageNoticeJs.includes("/account-continuity/prototype/privacy-policy.ht
 assert.ok(pageNoticeJs.includes("/privacy-transparency.html"));
 assert.match(pageNoticeJs, /globalNotice\.acknowledgement/);
 assert.match(pageNoticeCss, /astro-entry-notice/);
-assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v2");
+assert.equal(featureStatus.notice_version, "2026-11-26-public-test-v3");
 assert.match(featureStatus.global_notice.introduction, /Public submissions may be visible to anyone on the internet/);
 assert.ok(featureStatus.global_notice.rules.some(rule => /copy, save, screenshot, quote or redistribute/.test(rule)));
 assert.match(homepage, new RegExp(featureStatus.notice_version));
