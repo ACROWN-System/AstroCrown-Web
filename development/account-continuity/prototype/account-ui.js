@@ -1094,6 +1094,7 @@
       dashboard.hidden = true;
       if (communicationsPage) communicationsPage.hidden = true;
       adminDashboard.hidden = false;
+      document.dispatchEvent(new CustomEvent("astrocrown:admin-dashboard-visible"));
       renderAdminDashboard(verified, walletOptions);
       var adminTitle = document.getElementById("admin-dashboard-title");
       if (adminTitle) adminTitle.focus();
