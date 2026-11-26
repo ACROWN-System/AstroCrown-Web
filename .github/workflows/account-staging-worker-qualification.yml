@@ -9,6 +9,7 @@ on:
       - "development/account-continuity/prototype/admin-wallet-ui.js"
       - "development/account-continuity/prototype/account-prototype.css"
       - "development/index.html"
+      - "development/page-entry/**"
       - "preview/supporters/**"
       - "preview/genesis-ethereum-treasury-proof.html"
       - "preview/genesis-tron-treasury-proof.html"
@@ -24,6 +25,7 @@ on:
       - "development/account-continuity/prototype/admin-wallet-ui.js"
       - "development/account-continuity/prototype/account-prototype.css"
       - "development/index.html"
+      - "development/page-entry/**"
       - "preview/supporters/**"
       - "development/supporter-programme/**"
       - ".github/workflows/account-staging-worker-qualification.yml"
@@ -62,12 +64,14 @@ jobs:
       - name: Verify the published Genesis page and wallet script
         run: |
           node --check public/supporters/supporters.js
+          node --check public/page-entry/page-entry-notice.js
           node scripts/test-staging-site-build.mjs
       - name: Validate browser code and Worker bundle without deploying
         run: |
           node --check src/index.js
           node --check scripts/build-staging-site.mjs
           node --check public/account-continuity/prototype/account-ui.js
+          node --check public/page-entry/page-entry-notice.js
           node --check tests/worker_browser_smoke.mjs
           node --check scripts/test-supporter-wallet-e2e.mjs
           npm run check:worker
