@@ -72,7 +72,7 @@ test("Genesis programme status never exposes treasury addresses or enables trans
   assert.equal(payload.purchaseAllowance.separateFromQualifyingPayment, true);
   assert.equal(payload.purchaseAllowance.automaticTokenIssuance, false);
   assert.ok(payload.networks.every((row) => !("treasuryAddress" in row)));
-  assert.ok(payload.networks.every((row) => row.networkConfigured === false));
+  assert.ok(payload.networks.every((row) => row.networkConfigured === true));
 });
 
 test("Genesis status rejects missing, duplicate, non-canonical and incorrectly configured networks", () => {
