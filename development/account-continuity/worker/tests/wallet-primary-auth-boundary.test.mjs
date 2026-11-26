@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isSupersededPasskeyRoute, isSupersededPasskeySession } from "../src/index.js";
+import { isSupersededPasskeyRoute, isSupersededPasskeySession, status } from "../src/index.js";
 
 test("legacy passkey sign-in, registration, recovery and passkey management routes are identified for staging shutdown", () => {
   for (const path of [
@@ -51,4 +51,43 @@ test("staging revokes legacy passkey sessions but preserves wallet-primary sessi
     authenticated_credential_id: "legacy-webauthn-credential",
   }), false);
   assert.equal(isSupersededPasskeySession({ ENVIRONMENT: "staging" }, null), false);
+});
+
+test("status revokes a legacy staging passkey session while keeping wallet registration available", async () => {
+  const statements = [];
+  const db = {
+    prepare(sql) {
+      const statement = {
+        values: [],
+        bind(...values) { this.values = values; return this; },
+        async first() {
+          if (sql.includes("SELECT a.*, s.expires_at")) {
+            return {
+              account_id: "acc_legacy_test",
+              expires_at: Math.floor(Date.now() / 1000) + 600,
+              authenticated_credential_id: "legacy-webauthn-credential",
+            };
+          }
+          return null;
+        },
+        async run() {
+          statements.push({ sql, values: this.values });
+          return { meta: { changes: 1 } };
+        },
+      };
+      return statement;
+    },
+  };
+  const request = new Request("https://accounts.astrocrown.example/api/account/status", {
+    headers: { Cookie: "acrown_account_session=legacy-session-token" },
+  });
+  const response = await status(db, request, { ENVIRONMENT: "staging" });
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.authenticated, false);
+  assert.equal(body.walletAuthenticationAvailable, true);
+  assert.equal(body.passkeyAvailable, false);
+  assert.match(response.headers.get("set-cookie") || "", /Max-Age=0/);
+  assert.equal(statements.length, 1);
+  assert.match(statements[0].sql, /DELETE FROM auth_sessions WHERE token_hash = \?/);
 });
