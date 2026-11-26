@@ -9,6 +9,7 @@ import { decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
 import { supporterStatusResponse } from "./supporters.js";
 import { handleGenesisWalletApi } from "./genesis.js";
+import { issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge } from "./wallet-auth.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const SESSION_SECONDS = 1800;
@@ -296,7 +297,7 @@ async function activeAccount(db, request) {
   const tokenHash = await hashText(token);
   const now = Math.floor(Date.now() / 1000);
   const row = await db.prepare(
-    "SELECT a.*, s.expires_at, s.admin_wallet_address, s.admin_authenticated_at, s.admin_expires_at " +
+    "SELECT a.*, s.expires_at, s.authenticated_credential_id, s.admin_wallet_address, s.admin_authenticated_at, s.admin_expires_at " +
     "FROM auth_sessions s JOIN auth_accounts a ON a.account_id = s.account_id WHERE s.token_hash = ? AND s.expires_at > ?"
   ).bind(tokenHash, now).first();
   if (!row) await db.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").bind(tokenHash).run();
@@ -304,7 +305,7 @@ async function activeAccount(db, request) {
 }
 async function summary(db, account) {
   const now = Math.floor(Date.now() / 1000);
-  const [counts, algorithmRows, role, permissions, wallets, walletHistory, notice] = await Promise.all([
+  const [counts, algorithmRows, role, permissions, wallets, walletHistory, notice, primaryWallet] = await Promise.all([
     db.prepare(
       "SELECT " +
       "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) AS passkey_count, " +
@@ -330,6 +331,9 @@ async function summary(db, account) {
     db.prepare(
       "SELECT notice_id,reason,created_at FROM auth_admin_revocation_notices " +
       "WHERE account_id = ? AND acknowledged_at IS NULL ORDER BY created_at DESC,notice_id DESC LIMIT 1"
+    ).bind(account.account_id).first(),
+    db.prepare(
+      "SELECT network,address,proof_method,linked_at FROM auth_primary_wallets WHERE account_id = ? AND active = 1 LIMIT 1"
     ).bind(account.account_id).first(),
   ]);
   const passkeyAlgorithmIds = (algorithmRows.results || []).map((row) => Number(row.credential_alg));
@@ -359,7 +363,14 @@ async function summary(db, account) {
     authenticated: true,
     email: null,
     accountIdentifier: account.account_identifier,
-    authMethod: "webauthn",
+    authMethod: primaryWallet ? "primary-wallet" : "webauthn",
+    primaryWallet: primaryWallet ? {
+      network: primaryWallet.network,
+      address: primaryWallet.address,
+      proofMethod: primaryWallet.proof_method,
+      linkedAt: new Date(Number(primaryWallet.linked_at) * 1000).toISOString(),
+      recoveryModel: "wallet-provider-recovery-only",
+    } : null,
     passkeyCount: Number(counts.passkey_count || 0),
     postQuantumPasskeyCount: Number(counts.pq_count || 0),
     passkeyAlgorithmIds,
@@ -378,7 +389,7 @@ async function summary(db, account) {
     passwordResetAvailable: false,
     sessionExpiresAt: new Date(Number(account.expires_at) * 1000).toISOString(),
     activeSessionCount: Number(counts.session_count || 0),
-    securityManagementAvailable: true,
+    securityManagementAvailable: !primaryWallet,
     scope: "staging-test-account-only",
     role: roleAssigned ? "admin" : "user",
     adminRoleAssigned: roleAssigned,
@@ -1981,14 +1992,17 @@ async function diagnostics() {
     note: "SimpleWebAuthn offers ML-DSA-44 first when the runtime supports verification. A real authenticator must register a credential whose stored COSE alg is -48 and later complete a valid assertion before that account is counted as post-quantum.",
   };
 }
-async function status(db, request) {
+async function status(db, request, env) {
   const account = await activeAccount(db, request);
   if (account) return json(200, await summary(db, account));
   return json(200, {
     authenticated: false, avatarId: "person", role: "user", adminRoleAssigned: false,
     adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
     admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
-    passkeyAvailable: true, emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
+    passkeyAvailable: env?.ENVIRONMENT !== "staging",
+    walletAuthenticationAvailable: true,
+    walletAuthenticationNetworks: ["ethereum", "tron", "solana"],
+    emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
     activeSessionCount: 0, securityManagementAvailable: false, scope: "staging-test-account-only",
   });
@@ -2022,7 +2036,7 @@ async function api(request, env, config) {
   if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
-  if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
+  if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request, env);
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
   if (url.pathname === "/api/admin/wallet-options" && request.method === "GET") return adminWalletOptions(db, request);
@@ -2037,6 +2051,8 @@ async function api(request, env, config) {
   if (request.method === "GET" || request.method === "HEAD") throw fail(404, "The account endpoint does not exist.");
   if (request.method !== "POST") throw fail(405, "The account endpoint requires POST.");
   const payload = await bodyJson(request);
+  if (url.pathname === "/api/wallet-auth/challenge") return issuePrimaryWalletChallenge(db, env, request, payload, config);
+  if (url.pathname === "/api/wallet-auth/verify") return verifyPrimaryWalletChallenge(db, env, request, payload, config);
   if (url.pathname === "/api/staging/acknowledge") {
     await rateLimit(db, env, request, "staging-notice-acknowledgement", "public", 60, 3600);
     return createStagingAcknowledgement(env, payload, config);
@@ -2126,7 +2142,7 @@ export default {
         }
         const protectedPage = pathname.startsWith("/api/genesis/") ? "genesis"
           : pathname.startsWith("/api/admin/") ? "admin"
-            : pathname.startsWith("/api/account/") ? "account" : null;
+            : pathname.startsWith("/api/account/") || pathname.startsWith("/api/wallet-auth/") ? "account" : null;
         const requiresPageAcknowledgement = protectedPage === "genesis"
           ? request.method !== "GET"
           : protectedPage === "account"
