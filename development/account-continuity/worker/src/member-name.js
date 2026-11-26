@@ -5,7 +5,7 @@ const RESERVED_MEMBER_NAMES = new Set([
 ]);
 
 export function normalizeMemberName(value) {
-  if (typeof value !== "string" || /[\\u0000-\\u001F\\u007F]/.test(value)) return null;
+  if (typeof value !== "string" || /[\u0000-\u001F\u007F]/.test(value)) return null;
   const memberName = value.normalize("NFKC").trim();
   if (!MEMBER_NAME_PATTERN.test(memberName)) return null;
   const normalized = memberName.toLowerCase();
