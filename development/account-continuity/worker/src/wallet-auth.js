@@ -339,22 +339,29 @@ export function isLoopbackDevelopmentOrigin(origin) {
     return false;
   }
 }
-export function isQualifiedAccountRuntime(env, config) {
-  if (!env || !config || typeof config.origin !== "string") return false;
-  let url;
-  try { url = new URL(config.origin); } catch { return false; }
-  const local = env.ENVIRONMENT === "local" && isLoopbackDevelopmentOrigin(url.origin);
-  const staging = env.ENVIRONMENT === "staging" && url.protocol === "https:" &&
+export function isQualifiedAccountRuntime(env, config, request) {
+  if (!env || !config || typeof config.origin !== "string" || !request?.url) return false;
+  let configured;
+  let incoming;
+  try {
+    configured = new URL(config.origin);
+    incoming = new URL(request.url);
+  } catch {
+    return false;
+  }
+  if (configured.origin !== config.origin || incoming.origin !== configured.origin) return false;
+  const local = env.ENVIRONMENT === "local" && isLoopbackDevelopmentOrigin(configured.origin);
+  const staging = env.ENVIRONMENT === "staging" && configured.protocol === "https:" &&
     typeof env.RATE_LIMIT_HMAC_KEY === "string" && env.RATE_LIMIT_HMAC_KEY.length >= 32;
   return local || staging;
 }
-function assertWalletAuthEnvironment(env, config) {
-  if (!isQualifiedAccountRuntime(env, config)) {
+function assertWalletAuthEnvironment(env, config, request) {
+  if (!isQualifiedAccountRuntime(env, config, request)) {
     throw fail(404, "Primary-wallet account authentication is not enabled for this environment or origin.");
   }
 }
 export async function issuePrimaryWalletChallenge(db, env, request, payload, config) {
-  assertWalletAuthEnvironment(env, config);
+  assertWalletAuthEnvironment(env, config, request);
   if (!payload || !["register", "login"].includes(payload.intent)) {
     throw fail(400, "Choose primary-wallet registration or sign-in.");
   }
