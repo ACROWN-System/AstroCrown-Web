@@ -1,4 +1,4 @@
-import { normalizeWalletAddress, verifyWalletSignature } from "./supporters.js";
+import { normalizeWalletAddress, verifyWalletSignature } from "./wallet-proof.js";
 import { availableProgrammeAllowance, isGenesisRegistrationOpen } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 
 const COOKIE = "acrown_genesis_wallet";
