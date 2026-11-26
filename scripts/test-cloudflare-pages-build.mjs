@@ -90,6 +90,8 @@ assert.match(pageNoticeJs, /adminDashboard && !adminDashboard\.hidden/);
 assert.match(pageNoticeJs, /new MutationObserver\(reconcilePageEntry\)/);
 assert.match(pageNoticeJs, /astrocrown:admin-dashboard-visible/);
 assert.match(pageNoticeJs, /function bindNativeNoticeAcknowledgement/);
+assert.match(pageNoticeJs, /if \(dialog\.isConnected\) dialog\.remove\(\)/);
+assert.match(pageNoticeJs, /astrocrown:page-notice-acknowledged/);
 assert.match(pageNoticeJs, /dialog\.dataset\.pageNoticeAckChangeBound = "true"/);
 assert.match(pageNoticeJs, /continueButton\.disabled = acknowledgement\.checked !== true/);
 assert.match(pageNoticeJs, /noticeVersion: pageVersion/);
