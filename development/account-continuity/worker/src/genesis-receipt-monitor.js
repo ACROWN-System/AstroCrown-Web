@@ -682,8 +682,11 @@ function solanaIncomingCandidates(transaction, treasuryAddress, treasuryTokenAcc
     const sourceAfterAmount = afterSource ? afterSource.amount : 0n;
     const destinationBeforeAmount = beforeDestination ? beforeDestination.amount : 0n;
     const destinationAfterAmount = afterDestination ? afterDestination.amount : 0n;
-    if (sourceBeforeAmount - sourceAfterAmount !== amount ||
-        destinationAfterAmount - destinationBeforeAmount !== amount) continue;
+    // Balance deltas can aggregate several valid Transfer instructions within
+    // one transaction. The separately verified instruction index identifies this
+    // exact transfer; the account deltas must at least cover its amount.
+    if (sourceBeforeAmount - sourceAfterAmount < amount ||
+        destinationAfterAmount - destinationBeforeAmount < amount) continue;
     candidates.push({
       senderAddress: sourceOwner,
       treasuryAddress: destinationOwner,
@@ -869,14 +872,14 @@ export async function runGenesisReceiptMonitor(env) {
     tron: MAINNET_USDT_CONFIG.tron.treasuryAddress,
     solana: MAINNET_USDT_CONFIG.solana.treasuryAddress,
   };
-  const tasks = await Promise.all([
-    Promise.resolve().then(() => scanEthereum(db, config("ethereum"), treasury.ethereum)),
-    Promise.resolve().then(() => scanTron(db, config("tron"), treasury.tron)),
-    Promise.resolve().then(() => scanSolana(db, config("solana"), treasury.solana)),
-  ]);
-  const [ethereum, tron, solana] = await Promise.all(tasks.map(async (task) => {
+  const networkTasks = [
+    () => scanEthereum(db, config("ethereum"), treasury.ethereum),
+    () => scanTron(db, config("tron"), treasury.tron),
+    () => scanSolana(db, config("solana"), treasury.solana),
+  ];
+  const [ethereum, tron, solana] = await Promise.all(networkTasks.map(async (run) => {
     try {
-      const result = await task;
+      const result = await run();
       return { status: "SCANNED", ...result };
     } catch {
       return { status: "FAILED", receipts: 0 };
