@@ -446,11 +446,10 @@ async function tronNowBlock(source) {
 }
 
 function tronTransactionIds(block) {
-  if (!block || (block.transactions !== undefined && !Array.isArray(block.transactions))) {
-    fail("TRON block transaction list is malformed.");
+  if (!block || !Array.isArray(block.transactions)) {
+    fail("TRON block transaction list is missing or malformed.");
   }
-  const transactions = Array.isArray(block.transactions) ? block.transactions : [];
-  return transactions.map((transaction) => {
+  return block.transactions.map((transaction) => {
     const id = String(transaction && transaction.txID || "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(id)) fail("TRON block contains an invalid transaction id.");
     return id;
@@ -720,15 +719,10 @@ function solanaIncomingCandidates(transaction, treasuryAddress, treasuryTokenAcc
         (afterDestination && afterDestination.owner !== destinationOwner)) continue;
     const amount = amountFromSolanaInstruction(instruction.parsed);
     if (amount === null) continue;
-    const sourceBeforeAmount = beforeSource ? beforeSource.amount : 0n;
-    const sourceAfterAmount = afterSource ? afterSource.amount : 0n;
-    const destinationBeforeAmount = beforeDestination ? beforeDestination.amount : 0n;
-    const destinationAfterAmount = afterDestination ? afterDestination.amount : 0n;
-    // Balance deltas can aggregate several valid Transfer instructions within
-    // one transaction. The separately verified instruction index identifies this
-    // exact transfer; the account deltas must at least cover its amount.
-    if (sourceBeforeAmount - sourceAfterAmount < amount ||
-        destinationAfterAmount - destinationBeforeAmount < amount) continue;
+    // Exact balance reconciliation is performed by the shared evidence parser
+    // across every canonical USDT transfer in the transaction. Do not require a
+    // positive net delta here: a later outgoing transfer in the same transaction
+    // can reduce the treasury account's net balance without erasing this receipt.
     candidates.push({
       senderAddress: sourceOwner,
       treasuryAddress: destinationOwner,
