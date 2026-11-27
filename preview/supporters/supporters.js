@@ -61,6 +61,70 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
 
   if (!solanaSelect || !evmSelect || !tronSelect || !pseudonymInput) return;
 
+  function detectedGenesisNetworks(walletId) {
+    var networks = [];
+    if (typeof evmProviders !== "undefined" && evmProviders instanceof Map &&
+        Array.from(evmProviders.values()).some(function (entry) { return entry.walletId === walletId; })) {
+      networks.push("Ethereum");
+    }
+    if (typeof tronWallets !== "undefined" && tronWallets instanceof Map &&
+        Array.from(tronWallets.values()).some(function (entry) { return entry.walletId === walletId; })) {
+      networks.push("TRON");
+    }
+    if (typeof solanaWallets !== "undefined" && solanaWallets instanceof Map &&
+        Array.from(solanaWallets.values()).some(function (entry) { return entry.walletId === walletId; })) {
+      networks.push("Solana");
+    }
+    return networks;
+  }
+
+  function updateGenesisWalletBrandCards() {
+    if (!genesisWalletBrandGrid) return;
+    genesisWalletBrandGrid.querySelectorAll("[data-genesis-wallet-brand]").forEach(function (button) {
+      var walletId = button.dataset.genesisWalletBrand;
+      var detected = detectedGenesisNetworks(walletId);
+      var selected = walletId === selectedGenesisWalletBrand;
+      button.setAttribute("aria-pressed", selected ? "true" : "false");
+      button.classList.toggle("is-selected", selected);
+      var status = button.querySelector("[data-wallet-brand-status]");
+      if (status) status.textContent = detected.length ? "Detected · " + detected.join(" / ") : "Not detected";
+    });
+    if (genesisWalletBrandState) {
+      var selectedPresentation = genesisWalletBrandPresentation[selectedGenesisWalletBrand];
+      var detectedSelected = detectedGenesisNetworks(selectedGenesisWalletBrand);
+      genesisWalletBrandState.textContent = selectedPresentation
+        ? (detectedSelected.length
+          ? selectedPresentation.name + " selected · available identity networks: " + detectedSelected.join(", ")
+          : selectedPresentation.name + " selected · no compatible provider detected for this browser")
+        : "Choose the wallet application you use. The network is selected afterwards for identity verification.";
+    }
+  }
+
+  if (genesisWalletBrandGrid) {
+    genesisWalletBrandGrid.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-genesis-wallet-brand]");
+      if (!button || !genesisWalletBrandPresentation[button.dataset.genesisWalletBrand]) return;
+      var nextWalletBrand = button.dataset.genesisWalletBrand;
+      if (nextWalletBrand === selectedGenesisWalletBrand) return;
+      selectedGenesisWalletBrand = nextWalletBrand;
+      if (connectedEvm && connectedEvm.walletId !== nextWalletBrand) clearEvmConnection();
+      if (connectedTronWallet && connectedTronWallet.walletId !== nextWalletBrand) clearTronConnection(false);
+      if (connectedSolana && connectedSolana.walletId !== nextWalletBrand) clearSolanaConnection(false);
+      renderEvmChoices();
+      renderTronChoices();
+      renderSolanaChoices();
+      updateGenesisWalletBrandCards();
+      updateSupporterActionButtons();
+      if (memberFeedback) setFeedback(memberFeedback,
+        "Selected " + genesisWalletBrandPresentation[nextWalletBrand].name +
+        ". Connect one of its detected network addresses below. Every added address must prove its own ownership; only the primary wallet signs in to Genesis.",
+        "neutral");
+    });
+    genesisWalletBrandGrid.querySelectorAll(".genesis-wallet-brand-logo img").forEach(function (image) {
+      image.addEventListener("error", function () { image.hidden = true; });
+    });
+  }
+
   var adjectives = [
     "Golden", "Silver", "Stellar", "Cosmic", "Radiant", "Quiet", "Noble",
     "Bright", "Lunar", "Solar", "Infinite", "Crimson", "Azure", "Celestial"
@@ -424,7 +488,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     incoming.forEach(function (wallet) {
       if (!supportedSolanaWallet(wallet)) return;
       var duplicate = Array.from(solanaWallets.values()).some(function (existing) {
-        return existing === wallet;
+        return existing && existing.wallet === wallet;
       });
       if (duplicate) return;
       var id = "solana-" + (++nextSolanaWalletId);
