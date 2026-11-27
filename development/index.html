@@ -1633,10 +1633,9 @@
         var AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (!AudioContextClass) return null;
         try {
+          // Create lazily during the user's direct pointer/keyboard interaction.
+          // Resuming and scheduling are handled together in playMechanicalSound().
           audio = new AudioContextClass({ latencyHint: "interactive" });
-          if (audio.state === "suspended" && typeof audio.resume === "function") {
-            audio.resume().catch(function () {});
-          }
           return audio;
         } catch (error) {
           audio = null;
@@ -1644,9 +1643,9 @@
         }
       }
 
-      // Short, band-limited transients give a quiet instrument-like tick/tack.
+      // Short, band-limited transients give a dry instrument-like tick/tack.
       // No pitched body, low thud, spring resonance or lingering tail is added.
-      function addPrecisionClick(context, destination, peak, duration, offset, centerFrequency) {
+      function addPrecisionClick(context, destination, peak, duration, centerFrequency) {
         var sampleCount = Math.max(8, Math.floor(context.sampleRate * duration));
         var buffer = context.createBuffer(1, sampleCount, context.sampleRate);
         var samples = buffer.getChannelData(0);
@@ -1658,7 +1657,7 @@
         var source = context.createBufferSource();
         var filter = context.createBiquadFilter();
         var envelope = context.createGain();
-        var start = context.currentTime + (offset || 0);
+        var start = context.currentTime;
 
         source.buffer = buffer;
         filter.type = "bandpass";
@@ -1672,32 +1671,57 @@
         filter.connect(envelope);
         envelope.connect(destination);
         source.start(start);
-        source.stop(start + duration + 0.002);
+        source.stop(start + duration + 0.003);
       }
 
       function playMechanicalSound(phase) {
         var context = getAudioContext();
         if (!context) return;
 
-        try {
-          var output = context.createGain();
-          // Keep the overall level deliberately restrained for a financial interface.
-          output.gain.setValueAtTime(0.62, context.currentTime);
-          output.connect(context.destination);
+        function emitWhenRunning() {
+          // Do not create or disconnect the sound graph while the context is suspended.
+          if (context.state !== "running") return;
 
-          if (phase === "push") {
-            // A soft, dry tick: brief and slightly lower in register.
-            addPrecisionClick(context, output, 0.035, 0.010, 0, 1550);
-          } else {
-            // A similarly quiet tack, a touch brighter to distinguish release.
-            addPrecisionClick(context, output, 0.032, 0.011, 0, 1900);
+          try {
+            var output = context.createGain();
+            // Audible on ordinary desktop speakers, while remaining deliberately restrained.
+            output.gain.setValueAtTime(0.62, context.currentTime);
+            output.connect(context.destination);
+
+            if (phase === "push") {
+              // A dry, lower-register tick on press.
+              addPrecisionClick(context, output, 0.035, 0.010, 1550);
+            } else {
+              // A slightly brighter tack on release.
+              addPrecisionClick(context, output, 0.032, 0.011, 1900);
+            }
+
+            // Keep the output connected long enough for browser audio startup and playback.
+            window.setTimeout(function () {
+              try { output.disconnect(); } catch (error) {}
+            }, 140);
+          } catch (error) {
+            // Feedback is non-essential; an audio failure must never block the control.
           }
+        }
 
-          window.setTimeout(function () {
-            try { output.disconnect(); } catch (error) {}
-          }, 40);
-        } catch (error) {
-          // Feedback is non-essential; a browser audio restriction must never block a control.
+        if (context.state === "running") {
+          emitWhenRunning();
+          return;
+        }
+
+        // resume() must be invoked synchronously from the direct user gesture.
+        // Schedule the click only after the browser confirms the context is running.
+        if (typeof context.resume === "function") {
+          try {
+            context.resume().then(function () {
+              emitWhenRunning();
+            }).catch(function () {
+              // Respect browser/device audio restrictions without interrupting interaction.
+            });
+          } catch (error) {
+            // Audio is optional; never interfere with the activated control.
+          }
         }
       }
 
