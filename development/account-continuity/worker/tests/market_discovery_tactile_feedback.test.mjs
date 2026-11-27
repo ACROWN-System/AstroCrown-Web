@@ -51,10 +51,101 @@ test("Tactile sounds are restrained, dry instrument-like clicks rather than effe
   assert.ok(controller.includes("function addPrecisionClick("), "Use the dedicated precision-click sound.");
   assert.ok(controller.includes('filter.type = "bandpass"'), "Keep each transient acoustically restrained.");
   assert.ok(controller.includes("output.gain.setValueAtTime(0.62, context.currentTime)"), "Keep the overall sound level low.");
-  assert.ok(controller.includes("addPrecisionClick(context, output, 0.035, 0.010, 0, 1550)"), "Press should be a short, soft tick.");
-  assert.ok(controller.includes("addPrecisionClick(context, output, 0.032, 0.011, 0, 1900)"), "Release should be a distinct short, soft tack.");
+  assert.ok(controller.includes("addPrecisionClick(context, output, 0.035, 0.010, 1550)"), "Press should be a short, soft tick.");
+  assert.ok(controller.includes("addPrecisionClick(context, output, 0.032, 0.011, 1900)"), "Release should be a distinct short, soft tack.");
   assert.equal(controller.includes("function addTone("), false, "Remove pitched thuds and resonant tones.");
   assert.equal(controller.includes("function addSoftClick("), false, "Replace the former, more pronounced sound design.");
+});
+
+test("A suspended browser audio context resumes before the click is scheduled", async () => {
+  const listeners = {};
+  const timers = [];
+  let scheduledSources = 0;
+  let resolveResume;
+  let contextInstance;
+
+  function makeParam() {
+    return {
+      setValueAtTime() {},
+      exponentialRampToValueAtTime() {}
+    };
+  }
+  function makeNode() {
+    return {
+      gain: makeParam(),
+      frequency: makeParam(),
+      Q: { value: 0 },
+      connect() {},
+      disconnect() {},
+      start() { scheduledSources += 1; },
+      stop() {},
+      set buffer(value) { this._buffer = value; }
+    };
+  }
+  class MockAudioContext {
+    constructor() {
+      this.state = "suspended";
+      this.currentTime = 0;
+      this.sampleRate = 48000;
+      this.destination = {};
+      contextInstance = this;
+    }
+    resume() {
+      return new Promise(resolve => {
+        resolveResume = () => {
+          this.state = "running";
+          resolve();
+        };
+      });
+    }
+    createGain() { return makeNode(); }
+    createBiquadFilter() { return makeNode(); }
+    createBuffer() {
+      return { getChannelData: () => new Float32Array(480) };
+    }
+    createBufferSource() { return makeNode(); }
+  }
+
+  const document = {
+    hidden: false,
+    activeElement: null,
+    addEventListener(name, callback) { listeners[name] = callback; }
+  };
+  const window = {
+    AudioContext: MockAudioContext,
+    addEventListener() {},
+    setTimeout(callback, delay) { timers.push({ callback, delay }); }
+  };
+  const sandbox = { window, document, Math, Promise };
+  new Script(controller, { filename: "astro-tactile-feedback.js" }).runInNewContext(sandbox);
+
+  const target = {
+    nodeType: 1,
+    parentElement: null,
+    classList: { add() {}, remove() {} },
+    closest(selector) {
+      return selector === "[data-ac-interaction-feedback='off']" ? null : this;
+    },
+    hasAttribute() { return false; },
+    getAttribute() { return null; }
+  };
+
+  listeners.pointerdown({ button: 0, isPrimary: true, target });
+  assert.equal(contextInstance.state, "suspended");
+  assert.equal(scheduledSources, 0, "Never schedule audio into a suspended context.");
+  assert.equal(timers.length, 0, "Do not tear down the output graph before audio starts.");
+
+  resolveResume();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  assert.equal(contextInstance.state, "running");
+  assert.equal(scheduledSources, 1, "Schedule the press click after resume succeeds.");
+  assert.equal(timers.length, 1);
+  assert.ok(timers[0].delay >= 120, "Keep the output connected through playback.");
+
+  listeners.pointerup();
+  assert.equal(scheduledSources, 2, "The release tack should also be emitted.");
 });
 
 test("Tactile sound feedback uses no external audio fetches or media files", () => {
