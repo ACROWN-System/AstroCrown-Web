@@ -490,10 +490,41 @@ async function smokeTest(origin) {
   const statusResponse = await fetch(origin + "/api/account/status", { headers, signal: AbortSignal.timeout(30000) });
   if (statusResponse.status !== 200) fail("Remote staging account-status check after acknowledgement failed (HTTP " + statusResponse.status + ").");
   const status = await statusResponse.json();
-  if (status.authenticated !== false || status.passkeyAvailable !== true || status.mlDsaRegistrationAvailable !== true) {
-    fail("Remote staging account-status response did not meet the required passkey/ML-DSA-44 qualification.");
+  if (status.authenticated !== false || status.passkeyAvailable !== true ||
+      status.walletSignInAvailable !== true || status.legacyPasskeySignInAvailable !== true ||
+      status.mlDsaRegistrationAvailable !== true) {
+    fail("Remote staging account-status response did not expose the wallet-first entry point and legacy compatibility status.");
   }
   if (status.scope !== "staging-test-account-only") fail("Remote account status is missing the staging-only scope marker.");
+
+  const walletChallengeResponse = await fetch(origin + "/api/account/primary-wallet/options", {
+    method: "POST",
+    headers: {
+      ...headers,
+      Origin: origin,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      address: "0x0000000000000000000000000000000000000001",
+      chainId: 1,
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (walletChallengeResponse.status !== 200) {
+    fail("Remote primary-wallet sign-in challenge endpoint failed (HTTP " + walletChallengeResponse.status + ").");
+  }
+  const walletChallenge = await walletChallengeResponse.json();
+  if (
+    walletChallenge.signatureOnly !== true ||
+    walletChallenge.transactionAuthorized !== false ||
+    walletChallenge.walletFamily !== "evm-eoa" ||
+    walletChallenge.chainId !== 1 ||
+    typeof walletChallenge.message !== "string" ||
+    !walletChallenge.message.includes(origin) ||
+    !walletChallenge.message.includes("does not authorize a blockchain transaction")
+  ) {
+    fail("Remote primary-wallet challenge was not correctly origin-bound or signature-only.");
+  }
 
   const diagnosticsResponse = await fetch(origin + "/api/diagnostics/runtime", { headers, signal: AbortSignal.timeout(30000) });
   if (diagnosticsResponse.status !== 200) fail("Remote staging runtime-diagnostics check failed (HTTP " + diagnosticsResponse.status + ").");
@@ -641,14 +672,14 @@ async function main() {
   console.log("Installing the staging-only rate-limit and acknowledgement-signing key.");
   await setSecret("RATE_LIMIT_HMAC_KEY", rateLimitKey);
 
-  console.log("Checking public homepage access, required notice acknowledgement, the account API, ML-DSA-44 and wrong-Origin rejection.");
+  console.log("Checking public homepage access, notice acknowledgement, wallet-first challenge, legacy passkey compatibility, ML-DSA-44 and wrong-Origin rejection.");
   const evidence = await smokeTest(configInfo.origin);
 
   console.log("");
   console.log("REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED");
   console.log("Staging URL: " + configInfo.origin + "/");
   console.log("Access mode: public live test environment; visitors see the mandatory safety notice before account services.");
-  console.log("Account API: server-enforced staging acknowledgement and per-IP passkey/recovery rate limits are active.");
+  console.log("Account API: server-enforced staging acknowledgement and per-IP wallet, legacy-passkey and recovery rate limits are active.");
   console.log("Account D1 database name: " + databaseName);
   console.log("Account D1 database ID: " + state.databaseId);
   console.log("Supporter Programme D1 database name: " + supportersDatabaseName);
@@ -659,9 +690,9 @@ async function main() {
   console.log("ML-DSA-44 algorithm -48 advertised first: " + evidence.diagnostics.pqcRegistrationAlgorithmAdvertised);
   console.log("");
   console.log("This is only initial deployment smoke evidence, not full remote account qualification.");
-  console.log("A real remote browser must still prove registration, discoverable sign-in, sign-out, recovery, old-key rejection, key rotation and replacement-passkey sign-in.");
+  console.log("A real remote browser must still prove primary-wallet account creation, repeat sign-in, sign-out, wrong-wallet rejection and legacy passkey compatibility.");
   console.log("Claim ML-DSA-44 for a remote credential only after the actual stored COSE algorithm is -48 and a later assertion verifies on this deployed Worker.");
-  console.log("Use synthetic data only. The one-time recovery key is displayed by the site and must be kept offline.");
+  console.log("Use synthetic data only. A one-time recovery key exists only for older legacy passkey test accounts; primary-wallet accounts are recovered only by restoring the same wallet through the user’s own backup/provider.");
   console.log("This script does not enable billing, add a payment method, deploy production, or delete resources after a failed run.");
   console.log("Record three-pass cleanup and the provider's retention quarantine before closing this staging environment.");
 }
