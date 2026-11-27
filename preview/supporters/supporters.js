@@ -899,7 +899,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     updateSupporterActionButtons();
     refreshGenesisDirectory();
   refreshGenesisTreasuryReceipts();
-  window.setInterval(refreshGenesisTreasuryReceipts, 30000);
+  window.setInterval(refreshGenesisTreasuryReceipts, 60000);
   }
 
   async function refreshSupporterMember() {
