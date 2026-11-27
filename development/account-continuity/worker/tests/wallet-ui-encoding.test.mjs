@@ -7,7 +7,7 @@ const accountUiPath = new URL("../../prototype/account-ui.js", import.meta.url);
 
 test("Solana wallet signatures are converted to unpadded Base64URL", async () => {
   const source = await readFile(accountUiPath, "utf8");
-  const match = source.match(/function encodeBase64urlBytes\\(bytes\\) \\{[\\s\\S]*?\\n  \\}/);
+  const match = source.match(/function encodeBase64urlBytes\(bytes\) \{[\s\S]*?\n  \}/);
   assert.ok(match, "the account UI must retain its tested Base64URL encoder");
 
   const encode = vm.runInNewContext("(" + match[0] + ")", { btoa });
