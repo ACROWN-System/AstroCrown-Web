@@ -1,5 +1,5 @@
 import { normalizeWalletAddress, verifyWalletSignature } from "./wallet-proof.js";
-import { publicGenesisTreasuryReceipts, prepareGenesisRpcPair, formatUsdtAmount, explorerUrl } from "./genesis-receipt-monitor.js";
+import { publicGenesisTreasuryReceipts, prepareGenesisRpcPair } from "./genesis-receipt-monitor.js";
 import { availableProgrammeAllowance, isGenesisRegistrationOpen, calculateGenesisTieredPurchaseAllowance, GENESIS_QUALIFYING_RULES_VERSION, GENESIS_QUALIFYING_PRINCIPAL_CAP_BASE_UNITS, GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
 import { parseGenesisUsdtAmountToBaseUnits } from "../../../supporter-programme/shared/genesis-payment-policy.mjs";
