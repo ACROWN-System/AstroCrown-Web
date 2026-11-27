@@ -350,14 +350,48 @@
           </div>
           <p class="name-availability" id="member-name-availability" data-state="checking" aria-live="polite">Connect and verify the primary wallet to reserve a unique name.</p>
           <p class="wallet-instructions"><strong>Wallet ownership:</strong> connect a wallet you control. On the official staging Worker, you can prove control by signing a domain-bound text message. The wallet must display the exact domain-bound message. It proves address control only and does not create a transaction, approve a token, transfer funds, grant an entitlement or pay a network fee. Never sign a prompt asking you to approve, transfer or send funds. The primary wallet remains the only identity and recovery anchor; linked addresses cannot independently recover it.</p>
+          <section class="wallet-ecosystem-card genesis-wallet-brand-panel" aria-labelledby="genesis-wallet-brand-heading">
+            <div class="ecosystem-heading">
+              <strong id="genesis-wallet-brand-heading">01 · Choose your wallet application</strong>
+              <span class="ecosystem-tag">Wallet brand first</span>
+            </div>
+            <p class="panel-intro">Select the wallet you use. AstroCrown checks which networks that wallet actually exposes in this browser. A brand name or logo alone does not prove that an address belongs to you.</p>
+            <div class="genesis-wallet-brand-grid" id="genesis-wallet-brand-grid" role="group" aria-label="Choose wallet brand">
+              <button type="button" class="genesis-wallet-brand-choice" data-genesis-wallet-brand="metamask" aria-pressed="false">
+                <span class="genesis-wallet-brand-logo"><span aria-hidden="true">MM</span><img src="https://www.web3icons.com/svgs/wallets/branded/metamask.svg?v=4.0.58" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer"></span>
+                <span class="genesis-wallet-brand-copy"><strong>MetaMask</strong><small data-wallet-brand-status>Checking browser</small></span><span class="genesis-wallet-brand-check" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="genesis-wallet-brand-choice" data-genesis-wallet-brand="trust-wallet" aria-pressed="false">
+                <span class="genesis-wallet-brand-logo"><span aria-hidden="true">TW</span><img src="https://www.web3icons.com/svgs/wallets/branded/trust.svg?v=4.0.58" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer"></span>
+                <span class="genesis-wallet-brand-copy"><strong>Trust Wallet</strong><small data-wallet-brand-status>Checking browser</small></span><span class="genesis-wallet-brand-check" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="genesis-wallet-brand-choice" data-genesis-wallet-brand="okx-wallet" aria-pressed="false">
+                <span class="genesis-wallet-brand-logo"><span aria-hidden="true">OKX</span><img src="https://www.web3icons.com/svgs/wallets/branded/okx.svg?v=4.0.58" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer"></span>
+                <span class="genesis-wallet-brand-copy"><strong>OKX Wallet</strong><small data-wallet-brand-status>Checking browser</small></span><span class="genesis-wallet-brand-check" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="genesis-wallet-brand-choice" data-genesis-wallet-brand="bitget-wallet" aria-pressed="false">
+                <span class="genesis-wallet-brand-logo"><span aria-hidden="true">BG</span><img src="https://web3.bitget.com/bgwactivity-static/_next/static/media/Bitget-Wallet-Logomark.07wqb3-5_b2ml.svg" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer"></span>
+                <span class="genesis-wallet-brand-copy"><strong>Bitget Wallet</strong><small data-wallet-brand-status>Checking browser</small></span><span class="genesis-wallet-brand-check" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="genesis-wallet-brand-choice" data-genesis-wallet-brand="tokenpocket" aria-pressed="false">
+                <span class="genesis-wallet-brand-logo"><span aria-hidden="true">TP</span><img src="https://www.web3icons.com/svgs/wallets/branded/token-pocket.svg?v=4.0.58" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer"></span>
+                <span class="genesis-wallet-brand-copy"><strong>TokenPocket</strong><small data-wallet-brand-status>Checking browser</small></span><span class="genesis-wallet-brand-check" aria-hidden="true"></span>
+              </button>
+              <button type="button" class="genesis-wallet-brand-choice" data-genesis-wallet-brand="coin98" aria-pressed="false">
+                <span class="genesis-wallet-brand-logo"><span aria-hidden="true">C98</span><img src="https://www.web3icons.com/svgs/wallets/branded/coin98.svg?v=4.0.58" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer"></span>
+                <span class="genesis-wallet-brand-copy"><strong>Coin98</strong><small data-wallet-brand-status>Checking browser</small></span><span class="genesis-wallet-brand-check" aria-hidden="true"></span>
+              </button>
+            </div>
+            <p class="genesis-wallet-brand-state" id="genesis-wallet-brand-state" role="status" aria-live="polite">Choose the wallet application you use. The network is selected afterwards for identity verification.</p>
+          </section>
           <div class="wallet-ecosystem-grid">
             <section class="wallet-ecosystem-card" aria-labelledby="evm-wallet-heading">
               <div class="ecosystem-heading">
-                <strong id="evm-wallet-heading">Ethereum Mainnet · ERC-20</strong>
+                <strong id="evm-wallet-heading">Ethereum Mainnet identity address</strong>
                 <span class="ecosystem-tag">EIP-6963 / EIP-1193</span>
               </div>
               <div class="field">
-                <label for="supporter-evm-wallet-choice">Choose your EVM wallet</label>
+                <label for="supporter-evm-wallet-choice">Choose the Ethereum account exposed by this wallet</label>
                 <select id="supporter-evm-wallet-choice" disabled>
                   <option value="">Looking for EVM wallets…</option>
                 </select>
@@ -375,11 +409,11 @@
             </section>
             <section class="wallet-ecosystem-card" aria-labelledby="tron-wallet-heading">
               <div class="ecosystem-heading">
-                <strong id="tron-wallet-heading">Tron</strong>
+                <strong id="tron-wallet-heading">TRON Mainnet identity address</strong>
                 <span class="ecosystem-tag">TRON / TIP-6963</span>
               </div>
               <div class="field">
-                <label for="supporter-tron-wallet-choice">Choose your TRON wallet</label>
+                <label for="supporter-tron-wallet-choice">Choose the TRON account exposed by this wallet</label>
                 <select id="supporter-tron-wallet-choice" disabled>
                   <option value="">Looking for TRON wallets…</option>
                 </select>
@@ -397,11 +431,11 @@
             </section>
             <section class="wallet-ecosystem-card" aria-labelledby="solana-wallet-heading">
               <div class="ecosystem-heading">
-                <strong id="solana-wallet-heading">Solana</strong>
+                <strong id="solana-wallet-heading">Solana Mainnet identity address</strong>
                 <span class="ecosystem-tag">Solana Wallet Standard</span>
               </div>
               <div class="field">
-                <label for="supporter-wallet-choice">Choose your Solana wallet</label>
+                <label for="supporter-wallet-choice">Choose the Solana account exposed by this wallet</label>
                 <select id="supporter-wallet-choice" disabled>
                   <option value="">Looking for Solana wallets…</option>
                 </select>
@@ -423,7 +457,7 @@
               <strong id="genesis-wallet-verification-heading">Wallet identity and linked network addresses</strong>
               <span class="ecosystem-tag" id="supporter-member-mode">Staging service required</span>
             </div>
-            <p class="panel-intro">Connect the primary wallet once to establish the Genesis identity. Then connect the same wallet application on Ethereum, TRON or Solana and register each address you intend to use. The primary wallet session authorizes the profile change; the address being added signs its own domain-bound off-chain proof solely to demonstrate control of that address. The added address does not receive Genesis login or account authority.</p>
+            <p class="panel-intro">Your selected primary wallet creates and signs in to one Genesis wallet profile. Then use the same wallet application, or another supported application, to connect additional Ethereum, TRON or Solana addresses for their own network use. Each address being added signs its own domain-bound off-chain ownership proof. Added addresses can initiate only their own verified network payments; they never become a Genesis login, recovery anchor or profile authority.</p>
             <div class="field">
               <label for="supporter-wallet-purpose">Purpose of this network address</label>
               <select id="supporter-wallet-purpose">
@@ -439,7 +473,7 @@
               <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link address</button>
               <button class="secondary-button" id="supporter-logout" type="button" disabled>Disconnect wallet session</button>
             </div>
-            <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Connect your primary Ethereum, TRON or Solana mainnet wallet. A signed off-chain proof establishes its wallet identity; no separate user account is created.</div>
+            <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Choose a wallet brand above, then connect its primary network address. The signed proof creates your Genesis wallet profile; the selected primary wallet remains its only login and recovery authority.</div>
             <div class="wallet-address-card">
               <span class="side-label">Primary wallet identity</span>
               <strong id="supporter-member-summary">Not signed in</strong>
