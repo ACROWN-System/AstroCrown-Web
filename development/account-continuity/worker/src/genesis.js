@@ -361,6 +361,8 @@ function paymentIntentPublicView(row) {
   };
   return {
     paymentIntentId: row.payment_intent_id,
+    sourceWalletAddressId: row.source_wallet_address_id,
+    identityId: row.identity_id,
     status: row.status,
     asset: "USDT",
     label: labels[network] || "USDT",
