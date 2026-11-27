@@ -203,6 +203,92 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "0",
         )
 
+    def test_exact_reconciled_receipt_settles_qualifying_payment_and_awards_global_allowance(self):
+        identity_id = 'gid-settlement'
+        wallet_id = 'gwa-settlement'
+        terms_version = 'GENESIS-TERMS-V1'
+        payment_amount = '1000000000'
+        allowance_amount = '30000000000'
+        sender = '0x1111111111111111111111111111111111111111'
+        treasury = '0xbbb77071149a5F113Df15E78c58518917afa950A'
+        asset = '0xdAC17F958D2ee523a2206206994597C13D831ec7'
+        tx_hash = '0x' + 'c' * 64
+        self.db.execute(
+            'INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,'
+            'display_name,display_name_normalized,terms_version,terms_accepted_at,created_at,updated_at) '
+            'VALUES(?,?,?,?,?,?,?,?,?,?)',
+            (identity_id, 'ethereum', sender, sender, 'Settlement Member', 'settlement member', terms_version, 1000, 900, 1000),
+        )
+        self.db.execute(
+            'INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,'
+            'wallet_role,ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,?,?,?,?)',
+            (wallet_id, identity_id, 'ethereum', sender, sender, 'PRIMARY', 900, 'EIP-191', 900),
+        )
+        intent_values = (
+            'gpi-settlement', identity_id, wallet_id, 'ethereum', asset, treasury,
+            payment_amount, '1000', '0', payment_amount, allowance_amount,
+            '[{"tranche":1,"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"30","allowanceBaseUnits":"30000000000"}]',
+            'GENESIS-USDT-50K-1M-TIERS-V1', terms_version, 'OPEN', 1000, 1300,
+        )
+        self.db.execute(
+            'INSERT INTO genesis_payment_intents(payment_intent_id,identity_id,source_wallet_address_id,network,'
+            'asset_identifier,treasury_address,amount_base_units,amount_display,principal_start_base_units,'
+            'principal_end_base_units,allowance_credit_usdt_base_units,tier_breakdown_json,rules_version,terms_version,'
+            'status,created_at,expires_at) VALUES(' + ','.join('?' for _ in intent_values) + ')',
+            intent_values,
+        )
+        receipt_id = 'gtr-settlement'
+        inclusion = '{"blockNumber":"123","blockHash":"0x' + 'd' * 64 + '"}'
+        self.db.execute(
+            'INSERT INTO genesis_treasury_receipts(receipt_id,network,asset_identifier,amount_base_units,amount_display,'
+            'sender_address,treasury_address,transaction_hash,transfer_index,inclusion_reference,finality_status,'
+            'verification_method,rpc_provider_ids_json,rpc_source_ids_json,evidence_digest,evidence_json,'
+            'attribution_status,identity_id,source_wallet_address_id,public_visible,observed_at,verified_at) '
+            'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            (receipt_id, 'ethereum', asset, payment_amount, '1000', sender, treasury, tx_hash, 2, inclusion, 'FINALIZED',
+             'TWO_INDEPENDENT_RPC_SOURCES', '["rpc-a","rpc-b"]', '["source-a","source-b"]', 'e' * 64,
+             '{"creditApplied":false}', 'MATCHED', identity_id, wallet_id, 1, 1050, 1100),
+        )
+        self.db.execute(
+            'INSERT INTO genesis_public_payments(payment_record_id,identity_id,source_wallet_address_id,payment_kind,'
+            'network,asset_identifier,amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,'
+            'receipt_finality_status,rules_version,explorer_reference,confirmed_at,public_visible,payment_intent_id,'
+            'receipt_id,allowance_credit_usdt_base_units) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            ('gpm-settlement', identity_id, wallet_id, 'QUALIFYING_PAYMENT', 'ethereum', asset, payment_amount,
+             '1000', tx_hash, '2', 'FINALIZED', 'FINALIZED', 'GENESIS-USDT-50K-1M-TIERS-V1',
+             'https://etherscan.io/tx/' + tx_hash, 1100, 1, 'gpi-settlement', receipt_id, allowance_amount),
+        )
+        self.assertEqual(
+            self.db.execute('SELECT status,receipt_id,payment_record_id FROM genesis_payment_intents WHERE payment_intent_id=?',
+                            ('gpi-settlement',)).fetchone(),
+            ('CONFIRMED', receipt_id, 'gpm-settlement'),
+        )
+        self.assertEqual(
+            self.db.execute('SELECT qualifying_principal_usdt_base_units,pending_qualifying_principal_usdt_base_units,'
+                            'earned_usdt_base_units FROM genesis_programme_allowance_state WHERE singleton=1').fetchone(),
+            (payment_amount, '0', allowance_amount),
+        )
+        self.assertEqual(
+            self.db.execute('SELECT genesis_member_status,genesis_member_awarded_at FROM genesis_wallet_identities WHERE identity_id=?',
+                            (identity_id,)).fetchone(),
+            ('ACTIVE', 1100),
+        )
+        self.assertEqual(
+            self.db.execute('SELECT badge_code,status,qualifying_payment_record_id FROM genesis_member_badges WHERE identity_id=?',
+                            (identity_id,)).fetchone(),
+            ('GENESIS_MEMBER_DNA_GOLD', 'ACTIVE', 'gpm-settlement'),
+        )
+        self.assertEqual(
+            self.db.execute('SELECT event_type,amount_usdt_base_units,resulting_earned_usdt_base_units'
+                            ' FROM genesis_programme_allowance_events WHERE payment_record_id=?',
+                            ('gpm-settlement',)).fetchone(),
+            ('QUALIFYING_PAYMENT_CREDIT', allowance_amount, allowance_amount),
+        )
+        self.assertEqual(
+            self.db.execute('SELECT receipt_finality_status FROM genesis_public_payments WHERE payment_record_id=?',
+                            ('gpm-settlement',)).fetchone()[0],
+            'FINALIZED',
+        )
     def test_global_pool_is_one_shared_usdt_balance_and_personal_entitlement_rows_are_rejected(self):
         self.assertEqual(
             self.db.execute(
