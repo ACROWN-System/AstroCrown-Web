@@ -5,12 +5,14 @@
 
 **Status: public-access staging implementation is being qualified; remote staging is not yet deployed. This is not a production release or a completed commercial platform.**
 
-This is an isolated Worker/D1 implementation path for the adopted passkey-first account model. It is separate from the Python loopback reference prototype.
+This is an isolated Worker/D1 implementation path for the wallet-first primary identity model. Initial primary-wallet authentication supports EVM externally owned accounts using EIP-1193 and EIP-191; legacy WebAuthn passkey accounts remain available only through the clearly labelled compatibility path. It is separate from the Python loopback reference prototype.
 
 ## Included
 
 - Same-origin Worker request handler; exact Host, Origin and RP ID binding; security headers; no CORS; public staging mode without a shared browser password; fail-closed if the rate-limit/acknowledgement-signing key is missing.
-- D1 schema for ordinary accounts, WebAuthn credentials, one-use challenges, recovery-key verifiers, sessions, persistent rate-limit events and security audit.
+- D1 schema for ordinary accounts, primary EVM wallet identities, one-use wallet-sign-in challenges, legacy WebAuthn credentials, legacy recovery-key verifiers, sessions, persistent rate-limit events and security audit.
+- Primary wallet sign-in and new-account registration: origin-bound EIP-191 challenge, strict signature/address recovery, one-use expiry-bound challenge, public-address uniqueness and server-issued HttpOnly session. No seed phrase or private key is collected or stored.
+- Legacy passkey sign-in/recovery remains isolated for older test accounts; new staging registrations use the primary-wallet flow.
 - Discoverable WebAuthn registration and sign-in through pinned SimpleWebAuthn 14.0.3.
 - One-time 256-bit offline recovery key; only a salted SHA-256 verifier is stored. Recovery requires a new passkey, consumes/rotates the key, deactivates old credentials, revokes prior sessions and records an audit event.
 - Session tokens stored only as SHA-256 hashes; HttpOnly, SameSite=Strict cookies; Secure on HTTPS.
@@ -19,7 +21,7 @@ This is an isolated Worker/D1 implementation path for the adopted passkey-first 
 - The Genesis Programme preview is served at the same origin under `/supporters/` and linked from the homepage footer. It shows the intended Ethereum/Tron/Solana USD₮ mainnet scope and the illustrative multiplier model, but remains a display-only development preview: no real qualifying payments, entitlement activation, ACROWN purchase or payment service is enabled.
 - Existing homepage/account UI are reused. The generated staging homepage is clearly marked as a live public test environment. Its mandatory first-visit notice explains that public submissions are visible to anyone, that accounts/data are disposable, and that only enabled test functionality may be used. The notice must be acknowledged through a same-origin API request before account APIs accept requests.
 
-## Account security lifecycle — local qualification passed; not deployed
+## Legacy passkey account security lifecycle — local qualification passed; not deployed
 
 The Worker branch now contains an implementation candidate for the ordinary-account security centre. It adds opaque passkey/session references, user-managed passkey labels and additional passkey enrollment/revocation, session listing/revocation, and one-time recovery-key rotation. Sensitive operations require a fresh WebAuthn assertion and a short-lived, purpose-bound, single-use grant tied to the active account session. The normal revoke path refuses to remove the last active passkey; session controls preserve the current session.
 

@@ -1,8 +1,10 @@
 # Primary Identity and Auxiliary Transaction Wallet Architecture
 
 **Owner direction recorded:** 18 November 2026  
-**Status:** Architecture decision for future AstroCrown account, exchange and swap development.  
+**Status:** Owner-approved wallet-first account identity architecture. EVM EOA primary-wallet authentication is implemented in the staging code; remote staging deployment and qualification remain separate release steps. Non-EVM adapters and auxiliary transaction-wallet UX remain future work.  
 **Relationship to Genesis:** Compatible with the wallet-first Genesis identity. This document extends the model beyond Genesis payment wallets; it does not activate payments or authorize custody.
+
+**Implementation status — 28 November 2026:** the account Worker now contains the first EVM externally owned account (EOA) sign-in/registration path. It uses EIP-1193 provider access and EIP-191 personal-sign challenges. Only the public address, chain ID and account linkage are stored. The signature authorizes an account session only, not a blockchain transaction. This implementation is not yet a production release; smart-contract wallets and Solana, TRON and Bitcoin primary-wallet adapters remain unimplemented.
 
 ## 1. Decision
 

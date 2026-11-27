@@ -1,10 +1,12 @@
-# Passkey-First Account Authentication and Recovery Requirements
+# Legacy Passkey-First Account Authentication and Recovery Requirements (Superseded)
 
 **Decision date:** 2026-11-03  
-**Status:** OWNER-ACCEPTED DESIGN DIRECTION / PARTIALLY IMPLEMENTED IN LOCAL LOOPBACK PROTOTYPE / NOT PRODUCTION  
+**Status:** HISTORICAL / SUPERSEDED FOR NEW ACCOUNTS / RETAINED ONLY FOR LEGACY TEST ACCOUNTS  
 **Scope:** AstroCrown ordinary-user and administrator account authentication  
 **Parent:** [PR #141 — account foundation](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
 **Related requirements:** [User and Administrator Account Requirements](USER-AND-ADMIN-ACCOUNT-REQUIREMENTS.md)
+
+> **Superseded for new accounts on 18 November 2026.** The current account identity decision is [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md): one primary identity wallet owns and authenticates the account. This document describes only the older WebAuthn passkey test-account path and its compatibility/security requirements. Do not use its one-time passkey recovery key as a recovery path for a wallet identity.
 
 ## 1. Adopted principle
 
