@@ -41,6 +41,12 @@ export function genesisQualifyingPaymentGate(env, network, rpcPairReady = false)
     if (env.GENESIS_PRODUCTION_PAYMENTS_APPROVED !== "true") {
       reasons.push("Production Genesis payment acceptance has not been separately approved.");
     }
+    if (env.GENESIS_PRODUCTION_RECEIPT_MONITOR_APPROVED !== "true") {
+      reasons.push("Production Genesis receipt monitoring has not been separately approved.");
+    }
+    if (env.GENESIS_PRODUCTION_RECEIPT_MONITOR_CRON_VERIFIED !== "true") {
+      reasons.push("The production Genesis receipt-monitor Cron schedule has not been verified.");
+    }
   } else if (environment !== "staging") {
     reasons.push("The qualifying-payment service must run in the isolated staging environment or an explicitly approved production environment.");
   }
