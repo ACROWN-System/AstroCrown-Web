@@ -204,7 +204,7 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
     receipt.finality_status,
     intent.rules_version,
     link,
-    Number(receipt.verified_at),
+    Math.floor(Date.now() / 1000),
     1,
     intent.payment_intent_id,
     receipt.receipt_id,
