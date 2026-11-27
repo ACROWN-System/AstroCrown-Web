@@ -210,6 +210,71 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         ).fetchone()
         self.assertEqual(state, ("0", "0", "0"))
 
+    def test_payment_intent_cannot_be_cancelled_when_a_matching_onchain_receipt_exists(self):
+        identity_id = "gid-receipt-guard"
+        wallet_id = "gwa-receipt-guard"
+        sender = "0x4444444444444444444444444444444444444444"
+        treasury = "0xbbb77071149a5F113Df15E78c58518917afa950A"
+        asset = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
+        amount = "1000000000"
+        tx_hash = "0x" + "f" * 64
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,terms_version,terms_accepted_at,created_at,updated_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (identity_id, "ethereum", sender, sender, "Receipt Guard", "receipt guard", "GENESIS-TERMS-V1", 90, 1, 1),
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,?,?,?,?)",
+            (wallet_id, identity_id, "ethereum", sender, sender, "PRIMARY", 1, "EIP-191", 1),
+        )
+        intent = (
+            "gpi-receipt-guard", identity_id, wallet_id, "ethereum", asset, treasury,
+            amount, "1000", "0", amount, "30000000000",
+            '[{"tranche":1,"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"30",'
+            '"multiplierDenominator":"1","allowanceBaseUnits":"30000000000"}]',
+            "GENESIS-USDT-50K-1M-TIERS-V1", "GENESIS-TERMS-V1", "OPEN", 100, 200,
+        )
+        self.db.execute(
+            "INSERT INTO genesis_payment_intents(payment_intent_id,identity_id,source_wallet_address_id,network,"
+            "asset_identifier,treasury_address,amount_base_units,amount_display,principal_start_base_units,"
+            "principal_end_base_units,allowance_credit_usdt_base_units,tier_breakdown_json,rules_version,terms_version,"
+            "status,created_at,expires_at) VALUES(" + ",".join("?" for _ in intent) + ")",
+            intent,
+        )
+        self._set_monitor_healthy_after(200)
+        inclusion = '{"blockNumber":"123","blockHash":"0x' + "d" * 64 + '"}'
+        self.db.execute(
+            "INSERT INTO genesis_treasury_receipts(receipt_id,network,asset_identifier,amount_base_units,amount_display,"
+            "sender_address,treasury_address,transaction_hash,transfer_index,inclusion_reference,finality_status,"
+            "verification_method,rpc_provider_ids_json,rpc_source_ids_json,evidence_digest,evidence_json,"
+            "attribution_status,identity_id,source_wallet_address_id,public_visible,occurred_at,observed_at,verified_at) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                "gtr-receipt-guard", "ethereum", asset, amount, "1000", sender, treasury, tx_hash, 0,
+                inclusion, "FINALIZED", "TWO_INDEPENDENT_RPC_SOURCES",
+                '["rpc-a","rpc-b"]', '["source-a","source-b"]', "f" * 64, '{"verified":true}',
+                "MATCHED", identity_id, wallet_id, 1, 150, 160, 160,
+            ),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "no matching receipt exists"):
+            self.db.execute(
+                "UPDATE genesis_payment_intents SET status='CANCELLED' WHERE payment_intent_id='gpi-receipt-guard'"
+            )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT status FROM genesis_payment_intents WHERE payment_intent_id='gpi-receipt-guard'"
+            ).fetchone()[0],
+            "OPEN",
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT pending_qualifying_principal_usdt_base_units FROM genesis_programme_allowance_state WHERE singleton=1"
+            ).fetchone()[0],
+            amount,
+        )
+
     def test_different_genesis_profiles_can_reserve_concurrent_sequential_global_tranches(self):
         wallets = [
             ("gid-concurrent-a", "gwa-concurrent-a", "0x" + "1" * 40, "Concurrent A"),
