@@ -51,8 +51,8 @@ test("Tactile sounds are restrained, dry instrument-like clicks rather than effe
   assert.ok(controller.includes("function addPrecisionClick("), "Use the dedicated precision-click sound.");
   assert.ok(controller.includes('filter.type = "bandpass"'), "Keep each transient acoustically restrained.");
   assert.ok(controller.includes("output.gain.setValueAtTime(0.62, context.currentTime)"), "Keep the overall sound level low.");
-  assert.ok(controller.includes("addPrecisionClick(context, output, 0.035, 0.010, 0, 1550)"), "Press should be a short, soft tick.");
-  assert.ok(controller.includes("addPrecisionClick(context, output, 0.032, 0.011, 0, 1900)"), "Release should be a distinct short, soft tack.");
+  assert.ok(controller.includes("addPrecisionClick(context, output, 0.035, 0.010, 1550)"), "Press should be a short, soft tick.");
+  assert.ok(controller.includes("addPrecisionClick(context, output, 0.032, 0.011, 1900)"), "Release should be a distinct short, soft tack.");
   assert.equal(controller.includes("function addTone("), false, "Remove pitched thuds and resonant tones.");
   assert.equal(controller.includes("function addSoftClick("), false, "Replace the former, more pronounced sound design.");
 });
