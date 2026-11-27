@@ -5,6 +5,8 @@ import {
 } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 import { genesisQualifyingPaymentGate } from "../../../supporter-programme/shared/genesis-payment-policy.mjs";
 
+const GENESIS_MONITOR_HEALTH_MAX_AGE_SECONDS = 15 * 60;
+
 function rpcPairConfigured(env, network) {
   const prefix = "GENESIS_" + network.toUpperCase() + "_RPC_";
   try {
@@ -42,7 +44,7 @@ export async function genesisPaymentActivationGate(db, env, network, rpcPairRead
     return Object.freeze({ enabled: false, network, reasons: Object.freeze(reasons) });
   }
 
-  const [programme, configuredNetwork, control] = await Promise.all([
+  const [programme, configuredNetwork, control, monitorHealth] = await Promise.all([
     db.prepare(
       "SELECT status,rules_version,usdt_decimals FROM supporter_program WHERE singleton=1"
     ).first(),
@@ -53,6 +55,10 @@ export async function genesisPaymentActivationGate(db, env, network, rpcPairRead
     db.prepare(
       "SELECT registration_freeze_at,registration_closed_at,acrown_launched_at " +
       "FROM genesis_programme_control WHERE singleton=1"
+    ).first(),
+    db.prepare(
+      "SELECT status,last_cycle_completed_at,ethereum_caught_up,tron_caught_up,solana_caught_up," +
+      "settlement_queue_deferred FROM genesis_treasury_monitor_health WHERE singleton=1"
     ).first(),
   ]);
 
@@ -73,6 +79,19 @@ export async function genesisPaymentActivationGate(db, env, network, rpcPairRead
     reasons.push("The selected USDT network has not passed canonical token, decimal, treasury and network activation checks in Genesis D1.");
   }
   const now = Math.floor(Date.now() / 1000);
+  const monitorCompletedAt = monitorHealth ? Number(monitorHealth.last_cycle_completed_at) : 0;
+  const monitorAge = now - monitorCompletedAt;
+  if (!monitorHealth ||
+      monitorHealth.status !== "HEALTHY" ||
+      !Number.isSafeInteger(monitorCompletedAt) ||
+      monitorAge < 0 ||
+      monitorAge > GENESIS_MONITOR_HEALTH_MAX_AGE_SECONDS ||
+      Number(monitorHealth.ethereum_caught_up) !== 1 ||
+      Number(monitorHealth.tron_caught_up) !== 1 ||
+      Number(monitorHealth.solana_caught_up) !== 1 ||
+      Number(monitorHealth.settlement_queue_deferred) !== 0) {
+    reasons.push("AstroCrown's USDT receipt monitor has not completed a recent healthy, all-network caught-up cycle with no deferred settlement backlog.");
+  }
   if (!control || control.registration_closed_at ||
       (control.registration_freeze_at && now >= Number(control.registration_freeze_at)) ||
       control.acrown_launched_at) {
