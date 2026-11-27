@@ -5,6 +5,7 @@ import {
   explorerUrl,
   formatUsdtAmount,
   prepareGenesisRpcPair,
+  normalizeTronBlockReceiptPage,
   publicGenesisTreasuryReceipts,
   runGenesisReceiptMonitor,
 } from "../src/genesis-receipt-monitor.js";
@@ -145,6 +146,29 @@ test("public receipt projection contains explorer evidence but no internal ident
     assert.equal(Object.hasOwn(item, "identityId"), false);
     assert.equal(Object.hasOwn(item, "sourceWalletAddressId"), false);
   }
+});
+
+test("TRON solidified block receipt pages must cover each transaction exactly once at the requested height", () => {
+  const first = "a".repeat(64);
+  const second = "b".repeat(64);
+  const receipts = [
+    { id: first, blockNumber: 123, receipt: { result: "SUCCESS" } },
+    { id: second, blockNumber: 123 },
+  ];
+  const indexed = normalizeTronBlockReceiptPage(receipts, 123, [first, second]);
+  assert.equal(indexed.size, 2);
+  assert.equal(indexed.get(first).receipt.result, "SUCCESS");
+  assert.deepEqual(
+    Array.from(normalizeTronBlockReceiptPage([], 123, []).keys()),
+    [],
+    "An empty but independently verified block has an empty receipt page.",
+  );
+  assert.throws(() => normalizeTronBlockReceiptPage([receipts[0]], 123, [first, second]), /every transaction/);
+  assert.throws(() => normalizeTronBlockReceiptPage([receipts[0], receipts[0]], 123, [first, second]), /unknown, malformed or duplicate/);
+  assert.throws(() => normalizeTronBlockReceiptPage([{ ...receipts[0], id: "c".repeat(64) }], 123, [first]), /unknown, malformed or duplicate/);
+  assert.throws(() => normalizeTronBlockReceiptPage([{ ...receipts[0], blockNumber: 122 }], 123, [first]), /requested solidified block height/);
+  assert.throws(() => normalizeTronBlockReceiptPage([], 123, [first]), /every transaction/);
+  assert.throws(() => normalizeTronBlockReceiptPage(null, 123, []), /malformed block receipt page/);
 });
 
 test("explorer links reject malformed transaction identifiers", () => {
