@@ -59,7 +59,8 @@ test("USDT principal conversion uses exact six-decimal integer units", () => {
   assert.equal(parseGenesisUsdtAmountToBaseUnits("1"), "1000000");
   assert.equal(parseGenesisUsdtAmountToBaseUnits("0.000001"), "1");
   assert.equal(parseGenesisUsdtAmountToBaseUnits("10000.25"), "10000250000");
-  assert.equal(parseGenesisUsdtAmountToBaseUnits("00001"), "1000000");
+  assert.equal(parseGenesisUsdtAmountToBaseUnits("1"), "1000000");
+  assert.throws(() => parseGenesisUsdtAmountToBaseUnits("00001"), /plain decimal values/);
   for (const value of ["0", "0.0000001", "1e3", "1,000", "-1", ".5", "1.", "abc", ""]) {
     assert.throws(() => parseGenesisUsdtAmountToBaseUnits(value));
   }
