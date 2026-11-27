@@ -444,7 +444,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       registeredIds.forEach(function (id) {
         var removed = solanaWallets.get(id);
         solanaWallets.delete(id);
-        if (connectedSolana && connectedSolana.wallet === removed) clearSolanaConnection(false);
+        if (connectedSolana && removed && connectedSolana.wallet === removed.wallet) clearSolanaConnection(false);
       });
       renderSolanaChoices();
     };
@@ -471,9 +471,10 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
 
   solanaSelect.addEventListener("change", renderSolanaChoices);
   solanaConnectButton.addEventListener("click", async function () {
-    var wallet = solanaWallets.get(solanaSelect.value);
+    var selected = solanaWallets.get(solanaSelect.value);
+    var wallet = selected && selected.wallet;
     if (!wallet || !supportedSolanaWallet(wallet)) {
-      setFeedback(solanaFeedback, "Choose a compatible Solana wallet first.", "error");
+      setFeedback(solanaFeedback, "Choose a compatible Solana wallet under the selected brand first.", "error");
       return;
     }
 
@@ -494,7 +495,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         throw new Error("The selected wallet did not return a connected Solana account.");
       }
 
-      connectedSolana = { wallet: wallet };
+      connectedSolana = { wallet: wallet, walletId: selected.walletId };
       connectedSolanaAccount = account;
       lastConnectedNetwork = "solana";
       solanaAddress.textContent = account.address;
@@ -712,9 +713,11 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   }
 
   function activeConnectedWallet() {
-    if (lastConnectedNetwork === "ethereum" && connectedEvm && connectedEvmAddress) {
+    if (lastConnectedNetwork === "ethereum" && connectedEvm && connectedEvmAddress &&
+        connectedEvm.walletId === selectedGenesisWalletBrand) {
       return {
         network: "ethereum",
+        walletId: connectedEvm.walletId,
         address: connectedEvmAddress,
         mainnet: String(connectedEvmChainId || "").toLowerCase() === "0x1",
         sign: async function (message) {
@@ -722,7 +725,8 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         }
       };
     }
-    if (lastConnectedNetwork === "tron" && connectedTronProvider && connectedTronAddress) {
+    if (lastConnectedNetwork === "tron" && connectedTronProvider && connectedTronAddress &&
+        connectedTronWallet && connectedTronWallet.walletId === selectedGenesisWalletBrand) {
       var tronWeb = connectedTronWeb || connectedTronProvider.tronWeb || null;
       return {
         network: "tron",
@@ -738,12 +742,13 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         }
       };
     }
-    if (lastConnectedNetwork === "solana" && connectedSolana && connectedSolanaAccount) {
+    if (lastConnectedNetwork === "solana" && connectedSolana && connectedSolanaAccount &&
+        connectedSolana.walletId === selectedGenesisWalletBrand) {
       var chains = Array.isArray(connectedSolanaAccount.chains) ? connectedSolanaAccount.chains : [];
       return {
         network: "solana",
         address: connectedSolanaAccount.address,
-        walletId: connectedSolana.wallet.genesisWalletId || null,
+        walletId: connectedSolana.walletId || connectedSolana.wallet.genesisWalletId || null,
         mainnet: isSolanaMainnet(connectedSolanaAccount),
         canSign: Boolean(connectedSolana.wallet.features && connectedSolana.wallet.features["solana:signMessage"] && typeof connectedSolana.wallet.features["solana:signMessage"].signMessage === "function"),
         sign: async function (message) {
