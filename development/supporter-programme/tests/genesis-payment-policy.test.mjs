@@ -80,7 +80,7 @@ test("payment instructions identify one USDT asset first and keep participant ne
     assert.equal(view.label, label);
     assert.equal(view.standard, standard);
     assert.equal(view.amount, "125.5");
-    assert.match(view.networkFeePolicy, /paid separately/i);
+    assert.match(view.networkFeePolicy, /network fee separately/i);
     assert.equal(view.walletTransactionSubmitted, false);
     assert.equal(view.paymentMethod, "MANUAL_EXACT_AMOUNT_TRANSFER");
   }
