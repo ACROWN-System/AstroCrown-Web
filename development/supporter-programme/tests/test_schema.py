@@ -72,6 +72,44 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "The Worker-deployed treasury receipt monitor migration must match the canonical migration.",
         )
 
+    def test_treasury_receipts_are_append_only_and_idempotent_by_chain_transaction_and_transfer_index(self):
+        values = (
+            "receipt-one", "ethereum", "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+            "25000000", "25", "0x1111111111111111111111111111111111111111",
+            "0xbbb77071149a5F113Df15E78c58518917afa950A", "0x" + "a" * 64, 0,
+            '{"blockNumber":"123","blockHash":"0x' + "b" * 64 + '"}', "FINALIZED",
+            "TWO_INDEPENDENT_RPC_OPERATORS", '["a","b"]', '["operator-a","operator-b"]',
+            "a" * 64, '{"creditApplied":false}', "UNMATCHED", None, None, 1, 100, 100,
+        )
+        sql = (
+            "INSERT INTO genesis_treasury_receipts("
+            "receipt_id,network,asset_identifier,amount_base_units,amount_display,sender_address,treasury_address,"
+            "transaction_hash,transfer_index,inclusion_reference,finality_status,verification_method,"
+            "rpc_provider_ids_json,rpc_operator_ids_json,evidence_digest,evidence_json,attribution_status,"
+            "identity_id,source_wallet_address_id,public_visible,observed_at,verified_at"
+            ") VALUES(" + ",".join("?" for _ in values) + ")"
+        )
+        self.db.execute(sql, values)
+        self.assertEqual(
+            self.db.execute("SELECT amount_display,attribution_status FROM genesis_treasury_receipts").fetchone(),
+            ("25", "UNMATCHED"),
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable"):
+            self.db.execute("UPDATE genesis_treasury_receipts SET amount_display='30' WHERE receipt_id='receipt-one'")
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable"):
+            self.db.execute("DELETE FROM genesis_treasury_receipts WHERE receipt_id='receipt-one'")
+        duplicate = list(values)
+        duplicate[0] = "receipt-duplicate-id"
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(sql, tuple(duplicate))
+        self.assertEqual(self.db.execute("SELECT COUNT(*) FROM genesis_public_payments").fetchone()[0], 0)
+        self.assertEqual(
+            self.db.execute(
+                "SELECT COUNT(*) FROM genesis_programme_allowance_events WHERE event_type='QUALIFYING_PAYMENT_CREDIT'"
+            ).fetchone()[0],
+            0,
+        )
+
     def test_global_pool_is_one_shared_usdt_balance_and_personal_entitlement_rows_are_rejected(self):
         self.assertEqual(
             self.db.execute(
