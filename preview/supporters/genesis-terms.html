@@ -51,6 +51,9 @@
     <h2>6. Purchase and ACROWN delivery are separate</h2>
     <p>A qualifying payment, if accepted under the final approved terms, creates a purchase allowance only. It does not automatically issue, mint or transfer ACROWN. Any later floor-price purchase, reserve accounting, ACROWN inventory allocation and Solana delivery require separately approved rules, custody controls and operational authorization.</p>
 
+    <h2>7. Safe expiry and reservation release</h2>
+    <p>A payment intent cannot be cancelled before it expires. After expiry, AstroCrown must first complete a recent healthy scan of Ethereum, TRON and Solana with all three finalized/solidified heads beyond the deadline, a clear settlement queue and no exact matching receipt. A transfer already recorded within the intent window keeps the intent open for independent settlement. When a network is behind or monitor health is stale/degraded, the principal reservation remains held. This avoids releasing a tranche while a timely transfer may still be waiting for reconciliation.</p>
+
     <h2>7. Terms still awaiting final approval</h2>
     <ul>
       <li>Eligibility and any applicable geographic or legal restrictions.</li>
