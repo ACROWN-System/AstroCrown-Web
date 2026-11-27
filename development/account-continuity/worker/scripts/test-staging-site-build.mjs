@@ -63,7 +63,7 @@ test("published Genesis profile is part of the same AstroCrown account", async (
   assert.match(html, /The linked address proves control of itself only and never becomes an account login or spending authorization/i);
   assert.match(html, /a payment must originate from a pre-verified address on its own network/i);
   assert.match(html, /exact asset, amount, network and destination/i);
-  assert.match(html, /separate wallet confirmation/i);
+  assert.match(html, /requires a separate confirmation in your wallet/i);
   assert.match(html, /No unlimited or automated spending permission is active/i);
   assert.match(html, /separate, explicit, narrowly capped, time-limited and revocable authorization/i);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/i);
