@@ -183,8 +183,9 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         base = (
             "ethereum", "0xdAC17F958D2ee523a2206206994597C13D831ec7",
             "0xbbb77071149a5F113Df15E78c58518917afa950A", "1000000000", "1000",
-            "10000000000", '[{"tranche":1,"qualifyingPrincipalBaseUnits":"1000000000",'
-            '"multiplierNumerator":"30","multiplierDenominator":"1","allowanceBaseUnits":"30000000000"}]',
+            "30000000000", '[{"tranche":1,"principalStartBaseUnits":"0","principalEndBaseUnits":"1000000000",'
+            '"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"30",'
+            '"multiplierDenominator":"1","allowanceBaseUnits":"30000000000"}]',
             "GENESIS-USDT-50K-1M-TIERS-V1", "GENESIS-TERMS-V1", "OPEN", 100, 200,
         )
         sql = (
@@ -365,6 +366,18 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             self.db.execute('SELECT receipt_finality_status FROM genesis_public_payments WHERE payment_record_id=?',
                             ('gpm-settlement',)).fetchone()[0],
             'FINALIZED',
+        )
+        self.assertEqual(
+            self.db.execute(
+                'SELECT settled_principal_start_base_units,settled_principal_end_base_units,settled_tier_breakdown_json '
+                'FROM genesis_public_payments WHERE payment_record_id=?',
+                ('gpm-settlement',),
+            ).fetchone(),
+            (
+                '0',
+                payment_amount,
+                settled_tiers,
+            ),
         )
     def test_global_pool_is_one_shared_usdt_balance_and_personal_entitlement_rows_are_rejected(self):
         self.assertEqual(
