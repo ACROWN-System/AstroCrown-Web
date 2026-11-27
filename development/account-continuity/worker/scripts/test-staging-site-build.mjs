@@ -257,6 +257,10 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("/api/genesis/payment-intents"));
   assert.ok(js.includes("/api/genesis/payment-intents/cancel"));
   assert.ok(js.includes("requestGenesisPaymentIntent"));
+  assert.ok(js.includes("Cancellation available after expiry and monitor reconciliation"));
+  assert.ok(js.includes("Do not cancel an intent after sending USDT"));
+  assert.ok(js.includes("A payment intent cannot be cancelled before its expiry."));
+  assert.ok(js.includes("recent healthy scan of Ethereum, TRON and Solana"));
   assert.ok(js.includes("renderGenesisPaymentPanel"));
   assert.ok(js.includes("MANUAL_EXACT_AMOUNT_TRANSFER"));
   assert.ok(js.includes("walletTransactionSubmitted"));
