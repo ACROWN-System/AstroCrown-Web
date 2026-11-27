@@ -895,8 +895,8 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     if (memberFeedback) {
       setFeedback(memberFeedback, genesisMember
-        ? "Primary wallet verified. Genesis Member status and its gold DNA badge are active for this wallet."
-        : "Primary wallet verified. Its unique display name is reserved. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
+        ? "AstroCrown account primary wallet verified. Genesis Member status and its gold DNA badge belong to this same account."
+        : "AstroCrown account primary wallet verified. Its unique display name is reserved to this same account. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
     }
     updateSupporterActionButtons();
     refreshGenesisDirectory();
