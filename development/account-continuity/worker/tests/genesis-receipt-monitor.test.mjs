@@ -83,6 +83,21 @@ test("receipt monitoring remains disabled outside staging and without its explic
     status: "DISABLED",
     receiptsRecorded: 0,
   });
+  assert.deepEqual(await runGenesisReceiptMonitor({
+    ENVIRONMENT: "production",
+    GENESIS_RECEIPT_MONITOR_ENABLED: "true",
+  }), {
+    status: "DISABLED",
+    receiptsRecorded: 0,
+  });
+  assert.deepEqual(await runGenesisReceiptMonitor({
+    ENVIRONMENT: "production",
+    GENESIS_RECEIPT_MONITOR_ENABLED: "true",
+    GENESIS_PRODUCTION_RECEIPT_MONITOR_APPROVED: "true",
+  }), {
+    status: "DISABLED",
+    receiptsRecorded: 0,
+  });
   assert.deepEqual(await runGenesisReceiptMonitor({ ENVIRONMENT: "production", GENESIS_RECEIPT_MONITOR_ENABLED: "true" }), {
     status: "DISABLED",
     receiptsRecorded: 0,
