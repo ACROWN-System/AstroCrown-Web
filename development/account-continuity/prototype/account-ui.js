@@ -28,6 +28,10 @@
   var busy = false;
   var pendingAdminWalletMessage = null;
   var termsVersion = "development-terms-2026-10-31-v0.3";
+  var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v1";
+  var discoveredWalletProviders = [];
+  var selectedWalletProvider = null;
+  var selectedWalletAddress = "";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var queryParams = new URLSearchParams(window.location.search);
   var forceBrowserDemo = queryParams.get("account-preview-demo") === "1";
@@ -591,20 +595,141 @@
       '</svg><span>Log In</span>';
   }
 
-  async function authenticateWithPrimaryWallet(createAccount, referralId) {
+  function walletProviderLabel(entry) {
+    var name = entry && entry.info && typeof entry.info.name === "string" ? entry.info.name.trim() : "Browser wallet";
+    var rdns = entry && entry.info && typeof entry.info.rdns === "string" ? entry.info.rdns : "";
+    return { name: name || "Browser wallet", rdns: rdns };
+  }
+
+  async function refreshWalletProviderChoices() {
+    var providerSelects = [
+      document.getElementById("account-wallet-provider")
+    ].filter(Boolean);
+    if (!providerSelects.length || browserPreviewMode) return;
+    discoveredWalletProviders = [];
+    var announced = new Map();
+    function onAnnounce(event) {
+      var detail = event && event.detail;
+      if (!detail || !detail.provider || !detail.info || typeof detail.info.uuid !== "string") return;
+      announced.set(detail.info.uuid, { id: detail.info.uuid, provider: detail.provider, info: detail.info });
+    }
+    window.addEventListener("eip6963:announceProvider", onAnnounce);
+    try {
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+      await new Promise(function (resolve) { window.setTimeout(resolve, 350); });
+    } finally {
+      window.removeEventListener("eip6963:announceProvider", onAnnounce);
+    }
+    discoveredWalletProviders = Array.from(announced.values());
+    if (!discoveredWalletProviders.length && window.ethereum && Array.isArray(window.ethereum.providers)) {
+      discoveredWalletProviders = window.ethereum.providers.map(function (provider, index) {
+        return {
+          id: "injected-" + index,
+          provider: provider,
+          info: { name: provider.isMetaMask ? "MetaMask" : provider.isRabby ? "Rabby" : "Browser wallet " + (index + 1), rdns: "" }
+        };
+      });
+    }
+    if (!discoveredWalletProviders.length && window.ethereum && typeof window.ethereum.request === "function") {
+      discoveredWalletProviders = [{
+        id: "injected-default",
+        provider: window.ethereum,
+        info: { name: window.ethereum.isMetaMask ? "MetaMask" : "Injected wallet", rdns: "" }
+      }];
+    }
+    providerSelects.forEach(function (select) {
+      var previous = select.value;
+      select.innerHTML = '<option value="">Select a wallet provider…</option>';
+      discoveredWalletProviders.forEach(function (entry) {
+        var label = walletProviderLabel(entry);
+        var option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = label.name;
+        select.appendChild(option);
+      });
+      if (previous && discoveredWalletProviders.some(function (entry) { return entry.id === previous; })) {
+        select.value = previous;
+      } else if (discoveredWalletProviders.length === 1) {
+        select.value = discoveredWalletProviders[0].id;
+        selectedWalletProvider = discoveredWalletProviders[0].provider;
+      } else {
+        selectedWalletProvider = null;
+      }
+      var help = document.getElementById("account-wallet-selection-help");
+      if (help && !discoveredWalletProviders.length) {
+        help.textContent = "No compatible EVM wallet was detected. Install or enable a wallet that supports EIP-1193 and EIP-191 message signing, then reopen this window.";
+      } else if (help && discoveredWalletProviders.length > 1) {
+        help.textContent = "Choose the wallet provider you want to use. AstroCrown will not select a provider or wallet address for you.";
+      }
+    });
+  }
+
+  function selectedWalletProviderFromForm() {
+    var select = document.getElementById("account-wallet-provider");
+    var id = select ? select.value : "";
+    var entry = discoveredWalletProviders.find(function (candidate) { return candidate.id === id; });
+    if (!entry && discoveredWalletProviders.length === 1) entry = discoveredWalletProviders[0];
+    if (!entry || !entry.provider || typeof entry.provider.request !== "function") {
+      throw new Error("Choose one of the detected wallet providers before continuing.");
+    }
+    selectedWalletProvider = entry.provider;
+    return selectedWalletProvider;
+  }
+
+  async function authenticateWithPrimaryWallet(createAccount, referralId, consent) {
     if (browserPreviewMode) {
       throw new Error("Wallet authentication is not available in the read-only hosted preview.");
     }
-    var provider = window.ethereum;
-    if (!provider || typeof provider.request !== "function") {
-      throw new Error("No compatible EVM browser wallet was detected. Install or unlock a wallet that supports EIP-1193 and EIP-191 message signing.");
+    var provider = selectedWalletProviderFromForm();
+    var granted;
+    try {
+      granted = await provider.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }]
+      });
+    } catch (permissionError) {
+      if (!permissionError || permissionError.code !== -32601) throw permissionError;
+      granted = null;
     }
-    var accounts = await provider.request({ method: "eth_requestAccounts" });
-    if (!Array.isArray(accounts) || typeof accounts[0] !== "string" ||
-        !/^0x[0-9a-f]{40}$/i.test(accounts[0])) {
-      throw new Error("The wallet did not return a valid EVM account.");
+    var accounts = await provider.request({ method: "eth_accounts" });
+    if (!Array.isArray(accounts) || !accounts.length ||
+        accounts.some(function (item) { return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item); })) {
+      accounts = await provider.request({ method: "eth_requestAccounts" });
     }
-    var address = accounts[0];
+    if (!Array.isArray(accounts) || !accounts.length ||
+        accounts.some(function (item) { return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item); })) {
+      throw new Error("The selected wallet did not return a valid EVM account.");
+    }
+    var accountSelect = document.getElementById("account-wallet-account");
+    var accountField = accountSelect ? accountSelect.closest("label") : null;
+    var requestedAddress = accountSelect ? accountSelect.value : "";
+    if (accountSelect) {
+      accountSelect.innerHTML = '<option value="">Choose an address…</option>';
+      accounts.forEach(function (address) {
+        var option = document.createElement("option");
+        option.value = address;
+        option.textContent = address.slice(0, 8) + "…" + address.slice(-6);
+        accountSelect.appendChild(option);
+      });
+      if (requestedAddress && accounts.some(function (address) { return address.toLowerCase() === requestedAddress.toLowerCase(); })) {
+        accountSelect.value = requestedAddress;
+      }
+      if (accountField) accountField.hidden = accounts.length < 2;
+      if (accounts.length > 1 && !accountSelect.value) {
+        selectedWalletAddress = "";
+        throw new Error("Your wallet returned more than one address. Choose the address you want as your AstroCrown primary identity, then continue.");
+      }
+      if (accounts.length > 1 && !accountSelect.value) {
+        throw new Error("Choose the wallet address for this AstroCrown account.");
+      }
+    }
+    var address = accountSelect && accountSelect.value ? accountSelect.value
+      : selectedWalletAddress && accounts.find(function (item) { return item.toLowerCase() === selectedWalletAddress.toLowerCase(); })
+        ? selectedWalletAddress : accounts[0];
+    if (accounts.length > 1 && (!accountSelect || !accountSelect.value)) {
+      throw new Error("Choose the wallet address for this AstroCrown account.");
+    }
+    selectedWalletAddress = address;
     var chainHex = await provider.request({ method: "eth_chainId" });
     var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
       ? Number.parseInt(chainHex, 16) : NaN;
@@ -631,7 +756,7 @@
       throw new Error("The selected wallet or network changed during sign-in. Start again with the intended primary wallet.");
     }
 
-    showFeedback("Review the message in your wallet. This is an off-chain signature only; it cannot move assets or approve a contract.", "info");
+    showFeedback("Review the message in your wallet. This is an off-chain signature only; it cannot move assets, approve a contract or authorize a payment.", "info");
     var messageHex = "0x" + Array.prototype.map.call(
       new TextEncoder().encode(challenge.message),
       function (byte) { return byte.toString(16).padStart(2, "0"); }
@@ -643,17 +768,20 @@
     if (typeof signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(signature)) {
       throw new Error("The wallet did not return a valid EIP-191 signature.");
     }
-    return requestJson("/api/account/primary-wallet/verify", {
+    var requestPayload = {
       challengeId: challenge.challengeId,
       message: challenge.message,
       signature: signature,
-      createAccount: createAccount === true,
-      ...(createAccount === true ? {
-        termsAccepted: true,
-        termsVersion: termsVersion,
-        referralId: referralId || ""
-      } : {})
-    });
+      createAccount: createAccount === true
+    };
+    if (createAccount === true) {
+      requestPayload.termsAccepted = consent && consent.termsAccepted === true;
+      requestPayload.termsVersion = termsVersion;
+      requestPayload.walletLossAcknowledged = consent && consent.walletLossAcknowledged === true;
+      requestPayload.walletLossNoticeVersion = walletLossNoticeVersion;
+      requestPayload.referralId = referralId || "";
+    }
+    return requestJson("/api/account/primary-wallet/verify", requestPayload);
   }
 
   function finishPrimaryWalletAuthentication(result, created) {
@@ -690,12 +818,25 @@
       noticeText + '</p>';
   }
 
+  function walletProviderMarkup() {
+    return '<label class="account-field" for="account-wallet-provider">Choose your wallet provider' +
+      '<select id="account-wallet-provider" name="walletProvider" required>' +
+        '<option value="">Detecting installed wallets…</option>' +
+      '</select></label>' +
+      '<label class="account-field account-wallet-account-field" for="account-wallet-account" hidden>Choose the wallet address for this AstroCrown account' +
+      '<select id="account-wallet-account" name="walletAccount"><option value="">Connect your wallet first</option></select>' +
+      '</label>' +
+      '<p class="account-provider-note" id="account-wallet-selection-help">AstroCrown will ask your chosen wallet for permission to view the account you select. It will not choose an address on your behalf.</p>';
+  }
+
   function renderSignIn() {
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
       '<div class="account-form">' +
+        walletProviderMarkup() +
         '<button class="account-primary" type="button" id="account-wallet-signin"' +
           (browserPreviewMode ? ' disabled' : '') + '>Sign in with wallet</button>' +
-        '<p class="account-signin-help"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
+        '<p class="account-signin-help">New to AstroCrown? <button class="account-text-button" type="button" data-account-mode="create">Create an account</button></p>' +
+        '<p class="account-signin-help"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet sign-in?</a></p>' +
       '</div>' +
       '<details class="account-wallet-recovery-explainer">' +
         '<summary>Lost your wallet?</summary>' +
@@ -703,48 +844,37 @@
         '<p>Use the wallet provider’s own recovery process or a backup you created offline to restore the <strong>same wallet and address</strong>. If you permanently lose access to that wallet and every way of restoring it, access to the associated AstroCrown account is permanently lost. AstroCrown staff and administrators cannot bypass wallet proof or move the account to a different wallet.</p>' +
         '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
       '</details>' +
-      '<details class="account-legacy-auth"' + (workerStagingMode ? '' : ' open') + '>' +
-        '<summary id="account-legacy-passkey-summary">Existing legacy passkey test accounts</summary>' +
-        '<p class="account-provider-note">This access path is retained only for older staging test accounts created before wallet-first identity was implemented.</p>' +
-        '<button class="account-secondary" type="button" id="account-passkey-signin"' +
-          (browserPreviewMode ? ' disabled' : '') + '>Continue with legacy passkey</button>' +
-        '<p class="account-signin-recovery"><button class="account-text-button" type="button" id="account-recovery-start">Recover a legacy passkey account</button></p>' +
-      '</details>' +
-      '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
+      '<p class="account-signin-feedback">Feedback and case access are not enabled in this staging qualification.</p>';
+    refreshWalletProviderChoices();
   }
 
   function renderCreate() {
-    var legacyPasskeyCreate = workerStagingMode ? "" :
-      '<details class="account-legacy-auth" id="account-legacy-passkey-create" open>' +
-        '<summary id="account-legacy-passkey-create-summary">Create an older passkey test account (legacy only)</summary>' +
-        '<p class="account-provider-note">This is retained for automated testing and older development records. New AstroCrown accounts should use a primary wallet.</p>' +
-        '<form id="account-create-form" class="account-form" autocomplete="off">' +
-          '<label class="account-field" for="account-referral-id">Referral ID (Optional)' +
-            '<input id="account-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
-          '</label>' +
-          '<label class="account-consent account-terms-consent" for="account-terms-accepted">' +
-            '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
-            '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
-          '</label>' +
-          '<p class="account-provider-note">Legacy WebAuthn passkey registration for a pre-wallet test path. Do not create a new legacy account for ordinary use.</p>' +
-          '<button class="account-secondary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create legacy passkey test account</button>' +
-        '</form>' +
-      '</details>';
     content.innerHTML = renderTabs("create") + renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Your primary wallet is your AstroCrown identity. Sign a short, one-time message to create your account. No transaction or token approval is requested.</p>' +
+      '<p class="account-dialog-description">Create one AstroCrown account using the wallet that will be your primary identity. Your Genesis Programme status and any future entitlements will belong to this same account. No transaction or token approval is requested to sign in or create an account.</p>' +
       '<form id="account-wallet-create-form" class="account-form" autocomplete="off">' +
+        walletProviderMarkup() +
         '<label class="account-field" for="account-wallet-referral-id">Referral ID (Optional)' +
           '<input id="account-wallet-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
-        '<label class="account-consent account-terms-consent" for="account-wallet-terms-accepted">' +
-          '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
-          '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
-        '</label>' +
-        '<p class="account-provider-note">Initial support: Ethereum-compatible EVM wallets that provide EIP-1193 account access and EIP-191 message signing. Other wallet families and smart-contract wallets are not yet qualified.</p>' +
+        '<section class="account-wallet-consent-panel" aria-labelledby="account-wallet-consent-heading">' +
+          '<h3 id="account-wallet-consent-heading">Please read before creating your account</h3>' +
+          '<p><strong>Your primary wallet is your AstroCrown identity.</strong> AstroCrown never receives or stores your wallet private key, seed phrase or recovery words. Restore the same wallet and address using your wallet provider or your own offline backup. If you permanently lose that wallet and every way to restore it, access to this AstroCrown account is permanently lost. AstroCrown staff and administrators cannot reset the wallet identity or move it to another address.</p>' +
+          '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
+          '<label class="account-consent account-required-consent" for="account-wallet-loss-accepted">' +
+            '<input id="account-wallet-loss-accepted" name="walletLossAcknowledged" type="checkbox" required>' +
+            '<span>I have read and understood the wallet-loss and recovery warning above. I understand that losing access to my primary wallet and all of its backups means losing access to my AstroCrown account.</span>' +
+          '</label>' +
+          '<label class="account-consent account-required-consent" for="account-wallet-terms-accepted">' +
+            '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
+            '<span>I have read, understood and agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> and <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
+          '</label>' +
+        '</section>' +
+        '<p class="account-provider-note">Connecting only requests access to the address you choose. Account creation requires an off-chain personal-message signature. It does not send a transaction, approve a token, transfer funds or authorize future payments.</p>' +
         '<button class="account-primary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create account with wallet</button>' +
+        '<p class="account-signin-help">Already have an account? <button class="account-text-button" type="button" data-account-mode="signin">Log in</button></p>' +
       '</form>' +
-      legacyPasskeyCreate +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet identity?</a></p>';
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">How wallet identity and transaction safety work</a></p>';
+    refreshWalletProviderChoices();
   }
 
   function renderRecover() {
@@ -1268,14 +1398,23 @@
 
     if (form.id === "account-wallet-create-form") {
       var walletTermsInput = form.elements.namedItem("termsAccepted");
+      var walletLossInput = form.elements.namedItem("walletLossAcknowledged");
+      if (!(walletLossInput && walletLossInput.checked)) {
+        showFeedback("Read and confirm the wallet-loss and recovery warning before creating an account.", "error");
+        if (walletLossInput) walletLossInput.focus();
+        return;
+      }
       if (!(walletTermsInput && walletTermsInput.checked)) {
-        showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
+        showFeedback("Read and accept the Terms of Use and Privacy Policy before creating an account.", "error");
         if (walletTermsInput) walletTermsInput.focus();
         return;
       }
       setBusy(true);
       try {
-        var walletResult = await authenticateWithPrimaryWallet(true, formValue(form, "referralId"));
+        var walletResult = await authenticateWithPrimaryWallet(true, formValue(form, "referralId"), {
+          termsAccepted: walletTermsInput.checked,
+          walletLossAcknowledged: walletLossInput.checked
+        });
         finishPrimaryWalletAuthentication(walletResult, walletResult.walletAccountCreated === true);
       } catch (error) {
         showFeedback(error.message || "Wallet account creation could not be completed.", "error");
@@ -1332,10 +1471,16 @@
   });
 
   content.addEventListener("change", function (event) {
-    if (event.target && event.target.id === "account-recovery-key-saved") {
-      recoveryKeyAcknowledged = event.target.checked === true;
-      var openButton = document.getElementById("open-account-hub");
-      if (openButton) openButton.disabled = !recoveryKeyAcknowledged;
+    if (event.target && event.target.id === "account-wallet-provider") {
+      selectedWalletProvider = null;
+      selectedWalletAddress = "";
+      var accountField = document.getElementById("account-wallet-account");
+      var accountLabel = accountField ? accountField.closest("label") : null;
+      if (accountField) accountField.innerHTML = '<option value="">Connect your wallet first</option>';
+      if (accountLabel) accountLabel.hidden = true;
+    }
+    if (event.target && event.target.id === "account-wallet-account") {
+      selectedWalletAddress = event.target.value || "";
     }
   });
 
