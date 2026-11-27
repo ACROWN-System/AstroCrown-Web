@@ -252,12 +252,14 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "gpi-cap", "gid-cap", "gwa-cap", "ethereum",
             "0xdAC17F958D2ee523a2206206994597C13D831ec7",
             "0xbbb77071149a5F113Df15E78c58518917afa950A",
-            "1000000000", "1000", "49999000000", "50000000000", "10000000000",
-            '[{"tranche":5,"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"10","allowanceBaseUnits":"10000000000"}]',
+            "1000000000", "1000", "49000000000", "50000000000", "10000000000",
+            '[{"tranche":5,"principalStartBaseUnits":"49000000000","principalEndBaseUnits":"50000000000",'
+            '"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"10",'
+            '"multiplierDenominator":"1","allowanceBaseUnits":"10000000000"}]',
             "GENESIS-USDT-50K-1M-TIERS-V1", "GENESIS-TERMS-V1", "OPEN", 100, 101,
         )
         self.db.execute(
-            "UPDATE genesis_programme_allowance_state SET qualifying_principal_usdt_base_units='49999000000' WHERE singleton=1"
+            "UPDATE genesis_programme_allowance_state SET qualifying_principal_usdt_base_units='49000000000' WHERE singleton=1"
         )
         self.db.execute(insert, values)
         self.db.execute("UPDATE genesis_payment_intents SET status='EXPIRED' WHERE payment_intent_id='gpi-cap'")
@@ -369,6 +371,10 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                             ('gpm-settlement',)).fetchone()[0],
             'FINALIZED',
         )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable"):
+            self.db.execute(
+                "UPDATE genesis_public_payments SET amount_display='2000' WHERE payment_record_id='gpm-settlement'"
+            )
         self.assertEqual(
             self.db.execute(
                 'SELECT settled_principal_start_base_units,settled_principal_end_base_units,settled_tier_breakdown_json '
@@ -762,7 +768,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 "WHERE identity_id='gid-unqualified'"
             )
 
-    def test_genesis_badge_requires_qualified_wallet_and_public_payment_is_immutable(self):
+    def test_unmatched_direct_payment_cannot_award_genesis_badge(self):
         self.db.execute(
             "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
             "display_name,display_name_normalized,created_at,updated_at) "
@@ -774,31 +780,26 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "VALUES('gwa-badge','gid-badge','ethereum','0x222','0x222','PRIMARY',1,'EIP-191',1)"
         )
         tx = "0x" + ("a" * 64)
-        self.db.execute(
-            "INSERT INTO genesis_public_payments(payment_record_id,identity_id,source_wallet_address_id,payment_kind,network,"
-            "asset_identifier,amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,rules_version,"
-            "explorer_reference,confirmed_at) "
-            "VALUES('gp-1','gid-badge','gwa-badge','QUALIFYING_PAYMENT','ethereum','USDT','1000000','1.00',?,'0',"
-            "'FINALIZED','rules-v1',?,2)",
-            (tx, "https://etherscan.io/tx/" + tx),
-        )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "active wallet identity and its own finalized qualifying payment"):
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "exact, unexpired, independently reconciled receipt"):
             self.db.execute(
-                "INSERT INTO genesis_member_badges(badge_id,identity_id,badge_code,qualifying_payment_record_id,rules_version,awarded_at) "
-                "VALUES('gb-1','gid-badge','GENESIS_MEMBER_DNA_GOLD','gp-1','rules-v1',3)"
+                "INSERT INTO genesis_public_payments(payment_record_id,identity_id,source_wallet_address_id,payment_kind,network,"
+                "asset_identifier,amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,rules_version,"
+                "explorer_reference,confirmed_at) "
+                "VALUES('gp-1','gid-badge','gwa-badge','QUALIFYING_PAYMENT','ethereum','USDT','1000000','1.00',?,'0',"
+                "'FINALIZED','rules-v1',?,2)",
+                (tx, "https://etherscan.io/tx/" + tx),
             )
-        self.db.execute(
-            "UPDATE genesis_wallet_identities SET genesis_member_status='ACTIVE',genesis_member_awarded_at=3 WHERE identity_id='gid-badge'"
-        )
-        self.db.execute(
-            "INSERT INTO genesis_member_badges(badge_id,identity_id,badge_code,qualifying_payment_record_id,rules_version,awarded_at) "
-            "VALUES('gb-1','gid-badge','GENESIS_MEMBER_DNA_GOLD','gp-1','rules-v1',3)"
-        )
-        with self.assertRaisesRegex(sqlite3.IntegrityError, "immutable"):
-            self.db.execute("UPDATE genesis_public_payments SET amount_display='2.00' WHERE payment_record_id='gp-1'")
         self.assertEqual(
-            self.db.execute("SELECT badge_code,status FROM genesis_member_badges WHERE identity_id='gid-badge'").fetchone(),
-            ("GENESIS_MEMBER_DNA_GOLD", "ACTIVE"),
+            self.db.execute("SELECT genesis_member_status FROM genesis_wallet_identities WHERE identity_id='gid-badge'").fetchone()[0],
+            "PENDING",
+        )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM genesis_public_payments WHERE payment_record_id='gp-1'").fetchone()[0],
+            0,
+        )
+        self.assertEqual(
+            self.db.execute("SELECT COUNT(*) FROM genesis_member_badges WHERE identity_id='gid-badge'").fetchone()[0],
+            0,
         )
 
     def test_new_member_registration_starts_pending_and_unverified(self):
