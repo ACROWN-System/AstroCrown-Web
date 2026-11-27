@@ -152,3 +152,34 @@ test("Genesis profile routes require the same authenticated AstroCrown primary-w
   assert.match(genesis, /identityId = accountIdentity\.accountId/);
   assert.doesNotMatch(genesis, /genesis_wallet_sessions|requestCookie|\/api\/genesis\/identity\//);
 });
+
+
+test("Genesis programme profile is uniquely linked to the same AstroCrown account ID", async () => {
+  const genesis = await readFile(new URL("../src/genesis.js", import.meta.url), "utf8");
+  const migration = await readFile(
+    new URL("../migrations/supporters/0007_genesis_astro_account_binding.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(genesis, /identityId = accountIdentity\.accountId/);
+  assert.match(genesis, /astro_account_id/);
+  assert.match(genesis, /existing\.astro_account_id !== accountIdentity\.accountId/);
+  assert.match(genesis, /identityId, accountIdentity\.accountId/);
+  assert.match(genesis, /Genesis profile.*already bound to another AstroCrown account/);
+  assert.match(migration, /ADD COLUMN astro_account_id TEXT/);
+  assert.match(migration, /UNIQUE INDEX IF NOT EXISTS genesis_wallet_identities_astro_account_idx/);
+  assert.doesNotMatch(genesis, /genesis_wallet_sessions|acrown_genesis_wallet|\/api\/genesis\/identity\//);
+});
+
+test("wallet-only account cleanup preserves immutable governance and administrator wallet evidence", async () => {
+  const migration = await readFile(
+    new URL("../migrations/0007_wallet-only-account-and-consent.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /auth_admin_governance_audit/);
+  assert.match(migration, /auth_admin_wallet_audit/);
+  assert.match(migration, /granted_by_account_id=auth_accounts\.account_id/);
+  assert.match(migration, /p\.granted_by_account_id=auth_accounts\.account_id/);
+  assert.match(migration, /DROP TABLE IF EXISTS auth_passkeys/);
+  assert.match(migration, /DROP TABLE IF EXISTS auth_recovery_keys/);
+  assert.match(migration, /DROP COLUMN authenticated_credential_id/);
+});
