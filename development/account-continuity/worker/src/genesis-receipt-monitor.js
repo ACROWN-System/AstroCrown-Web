@@ -446,9 +446,15 @@ async function tronNowBlock(source) {
 }
 
 function tronTransactionIds(block) {
-  if (!block || !Array.isArray(block.transactions)) {
-    fail("TRON block transaction list is missing or malformed.");
+  if (!block || typeof block !== "object" ||
+      !block.block_header || !block.block_header.raw_data) {
+    fail("TRON solidified block header is missing.");
   }
+  // java-tron omits the transactions property for a valid empty block.
+  // readTronSolidifiedBlock validates the block id and requested height first,
+  // so an omitted transaction list here represents an empty confirmed block.
+  if (block.transactions === undefined) return [];
+  if (!Array.isArray(block.transactions)) fail("TRON block transaction list is malformed.");
   return block.transactions.map((transaction) => {
     const id = String(transaction && transaction.txID || "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(id)) fail("TRON block contains an invalid transaction id.");
