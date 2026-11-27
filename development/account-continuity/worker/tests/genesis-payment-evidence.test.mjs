@@ -343,7 +343,7 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
     signatureStatus: { err: null, confirmationStatus: "finalized" },
     mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
     expected: { ...expected, transferIndex: 2 },
-  }), /balance deltas do not reconcile/);
+  }), /exactly one matching canonical USDT Transfer event/);
 });
 
 test("Solana parser rejects wrong cluster, non-finalized status, failed transactions and mismatched token deltas", () => {
@@ -394,7 +394,7 @@ test("Solana parser rejects wrong cluster, non-finalized status, failed transact
   assert.throws(() => parse({ transaction: { ...tx, meta: { ...tx.meta, postTokenBalances: [
     tx.meta.postTokenBalances[0],
     { ...tx.meta.postTokenBalances[1], uiTokenAmount: { amount: "999999", decimals: 6 } },
-  ] } } }), /exactly one matching/);
+  ] } } }), /balance deltas do not reconcile/);
 });
 
 test("RPC reconciliation requires two distinct operators and identical normalized evidence, and never credits", () => {
