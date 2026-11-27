@@ -1,6 +1,9 @@
 import { normalizeWalletAddress, verifyWalletSignature } from "./wallet-proof.js";
-import { publicGenesisTreasuryReceipts } from "./genesis-receipt-monitor.js";
-import { availableProgrammeAllowance, isGenesisRegistrationOpen } from "../../../supporter-programme/shared/entitlement-rules.mjs";
+import { publicGenesisTreasuryReceipts, prepareGenesisRpcPair, formatUsdtAmount, explorerUrl } from "./genesis-receipt-monitor.js";
+import { availableProgrammeAllowance, isGenesisRegistrationOpen, calculateGenesisTieredPurchaseAllowance, GENESIS_QUALIFYING_RULES_VERSION, GENESIS_QUALIFYING_PRINCIPAL_CAP_BASE_UNITS, GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS } from "../../../supporter-programme/shared/entitlement-rules.mjs";
+import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
+import { parseGenesisUsdtAmountToBaseUnits } from "../../../supporter-programme/shared/genesis-payment-policy.mjs";
+import { genesisPaymentActivationGate } from "./genesis-payment-operations.js";
 
 const COOKIE = "acrown_genesis_wallet";
 const SESSION_SECONDS = 12 * 60 * 60;
@@ -260,10 +263,11 @@ async function currentIdentity(db, request) {
   return row;
 }
 
-async function identityProfile(db, identity) {
-  const [wallets, badge, allowance, control] = await Promise.all([
+async function identityProfile(db, identity, env = {}) {
+  await expireStaleGenesisPaymentIntents(db);
+  const [wallets, badge, allowance, control, paymentAcceptance, openIntent] = await Promise.all([
     db.prepare(
-      "SELECT network,address,wallet_role,ownership_verified_at,proof_method FROM genesis_wallet_addresses " +
+      "SELECT wallet_address_id,network,address,wallet_role,ownership_verified_at,proof_method FROM genesis_wallet_addresses " +
       "WHERE identity_id=? ORDER BY CASE wallet_role WHEN 'PRIMARY' THEN 0 ELSE 1 END,network"
     ).bind(identity.identity_id).all(),
     db.prepare(
@@ -274,7 +278,13 @@ async function identityProfile(db, identity) {
       "SELECT allowance_cap_usdt_base_units,earned_usdt_base_units,reserved_usdt_base_units,consumed_usdt_base_units " +
       "FROM genesis_programme_allowance_state WHERE singleton=1"
     ).first(),
-    loadGenesisProgrammeControl(db)
+    loadGenesisProgrammeControl(db),
+    genesisPaymentAcceptanceSummary(db, env),
+    db.prepare(
+      "SELECT payment_intent_id,network,asset_identifier,amount_base_units,amount_display,treasury_address," +
+      "allowance_credit_usdt_base_units,tier_breakdown_json,rules_version,created_at,expires_at,status " +
+      "FROM genesis_payment_intents WHERE identity_id=? AND status='OPEN' ORDER BY created_at DESC LIMIT 1"
+    ).bind(identity.identity_id).first()
   ]);
   const earned = allowance?.earned_usdt_base_units || "0";
   const reserved = allowance?.reserved_usdt_base_units || "0";
@@ -325,7 +335,78 @@ async function identityProfile(db, identity) {
       purchaseWindowRemainingSeconds: windowRemainingSeconds,
       purchaseWindowOpen: Boolean(windowStarted && windowCloses && now >= windowStarted && now < windowCloses)
     },
-    paymentAcceptance: { enabled: false }
+    paymentAcceptance,
+    paymentIntent: openIntent ? paymentIntentPublicView(openIntent) : null,
+    terms: {
+      acceptedVersion: identity.terms_version || null,
+      acceptedAt: identity.terms_accepted_at ? new Date(Number(identity.terms_accepted_at) * 1000).toISOString() : null
+    }
+  };
+}
+
+function usdtDisplay(baseUnits) {
+  const value = BigInt(baseUnits);
+  const whole = value / 1_000_000n;
+  const fraction = (value % 1_000_000n).toString().padStart(6, "0").replace(/0+$/, "");
+  return fraction ? whole.toString() + "." + fraction : whole.toString();
+}
+
+function paymentIntentPublicView(row) {
+  const network = String(row.network || "");
+  const canonical = MAINNET_USDT_CONFIG[network];
+  const labels = {
+    ethereum: "USDT · Ethereum (ERC-20)",
+    tron: "USDT · TRON (TRC-20)",
+    solana: "USDT · Solana (SPL)"
+  };
+  return {
+    paymentIntentId: row.payment_intent_id,
+    status: row.status,
+    asset: "USDT",
+    label: labels[network] || "USDT",
+    network,
+    amount: row.amount_display,
+    amountBaseUnits: row.amount_base_units,
+    receivingAddress: row.treasury_address,
+    tokenIdentifier: canonical ? canonical.tokenIdentifier : row.asset_identifier,
+    allowanceCreditUsdtBaseUnits: row.allowance_credit_usdt_base_units,
+    allowanceCreditUsdt: usdtDisplay(row.allowance_credit_usdt_base_units),
+    tierBreakdown: JSON.parse(row.tier_breakdown_json),
+    rulesVersion: row.rules_version,
+    createdAt: new Date(Number(row.created_at) * 1000).toISOString(),
+    expiresAt: new Date(Number(row.expires_at) * 1000).toISOString(),
+    networkFeePolicy: "The registered wallet owner pays the network fee separately using the network's native fee asset/resources. It is not deducted from the USDT principal.",
+    paymentMethod: "MANUAL_EXACT_AMOUNT_TRANSFER",
+    walletTransactionSubmitted: false
+  };
+}
+
+async function expireStaleGenesisPaymentIntents(db, now = Math.floor(Date.now() / 1000)) {
+  return db.prepare(
+    "UPDATE genesis_payment_intents SET status='EXPIRED' " +
+    "WHERE status='OPEN' AND expires_at<=?"
+  ).bind(now).run();
+}
+
+async function genesisPaymentAcceptanceSummary(db, env) {
+  const networks = {};
+  await Promise.all(["ethereum", "tron", "solana"].map(async (network) => {
+    let rpcPairReady = false;
+    try {
+      prepareGenesisRpcPair(env, network);
+      rpcPairReady = true;
+    } catch {
+      rpcPairReady = false;
+    }
+    networks[network] = await genesisPaymentActivationGate(db, env, network, rpcPairReady);
+  }));
+  return {
+    enabled: Object.values(networks).some((entry) => entry.enabled),
+    asset: "USDT",
+    networks,
+    activationRequired: true,
+    paymentMethod: "MANUAL_EXACT_AMOUNT_TRANSFER",
+    walletTransactionSubmittedByWebsite: false
   };
 }
 
