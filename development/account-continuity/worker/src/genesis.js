@@ -257,7 +257,7 @@ async function identityProfile(db, identity) {
   const windowRemainingSeconds = windowCloses ? Math.max(0, windowCloses - now) : null;
   return {
     walletIdentity: {
-      identityId: identity.identity_id,
+      accountId: identity.astro_account_id || null,
       primaryNetwork: identity.primary_network,
       primaryAddress: identity.primary_address,
       displayName: identity.display_name,
@@ -310,6 +310,29 @@ async function getOrCreateIdentity(db, accountIdentity) {
   ).bind(address.normalized).first();
   if (existing) {
     if (existing.identity_status !== "ACTIVE") throw error(403, "The Genesis profile associated with this primary AstroCrown wallet is suspended or retired.");
+    if (existing.astro_account_id && existing.astro_account_id !== accountIdentity.accountId) {
+      throw error(409, "This primary wallet's Genesis profile is already bound to another AstroCrown account.");
+    }
+    if (!existing.astro_account_id) {
+      const competingProfile = await db.prepare(
+        "SELECT identity_id FROM genesis_wallet_identities WHERE astro_account_id=? AND identity_id!=? LIMIT 1"
+      ).bind(accountIdentity.accountId, existing.identity_id).first();
+      if (competingProfile) throw error(409, "This AstroCrown account is already bound to a different Genesis profile.");
+      const attached = await db.prepare(
+        "UPDATE genesis_wallet_identities SET astro_account_id=?,updated_at=? " +
+        "WHERE identity_id=? AND astro_account_id IS NULL"
+      ).bind(accountIdentity.accountId, Math.floor(Date.now() / 1000), existing.identity_id).run();
+      if (Number(attached.meta?.changes || 0) !== 1) {
+        const refreshed = await db.prepare(
+          "SELECT * FROM genesis_wallet_identities WHERE identity_id=?"
+        ).bind(existing.identity_id).first();
+        if (!refreshed || refreshed.astro_account_id !== accountIdentity.accountId) {
+          throw error(409, "This Genesis profile could not be bound exclusively to the signed-in AstroCrown account.");
+        }
+        return refreshed;
+      }
+      existing.astro_account_id = accountIdentity.accountId;
+    }
     return existing;
   }
   const linked = await db.prepare(
@@ -324,9 +347,9 @@ async function getOrCreateIdentity(db, accountIdentity) {
     try {
       await db.batch([
         db.prepare(
-          "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized," +
-          "display_name,display_name_normalized,avatar_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)"
-        ).bind(identityId, "ethereum", address.address, address.normalized, name.name, name.normalized, avatar, now, now),
+          "INSERT INTO genesis_wallet_identities(identity_id,astro_account_id,primary_network,primary_address,primary_address_normalized," +
+          "display_name,display_name_normalized,avatar_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)"
+        ).bind(identityId, accountIdentity.accountId, "ethereum", address.address, address.normalized, name.name, name.normalized, avatar, now, now),
         db.prepare(
           "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,wallet_role," +
           "ownership_verified_at,proof_method,created_at) VALUES(?,?, 'ethereum',?,?,'PRIMARY',?,'EIP-191',?)"
@@ -340,6 +363,16 @@ async function getOrCreateIdentity(db, accountIdentity) {
       ).bind(address.normalized).first();
       if (duplicateAddress) {
         if (duplicateAddress.identity_status !== "ACTIVE") throw error(403, "The Genesis profile associated with this primary AstroCrown wallet is suspended or retired.");
+        if (duplicateAddress.astro_account_id && duplicateAddress.astro_account_id !== accountIdentity.accountId) {
+          throw error(409, "This primary wallet's Genesis profile is already bound to another AstroCrown account.");
+        }
+        if (!duplicateAddress.astro_account_id) {
+          const attached = await db.prepare(
+            "UPDATE genesis_wallet_identities SET astro_account_id=?,updated_at=? WHERE identity_id=? AND astro_account_id IS NULL"
+          ).bind(accountIdentity.accountId, Math.floor(Date.now() / 1000), duplicateAddress.identity_id).run();
+          if (Number(attached.meta?.changes || 0) !== 1) throw error(409, "This Genesis profile was attached to another AstroCrown account during registration.");
+          duplicateAddress.astro_account_id = accountIdentity.accountId;
+        }
         return duplicateAddress;
       }
       const detail = String(cause?.message || cause);
