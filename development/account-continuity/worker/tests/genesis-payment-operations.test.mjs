@@ -4,7 +4,7 @@ import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet
 import { GENESIS_QUALIFYING_RULES_VERSION } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 import { genesisPaymentActivationGate } from "../src/genesis-payment-operations.js";
 
-function database({ programme, network, control } = {}) {
+function database({ programme, network, control, monitorHealth } = {}) {
   return {
     prepare(sql) {
       return {
@@ -19,7 +19,9 @@ function database({ programme, network, control } = {}) {
           ? (programme || null)
           : sql.includes("genesis_programme_control")
             ? (control || null)
-            : null,
+            : sql.includes("genesis_treasury_monitor_health")
+              ? (monitorHealth || null)
+              : null,
       };
     },
   };
@@ -62,6 +64,14 @@ function databaseState(network = "ethereum") {
       registration_closed_at: null,
       acrown_launched_at: null,
     },
+    monitorHealth: {
+      status: "HEALTHY",
+      last_cycle_completed_at: Math.floor(Date.now() / 1000),
+      ethereum_caught_up: 1,
+      tron_caught_up: 1,
+      solana_caught_up: 1,
+      settlement_queue_deferred: 0,
+    },
   };
 }
 
@@ -89,6 +99,30 @@ test("Genesis payment acceptance requires every independent environment, RPC, D1
   assert.equal(ready.asset, "USDT");
   assert.equal(ready.label, "USDT · Ethereum (ERC-20)");
   assert.equal(ready.tokenIdentifier, MAINNET_USDT_CONFIG.ethereum.tokenIdentifier);
+});
+
+test("Genesis payment acceptance is closed when cross-chain monitor health is stale, degraded or backlogged", async () => {
+  const state = databaseState("ethereum");
+  state.monitorHealth.last_cycle_completed_at = Math.floor(Date.now() / 1000) - 901;
+  const stale = await genesisPaymentActivationGate(
+    database(state), environment("ethereum"), "ethereum", true
+  );
+  assert.equal(stale.enabled, false);
+  assert.ok(stale.reasons.some((reason) => /recent healthy.*caught-up cycle/.test(reason)));
+
+  const lagging = databaseState("ethereum");
+  lagging.monitorHealth.solana_caught_up = 0;
+  const notCaughtUp = await genesisPaymentActivationGate(
+    database(lagging), environment("ethereum"), "ethereum", true
+  );
+  assert.equal(notCaughtUp.enabled, false);
+
+  const deferred = databaseState("ethereum");
+  deferred.monitorHealth.settlement_queue_deferred = 1;
+  const backlog = await genesisPaymentActivationGate(
+    database(deferred), environment("ethereum"), "ethereum", true
+  );
+  assert.equal(backlog.enabled, false);
 });
 
 test("Genesis payment acceptance checks each USDT network against its own canonical D1 treasury record", async () => {
