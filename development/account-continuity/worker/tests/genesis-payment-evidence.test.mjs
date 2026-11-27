@@ -118,12 +118,22 @@ test("Ethereum parser rejects wrong chain, failed receipt, wrong token, wrong se
   assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
     blockAtReceiptHeight: { number: "0x100", hash: "0x" + "ee".repeat(32) },
   })), /not canonical/);
-  assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
+  const repeated = ethereumFixture({
     receipt: { ...ethereumFixture().receipt, logs: [
       ...ethereumFixture().receipt.logs,
       { ...ethereumFixture().receipt.logs[0], logIndex: "0x5" },
     ] },
-  })), /exactly one matching/);
+  });
+  assert.throws(() => parseEthereumUsdtTransferEvidence(repeated), /exactly one matching/);
+  const selected = parseEthereumUsdtTransferEvidence({
+    ...repeated,
+    expected: { ...ETH_EXPECTED, transferIndex: 4 },
+  });
+  assert.equal(selected.transferIndex, 4);
+  assert.throws(() => parseEthereumUsdtTransferEvidence({
+    ...repeated,
+    expected: { ...ETH_EXPECTED, transferIndex: 99 },
+  }), /exactly one matching/);
 });
 
 test("TRON parser requires a checksummed Mainnet address and a SolidityNode solidified receipt", async () => {
@@ -159,6 +169,22 @@ test("TRON parser requires a checksummed Mainnet address and a SolidityNode soli
   assert.equal(evidence.finalityStatus, "SOLIDIFIED");
   assert.equal(evidence.amountBaseUnits, "1000000");
   assert.equal(evidence.transferIndex, 0);
+  const repeatedInfo = { ...info, log: [...info.log, { ...info.log[0] }] };
+  const selected = await parseTronUsdtTransferEvidence({
+    networkTag: "TRON_MAINNET",
+    receiptSource: "SOLIDITY_NODE",
+    tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 },
+    transactionInfo: repeatedInfo,
+    expected: { ...expected, transferIndex: 1 },
+  });
+  assert.equal(selected.transferIndex, 1);
+  await assert.rejects(() => parseTronUsdtTransferEvidence({
+    networkTag: "TRON_MAINNET",
+    receiptSource: "SOLIDITY_NODE",
+    tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 },
+    transactionInfo: repeatedInfo,
+    expected,
+  }), /exactly one matching/);
   await assert.rejects(() => parseTronUsdtTransferEvidence({
     networkTag: "TRON_MAINNET", receiptSource: "FULL_NODE", tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 }, transactionInfo: info, expected,
   }), /SolidityNode/);
@@ -235,6 +261,14 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
   assert.equal(evidence.amountBaseUnits, "1000000");
   assert.equal(evidence.transferIndex, 1);
   assert.deepEqual(evidence.inclusion, { slot: "987654" });
+  const selected = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint: GENESIS_USDT_ASSETS.solana.assetIdentifier, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 1 },
+  });
+  assert.equal(selected.transferIndex, 1);
 });
 
 test("Solana parser rejects wrong cluster, non-finalized status, failed transactions and mismatched token deltas", () => {
