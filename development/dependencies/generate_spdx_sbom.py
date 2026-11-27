@@ -15,8 +15,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_LOCK = ROOT / "development/dependencies/requirements-account-continuity-py312-ubuntu24-x86_64.lock"
-DEFAULT_OUTPUT = ROOT / "development/dependencies/SBOM-Python-CI.spdx.json"
+DEFAULT_LOCK = ROOT / "development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock"
+DEFAULT_OUTPUT = ROOT / "development/dependencies/SBOM-Python-Audit-Toolchain.spdx.json"
 LOCK_LINE = re.compile(r"^([A-Za-z0-9._-]+)==([^\s]+) --hash=sha256:([0-9a-f]{64})$")
 
 
@@ -89,17 +89,17 @@ def build_document(lock_path: Path, packages: dict[str, dict[str, str]]) -> dict
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
-        "name": "AstroCrown Python CI dependencies — Ubuntu 24.04 / CPython 3.12 / x86_64",
+        "name": "AstroCrown Python audit toolchain — Ubuntu 24.04 / CPython 3.12 / x86_64",
         "documentNamespace": (
-            "https://github.com/ACROWN-System/AstroCrown-Web/spdx/python-ci/"
+            "https://github.com/ACROWN-System/AstroCrown-Web/spdx/python-audit-toolchain/"
             + lock_digest
         ),
         "creationInfo": {
             "created": created,
             "creators": ["Tool: AstroCrown Standard-Library SPDX Generator"],
             "comment": (
-                "Inventory derived from the SHA-256-pinned, wheel-only account-continuity "
-                "CI lock. License declarations and conclusions are intentionally NOASSERTION."
+                "Inventory derived from the SHA-256-pinned, wheel-only pip-audit "
+                "toolchain lock. License declarations and conclusions are intentionally NOASSERTION."
             ),
         },
         "packages": spdx_packages,
