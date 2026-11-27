@@ -948,6 +948,7 @@ async function scanSolana(db, sources, treasuryAddress, env) {
   let receipts = 0;
   let qualifyingPaymentsSettled = 0;
   let allowanceCreditApplied = 0n;
+  let caughtUp = true;
   let processedAccounts = 0;
   const monitorCursor = await getCursor(db, "solana", "__monitor_initialized__");
   const bootstrapping = !monitorCursor;
