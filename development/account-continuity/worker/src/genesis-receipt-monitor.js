@@ -440,8 +440,11 @@ async function tronNowBlock(source) {
 }
 
 function tronTransactionIds(block) {
-  if (!block || !Array.isArray(block.transactions)) fail("TRON block transaction list is missing.");
-  return block.transactions.map((transaction) => {
+  if (!block || (block.transactions !== undefined && !Array.isArray(block.transactions))) {
+    fail("TRON block transaction list is malformed.");
+  }
+  const transactions = Array.isArray(block.transactions) ? block.transactions : [];
+  return transactions.map((transaction) => {
     const id = String(transaction && transaction.txID || "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(id)) fail("TRON block contains an invalid transaction id.");
     return id;
@@ -491,17 +494,21 @@ async function scanTron(db, sources, treasuryAddress) {
   for (let height = previous + 1; height <= end; height += 1) {
     const blocks = await Promise.all(sources.map((source) => tronRpc(source, "getblockbynum", { num: height })));
     const ids = blocks.map((block) => String(block && block.blockID || "").toLowerCase());
-    if (ids[0] !== ids[1] || !/^[0-9a-f]{64}$/.test(ids[0])) {
-      fail("TRON independent SolidityNodes disagree on block " + height + ".");
+    const heights = blocks.map((block) => block && block.block_header && block.block_header.raw_data &&
+      Number(block.block_header.raw_data.number));
+    if (ids[0] !== ids[1] || !/^[0-9a-f]{64}$/.test(ids[0]) ||
+        heights.some((blockHeight) => blockHeight !== height)) {
+      fail("TRON independent SolidityNodes disagree on block identity or requested block height " + height + ".");
     }
     const txIds = blocks.map(tronTransactionIds);
     if (JSON.stringify(txIds[0]) !== JSON.stringify(txIds[1])) fail("TRON independent SolidityNodes disagree on block transactions.");
     for (const transactionId of txIds[0]) {
       const infos = await Promise.all(sources.map((source) => tronRpc(source, "gettransactioninfobyid", { value: transactionId })));
-      if (infos.some((info) => String(info.id || "").toLowerCase() !== transactionId ||
-          Number(info.blockNumber) !== height || !info.receipt || info.receipt.result !== "SUCCESS")) {
-        continue;
+      if (infos.some((info) => !info || String(info.id || "").toLowerCase() !== transactionId ||
+          Number(info.blockNumber) !== height || !info.receipt || typeof info.receipt.result !== "string")) {
+        fail("TRON SolidityNode omitted or mismatched transaction receipt evidence for block " + height + ".");
       }
+      if (infos.some((info) => info.receipt.result !== "SUCCESS")) continue;
       const candidates = await Promise.all(infos.map((info) => extractTronUsdtCandidates(info, tokenHex, treasuryHex)));
       if (JSON.stringify(candidates[0]) !== JSON.stringify(candidates[1])) {
         fail("TRON independent SolidityNodes disagree on the incoming USDT transfer events.");
@@ -577,8 +584,9 @@ async function solanaTreasuryTokenAccounts(source, treasuryAddress) {
   const accounts = result.value.map((entry) => {
     const info = entry && entry.account && entry.account.data && entry.account.data.parsed &&
       entry.account.data.parsed.info;
-    if (!entry || typeof entry.pubkey !== "string" || !info ||
-        info.mint !== GENESIS_USDT_ASSETS.solana.assetIdentifier ||
+    if (!entry || typeof entry.pubkey !== "string" ||
+        !entry.account || entry.account.owner !== GENESIS_USDT_ASSETS.solana.tokenProgramId ||
+        !info || info.mint !== GENESIS_USDT_ASSETS.solana.assetIdentifier ||
         info.owner !== treasuryAddress ||
         Number(info.tokenAmount && info.tokenAmount.decimals) !== 6) {
       fail(source.id + " RPC returned a treasury token account with unexpected mint, owner or precision.");
@@ -634,7 +642,8 @@ function amountFromSolanaInstruction(parsed) {
   try { return exactPositiveInteger(raw, "Solana transfer amount"); } catch { return null; }
 }
 
-function solanaIncomingCandidates(transaction, treasuryAddress) {
+function solanaIncomingCandidates(transaction, treasuryAddress, treasuryTokenAccounts) {
+  const allowedTreasuryTokenAccounts = new Set(treasuryTokenAccounts || []);
   if (!transaction || !transaction.meta || transaction.meta.err !== null ||
       !Array.isArray(transaction.meta.preTokenBalances) || !Array.isArray(transaction.meta.postTokenBalances)) {
     fail("Solana transaction does not contain successful execution and token-balance metadata.");
@@ -650,6 +659,7 @@ function solanaIncomingCandidates(transaction, treasuryAddress) {
         !instruction.parsed || !["transfer", "transferChecked"].includes(instruction.parsed.type)) continue;
     const info = instruction.parsed.info;
     if (!info || typeof info.source !== "string" || typeof info.destination !== "string") continue;
+    if (!allowedTreasuryTokenAccounts.has(info.destination)) continue;
     if (info.mint && info.mint !== GENESIS_USDT_ASSETS.solana.assetIdentifier) continue;
     if (instruction.parsed.type === "transferChecked" &&
         Number(info.tokenAmount && info.tokenAmount.decimals) !== 6) continue;
@@ -698,7 +708,7 @@ async function solanaSignatures(source, tokenAccount, options) {
   });
 }
 
-async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor) {
+async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts) {
   let pageOptions = {};
   let pendingLatest = null;
   let pendingUntil = null;
@@ -719,7 +729,7 @@ async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenA
     pendingUntil = cursor && cursor.cursor_value ? cursor.cursor_value : null;
     return await processSolanaSignaturePage(
       db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor,
-      rows, pendingLatest, pendingUntil,
+      rows, pendingLatest, pendingUntil, currentTreasuryTokenAccounts,
     );
   }
 
@@ -733,11 +743,11 @@ async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenA
   }
   return await processSolanaSignaturePage(
     db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor,
-    pages[0], pendingLatest, pendingUntil,
+    pages[0], pendingLatest, pendingUntil, currentTreasuryTokenAccounts,
   );
 }
 
-async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, rows, pendingLatest, pendingUntil) {
+async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, rows, pendingLatest, pendingUntil, currentTreasuryTokenAccounts) {
   let receipts = 0;
   for (const row of rows) {
     if (row.err !== null) continue;
@@ -753,7 +763,7 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
       if (!transaction || !status || status.err !== null || status.confirmationStatus !== "finalized") {
         fail(source.id + " RPC does not provide a successful finalized Solana transaction for a treasury signature.");
       }
-      const candidates = solanaIncomingCandidates(transaction, treasuryAddress);
+      const candidates = solanaIncomingCandidates(transaction, treasuryAddress, currentTreasuryTokenAccounts);
       return { source, transaction, status, candidates };
     }));
     const left = observations[0].candidates;
@@ -811,7 +821,15 @@ async function scanSolana(db, sources, treasuryAddress) {
   let processedAccounts = 0;
   const monitorCursor = await getCursor(db, "solana", "__monitor_initialized__");
   const bootstrapping = !monitorCursor;
-  for (const tokenAccount of tokenAccounts[0]) {
+  const priorAccountRows = await db.prepare(
+    "SELECT scope_key FROM genesis_treasury_receipt_cursors WHERE network='solana' AND scope_key<>'__monitor_initialized__'"
+  ).all();
+  const trackedAccounts = new Set(tokenAccounts[0]);
+  for (const row of priorAccountRows.results || []) {
+    if (row && typeof row.scope_key === "string" && row.scope_key) trackedAccounts.add(row.scope_key);
+  }
+  const currentTreasuryTokenAccounts = Array.from(trackedAccounts).sort();
+  for (const tokenAccount of currentTreasuryTokenAccounts) {
     const cursor = await getCursor(db, "solana", tokenAccount);
     if (!cursor) {
       if (bootstrapping) {
@@ -829,7 +847,9 @@ async function scanSolana(db, sources, treasuryAddress) {
       processedAccounts += 1;
       continue;
     }
-    const result = await scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor);
+    const result = await scanSolanaPage(
+      db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts
+    );
     receipts += result.receipts;
     processedAccounts += 1;
   }
@@ -849,13 +869,21 @@ export async function runGenesisReceiptMonitor(env) {
     tron: MAINNET_USDT_CONFIG.tron.treasuryAddress,
     solana: MAINNET_USDT_CONFIG.solana.treasuryAddress,
   };
-  const [ethereum, tron, solana] = await Promise.all([
-    scanEthereum(db, config("ethereum"), treasury.ethereum),
-    scanTron(db, config("tron"), treasury.tron),
-    scanSolana(db, config("solana"), treasury.solana),
+  const tasks = await Promise.all([
+    Promise.resolve().then(() => scanEthereum(db, config("ethereum"), treasury.ethereum)),
+    Promise.resolve().then(() => scanTron(db, config("tron"), treasury.tron)),
+    Promise.resolve().then(() => scanSolana(db, config("solana"), treasury.solana)),
   ]);
+  const [ethereum, tron, solana] = await Promise.all(tasks.map(async (task) => {
+    try {
+      const result = await task;
+      return { status: "SCANNED", ...result };
+    } catch {
+      return { status: "FAILED", receipts: 0 };
+    }
+  }));
   return {
-    status: "SCANNED",
+    status: [ethereum, tron, solana].every((network) => network.status === "SCANNED") ? "SCANNED" : "PARTIAL",
     receiptsRecorded: ethereum.receipts + tron.receipts + solana.receipts,
     networks: { ethereum, tron, solana },
     paymentCreditsApplied: 0,
