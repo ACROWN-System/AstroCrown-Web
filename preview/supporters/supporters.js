@@ -42,6 +42,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   var genesisBadgeImage = document.getElementById("genesis-member-badge-image");
   var memberAvatar = document.getElementById("member-avatar");
   var publicDirectoryList = document.getElementById("genesis-public-directory-list");
+  var publicTreasuryReceipts = document.getElementById("genesis-public-treasury-receipts");
   var supporterRuntimeEnabled = false;
   var supporterMember = null;
   var purchaseInactivityInterval = null;
@@ -897,6 +898,8 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     updateSupporterActionButtons();
     refreshGenesisDirectory();
+  refreshGenesisTreasuryReceipts();
+  window.setInterval(refreshGenesisTreasuryReceipts, 30000);
   }
 
   async function refreshSupporterMember() {
@@ -1103,6 +1106,112 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       });
     } catch (_) {
       publicDirectoryList.textContent = "The public Genesis directory is temporarily unavailable.";
+    }
+  }
+
+  async function refreshGenesisTreasuryReceipts() {
+    if (!publicTreasuryReceipts) return;
+    if (!supporterRuntimeMarkerPresent()) {
+      publicTreasuryReceipts.textContent = "Standalone preview · No live treasury-monitor connection. No live receipt claims are being displayed.";
+      return;
+    }
+    try {
+      var response = await fetch("/api/genesis/treasury-receipts", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: { "Accept": "application/json" }
+      });
+      var data = await response.json();
+      if (!response.ok || !data.publicReceiptRegister || !Array.isArray(data.items)) {
+        throw new Error("The public treasury receipt register is unavailable.");
+      }
+      publicTreasuryReceipts.replaceChildren();
+      if (!data.items.length) {
+        var empty = document.createElement("div");
+        empty.className = "ledger-empty";
+        var heading = document.createElement("strong");
+        heading.textContent = "No verified incoming USDT receipts are published yet.";
+        var explanation = document.createElement("p");
+        explanation.textContent = "This register will display receipts after AstroCrown's own receiving-wallet monitor verifies them against independent blockchain RPC sources.";
+        empty.append(heading, explanation);
+        publicTreasuryReceipts.append(empty);
+        return;
+      }
+
+      var networks = {
+        ethereum: { label: "USDT · Ethereum (ERC-20)", explorer: "Etherscan", origin: "https://etherscan.io", hash: /^0x[0-9a-fA-F]{64}$/ },
+        tron: { label: "USDT · TRON (TRC-20)", explorer: "TronScan", origin: "https://tronscan.org", hash: /^[0-9a-fA-F]{64}$/ },
+        solana: { label: "USDT · Solana (SPL)", explorer: "Solscan", origin: "https://solscan.io", hash: /^[1-9A-HJ-NP-Za-km-z]{64,90}$/ }
+      };
+
+      data.items.forEach(function (item) {
+        var network = item && networks[item.network];
+        if (!network || item.asset !== "USDT" ||
+            typeof item.transactionHash !== "string" || !network.hash.test(item.transactionHash) ||
+            typeof item.amount !== "string" || !/^[0-9]+(?:\.[0-9]{1,6})?$/.test(item.amount) ||
+            typeof item.senderAddress !== "string" || typeof item.receivingAddress !== "string") {
+          return;
+        }
+        var expectedPath = item.network === "ethereum"
+          ? "/tx/" + item.transactionHash
+          : item.network === "tron"
+            ? "/#/transaction/" + item.transactionHash
+            : "/tx/" + item.transactionHash;
+        var explorer;
+        try {
+          explorer = new URL(item.explorerUrl);
+        } catch (_) {
+          return;
+        }
+        if (explorer.origin !== network.origin || explorer.pathname + explorer.hash !== expectedPath) return;
+
+        var row = document.createElement("article");
+        row.className = "receipt-row";
+        var head = document.createElement("div");
+        head.className = "receipt-row-head";
+        var networkLabel = document.createElement("strong");
+        networkLabel.className = "receipt-network";
+        networkLabel.textContent = network.label;
+        var amount = document.createElement("span");
+        amount.className = "receipt-amount";
+        amount.textContent = item.amount + " USDT";
+        head.append(networkLabel, amount);
+
+        var meta = document.createElement("div");
+        meta.className = "receipt-meta";
+        function addReceiptField(label, value) {
+          var field = document.createElement("div");
+          var title = document.createElement("b");
+          title.textContent = label;
+          var content = document.createElement("span");
+          content.textContent = value;
+          field.append(title, content);
+          meta.append(field);
+        }
+        addReceiptField("Sending wallet", item.senderAddress);
+        addReceiptField("AstroCrown receiving wallet", item.receivingAddress);
+        addReceiptField("Transaction hash / signature", item.transactionHash);
+        addReceiptField("Transfer index · finality", String(item.transferIndex) + " · " + String(item.finalityStatus || "VERIFIED"));
+
+        var actions = document.createElement("div");
+        actions.className = "receipt-actions";
+        var status = document.createElement("small");
+        status.textContent = "Independently checked by two RPC operators · Receipt only; no entitlement implied";
+        var link = document.createElement("a");
+        link.href = explorer.toString();
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Verify on " + network.explorer + " ↗";
+        actions.append(status, link);
+        row.append(head, meta, actions);
+        publicTreasuryReceipts.append(row);
+      });
+
+      if (!publicTreasuryReceipts.children.length) {
+        publicTreasuryReceipts.textContent = "No valid public receipt records are currently available.";
+      }
+    } catch (_) {
+      publicTreasuryReceipts.textContent = "The public treasury receipt register is temporarily unavailable.";
     }
   }
 
