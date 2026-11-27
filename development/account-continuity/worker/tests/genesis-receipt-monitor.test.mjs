@@ -152,7 +152,7 @@ test("public receipt projection contains explorer evidence but no internal ident
   assert.equal(result[2].explorerUrl, "https://solscan.io/tx/" + rows[2].transaction_hash);
   for (const item of result) {
     assert.equal(item.asset, "USDT");
-    assert.equal(item.verification, "TWO_INDEPENDENT_RPC_OPERATORS");
+    assert.equal(item.verification, "TWO_INDEPENDENT_RPC_SOURCES");
     assert.equal(item.creditApplied, false);
     assert.equal(Object.hasOwn(item, "identityId"), false);
     assert.equal(Object.hasOwn(item, "sourceWalletAddressId"), false);
