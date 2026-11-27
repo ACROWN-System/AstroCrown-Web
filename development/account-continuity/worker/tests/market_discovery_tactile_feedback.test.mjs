@@ -47,6 +47,16 @@ test("Mechanical push and release sounds respond to pointer and keyboard input",
   assert.ok(controller.includes('playMechanicalSound("release")'));
 });
 
+test("Tactile sounds are restrained, dry instrument-like clicks rather than effects", () => {
+  assert.ok(controller.includes("function addPrecisionClick("), "Use the dedicated precision-click sound.");
+  assert.ok(controller.includes('filter.type = "bandpass"'), "Keep each transient acoustically restrained.");
+  assert.ok(controller.includes("output.gain.setValueAtTime(0.30, context.currentTime)"), "Keep the overall sound level low.");
+  assert.ok(controller.includes("addPrecisionClick(context, output, 0.012, 0.006, 0, 1380)"), "Press should be a short, soft tick.");
+  assert.ok(controller.includes("addPrecisionClick(context, output, 0.010, 0.0065, 0, 1760)"), "Release should be a distinct short, soft tack.");
+  assert.equal(controller.includes("function addTone("), false, "Remove pitched thuds and resonant tones.");
+  assert.equal(controller.includes("function addSoftClick("), false, "Replace the former, more pronounced sound design.");
+});
+
 test("Tactile sound feedback uses no external audio fetches or media files", () => {
   assert.equal(controller.includes("fetch("), false, "Audio must not be fetched from an external service.");
   assert.equal(controller.includes("new Audio("), false, "Audio must not depend on external media files.");
