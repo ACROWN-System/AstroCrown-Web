@@ -2,7 +2,7 @@ name: Account Staging Worker Qualification
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, feat/genesis-treasury-receipt-monitor-2026-11-27]
     paths:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
@@ -18,7 +18,7 @@ on:
       - ".github/workflows/cloudflare-staging-deployment.yml"
       - ".github/workflows/cloudflare-account02-readonly-preflight.yml"
   push:
-    branches: [docs/provider-independent-wallet-auth-plan-2026-10-20]
+    branches: [docs/provider-independent-wallet-auth-plan-2026-10-20, feat/genesis-wallet-first-account-registration-2026-11-27]
     paths:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
@@ -69,10 +69,14 @@ jobs:
       - name: Validate browser code and Worker bundle without deploying
         run: |
           node --check src/index.js
+          node --check src/genesis.js
           node --check src/genesis-receipt-monitor.js
           node --check src/genesis-payment-evidence.js
+          node --check src/genesis-payment-operations.js
           node --check scripts/build-staging-site.mjs
           node --check public/account-continuity/prototype/account-ui.js
+          node --check public/supporters/supporters.js
+          node --check public/supporters/wallet-provider-adapters.mjs
           node --check public/page-entry/page-entry-notice.js
           node --check scripts/test-primary-wallet-auth-e2e.mjs
           npm run check:worker
