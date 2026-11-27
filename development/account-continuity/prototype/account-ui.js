@@ -493,7 +493,7 @@
         body: payload === undefined ? undefined : JSON.stringify(payload)
       });
     } catch (_error) {
-      throw new Error(liveTestMode ? "The temporary HTTPS test service is not responding. Restart the live-test runner." : "The local account prototype is not running. Start it with the documented local command.");
+      throw new Error(workerStagingMode ? "The AstroCrown staging account service is not responding. No wallet account action was completed." : "The local AstroCrown account service is not running. No wallet account action was completed.");
     }
     var data;
     try { data = await response.json(); }
@@ -591,6 +591,88 @@
       '</svg><span>Log In</span>';
   }
 
+  async function authenticateWithPrimaryWallet(createAccount, referralId) {
+    if (browserPreviewMode) {
+      throw new Error("Wallet authentication is not available in the read-only hosted preview.");
+    }
+    var provider = window.ethereum;
+    if (!provider || typeof provider.request !== "function") {
+      throw new Error("No compatible EVM browser wallet was detected. Install or unlock a wallet that supports EIP-1193 and EIP-191 message signing.");
+    }
+    var accounts = await provider.request({ method: "eth_requestAccounts" });
+    if (!Array.isArray(accounts) || typeof accounts[0] !== "string" ||
+        !/^0x[0-9a-f]{40}$/i.test(accounts[0])) {
+      throw new Error("The wallet did not return a valid EVM account.");
+    }
+    var address = accounts[0];
+    var chainHex = await provider.request({ method: "eth_chainId" });
+    var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
+      ? Number.parseInt(chainHex, 16) : NaN;
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Error("The wallet did not return a valid EVM network identifier.");
+    }
+    var challenge = await requestJson("/api/account/primary-wallet/options", {
+      address: address,
+      chainId: chainId
+    });
+    if (challenge.transactionAuthorized !== false || challenge.signatureOnly !== true ||
+        challenge.walletFamily !== "evm-eoa" || typeof challenge.message !== "string" ||
+        challenge.address.toLowerCase() !== address.toLowerCase() || challenge.chainId !== chainId) {
+      throw new Error("The server returned an invalid wallet sign-in challenge. No account action was performed.");
+    }
+
+    var currentAccounts = await provider.request({ method: "eth_accounts" });
+    var currentChainHex = await provider.request({ method: "eth_chainId" });
+    var currentChainId = typeof currentChainHex === "string" && /^0x[0-9a-f]+$/i.test(currentChainHex)
+      ? Number.parseInt(currentChainHex, 16) : NaN;
+    if (!Array.isArray(currentAccounts) || !currentAccounts.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === address.toLowerCase();
+    }) || currentChainId !== chainId) {
+      throw new Error("The selected wallet or network changed during sign-in. Start again with the intended primary wallet.");
+    }
+
+    showFeedback("Review the message in your wallet. This is an off-chain signature only; it cannot move assets or approve a contract.", "info");
+    var messageHex = "0x" + Array.prototype.map.call(
+      new TextEncoder().encode(challenge.message),
+      function (byte) { return byte.toString(16).padStart(2, "0"); }
+    ).join("");
+    var signature = await provider.request({
+      method: "personal_sign",
+      params: [messageHex, address]
+    });
+    if (typeof signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(signature)) {
+      throw new Error("The wallet did not return a valid EIP-191 signature.");
+    }
+    return requestJson("/api/account/primary-wallet/verify", {
+      challengeId: challenge.challengeId,
+      message: challenge.message,
+      signature: signature,
+      createAccount: createAccount === true,
+      ...(createAccount === true ? {
+        termsAccepted: true,
+        termsVersion: termsVersion,
+        referralId: referralId || ""
+      } : {})
+    });
+  }
+
+  function finishPrimaryWalletAuthentication(result, created) {
+    accountState = result;
+    successKind = created ? "signup" : "signin";
+    recoveryKeyAcknowledged = true;
+    syncAccountButton();
+    if (!created) {
+      mode = "signin";
+      if (dialog.open) closeDialog();
+      navigateToAccount();
+      return;
+    }
+    mode = "success";
+    render();
+    var successAction = document.getElementById("open-account-hub");
+    if (successAction) successAction.focus();
+  }
+
   function renderTabs(selected) {
     return '<div class="account-tabs" role="tablist" aria-label="Account access">' +
       '<button type="button" class="account-tab" role="tab" data-account-mode="signin" aria-selected="' + (selected === "signin" ? "true" : "false") + '">Log In</button>' +
@@ -600,10 +682,10 @@
 
   function renderDevelopmentNotice() {
     if (browserPreviewMode) return "";
-    var noticeMode = liveTestMode ? "https-live-test" : "local-passkey-test";
-    var noticeText = liveTestMode
-      ? "TEMPORARY HTTPS LIVE TEST — Use only invented test details and a new passkey created for this temporary hostname. Never use production account data, personal recovery keys, wallet secrets or real assets. This is not a production service."
-      : "LOCAL PASSKEY TEST — WebAuthn is verified by this computer's local AstroCrown server. No email, SMS or external identity provider is used. Not production authentication.";
+    var noticeMode = workerStagingMode ? "worker-staging-wallet-test" : "local-wallet-test";
+    var noticeText = workerStagingMode
+      ? "LIVE STAGING WALLET TEST — Use only a disposable EVM test wallet and invented account details. Never use a wallet holding real assets, reveal seed words, or sign a transaction or approval. This is not the production service."
+      : "LOCAL WALLET TEST — Primary-wallet sign-in uses an EVM personal-sign challenge. No transaction is submitted. Use a disposable test wallet only.";
     return '<p class="account-demo-notice" id="account-demo-notice" data-mode="' + noticeMode + '">' +
       noticeText + '</p>';
   }
@@ -611,30 +693,43 @@
   function renderSignIn() {
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
       '<div class="account-form">' +
-        '<button class="account-primary" type="button" id="account-passkey-signin"' +
-          (browserPreviewMode ? ' disabled' : '') + '>Sign in with passkey</button>' +
-        '<p class="account-signin-help"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why Passkeys?</a></p>' +
+        '<button class="account-primary" type="button" id="account-wallet-signin"' +
+          (browserPreviewMode ? ' disabled' : '') + '>Sign in with wallet</button>' +
+        '<p class="account-signin-help"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
       '</div>' +
-      '<div class="account-signin-divider" aria-hidden="true"></div>' +
-      '<p class="account-signin-recovery"><button class="account-text-button" type="button" id="account-recovery-start">Lost your passkey? Use a recovery key</button></p>' +
-      '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
+      '<details class="account-wallet-recovery-explainer">' +
+        '<summary>Lost your wallet?</summary>' +
+        '<p>Your primary wallet is your AstroCrown identity. AstroCrown never receives or stores its private keys, seed phrase or recovery words. This protects your control and privacy, but it also means we cannot retrieve, reset or recreate a lost wallet, its secret words or the account it identifies.</p>' +
+        '<p>Use the wallet provider’s own recovery process or a backup you created offline to restore the <strong>same wallet and address</strong>. If you permanently lose access to that wallet and every way of restoring it, access to the associated AstroCrown account is permanently lost. AstroCrown staff and administrators cannot bypass wallet proof or move the account to a different wallet.</p>' +
+        '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
+      '</details>' +
+      '<details class="account-legacy-auth">' +
+        '<summary id="account-legacy-passkey-summary">Existing legacy passkey test accounts</summary>' +
+        '<p class="account-provider-note">This access path is retained only for older staging test accounts created before wallet-first identity was implemented.</p>' +
+        '<button class="account-secondary" type="button" id="account-passkey-signin"' +
+          (browserPreviewMode ? ' disabled' : '') + '>Continue with legacy passkey</button>' +
+        '<p class="account-signin-recovery"><button class="account-text-button" type="button" id="account-recovery-start">Recover a legacy passkey account</button></p>' +
+      '</details>';
   }
 
   function renderCreate() {
+    var legacyPasskeyCreate = workerStagingMode ? "" : 
+      "      '<details class=\"account-legacy-auth\" id=\"account-legacy-passkey-create\">' +\n        '<summary id=\"account-legacy-passkey-create-summary\">Create an older passkey test account (legacy only)</summary>' +\n        '<p class=\"account-provider-note\">This is retained for automated testing and older development records. New AstroCrown accounts should use a primary wallet.</p>' +\n        '<form id=\"account-create-form\" class=\"account-form\" autocomplete=\"off\">' +\n          '<label class=\"account-field\" for=\"account-referral-id\">Referral ID (Optional)' +\n            '<input id=\"account-referral-id\" name=\"referralId\" type=\"text\" autocomplete=\"off\" maxlength=\"64\" autocapitalize=\"characters\" spellcheck=\"false\" placeholder=\"Enter referral ID...\">' +\n          '</label>' +\n          '<label class=\"account-consent account-terms-consent\" for=\"account-terms-accepted\">' +\n            '<input id=\"account-terms-accepted\" name=\"termsAccepted\" type=\"checkbox\" required>' +\n            '<span>By proceeding, you agree to AstroCrown’s <a href=\"./account-continuity/prototype/terms-of-use.html\" target=\"_blank\" rel=\"noopener noreferrer\">Terms of Use</a> &amp; <a href=\"./account-continuity/prototype/privacy-policy.html\" target=\"_blank\" rel=\"noopener noreferrer\">Privacy Policy</a>.</span>' +\n          '</label>' +\n          '<p class=\"account-provider-note\">Legacy WebAuthn passkey registration for a pre-wallet test path. Do not create a new legacy account for ordinary use.</p>' +\n          '<button class=\"account-secondary\" type=\"submit\"' + (browserPreviewMode ? ' disabled' : '') + '>Create legacy passkey test account</button>' +\n        '</form>' +\n      '</details>';";
     content.innerHTML = renderTabs("create") + renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Create your account by registering a passkey. The private key stays with your authenticator.</p>' +
-      '<form id="account-create-form" class="account-form" autocomplete="off">' +
-        '<label class="account-field" for="account-referral-id">Referral ID (Optional)' +
-          '<input id="account-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
+      '<p class="account-dialog-description">Your primary wallet is your AstroCrown identity. Sign a short, one-time message to create your account. No transaction or token approval is requested.</p>' +
+      '<form id="account-wallet-create-form" class="account-form" autocomplete="off">' +
+        '<label class="account-field" for="account-wallet-referral-id">Referral ID (Optional)' +
+          '<input id="account-wallet-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
-        '<label class="account-consent account-terms-consent" for="account-terms-accepted">' +
-          '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
+        '<label class="account-consent account-terms-consent" for="account-wallet-terms-accepted">' +
+          '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
           '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
         '</label>' +
-        '<p class="account-provider-note">Passkey registration requires a compatible authenticator and a supported browser. The passkey is tied to the verified AstroCrown site origin.</p>' +
-        '<button class="account-primary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create account with passkey</button>' +
+        '<p class="account-provider-note">Initial support: Ethereum-compatible EVM wallets that provide EIP-1193 account access and EIP-191 message signing. Other wallet families and smart-contract wallets are not yet qualified.</p>' +
+        '<button class="account-primary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create account with wallet</button>' +
       '</form>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Security assurance</a></p>';
+      legacyPasskeyCreate +
+      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet identity?</a></p>';
   }
 
   function renderRecover() {
@@ -656,15 +751,21 @@
   function renderSuccess() {
     var created = successKind === "signup";
     var recovered = successKind === "recovery";
-    var needsRecoveryKeyAcknowledgement = created || recovered;
-    var heading = created ? "Your passkey account is ready"
-      : recovered ? "Your account has been recovered"
+    var walletCreated = created && accountState && accountState.authMethod === "wallet";
+    var needsRecoveryKeyAcknowledgement = (created || recovered) && !walletCreated;
+    var heading = created
+      ? (walletCreated ? "Your wallet account is ready" : "Your legacy passkey account is ready")
+      : recovered ? "Your legacy account has been recovered"
       : "You're signed in";
     var message = created
-      ? "Your AstroCrown account was created using a passkey. Your authenticator keeps the private key; AstroCrown stores the public credential needed for verification."
+      ? (walletCreated
+          ? "Your AstroCrown account is linked to the primary wallet address you just verified. Your wallet keeps its private key and recovery words; AstroCrown stores the public address and verifies future sign-in messages."
+          : "Your legacy test account was created using a passkey. Its authenticator keeps the private key.")
       : recovered
-        ? "Recovery succeeded. Your previous passkeys and active sessions were revoked. The old recovery key has been consumed."
-        : "You are signed in to AstroCrown with your passkey. This local prototype does not grant production access or administrator privileges.";
+        ? "Legacy passkey recovery succeeded. Your previous passkeys and sessions were revoked and the old recovery key was consumed."
+        : (accountState && accountState.authMethod === "wallet"
+            ? "You are signed in to AstroCrown with your primary identity wallet."
+            : "You are signed in to AstroCrown with a legacy passkey account.");
     var persistenceNote = "You can close this window without signing out. The local server keeps your session until it expires or you sign out.";
     var recoveryKey = accountState && typeof accountState.oneTimeRecoveryKey === "string"
       ? accountState.oneTimeRecoveryKey : "";
@@ -1150,6 +1251,25 @@
     event.preventDefault();
     if (busy) return;
 
+    if (form.id === "account-wallet-create-form") {
+      var walletTermsInput = form.elements.namedItem("termsAccepted");
+      if (!(walletTermsInput && walletTermsInput.checked)) {
+        showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
+        if (walletTermsInput) walletTermsInput.focus();
+        return;
+      }
+      setBusy(true);
+      try {
+        var walletResult = await authenticateWithPrimaryWallet(true, formValue(form, "referralId"));
+        finishPrimaryWalletAuthentication(walletResult, walletResult.walletAccountCreated === true);
+      } catch (error) {
+        showFeedback(error.message || "Wallet account creation could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     if (form.id === "account-create-form") {
       var termsInput = form.elements.namedItem("termsAccepted");
       var termsAccepted = Boolean(termsInput && termsInput.checked);
@@ -1209,6 +1329,18 @@
     if (!button || busy) return;
     if (button.dataset.accountMode) {
       setMode(button.dataset.accountMode);
+      return;
+    }
+    if (button.id === "account-wallet-signin") {
+      setBusy(true);
+      try {
+        var walletSignInResult = await authenticateWithPrimaryWallet(false, "");
+        finishPrimaryWalletAuthentication(walletSignInResult, false);
+      } catch (error) {
+        showFeedback(error.message || "Wallet sign-in could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "account-passkey-signin") {
