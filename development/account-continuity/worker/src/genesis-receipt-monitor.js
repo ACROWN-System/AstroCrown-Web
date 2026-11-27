@@ -312,10 +312,10 @@ async function scanEthereum(db, sources, treasuryAddress, env) {
   let cursor = await getCursor(db, "ethereum", "mainnet");
   if (!cursor) {
     await setCursor(db, "ethereum", "mainnet", head.toString());
-    return { initialized: true, receipts: 0, scannedThrough: head.toString() };
+    return { initialized: true, receipts: 0, scannedThrough: head.toString(), caughtUp: true };
   }
   const previous = quantity(cursor.cursor_value, "Ethereum scan cursor");
-  if (head <= previous) return { initialized: false, receipts: 0, scannedThrough: previous.toString() };
+  if (head <= previous) return { initialized: false, receipts: 0, scannedThrough: previous.toString(), caughtUp: true };
   const from = previous + 1n;
   const to = head < from + BigInt(ETHEREUM_BLOCK_BATCH - 1) ? head : from + BigInt(ETHEREUM_BLOCK_BATCH - 1);
   const filter = {
@@ -384,7 +384,8 @@ async function scanEthereum(db, sources, treasuryAddress, env) {
     receipts,
     qualifyingPaymentsSettled,
     allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
-    scannedThrough: to.toString()
+    scannedThrough: to.toString(),
+    caughtUp: to === head
   };
 }
 
@@ -585,10 +586,10 @@ async function scanTron(db, sources, treasuryAddress, env) {
   let cursor = await getCursor(db, "tron", "mainnet");
   if (!cursor) {
     await setCursor(db, "tron", "mainnet", String(heads[0].number));
-    return { initialized: true, receipts: 0, scannedThrough: String(heads[0].number) };
+    return { initialized: true, receipts: 0, scannedThrough: String(heads[0].number), caughtUp: true };
   }
   const previous = toSafeNumber(cursor.cursor_value, "TRON scan cursor");
-  if (heads[0].number <= previous) return { initialized: false, receipts: 0, scannedThrough: String(previous) };
+  if (heads[0].number <= previous) return { initialized: false, receipts: 0, scannedThrough: String(previous), caughtUp: true };
   const end = Math.min(heads[0].number, previous + TRON_BLOCK_BATCH);
   let receiptsRecorded = 0;
   let qualifyingPaymentsSettled = 0;
@@ -655,7 +656,8 @@ async function scanTron(db, sources, treasuryAddress, env) {
     receipts: receiptsRecorded,
     qualifyingPaymentsSettled,
     allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
-    scannedThrough: String(end)
+    scannedThrough: String(end),
+    caughtUp: end === heads[0].number
   };
 }
 
@@ -979,6 +981,7 @@ async function scanSolana(db, sources, treasuryAddress, env) {
       db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts, env
     );
     receipts += result.receipts;
+    if (result.morePages) caughtUp = false;
     qualifyingPaymentsSettled += result.qualifyingPaymentsSettled || 0;
     allowanceCreditApplied += BigInt(result.allowanceCreditAppliedUsdtBaseUnits || "0");
     processedAccounts += 1;
@@ -990,7 +993,8 @@ async function scanSolana(db, sources, treasuryAddress, env) {
     qualifyingPaymentsSettled,
     allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
     tokenAccounts: currentTreasuryTokenAccounts.length,
-    processedAccounts
+    processedAccounts,
+    caughtUp
   };
 }
 
@@ -1001,22 +1005,31 @@ async function retryPendingGenesisPaymentSettlements(db, env) {
     "AND r.source_wallet_address_id=i.source_wallet_address_id " +
     "AND r.network=i.network AND r.asset_identifier=i.asset_identifier " +
     "AND r.treasury_address=i.treasury_address AND r.amount_base_units=i.amount_base_units " +
-    "AND r.verified_at>=i.created_at AND r.verified_at<=i.expires_at " +
+    "AND r.occurred_at>=i.created_at AND r.occurred_at<=i.expires_at " +
     "WHERE i.status='OPEN' AND r.attribution_status='MATCHED' " +
     "ORDER BY r.occurred_at ASC,r.verified_at ASC,r.network,r.transaction_hash,r.transfer_index LIMIT 100"
   ).all();
   let qualifyingPaymentsSettled = 0;
   let allowanceCreditApplied = 0n;
+  let blockedBy = null;
   for (const row of matches.results || []) {
     const result = await settleGenesisPaymentReceipt(db, env, row.receipt_id);
     if (result.status === "CONFIRMED") {
       qualifyingPaymentsSettled += 1;
       allowanceCreditApplied += BigInt(result.allowanceCreditUsdtBaseUnits || "0");
+      continue;
     }
+    if (result.status === "NO_MATCHING_OPEN_INTENT" || result.status === "INVALID_TRANSACTION_REFERENCE") {
+      continue;
+    }
+    blockedBy = result.status;
+    break;
   }
   return {
     qualifyingPaymentsSettled,
     allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
+    blockedBy,
+    settlementQueueDeferred: Boolean(blockedBy),
   };
 }
 
@@ -1056,16 +1069,19 @@ export async function runGenesisReceiptMonitor(env) {
       return { status: "FAILED", receipts: 0, qualifyingPaymentsSettled: 0, allowanceCreditAppliedUsdtBaseUnits: "0" };
     }
   }));
-  const retryResult = await retryPendingGenesisPaymentSettlements(db, env);
-  const qualifyingPaymentsSettled =
-    (ethereum.qualifyingPaymentsSettled || 0) +
-    (tron.qualifyingPaymentsSettled || 0) +
-    (solana.qualifyingPaymentsSettled || 0) +
-    retryResult.qualifyingPaymentsSettled;
-  const allowanceCreditApplied = BigInt(ethereum.allowanceCreditAppliedUsdtBaseUnits || "0") +
-    BigInt(tron.allowanceCreditAppliedUsdtBaseUnits || "0") +
-    BigInt(solana.allowanceCreditAppliedUsdtBaseUnits || "0") +
-    BigInt(retryResult.allowanceCreditAppliedUsdtBaseUnits || "0");
+  const scansComplete = [ethereum, tron, solana].every((network) =>
+    network.status === "SCANNED" && network.caughtUp === true
+  );
+  const retryResult = scansComplete
+    ? await retryPendingGenesisPaymentSettlements(db, env)
+    : {
+        qualifyingPaymentsSettled: 0,
+        allowanceCreditAppliedUsdtBaseUnits: "0",
+        blockedBy: "NETWORK_SCAN_BACKLOG_OR_FAILURE",
+        settlementQueueDeferred: true,
+      };
+  const qualifyingPaymentsSettled = retryResult.qualifyingPaymentsSettled;
+  const allowanceCreditApplied = BigInt(retryResult.allowanceCreditAppliedUsdtBaseUnits || "0");
   return {
     status: [ethereum, tron, solana].every((network) => network.status === "SCANNED") ? "SCANNED" : "PARTIAL",
     receiptsRecorded: ethereum.receipts + tron.receipts + solana.receipts,
@@ -1074,6 +1090,8 @@ export async function runGenesisReceiptMonitor(env) {
     networks: { ethereum, tron, solana },
     paymentCreditsApplied: qualifyingPaymentsSettled,
     entitlementChanges: qualifyingPaymentsSettled,
+    settlementQueueDeferred: retryResult.settlementQueueDeferred,
+    settlementQueueBlockedBy: retryResult.blockedBy,
   };
 }
 
