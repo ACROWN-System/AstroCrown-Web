@@ -1060,16 +1060,22 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       return;
     }
     genesisPaymentInstructions.hidden = false;
-    if (genesisPaymentCancel) genesisPaymentCancel.hidden = intent.status !== "OPEN";
+    var intentExpired = intent.status === "OPEN" && Date.now() >= new Date(intent.expiresAt).getTime();
+    if (genesisPaymentCancel) {
+      genesisPaymentCancel.hidden = intent.status !== "OPEN";
+      genesisPaymentCancel.textContent = intentExpired ? "Cancel expired intent and release reservation" : "Cancel unsubmitted payment intent";
+    }
     if (genesisPaymentIntentExpiry) {
-      genesisPaymentIntentExpiry.textContent = "Expires " + new Date(intent.expiresAt).toLocaleString();
+      genesisPaymentIntentExpiry.textContent = intentExpired
+        ? "Expired · Do not send"
+        : "Expires " + new Date(intent.expiresAt).toLocaleString();
     }
     if (genesisPaymentInstructionNetwork) genesisPaymentInstructionNetwork.textContent = instructions.label;
     if (genesisPaymentInstructionAmount) genesisPaymentInstructionAmount.textContent = instructions.amount + " USDT";
     if (genesisPaymentInstructionToken) genesisPaymentInstructionToken.textContent = instructions.tokenIdentifier;
     if (genesisPaymentInstructionSender) genesisPaymentInstructionSender.textContent =
       (supporterMember && supporterMember.wallets || []).find(function (wallet) {
-        return wallet.wallet_address_id === (genesisPaymentWallet && genesisPaymentWallet.value);
+        return wallet.wallet_address_id === intent.sourceWalletAddressId;
       })?.address || "Verified Genesis payment wallet";
     if (genesisPaymentInstructionAddress) genesisPaymentInstructionAddress.textContent = instructions.receivingAddress;
     if (genesisPaymentInstructionAllowance) {
@@ -1088,10 +1094,12 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     if (genesisPaymentNetwork) genesisPaymentNetwork.disabled = true;
     if (genesisPaymentTerms) genesisPaymentTerms.disabled = true;
     setGenesisPaymentFeedback(
-      intent.status === "OPEN"
-        ? "Exact payment intent created. Send only the displayed USDT amount to the displayed address before expiry. The website has not submitted a transaction. The displayed allowance is an estimate; its final tier is determined by the global order of independently verified qualifying receipts."
-        : "This payment intent is " + intent.status.toLowerCase() + ". It is not an open payment instruction.",
-      intent.status === "OPEN" ? "open" : "blocked"
+      intent.status === "OPEN" && intentExpired
+        ? "This payment instruction has expired. Do not send funds. An earlier transfer included before expiry can still be reconciled; cancel this intent only when you know no transfer was made."
+        : intent.status === "OPEN"
+          ? "Exact payment intent created. Send only the displayed USDT amount to the displayed address before expiry. The website has not submitted a transaction. The displayed allowance is an estimate; its final tier is determined by the global order of independently verified qualifying receipts."
+          : "This payment intent is " + intent.status.toLowerCase() + ". It is not an open payment instruction.",
+      intent.status === "OPEN" && !intentExpired ? "open" : "blocked"
     );
   }
 
@@ -1281,9 +1289,11 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       nameAvailability.dataset.state = "available";
     }
     if (memberFeedback) {
+      var paymentEnabled = Boolean(data.paymentAcceptance && data.paymentAcceptance.enabled);
       setFeedback(memberFeedback, genesisMember
         ? "Primary wallet verified. Genesis Member status and its gold DNA badge are active for this wallet."
-        : "Primary wallet verified. Its unique display name is reserved. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
+        : "Primary wallet verified. Its unique display name is reserved. Genesis Member status and the gold DNA badge are awarded only after a matching qualifying USDT receipt is independently verified. " +
+          (paymentEnabled ? "Qualifying payment instructions are available for the approved network(s)." : "Qualifying payment acceptance is not open. Do not send USDT."), "connected");
     }
     updateSupporterActionButtons();
     renderGenesisPaymentPanel(data);
@@ -1481,7 +1491,12 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         identityGroup.append(avatar, identity, badge);
         var detail = document.createElement("span");
         var paymentLabel = item.paymentKind === "QUALIFYING_PAYMENT" ? "Qualifying payment" : "ACROWN floor-price purchase";
-        detail.textContent = paymentLabel + " · " + item.amount + " USDT · " + item.network.toUpperCase();
+        var networkLabels = {
+          ethereum: "USDT · Ethereum (ERC-20)",
+          tron: "USDT · TRON (TRC-20)",
+          solana: "USDT · Solana (SPL)"
+        };
+        detail.textContent = paymentLabel + " · " + (networkLabels[item.network] || "USDT") + " · " + item.amount;
         row.append(identityGroup, detail);
         if (item.explorerUrl) {
           var link = document.createElement("a");
@@ -1586,6 +1601,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         addReceiptField("Transaction hash / signature", item.transactionHash);
         addReceiptField("Block / slot inclusion", typeof item.inclusionReference === "string" ? item.inclusionReference : JSON.stringify(item.inclusionReference || {}));
         addReceiptField("Transfer index · finality", String(item.transferIndex) + " · " + String(item.finalityStatus || "VERIFIED"));
+        if (typeof item.occurredAt === "string") addReceiptField("On-chain occurrence time (UTC)", new Date(item.occurredAt).toISOString().replace("T", " ").replace(".000Z", " UTC"));
         if (typeof item.verifiedAt === "string") {
           var verifiedDate = new Date(item.verifiedAt);
           if (!Number.isNaN(verifiedDate.getTime())) addReceiptField("Verified at (UTC)", verifiedDate.toISOString().replace("T", " ").replace(".000Z", " UTC"));
@@ -1680,6 +1696,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   refreshGenesisDirectory();
   refreshGenesisTreasuryReceipts();
   window.setInterval(refreshGenesisTreasuryReceipts, 60000);
+  window.setInterval(refreshSupporterMember, 60000);
 
   // Never call eth_sign, eth_sendTransaction, signAndSendTransaction,
   // signTransaction, signAndSendTransaction, signMessageV2, or any wallet payment method here.
