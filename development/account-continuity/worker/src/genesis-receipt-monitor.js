@@ -1003,25 +1003,36 @@ export async function runGenesisReceiptMonitor(env) {
       const result = await run();
       return { status: "SCANNED", ...result };
     } catch {
-      return { status: "FAILED", receipts: 0 };
+      return { status: "FAILED", receipts: 0, qualifyingPaymentsSettled: 0, allowanceCreditAppliedUsdtBaseUnits: "0" };
     }
   }));
+  const qualifyingPaymentsSettled =
+    (ethereum.qualifyingPaymentsSettled || 0) +
+    (tron.qualifyingPaymentsSettled || 0) +
+    (solana.qualifyingPaymentsSettled || 0);
+  const allowanceCreditApplied = BigInt(ethereum.allowanceCreditAppliedUsdtBaseUnits || "0") +
+    BigInt(tron.allowanceCreditAppliedUsdtBaseUnits || "0") +
+    BigInt(solana.allowanceCreditAppliedUsdtBaseUnits || "0");
   return {
     status: [ethereum, tron, solana].every((network) => network.status === "SCANNED") ? "SCANNED" : "PARTIAL",
     receiptsRecorded: ethereum.receipts + tron.receipts + solana.receipts,
+    qualifyingPaymentsSettled,
+    allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
     networks: { ethereum, tron, solana },
-    paymentCreditsApplied: 0,
-    entitlementChanges: 0,
+    paymentCreditsApplied: qualifyingPaymentsSettled,
+    entitlementChanges: qualifyingPaymentsSettled,
   };
 }
 
 export async function publicGenesisTreasuryReceipts(db, limit = 100) {
   const boundedLimit = Math.max(1, Math.min(200, Number.isSafeInteger(limit) ? limit : 100));
   const rows = await db.prepare(
-    "SELECT network,asset_identifier,amount_display,sender_address,treasury_address,transaction_hash," +
-    "transfer_index,inclusion_reference,finality_status,verified_at " +
-    "FROM genesis_treasury_receipts WHERE public_visible=1 " +
-    "ORDER BY verified_at DESC,network,transaction_hash,transfer_index LIMIT ?"
+    "SELECT r.receipt_id,r.network,r.asset_identifier,r.amount_display,r.sender_address,r.treasury_address,r.transaction_hash," +
+    "r.transfer_index,r.inclusion_reference,r.finality_status,r.verified_at,p.payment_record_id " +
+    "FROM genesis_treasury_receipts r LEFT JOIN genesis_public_payments p " +
+    "ON p.receipt_id=r.receipt_id AND p.public_visible=1 " +
+    "WHERE r.public_visible=1 " +
+    "ORDER BY r.verified_at DESC,r.network,r.transaction_hash,r.transfer_index LIMIT ?"
   ).bind(boundedLimit).all();
   return (rows.results || []).map((row) => {
     const presentation = NETWORK_PRESENTATION[row.network];
@@ -1043,7 +1054,8 @@ export async function publicGenesisTreasuryReceipts(db, limit = 100) {
       verifiedAt: new Date(Number(row.verified_at) * 1000).toISOString(),
       verification: "TWO_INDEPENDENT_RPC_SOURCES",
       explorerUrl: link,
-      creditApplied: false,
+      creditApplied: Boolean(row.payment_record_id),
+      qualifyingPaymentRecordId: row.payment_record_id || null,
     };
   }).filter(Boolean);
 }
