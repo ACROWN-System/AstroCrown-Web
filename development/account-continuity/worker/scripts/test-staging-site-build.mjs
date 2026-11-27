@@ -198,6 +198,16 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /Never share your seed phrase or private key/);
   assert.match(html, /id="genesis-public-treasury-receipts"/);
   assert.match(html, /Verified incoming USDT treasury receipts/);
+  assert.match(html, /id="genesis-payment-intent-form"/);
+  assert.match(html, /id="genesis-payment-network"/);
+  assert.match(html, /id="genesis-payment-source-wallet"/);
+  assert.match(html, /id="genesis-payment-amount"/);
+  assert.match(html, /id="genesis-payment-terms-accepted"/);
+  assert.match(html, /id="genesis-payment-intent-create" type="submit" disabled/);
+  assert.match(html, /id="genesis-payment-instructions" hidden/);
+  assert.match(html, /Payments closed · Do not send USDT/);
+  assert.match(html, /Create exact USDT payment instructions/);
+  assert.match(html, /Cancel unsubmitted payment intent/);
   assert.match(html, /community inspection/);
 });
 
@@ -231,6 +241,15 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("Block / slot inclusion"));
   assert.ok(js.includes("No live receipt claims are being displayed"));
   assert.ok(js.includes("explorer.origin !== network.origin"));
+  assert.ok(js.includes("/api/genesis/payment-intents"));
+  assert.ok(js.includes("/api/genesis/payment-intents/cancel"));
+  assert.ok(js.includes("requestGenesisPaymentIntent"));
+  assert.ok(js.includes("renderGenesisPaymentPanel"));
+  assert.ok(js.includes("MANUAL_EXACT_AMOUNT_TRANSFER"));
+  assert.ok(js.includes("walletTransactionSubmitted"));
+  assert.ok(js.includes("creditApplied === true"));
+  assert.ok(js.includes("Qualifying payment independently reconciled"));
+  assert.ok(js.includes("The registered wallet owner pays the network fee separately"));
 
   assert.ok(js.includes("/api/genesis/identity/challenge"));
   assert.ok(js.includes("/api/genesis/identity/verify"));
