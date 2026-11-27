@@ -403,8 +403,8 @@ test("RPC reconciliation requires two distinct operators and identical normalize
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence },
     ],
   });
   assert.equal(result.status, "RPC_EVIDENCE_AGREES_FINALIZED_TRANSFER");
@@ -414,32 +414,32 @@ test("RPC reconciliation requires two distinct operators and identical normalize
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "same-operator", evidence },
-      { providerId: "rpc-b", operatorId: "same-operator", evidence },
+      { providerId: "rpc-a", sourceId: "same-source", evidence },
+      { providerId: "rpc-b", sourceId: "same-source", evidence },
     ],
   }), /distinct providers and independently qualified operators/);
   assert.throws(() => reconcileGenesisRpcEvidence({
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, transferIndex: 9 } },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence: { ...evidence, transferIndex: 9 } },
     ],
   }), /disagree/);
   assert.throws(() => reconcileGenesisRpcEvidence({
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
     ],
   }), /canonical network, token identifier/);
   assert.throws(() => reconcileGenesisRpcEvidence({
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence: { ...evidence, finalityStatus: "LATEST" } },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, finalityStatus: "LATEST" } },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence: { ...evidence, finalityStatus: "LATEST" } },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence: { ...evidence, finalityStatus: "LATEST" } },
     ],
   }), /chain-specific finality/);
 });
