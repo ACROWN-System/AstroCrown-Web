@@ -219,6 +219,9 @@ WHEN NEW.payment_kind='QUALIFYING_PAYMENT'
          OR CAST(json_extract(j.value,'$.qualifyingPrincipalBaseUnits') AS INTEGER) >
            CAST(json_extract(j.value,'$.tranche') AS INTEGER)*10000000000 -
            CAST(json_extract(j.value,'$.principalStartBaseUnits') AS INTEGER)
+         OR CAST(json_extract(j.value,'$.principalEndBaseUnits') AS INTEGER) !=
+           CAST(json_extract(j.value,'$.principalStartBaseUnits') AS INTEGER)+
+           CAST(json_extract(j.value,'$.qualifyingPrincipalBaseUnits') AS INTEGER)
          OR CAST(json_extract(j.value,'$.allowanceBaseUnits') AS INTEGER) !=
            CAST(json_extract(j.value,'$.qualifyingPrincipalBaseUnits') AS INTEGER)*
            CAST(json_extract(j.value,'$.multiplierNumerator') AS INTEGER)
@@ -242,8 +245,8 @@ WHEN NEW.payment_kind='QUALIFYING_PAYMENT'
      AND p.asset_identifier=NEW.asset_identifier
      AND p.amount_base_units=NEW.amount_base_units
      AND p.rules_version=NEW.rules_version
-     AND p.expires_at>=r.verified_at
-     AND p.created_at<=r.verified_at
+     AND p.expires_at>=r.occurred_at
+     AND p.created_at<=r.occurred_at
      AND r.network=NEW.network
      AND r.asset_identifier=NEW.asset_identifier
      AND r.amount_base_units=NEW.amount_base_units
