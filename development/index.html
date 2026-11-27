@@ -532,7 +532,119 @@
   <link rel="stylesheet" href="./account-continuity/prototype/account-prototype.css">
   <script src="./account-continuity/prototype/account-ui.js" defer></script>
   <script src="./account-continuity/prototype/admin-wallet-ui.js" defer></script>
-</head>
+
+  <style id="astro-interaction-feedback">
+    /*
+      Shared tactile feedback for every actionable control on Market Discovery.
+      The individual scale property composes with existing translate/transform
+      effects so existing card lifts, menu transitions and layout are preserved.
+    */
+    :where(
+      a[href],
+      button:not(:disabled),
+      input[type="button"]:not(:disabled),
+      input[type="submit"]:not(:disabled),
+      input[type="reset"]:not(:disabled),
+      input[type="checkbox"]:not(:disabled),
+      input[type="radio"]:not(:disabled),
+      input[type="file"]:not(:disabled),
+      select:not(:disabled),
+      summary,
+      label,
+      [role="button"]:not([aria-disabled="true"]),
+      [role="link"]:not([aria-disabled="true"]),
+      [role="menuitem"]:not([aria-disabled="true"]),
+      [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
+      [onclick]:not([aria-disabled="true"]),
+      [data-clickable="true"]:not([aria-disabled="true"])
+    ) {
+      transform-origin: center;
+      transition-property: scale, filter;
+      transition-duration: 135ms, 135ms;
+      transition-timing-function: cubic-bezier(.2,.75,.25,1);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      :where(
+        a[href],
+        button:not(:disabled),
+        input[type="button"]:not(:disabled),
+        input[type="submit"]:not(:disabled),
+        input[type="reset"]:not(:disabled),
+        input[type="checkbox"]:not(:disabled),
+        input[type="radio"]:not(:disabled),
+        input[type="file"]:not(:disabled),
+        select:not(:disabled),
+        summary,
+        label,
+        [role="button"]:not([aria-disabled="true"]),
+        [role="link"]:not([aria-disabled="true"]),
+        [role="menuitem"]:not([aria-disabled="true"]),
+        [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
+        [onclick]:not([aria-disabled="true"]),
+        [data-clickable="true"]:not([aria-disabled="true"])
+      ):hover {
+        scale: 1.035;
+        filter: brightness(1.045);
+        z-index: 2;
+      }
+    }
+
+    :where(
+      a[href],
+      button:not(:disabled),
+      input[type="button"]:not(:disabled),
+      input[type="submit"]:not(:disabled),
+      input[type="reset"]:not(:disabled),
+      input[type="checkbox"]:not(:disabled),
+      input[type="radio"]:not(:disabled),
+      input[type="file"]:not(:disabled),
+      select:not(:disabled),
+      summary,
+      label,
+      [role="button"]:not([aria-disabled="true"]),
+      [role="link"]:not([aria-disabled="true"]),
+      [role="menuitem"]:not([aria-disabled="true"]),
+      [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
+      [onclick]:not([aria-disabled="true"]),
+      [data-clickable="true"]:not([aria-disabled="true"])
+    ):active,
+    .astro-tactile-pressed {
+      scale: .955;
+      filter: brightness(.975);
+      transition-duration: 65ms, 65ms;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      :where(
+        a[href],
+        button:not(:disabled),
+        input[type="button"]:not(:disabled),
+        input[type="submit"]:not(:disabled),
+        input[type="reset"]:not(:disabled),
+        input[type="checkbox"]:not(:disabled),
+        input[type="radio"]:not(:disabled),
+        input[type="file"]:not(:disabled),
+        select:not(:disabled),
+        summary,
+        label,
+        [role="button"]:not([aria-disabled="true"]),
+        [role="link"]:not([aria-disabled="true"]),
+        [role="menuitem"]:not([aria-disabled="true"]),
+        [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
+        [onclick]:not([aria-disabled="true"]),
+        [data-clickable="true"]:not([aria-disabled="true"])
+      ) {
+        transition-duration: .01ms, .01ms;
+      }
+    }
+  </style>
+
+  </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div class="preview-ribbon"><span class="ribbon-dot" aria-hidden="true"></span>Visual review build&nbsp; / &nbsp;illustrative market values&nbsp; / &nbsp;no live services connected</div>
@@ -1476,5 +1588,226 @@
       openNotice();
     }());
   </script>
+
+  <script id="astro-tactile-feedback">
+    (function () {
+      "use strict";
+
+      var actionableSelector = [
+        "a[href]",
+        "button:not(:disabled)",
+        "input[type='button']:not(:disabled)",
+        "input[type='submit']:not(:disabled)",
+        "input[type='reset']:not(:disabled)",
+        "input[type='checkbox']:not(:disabled)",
+        "input[type='radio']:not(:disabled)",
+        "input[type='file']:not(:disabled)",
+        "select:not(:disabled)",
+        "summary",
+        "label",
+        "[role='button']:not([aria-disabled='true'])",
+        "[role='link']:not([aria-disabled='true'])",
+        "[role='menuitem']:not([aria-disabled='true'])",
+        "[role='tab']:not([aria-disabled='true'])",
+        "[aria-haspopup]:not([aria-disabled='true'])",
+        "[onclick]:not([aria-disabled='true'])",
+        "[data-clickable='true']:not([aria-disabled='true'])"
+      ].join(",");
+
+      var audio = null;
+      var pointerTarget = null;
+      var keyboardTarget = null;
+
+      function getActionable(target) {
+        if (!target) return null;
+        var element = target.nodeType === 1 ? target : target.parentElement;
+        if (!element || typeof element.closest !== "function") return null;
+        var match = element.closest(actionableSelector);
+        if (!match || match.hasAttribute("disabled") || match.getAttribute("aria-disabled") === "true") return null;
+        if (match.closest("[data-ac-interaction-feedback='off']")) return null;
+        return match;
+      }
+
+      function getAudioContext() {
+        if (audio) return audio;
+        var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) return null;
+        try {
+          audio = new AudioContextClass({ latencyHint: "interactive" });
+          if (audio.state === "suspended" && typeof audio.resume === "function") {
+            audio.resume().catch(function () {});
+          }
+          return audio;
+        } catch (error) {
+          audio = null;
+          return null;
+        }
+      }
+
+      function addTone(context, destination, frequency, endingFrequency, wave, peak, duration, offset, cutoff) {
+        var start = context.currentTime + (offset || 0);
+        var oscillator = context.createOscillator();
+        var filter = context.createBiquadFilter();
+        var envelope = context.createGain();
+
+        oscillator.type = wave;
+        oscillator.frequency.setValueAtTime(frequency, start);
+        oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endingFrequency), start + duration);
+
+        filter.type = "lowpass";
+        filter.frequency.setValueAtTime(cutoff || 1700, start);
+        filter.Q.value = 0.55;
+
+        envelope.gain.setValueAtTime(0.0001, start);
+        envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + 0.0025);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+        oscillator.connect(filter);
+        filter.connect(envelope);
+        envelope.connect(destination);
+        oscillator.start(start);
+        oscillator.stop(start + duration + 0.006);
+      }
+
+      function addSoftClick(context, destination, peak, duration, offset, highpass) {
+        var sampleCount = Math.max(8, Math.floor(context.sampleRate * duration));
+        var buffer = context.createBuffer(1, sampleCount, context.sampleRate);
+        var samples = buffer.getChannelData(0);
+        for (var i = 0; i < sampleCount; i += 1) {
+          samples[i] = (Math.random() * 2 - 1) * (1 - i / sampleCount);
+        }
+
+        var source = context.createBufferSource();
+        var filter = context.createBiquadFilter();
+        var envelope = context.createGain();
+        var start = context.currentTime + (offset || 0);
+
+        source.buffer = buffer;
+        filter.type = "highpass";
+        filter.frequency.setValueAtTime(highpass || 850, start);
+        filter.Q.value = 0.65;
+        envelope.gain.setValueAtTime(0.0001, start);
+        envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + 0.0015);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+        source.connect(filter);
+        filter.connect(envelope);
+        envelope.connect(destination);
+        source.start(start);
+        source.stop(start + duration + 0.004);
+      }
+
+      function playMechanicalSound(phase) {
+        var context = getAudioContext();
+        if (!context) return;
+
+        try {
+          var output = context.createGain();
+          output.gain.setValueAtTime(0.78, context.currentTime);
+          output.connect(context.destination);
+
+          if (phase === "push") {
+            // Muted low switch travel with a short, soft contact tick.
+            addTone(context, output, 158, 108, "triangle", 0.040, 0.058, 0, 1150);
+            addSoftClick(context, output, 0.012, 0.010, 0.001, 1050);
+          } else {
+            // A light spring-return click followed by a restrained mechanical settle.
+            addSoftClick(context, output, 0.015, 0.012, 0, 1150);
+            addTone(context, output, 690, 455, "triangle", 0.025, 0.036, 0.002, 1750);
+            addTone(context, output, 148, 105, "sine", 0.025, 0.047, 0.006, 650);
+          }
+
+          window.setTimeout(function () {
+            try { output.disconnect(); } catch (error) {}
+          }, 140);
+        } catch (error) {
+          // Feedback is non-essential; a browser audio restriction must never block a control.
+        }
+      }
+
+      function press(target) {
+        if (!target) return;
+        target.classList.add("astro-tactile-pressed");
+        playMechanicalSound("push");
+      }
+
+      function release(target, cancelled) {
+        if (!target) return;
+        target.classList.remove("astro-tactile-pressed");
+        if (!cancelled) playMechanicalSound("release");
+      }
+
+      document.addEventListener("pointerdown", function (event) {
+        if (event.button !== undefined && event.button !== 0) return;
+        if (event.isPrimary === false) return;
+        var target = getActionable(event.target);
+        if (!target) return;
+        if (pointerTarget && pointerTarget !== target) release(pointerTarget, true);
+        pointerTarget = target;
+        press(target);
+      }, true);
+
+      document.addEventListener("pointerup", function () {
+        if (!pointerTarget) return;
+        var target = pointerTarget;
+        pointerTarget = null;
+        release(target, false);
+      }, true);
+
+      document.addEventListener("pointercancel", function () {
+        if (!pointerTarget) return;
+        var target = pointerTarget;
+        pointerTarget = null;
+        release(target, true);
+      }, true);
+
+      window.addEventListener("blur", function () {
+        if (pointerTarget) {
+          var target = pointerTarget;
+          pointerTarget = null;
+          release(target, true);
+        }
+        if (keyboardTarget) {
+          var keyTarget = keyboardTarget;
+          keyboardTarget = null;
+          release(keyTarget, true);
+        }
+      });
+
+      document.addEventListener("keydown", function (event) {
+        if (event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
+        var target = getActionable(document.activeElement);
+        if (!target) return;
+        if (event.key === " " && target.matches("a[href]")) return;
+        if (keyboardTarget) return;
+        keyboardTarget = target;
+        press(target);
+      }, true);
+
+      document.addEventListener("keyup", function (event) {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (!keyboardTarget) return;
+        var target = keyboardTarget;
+        keyboardTarget = null;
+        release(target, false);
+      }, true);
+
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) {
+          if (pointerTarget) {
+            var target = pointerTarget;
+            pointerTarget = null;
+            release(target, true);
+          }
+          if (keyboardTarget) {
+            var keyTarget = keyboardTarget;
+            keyboardTarget = null;
+            release(keyTarget, true);
+          }
+        }
+      });
+    }());
+  </script>
+
 </body>
 </html>
