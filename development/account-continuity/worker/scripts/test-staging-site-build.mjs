@@ -173,6 +173,9 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /Explorer links expose the full wallet address and associated public transaction history/);
   assert.match(html, /A random display name is generated when the primary wallet is first verified/);
   assert.match(html, /Never share your seed phrase or private key/);
+  assert.match(html, /id="genesis-public-treasury-receipts"/);
+  assert.match(html, /Verified incoming USDT treasury receipts/);
+  assert.match(html, /community inspection/);
 });
 
 test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
@@ -191,6 +194,13 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
   assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
   assert.ok(js.includes("/api/genesis/status"));
+  assert.ok(js.includes("/api/genesis/treasury-receipts"));
+  assert.ok(js.includes("USDT · Ethereum (ERC-20)"));
+  assert.ok(js.includes("USDT · TRON (TRC-20)"));
+  assert.ok(js.includes("USDT · Solana (SPL)"));
+  assert.ok(js.includes("No live receipt claims are being displayed"));
+  assert.ok(js.includes("receipt explorer origin"));
+
   assert.ok(js.includes("/api/genesis/identity/challenge"));
   assert.ok(js.includes("/api/genesis/identity/verify"));
   assert.ok(js.includes("/api/genesis/display-name/challenge"));
