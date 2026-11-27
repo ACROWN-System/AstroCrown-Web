@@ -1064,7 +1064,7 @@ export async function publicGenesisTreasuryReceipts(db, limit = 100) {
   const boundedLimit = Math.max(1, Math.min(200, Number.isSafeInteger(limit) ? limit : 100));
   const rows = await db.prepare(
     "SELECT r.receipt_id,r.network,r.asset_identifier,r.amount_display,r.sender_address,r.treasury_address,r.transaction_hash," +
-    "r.transfer_index,r.inclusion_reference,r.finality_status,r.verified_at,p.payment_record_id " +
+    "r.transfer_index,r.inclusion_reference,r.finality_status,r.verified_at,p.payment_record_id,p.receipt_finality_status " +
     "FROM genesis_treasury_receipts r LEFT JOIN genesis_public_payments p " +
     "ON p.receipt_id=r.receipt_id AND p.public_visible=1 " +
     "WHERE r.public_visible=1 " +
@@ -1087,6 +1087,7 @@ export async function publicGenesisTreasuryReceipts(db, limit = 100) {
       transferIndex: row.transfer_index,
       inclusionReference: row.inclusion_reference,
       finalityStatus: row.finality_status,
+      qualifyingPaymentFinalityStatus: row.receipt_finality_status || null,
       verifiedAt: new Date(Number(row.verified_at) * 1000).toISOString(),
       verification: "TWO_INDEPENDENT_RPC_SOURCES",
       explorerUrl: link,
