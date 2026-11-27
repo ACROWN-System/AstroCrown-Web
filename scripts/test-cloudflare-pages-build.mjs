@@ -64,7 +64,7 @@ assert.match(homepage, /var workerStagingMode = false;/);
 
 assert.match(accountJs, /var forceBrowserDemo = true;/);
 assert.match(accountJs, /hosted-preview-no-authentication/);
-assert.match(accountJs, /read-only interface demonstration/);
+assert.match(accountJs, /hosted HTML preview is read-only/);
 
 assert.match(supporterPage, /noindex, nofollow, noarchive/i);
 assert.match(supporterPage, /USDT qualifying payments and ACROWN purchases are not enabled/i);
