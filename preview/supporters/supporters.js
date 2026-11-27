@@ -43,6 +43,28 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   var memberAvatar = document.getElementById("member-avatar");
   var publicDirectoryList = document.getElementById("genesis-public-directory-list");
   var publicTreasuryReceipts = document.getElementById("genesis-public-treasury-receipts");
+  var genesisPaymentForm = document.getElementById("genesis-payment-intent-form");
+  var genesisPaymentNetwork = document.getElementById("genesis-payment-network");
+  var genesisPaymentWallet = document.getElementById("genesis-payment-source-wallet");
+  var genesisPaymentAmount = document.getElementById("genesis-payment-amount");
+  var genesisPaymentTerms = document.getElementById("genesis-payment-terms-accepted");
+  var genesisPaymentCreate = document.getElementById("genesis-payment-intent-create");
+  var genesisPaymentFeedback = document.getElementById("genesis-payment-intent-feedback");
+  var genesisPaymentState = document.getElementById("genesis-payment-acceptance-state");
+  var genesisPaymentSummary = document.getElementById("genesis-payment-acceptance-summary");
+  var genesisPaymentInstructions = document.getElementById("genesis-payment-instructions");
+  var genesisPaymentIntentExpiry = document.getElementById("genesis-payment-intent-expiry");
+  var genesisPaymentInstructionNetwork = document.getElementById("genesis-payment-instruction-network");
+  var genesisPaymentInstructionAmount = document.getElementById("genesis-payment-instruction-amount");
+  var genesisPaymentInstructionToken = document.getElementById("genesis-payment-instruction-token");
+  var genesisPaymentInstructionSender = document.getElementById("genesis-payment-instruction-sender");
+  var genesisPaymentInstructionAddress = document.getElementById("genesis-payment-instruction-address");
+  var genesisPaymentInstructionAllowance = document.getElementById("genesis-payment-instruction-allowance");
+  var genesisPaymentInstructionFees = document.getElementById("genesis-payment-instruction-fees");
+  var genesisPaymentCopyAddress = document.getElementById("genesis-payment-copy-address");
+  var genesisPaymentCancel = document.getElementById("genesis-payment-intent-cancel");
+  var currentGenesisPaymentIntent = null;
+  var currentGenesisPaymentInstructions = null;
   var supporterRuntimeEnabled = false;
   var supporterMember = null;
   var purchaseInactivityInterval = null;
@@ -960,6 +982,252 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     tick();
     purchaseInactivityInterval = window.setInterval(tick, 1000);
+  }
+
+  function setGenesisPaymentFeedback(message, state) {
+    if (!genesisPaymentFeedback) return;
+    genesisPaymentFeedback.textContent = message;
+    genesisPaymentFeedback.classList.toggle("is-open", state === "open");
+    genesisPaymentFeedback.classList.toggle("is-blocked", state === "blocked");
+  }
+
+  function paymentNetworkLabel(network, gate) {
+    if (gate && gate.label) return gate.label;
+    var labels = {
+      ethereum: "USDT · Ethereum (ERC-20)",
+      tron: "USDT · TRON (TRC-20)",
+      solana: "USDT · Solana (SPL)"
+    };
+    return labels[network] || "USDT";
+  }
+
+  function populateGenesisPaymentWalletOptions() {
+    if (!genesisPaymentWallet) return;
+    var network = genesisPaymentNetwork && genesisPaymentNetwork.value;
+    var previous = genesisPaymentWallet.value;
+    genesisPaymentWallet.textContent = "";
+    var placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = network ? "Select a verified " + network.toUpperCase() + " payment address" : "Select the USDT network first";
+    genesisPaymentWallet.appendChild(placeholder);
+    var wallets = supporterMember && Array.isArray(supporterMember.wallets) ? supporterMember.wallets : [];
+    var eligible = wallets.filter(function (wallet) {
+      return wallet.network === network &&
+        ["PRIMARY", "PAYMENT", "PAYMENT_AND_DELIVERY"].includes(wallet.wallet_role) &&
+        wallet.ownership_verified_at !== null && wallet.ownership_verified_at !== undefined &&
+        wallet.proof_method;
+    });
+    eligible.forEach(function (wallet) {
+      var option = document.createElement("option");
+      option.value = wallet.wallet_address_id;
+      option.textContent = wallet.wallet_role.replace(/_/g, " ") + " · " + wallet.address;
+      genesisPaymentWallet.appendChild(option);
+    });
+    if (previous && eligible.some(function (wallet) { return wallet.wallet_address_id === previous; })) {
+      genesisPaymentWallet.value = previous;
+    }
+    genesisPaymentWallet.disabled = !supporterMember || !network || eligible.length === 0;
+  }
+
+  function renderGenesisPaymentInstructions(intent, instructions, qualification) {
+    currentGenesisPaymentIntent = intent || null;
+    currentGenesisPaymentInstructions = instructions || null;
+    if (!genesisPaymentInstructions) return;
+    if (!intent || !instructions) {
+      genesisPaymentInstructions.hidden = true;
+      if (genesisPaymentCancel) genesisPaymentCancel.hidden = true;
+      return;
+    }
+    genesisPaymentInstructions.hidden = false;
+    if (genesisPaymentCancel) genesisPaymentCancel.hidden = intent.status !== "OPEN";
+    if (genesisPaymentIntentExpiry) {
+      genesisPaymentIntentExpiry.textContent = "Expires " + new Date(intent.expiresAt).toLocaleString();
+    }
+    if (genesisPaymentInstructionNetwork) genesisPaymentInstructionNetwork.textContent = instructions.label;
+    if (genesisPaymentInstructionAmount) genesisPaymentInstructionAmount.textContent = instructions.amount + " USDT";
+    if (genesisPaymentInstructionToken) genesisPaymentInstructionToken.textContent = instructions.tokenIdentifier;
+    if (genesisPaymentInstructionSender) genesisPaymentInstructionSender.textContent =
+      (supporterMember && supporterMember.wallets || []).find(function (wallet) {
+        return wallet.wallet_address_id === (genesisPaymentWallet && genesisPaymentWallet.value);
+      })?.address || "Verified Genesis payment wallet";
+    if (genesisPaymentInstructionAddress) genesisPaymentInstructionAddress.textContent = instructions.receivingAddress;
+    if (genesisPaymentInstructionAllowance) {
+      genesisPaymentInstructionAllowance.textContent = qualification && qualification.proposedPurchaseAllowanceUsdt
+        ? qualification.proposedPurchaseAllowanceUsdt + " USDT (held pending verification)"
+        : intent.allowanceCreditUsdt + " USDT (held pending verification)";
+    }
+    if (genesisPaymentInstructionFees) genesisPaymentInstructionFees.textContent = instructions.networkFeePolicy;
+    if (genesisPaymentCreate) genesisPaymentCreate.disabled = true;
+    if (genesisPaymentAmount) genesisPaymentAmount.disabled = true;
+    if (genesisPaymentWallet) genesisPaymentWallet.disabled = true;
+    if (genesisPaymentNetwork) genesisPaymentNetwork.disabled = true;
+    if (genesisPaymentTerms) genesisPaymentTerms.disabled = true;
+    setGenesisPaymentFeedback(
+      intent.status === "OPEN"
+        ? "Exact payment intent created. Send only the displayed USDT amount to the displayed address before expiry. The website has not submitted a transaction. The allowance remains uncredited until independent receipt verification."
+        : "This payment intent is " + intent.status.toLowerCase() + ". It is not an open payment instruction.",
+      intent.status === "OPEN" ? "open" : "blocked"
+    );
+  }
+
+  function renderGenesisPaymentPanel(profile) {
+    if (!genesisPaymentForm) return;
+    var acceptance = profile && profile.paymentAcceptance;
+    var networks = acceptance && acceptance.networks || {};
+    var enabledNetworks = Object.keys(networks).filter(function (network) {
+      return networks[network] && networks[network].enabled === true;
+    });
+    var intent = profile && profile.paymentIntent;
+    if (profile && Array.isArray(profile.paymentIntents) && !intent) {
+      intent = profile.paymentIntents.find(function (item) { return item.status === "OPEN"; }) || null;
+    }
+    if (intent) {
+      if (currentGenesisPaymentIntent && currentGenesisPaymentIntent.paymentIntentId === intent.paymentIntentId &&
+          currentGenesisPaymentInstructions) {
+        renderGenesisPaymentInstructions(intent, currentGenesisPaymentInstructions, null);
+      } else {
+        currentGenesisPaymentIntent = intent;
+        if (genesisPaymentInstructions) genesisPaymentInstructions.hidden = true;
+        setGenesisPaymentFeedback(
+          "An exact USDT payment intent is already open for this Genesis profile. Refresh its details through the payment-intents service; do not create a second payment.",
+          "open"
+        );
+        if (genesisPaymentCreate) genesisPaymentCreate.disabled = true;
+      }
+    } else {
+      renderGenesisPaymentInstructions(null, null, null);
+    }
+
+    var enabled = Boolean(supporterRuntimeEnabled && profile && enabledNetworks.length);
+    if (genesisPaymentState) {
+      genesisPaymentState.textContent = enabled ? "Approval gates satisfied" : "Not open";
+      genesisPaymentState.classList.toggle("pending-state", !enabled);
+    }
+    if (genesisPaymentSummary) {
+      var reason = "";
+      if (!profile || !supporterRuntimeEnabled) {
+        reason = "Connect your Genesis primary wallet through the official staging service to view the payment readiness status.";
+      } else {
+        var disabledGate = Object.keys(networks).map(function (network) { return networks[network]; })
+          .find(function (gate) { return gate && gate.reasons && gate.reasons.length; });
+        reason = disabledGate
+          ? "Payments remain closed. " + disabledGate.reasons[0]
+          : "Payments are not open on any network. Do not send USDT.";
+      }
+      genesisPaymentSummary.textContent = enabled
+        ? "The selected USDT networks have passed all configured activation gates. Request an exact, time-limited payment intent; only a separately verified receipt can qualify it."
+        : reason + " Payment acceptance remains disabled until every required approval, treasury proof, network record and RPC source is verified.";
+    }
+
+    if (genesisPaymentNetwork) {
+      var previousNetwork = genesisPaymentNetwork.value;
+      genesisPaymentNetwork.textContent = "";
+      var placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = enabledNetworks.length ? "Choose an enabled USDT network" : "USDT payment acceptance is closed";
+      genesisPaymentNetwork.appendChild(placeholder);
+      ["ethereum", "tron", "solana"].forEach(function (network) {
+        var option = document.createElement("option");
+        option.value = network;
+        option.textContent = paymentNetworkLabel(network, networks[network]);
+        option.disabled = !networks[network] || networks[network].enabled !== true;
+        genesisPaymentNetwork.appendChild(option);
+      });
+      if (enabledNetworks.indexOf(previousNetwork) >= 0) genesisPaymentNetwork.value = previousNetwork;
+      else if (enabledNetworks.length === 1) genesisPaymentNetwork.value = enabledNetworks[0];
+      genesisPaymentNetwork.disabled = !enabled || Boolean(intent);
+    }
+    populateGenesisPaymentWalletOptions();
+    var currentGate = networks[genesisPaymentNetwork && genesisPaymentNetwork.value];
+    var canCreate = Boolean(enabled && currentGate && currentGate.enabled === true &&
+      supporterMember && !intent && genesisPaymentWallet && genesisPaymentWallet.value &&
+      genesisPaymentAmount && /^[0-9]+(?:\\.[0-9]{1,6})?$/.test(genesisPaymentAmount.value.trim()) &&
+      genesisPaymentTerms && genesisPaymentTerms.checked === true);
+    if (genesisPaymentAmount) genesisPaymentAmount.disabled = !enabled || Boolean(intent);
+    if (genesisPaymentTerms) genesisPaymentTerms.disabled = !enabled || Boolean(intent);
+    if (genesisPaymentCreate) genesisPaymentCreate.disabled = !canCreate;
+    if (!intent && !enabled) setGenesisPaymentFeedback("Payment acceptance is closed. Do not send USDT. Wallet registration and wallet-ownership proofs do not require a payment or a network fee.", "blocked");
+    if (!intent && enabled) setGenesisPaymentFeedback("Select a network, one of your verified payment addresses, an exact USDT amount and accept the approved terms.", "open");
+  }
+
+  async function refreshGenesisPaymentIntents() {
+    if (!supporterRuntimeMarkerPresent() || !supporterMember) {
+      renderGenesisPaymentPanel(supporterMember);
+      return;
+    }
+    try {
+      var response = await fetch("/api/genesis/payment-intents", {
+        method: "GET", credentials: "same-origin", headers: { "Accept": "application/json" }
+      });
+      var data = await response.json();
+      if (!response.ok || !Array.isArray(data.items)) throw new Error(data.error || "Payment-intent status is unavailable.");
+      var intent = data.items.find(function (item) { return item.status === "OPEN"; }) || null;
+      supporterMember.paymentAcceptance = data.paymentAcceptance || supporterMember.paymentAcceptance;
+      supporterMember.paymentIntent = intent;
+      renderGenesisPaymentPanel(supporterMember);
+    } catch (error) {
+      setGenesisPaymentFeedback(error && error.message ? error.message : "Payment-intent status is unavailable.", "blocked");
+    }
+  }
+
+  async function requestGenesisPaymentIntent(event) {
+    if (event) event.preventDefault();
+    if (!supporterRuntimeMarkerPresent() || !supporterMember || currentGenesisPaymentIntent) return;
+    if (!genesisPaymentForm || !genesisPaymentNetwork || !genesisPaymentWallet ||
+        !genesisPaymentAmount || !genesisPaymentTerms) return;
+    var network = genesisPaymentNetwork.value;
+    var gate = supporterMember.paymentAcceptance && supporterMember.paymentAcceptance.networks &&
+      supporterMember.paymentAcceptance.networks[network];
+    if (!gate || gate.enabled !== true || !genesisPaymentTerms.checked) {
+      setGenesisPaymentFeedback("The selected network or approved terms are not ready. No payment intent has been created.", "blocked");
+      return;
+    }
+    genesisPaymentCreate.disabled = true;
+    try {
+      setGenesisPaymentFeedback("Creating an exact, time-limited USDT intent from your verified Genesis wallet profile…", "open");
+      var result = await supporterApiPost("/api/genesis/payment-intents", {
+        network,
+        walletAddressId: genesisPaymentWallet.value,
+        amount: genesisPaymentAmount.value.trim(),
+        termsAccepted: true,
+        termsVersion: gate.termsVersion
+      });
+      supporterMember.paymentIntent = result.paymentIntent;
+      renderGenesisPaymentInstructions(result.paymentIntent, result.instructions, result.qualification);
+    } catch (error) {
+      setGenesisPaymentFeedback(error && error.message ? error.message : "A payment intent could not be created.", "blocked");
+      renderGenesisPaymentPanel(supporterMember);
+    }
+  }
+
+  async function cancelGenesisPaymentIntent() {
+    if (!currentGenesisPaymentIntent || currentGenesisPaymentIntent.status !== "OPEN") return;
+    if (genesisPaymentCancel) genesisPaymentCancel.disabled = true;
+    try {
+      await supporterApiPost("/api/genesis/payment-intents/cancel", {
+        paymentIntentId: currentGenesisPaymentIntent.paymentIntentId
+      });
+      currentGenesisPaymentIntent = null;
+      currentGenesisPaymentInstructions = null;
+      if (supporterMember) supporterMember.paymentIntent = null;
+      await refreshSupporterMember();
+      setGenesisPaymentFeedback("The unsubmitted payment intent was cancelled. Its global principal reservation has been released.", "blocked");
+    } catch (error) {
+      setGenesisPaymentFeedback(error && error.message ? error.message : "The payment intent could not be cancelled.", "blocked");
+    } finally {
+      if (genesisPaymentCancel) genesisPaymentCancel.disabled = false;
+    }
+  }
+
+  async function copyGenesisReceivingAddress() {
+    var address = currentGenesisPaymentInstructions && currentGenesisPaymentInstructions.receivingAddress;
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      if (genesisPaymentCopyAddress) genesisPaymentCopyAddress.textContent = "Address copied";
+    } catch (_) {
+      setGenesisPaymentFeedback("Copy was blocked by the browser. Select the receiving address and copy it manually.", "blocked");
+    }
   }
 
   function applySupporterProfile(data) {
