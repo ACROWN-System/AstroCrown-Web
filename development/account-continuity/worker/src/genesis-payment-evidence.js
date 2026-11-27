@@ -429,7 +429,8 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
         transfer.amount === amount) {
       matches.push({ transferIndex: transfer.instructionOrdinal });
     }
-  }  if (matches.length !== 1) fail("Solana finalized transaction must contain exactly one matching USDT transfer instruction with matching owner and balance deltas.");
+  }
+  if (matches.length !== 1) fail("Solana finalized transaction must contain exactly one matching USDT transfer instruction with matching owner and balance deltas.");
   return canonicalEvidence(
     "solana", transactionId, sender, treasury, amount, matches[0].transferIndex,
     { slot: slot.toString() }, "FINALIZED"
