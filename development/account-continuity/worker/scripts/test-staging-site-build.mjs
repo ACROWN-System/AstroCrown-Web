@@ -31,9 +31,20 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(walletAssurance, /name="astro-page-id" content="account"/);
   assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
   assert.match(accountUi, /function renderWalletPrimaryStatus\(\)/);
-  assert.match(accountUi, /Sign in with primary wallet/);
-  assert.match(accountUi, /Create account with primary wallet/);
+  assert.match(accountUi, /Sign in with selected wallet/);
+  assert.match(accountUi, /Create account with selected wallet/);
   assert.match(accountUi, /finishPrimaryWalletAuthentication/);
+  assert.match(accountUi, /discoverPrimaryWalletProviders/);
+  assert.match(accountUi, /selectedPrimaryWalletId/);
+  assert.match(accountUi, /selectedPrimaryNetwork/);
+  assert.match(accountUi, /Choose your wallet/);
+  assert.match(accountUi, /Network used for identity proof/);
+  assert.match(accountUi, /This selects the network for your primary-wallet identity proof only/);
+  for (const walletName of ["MetaMask", "Trust Wallet", "OKX Wallet", "Bitget Wallet", "TokenPocket", "Coin98"]) {
+    assert.ok(accountUi.includes(walletName), "Ordinary account brand picker must show " + walletName);
+  }
+  assert.match(accountUi, /account-wallet-brand-choice/);
+  assert.match(accountUi, /duplicate provider/);
   assert.match(accountUi, /EIP-1193 wallet/);
   assert.match(accountUi, /Solana Mainnet/);
   assert.match(accountUi, /astrocrown:admin-dashboard-visible/);
@@ -162,6 +173,16 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /Any eligible identity registered before the permanent cutoff may purchase any amount up to the entire remaining pool/);
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
+  assert.match(html, /id="genesis-wallet-brand-grid"/);
+  assert.match(html, /Choose your wallet application/);
+  assert.match(html, /Wallet brand first/);
+  assert.match(html, /Ethereum Mainnet identity address/);
+  assert.match(html, /TRON Mainnet identity address/);
+  assert.match(html, /Solana Mainnet identity address/);
+  for (const walletId of ["metamask", "trust-wallet", "okx-wallet", "bitget-wallet", "tokenpocket", "coin98"]) {
+    assert.ok(html.includes('data-genesis-wallet-brand="' + walletId + '"'), "Genesis brand selector must include " + walletId);
+  }
+  assert.doesNotMatch(html, /No separate user account is created/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
   assert.match(html, /The primary wallet is the sole Genesis identity, login authority and recovery anchor/);
@@ -188,6 +209,12 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.match(js, /discoverDirectEvmProviders/);
   assert.match(js, /discoverDirectTronProviders/);
   assert.match(js, /discoverDirectSolanaWallets/);
+  assert.match(js, /selectedGenesisWalletBrand/);
+  assert.match(js, /genesis-wallet-brand-grid/);
+  assert.match(js, /This wallet has no Ethereum provider detected/);
+  assert.match(js, /This wallet has no TRON provider detected/);
+  assert.match(js, /This wallet has no Solana provider detected/);
+  assert.match(js, /This creates your Genesis wallet profile/);
   assert.match(js, /eth_requestAccounts/);
   assert.match(js, /standard:connect/);
   assert.match(js, /personal_sign/);
