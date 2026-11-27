@@ -5,24 +5,3 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-
-  # The only remaining Python runtime dependency is the isolated CI audit tool.
-  # The account and wallet authentication runtimes are implemented in the
-  # Cloudflare Worker and do not use Python packages.
-  - package-ecosystem: pip
-    directory: /development/dependencies
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 2
-    groups:
-      python-audit-tool-compatible:
-        patterns:
-          - "pip-audit"
-        update-types:
-          - minor
-          - patch
-      python-audit-tool-major:
-        patterns:
-          - "pip-audit"
-        update-types:
-          - major
