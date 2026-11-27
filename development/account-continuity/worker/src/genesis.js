@@ -781,7 +781,7 @@ export async function handleGenesisWalletApi(request, env, config) {
       await authenticateSignature(challenge, payload.signature);
       const identity = await getOrCreateIdentity(db, challenge);
       const setCookie = await createSession(db, identity.identity_id, config.origin);
-      return response(200, await identityProfile(db, identity), { "Set-Cookie": setCookie });
+      return response(200, await identityProfile(db, identity, env), { "Set-Cookie": setCookie });
     }
 
     if (url.pathname === "/api/genesis/wallet-link/challenge") {
@@ -868,7 +868,7 @@ export async function handleGenesisWalletApi(request, env, config) {
       }
       if (Number(updated.meta?.changes || 0) !== 1) throw error(409, "This display name has just been claimed by another wallet. Choose another name.");
       const refreshed = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identity.identity_id).first();
-      return response(200, await identityProfile(db, refreshed));
+      return response(200, await identityProfile(db, refreshed, env));
     }
 
     if (url.pathname === "/api/genesis/logout") {
