@@ -52,7 +52,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(accountUi, /The selected wallet does not expose exactly one compatible/);
   assert.match(accountUi, /Solana Mainnet/);
   assert.match(accountUi, /astrocrown:admin-dashboard-visible/);
-  assert.match(accountUi, /Why wallet\?/);
+  assert.match(accountUi, /Why a primary wallet\?/);
   assert.match(accountUi, /typeof workerStagingMode/);
   assert.match(noticeScript, /Before you continue/);
   assert.match(noticeScript, /async function isAcknowledged/);
