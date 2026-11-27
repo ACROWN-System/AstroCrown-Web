@@ -33,12 +33,12 @@
   var primaryWalletCatalogueReady = false;
   var primaryWalletCataloguePromise = null;
   var primaryWalletBrandPresentation = {
-    metamask: { name: "MetaMask", logo: "https://www.web3icons.com/svgs/wallets/branded/metamask.svg?v=4.0.58", initials: "MM" },
-    "trust-wallet": { name: "Trust Wallet", logo: "https://www.web3icons.com/svgs/wallets/branded/trust.svg?v=4.0.58", initials: "TW" },
-    "okx-wallet": { name: "OKX Wallet", logo: "https://www.web3icons.com/svgs/wallets/branded/okx.svg?v=4.0.58", initials: "OKX" },
+    metamask: { name: "MetaMask", logo: "/assets/wallet-logos/metamask.svg", initials: "MM" },
+    "trust-wallet": { name: "Trust Wallet", logo: "/assets/wallet-logos/trust.svg", initials: "TW" },
+    "okx-wallet": { name: "OKX Wallet", logo: "/assets/wallet-logos/okx.svg", initials: "OKX" },
     "bitget-wallet": { name: "Bitget Wallet", logo: "https://web3.bitget.com/bgwactivity-static/_next/static/media/Bitget-Wallet-Logomark.07wqb3-5_b2ml.svg", initials: "BG" },
-    tokenpocket: { name: "TokenPocket", logo: "https://www.web3icons.com/svgs/wallets/branded/token-pocket.svg?v=4.0.58", initials: "TP" },
-    coin98: { name: "Coin98", logo: "https://www.web3icons.com/svgs/wallets/branded/coin98.svg?v=4.0.58", initials: "C98" }
+    tokenpocket: { name: "TokenPocket", logo: "/assets/wallet-logos/tokenpocket.svg", initials: "TP" },
+    coin98: { name: "Coin98", logo: "/assets/wallet-logos/coin98.svg", initials: "C98" }
   };
   var termsVersion = "development-terms-2026-10-31-v0.3";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
