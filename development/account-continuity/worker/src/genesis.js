@@ -281,9 +281,8 @@ async function identityProfile(db, identity, env = {}) {
     loadGenesisProgrammeControl(db),
     genesisPaymentAcceptanceSummary(db, env),
     db.prepare(
-      "SELECT payment_intent_id,network,asset_identifier,amount_base_units,amount_display,treasury_address," +
-      "allowance_credit_usdt_base_units,tier_breakdown_json,rules_version,created_at,expires_at,status " +
-      "FROM genesis_payment_intents WHERE identity_id=? AND status='OPEN' ORDER BY created_at DESC LIMIT 1"
+      "SELECT * FROM genesis_payment_intents WHERE identity_id=? AND status='OPEN' " +
+      "ORDER BY created_at DESC LIMIT 1"
     ).bind(identity.identity_id).first()
   ]);
   const earned = allowance?.earned_usdt_base_units || "0";
