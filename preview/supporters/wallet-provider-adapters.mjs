@@ -346,20 +346,41 @@ export const PRIMARY_WALLET_BRANDS = Object.freeze([
 
 function injectedEvmCandidates(win) {
   const candidates = [];
+  const append = (provider, knownWalletId = null, name = "", rdns = "") => {
+    if (!provider || typeof provider.request !== "function") return;
+    const detectedWalletId = knownWalletId || identifyWalletCandidate({
+      name: name || provider.name || provider.walletName || "",
+      rdns: rdns || provider.rdns || "",
+    }, provider);
+    const existing = candidates.find((entry) => entry.provider === provider);
+    if (existing) {
+      if (existing.ambiguous) return;
+      if (!existing.walletId) existing.walletId = detectedWalletId;
+      else if (detectedWalletId && existing.walletId !== detectedWalletId) {
+        // One injected object cannot be trusted as two different wallet brands.
+        existing.walletId = null;
+        existing.ambiguous = true;
+      }
+      return;
+    }
+    candidates.push({ provider, walletId: detectedWalletId, ambiguous: false });
+  };
+
   const injected = win && win.ethereum;
   if (injected && Array.isArray(injected.providers)) {
-    injected.providers.forEach((provider) => candidates.push(provider));
+    injected.providers.forEach((provider) => append(provider));
   } else if (injected && typeof injected.request === "function") {
-    candidates.push(injected);
+    append(injected);
   }
-  discoverDirectEvmProviders(win).forEach((entry) => candidates.push(entry.provider));
-  return uniqueEntries(candidates.map((provider) => ({
-    provider,
-    walletId: identifyWalletCandidate({
-      name: provider && (provider.name || provider.walletName) || "",
-      rdns: provider && provider.rdns || "",
-    }, provider || {}),
-  }))).filter((entry) => entry.walletId && typeof entry.provider.request === "function");
+  // Preserve the brand identity supplied by a wallet's documented namespace.
+  // Do not discard it and attempt to infer the brand again from an anonymous
+  // EIP-1193 provider object.
+  discoverDirectEvmProviders(win).forEach((entry) => {
+    append(entry.provider, entry.walletId, entry.name, entry.rdns);
+  });
+  return candidates.filter((entry) =>
+    entry.walletId && !entry.ambiguous && typeof entry.provider.request === "function"
+  );
 }
 
 /**
