@@ -1073,9 +1073,13 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       })?.address || "Verified Genesis payment wallet";
     if (genesisPaymentInstructionAddress) genesisPaymentInstructionAddress.textContent = instructions.receivingAddress;
     if (genesisPaymentInstructionAllowance) {
-      genesisPaymentInstructionAllowance.textContent = qualification && qualification.proposedPurchaseAllowanceUsdt
-        ? qualification.proposedPurchaseAllowanceUsdt + " USDT (held pending verification)"
-        : intent.allowanceCreditUsdt + " USDT (held pending verification)";
+      var settled = intent.status === "CONFIRMED" && intent.allowanceCreditUsdt;
+      var estimate = qualification && qualification.estimatedPurchaseAllowanceUsdt
+        ? qualification.estimatedPurchaseAllowanceUsdt
+        : intent.estimatedAllowanceCreditUsdt;
+      genesisPaymentInstructionAllowance.textContent = settled
+        ? settled + " USDT (final allowance settled)"
+        : (estimate || "Not calculated") + " USDT estimated · final tranche is determined by the order in which qualifying receipts are independently verified";
     }
     if (genesisPaymentInstructionFees) genesisPaymentInstructionFees.textContent = instructions.networkFeePolicy;
     if (genesisPaymentCreate) genesisPaymentCreate.disabled = true;
@@ -1085,7 +1089,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     if (genesisPaymentTerms) genesisPaymentTerms.disabled = true;
     setGenesisPaymentFeedback(
       intent.status === "OPEN"
-        ? "Exact payment intent created. Send only the displayed USDT amount to the displayed address before expiry. The website has not submitted a transaction. The allowance remains uncredited until independent receipt verification."
+        ? "Exact payment intent created. Send only the displayed USDT amount to the displayed address before expiry. The website has not submitted a transaction. The displayed allowance is an estimate; its final tier is determined by the global order of independently verified qualifying receipts."
         : "This payment intent is " + intent.status.toLowerCase() + ". It is not an open payment instruction.",
       intent.status === "OPEN" ? "open" : "blocked"
     );
