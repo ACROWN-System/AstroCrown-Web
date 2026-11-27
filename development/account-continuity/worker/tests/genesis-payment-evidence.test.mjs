@@ -111,7 +111,7 @@ test("Ethereum parser rejects wrong chain, failed receipt, wrong token, wrong se
     receipt: { ...ethereumFixture().receipt, logs: [{
       ...ethereumFixture().receipt.logs[0], address: "0x" + "11".repeat(20),
     }] },
-  })), /exactly one matching/);
+  })), /balance deltas do not reconcile/);
   assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
     finalityBlock: { tag: "latest", number: "0x500" },
   })), /safe\/finalized/);
@@ -417,7 +417,7 @@ test("RPC reconciliation requires two distinct operators and identical normalize
       { providerId: "rpc-a", sourceId: "same-source", evidence },
       { providerId: "rpc-b", sourceId: "same-source", evidence },
     ],
-  }), /distinct providers and independently qualified operators/);
+  }), /distinct providers and distinct configured sources/);
   assert.throws(() => reconcileGenesisRpcEvidence({
     network: "ethereum",
     expected: ETH_EXPECTED,
