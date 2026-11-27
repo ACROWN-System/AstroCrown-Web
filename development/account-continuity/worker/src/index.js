@@ -206,15 +206,6 @@ async function rateLimit(db, env, request, action, subject, maximum, seconds) {
   ).bind(b64u(bytes(16)), action, subjectHash, now, action, subjectHash, now - seconds, maximum).run();
   if (Number(result.meta?.changes || 0) !== 1) throw fail(429, "Too many attempts. Please try again later.");
 }
-async function createChallenge(db, item) {
-  await db.prepare(
-    "INSERT INTO auth_challenges(challenge_id, challenge, ceremony, account_id, account_identifier, user_handle, payload_json, created_at, expires_at) " +
-    "VALUES(?,?,?,?,?,?,?,?,?)"
-  ).bind(
-    item.id, item.challenge, item.ceremony, item.accountId || null, item.accountIdentifier || null,
-    item.userHandle || null, JSON.stringify(item.payload || {}), item.now, item.now + CHALLENGE_SECONDS
-  ).run();
-}
 async function activeAccount(db, request) {
   const token = cookie(request, SESSION_COOKIE);
   if (!token) return null;
@@ -496,7 +487,7 @@ async function issueAdminWalletEnrollmentChallenge(db, env, request, payload, co
   const historyCount = Number(countRow?.history_count || 0);
   if (activeCount >= 3) throw fail(409, "This administrator account already has three active wallets.");
   if (historyCount > 0 && activeCount === 0) {
-    throw fail(409, "All previously enrolled administrator wallets are inactive. A separate owner-authorized recovery review is required; ordinary passkey sign-in cannot register a replacement wallet.");
+    throw fail(409, "All previously enrolled administrator wallets are inactive. A separate owner-authorized recovery review is required; ordinary wallet sign-in cannot bypass administrator wallet recovery.");
   }
   const existing = await db.prepare(
     "SELECT account_id,active FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE"
@@ -1090,7 +1081,7 @@ async function issuePrimaryWalletAuthenticationChallenge(db, env, request, paylo
 async function verifyPrimaryWalletAuthentication(db, env, request, payload, config) {
   const allowed = new Set([
     "challengeId", "message", "signature", "createAccount",
-    "termsAccepted", "termsVersion", "referralId",
+    "termsAccepted", "termsVersion", "walletLossAcknowledged", "walletLossNoticeVersion", "referralId",
   ]);
   if (Object.keys(payload).some((key) => !allowed.has(key)) ||
       typeof payload.challengeId !== "string" ||
@@ -1134,6 +1125,9 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
     if (payload.termsAccepted !== true || payload.termsVersion !== TERMS_VERSION) {
       throw fail(400, "Accept the current Terms of Use and Privacy Policy before creating an account.");
     }
+    if (payload.walletLossAcknowledged !== true || payload.walletLossNoticeVersion !== WALLET_LOSS_NOTICE_VERSION) {
+      throw fail(400, "Read and acknowledge the primary-wallet loss and recovery notice before creating an account.");
+    }
     const referral = payload.referralId == null ? "" : String(payload.referralId).trim();
     if (referral && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(referral)) {
       throw fail(400, "Enter a valid Referral ID or leave the field blank.");
@@ -1150,14 +1144,14 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
     try {
       await db.batch([
         db.prepare(
-          "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
-          "VALUES(?,?,?,?,'person',?,?,?,'user')"
-        ).bind(accountPrimaryId, accountIdentifier, userHandle, created, referral, TERMS_VERSION, created),
+          "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,wallet_loss_notice_version,wallet_loss_accepted_at,role) " +
+          "VALUES(?,?,?,?,'person',?,?,?,?,?,'user')"
+        ).bind(accountPrimaryId, accountIdentifier, userHandle, created, referral, TERMS_VERSION, created, WALLET_LOSS_NOTICE_VERSION, created),
         db.prepare(
           "INSERT INTO auth_primary_wallets(wallet_id,account_id,address,chain_id,created_at,active,proof_type) VALUES(?,?,?,?,?,1,'eip191-personal-sign')"
         ).bind(walletId, accountPrimaryId, address, Number(challenge.chain_id), created),
         db.prepare(
-          "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+          "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
         ).bind(tokenHash, accountPrimaryId, sessionRef, now, expires),
         db.prepare(
           "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'account_created_with_primary_wallet',?,'wallet_signature_verified=true;transaction_authorized=false')"
@@ -1184,7 +1178,7 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
   const timestamp = new Date().toISOString();
   await db.batch([
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
     ).bind(tokenHash, identity.account_id, sessionRef, now, expires),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'primary_wallet_sign_in',?,'wallet_signature_verified=true;transaction_authorized=false')"
@@ -1252,7 +1246,11 @@ async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
   if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
-  if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
+  if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) {
+    const account = await activeAccount(db, request);
+    const primaryWallet = account ? await db.prepare("SELECT address,chain_id FROM auth_primary_wallets WHERE account_id=? AND active=1 LIMIT 1").bind(account.account_id).first() : null;
+    return handleGenesisWalletApi(request, env, config, account && primaryWallet ? { accountId: account.account_id, primaryWallet } : null);
+  }
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
@@ -1260,7 +1258,6 @@ async function api(request, env, config) {
     const payload = await bodyJson(request);
     return issuePrimaryWalletAuthenticationChallenge(db, env, request, payload, config);
   }
-  if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
   if (url.pathname === "/api/admin/wallet-options" && request.method === "GET") return adminWalletOptions(db, request);
   if (url.pathname === "/api/admin/status" && request.method === "GET") {
@@ -1290,20 +1287,6 @@ async function api(request, env, config) {
   if (url.pathname === "/api/admin/roles/grant") return grantAdminRole(db, request, payload);
   if (url.pathname === "/api/admin/roles/revoke") return revokeAdminRole(db, request, payload);
   if (url.pathname === "/api/account/administrator-notice/acknowledge") return acknowledgeAdminRevocationNotice(db, request, payload);
-  if (url.pathname === "/api/account/security/step-up/options") return issueSecurityStepUp(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/step-up/verify") return verifySecurityStepUp(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/passkeys/add/options") return addPasskeyOptions(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/passkeys/add/verify") return addPasskeyVerify(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/passkeys/rename") return renamePasskey(db, request, payload);
-  if (url.pathname === "/api/account/security/passkeys/revoke") return revokePasskey(db, env, request, payload);
-  if (url.pathname === "/api/account/security/sessions/revoke") return revokeSessions(db, request, payload);
-  if (url.pathname === "/api/account/security/recovery/rotate") return rotateRecoveryKey(db, request, payload);
-  if (url.pathname === "/api/passkeys/register/options") return issueRegistration(db, env, request, payload, config);
-  if (url.pathname === "/api/passkeys/register/verify") return verifyRegistration(db, env, request, payload, config);
-  if (url.pathname === "/api/passkeys/authentication/options") return issueAuthentication(db, env, request, config);
-  if (url.pathname === "/api/passkeys/authentication/verify") return verifyAuthentication(db, env, request, payload, config);
-  if (url.pathname === "/api/account/recovery/options") return issueRecovery(db, env, request, payload, config);
-  if (url.pathname === "/api/account/recovery/complete") return completeRecovery(db, env, request, payload, config);
   if (url.pathname === "/api/account/logout") return logout(db, request, config);
   if (url.pathname === "/api/account/avatar") return avatar(db, request, payload);
   if (url.pathname === "/api/account/communications/page" || url.pathname === "/api/account/communications/state") return communications(db, request);
@@ -1322,7 +1305,6 @@ export {
   unb64u as fromBase64url,
   equalConstantTime,
   accountId as validateAccountIdentifier,
-  recoveryKey as validateRecoveryKey,
   validateAdminReason,
   validateAdminPermissions,
   gate,
