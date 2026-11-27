@@ -309,13 +309,17 @@ async function scanEthereum(db, sources, treasuryAddress, env) {
     fail("Ethereum independent RPC sources disagree on the finalized head.");
   }
   const head = quantity(finalized[0].number, "Ethereum finalized block number");
+  const headOccurredAt = toSafeNumber(finalized[0].timestamp, "Ethereum finalized block timestamp");
+  if (!headOccurredAt || headOccurredAt !== toSafeNumber(finalized[1].timestamp, "Ethereum finalized block timestamp")) {
+    fail("Ethereum independent RPC sources disagree on the finalized head timestamp.");
+  }
   let cursor = await getCursor(db, "ethereum", "mainnet");
   if (!cursor) {
     await setCursor(db, "ethereum", "mainnet", head.toString());
-    return { initialized: true, receipts: 0, scannedThrough: head.toString(), caughtUp: true };
+    return { initialized: true, receipts: 0, scannedThrough: head.toString(), caughtUp: true, headOccurredAt };
   }
   const previous = quantity(cursor.cursor_value, "Ethereum scan cursor");
-  if (head <= previous) return { initialized: false, receipts: 0, scannedThrough: previous.toString(), caughtUp: true };
+  if (head <= previous) return { initialized: false, receipts: 0, scannedThrough: previous.toString(), caughtUp: true, headOccurredAt };
   const from = previous + 1n;
   const to = head < from + BigInt(ETHEREUM_BLOCK_BATCH - 1) ? head : from + BigInt(ETHEREUM_BLOCK_BATCH - 1);
   const filter = {
@@ -385,7 +389,8 @@ async function scanEthereum(db, sources, treasuryAddress, env) {
     qualifyingPaymentsSettled,
     allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
     scannedThrough: to.toString(),
-    caughtUp: to === head
+    caughtUp: to === head,
+    headOccurredAt
   };
 }
 
@@ -469,11 +474,14 @@ async function tronMetadata(source, treasuryAddress) {
 async function tronNowBlock(source) {
   const block = await tronRpc(source, "getnowblock");
   const number = block && block.block_header && block.block_header.raw_data && block.block_header.raw_data.number;
+  const timestampMs = block && block.block_header && block.block_header.raw_data && block.block_header.raw_data.timestamp;
   const blockId = String(block && block.blockID || "").toLowerCase();
-  if (!Number.isSafeInteger(number) || number < 0 || !/^[0-9a-f]{64}$/.test(blockId)) {
+  if (!Number.isSafeInteger(number) || number < 0 ||
+      !Number.isSafeInteger(timestampMs) || timestampMs <= 0 ||
+      !/^[0-9a-f]{64}$/.test(blockId)) {
     fail(source.id + " SolidityNode returned an invalid solidified head.");
   }
-  return { number, blockId };
+  return { number, blockId, occurredAt: Math.floor(timestampMs / 1000) };
 }
 
 function tronTransactionIds(block) {
@@ -580,16 +588,17 @@ async function scanTron(db, sources, treasuryAddress, env) {
   await tronAddressPayload(treasuryAddress, "Configured TRON treasury");
   const metadata = await Promise.all(sources.map((source) => tronMetadata(source, treasuryAddress)));
   const heads = await Promise.all(sources.map(tronNowBlock));
-  if (heads[0].number !== heads[1].number || heads[0].blockId !== heads[1].blockId) {
+  if (heads[0].number !== heads[1].number || heads[0].blockId !== heads[1].blockId ||
+      heads[0].occurredAt !== heads[1].occurredAt) {
     fail("TRON independent SolidityNodes disagree on the solidified head.");
   }
   let cursor = await getCursor(db, "tron", "mainnet");
   if (!cursor) {
     await setCursor(db, "tron", "mainnet", String(heads[0].number));
-    return { initialized: true, receipts: 0, scannedThrough: String(heads[0].number), caughtUp: true };
+    return { initialized: true, receipts: 0, scannedThrough: String(heads[0].number), caughtUp: true, headOccurredAt: heads[0].occurredAt };
   }
   const previous = toSafeNumber(cursor.cursor_value, "TRON scan cursor");
-  if (heads[0].number <= previous) return { initialized: false, receipts: 0, scannedThrough: String(previous), caughtUp: true };
+  if (heads[0].number <= previous) return { initialized: false, receipts: 0, scannedThrough: String(previous), caughtUp: true, headOccurredAt: heads[0].occurredAt };
   const end = Math.min(heads[0].number, previous + TRON_BLOCK_BATCH);
   let receiptsRecorded = 0;
   let qualifyingPaymentsSettled = 0;
@@ -657,7 +666,8 @@ async function scanTron(db, sources, treasuryAddress, env) {
     qualifyingPaymentsSettled,
     allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
     scannedThrough: String(end),
-    caughtUp: end === heads[0].number
+    caughtUp: end === heads[0].number,
+    headOccurredAt: heads[0].occurredAt
   };
 }
 
@@ -934,10 +944,22 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
 }
 
 async function scanSolana(db, sources, treasuryAddress, env) {
-  const [genesisHashes, mintMetadata] = await Promise.all([
+  const [genesisHashes, mintMetadata, finalizedHeads] = await Promise.all([
     Promise.all(sources.map((source) => jsonRpc(source, "getGenesisHash"))),
     Promise.all(sources.map(solanaMintMetadata)),
+    Promise.all(sources.map(async (source) => {
+      const slot = await jsonRpc(source, "getSlot", [{ commitment: "finalized" }]);
+      const blockTime = await jsonRpc(source, "getBlockTime", [slot]);
+      if (!Number.isSafeInteger(slot) || slot < 0 || !Number.isSafeInteger(blockTime) || blockTime <= 0) {
+        fail(source.id + " RPC did not return a canonical finalized Solana head timestamp.");
+      }
+      return { slot, occurredAt: blockTime };
+    })),
   ]);
+  if (finalizedHeads[0].slot !== finalizedHeads[1].slot ||
+      finalizedHeads[0].occurredAt !== finalizedHeads[1].occurredAt) {
+    fail("Solana independent RPC sources disagree on the finalized head slot or timestamp.");
+  }
   if (genesisHashes.some((hash) => hash !== GENESIS_USDT_ASSETS.solana.clusterGenesisHash)) {
     fail("A configured Solana RPC source is not on Mainnet Beta.");
   }
@@ -995,11 +1017,12 @@ async function scanSolana(db, sources, treasuryAddress, env) {
     allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
     tokenAccounts: currentTreasuryTokenAccounts.length,
     processedAccounts,
-    caughtUp
+    caughtUp,
+    headOccurredAt: finalizedHeads[0].occurredAt
   };
 }
 
-async function retryPendingGenesisPaymentSettlements(db, env) {
+async function retryPendingGenesisPaymentSettlements(db, env, settlementCutoff) {
   const matches = await db.prepare(
     "SELECT r.receipt_id FROM genesis_payment_intents i " +
     "JOIN genesis_treasury_receipts r ON r.identity_id=i.identity_id " +
@@ -1007,9 +1030,9 @@ async function retryPendingGenesisPaymentSettlements(db, env) {
     "AND r.network=i.network AND r.asset_identifier=i.asset_identifier " +
     "AND r.treasury_address=i.treasury_address AND r.amount_base_units=i.amount_base_units " +
     "AND r.occurred_at>=i.created_at AND r.occurred_at<=i.expires_at " +
-    "WHERE i.status='OPEN' AND r.attribution_status='MATCHED' " +
+    "WHERE i.status='OPEN' AND r.attribution_status='MATCHED' AND r.occurred_at<? " +
     "ORDER BY r.occurred_at ASC,r.verified_at ASC,r.network,r.transaction_hash,r.transfer_index LIMIT 100"
-  ).all();
+  ).bind(settlementCutoff).all();
   let qualifyingPaymentsSettled = 0;
   let allowanceCreditApplied = 0n;
   let blockedBy = null;
@@ -1073,8 +1096,11 @@ export async function runGenesisReceiptMonitor(env) {
   const scansComplete = [ethereum, tron, solana].every((network) =>
     network.status === "SCANNED" && network.caughtUp === true
   );
-  const retryResult = scansComplete
-    ? await retryPendingGenesisPaymentSettlements(db, env)
+  const settlementCutoff = scansComplete
+    ? Math.min(ethereum.headOccurredAt, tron.headOccurredAt, solana.headOccurredAt)
+    : 0;
+  const retryResult = scansComplete && settlementCutoff > 0
+    ? await retryPendingGenesisPaymentSettlements(db, env, settlementCutoff)
     : {
         qualifyingPaymentsSettled: 0,
         allowanceCreditAppliedUsdtBaseUnits: "0",
@@ -1093,6 +1119,7 @@ export async function runGenesisReceiptMonitor(env) {
     entitlementChanges: qualifyingPaymentsSettled,
     settlementQueueDeferred: retryResult.settlementQueueDeferred,
     settlementQueueBlockedBy: retryResult.blockedBy,
+    settlementOccurrenceCutoffExclusive: settlementCutoff,
   };
 }
 
