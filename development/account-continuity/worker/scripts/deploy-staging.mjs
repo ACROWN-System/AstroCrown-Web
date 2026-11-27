@@ -515,7 +515,7 @@ async function smokeTest(origin) {
     supporters.environment !== "MAINNET" ||
     supporters.programme?.status !== "PRELAUNCH" ||
     supporters.paymentAcceptance?.enabled !== false ||
-    supporters.paymentAcceptance?.contributionsAccepted !== false ||
+    supporters.paymentAcceptance?.qualifyingPaymentsAccepted !== false ||
     supporters.purchaseAllowance?.automaticTokenIssuance !== false ||
     !Array.isArray(supporters.networks) ||
     supporters.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
