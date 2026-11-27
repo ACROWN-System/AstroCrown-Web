@@ -866,6 +866,17 @@ export async function runGenesisReceiptMonitor(env) {
   }
   const db = env.SUPPORTERS_DB;
   if (!db) fail("the isolated Genesis database is not bound.");
+  for (const network of ["ethereum", "tron", "solana"]) {
+    const configuredAsset = MAINNET_USDT_CONFIG[network];
+    const canonicalAsset = GENESIS_USDT_ASSETS[network];
+    if (!configuredAsset ||
+        configuredAsset.tokenIdentifier !== canonicalAsset.assetIdentifier ||
+        Number(configuredAsset.tokenDecimals) !== canonicalAsset.decimals ||
+        typeof configuredAsset.treasuryAddress !== "string" ||
+        !configuredAsset.treasuryAddress) {
+      fail(network + " treasury configuration does not match the canonical USDT asset registry.");
+    }
+  }
   const config = (network) => prepareGenesisRpcPair(env, network);
   const treasury = {
     ethereum: MAINNET_USDT_CONFIG.ethereum.treasuryAddress,
