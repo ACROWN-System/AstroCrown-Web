@@ -1003,7 +1003,7 @@ async function retryPendingGenesisPaymentSettlements(db, env) {
     "AND r.treasury_address=i.treasury_address AND r.amount_base_units=i.amount_base_units " +
     "AND r.verified_at>=i.created_at AND r.verified_at<=i.expires_at " +
     "WHERE i.status='OPEN' AND r.attribution_status='MATCHED' " +
-    "ORDER BY r.verified_at ASC LIMIT 100"
+    "ORDER BY r.occurred_at ASC,r.verified_at ASC,r.network,r.transaction_hash,r.transfer_index LIMIT 100"
   ).all();
   let qualifyingPaymentsSettled = 0;
   let allowanceCreditApplied = 0n;
@@ -1081,7 +1081,7 @@ export async function publicGenesisTreasuryReceipts(db, limit = 100) {
   const boundedLimit = Math.max(1, Math.min(200, Number.isSafeInteger(limit) ? limit : 100));
   const rows = await db.prepare(
     "SELECT r.receipt_id,r.network,r.asset_identifier,r.amount_display,r.sender_address,r.treasury_address,r.transaction_hash," +
-    "r.transfer_index,r.inclusion_reference,r.finality_status,r.verified_at,p.payment_record_id,p.receipt_finality_status " +
+    "r.transfer_index,r.inclusion_reference,r.finality_status,r.occurred_at,r.verified_at,p.payment_record_id,p.receipt_finality_status " +
     "FROM genesis_treasury_receipts r LEFT JOIN genesis_public_payments p " +
     "ON p.receipt_id=r.receipt_id AND p.public_visible=1 " +
     "WHERE r.public_visible=1 " +
@@ -1105,6 +1105,7 @@ export async function publicGenesisTreasuryReceipts(db, limit = 100) {
       inclusionReference: row.inclusion_reference,
       finalityStatus: row.finality_status,
       qualifyingPaymentFinalityStatus: row.receipt_finality_status || null,
+      occurredAt: row.occurred_at ? new Date(Number(row.occurred_at) * 1000).toISOString() : null,
       verifiedAt: new Date(Number(row.verified_at) * 1000).toISOString(),
       verification: "TWO_INDEPENDENT_RPC_SOURCES",
       explorerUrl: link,
