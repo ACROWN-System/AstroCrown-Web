@@ -14,6 +14,8 @@ WORKER_GENESIS_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" 
 GLOBAL_ALLOWANCE_MIGRATION = ROOT / "migrations" / "0005_genesis_global_allowance_and_launch_freeze.sql"
 WORKER_GLOBAL_ALLOWANCE_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0005_genesis_global_allowance_and_launch_freeze.sql"
 TREASURY_RECEIPT_MONITOR_MIGRATION = ROOT / "migrations" / "0006_genesis_treasury_receipt_monitor.sql"
+GENESIS_QUALIFYING_INTENT_MIGRATION = ROOT / "migrations" / "0007_genesis_qualifying_payment_intents.sql"
+WORKER_GENESIS_QUALIFYING_INTENT_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0007_genesis_qualifying_payment_intents.sql"
 WORKER_TREASURY_RECEIPT_MONITOR_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0006_genesis_treasury_receipt_monitor.sql"
 
 class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
@@ -26,6 +28,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.db.executescript(GENESIS_WALLET_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(GLOBAL_ALLOWANCE_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(TREASURY_RECEIPT_MONITOR_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(GENESIS_QUALIFYING_INTENT_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -108,6 +111,98 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
                 "SELECT COUNT(*) FROM genesis_programme_allowance_events WHERE event_type='QUALIFYING_PAYMENT_CREDIT'"
             ).fetchone()[0],
             0,
+        )
+
+    def test_qualifying_payment_intent_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_GENESIS_QUALIFYING_INTENT_MIGRATION.read_bytes(),
+            GENESIS_QUALIFYING_INTENT_MIGRATION.read_bytes(),
+            "The Worker-deployed qualifying-payment intent migration must match the canonical migration.",
+        )
+
+    def test_qualifying_payment_intents_reserve_one_global_principal_slot_and_release_on_cancel(self):
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,terms_version,terms_accepted_at,created_at,updated_at) "
+            "VALUES('gid-intent','ethereum','0x1111111111111111111111111111111111111111',"
+            "'0x1111111111111111111111111111111111111111','Intent Member','intent member','GENESIS-TERMS-V1',90,1,1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-intent','gid-intent','ethereum','0x1111111111111111111111111111111111111111',"
+            "'0x1111111111111111111111111111111111111111','PRIMARY',1,'EIP-191',1)"
+        )
+        insert = (
+            "INSERT INTO genesis_payment_intents("
+            "payment_intent_id,identity_id,source_wallet_address_id,network,asset_identifier,treasury_address,"
+            "amount_base_units,amount_display,principal_start_base_units,principal_end_base_units,"
+            "allowance_credit_usdt_base_units,tier_breakdown_json,rules_version,terms_version,status,created_at,expires_at"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        )
+        values = (
+            "gpi-one", "gid-intent", "gwa-intent", "ethereum",
+            "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+            "0xbbb77071149a5F113Df15E78c58518917afa950A",
+            "1000000000", "1000", "0", "1000000000", "30000000000",
+            '[{"tranche":1,"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"30","allowanceBaseUnits":"30000000000"}]',
+            "GENESIS-USDT-50K-1M-TIERS-V1-PROPOSED", "GENESIS-TERMS-V1", "OPEN", 100, 200,
+        )
+        self.db.execute(insert, values)
+        state = self.db.execute(
+            "SELECT qualifying_principal_usdt_base_units,pending_qualifying_principal_usdt_base_units,"
+            "earned_usdt_base_units FROM genesis_programme_allowance_state WHERE singleton=1"
+        ).fetchone()
+        self.assertEqual(state, ("0", "1000000000", "0"))
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute(insert, ("gpi-two",) + values[1:])
+        self.db.execute("UPDATE genesis_payment_intents SET status='CANCELLED' WHERE payment_intent_id='gpi-one'")
+        state = self.db.execute(
+            "SELECT qualifying_principal_usdt_base_units,pending_qualifying_principal_usdt_base_units,"
+            "earned_usdt_base_units FROM genesis_programme_allowance_state WHERE singleton=1"
+        ).fetchone()
+        self.assertEqual(state, ("0", "0", "0"))
+
+    def test_expired_or_over_target_payment_intents_are_rejected_or_release_the_reservation(self):
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,terms_version,terms_accepted_at,created_at,updated_at) "
+            "VALUES('gid-cap','ethereum','0x2222222222222222222222222222222222222222',"
+            "'0x2222222222222222222222222222222222222222','Cap Member','cap member','GENESIS-TERMS-V1',90,1,1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-cap','gid-cap','ethereum','0x2222222222222222222222222222222222222222',"
+            "'0x2222222222222222222222222222222222222222','PRIMARY',1,'EIP-191',1)"
+        )
+        insert = (
+            "INSERT INTO genesis_payment_intents("
+            "payment_intent_id,identity_id,source_wallet_address_id,network,asset_identifier,treasury_address,"
+            "amount_base_units,amount_display,principal_start_base_units,principal_end_base_units,"
+            "allowance_credit_usdt_base_units,tier_breakdown_json,rules_version,terms_version,status,created_at,expires_at"
+            ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+        )
+        values = (
+            "gpi-cap", "gid-cap", "gwa-cap", "ethereum",
+            "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+            "0xbbb77071149a5F113Df15E78c58518917afa950A",
+            "1000000000", "1000", "49999000000", "50000000000", "10000000000",
+            '[{"tranche":5,"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"10","allowanceBaseUnits":"10000000000"}]',
+            "GENESIS-USDT-50K-1M-TIERS-V1-PROPOSED", "GENESIS-TERMS-V1", "OPEN", 100, 101,
+        )
+        self.db.execute(
+            "UPDATE genesis_programme_allowance_state SET qualifying_principal_usdt_base_units='49999000000' WHERE singleton=1"
+        )
+        self.db.execute(insert, values)
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.db.execute("UPDATE genesis_payment_intents SET status='EXPIRED' WHERE payment_intent_id='gpi-cap' AND expires_at>unixepoch()")
+        self.db.execute("UPDATE genesis_payment_intents SET status='CANCELLED' WHERE payment_intent_id='gpi-cap'")
+        self.assertEqual(
+            self.db.execute(
+                "SELECT pending_qualifying_principal_usdt_base_units FROM genesis_programme_allowance_state WHERE singleton=1"
+            ).fetchone()[0],
+            "0",
         )
 
     def test_global_pool_is_one_shared_usdt_balance_and_personal_entitlement_rows_are_rejected(self):
