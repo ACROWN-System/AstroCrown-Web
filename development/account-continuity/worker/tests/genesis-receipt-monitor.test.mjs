@@ -16,9 +16,9 @@ function rpcEnvironment(network = "ethereum") {
   const prefix = "GENESIS_" + network.toUpperCase() + "_RPC_";
   return {
     [prefix + "A_URL"]: "https://rpc-a.example.test",
-    [prefix + "A_OPERATOR_ID"]: "operator-a",
+    [prefix + "A_SOURCE_ID"]: "operator-a",
     [prefix + "B_URL"]: "https://rpc-b.example.test",
-    [prefix + "B_OPERATOR_ID"]: "operator-b",
+    [prefix + "B_SOURCE_ID"]: "operator-b",
   };
 }
 
@@ -35,8 +35,8 @@ test("USDT amount formatting uses exact six-decimal integer arithmetic", () => {
 test("RPC source configuration requires HTTPS, distinct origins and distinct operators", () => {
   const pair = prepareGenesisRpcPair(rpcEnvironment(), "ethereum");
   assert.equal(pair.length, 2);
-  assert.equal(pair[0].operatorId, "operator-a");
-  assert.equal(pair[1].operatorId, "operator-b");
+  assert.equal(pair[0].sourceId, "operator-a");
+  assert.equal(pair[1].sourceId, "operator-b");
   assert.notEqual(pair[0].origin, pair[1].origin);
 
   const tronPair = prepareGenesisRpcPair({
@@ -58,7 +58,7 @@ test("RPC source configuration requires HTTPS, distinct origins and distinct ope
 
   const sameOperator = {
     ...rpcEnvironment(),
-    GENESIS_ETHEREUM_RPC_B_OPERATOR_ID: "operator-a",
+    GENESIS_ETHEREUM_RPC_B_SOURCE_ID: "operator-a",
   };
   assert.throws(() => prepareGenesisRpcPair(sameOperator, "ethereum"), /independently identified operators/);
 
