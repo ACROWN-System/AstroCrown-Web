@@ -493,6 +493,7 @@
     if (!primaryWalletCatalogueReady) loadPrimaryWalletCatalogue();
     var wallet = selectedPrimaryWalletNetworkList();
     var networks = wallet ? wallet.networks : [];
+    if (networks.length && networks.indexOf(selectedPrimaryNetwork) === -1) selectedPrimaryNetwork = networks[0];
     var ambiguous = wallet && wallet.ambiguousNetworks.indexOf(selectedPrimaryNetwork || networks[0]) >= 0;
     var selectedNetworkAvailable = Boolean(wallet && selectedPrimaryNetwork && networks.indexOf(selectedPrimaryNetwork) >= 0);
     var enabled = accountState.walletAuthenticationAvailable === true &&
@@ -1112,11 +1113,26 @@
 
   });
 
+  content.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "account-wallet-network") {
+      selectedPrimaryNetwork = event.target.value;
+      renderWalletPrimaryStatus();
+    }
+  });
+
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
     if (button.dataset.accountMode) {
       setMode(button.dataset.accountMode);
+      return;
+    }
+    if (button.dataset.primaryWallet) {
+      selectedPrimaryWalletId = button.dataset.primaryWallet;
+      var selectedEntry = selectedPrimaryWalletNetworkList();
+      selectedPrimaryNetwork = selectedEntry && selectedEntry.networks.length
+        ? selectedEntry.networks[0] : "";
+      renderWalletPrimaryStatus();
       return;
     }
     if (button.id === "account-wallet-auth") {
