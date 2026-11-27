@@ -332,9 +332,6 @@
         selectedWalletAddress = "";
         throw new Error("Your wallet returned more than one address. Choose the address you want as your AstroCrown primary identity, then continue.");
       }
-      if (accounts.length > 1 && !accountSelect.value) {
-        throw new Error("Choose the wallet address for this AstroCrown account.");
-      }
     }
     var address = accountSelect && accountSelect.value ? accountSelect.value
       : selectedWalletAddress && accounts.find(function (item) { return item.toLowerCase() === selectedWalletAddress.toLowerCase(); })
@@ -448,7 +445,7 @@
         '<button class="account-primary" type="button" id="account-wallet-signin"' +
           (browserPreviewMode ? ' disabled' : '') + '>Sign in with wallet</button>' +
         '<p class="account-signin-help">New to AstroCrown? <button class="account-text-button" type="button" data-account-mode="create">Create an account</button></p>' +
-        '<p class="account-signin-help"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet sign-in?</a></p>' +
+        '<p class="account-signin-help"><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet sign-in?</a></p>' +
       '</div>' +
       '<details class="account-wallet-recovery-explainer">' +
         '<summary>Lost your wallet?</summary>' +
@@ -478,14 +475,14 @@
           '</label>' +
           '<label class="account-consent account-required-consent" for="account-wallet-terms-accepted">' +
             '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
-            '<span>I have read, understood and agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> and <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
+            '<span>I have read, understood and agree to AstroCrown’s <a href="/account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> and <a href="/account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
           '</label>' +
         '</section>' +
         '<p class="account-provider-note">Connecting only requests access to the address you choose. Account creation requires an off-chain personal-message signature. It does not send a transaction, approve a token, transfer funds or authorize future payments.</p>' +
         '<button class="account-primary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create account with wallet</button>' +
         '<p class="account-signin-help">Already have an account? <button class="account-text-button" type="button" data-account-mode="signin">Log in</button></p>' +
       '</form>' +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">How wallet identity and transaction safety work</a></p>';
+      '<p class="account-security-assurance"><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">How wallet identity and transaction safety work</a></p>';
     refreshWalletProviderChoices();
   }
 
@@ -582,13 +579,13 @@
           '<p>Network: ' + (chainId > 0 ? "EVM chain ID " + String(chainId) : "Not reported") + '</p>' +
           '<p>AstroCrown does not receive or store your private key, seed phrase or recovery words. Restore this same wallet and address using your wallet provider or your own offline backup. If every restoration path is lost, access to this account is permanently lost.</p>' +
           '<p><strong>Never share your seed phrase or private key with AstroCrown, support staff, NOVA or anyone else.</strong></p>' +
-          '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+          '<a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         '<section class="account-dashboard-card account-payment-safety-card"><h2>Payment and transaction safety</h2>' +
           '<span class="account-dashboard-status">Payments disabled in staging</span>' +
           '<p>Signing in proves control of your primary wallet only. It cannot move assets, approve tokens, submit transactions or authorize spending.</p>' +
           '<p>When payments are introduced, each payment must show the asset, amount, network and recipient and require a separate confirmation in your wallet. No unlimited token approval or standing spending permission is enabled by account sign-in.</p>' +
           '<p>Any future automated trading or payment tool must use a separate, explicit, narrowly limited, expiring and revocable authorization. No automated spending authorization is active.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Terms &amp; consent</h2><p>Terms accepted: ' + escapeHtml(accountState.termsVersion || "Not reported") + '</p><p>Wallet-loss warning acknowledged: ' + (accountState.walletLossAcknowledged === true ? "Yes" : "Not recorded") + '</p><p>Your acceptance is recorded by the account service when the account is created.</p><a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> · <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a></section>' +
+        '<section class="account-dashboard-card"><h2>Terms &amp; consent</h2><p>Terms accepted: ' + escapeHtml(accountState.termsVersion || "Not reported") + '</p><p>Wallet-loss warning acknowledged: ' + (accountState.walletLossAcknowledged === true ? "Yes" : "Not recorded") + '</p><p>Your acceptance is recorded by the account service when the account is created.</p><a href="/account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> · <a href="/account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a></section>' +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
         '<section class="account-dashboard-card"><h2>Account data</h2><p>The primary wallet address is public and may be associated with public blockchain activity. AstroCrown does not collect an email address, phone number or password for wallet authentication.</p></section>' +
         '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
@@ -821,7 +818,7 @@
           enrollmentControl +
           '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this dashboard. Revoked wallet addresses cannot be enrolled again. Losing every enrolled wallet requires a separately authorized recovery process that is not yet implemented.</p>' +
           '<p id="admin-wallet-enrollment-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p></section>' +
-        '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, account-wide management, payments and all-wallet-loss recovery are not available in this console. Administrator appointment and revocation are shown separately only when the server confirms their corresponding permissions.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, account-wide management, payments and all-wallet-loss recovery are not available in this console. Administrator appointment and revocation are shown separately only when the server confirms their corresponding permissions.</p><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         roleManagementCard +
         communicationComposer +
       '</div>' +
@@ -1264,7 +1261,6 @@
     });
   }
   closeButton.addEventListener("click", closeDialog);
-  dialog.addEventListener("cancel", function () {});
   dialog.addEventListener("close", function () {
     showFeedback("", "");
     if (focusBeforeOpen && typeof focusBeforeOpen.focus === "function") focusBeforeOpen.focus();
