@@ -28,14 +28,16 @@
   var discoveredWalletProviders = [];
   var selectedWalletProvider = null;
   var selectedWalletAddress = "";
-  var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var queryParams = new URLSearchParams(window.location.search);
   var forceBrowserDemo = queryParams.get("account-preview-demo") === "1";
-  var liveTestHost = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.trycloudflare\.com$/i.test(window.location.hostname);
-  var liveTestMode = queryParams.get("account-live-test") === "1" &&
-    window.location.protocol === "https:" && liveTestHost;
-  var browserPreviewMode = forceBrowserDemo ||
-    (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);
+  var runtimeMarker = document.querySelector('meta[name="astro-account-runtime"]');
+  var workerStagingMode = Boolean(
+    runtimeMarker && runtimeMarker.content === "worker-staging" &&
+    window.location.protocol === "https:"
+  );
+  // Only the explicitly marked Cloudflare staging Worker may authenticate.
+  // Local files, localhost pages and generic previews remain read-only demos.
+  var browserPreviewMode = forceBrowserDemo || !workerStagingMode;
   // Built-in glyphs only: no user-uploaded image, remote URL or third-party asset.
   // The server independently validates the selected identifier.
   var avatarOptions = {
