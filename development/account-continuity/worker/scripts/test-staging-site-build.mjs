@@ -17,7 +17,6 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   const noticeCss = await readPublic("page-entry/page-entry-notice.css");
   const registry = JSON.parse(await readPublic("page-entry/feature-status.json"));
   const workerSource = await readFile(resolve(workerRoot, "src", "index.js"), "utf8");
-  const genesisWorkerSource = await readFile(resolve(workerRoot, "src", "genesis.js"), "utf8");
   const walletAssurance = await readPublic("account-continuity/prototype/wallet-identity-assurance.html");
   const accountUi = await readPublic("account-continuity/prototype/account-ui.js");
 
@@ -227,7 +226,6 @@ test("published Genesis Programme states that qualifying payments are not open a
 
 test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
   const js = await readPublic("supporters/supporters.js");
-  const genesisWorkerSource = await readFile(resolve(workerRoot, "src", "genesis.js"), "utf8");
   const genesisWorkerSource = await readFile(resolve(workerRoot, "src", "genesis.js"), "utf8");
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
