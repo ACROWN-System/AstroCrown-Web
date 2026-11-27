@@ -228,6 +228,7 @@ test("published Genesis Programme states that qualifying payments are not open a
 test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
   const js = await readPublic("supporters/supporters.js");
   const genesisWorkerSource = await readFile(resolve(workerRoot, "src", "genesis.js"), "utf8");
+  const genesisWorkerSource = await readFile(resolve(workerRoot, "src", "genesis.js"), "utf8");
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
   assert.match(js, /wallet-standard:app-ready/);
