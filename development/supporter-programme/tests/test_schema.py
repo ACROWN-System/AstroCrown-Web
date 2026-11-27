@@ -262,6 +262,30 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "UPDATE genesis_programme_allowance_state SET qualifying_principal_usdt_base_units='49000000000' WHERE singleton=1"
         )
         self.db.execute(insert, values)
+
+        self.db.execute(
+            "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized,"
+            "display_name,display_name_normalized,terms_version,terms_accepted_at,created_at,updated_at) "
+            "VALUES('gid-over','ethereum','0x333','0x333','Over Cap Member','over cap member','GENESIS-TERMS-V1',90,1,1)"
+        )
+        self.db.execute(
+            "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,"
+            "wallet_role,ownership_verified_at,proof_method,created_at) "
+            "VALUES('gwa-over','gid-over','ethereum','0x333','0x333','PRIMARY',1,'EIP-191',1)"
+        )
+        over_values = (
+            "gpi-over", "gid-over", "gwa-over", "ethereum",
+            "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+            "0xbbb77071149a5F113Df15E78c58518917afa950A",
+            "1", "0.000001", "50000000000", "50000000001", "10",
+            '[{"tranche":5,"principalStartBaseUnits":"50000000000","principalEndBaseUnits":"50000000001",'
+            '"qualifyingPrincipalBaseUnits":"1","multiplierNumerator":"10","multiplierDenominator":"1",'
+            '"allowanceBaseUnits":"10"}]',
+            "GENESIS-USDT-50K-1M-TIERS-V1", "GENESIS-TERMS-V1", "OPEN", 100, 200,
+        )
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "global USDT 50,000 principal reservation"):
+            self.db.execute(insert, over_values)
+
         self.db.execute("UPDATE genesis_payment_intents SET status='EXPIRED' WHERE payment_intent_id='gpi-cap'")
         self.assertEqual(
             self.db.execute(
