@@ -10,7 +10,7 @@ import {
 const TRANSFER_TOPIC = GENESIS_USDT_ASSETS.ethereum.transferTopic.toLowerCase();
 const SOLANA_PAGE_SIZE = 1000;
 const ETHEREUM_BLOCK_BATCH = 500;
-const TRON_BLOCK_BATCH = 5;
+const TRON_BLOCK_BATCH = 150;
 const USDT_SCALE = 1_000_000n;
 const NETWORK_PRESENTATION = Object.freeze({
   ethereum: Object.freeze({ label: "USDT · Ethereum (ERC-20)", standard: "ERC-20" }),
@@ -455,6 +455,30 @@ function tronTransactionIds(block) {
   });
 }
 
+export function normalizeTronBlockReceiptPage(receipts, blockHeight, expectedTransactionIds) {
+  if (!Array.isArray(receipts) || !Array.isArray(expectedTransactionIds)) {
+    fail("TRON SolidityNode returned a malformed block receipt page.");
+  }
+  const expected = new Set(expectedTransactionIds.map((value) => String(value).toLowerCase()));
+  if (expected.size !== expectedTransactionIds.length) fail("TRON block contains duplicate transaction ids.");
+  const byId = new Map();
+  for (const receipt of receipts) {
+    if (!receipt || typeof receipt !== "object") fail("TRON block receipt entry is malformed.");
+    const id = String(receipt.id || "").toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(id) || !expected.has(id) || byId.has(id)) {
+      fail("TRON block receipt page contains an unknown, malformed or duplicate transaction id.");
+    }
+    if (!Number.isSafeInteger(Number(receipt.blockNumber)) || Number(receipt.blockNumber) !== blockHeight) {
+      fail("TRON block receipt is not bound to the requested solidified block height.");
+    }
+    byId.set(id, receipt);
+  }
+  if (byId.size !== expected.size || Array.from(expected).some((id) => !byId.has(id))) {
+    fail("TRON SolidityNode did not return a receipt for every transaction in the solidified block.");
+  }
+  return byId;
+}
+
 async function extractTronUsdtCandidates(info, tokenHex, treasuryHex) {
   if (!info || !Array.isArray(info.log)) return [];
   const candidates = [];
@@ -494,8 +518,11 @@ async function scanTron(db, sources, treasuryAddress) {
   const previous = toSafeNumber(cursor.cursor_value, "TRON scan cursor");
   if (heads[0].number <= previous) return { initialized: false, receipts: 0, scannedThrough: String(previous) };
   const end = Math.min(heads[0].number, previous + TRON_BLOCK_BATCH);
-  let receipts = 0;
+  let receiptsRecorded = 0;
   for (let height = previous + 1; height <= end; height += 1) {
+    // Fetch the solidified block header and its complete receipt page from both
+    // native SolidityNodes. This avoids an RPC call per transaction and ensures
+    // every block transaction is accounted for, including non-USDT transactions.
     const blocks = await Promise.all(sources.map((source) => tronRpc(source, "getblockbynum", { num: height })));
     const ids = blocks.map((block) => String(block && block.blockID || "").toLowerCase());
     const heights = blocks.map((block) => block && block.block_header && block.block_header.raw_data &&
@@ -505,17 +532,24 @@ async function scanTron(db, sources, treasuryAddress) {
       fail("TRON independent SolidityNodes disagree on block identity or requested block height " + height + ".");
     }
     const txIds = blocks.map(tronTransactionIds);
-    if (JSON.stringify(txIds[0]) !== JSON.stringify(txIds[1])) fail("TRON independent SolidityNodes disagree on block transactions.");
+    if (JSON.stringify(txIds[0]) !== JSON.stringify(txIds[1])) {
+      fail("TRON independent SolidityNodes disagree on solidified block transaction order.");
+    }
+    const receiptPages = await Promise.all(sources.map((source) =>
+      tronRpc(source, "gettransactioninfobyblocknum", { num: height })
+    ));
+    const receiptMaps = receiptPages.map((page) =>
+      normalizeTronBlockReceiptPage(page, height, txIds[0])
+    );
     for (const transactionId of txIds[0]) {
-      const infos = await Promise.all(sources.map((source) => tronRpc(source, "gettransactioninfobyid", { value: transactionId })));
-      if (infos.some((info) => !info || String(info.id || "").toLowerCase() !== transactionId ||
-          Number(info.blockNumber) !== height || !info.receipt || typeof info.receipt.result !== "string")) {
-        fail("TRON SolidityNode omitted or mismatched transaction receipt evidence for block " + height + ".");
-      }
-      if (infos.some((info) => info.receipt.result !== "SUCCESS")) continue;
+      const infos = sources.map((source, sourceIndex) => receiptMaps[sourceIndex].get(transactionId));
       const candidates = await Promise.all(infos.map((info) => extractTronUsdtCandidates(info, tokenHex, treasuryHex)));
       if (JSON.stringify(candidates[0]) !== JSON.stringify(candidates[1])) {
-        fail("TRON independent SolidityNodes disagree on the incoming USDT transfer events.");
+        fail("TRON independent SolidityNodes disagree on incoming USDT Transfer event evidence.");
+      }
+      if (!candidates[0].length) continue;
+      if (infos.some((info) => !info.receipt || info.receipt.result !== "SUCCESS")) {
+        fail("A TRON USDT Transfer event is not attached to a successful solidified contract receipt.");
       }
       for (const candidate of candidates[0]) {
         const expected = {
@@ -545,12 +579,12 @@ async function scanTron(db, sources, treasuryAddress) {
         }
         const reconciled = reconcileGenesisRpcEvidence({ network: "tron", observations, expected });
         await persistVerifiedReceipt(db, reconciled);
-        receipts += 1;
+        receiptsRecorded += 1;
       }
     }
   }
   await setCursor(db, "tron", "mainnet", String(end));
-  return { initialized: false, receipts, scannedThrough: String(end) };
+  return { initialized: false, receipts: receiptsRecorded, scannedThrough: String(end) };
 }
 
 async function solanaMintMetadata(source) {
