@@ -111,7 +111,7 @@ test("Ethereum parser rejects wrong chain, failed receipt, wrong token, wrong se
     receipt: { ...ethereumFixture().receipt, logs: [{
       ...ethereumFixture().receipt.logs[0], address: "0x" + "11".repeat(20),
     }] },
-  })), /balance deltas do not reconcile/);
+  })), /exactly one matching canonical USDT Transfer event/);
   assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
     finalityBlock: { tag: "latest", number: "0x500" },
   })), /safe\/finalized/);
@@ -343,7 +343,7 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
     signatureStatus: { err: null, confirmationStatus: "finalized" },
     mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
     expected: { ...expected, transferIndex: 2 },
-  }), /exactly one matching canonical USDT Transfer event/);
+  }), /balance deltas do not reconcile/);
 });
 
 test("Solana parser rejects wrong cluster, non-finalized status, failed transactions and mismatched token deltas", () => {
