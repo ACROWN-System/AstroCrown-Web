@@ -146,7 +146,6 @@
         adminWalletAuthenticated: false,
         adminSessionAuthorized: false,
         admin: false,
-        passkeyAvailable: false,
         activeSessionCount: 0,
         scope: "hosted-preview-no-authentication"
       };
@@ -155,7 +154,7 @@
       return { authenticated: false, message: "No account session exists in this hosted preview." };
     }
     throw new Error(
-      "The hosted HTML preview is a read-only interface demonstration. It cannot create accounts, store credentials or perform passkey authentication. Use the local loopback server for real WebAuthn tests."
+      "The hosted HTML preview is read-only. Wallet authentication requires the official AstroCrown staging Worker."
     );
   }
 
@@ -943,80 +942,33 @@
   content.addEventListener("submit", async function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.id !== "account-wallet-create-form") return;
     event.preventDefault();
     if (busy) return;
 
-    if (form.id === "account-wallet-create-form") {
-      var walletTermsInput = form.elements.namedItem("termsAccepted");
-      var walletLossInput = form.elements.namedItem("walletLossAcknowledged");
-      if (!(walletLossInput && walletLossInput.checked)) {
-        showFeedback("Read and confirm the wallet-loss and recovery warning before creating an account.", "error");
-        if (walletLossInput) walletLossInput.focus();
-        return;
-      }
-      if (!(walletTermsInput && walletTermsInput.checked)) {
-        showFeedback("Read and accept the Terms of Use and Privacy Policy before creating an account.", "error");
-        if (walletTermsInput) walletTermsInput.focus();
-        return;
-      }
-      setBusy(true);
-      try {
-        var walletResult = await authenticateWithPrimaryWallet(true, formValue(form, "referralId"), {
-          termsAccepted: walletTermsInput.checked,
-          walletLossAcknowledged: walletLossInput.checked
-        });
-        finishPrimaryWalletAuthentication(walletResult, walletResult.walletAccountCreated === true);
-      } catch (error) {
-        showFeedback(error.message || "Wallet account creation could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
+    var walletLossInput = form.elements.namedItem("walletLossAcknowledged");
+    var termsInput = form.elements.namedItem("termsAccepted");
+    if (!walletLossInput || !walletLossInput.checked) {
+      showFeedback("Read and confirm the wallet-loss and recovery warning before creating an account.", "error");
+      if (walletLossInput) walletLossInput.focus();
       return;
     }
-
-    if (form.id === "account-create-form") {
-      var termsInput = form.elements.namedItem("termsAccepted");
-      var termsAccepted = Boolean(termsInput && termsInput.checked);
-      if (!termsAccepted) {
-        showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
-        if (termsInput) termsInput.focus();
-        return;
-      }
-      setBusy(true);
-      try {
-        var result = await registerWithPasskey({
-          referralId: formValue(form, "referralId"),
-          termsAccepted: true,
-          termsVersion: termsVersion
-        });
-        await finishPasskeyAuthentication(result, "signup");
-      } catch (error) {
-        showFeedback(error.message || "Passkey account creation could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
+    if (!termsInput || !termsInput.checked) {
+      showFeedback("Read and accept the Terms of Use and Privacy Policy before creating an account.", "error");
+      if (termsInput) termsInput.focus();
       return;
     }
-
-    if (form.id === "account-recovery-form") {
-      var accountIdentifier = formValue(form, "accountIdentifier").trim();
-      var recoveryKey = formValue(form, "recoveryKey").trim();
-      if (!accountIdentifier || !recoveryKey) {
-        showFeedback("Enter both your account identifier and offline recovery key.", "error");
-        return;
-      }
-      setBusy(true);
-      try {
-        var recovered = await recoverWithPasskey({
-          accountIdentifier: accountIdentifier,
-          recoveryKey: recoveryKey
-        });
-        await finishPasskeyAuthentication(recovered, "recovery");
-      } catch (error) {
-        showFeedback(error.message || "Account recovery could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
+    setBusy(true);
+    try {
+      var result = await authenticateWithPrimaryWallet(true, formValue(form, "referralId"), {
+        termsAccepted: termsInput.checked,
+        walletLossAcknowledged: walletLossInput.checked
+      });
+      finishPrimaryWalletAuthentication(result, result.walletAccountCreated === true);
+    } catch (error) {
+      showFeedback(error.message || "Wallet account creation could not be completed.", "error");
+    } finally {
+      setBusy(false);
     }
   });
 
@@ -1037,15 +989,15 @@
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (button.dataset.accountMode) {
+    if (button.dataset.accountMode === "signin" || button.dataset.accountMode === "create") {
       setMode(button.dataset.accountMode);
       return;
     }
     if (button.id === "account-wallet-signin") {
       setBusy(true);
       try {
-        var walletSignInResult = await authenticateWithPrimaryWallet(false, "");
-        finishPrimaryWalletAuthentication(walletSignInResult, false);
+        var result = await authenticateWithPrimaryWallet(false, "");
+        finishPrimaryWalletAuthentication(result, false);
       } catch (error) {
         showFeedback(error.message || "Wallet sign-in could not be completed.", "error");
       } finally {
@@ -1053,280 +1005,15 @@
       }
       return;
     }
-    if (button.id === "account-passkey-signin") {
-      setBusy(true);
-      try {
-        var signInResult = await signInWithPasskey();
-        await finishPasskeyAuthentication(signInResult, "signin");
-      } catch (error) {
-        showFeedback(error.message || "Passkey sign-in could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-recovery-start") {
-      setMode("recover");
-      var recoveryIdentifier = document.getElementById("account-recovery-identifier");
-      if (recoveryIdentifier) recoveryIdentifier.focus();
-      return;
-    }
-    if (button.id === "copy-account-identifier" || button.id === "copy-account-recovery-key") {
-      var isRecoveryKey = button.id === "copy-account-recovery-key";
-      var keyField = document.getElementById(
-        isRecoveryKey ? "account-one-time-recovery-key" : "account-one-time-account-identifier"
-      );
-      if (!keyField) return;
-      keyField.focus();
-      keyField.select();
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        try {
-          await navigator.clipboard.writeText(keyField.value);
-          showFeedback(
-            isRecoveryKey ? "Recovery key copied. Store it offline and do not share it."
-              : "Account identifier copied. Keep it with your offline recovery record.",
-            "success"
-          );
-        } catch (_error) {
-          showFeedback("The value is selected. Copy it manually and keep it offline.", "info");
-        }
-      } else {
-        showFeedback("The value is selected. Copy it manually and keep it offline.", "info");
-      }
-      return;
-    }
     if (button.id === "open-account-hub") {
-      if ((successKind === "signup" || successKind === "recovery") && !recoveryKeyAcknowledged) {
-        showFeedback("Confirm that you saved the offline recovery key before continuing.", "error");
-        return;
-      }
-      delete accountState.oneTimeRecoveryKey;
       closeDialog();
-      recoveryKeyAcknowledged = false;
       navigateToAccount();
-      return;
-    }
-    if (button.id === "account-signout") {
-      setBusy(true);
-      try {
-        await requestJson("/api/account/logout", {});
-        accountState = { authenticated: false };
-        await refreshStatus();
-        mode = "signin";
-        render();
-        showFeedback("Signed out of the development test account.", "success");
-      } catch (error) {
-        showFeedback(error.message, "error");
-      } finally {
-        setBusy(false);
-      }
     }
   });
 
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (securityRecoveryKeyPending && button.dataset.securityAction !== "copy-recovery-key" &&
-        button.dataset.securityAction !== "acknowledge-recovery-key") {
-      var pendingFeedback = document.getElementById("account-security-feedback");
-      if (pendingFeedback) pendingFeedback.textContent = "Save and acknowledge the one-time recovery key before making another security change.";
-      return;
-    }
-    if (button.id === "account-security-manage") {
-      var panel = document.getElementById("account-security-panel");
-      if (!panel) return;
-      panel.hidden = false;
-      panel.textContent = "Loading account security information…";
-      setBusy(true);
-      try {
-        var securityData = await requestJson("/api/account/security");
-        renderSecurityPanel(securityData);
-      } catch (error) {
-        panel.textContent = error.message || "Account security information could not be loaded.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-add-passkey") {
-      var newPasskeyLabel = document.getElementById("account-security-new-passkey-label");
-      var labelValue = newPasskeyLabel ? newPasskeyLabel.value.trim() : "";
-      if (!labelValue || labelValue.length > 40) {
-        var addFeedbackInvalid = document.getElementById("account-security-feedback");
-        if (addFeedbackInvalid) addFeedbackInvalid.textContent = "Enter a passkey name between 1 and 40 characters.";
-        return;
-      }
-      setBusy(true);
-      try {
-        accountSecurityPendingPasskeyOptions = await prepareAnotherPasskey(labelValue);
-        var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
-        if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = false;
-        var addFeedback = document.getElementById("account-security-feedback");
-        if (addFeedback) addFeedback.textContent = "Passkey step-up verified. Continue with the second button to open your authenticator.";
-      } catch (error) {
-        accountSecurityPendingPasskeyOptions = null;
-        var addErrorFeedback = document.getElementById("account-security-feedback");
-        if (addErrorFeedback) addErrorFeedback.textContent = error.message || "The additional passkey could not be prepared.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-create-passkey") {
-      setBusy(true);
-      try {
-        var addedPasskeyData = await createPreparedPasskey();
-        accountSecurityPendingPasskeyOptions = null;
-        renderSecurityPanel(addedPasskeyData);
-        var addFeedback = document.getElementById("account-security-feedback");
-        if (addFeedback) addFeedback.textContent = "The additional passkey was added to this account.";
-      } catch (error) {
-        var addErrorFeedback = document.getElementById("account-security-feedback");
-        if (addErrorFeedback) addErrorFeedback.textContent = error.message || "The additional passkey could not be added.";
-        accountSecurityPendingPasskeyOptions = null;
-        var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
-        if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = true;
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-cancel-passkey") {
-      accountSecurityPendingPasskeyOptions = null;
-      var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
-      if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = true;
-      var addFeedback = document.getElementById("account-security-feedback");
-      if (addFeedback) addFeedback.textContent = "Additional passkey registration cancelled. No credential was added.";
-      return;
-    }
-    if (button.id === "account-security-rotate-recovery-key") {
-      setBusy(true);
-      try {
-        var rotatedRecoveryData = await rotateOfflineRecoveryKey();
-        renderSecurityPanel(rotatedRecoveryData);
-      } catch (error) {
-        var rotateFeedback = document.getElementById("account-security-feedback");
-        if (rotateFeedback) rotateFeedback.textContent = error.message || "The offline recovery key could not be replaced.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-revoke-others") {
-      if (!window.confirm("Sign out every other active session for this account? The current browser session will remain active.")) return;
-      setBusy(true);
-      try {
-        var sessionsResult = await revokeOtherAccountSessions();
-        renderSecurityPanel(sessionsResult);
-        var sessionFeedback = document.getElementById("account-security-feedback");
-        if (sessionFeedback) sessionFeedback.textContent = "Other active sessions have been revoked. This browser session remains active.";
-      } catch (error) {
-        var sessionErrorFeedback = document.getElementById("account-security-feedback");
-        if (sessionErrorFeedback) sessionErrorFeedback.textContent = error.message || "Other sessions could not be revoked.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "rename-passkey") {
-      var passkeyRef = button.dataset.passkeyRef;
-      var labelInput = dashboardContent.querySelector('input[data-passkey-label-input="' + passkeyRef + '"]');
-      var nextLabel = labelInput ? labelInput.value.trim() : "";
-      if (!nextLabel || nextLabel.length > 40) {
-        var renameInvalid = document.getElementById("account-security-feedback");
-        if (renameInvalid) renameInvalid.textContent = "Enter a passkey name between 1 and 40 characters.";
-        return;
-      }
-      setBusy(true);
-      try {
-        var renamed = await renameAccountPasskey(passkeyRef, nextLabel);
-        renderSecurityPanel(renamed);
-        var renameFeedback = document.getElementById("account-security-feedback");
-        if (renameFeedback) renameFeedback.textContent = "Passkey name updated.";
-      } catch (error) {
-        var renameError = document.getElementById("account-security-feedback");
-        if (renameError) renameError.textContent = error.message || "The passkey name could not be updated.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "revoke-passkey") {
-      if (!window.confirm("Revoke this passkey? It will no longer be able to sign in. Keep at least one usable passkey on the account.")) return;
-      setBusy(true);
-      try {
-        var revokedPasskey = await revokeAccountPasskey(button.dataset.passkeyRef);
-        if (revokedPasskey.sessionRevoked === true) {
-          securityRecoveryKeyPending = false;
-          accountSecurityData = null;
-          accountState = { authenticated: false };
-          await refreshStatus();
-          mode = "signin";
-          render();
-          showFeedback(
-            revokedPasskey.message || "The passkey was revoked and this session was ended. Sign in with another active passkey.",
-            "success"
-          );
-          return;
-        }
-        renderSecurityPanel(revokedPasskey);
-        var revokeFeedback = document.getElementById("account-security-feedback");
-        if (revokeFeedback) revokeFeedback.textContent = "The selected passkey was revoked. Sessions established by that passkey were also ended.";
-      } catch (error) {
-        var revokeError = document.getElementById("account-security-feedback");
-        if (revokeError) revokeError.textContent = error.message || "The passkey could not be revoked.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "revoke-session") {
-      if (!window.confirm("Sign out the selected session? This action cannot be undone.")) return;
-      setBusy(true);
-      try {
-        var revokedSession = await revokeAccountSession(button.dataset.sessionRef);
-        renderSecurityPanel(revokedSession);
-        var revokeSessionFeedback = document.getElementById("account-security-feedback");
-        if (revokeSessionFeedback) revokeSessionFeedback.textContent = "The selected other session was revoked.";
-      } catch (error) {
-        var revokeSessionError = document.getElementById("account-security-feedback");
-        if (revokeSessionError) revokeSessionError.textContent = error.message || "The session could not be revoked.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "copy-recovery-key") {
-      var recoveryKeyField = document.getElementById("account-security-recovery-key-value");
-      if (!recoveryKeyField) return;
-      recoveryKeyField.focus();
-      recoveryKeyField.select();
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        try {
-          await navigator.clipboard.writeText(recoveryKeyField.value);
-          var copyFeedback = document.getElementById("account-security-feedback");
-          if (copyFeedback) copyFeedback.textContent = "Recovery key copied. Store it offline and do not share it.";
-        } catch (_error) {
-          var copyFallback = document.getElementById("account-security-feedback");
-          if (copyFallback) copyFallback.textContent = "The key is selected. Copy it manually and store it offline.";
-        }
-      } else {
-        var copyUnavailable = document.getElementById("account-security-feedback");
-        if (copyUnavailable) copyUnavailable.textContent = "The key is selected. Copy it manually and store it offline.";
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "acknowledge-recovery-key") {
-      var output = document.getElementById("account-security-recovery-output");
-      var secretField = document.getElementById("account-security-recovery-key-value");
-      if (secretField) secretField.value = "";
-      if (output) {
-        output.textContent = "The replacement key has been acknowledged. AstroCrown will not display it again.";
-        output.setAttribute("role", "status");
-      }
-      securityRecoveryKeyPending = false;
-      return;
-    }
     if (button.id === "open-account-communications") {
       window.location.hash = "communications";
       return;
@@ -1339,9 +1026,7 @@
       var noticeId = button.getAttribute("data-notice-id");
       setBusy(true);
       try {
-        accountState = await requestJson("/api/account/administrator-notice/acknowledge", {
-          noticeId: noticeId
-        });
+        accountState = await requestJson("/api/account/administrator-notice/acknowledge", { noticeId: noticeId });
         syncAccountButton();
         renderAccountDashboard();
       } catch (error) {
@@ -1375,7 +1060,7 @@
         syncAccountButton();
         renderAccountDashboard();
         var avatarFeedback = document.getElementById("account-avatar-feedback");
-        if (avatarFeedback) avatarFeedback.textContent = "Avatar updated for this test account.";
+        if (avatarFeedback) avatarFeedback.textContent = "Avatar updated for this AstroCrown account.";
         var selectedAvatar = dashboardContent.querySelector('#account-avatar-picker [data-avatar-id="' + requestedAvatar + '"]');
         if (selectedAvatar) selectedAvatar.focus();
       } catch (error) {
@@ -1387,11 +1072,6 @@
       return;
     }
     if (button.id !== "account-signout") return;
-    if (securityRecoveryKeyPending) {
-      var saveKeyNotice = document.getElementById("account-security-feedback");
-      if (saveKeyNotice) saveKeyNotice.textContent = "Save and acknowledge the new recovery key before signing out.";
-      return;
-    }
     setBusy(true);
     try {
       await requestJson("/api/account/logout", {});
@@ -1409,69 +1089,6 @@
         notice.textContent = error.message || "Sign-out could not be completed.";
         message.prepend(notice);
       }
-    } finally {
-      setBusy(false);
-    }
-  });
-
-
-  communicationsContent.addEventListener("click", async function (event) {
-    var button = event.target.closest("button");
-    if (!button || busy) return;
-    if (button.dataset.communicationSection) {
-      var nextSection = button.dataset.communicationSection === "messages" ? "messages" : "alerts";
-      if (nextSection === activeCommunicationsSection) return;
-      activeCommunicationsSection = nextSection;
-      setBusy(true);
-      try {
-        await loadCommunicationsPage(activeCommunicationsSection, null, false);
-      } catch (error) {
-        var tabFeedback = document.getElementById("communications-feedback");
-        if (tabFeedback) tabFeedback.textContent =
-          error.message || "This communication section could not be loaded.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.communicationsLoadOlder === "true") {
-      var olderCursor = communicationsState.nextCursor;
-      if (!olderCursor) return;
-      setBusy(true);
-      try {
-        await loadCommunicationsPage(activeCommunicationsSection, olderCursor, true);
-      } catch (error) {
-        var olderFeedback = document.getElementById("communications-feedback");
-        if (olderFeedback) olderFeedback.textContent =
-          error.message || "Older communications could not be loaded.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (!button.dataset.communicationAction || !button.dataset.communicationId) return;
-    setBusy(true);
-    try {
-      var stateResult = await requestJson("/api/account/communications/state", {
-        communicationId: button.dataset.communicationId,
-        action: button.dataset.communicationAction
-      });
-      var changedItem = communicationsState.items.find(function (item) {
-        return item.communicationId === button.dataset.communicationId;
-      });
-      if (changedItem && button.dataset.communicationAction === "acknowledge") {
-        changedItem.acknowledgedAt = changedItem.acknowledgedAt || "acknowledged";
-      } else if (changedItem && button.dataset.communicationAction === "read") {
-        changedItem.readAt = changedItem.readAt || "read";
-      }
-      communicationsState.unreadCounts = stateResult.unreadCounts || communicationsState.unreadCounts;
-      accountState.communicationsUnreadCounts = communicationsState.unreadCounts;
-      syncAccountButton();
-      renderCommunicationsPage();
-    } catch (error) {
-      var communicationFeedback = document.getElementById("communications-feedback");
-      if (communicationFeedback) communicationFeedback.textContent =
-        error.message || "The communication state could not be updated.";
     } finally {
       setBusy(false);
     }
