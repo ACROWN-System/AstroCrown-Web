@@ -393,8 +393,12 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     if (!destinationOwners.length || destinationOwners.some((owner) => owner !== treasury)) continue;
     const sourceDelta = sourceBefore.amount - sourceAfter.amount;
     const destinationDelta = destinationAfter.amount - destinationBefore.amount;
+    // Multiple canonical SPL transfers in one transaction can aggregate into
+    // the same token-account balance delta. The requested instruction ordinal
+    // isolates this transfer; the before/after balances corroborate that its
+    // amount was covered by the successful transaction.
     if ((requestedIndex === null || instructionOrdinal === requestedIndex) &&
-        transfer.amount === amount && sourceDelta === amount && destinationDelta === amount) {
+        transfer.amount === amount && sourceDelta >= amount && destinationDelta >= amount) {
       matches.push({ transferIndex: instructionOrdinal });
     }
   }
