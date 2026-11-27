@@ -370,9 +370,16 @@ function paymentIntentPublicView(row) {
     amountBaseUnits: row.amount_base_units,
     receivingAddress: row.treasury_address,
     tokenIdentifier: canonical ? canonical.tokenIdentifier : row.asset_identifier,
-    allowanceCreditUsdtBaseUnits: row.allowance_credit_usdt_base_units,
-    allowanceCreditUsdt: usdtDisplay(row.allowance_credit_usdt_base_units),
-    tierBreakdown: JSON.parse(row.tier_breakdown_json),
+    allowanceCreditUsdtBaseUnits: row.settled_allowance_credit_usdt_base_units || row.allowance_credit_usdt_base_units,
+    allowanceCreditUsdt: usdtDisplay(row.settled_allowance_credit_usdt_base_units || row.allowance_credit_usdt_base_units),
+    estimatedAllowanceCreditUsdtBaseUnits: row.allowance_credit_usdt_base_units,
+    estimatedAllowanceCreditUsdt: usdtDisplay(row.allowance_credit_usdt_base_units),
+    tierBreakdown: row.settled_tier_breakdown_json
+      ? JSON.parse(row.settled_tier_breakdown_json)
+      : JSON.parse(row.tier_breakdown_json),
+    allowanceStatus: row.status === "CONFIRMED" ? "SETTLED" : "ESTIMATE_ONLY_UNTIL_RECEIPT_VERIFICATION",
+    settledPrincipalStartBaseUnits: row.settled_principal_start_base_units || null,
+    settledPrincipalEndBaseUnits: row.settled_principal_end_base_units || null,
     rulesVersion: row.rules_version,
     createdAt: new Date(Number(row.created_at) * 1000).toISOString(),
     expiresAt: new Date(Number(row.expires_at) * 1000).toISOString(),
@@ -470,10 +477,10 @@ async function createGenesisPaymentIntent(db, env, identity, payload) {
   const now = Math.floor(Date.now() / 1000);
   await expireStaleGenesisPaymentIntents(db, now);
   const currentIntent = await db.prepare(
-    "SELECT payment_intent_id,identity_id,expires_at FROM genesis_payment_intents WHERE status='OPEN' LIMIT 1"
-  ).first();
+    "SELECT payment_intent_id,identity_id,expires_at FROM genesis_payment_intents WHERE status='OPEN' AND identity_id=? LIMIT 1"
+  ).bind(identity.identity_id).first();
   if (currentIntent) {
-    throw error(409, "Another qualifying-payment intent is currently reserving the single global Genesis tranche. It must be confirmed, cancelled or expire before a new one can be created.");
+    throw error(409, "This Genesis profile already has an open qualifying-payment intent. Confirm, cancel or let that intent expire before requesting another.");
   }
 
   const allowance = await db.prepare(
@@ -482,15 +489,16 @@ async function createGenesisPaymentIntent(db, env, identity, payload) {
     "FROM genesis_programme_allowance_state WHERE singleton=1"
   ).first();
   if (!allowance ||
-      allowance.allowance_cap_usdt_base_units !== GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS ||
-      BigInt(allowance.pending_qualifying_principal_usdt_base_units || "0") !== 0n) {
+      allowance.allowance_cap_usdt_base_units !== GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS) {
     throw error(503, "The shared Genesis USDT allowance ledger is not initialized for the approved rules version.");
   }
 
+  const plannedPrincipalPosition = BigInt(allowance.qualifying_principal_usdt_base_units || "0") +
+    BigInt(allowance.pending_qualifying_principal_usdt_base_units || "0");
   let tranchePlan;
   try {
     tranchePlan = calculateGenesisTieredPurchaseAllowance({
-      cumulativeQualifyingPrincipalBeforeBaseUnits: allowance.qualifying_principal_usdt_base_units || "0",
+      cumulativeQualifyingPrincipalBeforeBaseUnits: plannedPrincipalPosition.toString(),
       qualifyingPaymentUsdtBaseUnits: amountBaseUnits,
     });
   } catch (cause) {
