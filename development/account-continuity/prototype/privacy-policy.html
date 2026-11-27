@@ -15,32 +15,76 @@ p,li{color:var(--muted)}a{color:var(--gold)}.meta{font-size:12px;color:#8192aa}
 </style>
 </head>
 <body><main>
-<p class="meta">ASTROCROWN · DEVELOPMENT PREVIEW</p>
+<p class="meta">ASTROCROWN · ACCOUNT PRIVACY</p>
 <h1>Privacy Policy</h1>
-<p class="notice">DRAFT ONLY — NOT APPROVED FOR PRODUCTION OR REAL USERS</p>
-<p><strong>Draft revision:</strong> 0.3 · 31 October 2026</p>
-<p><strong>Status:</strong> Development draft for the Account dialog only. It does not replace a reviewed production privacy notice and should not be relied on as legal advice or a complete statement of a deployed service's practices.</p>
-<h2>1. Browser-preview mode</h2>
-<p>The hosted HTML preview is a disposable interaction demonstration. Account form values and demo account state are processed in page memory only by the prototype; this code does not send account API requests or write account data to browser storage. Reloading or opening a new tab discards the demo account. The preview is served through a third-party HTML-preview service, so never enter real personal information or credentials.</p>
-<h2>2. Local prototype mode</h2>
-<p>In the optional localhost test, email address, password hash, creation timestamp, referral ID, Terms acceptance and newsletter opt-in state are stored in a local SQLite database on the test computer. Passwords are not stored in plaintext. This prototype does not send verification messages, password-reset emails, or crypto-news newsletters. The newsletter checkbox records only a local test preference; it does not subscribe the address to a mailing list.</p>
-<h2>3. Data minimization and purpose</h2>
-<p>Email is used as the account identifier in this prototype. A Referral ID is an optional unverified test value; it does not trigger rewards or tracking. The crypto-news email preference is separate, optional, and unchecked by default. The development test is not an authorization to contact real people.</p>
-<h2>4. Retention, deletion and access</h2>
-<p>Hosted-preview data disappears with the page session. Local test records persist in the configured SQLite database until the test operator deletes that database. This draft does not define production retention periods, access requests, export, deletion, incident notifications, lawful bases, cross-border transfers, or data-subject rights.</p>
-<h2>5. Feedback, grievances, case records and recovery</h2>
-<p>The development case portal can receive suggestions, grievances and requests for review. The submission may contain its category, title, description, account identifier when a valid account session is present, reference code, priority, status and a dated event history. A submission made without an active session is not linked to an account identifier by the portal. The account link is a convenience and is not required for independent case access.</p>
-<p>Each case receives a reference code and a separate high-entropy private access key. The server stores a cryptographic hash of the case access key, not the readable key itself. The key is displayed when issued and should be saved by the submitter. The public case portal requires both the reference and key to retrieve a case. A reference code alone does not reveal case contents. A signed-in account may also view cases linked to that account while the session is active.</p>
-<p>The portal can generate a local text export of the submitter-visible case history. That export includes the public case timeline and excludes internal reviewer notes.</p>
-<p>Case records are stored separately from account session records and are not configured as child records that are automatically deleted when an account is closed or removed. This permits independent case access after an account is restricted or terminated. The case history separates submitter-visible updates from internal reviewer notes. Internal notes are returned only to the authorized administrator workspace.</p>
-<p>A case-access recovery request may collect a case reference if available, a short title or description and approximate date, a contact method and contact detail, and an explanation of the loss of access. The recovery request receives its own reference and private status key; the status key is stored as a hash. A contact detail supplied by a requester is not treated as verified merely because it was submitted. An authorized reviewer must verify identity and match the request to a case before a replacement case key can be issued. If the original case reference is also lost, the reviewer must identify and match the relevant case manually. Where the grievance concerns an administrator, the independent-review safeguard also applies.</p>
-<p>On approval, the system replaces the previous case-key hash and displays the replacement key once to the authorized reviewer for delivery through a separately verified contact route. The prototype does not automatically send email, SMS or push messages, and it does not guarantee that a contact route can be verified. A recovery request and its verification details are retained in the local test database. Do not submit real contact details or personal information to this prototype.</p>
-<p>The development prototype does not accept file attachments and does not send case contents to an AI model or external analysis provider. Deterministic classification and priority routing are performed locally. The prototype does not automatically determine the truth of a grievance or make a substantive decision about a user's rights or account status.</p>
-<p>For this local prototype, case submissions, public and internal case events, recovery requests and the recovery contact details are stored in the same local SQLite database as the account test data. They remain there until the local test operator deletes the database. This is not a production retention schedule. Production must define retention, access, correction, export, deletion, security, verification, appeal and legal-record requirements before collecting real case information.</p>
+<p class="notice">DRAFT ONLY — NOT APPROVED FOR PRODUCTION OR REAL-USER ACCEPTANCE</p>
+<p><strong>Draft revision:</strong> 0.4 · 28 November 2026</p>
+<p><strong>Status:</strong> This is a development draft for the wallet-only AstroCrown account and Genesis programme relationship. It must be reviewed against the actual production service operator, hosting configuration, data flows and applicable privacy law before real-user data is collected.</p>
 
-<h2>6. Third parties and production delivery</h2>
-<p>No external identity, mailing-list, or email delivery provider is configured by this prototype. Any future service must be evaluated for necessity, cost, data access, retention, security, jurisdiction, privacy, and the project's $0/no-card constraint before activation.</p>
-<h2>7. Review required</h2>
-<p>Before collecting real user data, AstroCrown must approve its production hosting and data flows, verify email addresses, implement secure password-reset delivery, define marketing consent and unsubscribe handling, assess legal obligations, and publish an accurate, reviewed privacy notice. No production compliance claim is made.</p>
-<p><a href="../../index.html">Return to the development homepage</a></p>
+<h2>1. Which environment are you using?</h2>
+<p>The public Cloudflare staging website is a temporary test environment. Use a disposable wallet with no valuable assets and synthetic profile information. Staging account records, sessions, profiles and test data may be reset or deleted during qualification. Do not use a production wallet or send real funds.</p>
+<p>A static HTML preview or local file preview is read-only and cannot create an account or authenticate a wallet. Account authentication is available only on the official HTTPS AstroCrown Worker staging origin marked for that purpose. Do not enter personal information or wallet recovery secrets into an untrusted preview.</p>
+<p>This policy is a development draft and does not identify all production service providers, legal bases, jurisdictions, retention periods or data-subject request contacts. Those details must be completed before production onboarding.</p>
+
+<h2>2. The account identity model</h2>
+<p>Each ordinary AstroCrown account is identified by one primary EVM wallet public address. The primary wallet is the account sign-in identity and recovery anchor. Genesis profile information, public display name, programme membership, badge and entitlements are attached to the same AstroCrown account. Genesis is not a separate account or sign-in service.</p>
+<p>The current primary sign-in flow supports EVM externally owned accounts using an EIP-191 personal-message signature. The browser discovers compatible wallet providers, the user chooses the provider and confirms the exact public address to use, and the Worker verifies a short-lived, origin-bound challenge before issuing a session.</p>
+<p>AstroCrown never asks for, receives or stores a wallet private key, seed phrase, mnemonic or recovery words. Never enter them into the AstroCrown website or send them to AstroCrown staff, support personnel, NOVA or anyone else.</p>
+
+<h2>3. Information processed</h2>
+<p>The wallet-only account service may process and store the following information to provide the requested account functions:</p>
+<ul>
+<li><strong>Primary wallet identity:</strong> the public EVM wallet address and chain identifier selected for the account.</li>
+<li><strong>Account record:</strong> a stable internal account identifier, account creation timestamp, user-selected or generated public profile name where available, avatar selection and optional referral value.</li>
+<li><strong>Authentication data:</strong> short-lived challenge metadata, nonce/request identifiers, signature verification result, session expiry and a cryptographic hash of the session token. The raw reusable wallet secret and private key are not stored.</li>
+<li><strong>Consent records:</strong> the accepted Terms of Use and Privacy Policy version, acceptance timestamp, wallet-loss warning version and acknowledgement timestamp.</li>
+<li><strong>Genesis programme data:</strong> the profile linked to the same AstroCrown account ID, public display name, programme status, linked public network addresses, ownership-proof metadata, programme entitlement status and relevant public payment or purchase evidence if those features are later enabled.</li>
+<li><strong>Security and abuse-prevention data:</strong> request timestamps, rate-limit counters and keyed digests used to apply request limits. Infrastructure providers may independently process network and diagnostic metadata as described in their own notices.</li>
+</ul>
+<p>The precise fields and retention periods must be kept aligned with the deployed schema and production infrastructure before this draft is approved.</p>
+
+<h2>4. Information not requested for wallet authentication</h2>
+<p>The ordinary wallet account sign-in flow does not require an email address, phone number, password or passkey credential. AstroCrown does not request or store the wallet's private key, seed phrase, mnemonic or recovery words. No ordinary-account passkey login, password reset, email/SMS recovery or one-time passkey recovery key is provided.</p>
+<p>A wallet public address is pseudonymous, not anonymous. It may be associated with public blockchain transactions and activity by anyone using public network data. If you use the same address across services or publish it elsewhere, other people may be able to associate those activities.</p>
+
+<h2>5. What the wallet signature does</h2>
+<p>The sign-in message is an off-chain personal-message proof of control of the selected public address. The signature is verified by the AstroCrown Worker to establish the account session. It is not broadcast to a blockchain, does not require gas and does not authorize a transaction, token approval, transfer, payment or spending permission.</p>
+<p>Connecting a wallet provider and exposing an address is distinct from signing the authentication challenge. The user chooses the provider and confirms the address. AstroCrown does not silently select an address from an account list when multiple addresses are available.</p>
+
+<h2>6. Wallet loss and account recovery</h2>
+<p>The primary wallet is the only ordinary AstroCrown account recovery anchor. To regain access, you must restore the same wallet and address through your wallet provider's own recovery process or an offline backup you created.</p>
+<p>If you permanently lose access to the primary wallet and every restoration path, access to the associated AstroCrown account is permanently lost. AstroCrown cannot reset or recreate the wallet, recover its secret words, bypass wallet proof or move the account to another address. AstroCrown staff and administrators will never ask you for seed phrases, private keys or recovery words.</p>
+
+<h2>7. Genesis and additional network addresses</h2>
+<p>Genesis programme data is stored in programme-specific records but is bound to the same AstroCrown account ID. This separation keeps programme, entitlement and financial-evidence records distinct from ordinary account session data; it does not create a second account or authentication authority.</p>
+<p>The primary identity wallet is automatically associated with the Genesis profile as its primary Ethereum address. Additional Ethereum, TRON or Solana addresses may be linked to the same account for specific supported programme functions. Each additional address must independently prove control using a fresh off-chain message signature. A linked address is not an alternate login or recovery identity.</p>
+<p>In the current staging environment, Genesis payment acceptance, qualifying payments, purchases and automatic token issuance are disabled. No funds should be sent. If payment functionality is approved in the future, the policy must be updated to identify the payment data collected, the actual processing purposes, providers, retention and legal basis before the feature is enabled.</p>
+
+<h2>8. Payments and automated permissions</h2>
+<p>Sign-in, wallet connection and additional-address linking do not authorize spending. When payments are eventually enabled, every payment must display the asset, exact amount, network, destination and applicable fees and require a separate confirmation in the user's wallet. Ordinary account sign-in must never create an unlimited token approval or standing spending permission.</p>
+<p>Any future automated trading or payment tool must require a separate, explicit, narrowly scoped, capped, time-limited and revocable authorization. No such automated spending authorization is active in staging.</p>
+
+<h2>9. Service providers and transfers</h2>
+<p>The staging service is hosted through Cloudflare Workers and D1. A user's wallet provider is an independent service selected by the user. AstroCrown does not control the wallet provider's software, account recovery, security procedures or independent data practices. Cloudflare and other providers may process technical information needed to deliver, secure and operate their services.</p>
+<p>The production version of this policy must identify the actual service providers, relevant processing roles, data locations and any international transfers, and must link to the providers' current privacy notices. This development draft is not a complete provider or transfer register.</p>
+
+<h2>10. Retention, deletion and account closure</h2>
+<p>Staging data is temporary and may be reset or deleted as part of qualification or cleanup. Session credentials expire and session-token hashes are retained only as needed for the account session and security controls. Challenge records are intended to be short-lived and single-use. Programme and public-ledger evidence may need different retention treatment from disposable account sessions because it can support audit, entitlement or public verification functions.</p>
+<p>The final retention schedule, deletion procedure, backup lifecycle, handling of immutable public blockchain information and process for privacy requests must be reviewed and published before production. Closing an AstroCrown account cannot erase information already recorded on a public blockchain by a user or third party.</p>
+
+<h2>11. Communications, feedback and case access</h2>
+<p>Email, SMS, newsletter delivery, private account messages, feedback and grievance/case access are not enabled in the current staging qualification. This staging account does not subscribe you to a mailing list and does not send email or SMS messages.</p>
+<p>If these features are introduced, AstroCrown must publish their specific purposes, data fields, access controls, retention, delivery providers and available choices before collecting real information for them.</p>
+
+<h2>12. Security</h2>
+<p>AstroCrown uses server-side signature verification, short-lived challenges, account sessions, origin checks and rate limits to protect the wallet account flow. No security measure can guarantee prevention of every incident. The production security description must be kept consistent with the actual deployed implementation and reviewed after material changes.</p>
+
+<h2>13. Your privacy choices and requests</h2>
+<p>Applicable privacy laws may provide rights to request access, correction, deletion, restriction or other handling of personal information. The process, exceptions, identity-verification requirements, response timelines and contact details must be specified for the production operator and relevant jurisdictions before real users are onboarded.</p>
+
+<h2>14. Changes and contact</h2>
+<p>Material changes to this policy should identify the new version and effective date and be communicated where reasonably practicable. Renewed acknowledgement or consent will be requested where required by law or appropriate to the change.</p>
+<p>Before production launch, AstroCrown must publish the identity and contact details of the responsible service operator and a working privacy-request contact. Those details have not yet been approved in this development draft.</p>
+
+<p><a href="/">Return to AstroCrown</a></p>
 </main></body></html>
