@@ -370,14 +370,15 @@ function paymentIntentPublicView(row) {
     amountBaseUnits: row.amount_base_units,
     receivingAddress: row.treasury_address,
     tokenIdentifier: canonical ? canonical.tokenIdentifier : row.asset_identifier,
-    allowanceCreditUsdtBaseUnits: row.settled_allowance_credit_usdt_base_units || row.allowance_credit_usdt_base_units,
-    allowanceCreditUsdt: usdtDisplay(row.settled_allowance_credit_usdt_base_units || row.allowance_credit_usdt_base_units),
+    allowanceCreditUsdtBaseUnits: row.settled_allowance_credit_usdt_base_units || null,
+    allowanceCreditUsdt: row.settled_allowance_credit_usdt_base_units
+      ? usdtDisplay(row.settled_allowance_credit_usdt_base_units) : null,
     estimatedAllowanceCreditUsdtBaseUnits: row.allowance_credit_usdt_base_units,
     estimatedAllowanceCreditUsdt: usdtDisplay(row.allowance_credit_usdt_base_units),
     tierBreakdown: row.settled_tier_breakdown_json
       ? JSON.parse(row.settled_tier_breakdown_json)
       : JSON.parse(row.tier_breakdown_json),
-    allowanceStatus: row.status === "CONFIRMED" ? "SETTLED" : "ESTIMATE_ONLY_UNTIL_RECEIPT_VERIFICATION",
+    allowanceStatus: row.status === "CONFIRMED" ? "SETTLED" : "ESTIMATE_ONLY_RECEIPT_ORDER_CAN_CHANGE_FINAL_TIER",
     settledPrincipalStartBaseUnits: row.settled_principal_start_base_units || null,
     settledPrincipalEndBaseUnits: row.settled_principal_end_base_units || null,
     rulesVersion: row.rules_version,
@@ -553,7 +554,7 @@ async function createGenesisPaymentIntent(db, env, identity, payload) {
     ]);
   } catch (cause) {
     if (/unique constraint|genesis_one_open_qualifying_payment_intent|another open/i.test(String(cause?.message || cause))) {
-      throw error(409, "Another qualifying-payment intent has reserved the shared Genesis tranche. Refresh the payment status and try again.");
+      throw error(409, "Another open intent exists for this Genesis profile, or the global principal reservation changed during this request. Refresh the payment status and try again.");
     }
     throw error(409, "The qualifying-payment intent could not reserve the global USDT tranche safely: " + String(cause?.message || "database constraint"));
   }
@@ -581,9 +582,11 @@ async function createGenesisPaymentIntent(db, env, identity, payload) {
     },
     qualification: {
       rulesVersion: GENESIS_QUALIFYING_RULES_VERSION,
-      proposedPurchaseAllowanceUsdtBaseUnits: tranchePlan.purchaseAllowanceUsdtBaseUnits,
-      proposedPurchaseAllowanceUsdt: usdtDisplay(tranchePlan.purchaseAllowanceUsdtBaseUnits),
-      tierBreakdown: tranchePlan.tierBreakdown,
+      estimatedPurchaseAllowanceUsdtBaseUnits: tranchePlan.purchaseAllowanceUsdtBaseUnits,
+      estimatedPurchaseAllowanceUsdt: usdtDisplay(tranchePlan.purchaseAllowanceUsdtBaseUnits),
+      estimatedTierBreakdown: tranchePlan.tierBreakdown,
+      finalTierAllocationMethod: "ORDER_OF_INDEPENDENTLY_VERIFIED_RECEIPTS_ACROSS_ALL_NETWORKS",
+      finalAllowanceCalculatedAtSettlement: true,
       notCreditedUntilIndependentlyVerifiedReceipt: true
     }
   };
