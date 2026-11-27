@@ -16,21 +16,6 @@ ALTER TABLE genesis_programme_allowance_state
   CHECK (length(pending_qualifying_principal_usdt_base_units) > 0
     AND pending_qualifying_principal_usdt_base_units NOT GLOB '*[^0-9]*');
 
--- Qualifying-payment records carry their unique intent and reconciled receipt references.
-ALTER TABLE genesis_public_payments
-  ADD COLUMN payment_intent_id TEXT REFERENCES genesis_payment_intents(payment_intent_id);
-ALTER TABLE genesis_public_payments
-  ADD COLUMN receipt_id TEXT REFERENCES genesis_treasury_receipts(receipt_id);
-ALTER TABLE genesis_public_payments
-  ADD COLUMN allowance_credit_usdt_base_units TEXT NOT NULL DEFAULT '0'
-  CHECK (length(allowance_credit_usdt_base_units) > 0
-    AND allowance_credit_usdt_base_units NOT GLOB '*[^0-9]*');
-
--- The proposed allowance cap remains a rules value, not a live activation switch.
-UPDATE genesis_programme_allowance_state
-SET allowance_cap_usdt_base_units='1000000000000'
-WHERE singleton=1 AND allowance_cap_usdt_base_units IS NULL;
-
 CREATE TABLE IF NOT EXISTS genesis_payment_intents (
   payment_intent_id TEXT PRIMARY KEY,
   identity_id TEXT NOT NULL REFERENCES genesis_wallet_identities(identity_id),
@@ -73,6 +58,22 @@ CREATE TABLE IF NOT EXISTS genesis_payment_intents (
     OR (status != 'CONFIRMED' AND payment_record_id IS NULL AND confirmed_at IS NULL)
   )
 );
+
+
+-- Qualifying-payment records carry their unique intent and reconciled receipt references.
+ALTER TABLE genesis_public_payments
+  ADD COLUMN payment_intent_id TEXT REFERENCES genesis_payment_intents(payment_intent_id);
+ALTER TABLE genesis_public_payments
+  ADD COLUMN receipt_id TEXT REFERENCES genesis_treasury_receipts(receipt_id);
+ALTER TABLE genesis_public_payments
+  ADD COLUMN allowance_credit_usdt_base_units TEXT NOT NULL DEFAULT '0'
+  CHECK (length(allowance_credit_usdt_base_units) > 0
+    AND allowance_credit_usdt_base_units NOT GLOB '*[^0-9]*');
+
+-- The proposed allowance cap remains a rules value, not a live activation switch.
+UPDATE genesis_programme_allowance_state
+SET allowance_cap_usdt_base_units='1000000000000'
+WHERE singleton=1 AND allowance_cap_usdt_base_units IS NULL;
 
 -- One open qualifying payment intent at a time serializes global tranche reservations.
 -- This avoids two concurrent cross-network intents allocating the same cumulative tranche.
