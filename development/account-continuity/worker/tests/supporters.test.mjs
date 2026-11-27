@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { readFile } from "node:fs/promises";
 import { buildSupporterStatus, supporterStatusResponse, normalizeWalletAddress, createWalletMessage, verifyWalletSignature, base58Encode } from "../src/supporters.js";
 import { privateKeyToAccount } from "viem/accounts";
 import { keccak256, toBytes } from "viem";
