@@ -742,7 +742,20 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     if (memberMode) memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
     var accountLoginLink = document.getElementById("supporter-account-login");
     if (accountLoginLink) accountLoginLink.hidden = Boolean(supporterMember);
-    if (linkWalletButton) linkWalletButton.disabled = !ready || !supporterMember;
+    var connectedAddressAlreadyLinked = Boolean(
+      wallet && supporterMember && Array.isArray(supporterMember.wallets) &&
+      supporterMember.wallets.some(function (item) {
+        return item && item.network === wallet.network &&
+          typeof item.address === "string" &&
+          item.address.toLowerCase() === String(wallet.address || "").toLowerCase();
+      })
+    );
+    if (linkWalletButton) {
+      linkWalletButton.disabled = !ready || !supporterMember || connectedAddressAlreadyLinked;
+      linkWalletButton.textContent = connectedAddressAlreadyLinked
+        ? "This address is already linked"
+        : "Verify and link additional address";
+    }
     if (walletPurposeSelect) walletPurposeSelect.disabled = !supporterRuntimeEnabled || !supporterMember;
     if (pseudonymInput) pseudonymInput.disabled = !supporterMember;
     if (randomizeButton) randomizeButton.disabled = !supporterMember;
@@ -750,7 +763,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     if (memberProfileState) {
       memberProfileState.textContent = supporterMember
         ? (supporterMember.genesisMember && supporterMember.genesisMember.status === "ACTIVE" ? "Genesis Member" : "Wallet verified")
-        : (supporterRuntimeEnabled ? "Wallet not connected" : "Preview only");
+        : (supporterRuntimeEnabled ? "AstroCrown account not signed in" : "Preview only");
     }
     if (!supporterRuntimeEnabled) {
       if (memberFeedback) setFeedback(memberFeedback,
@@ -761,7 +774,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       if (memberSummary) memberSummary.textContent =
         supporterMember.walletIdentity.displayName + " · primary wallet identity";
       if (nameAvailability && nameAvailability.dataset.state !== "available") {
-        nameAvailability.textContent = "Your current name is reserved to this wallet.";
+        nameAvailability.textContent = "Your current name is reserved to this AstroCrown account.";
         nameAvailability.dataset.state = "available";
       }
       return;
@@ -773,10 +786,10 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       var expected = wallet.network === "ethereum" ? "Ethereum Mainnet (chain ID 1)" :
         wallet.network === "tron" ? "TRON Mainnet" : "Solana Mainnet";
       if (memberFeedback) setFeedback(memberFeedback,
-        "The connected wallet is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
+        "The connected address is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
     } else if (memberFeedback && memberFeedback.dataset.state === "neutral") {
       setFeedback(memberFeedback,
-        wallet.network.toUpperCase() + " mainnet wallet connected. Continue to prove control of this primary wallet with an off-chain message signature.", "neutral");
+        wallet.network.toUpperCase() + " mainnet address connected for display. Sign in to AstroCrown with your primary identity wallet first. You may then optionally link this as an additional payment or delivery address using a separate off-chain ownership signature. It does not become another login or authorize spending.", "neutral");
     }
   }
 
@@ -877,7 +890,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     if (memberProfileState) memberProfileState.textContent = genesisMember ? "Genesis Member" : "Wallet verified";
     if (nameAvailability) {
-      nameAvailability.textContent = "Your current name is reserved exclusively to this wallet.";
+      nameAvailability.textContent = "Your current name is reserved exclusively to this AstroCrown account.";
       nameAvailability.dataset.state = "available";
     }
     if (memberFeedback) {
