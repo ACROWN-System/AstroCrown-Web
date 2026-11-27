@@ -170,6 +170,7 @@ for (const relativePath of allowlist) {
 // addition to the same site. Do not copy the preview directory wholesale.
 const genesisProgrammeFiles = [
   ["preview/supporters/index.html", "supporters/index.html"],
+  ["preview/supporters/genesis-terms.html", "supporters/genesis-terms.html"],
   ["preview/supporters/supporters.js", "supporters/supporters.js"],
   ["preview/supporters/wallet-provider-adapters.mjs", "supporters/wallet-provider-adapters.mjs"],
   ["preview/assets/genesis-member-dna.svg", "assets/genesis-member-dna.svg"],
