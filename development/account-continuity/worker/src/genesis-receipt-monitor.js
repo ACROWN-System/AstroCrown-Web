@@ -191,7 +191,7 @@ async function attributeSender(db, network, senderAddress) {
   };
 }
 
-async function persistVerifiedReceipt(db, reconciled, env) {
+async function persistVerifiedReceipt(db, reconciled, occurredAt) {
   if (!reconciled || reconciled.creditApplied !== false ||
       reconciled.status !== "RPC_EVIDENCE_AGREES_FINALIZED_TRANSFER") {
     fail("Only non-crediting, reconciled chain evidence can be recorded.");
@@ -210,14 +210,15 @@ async function persistVerifiedReceipt(db, reconciled, env) {
     creditApplied: false,
   });
   const now = Math.floor(Date.now() / 1000);
-  const digest = await sha256Hex(evidenceJson);
+  const chainOccurredAt = Number.isSafeInteger(occurredAt) && occurredAt > 0 ? occurredAt : 0;
+  const digest = await sha256Hex(JSON.stringify({ evidenceJson, chainOccurredAt }));
   await db.prepare(
     "INSERT OR IGNORE INTO genesis_treasury_receipts(" +
     "receipt_id,network,asset_identifier,amount_base_units,amount_display,sender_address,treasury_address," +
     "transaction_hash,transfer_index,inclusion_reference,finality_status,verification_method," +
     "rpc_provider_ids_json,rpc_source_ids_json,evidence_digest,evidence_json,attribution_status," +
-    "identity_id,source_wallet_address_id,public_visible,observed_at,verified_at" +
-    ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    "identity_id,source_wallet_address_id,public_visible,occurred_at,observed_at,verified_at" +
+    ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(
     randomId(),
     network,
@@ -239,6 +240,7 @@ async function persistVerifiedReceipt(db, reconciled, env) {
     attribution.identityId,
     attribution.sourceWalletAddressId,
     1,
+    chainOccurredAt,
     now,
     now,
   ).run();
@@ -362,10 +364,14 @@ async function scanEthereum(db, sources, treasuryAddress, env) {
         finalityBlock: { ...finalityBlock, tag: "finalized" },
         expected,
       });
-      return { providerId: source.id, sourceId: source.sourceId, evidence };
+      const occurredAt = toSafeNumber(canonicalBlock && canonicalBlock.timestamp, "Ethereum canonical block timestamp");
+      return { providerId: source.id, sourceId: source.sourceId, evidence, occurredAt };
     }));
+    if (observations.some((observation) => observation.occurredAt !== observations[0].occurredAt)) {
+      fail("Ethereum independent RPC sources disagree on the receipt block timestamp.");
+    }
     const reconciled = reconcileGenesisRpcEvidence({ network: "ethereum", observations, expected });
-    const persisted = await persistVerifiedReceipt(db, reconciled, env);
+    const persisted = await persistVerifiedReceipt(db, reconciled, observations[0].occurredAt);
     receipts += 1;
     if (persisted.settlement?.status === "CONFIRMED") {
       qualifyingPaymentsSettled += 1;
@@ -547,8 +553,12 @@ async function readTronSolidifiedBlock(sources, height) {
   const ids = blocks.map((block) => String(block && block.blockID || "").toLowerCase());
   const heights = blocks.map((block) => block && block.block_header && block.block_header.raw_data &&
     Number(block.block_header.raw_data.number));
+  const occurredAtMs = blocks.map((block) => block && block.block_header && block.block_header.raw_data &&
+    Number(block.block_header.raw_data.timestamp));
   if (ids[0] !== ids[1] || !/^[0-9a-f]{64}$/.test(ids[0]) ||
-      heights.some((blockHeight) => blockHeight !== height)) {
+      heights.some((blockHeight) => blockHeight !== height) ||
+      occurredAtMs.some((timestamp) => !Number.isSafeInteger(timestamp) || timestamp <= 0) ||
+      occurredAtMs[0] !== occurredAtMs[1]) {
     fail("TRON independent SolidityNodes disagree on block identity or requested block height " + height + ".");
   }
   const txIds = blocks.map(tronTransactionIds);
@@ -561,7 +571,7 @@ async function readTronSolidifiedBlock(sources, height) {
   const receiptMaps = receiptPages.map((page) =>
     normalizeTronBlockReceiptPage(page, height, txIds[0])
   );
-  return { height, txIds: txIds[0], receiptMaps };
+  return { height, occurredAt: Math.floor(occurredAtMs[0] / 1000), txIds: txIds[0], receiptMaps };
 }
 
 async function scanTron(db, sources, treasuryAddress, env) {
@@ -629,7 +639,7 @@ async function scanTron(db, sources, treasuryAddress, env) {
             delete observation.sourceIndex;
           }
           const reconciled = reconcileGenesisRpcEvidence({ network: "tron", observations, expected });
-          const persisted = await persistVerifiedReceipt(db, reconciled, env);
+          const persisted = await persistVerifiedReceipt(db, reconciled, blockPage.occurredAt);
           receiptsRecorded += 1;
           if (persisted.settlement?.status === "CONFIRMED") {
             qualifyingPaymentsSettled += 1;
@@ -864,10 +874,15 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
         fail(source.id + " RPC does not provide a successful finalized Solana transaction for a treasury signature.");
       }
       const candidates = solanaIncomingCandidates(transaction, treasuryAddress, currentTreasuryTokenAccounts);
-      return { source, transaction, status, candidates };
+      const occurredAt = Number.isSafeInteger(transaction.blockTime) && transaction.blockTime > 0
+        ? transaction.blockTime : 0;
+      return { source, transaction, status, candidates, occurredAt };
     }));
     const left = observations[0].candidates;
     const right = observations[1].candidates;
+    if (observations[0].occurredAt !== observations[1].occurredAt) {
+      fail("Solana independent RPC sources disagree on the transaction block time.");
+    }
     if (JSON.stringify(left) !== JSON.stringify(right)) {
       fail("Solana independent RPC sources disagree on incoming USDT instruction evidence.");
     }
@@ -891,7 +906,7 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
         }),
       }));
       const reconciled = reconcileGenesisRpcEvidence({ network: "solana", observations: parsed, expected });
-      const persisted = await persistVerifiedReceipt(db, reconciled, env);
+      const persisted = await persistVerifiedReceipt(db, reconciled, observations[0].occurredAt);
       receipts += 1;
       if (persisted.settlement?.status === "CONFIRMED") {
         qualifyingPaymentsSettled += 1;
