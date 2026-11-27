@@ -24,6 +24,12 @@ AND NOT EXISTS (
   SELECT 1 FROM auth_admin_governance_audit g
   WHERE g.actor_account_id=auth_accounts.account_id
      OR g.target_account_id=auth_accounts.account_id
+)
+-- Administrator wallet audit is also append-only and protected by a no-delete
+-- trigger. Never delete an account that has either governance or wallet audit.
+AND NOT EXISTS (
+  SELECT 1 FROM auth_admin_wallet_audit w
+  WHERE w.account_id=auth_accounts.account_id
 );
 
 -- No ordinary AstroCrown account uses passkeys or recovery keys after this migration.
