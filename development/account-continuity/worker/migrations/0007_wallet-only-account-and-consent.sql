@@ -30,6 +30,16 @@ AND NOT EXISTS (
 AND NOT EXISTS (
   SELECT 1 FROM auth_admin_wallet_audit w
   WHERE w.account_id=auth_accounts.account_id
+)
+-- Preserve accounts that granted permissions to other administrator accounts;
+-- these foreign-key references do not cascade on deletion.
+AND NOT EXISTS (
+  SELECT 1 FROM auth_admin_roles r
+  WHERE r.granted_by_account_id=auth_accounts.account_id
+)
+AND NOT EXISTS (
+  SELECT 1 FROM auth_admin_permissions p
+  WHERE p.granted_by_account_id=auth_accounts.account_id
 );
 
 -- No ordinary AstroCrown account uses passkeys or recovery keys after this migration.
