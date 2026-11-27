@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#081426">
+  <title>Genesis Qualifying-Payment Terms — Draft Status | AstroCrown</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;background:#06101e;color:#e8eef8}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(ellipse at 50% 0,#142846 0,#06101e 58%);min-height:100vh}
+    main{width:min(900px,calc(100% - 32px));margin:42px auto 80px;padding:clamp(20px,5vw,44px);border:1px solid rgba(151,177,216,.2);border-radius:18px;background:rgba(8,19,35,.88);box-shadow:0 26px 90px rgba(0,0,0,.36)}
+    .eyebrow{color:#f0d486;font-size:11px;font-weight:850;letter-spacing:.16em;text-transform:uppercase}
+    h1{margin:12px 0;color:#fff0bd;font-size:clamp(28px,5vw,42px);line-height:1.12}
+    h2{margin:28px 0 9px;color:#f1d98f;font-size:18px}
+    p,li{color:#b7c4d7;font-size:14px;line-height:1.75}
+    .status{margin:20px 0;padding:15px;border:1px solid rgba(243,176,99,.45);border-radius:10px;background:rgba(120,68,22,.15);color:#ffe0b2;font-size:13px;line-height:1.65}
+    .status strong{display:block;margin-bottom:4px;color:#ffdf9f}
+    code{color:#f7e7b8;overflow-wrap:anywhere}
+    a{color:#f0d486}
+    footer{margin-top:34px;padding-top:18px;border-top:1px solid rgba(151,177,216,.16);color:#8799b3;font-size:11px}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="eyebrow">AstroCrown · Genesis Programme</div>
+    <h1>Qualifying-Payment Terms</h1>
+    <div class="status">
+      <strong>DRAFT — NOT APPROVED — NOT AN OFFER TO PAY</strong>
+      This page is a publication placeholder for the final Genesis qualifying-payment terms. It is not the final terms document, does not create a payment obligation and cannot be accepted as an approved agreement. Genesis qualifying-payment acceptance remains disabled. Do not send USDT.
+    </div>
+
+    <p>AstroCrown is preparing the rules that will govern any future Genesis qualifying payment and the resulting USDT-denominated purchase allowance. The final document must be approved, versioned and published before any payment-intent request can be enabled.</p>
+
+    <h2>1. One payment asset, three supported networks</h2>
+    <p>The intended payment asset is USDT. The supported mainnet implementations are Ethereum (ERC-20), TRON (TRC-20) and Solana (SPL). These are network routes for the same USDT asset, not three different currencies. A payment is valid only when the exact canonical token, network, receiving address and amount specified by an approved payment intent are used.</p>
+
+    <h2>2. Wallet identity and payment-address ownership</h2>
+    <p>Each Genesis profile is controlled by one primary wallet. It is the only Genesis login and recovery anchor. A participant must separately prove ownership of every additional network address used to send a qualifying payment. A payment address does not become another login wallet or an alternative recovery method. Payments from unregistered addresses are not eligible for automatic qualification.</p>
+
+    <h2>3. Payment evidence and qualification</h2>
+    <p>A wallet popup, screenshot, balance display or public explorer page is not sufficient evidence of payment. AstroCrown's receiving-wallet monitor must independently verify the canonical USDT transfer, sender, destination, exact base-unit amount, inclusion and chain-specific finality against two distinct RPC node sources. A treasury receipt alone does not grant a Genesis Member status or purchase allowance. Qualification requires a matching, unexpired payment intent created for the same profile and verified source address before the transfer.</p>
+
+    <h2>4. Proposed global allowance schedule</h2>
+    <p>The current engineering model uses five cumulative global USDT 10,000 principal tranches with proposed multipliers of 30×, 25×, 20×, 15× and 10×. The resulting proposed global principal target is USDT 50,000 and the proposed aggregate USDT-denominated purchase-allowance cap is USDT 1,000,000. These values are a proposed implementation baseline, not approved programme terms. The final terms must establish eligibility, minimum payment, tranche order, rounding, timing, allocation, cancellation, expiry and the treatment of any remaining capacity.</p>
+
+    <h2>5. Network fees and exact transfer instructions</h2>
+    <p>If payment acceptance is formally opened, the payment intent will display one exact USDT amount, one network, one canonical token identifier and one AstroCrown receiving address. The participant's network fee is paid separately using the network's native fee asset or resources; it is not deducted from the USDT principal. The website does not submit the payment transaction on the participant's behalf.</p>
+
+    <h2>6. Purchase and ACROWN delivery are separate</h2>
+    <p>A qualifying payment, if accepted under the final approved terms, creates a purchase allowance only. It does not automatically issue, mint or transfer ACROWN. Any later floor-price purchase, reserve accounting, ACROWN inventory allocation and Solana delivery require separately approved rules, custody controls and operational authorization.</p>
+
+    <h2>7. Terms still awaiting final approval</h2>
+    <ul>
+      <li>Eligibility and any applicable geographic or legal restrictions.</li>
+      <li>Minimum qualifying payment and the definitive five-tranche calculation, rounding and boundary rules.</li>
+      <li>Payment-intent lifetime, cancellation, late transfers, duplicate transfers, underpayments, overpayments and reconciliation disputes.</li>
+      <li>Any refund, reversal, chargeback, sanctions, fraud, tax and consumer-protection treatment.</li>
+      <li>Programme opening/closing dates, permanent registration cutoff and support/contact process.</li>
+      <li>Privacy, public-record publication and retention terms.</li>
+      <li>The separate ACS floor-purchase and ACROWN delivery terms.</li>
+    </ul>
+
+    <div class="status">
+      <strong>No payment acceptance is enabled.</strong>
+      The final legal/operational terms version has not been approved. The payment-intent API refuses requests unless an exact approved version, minimum amount, treasury-control evidence, network configuration and RPC-source pair are separately enabled in the staging environment.
+    </div>
+
+    <footer>Document state: DRAFT · Version placeholder: GENESIS-TERMS-PENDING · Last updated: 27 November 2026. This placeholder is not an approved agreement.</footer>
+  </main>
+</body>
+</html>
