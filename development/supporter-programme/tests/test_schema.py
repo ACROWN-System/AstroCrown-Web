@@ -16,6 +16,8 @@ WORKER_GLOBAL_ALLOWANCE_MIGRATION = ROOT.parent / "account-continuity" / "worker
 TREASURY_RECEIPT_MONITOR_MIGRATION = ROOT / "migrations" / "0006_genesis_treasury_receipt_monitor.sql"
 GENESIS_QUALIFYING_INTENT_MIGRATION = ROOT / "migrations" / "0007_genesis_qualifying_payment_intents.sql"
 WORKER_GENESIS_QUALIFYING_INTENT_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0007_genesis_qualifying_payment_intents.sql"
+MONITOR_HEALTH_MIGRATION = ROOT / "migrations" / "0008_genesis_treasury_monitor_health.sql"
+WORKER_MONITOR_HEALTH_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0008_genesis_treasury_monitor_health.sql"
 WORKER_TREASURY_RECEIPT_MONITOR_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0006_genesis_treasury_receipt_monitor.sql"
 
 class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
@@ -29,6 +31,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.db.executescript(GLOBAL_ALLOWANCE_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(TREASURY_RECEIPT_MONITOR_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(GENESIS_QUALIFYING_INTENT_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(MONITOR_HEALTH_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -73,6 +76,35 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             WORKER_TREASURY_RECEIPT_MONITOR_MIGRATION.read_bytes(),
             TREASURY_RECEIPT_MONITOR_MIGRATION.read_bytes(),
             "The Worker-deployed treasury receipt monitor migration must match the canonical migration.",
+        )
+
+    def test_monitor_health_starts_closed_and_worker_migration_mirror_matches_canonical(self):
+        self.assertEqual(
+            WORKER_MONITOR_HEALTH_MIGRATION.read_bytes(),
+            MONITOR_HEALTH_MIGRATION.read_bytes(),
+            "The Worker-deployed monitor health migration must match the canonical migration.",
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT status,last_cycle_completed_at,ethereum_caught_up,tron_caught_up,"
+                "solana_caught_up,settlement_queue_deferred "
+                "FROM genesis_treasury_monitor_health WHERE singleton=1"
+            ).fetchone(),
+            ("DISABLED", None, 0, 0, 0, 1),
+        )
+        self.db.execute(
+            "UPDATE genesis_treasury_monitor_health SET status='HEALTHY',"
+            "last_cycle_started_at=10,last_cycle_completed_at=20,"
+            "ethereum_caught_up=1,tron_caught_up=1,solana_caught_up=1,"
+            "ethereum_head_occurred_at=17,tron_head_occurred_at=18,solana_head_occurred_at=19,"
+            "settlement_queue_deferred=0,updated_at=20 WHERE singleton=1"
+        )
+        self.assertEqual(
+            self.db.execute(
+                "SELECT status,ethereum_caught_up,tron_caught_up,solana_caught_up,"
+                "settlement_queue_deferred FROM genesis_treasury_monitor_health WHERE singleton=1"
+            ).fetchone(),
+            ("HEALTHY", 1, 1, 1, 0),
         )
 
     def test_treasury_receipts_are_append_only_and_idempotent_by_chain_transaction_and_transfer_index(self):
