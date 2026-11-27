@@ -72,7 +72,9 @@ function evmAddress(value, label) {
 }
 
 function evmTopicAddress(value, label) {
-  if (typeof value !== "string" || !/^0x[0-9a-f]{64}$/i.test(value)) fail(label + " is not a valid indexed EVM address.");
+  if (typeof value !== "string" || !/^0x[0-9a-f]{64}$/i.test(value) || !/^0{24}$/i.test(value.slice(2, 26))) {
+    fail(label + " is not a valid 20-byte indexed EVM address with canonical zero padding.");
+  }
   return "0x" + value.slice(-40).toLowerCase();
 }
 
@@ -135,7 +137,9 @@ function tronLogAddress(value, label) {
 function tronIndexedAddress(value, label) {
   if (typeof value !== "string") fail(label + " is missing.");
   const normalized = value.replace(/^0x/i, "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(normalized)) fail(label + " is not a 32-byte indexed TRON address.");
+  if (!/^[0-9a-f]{64}$/.test(normalized) || !/^0{24}/.test(normalized)) {
+    fail(label + " is not a canonical 20-byte indexed TRON address with zero padding.");
+  }
   return normalized.slice(-40);
 }
 
