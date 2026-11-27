@@ -27,6 +27,18 @@
   var memberNameCheckSequence = 0;
   var memberNameCheckTimer = null;
   var availableMemberName = "";
+  var selectedPrimaryWalletId = "";
+  var primaryWalletCatalogue = [];
+  var primaryWalletCatalogueReady = false;
+  var primaryWalletCataloguePromise = null;
+  var primaryWalletBrandPresentation = {
+    metamask: { name: "MetaMask", logo: "https://www.web3icons.com/svgs/wallets/branded/metamask.svg?v=4.0.58", initials: "MM" },
+    "trust-wallet": { name: "Trust Wallet", logo: "https://www.web3icons.com/svgs/wallets/branded/trust.svg?v=4.0.58", initials: "TW" },
+    "okx-wallet": { name: "OKX Wallet", logo: "https://www.web3icons.com/svgs/wallets/branded/okx.svg?v=4.0.58", initials: "OKX" },
+    "bitget-wallet": { name: "Bitget Wallet", logo: "https://web3.bitget.com/bgwactivity-static/_next/static/media/Bitget-Wallet-Logomark.07wqb3-5_b2ml.svg", initials: "BG" },
+    tokenpocket: { name: "TokenPocket", logo: "https://www.web3icons.com/svgs/wallets/branded/token-pocket.svg?v=4.0.58", initials: "TP" },
+    coin98: { name: "Coin98", logo: "https://www.web3icons.com/svgs/wallets/branded/coin98.svg?v=4.0.58", initials: "C98" }
+  };
   var termsVersion = "development-terms-2026-10-31-v0.3";
   var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
   var queryParams = new URLSearchParams(window.location.search);
@@ -110,30 +122,53 @@
     return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
   }
 
-  async function obtainPrimaryWalletProof(intent, network, payload) {
+  async function loadPrimaryWalletCatalogue() {
+    if (primaryWalletCataloguePromise) return primaryWalletCataloguePromise;
+    primaryWalletCataloguePromise = import("/supporters/wallet-provider-adapters.mjs").then(function (adapters) {
+      primaryWalletCatalogue = adapters.discoverPrimaryWalletProviders(window);
+      primaryWalletCatalogueReady = true;
+      if (!selectedPrimaryWalletId) {
+        var firstAvailable = primaryWalletCatalogue.find(function (wallet) { return wallet.networks.length > 0; });
+        selectedPrimaryWalletId = firstAvailable ? firstAvailable.id : "metamask";
+      }
+      if (mode === "signin" || mode === "create") renderWalletPrimaryStatus();
+      return primaryWalletCatalogue;
+    }).catch(function () {
+      primaryWalletCatalogueReady = true;
+      primaryWalletCatalogue = [];
+      if (mode === "signin" || mode === "create") renderWalletPrimaryStatus();
+      return primaryWalletCatalogue;
+    });
+    return primaryWalletCataloguePromise;
+  }
+
+  function selectedPrimaryWalletEntry() {
+    return primaryWalletCatalogue.find(function (wallet) {
+      return wallet.id === selectedPrimaryWalletId;
+    }) || null;
+  }
+
+  async function obtainPrimaryWalletProof(intent, network, walletId, payload) {
     var adapters = await import("/supporters/wallet-provider-adapters.mjs");
+    var wallet = adapters.selectedPrimaryWalletProvider(primaryWalletCatalogue, walletId, network);
+    if (!wallet) {
+      throw new Error("The selected wallet does not expose exactly one compatible " + network.toUpperCase() +
+        " provider. Reconnect the intended wallet or resolve duplicate wallet extensions first.");
+    }
+
     var address = "";
     var signature = "";
     if (network === "ethereum") {
-      var evmProviders = [];
-      if (window.ethereum && Array.isArray(window.ethereum.providers)) {
-        evmProviders = window.ethereum.providers.filter(function (item) {
-          return item && typeof item.request === "function";
-        });
-      } else if (window.ethereum && typeof window.ethereum.request === "function") {
-        evmProviders = [window.ethereum];
-      }
-      adapters.discoverDirectEvmProviders(window).forEach(function (entry) {
-        if (entry.provider && evmProviders.indexOf(entry.provider) === -1) evmProviders.push(entry.provider);
-      });
-      if (!evmProviders.length) throw new Error("No compatible EVM wallet was detected. Install or unlock an EIP-1193 wallet, then try again.");
-      if (evmProviders.length > 1) throw new Error("More than one EVM wallet is injected. Temporarily disable the others or choose a single default provider before continuing.");
-      var evm = evmProviders[0];
+      var evm = wallet.provider;
       var accounts = await evm.request({ method: "eth_requestAccounts" });
-      if (!Array.isArray(accounts) || typeof accounts[0] !== "string") throw new Error("The wallet did not return an Ethereum account.");
+      if (!Array.isArray(accounts) || typeof accounts[0] !== "string") {
+        throw new Error(wallet.name + " did not return an Ethereum account.");
+      }
       address = accounts[0];
       var chainId = await evm.request({ method: "eth_chainId" });
-      if (String(chainId).toLowerCase() !== "0x1") throw new Error("Switch your wallet to Ethereum Mainnet (Chain ID 1). No transaction will be submitted.");
+      if (String(chainId).toLowerCase() !== "0x1") {
+        throw new Error("Switch " + wallet.name + " to Ethereum Mainnet (Chain ID 1). No transaction will be submitted.");
+      }
       var challengeEvm = await requestJson("/api/wallet-auth/challenge", Object.assign({}, payload, {
         intent: intent, network: network, address: address
       }));
@@ -155,26 +190,24 @@
       }) || String(verifiedChain).toLowerCase() !== "0x1") {
         throw new Error("The active Ethereum account or network changed while signing. No account session was created.");
       }
-      var evmResult = await requestJson("/api/wallet-auth/verify", {
+      return requestJson("/api/wallet-auth/verify", {
         intent: intent, challengeId: challengeEvm.challengeId, signature: signature
       });
-      return evmResult;
     }
 
     if (network === "tron") {
-      var tronEntries = adapters.discoverDirectTronProviders(window);
-      if (!tronEntries.length) throw new Error("No compatible TRON wallet was detected. Connect a supported TronLink-compatible wallet and try again.");
-      if (tronEntries.length > 1) throw new Error("More than one TRON wallet is injected. Temporarily disable the others before continuing.");
-      var tronEntry = tronEntries[0];
-      if (!adapters.hasTronMessageSigner(tronEntry.tronWeb)) throw new Error("This TRON wallet does not expose the required off-chain signMessageV2 method.");
-      await tronEntry.provider.request({ method: tronEntry.connectMethod });
+      var tronEntry = wallet;
       var tronWeb = tronEntry.tronWeb;
-      address = tronWeb.defaultAddress && tronWeb.defaultAddress.base58 || "";
+      if (!tronWeb || !adapters.hasTronMessageSigner(tronWeb)) {
+        throw new Error(wallet.name + " does not expose the required off-chain signMessageV2 method on TRON.");
+      }
+      await tronEntry.provider.request({ method: tronEntry.connectMethod });
       var tronHost = tronWeb.fullNode && tronWeb.fullNode.host || "";
       var tronUrl;
       try { tronUrl = new URL(tronHost); } catch (_error) { tronUrl = null; }
+      address = tronWeb.defaultAddress && tronWeb.defaultAddress.base58 || "";
       if (!address || !tronUrl || tronUrl.protocol !== "https:" || tronUrl.hostname !== "api.trongrid.io") {
-        throw new Error("The connected TRON wallet could not verify the approved TRON Mainnet endpoint. No signature was requested.");
+        throw new Error("The selected wallet could not verify the approved TRON Mainnet endpoint. No signature was requested.");
       }
       var challengeTron = await requestJson("/api/wallet-auth/challenge", Object.assign({}, payload, {
         intent: intent, network: network, address: address
@@ -193,14 +226,11 @@
     }
 
     if (network === "solana") {
-      var solanaEntries = adapters.discoverDirectSolanaWallets(window);
-      if (!solanaEntries.length) throw new Error("No compatible Solana Wallet Standard message-signing wallet was detected.");
-      if (solanaEntries.length > 1) throw new Error("More than one supported Solana wallet is injected. Temporarily disable the others before continuing.");
-      var solana = solanaEntries[0];
+      var solana = wallet.adapter || wallet.provider;
       var connected = await solana.features["standard:connect"].connect();
       var solanaAccount = connected.accounts && connected.accounts[0];
       if (!solanaAccount || !adapters.isSolanaMainnet(solanaAccount)) {
-        throw new Error("The connected Solana wallet did not prove Solana Mainnet. Switch to Mainnet and reconnect.");
+        throw new Error("The selected wallet did not prove Solana Mainnet. Switch to Mainnet and reconnect.");
       }
       address = solanaAccount.address;
       var challengeSolana = await requestJson("/api/wallet-auth/challenge", Object.assign({}, payload, {
@@ -211,13 +241,13 @@
         message: new TextEncoder().encode(challengeSolana.message)
       });
       if (!Array.isArray(signed) || !signed[0] || !signed[0].signature) {
-        throw new Error("The Solana wallet did not return a supported message signature.");
+        throw new Error("The selected Solana wallet did not return a supported message signature.");
       }
       var returnedSolanaAccount = signed[0].account;
       if (returnedSolanaAccount && (
         returnedSolanaAccount.address !== address || !adapters.isSolanaMainnet(returnedSolanaAccount)
       )) {
-        throw new Error("The Solana wallet changed accounts or network while signing. No account session was created.");
+        throw new Error("The selected Solana wallet changed accounts or network while signing. No account session was created.");
       }
       var solanaAfterSign = await solana.features["standard:connect"].connect();
       var stillConnectedSolana = solanaAfterSign.accounts && solanaAfterSign.accounts.find(function (item) {
@@ -231,11 +261,15 @@
         intent: intent, challengeId: challengeSolana.challengeId, signature: signature
       });
     }
-    throw new Error("Choose a supported network: Ethereum Mainnet, TRON Mainnet or Solana Mainnet.");
+    throw new Error("The selected wallet has no supported primary identity network.");
   }
-
   async function finishPrimaryWalletAuthentication(intent, payload) {
-    await obtainPrimaryWalletProof(intent, document.getElementById("account-wallet-network").value, payload);
+    var networkControl = document.getElementById("account-wallet-network");
+    var selectedNetwork = networkControl && networkControl.value;
+    if (!selectedPrimaryWalletId || !selectedNetwork) {
+      throw new Error("Choose a detected wallet brand and one of its supported identity networks first.");
+    }
+    await obtainPrimaryWalletProof(intent, selectedNetwork, selectedPrimaryWalletId, payload);
     var refreshed = await requestJson("/api/account/status");
     if (refreshed.authenticated !== true || refreshed.authMethod !== "primary-wallet" || !refreshed.primaryWallet) {
       throw new Error("The wallet proof was accepted but the account session could not be independently confirmed.");
