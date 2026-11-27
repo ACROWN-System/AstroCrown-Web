@@ -2,17 +2,19 @@
 
 **Document ID:** ACW-ACCOUNT-REQ-001  
 **Date:** 2026-10-26  
-**Status:** ACTIVE DESIGN / DEVELOPMENT-ONLY — NOT A PRODUCTION AUTHORIZATION  
+**Status:** HISTORICAL REQUIREMENTS / DEVELOPMENT-ONLY — PASSKEY-FIRST AUTHENTICATION SUPERSEDED FOR NEW ACCOUNTS  
 **Parent work:** [PR #141 — account entry and optional-wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
-**Authentication authority:** [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). This is the sole governing account-authentication design.  
+**Legacy passkey reference:** [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). Apply only to older passkey accounts, not new wallet-first accounts.  
 **Long-term context:** [Account Continuity and Privacy-Preserving Access Roadmap](ACCOUNT-CONTINUITY-AND-PRIVACY-PRESERVING-ACCESS-ROADMAP.md)  
 **Administrative wallet architecture:** [NOVA Administrative Smart-Account and Transaction-Enforcement Specification](NOVA-ADMINISTRATIVE-SMART-ACCOUNT-SECURITY-SPEC.md)
+
+> **Authentication authority update — 28 November 2026:** the 18 November 2026 [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) supersedes this document's 3 November passkey-first account-authentication direction. New ordinary accounts use one primary identity wallet for sign-in and account ownership. This document remains relevant for dashboard, role, permission and administrative boundaries, and for the explicitly labelled legacy passkey accounts only. The old passkey recovery key must not be presented as a recovery method for a primary wallet account.
 
 ## 1. Purpose
 
 Define one understandable account foundation for ordinary users and administrators without mixing account identity, authentication, authorization, wallet control, eligibility, recovery or financial authority. The development prototype is for interaction and requirements testing only. It must not be exposed as production authentication.
 
-**Target principle (updated 2026-11-03):** every account uses WebAuthn public-key authentication as its primary sign-in method; a crypto wallet is optional and may be registered as an additional backup authenticator. AstroCrown stores public credential material only, not users' private authentication keys. Account recovery uses a user-held, offline, single-use recovery key. No email, password, SMS, paid identity provider or operator reset backdoor is required. Administrative authority remains separately granted and server-enforced.
+**Historical target principle (2026-11-03; superseded 2026-11-18):** this document originally specified WebAuthn passkeys as the primary sign-in method and crypto wallets as optional backup authenticators. That direction was replaced by the wallet-first primary identity decision recorded in [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md).
 
 ## 2. Decisions already established
 
