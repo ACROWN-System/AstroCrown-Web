@@ -503,6 +503,30 @@ async function extractTronUsdtCandidates(info, tokenHex, treasuryHex) {
   return candidates;
 }
 
+const TRON_BLOCK_READ_CONCURRENCY = 5;
+
+async function readTronSolidifiedBlock(sources, height) {
+  const blocks = await Promise.all(sources.map((source) => tronRpc(source, "getblockbynum", { num: height })));
+  const ids = blocks.map((block) => String(block && block.blockID || "").toLowerCase());
+  const heights = blocks.map((block) => block && block.block_header && block.block_header.raw_data &&
+    Number(block.block_header.raw_data.number));
+  if (ids[0] !== ids[1] || !/^[0-9a-f]{64}$/.test(ids[0]) ||
+      heights.some((blockHeight) => blockHeight !== height)) {
+    fail("TRON independent SolidityNodes disagree on block identity or requested block height " + height + ".");
+  }
+  const txIds = blocks.map(tronTransactionIds);
+  if (JSON.stringify(txIds[0]) !== JSON.stringify(txIds[1])) {
+    fail("TRON independent SolidityNodes disagree on solidified block transaction order.");
+  }
+  const receiptPages = await Promise.all(sources.map((source) =>
+    tronRpc(source, "gettransactioninfobyblocknum", { num: height })
+  ));
+  const receiptMaps = receiptPages.map((page) =>
+    normalizeTronBlockReceiptPage(page, height, txIds[0])
+  );
+  return { height, txIds: txIds[0], receiptMaps };
+}
+
 async function scanTron(db, sources, treasuryAddress) {
   const [tokenHex, treasuryHex] = await Promise.all([
     tronAddressPayload(GENESIS_USDT_ASSETS.tron.assetIdentifier, "Canonical TRON USDT contract"),
@@ -522,67 +546,55 @@ async function scanTron(db, sources, treasuryAddress) {
   if (heads[0].number <= previous) return { initialized: false, receipts: 0, scannedThrough: String(previous) };
   const end = Math.min(heads[0].number, previous + TRON_BLOCK_BATCH);
   let receiptsRecorded = 0;
-  for (let height = previous + 1; height <= end; height += 1) {
-    // Fetch the solidified block header and its complete receipt page from both
-    // native SolidityNodes. This avoids an RPC call per transaction and ensures
-    // every block transaction is accounted for, including non-USDT transactions.
-    const blocks = await Promise.all(sources.map((source) => tronRpc(source, "getblockbynum", { num: height })));
-    const ids = blocks.map((block) => String(block && block.blockID || "").toLowerCase());
-    const heights = blocks.map((block) => block && block.block_header && block.block_header.raw_data &&
-      Number(block.block_header.raw_data.number));
-    if (ids[0] !== ids[1] || !/^[0-9a-f]{64}$/.test(ids[0]) ||
-        heights.some((blockHeight) => blockHeight !== height)) {
-      fail("TRON independent SolidityNodes disagree on block identity or requested block height " + height + ".");
-    }
-    const txIds = blocks.map(tronTransactionIds);
-    if (JSON.stringify(txIds[0]) !== JSON.stringify(txIds[1])) {
-      fail("TRON independent SolidityNodes disagree on solidified block transaction order.");
-    }
-    const receiptPages = await Promise.all(sources.map((source) =>
-      tronRpc(source, "gettransactioninfobyblocknum", { num: height })
-    ));
-    const receiptMaps = receiptPages.map((page) =>
-      normalizeTronBlockReceiptPage(page, height, txIds[0])
+  for (let batchStart = previous + 1; batchStart <= end; batchStart += TRON_BLOCK_READ_CONCURRENCY) {
+    const heights = Array.from(
+      { length: Math.min(TRON_BLOCK_READ_CONCURRENCY, end - batchStart + 1) },
+      (_value, index) => batchStart + index,
     );
-    for (const transactionId of txIds[0]) {
-      const infos = sources.map((source, sourceIndex) => receiptMaps[sourceIndex].get(transactionId));
-      const candidates = await Promise.all(infos.map((info) => extractTronUsdtCandidates(info, tokenHex, treasuryHex)));
-      if (JSON.stringify(candidates[0]) !== JSON.stringify(candidates[1])) {
-        fail("TRON independent SolidityNodes disagree on incoming USDT Transfer event evidence.");
-      }
-      if (!candidates[0].length) continue;
-      if (infos.some((info) => !info.receipt || info.receipt.result !== "SUCCESS")) {
-        fail("A TRON USDT Transfer event is not attached to a successful solidified contract receipt.");
-      }
-      for (const candidate of candidates[0]) {
-        const expected = {
-          transactionId,
-          senderAddress: candidate.senderAddress,
-          treasuryAddress,
-          amountBaseUnits: candidate.amountBaseUnits,
-          transferIndex: candidate.transferIndex,
-        };
-        const observations = infos.map((info, sourceIndex) => ({
-          providerId: sources[sourceIndex].id,
-          operatorId: sources[sourceIndex].operatorId,
-          evidence: null,
-          info,
-          sourceIndex,
-        }));
-        for (const observation of observations) {
-          observation.evidence = await parseTronUsdtTransferEvidence({
-            networkTag: "TRON_MAINNET",
-            receiptSource: "SOLIDITY_NODE",
-            tokenMetadata: metadata[observation.sourceIndex],
-            transactionInfo: observation.info,
-            expected,
-          });
-          delete observation.info;
-          delete observation.sourceIndex;
+    // A small bounded batch keeps the native node requests concurrent without
+    // flooding independently operated RPC infrastructure.
+    const blockPages = await Promise.all(heights.map((height) => readTronSolidifiedBlock(sources, height)));
+    for (const blockPage of blockPages) {
+      for (const transactionId of blockPage.txIds) {
+        const infos = sources.map((source, sourceIndex) => blockPage.receiptMaps[sourceIndex].get(transactionId));
+        const candidates = await Promise.all(infos.map((info) => extractTronUsdtCandidates(info, tokenHex, treasuryHex)));
+        if (JSON.stringify(candidates[0]) !== JSON.stringify(candidates[1])) {
+          fail("TRON independent SolidityNodes disagree on incoming USDT Transfer event evidence.");
         }
-        const reconciled = reconcileGenesisRpcEvidence({ network: "tron", observations, expected });
-        await persistVerifiedReceipt(db, reconciled);
-        receiptsRecorded += 1;
+        if (!candidates[0].length) continue;
+        if (infos.some((info) => !info.receipt || info.receipt.result !== "SUCCESS")) {
+          fail("A TRON USDT Transfer event is not attached to a successful solidified contract receipt.");
+        }
+        for (const candidate of candidates[0]) {
+          const expected = {
+            transactionId,
+            senderAddress: candidate.senderAddress,
+            treasuryAddress,
+            amountBaseUnits: candidate.amountBaseUnits,
+            transferIndex: candidate.transferIndex,
+          };
+          const observations = infos.map((info, sourceIndex) => ({
+            providerId: sources[sourceIndex].id,
+            operatorId: sources[sourceIndex].operatorId,
+            evidence: null,
+            info,
+            sourceIndex,
+          }));
+          for (const observation of observations) {
+            observation.evidence = await parseTronUsdtTransferEvidence({
+              networkTag: "TRON_MAINNET",
+              receiptSource: "SOLIDITY_NODE",
+              tokenMetadata: metadata[observation.sourceIndex],
+              transactionInfo: observation.info,
+              expected,
+            });
+            delete observation.info;
+            delete observation.sourceIndex;
+          }
+          const reconciled = reconcileGenesisRpcEvidence({ network: "tron", observations, expected });
+          await persistVerifiedReceipt(db, reconciled);
+          receiptsRecorded += 1;
+        }
       }
     }
   }
