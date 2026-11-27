@@ -1384,8 +1384,10 @@ export default {
             tron: result.networks?.tron?.status || "NOT_RUN",
             solana: result.networks?.solana?.status || "NOT_RUN",
           },
-          paymentCreditsApplied: 0,
-          entitlementChanges: 0,
+          qualifyingPaymentsSettled: result.qualifyingPaymentsSettled || 0,
+          allowanceCreditAppliedUsdtBaseUnits: result.allowanceCreditAppliedUsdtBaseUnits || "0",
+          paymentCreditsApplied: result.paymentCreditsApplied || 0,
+          entitlementChanges: result.entitlementChanges || 0,
         }));
       })
       .catch(() => {
