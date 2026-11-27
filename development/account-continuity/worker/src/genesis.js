@@ -362,7 +362,6 @@ function paymentIntentPublicView(row) {
   return {
     paymentIntentId: row.payment_intent_id,
     sourceWalletAddressId: row.source_wallet_address_id,
-    identityId: row.identity_id,
     status: row.status,
     asset: "USDT",
     label: labels[network] || "USDT",
@@ -658,7 +657,7 @@ function explorerUrl(network, txHash) {
 async function directory(db) {
   const rows = await db.prepare(
     "SELECT i.display_name,i.avatar_key,i.genesis_member_status,p.payment_kind,p.network,p.amount_display," +
-    "p.asset_identifier,p.transaction_hash,p.transfer_index,p.confirmed_at " +
+    "p.asset_identifier,p.transaction_hash,p.transfer_index,p.confirmed_at,p.receipt_finality_status " +
     "FROM genesis_public_payments p JOIN genesis_wallet_identities i ON i.identity_id=p.identity_id " +
     "JOIN genesis_member_badges b ON b.identity_id=i.identity_id AND b.status='ACTIVE' " +
     "WHERE p.public_visible=1 AND p.finality_status='FINALIZED' AND i.identity_status='ACTIVE' AND i.genesis_member_status='ACTIVE' " +
@@ -676,7 +675,8 @@ async function directory(db) {
     explorerUrl: explorerUrl(row.network, row.transaction_hash),
     // The explorer link intentionally exposes the full public wallet address and chain history.
     transactionHash: row.transaction_hash,
-    transferIndex: row.transfer_index
+    transferIndex: row.transfer_index,
+    finalityStatus: row.receipt_finality_status || row.finality_status
   })).filter((row) => row.explorerUrl);
 }
 
