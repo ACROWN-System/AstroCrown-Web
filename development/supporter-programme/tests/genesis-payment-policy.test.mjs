@@ -52,6 +52,22 @@ test("Genesis payment acceptance is closed by default and every independent appr
     ...enabledEnvironment,
     ENVIRONMENT: "production",
   }, "ethereum", true).enabled, false);
+  const productionWithoutApproval = genesisQualifyingPaymentGate({
+    ...enabledEnvironment,
+    ENVIRONMENT: "production",
+  }, "ethereum", true);
+  assert.equal(productionWithoutApproval.enabled, false);
+  assert.ok(productionWithoutApproval.reasons.some((reason) => /production.*not been separately approved/i.test(reason)));
+  const productionApproved = genesisQualifyingPaymentGate({
+    ...enabledEnvironment,
+    ENVIRONMENT: "production",
+    GENESIS_PRODUCTION_PAYMENTS_APPROVED: "true",
+  }, "ethereum", true);
+  assert.equal(productionApproved.enabled, true);
+  assert.equal(genesisQualifyingPaymentGate({
+    ...enabledEnvironment,
+    ENVIRONMENT: "development",
+  }, "ethereum", true).enabled, false);
   assert.equal(genesisQualifyingPaymentGate(enabledEnvironment, "unknown", true).enabled, false);
 });
 
