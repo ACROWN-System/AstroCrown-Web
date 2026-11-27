@@ -815,7 +815,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             )
         self.assertEqual(
             self.db.execute("SELECT genesis_member_status FROM genesis_wallet_identities WHERE identity_id='gid-badge'").fetchone()[0],
-            "PENDING",
+            "NOT_QUALIFIED",
         )
         self.assertEqual(
             self.db.execute("SELECT COUNT(*) FROM genesis_public_payments WHERE payment_record_id='gp-1'").fetchone()[0],
