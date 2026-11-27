@@ -165,8 +165,61 @@ BEGIN SELECT RAISE(ABORT, 'Genesis payment intent status transition is invalid')
 
 CREATE TRIGGER IF NOT EXISTS genesis_payment_intent_expiry_guard
 BEFORE UPDATE OF status ON genesis_payment_intents
-WHEN OLD.status='OPEN' AND NEW.status='EXPIRED' AND OLD.expires_at>unixepoch()
-BEGIN SELECT RAISE(ABORT, 'A Genesis payment intent cannot expire before its deadline'); END;
+WHEN OLD.status='OPEN' AND NEW.status='EXPIRED'
+ AND (
+   OLD.expires_at>unixepoch()
+   OR NOT EXISTS (
+     SELECT 1 FROM genesis_treasury_monitor_health h
+     WHERE h.singleton=1 AND h.status='HEALTHY'
+       AND h.last_cycle_completed_at>=unixepoch()-900
+       AND h.ethereum_caught_up=1 AND h.tron_caught_up=1 AND h.solana_caught_up=1
+       AND h.settlement_queue_deferred=0
+       AND h.ethereum_head_occurred_at>OLD.expires_at
+       AND h.tron_head_occurred_at>OLD.expires_at
+       AND h.solana_head_occurred_at>OLD.expires_at
+   )
+   OR EXISTS (
+     SELECT 1 FROM genesis_treasury_receipts r
+     WHERE r.attribution_status='MATCHED'
+       AND r.identity_id=OLD.identity_id
+       AND r.source_wallet_address_id=OLD.source_wallet_address_id
+       AND r.network=OLD.network
+       AND r.asset_identifier=OLD.asset_identifier
+       AND r.treasury_address=OLD.treasury_address
+       AND r.amount_base_units=OLD.amount_base_units
+       AND r.occurred_at>=OLD.created_at AND r.occurred_at<=OLD.expires_at
+   )
+ )
+BEGIN SELECT RAISE(ABORT, 'A Genesis payment intent can expire only after a recent all-chain monitor watermark passes its deadline and no matching receipt exists'); END;
+
+CREATE TRIGGER IF NOT EXISTS genesis_payment_intent_cancel_guard
+BEFORE UPDATE OF status ON genesis_payment_intents
+WHEN OLD.status='OPEN' AND NEW.status='CANCELLED'
+ AND (
+   OLD.expires_at>unixepoch()
+   OR NOT EXISTS (
+     SELECT 1 FROM genesis_treasury_monitor_health h
+     WHERE h.singleton=1 AND h.status='HEALTHY'
+       AND h.last_cycle_completed_at>=unixepoch()-900
+       AND h.ethereum_caught_up=1 AND h.tron_caught_up=1 AND h.solana_caught_up=1
+       AND h.settlement_queue_deferred=0
+       AND h.ethereum_head_occurred_at>OLD.expires_at
+       AND h.tron_head_occurred_at>OLD.expires_at
+       AND h.solana_head_occurred_at>OLD.expires_at
+   )
+   OR EXISTS (
+     SELECT 1 FROM genesis_treasury_receipts r
+     WHERE r.attribution_status='MATCHED'
+       AND r.identity_id=OLD.identity_id
+       AND r.source_wallet_address_id=OLD.source_wallet_address_id
+       AND r.network=OLD.network
+       AND r.asset_identifier=OLD.asset_identifier
+       AND r.treasury_address=OLD.treasury_address
+       AND r.amount_base_units=OLD.amount_base_units
+       AND r.occurred_at>=OLD.created_at AND r.occurred_at<=OLD.expires_at
+   )
+ )
+BEGIN SELECT RAISE(ABORT, 'A Genesis payment intent can be cancelled only after expiry, a recent all-chain monitor watermark passes its deadline, and no matching receipt exists'); END;
 
 CREATE TRIGGER IF NOT EXISTS genesis_payment_intent_release_principal
 AFTER UPDATE OF status ON genesis_payment_intents
