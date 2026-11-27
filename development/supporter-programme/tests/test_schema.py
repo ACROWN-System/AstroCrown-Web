@@ -85,7 +85,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "INSERT INTO genesis_treasury_receipts("
             "receipt_id,network,asset_identifier,amount_base_units,amount_display,sender_address,treasury_address,"
             "transaction_hash,transfer_index,inclusion_reference,finality_status,verification_method,"
-            "rpc_provider_ids_json,rpc_operator_ids_json,evidence_digest,evidence_json,attribution_status,"
+            "rpc_provider_ids_json,rpc_source_ids_json,evidence_digest,evidence_json,attribution_status,"
             "identity_id,source_wallet_address_id,public_visible,observed_at,verified_at"
             ") VALUES(" + ",".join("?" for _ in values) + ")"
         )
