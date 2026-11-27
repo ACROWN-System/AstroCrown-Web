@@ -550,11 +550,12 @@
       input[type="file"]:not(:disabled),
       select:not(:disabled),
       summary,
-      label[for],
+      label,
       [role="button"]:not([aria-disabled="true"]),
       [role="link"]:not([aria-disabled="true"]),
       [role="menuitem"]:not([aria-disabled="true"]),
       [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
       [onclick]:not([aria-disabled="true"]),
       [data-clickable="true"]:not([aria-disabled="true"])
     ) {
@@ -576,11 +577,12 @@
         input[type="file"]:not(:disabled),
         select:not(:disabled),
         summary,
-        label[for],
+        label,
         [role="button"]:not([aria-disabled="true"]),
         [role="link"]:not([aria-disabled="true"]),
         [role="menuitem"]:not([aria-disabled="true"]),
         [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
         [onclick]:not([aria-disabled="true"]),
         [data-clickable="true"]:not([aria-disabled="true"])
       ):hover {
@@ -601,11 +603,12 @@
       input[type="file"]:not(:disabled),
       select:not(:disabled),
       summary,
-      label[for],
+      label,
       [role="button"]:not([aria-disabled="true"]),
       [role="link"]:not([aria-disabled="true"]),
       [role="menuitem"]:not([aria-disabled="true"]),
       [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
       [onclick]:not([aria-disabled="true"]),
       [data-clickable="true"]:not([aria-disabled="true"])
     ):active,
@@ -627,11 +630,12 @@
         input[type="file"]:not(:disabled),
         select:not(:disabled),
         summary,
-        label[for],
+        label,
         [role="button"]:not([aria-disabled="true"]),
         [role="link"]:not([aria-disabled="true"]),
         [role="menuitem"]:not([aria-disabled="true"]),
         [role="tab"]:not([aria-disabled="true"]),
+      [aria-haspopup]:not([aria-disabled="true"]),
         [onclick]:not([aria-disabled="true"]),
         [data-clickable="true"]:not([aria-disabled="true"])
       ) {
@@ -1600,11 +1604,12 @@
         "input[type='file']:not(:disabled)",
         "select:not(:disabled)",
         "summary",
-        "label[for]",
+        "label",
         "[role='button']:not([aria-disabled='true'])",
         "[role='link']:not([aria-disabled='true'])",
         "[role='menuitem']:not([aria-disabled='true'])",
         "[role='tab']:not([aria-disabled='true'])",
+        "[aria-haspopup]:not([aria-disabled='true'])",
         "[onclick]:not([aria-disabled='true'])",
         "[data-clickable='true']:not([aria-disabled='true'])"
       ].join(",");
