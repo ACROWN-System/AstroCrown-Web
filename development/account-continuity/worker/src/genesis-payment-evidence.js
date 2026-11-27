@@ -462,8 +462,8 @@ function evidenceCore(evidence) {
 }
 
 /**
- * Require two or more genuinely distinct configured RPC operators to agree on
- * the same normalized transfer. This is evidence reconciliation only: it never
+ * Require two or more distinctly identified RPC node sources to agree on
+ * the same normalized transfer. Sources may be self-operated; this is evidence reconciliation only: it never
  * inserts a contribution, credits an allowance or updates a payment state.
  */
 export function reconcileGenesisRpcEvidence({ network, observations, expected }) {
@@ -477,10 +477,10 @@ export function reconcileGenesisRpcEvidence({ network, observations, expected })
       fail("Every RPC observation must identify its configured provider.");
     }
     if (!observation.sourceId || typeof observation.sourceId !== "string") {
-      fail("Every RPC observation must identify its independently qualified operator.");
+      fail("Every RPC observation must identify its configured RPC source.");
     }
     if (providerIds.has(observation.providerId) || sourceIds.has(observation.sourceId)) {
-      fail("RPC observations must come from distinct providers and independently qualified operators.");
+      fail("RPC observations must come from distinct providers and distinct configured sources.");
     }
     providerIds.add(observation.providerId);
     sourceIds.add(observation.sourceId);
