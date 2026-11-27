@@ -383,8 +383,16 @@ function paymentIntentPublicView(row) {
 
 async function expireStaleGenesisPaymentIntents(db, now = Math.floor(Date.now() / 1000)) {
   return db.prepare(
-    "UPDATE genesis_payment_intents SET status='EXPIRED' " +
-    "WHERE status='OPEN' AND expires_at<=?"
+    "UPDATE genesis_payment_intents AS i SET status='EXPIRED' " +
+    "WHERE i.status='OPEN' AND i.expires_at<=? " +
+    "AND NOT EXISTS (" +
+      "SELECT 1 FROM genesis_treasury_receipts r " +
+      "WHERE r.attribution_status='MATCHED' AND r.identity_id=i.identity_id " +
+      "AND r.source_wallet_address_id=i.source_wallet_address_id " +
+      "AND r.network=i.network AND r.asset_identifier=i.asset_identifier " +
+      "AND r.treasury_address=i.treasury_address AND r.amount_base_units=i.amount_base_units " +
+      "AND r.verified_at>=i.created_at AND r.verified_at<=i.expires_at" +
+    ")"
   ).bind(now).run();
 }
 
