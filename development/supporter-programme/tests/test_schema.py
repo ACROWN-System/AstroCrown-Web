@@ -308,11 +308,11 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             'INSERT INTO genesis_treasury_receipts(receipt_id,network,asset_identifier,amount_base_units,amount_display,'
             'sender_address,treasury_address,transaction_hash,transfer_index,inclusion_reference,finality_status,'
             'verification_method,rpc_provider_ids_json,rpc_source_ids_json,evidence_digest,evidence_json,'
-            'attribution_status,identity_id,source_wallet_address_id,public_visible,observed_at,verified_at) '
-            'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+            'attribution_status,identity_id,source_wallet_address_id,public_visible,occurred_at,observed_at,verified_at) '
+            'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
             (receipt_id, 'ethereum', asset, payment_amount, '1000', sender, treasury, tx_hash, 2, inclusion, 'FINALIZED',
              'TWO_INDEPENDENT_RPC_SOURCES', '["rpc-a","rpc-b"]', '["source-a","source-b"]', 'e' * 64,
-             '{"creditApplied":false}', 'MATCHED', identity_id, wallet_id, 1, 1050, 1100),
+             '{"creditApplied":false}', 'MATCHED', identity_id, wallet_id, 1, 1050, 1055, 1100),
         )
         settled_tiers = '[{"tranche":1,"principalStartBaseUnits":"0","principalEndBaseUnits":"1000000000",'
             '"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"30",'
