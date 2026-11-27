@@ -180,6 +180,21 @@
     .wallet-instructions{margin:13px 0;color:var(--muted);font-size:10px;line-height:1.7}
     .wallet-ecosystem-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:14px}
     .wallet-ecosystem-card{min-width:0;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(4,12,22,.34)}
+    .genesis-wallet-brand-panel{margin-top:14px}
+    .genesis-wallet-brand-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:12px}
+    .genesis-wallet-brand-choice{display:flex;align-items:center;gap:10px;min-width:0;min-height:68px;padding:10px;border:1px solid rgba(153,178,213,.18);border-radius:10px;background:rgba(255,255,255,.025);color:var(--text);text-align:left;cursor:pointer;transition:border-color .15s ease,background .15s ease}
+    .genesis-wallet-brand-choice:hover{border-color:rgba(255,215,0,.42);background:rgba(255,215,0,.035)}
+    .genesis-wallet-brand-choice.is-selected{border-color:rgba(255,215,0,.62);background:rgba(255,215,0,.07);box-shadow:inset 0 0 0 1px rgba(255,215,0,.12)}
+    .genesis-wallet-brand-logo{position:relative;display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;overflow:hidden;border:1px solid rgba(153,178,213,.16);border-radius:10px;background:#f5f6f8;color:#101827;font-size:9px;font-weight:950}
+    .genesis-wallet-brand-logo img{position:absolute;inset:0;width:100%;height:100%;padding:5px;object-fit:contain;background:#f5f6f8}
+    .genesis-wallet-brand-copy{display:grid;gap:4px;min-width:0;flex:1}
+    .genesis-wallet-brand-copy strong{color:#eef2f9;font-size:10px;line-height:1.3}
+    .genesis-wallet-brand-copy small{color:var(--quiet);font-size:8px;line-height:1.35}
+    .genesis-wallet-brand-check{flex:0 0 15px;width:15px;height:15px;display:grid;place-items:center;border:1px solid rgba(153,178,213,.22);border-radius:50%;color:#ffe58a;font-size:10px}
+    .genesis-wallet-brand-choice.is-selected .genesis-wallet-brand-check{border-color:rgba(255,215,0,.55);background:rgba(255,215,0,.13)}
+    .genesis-wallet-brand-state{margin:10px 0 0;padding:9px 10px;border:1px solid rgba(153,178,213,.12);border-radius:8px;color:var(--muted);font-size:9px;line-height:1.55}
+    @media(max-width:640px){.genesis-wallet-brand-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.genesis-wallet-brand-choice{gap:8px;padding:8px;min-height:64px}.genesis-wallet-brand-logo{flex-basis:34px;width:34px;height:34px}}
+    @media(max-width:360px){.genesis-wallet-brand-grid{grid-template-columns:1fr}}
     .ecosystem-heading{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:7px;margin-bottom:7px}
     .ecosystem-heading strong{color:#eef2f9;font-size:11px}
     .ecosystem-tag{padding:3px 7px;border:1px solid rgba(255,215,0,.2);border-radius:999px;color:var(--gold-soft);font-size:8px;font-weight:800;letter-spacing:.045em}
