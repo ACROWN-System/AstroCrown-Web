@@ -970,6 +970,32 @@ async function scanSolana(db, sources, treasuryAddress, env) {
   return { initialized: bootstrapping, receipts, tokenAccounts: tokenAccounts[0].length, processedAccounts };
 }
 
+async function retryPendingGenesisPaymentSettlements(db, env) {
+  const matches = await db.prepare(
+    "SELECT r.receipt_id FROM genesis_payment_intents i " +
+    "JOIN genesis_treasury_receipts r ON r.identity_id=i.identity_id " +
+    "AND r.source_wallet_address_id=i.source_wallet_address_id " +
+    "AND r.network=i.network AND r.asset_identifier=i.asset_identifier " +
+    "AND r.treasury_address=i.treasury_address AND r.amount_base_units=i.amount_base_units " +
+    "AND r.verified_at>=i.created_at AND r.verified_at<=i.expires_at " +
+    "WHERE i.status='OPEN' AND r.attribution_status='MATCHED' " +
+    "ORDER BY r.verified_at ASC LIMIT 100"
+  ).all();
+  let qualifyingPaymentsSettled = 0;
+  let allowanceCreditApplied = 0n;
+  for (const row of matches.results || []) {
+    const result = await settleGenesisPaymentReceipt(db, env, row.receipt_id);
+    if (result.status === "CONFIRMED") {
+      qualifyingPaymentsSettled += 1;
+      allowanceCreditApplied += BigInt(result.allowanceCreditUsdtBaseUnits || "0");
+    }
+  }
+  return {
+    qualifyingPaymentsSettled,
+    allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
+  };
+}
+
 export async function runGenesisReceiptMonitor(env) {
   if (!env || env.ENVIRONMENT !== "staging" || env.GENESIS_RECEIPT_MONITOR_ENABLED !== "true") {
     return { status: "DISABLED", receiptsRecorded: 0 };
@@ -1006,13 +1032,16 @@ export async function runGenesisReceiptMonitor(env) {
       return { status: "FAILED", receipts: 0, qualifyingPaymentsSettled: 0, allowanceCreditAppliedUsdtBaseUnits: "0" };
     }
   }));
+  const retryResult = await retryPendingGenesisPaymentSettlements(db, env);
   const qualifyingPaymentsSettled =
     (ethereum.qualifyingPaymentsSettled || 0) +
     (tron.qualifyingPaymentsSettled || 0) +
-    (solana.qualifyingPaymentsSettled || 0);
+    (solana.qualifyingPaymentsSettled || 0) +
+    retryResult.qualifyingPaymentsSettled;
   const allowanceCreditApplied = BigInt(ethereum.allowanceCreditAppliedUsdtBaseUnits || "0") +
     BigInt(tron.allowanceCreditAppliedUsdtBaseUnits || "0") +
-    BigInt(solana.allowanceCreditAppliedUsdtBaseUnits || "0");
+    BigInt(solana.allowanceCreditAppliedUsdtBaseUnits || "0") +
+    BigInt(retryResult.allowanceCreditAppliedUsdtBaseUnits || "0");
   return {
     status: [ethereum, tron, solana].every((network) => network.status === "SCANNED") ? "SCANNED" : "PARTIAL",
     receiptsRecorded: ethereum.receipts + tron.receipts + solana.receipts,
