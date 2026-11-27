@@ -1,5 +1,8 @@
 import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
-import { GENESIS_QUALIFYING_RULES_VERSION } from "../../../supporter-programme/shared/entitlement-rules.mjs";
+import {
+  GENESIS_QUALIFYING_RULES_VERSION,
+  calculateGenesisTieredPurchaseAllowance,
+} from "../../../supporter-programme/shared/entitlement-rules.mjs";
 import { genesisQualifyingPaymentGate } from "../../../supporter-programme/shared/genesis-payment-policy.mjs";
 
 function rpcPairConfigured(env, network) {
@@ -149,6 +152,33 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
   if (matches.length !== 1) return { status: "AMBIGUOUS_INTENT_MATCH" };
 
   const intent = matches[0];
+  const allowanceState = await db.prepare(
+    "SELECT earned_usdt_base_units,reserved_usdt_base_units,consumed_usdt_base_units," +
+    "qualifying_principal_usdt_base_units,pending_qualifying_principal_usdt_base_units," +
+    "allowance_cap_usdt_base_units FROM genesis_programme_allowance_state WHERE singleton=1"
+  ).first();
+  if (!allowanceState ||
+      BigInt(allowanceState.pending_qualifying_principal_usdt_base_units || "0") < BigInt(receipt.amount_base_units)) {
+    return { status: "RESERVED_PRINCIPAL_STATE_UNAVAILABLE" };
+  }
+  let settledPlan;
+  try {
+    settledPlan = calculateGenesisTieredPurchaseAllowance({
+      cumulativeQualifyingPrincipalBeforeBaseUnits: allowanceState.qualifying_principal_usdt_base_units || "0",
+      qualifyingPaymentUsdtBaseUnits: receipt.amount_base_units,
+    });
+  } catch {
+    return { status: "GLOBAL_PRINCIPAL_LIMIT_REACHED" };
+  }
+  const finalAllowanceCredit = BigInt(settledPlan.purchaseAllowanceUsdtBaseUnits);
+  const availableCap = BigInt(allowanceState.allowance_cap_usdt_base_units || "0");
+  const accountedAllowance =
+    BigInt(allowanceState.earned_usdt_base_units || "0") +
+    BigInt(allowanceState.reserved_usdt_base_units || "0") +
+    BigInt(allowanceState.consumed_usdt_base_units || "0") +
+    finalAllowanceCredit;
+  if (accountedAllowance > availableCap) return { status: "GLOBAL_ALLOWANCE_CAP_REACHED" };
+
   const link = paymentExplorerUrl(receipt.network, receipt.transaction_hash);
   if (!link) return { status: "INVALID_TRANSACTION_REFERENCE" };
   const paymentRecordId = randomRecordId("gpm");
@@ -156,8 +186,9 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
     "INSERT INTO genesis_public_payments(" +
     "payment_record_id,identity_id,source_wallet_address_id,payment_kind,network,asset_identifier," +
     "amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,receipt_finality_status,rules_version," +
-    "explorer_reference,confirmed_at,public_visible,payment_intent_id,receipt_id,allowance_credit_usdt_base_units" +
-    ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    "explorer_reference,confirmed_at,public_visible,payment_intent_id,receipt_id,allowance_credit_usdt_base_units," +
+    "settled_principal_start_base_units,settled_principal_end_base_units,settled_tier_breakdown_json" +
+    ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(
     paymentRecordId,
     receipt.identity_id,
@@ -177,7 +208,10 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
     1,
     intent.payment_intent_id,
     receipt.receipt_id,
-    intent.allowance_credit_usdt_base_units
+    settledPlan.purchaseAllowanceUsdtBaseUnits,
+    settledPlan.cumulativeQualifyingPrincipalBeforeBaseUnits,
+    settledPlan.cumulativeQualifyingPrincipalAfterBaseUnits,
+    JSON.stringify(settledPlan.tierBreakdown)
   );
 
   try {
@@ -203,6 +237,10 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
     status: "CONFIRMED",
     paymentRecordId,
     paymentIntentId: intent.payment_intent_id,
-    allowanceCreditUsdtBaseUnits: intent.allowance_credit_usdt_base_units,
+    allowanceCreditUsdtBaseUnits: settledPlan.purchaseAllowanceUsdtBaseUnits,
+    settlementRulesVersion: settledPlan.rulesVersion,
+    settledPrincipalStartBaseUnits: settledPlan.cumulativeQualifyingPrincipalBeforeBaseUnits,
+    settledPrincipalEndBaseUnits: settledPlan.cumulativeQualifyingPrincipalAfterBaseUnits,
+    settledTierBreakdown: settledPlan.tierBreakdown,
   };
 }
