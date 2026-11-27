@@ -13,6 +13,8 @@ WORKER_TREASURY_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "mig
 WORKER_GENESIS_WALLET_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0004_genesis_wallet_native_identity.sql"
 GLOBAL_ALLOWANCE_MIGRATION = ROOT / "migrations" / "0005_genesis_global_allowance_and_launch_freeze.sql"
 WORKER_GLOBAL_ALLOWANCE_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0005_genesis_global_allowance_and_launch_freeze.sql"
+TREASURY_RECEIPT_MONITOR_MIGRATION = ROOT / "migrations" / "0006_genesis_treasury_receipt_monitor.sql"
+WORKER_TREASURY_RECEIPT_MONITOR_MIGRATION = ROOT.parent / "account-continuity" / "worker" / "migrations" / "supporters" / "0006_genesis_treasury_receipt_monitor.sql"
 
 class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
     def setUp(self):
@@ -23,6 +25,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.db.executescript(TREASURY_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(GENESIS_WALLET_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(GLOBAL_ALLOWANCE_MIGRATION.read_text(encoding="utf-8"))
+        self.db.executescript(TREASURY_RECEIPT_MONITOR_MIGRATION.read_text(encoding="utf-8"))
 
     def tearDown(self):
         self.db.close()
@@ -60,6 +63,13 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             WORKER_GLOBAL_ALLOWANCE_MIGRATION.read_bytes(),
             GLOBAL_ALLOWANCE_MIGRATION.read_bytes(),
             "The Worker-deployed global allowance/freeze migration must match the canonical migration.",
+        )
+
+    def test_treasury_receipt_monitor_migration_mirror_matches_canonical_schema(self):
+        self.assertEqual(
+            WORKER_TREASURY_RECEIPT_MONITOR_MIGRATION.read_bytes(),
+            TREASURY_RECEIPT_MONITOR_MIGRATION.read_bytes(),
+            "The Worker-deployed treasury receipt monitor migration must match the canonical migration.",
         )
 
     def test_global_pool_is_one_shared_usdt_balance_and_personal_entitlement_rows_are_rejected(self):
