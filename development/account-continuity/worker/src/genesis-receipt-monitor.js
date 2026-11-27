@@ -1,3 +1,4 @@
+import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
 import {
   GENESIS_USDT_ASSETS,
   parseEthereumUsdtTransferEvidence,
@@ -808,15 +809,23 @@ async function scanSolana(db, sources, treasuryAddress) {
   }
   let receipts = 0;
   let processedAccounts = 0;
+  const monitorCursor = await getCursor(db, "solana", "__monitor_initialized__");
+  const bootstrapping = !monitorCursor;
   for (const tokenAccount of tokenAccounts[0]) {
     const cursor = await getCursor(db, "solana", tokenAccount);
     if (!cursor) {
-      const latest = await Promise.all(sources.map((source) => solanaSignatures(source, tokenAccount, { limit: 1 })));
-      if (JSON.stringify(latest[0]) !== JSON.stringify(latest[1])) {
-        fail("Solana independent RPC sources disagree while initializing a treasury token-account cursor.");
+      if (bootstrapping) {
+        const latest = await Promise.all(sources.map((source) => solanaSignatures(source, tokenAccount, { limit: 1 })));
+        if (JSON.stringify(latest[0]) !== JSON.stringify(latest[1])) {
+          fail("Solana independent RPC sources disagree while initializing a treasury token-account cursor.");
+        }
+        const initialCursor = latest[0][0] ? latest[0][0].signature : "";
+        await setCursor(db, "solana", tokenAccount, initialCursor);
+      } else {
+        // A token account created after monitoring began may hold the first new receipt.
+        // An empty cursor intentionally causes its first observed signatures to be scanned.
+        await setCursor(db, "solana", tokenAccount, "");
       }
-      const initialCursor = latest[0][0] ? latest[0][0].signature : "";
-      await setCursor(db, "solana", tokenAccount, initialCursor);
       processedAccounts += 1;
       continue;
     }
@@ -824,7 +833,8 @@ async function scanSolana(db, sources, treasuryAddress) {
     receipts += result.receipts;
     processedAccounts += 1;
   }
-  return { initialized: false, receipts, tokenAccounts: tokenAccounts[0].length, processedAccounts };
+  if (bootstrapping) await setCursor(db, "solana", "__monitor_initialized__", "1");
+  return { initialized: bootstrapping, receipts, tokenAccounts: tokenAccounts[0].length, processedAccounts };
 }
 
 export async function runGenesisReceiptMonitor(env) {
@@ -835,9 +845,9 @@ export async function runGenesisReceiptMonitor(env) {
   if (!db) fail("the isolated Genesis database is not bound.");
   const config = (network) => prepareGenesisRpcPair(env, network);
   const treasury = {
-    ethereum: GENESIS_USDT_ASSETS.ethereum && "0xbbb77071149a5F113Df15E78c58518917afa950A",
-    tron: "TAKHQcuJ3RLsZZxCorWc3rav6M28dS6VTR",
-    solana: "AWyq9E7Wsdjv9VyoTs84XGiubQGZM7fETnZ8ddfArwkG",
+    ethereum: MAINNET_USDT_CONFIG.ethereum.treasuryAddress,
+    tron: MAINNET_USDT_CONFIG.tron.treasuryAddress,
+    solana: MAINNET_USDT_CONFIG.solana.treasuryAddress,
   };
   const [ethereum, tron, solana] = await Promise.all([
     scanEthereum(db, config("ethereum"), treasury.ethereum),
