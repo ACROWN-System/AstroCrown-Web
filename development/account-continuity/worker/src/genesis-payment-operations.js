@@ -95,7 +95,7 @@ function randomRecordId(prefix) {
   const bytes = crypto.getRandomValues(new Uint8Array(18));
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return prefix + "_" + btoa(binary).replace(/\\+/g, "-").replace(/\\//g, "_").replace(/=+$/g, "");
+  return prefix + "_" + btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 function paymentExplorerUrl(network, transactionHash) {
