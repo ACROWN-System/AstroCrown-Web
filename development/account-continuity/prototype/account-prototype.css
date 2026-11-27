@@ -900,3 +900,83 @@
 .account-legacy-auth .account-text-button {
   margin-top:10px;
 }
+
+
+/* Wallet-first account creation: explicit, readable consent and wallet choice. */
+.account-wallet-consent-panel {
+  display:grid;
+  gap:13px;
+  margin:4px 0 2px;
+  padding:15px;
+  border:1px solid rgba(255,215,0,.32);
+  border-radius:12px;
+  background:linear-gradient(145deg,rgba(255,215,0,.055),rgba(255,255,255,.018));
+}
+.account-wallet-consent-panel h3 {
+  margin:0;
+  color:#f3e6b6;
+  font-size:13px;
+  line-height:1.35;
+}
+.account-wallet-consent-panel p {
+  margin:0;
+  color:#b9c6d8;
+  font-size:11px;
+  line-height:1.65;
+}
+.account-wallet-consent-panel p strong { color:#f5e4a6; }
+.account-required-consent {
+  display:grid;
+  grid-template-columns:22px minmax(0,1fr);
+  gap:11px;
+  align-items:start;
+  padding:11px 10px;
+  border:1px solid rgba(153,178,213,.24);
+  border-radius:9px;
+  background:rgba(2,10,20,.32);
+  color:#e0e8f3;
+  font-size:11px;
+  line-height:1.6;
+  cursor:pointer;
+}
+.account-required-consent input {
+  appearance:auto;
+  width:20px;
+  height:20px;
+  min-width:20px;
+  margin:1px 0 0;
+  accent-color:#ffd700;
+  cursor:pointer;
+}
+.account-required-consent span { display:block; cursor:pointer; }
+.account-required-consent a {
+  color:#ffe48a;
+  font-weight:800;
+  text-decoration:underline;
+  text-underline-offset:2px;
+}
+.account-wallet-account-field[hidden] { display:none !important; }
+#account-wallet-provider,
+#account-wallet-account {
+  width:100%;
+  min-height:43px;
+  padding:10px 12px;
+  border:1px solid rgba(153,178,213,.34);
+  border-radius:9px;
+  background:#0c1a2b;
+  color:#edf3fb;
+  font:inherit;
+  font-size:12px;
+}
+.account-signin-help {
+  margin:10px 0 0;
+  color:#aab8cb;
+  font-size:11px;
+  text-align:center;
+}
+.account-signin-help .account-text-button {
+  min-height:28px;
+  padding:3px 2px;
+  color:#ffe48a;
+  font-size:11px;
+}
