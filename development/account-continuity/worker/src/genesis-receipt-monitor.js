@@ -613,7 +613,7 @@ async function scanTron(db, sources, treasuryAddress, env) {
             delete observation.sourceIndex;
           }
           const reconciled = reconcileGenesisRpcEvidence({ network: "tron", observations, expected });
-          await persistVerifiedReceipt(db, reconciled);
+          await persistVerifiedReceipt(db, reconciled, env);
           receiptsRecorded += 1;
         }
       }
@@ -863,7 +863,7 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
         }),
       }));
       const reconciled = reconcileGenesisRpcEvidence({ network: "solana", observations: parsed, expected });
-      await persistVerifiedReceipt(db, reconciled);
+      await persistVerifiedReceipt(db, reconciled, env);
       receipts += 1;
     }
   }
