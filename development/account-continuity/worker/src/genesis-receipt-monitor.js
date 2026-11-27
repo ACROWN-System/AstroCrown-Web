@@ -83,6 +83,7 @@ export function prepareGenesisRpcPair(env, network) {
       fail(network + " RPC " + id + " must have a stable configured operator identifier.");
     }
     const apiKey = network === "tron" ? String(env[prefix + id + "_API_KEY"] || "").trim() : "";
+    if (apiKey.length > 4096 || /[\\r\\n]/.test(apiKey)) fail(network + " RPC " + id + " API key is invalid.");
     return Object.freeze({ id: slot.toLowerCase(), url: url.toString(), origin: url.origin, operatorId, apiKey });
   });
   if (sources[0].origin === sources[1].origin || sources[0].operatorId === sources[1].operatorId) {
