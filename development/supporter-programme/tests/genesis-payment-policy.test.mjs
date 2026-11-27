@@ -58,10 +58,26 @@ test("Genesis payment acceptance is closed by default and every independent appr
   }, "ethereum", true);
   assert.equal(productionWithoutApproval.enabled, false);
   assert.ok(productionWithoutApproval.reasons.some((reason) => /production.*not been separately approved/i.test(reason)));
+  const productionPaymentApprovalOnly = genesisQualifyingPaymentGate({
+    ...enabledEnvironment,
+    ENVIRONMENT: "production",
+    GENESIS_PRODUCTION_PAYMENTS_APPROVED: "true",
+  }, "ethereum", true);
+  assert.equal(productionPaymentApprovalOnly.enabled, false);
+  const productionMonitorApprovalWithoutCron = genesisQualifyingPaymentGate({
+    ...enabledEnvironment,
+    ENVIRONMENT: "production",
+    GENESIS_PRODUCTION_PAYMENTS_APPROVED: "true",
+    GENESIS_PRODUCTION_RECEIPT_MONITOR_APPROVED: "true",
+  }, "ethereum", true);
+  assert.equal(productionMonitorApprovalWithoutCron.enabled, false);
+  assert.ok(productionMonitorApprovalWithoutCron.reasons.some((reason) => /Cron schedule has not been verified/i.test(reason)));
   const productionApproved = genesisQualifyingPaymentGate({
     ...enabledEnvironment,
     ENVIRONMENT: "production",
     GENESIS_PRODUCTION_PAYMENTS_APPROVED: "true",
+    GENESIS_PRODUCTION_RECEIPT_MONITOR_APPROVED: "true",
+    GENESIS_PRODUCTION_RECEIPT_MONITOR_CRON_VERIFIED: "true",
   }, "ethereum", true);
   assert.equal(productionApproved.enabled, true);
   assert.equal(genesisQualifyingPaymentGate({
