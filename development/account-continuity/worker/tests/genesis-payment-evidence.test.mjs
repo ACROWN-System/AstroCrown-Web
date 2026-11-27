@@ -269,6 +269,49 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
     expected: { ...expected, transferIndex: 1 },
   });
   assert.equal(selected.transferIndex, 1);
+
+  const multiTransfer = structuredClone(transaction);
+  multiTransfer.transaction.message.instructions.push({
+    programId: GENESIS_USDT_ASSETS.solana.tokenProgramId,
+    parsed: {
+      type: "transferChecked",
+      info: {
+        source: sourceTokenAccount,
+        destination: destinationTokenAccount,
+        mint,
+        authority: sender,
+        tokenAmount: { amount: "2000000", decimals: 6 },
+      },
+    },
+  });
+  multiTransfer.meta.postTokenBalances[0].uiTokenAmount.amount = "7000000";
+  multiTransfer.meta.postTokenBalances[1].uiTokenAmount.amount = "3000100";
+  const firstTransfer = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: multiTransfer,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 1 },
+  });
+  const secondTransfer = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: multiTransfer,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, amountBaseUnits: "2000000", transferIndex: 2 },
+  });
+  assert.equal(firstTransfer.amountBaseUnits, "1000000");
+  assert.equal(secondTransfer.amountBaseUnits, "2000000");
+
+  const inflatedTransfer = structuredClone(transaction);
+  inflatedTransfer.transaction.message.instructions.push(structuredClone(transaction.transaction.message.instructions[1]));
+  assert.throws(() => parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: inflatedTransfer,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 2 },
+  }), /balance deltas do not reconcile/);
 });
 
 test("Solana parser rejects wrong cluster, non-finalized status, failed transactions and mismatched token deltas", () => {
