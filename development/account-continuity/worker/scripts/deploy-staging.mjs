@@ -460,7 +460,7 @@ async function smokeTest(origin) {
   if (
     publicSupportersPayload.programme?.status !== "PRELAUNCH" ||
     publicSupportersPayload.paymentAcceptance?.enabled !== false ||
-    publicSupportersPayload.paymentAcceptance?.contributionsAccepted !== false
+    publicSupportersPayload.paymentAcceptance?.qualifyingPaymentsAccepted !== false
   ) {
     fail("The public Genesis Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
   }
