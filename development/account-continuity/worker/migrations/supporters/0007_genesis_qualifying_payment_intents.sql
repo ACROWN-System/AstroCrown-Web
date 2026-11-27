@@ -16,6 +16,21 @@ ALTER TABLE genesis_programme_allowance_state
   CHECK (length(pending_qualifying_principal_usdt_base_units) > 0
     AND pending_qualifying_principal_usdt_base_units NOT GLOB '*[^0-9]*');
 
+-- Qualifying-payment records carry their unique intent and reconciled receipt references.
+ALTER TABLE genesis_public_payments
+  ADD COLUMN payment_intent_id TEXT REFERENCES genesis_payment_intents(payment_intent_id);
+ALTER TABLE genesis_public_payments
+  ADD COLUMN receipt_id TEXT REFERENCES genesis_treasury_receipts(receipt_id);
+ALTER TABLE genesis_public_payments
+  ADD COLUMN allowance_credit_usdt_base_units TEXT NOT NULL DEFAULT '0'
+  CHECK (length(allowance_credit_usdt_base_units) > 0
+    AND allowance_credit_usdt_base_units NOT GLOB '*[^0-9]*');
+
+-- The proposed allowance cap remains a rules value, not a live activation switch.
+UPDATE genesis_programme_allowance_state
+SET allowance_cap_usdt_base_units='1000000000000'
+WHERE singleton=1 AND allowance_cap_usdt_base_units IS NULL;
+
 CREATE TABLE IF NOT EXISTS genesis_payment_intents (
   payment_intent_id TEXT PRIMARY KEY,
   identity_id TEXT NOT NULL REFERENCES genesis_wallet_identities(identity_id),
@@ -138,6 +153,19 @@ BEGIN
     AND CAST(pending_qualifying_principal_usdt_base_units AS INTEGER)>=CAST(OLD.amount_base_units AS INTEGER);
 END;
 
+CREATE TRIGGER IF NOT EXISTS genesis_qualifying_payment_settlement_global_balance_guard
+BEFORE INSERT ON genesis_public_payments
+WHEN NEW.payment_kind='QUALIFYING_PAYMENT'
+ AND NOT EXISTS (
+   SELECT 1 FROM genesis_programme_allowance_state s
+   WHERE s.singleton=1
+     AND CAST(s.pending_qualifying_principal_usdt_base_units AS INTEGER)>=CAST(NEW.amount_base_units AS INTEGER)
+     AND CAST(s.qualifying_principal_usdt_base_units AS INTEGER)+CAST(NEW.amount_base_units AS INTEGER)<=50000000000
+     AND CAST(s.earned_usdt_base_units AS INTEGER)+CAST(NEW.allowance_credit_usdt_base_units AS INTEGER)<=1000000000000
+     AND CAST(NEW.allowance_credit_usdt_base_units AS INTEGER)>0
+ )
+BEGIN SELECT RAISE(ABORT, 'Genesis qualifying payment would exceed or mismatch the reserved global principal or allowance balance'); END;
+
 CREATE TRIGGER IF NOT EXISTS genesis_qualifying_payment_requires_matching_intent_and_receipt
 BEFORE INSERT ON genesis_public_payments
 WHEN NEW.payment_kind='QUALIFYING_PAYMENT'
@@ -161,7 +189,7 @@ WHEN NEW.payment_kind='QUALIFYING_PAYMENT'
      AND r.amount_base_units=NEW.amount_base_units
      AND r.transaction_hash=NEW.transaction_hash
      AND r.transfer_index=CAST(NEW.transfer_index AS INTEGER)
-     AND r.sender_address=w.address
+     AND r.sender_address=w.address_normalized
      AND r.treasury_address=p.treasury_address
      AND r.attribution_status='MATCHED'
      AND r.identity_id=NEW.identity_id
