@@ -96,6 +96,8 @@ WHEN NOT EXISTS (
     AND w.identity_id=NEW.identity_id
     AND w.network=NEW.network
     AND w.wallet_role IN ('PRIMARY', 'PAYMENT', 'PAYMENT_AND_DELIVERY')
+    AND w.ownership_verified_at IS NOT NULL
+    AND w.proof_method IS NOT NULL
     AND i.identity_status='ACTIVE'
     AND i.terms_version=NEW.terms_version
     AND i.terms_accepted_at IS NOT NULL
