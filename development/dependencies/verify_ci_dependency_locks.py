@@ -9,8 +9,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "development/dependencies/requirements-pip-audit.txt"
 LOCK = ROOT / "development/dependencies/requirements-pip-audit-py312-ubuntu24-x86_64.lock"
-SOURCE_PATTERN = re.compile(r"^([A-Za-z0-9._-]+)==([^<>=!~;\\s]+)$")
-LOCK_PATTERN = re.compile(r"^([A-Za-z0-9._-]+)==([^\\s]+) --hash=sha256:([0-9a-f]{64})$")
+SOURCE_PATTERN = re.compile(r"^([A-Za-z0-9._-]+)==([^<>=!~;\s]+)$")
+LOCK_PATTERN = re.compile(r"^([A-Za-z0-9._-]+)==([^\s]+) --hash=sha256:([0-9a-f]{64})$")
 
 
 def canonicalize(name: str) -> str:
