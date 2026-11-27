@@ -78,16 +78,16 @@ export function prepareGenesisRpcPair(env, network) {
   const sources = ["A", "B"].map((slot) => {
     const id = slot;
     const url = normalizeRpcUrl(env[prefix + id + "_URL"], network + " RPC " + id);
-    const operatorId = String(env[prefix + id + "_OPERATOR_ID"] || "").trim();
-    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{2,63}$/.test(operatorId)) {
-      fail(network + " RPC " + id + " must have a stable configured node/operator identifier.");
+    const sourceId = String(env[prefix + id + "_SOURCE_ID"] || "").trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{2,63}$/.test(sourceId)) {
+      fail(network + " RPC " + id + " must have a stable configured node/source identifier.");
     }
     const apiKey = network === "tron" ? String(env[prefix + id + "_API_KEY"] || "").trim() : "";
     if (apiKey.length > 4096 || apiKey.includes(String.fromCharCode(10)) || apiKey.includes(String.fromCharCode(13))) fail(network + " RPC " + id + " API key is invalid.");
-    return Object.freeze({ id: slot.toLowerCase(), url: url.toString(), origin: url.origin, operatorId, apiKey });
+    return Object.freeze({ id: slot.toLowerCase(), url: url.toString(), origin: url.origin, sourceId, apiKey });
   });
-  if (sources[0].origin === sources[1].origin || sources[0].operatorId === sources[1].operatorId) {
-    fail(network + " RPC sources must use different HTTPS origins and distinct node/operator identifiers.");
+  if (sources[0].origin === sources[1].origin || sources[0].sourceId === sources[1].sourceId) {
+    fail(network + " RPC sources must use different HTTPS origins and distinct node/source identifiers.");
   }
   return Object.freeze(sources);
 }
@@ -204,7 +204,7 @@ async function persistVerifiedReceipt(db, reconciled) {
     verification: {
       method: "TWO_INDEPENDENT_RPC_SOURCES",
       providers: reconciled.providerAgreement.providerIds,
-      operators: reconciled.providerAgreement.operatorIds,
+      sources: reconciled.providerAgreement.sourceIds,
     },
     creditApplied: false,
   });
@@ -214,7 +214,7 @@ async function persistVerifiedReceipt(db, reconciled) {
     "INSERT OR IGNORE INTO genesis_treasury_receipts(" +
     "receipt_id,network,asset_identifier,amount_base_units,amount_display,sender_address,treasury_address," +
     "transaction_hash,transfer_index,inclusion_reference,finality_status,verification_method," +
-    "rpc_provider_ids_json,rpc_operator_ids_json,evidence_digest,evidence_json,attribution_status," +
+    "rpc_provider_ids_json,rpc_source_ids_json,evidence_digest,evidence_json,attribution_status," +
     "identity_id,source_wallet_address_id,public_visible,observed_at,verified_at" +
     ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(
@@ -231,7 +231,7 @@ async function persistVerifiedReceipt(db, reconciled) {
     evidence.finalityStatus,
     "TWO_INDEPENDENT_RPC_SOURCES",
     JSON.stringify(reconciled.providerAgreement.providerIds),
-    JSON.stringify(reconciled.providerAgreement.operatorIds),
+    JSON.stringify(reconciled.providerAgreement.sourceIds),
     digest,
     evidenceJson,
     attribution.status,
@@ -350,7 +350,7 @@ async function scanEthereum(db, sources, treasuryAddress) {
         finalityBlock: { ...finalityBlock, tag: "finalized" },
         expected,
       });
-      return { providerId: source.id, operatorId: source.operatorId, evidence };
+      return { providerId: source.id, sourceId: source.sourceId, evidence };
     }));
     const reconciled = reconcileGenesisRpcEvidence({ network: "ethereum", observations, expected });
     await persistVerifiedReceipt(db, reconciled);
@@ -588,7 +588,7 @@ async function scanTron(db, sources, treasuryAddress) {
           };
           const observations = infos.map((info, sourceIndex) => ({
             providerId: sources[sourceIndex].id,
-            operatorId: sources[sourceIndex].operatorId,
+            sourceId: sources[sourceIndex].sourceId,
             evidence: null,
             info,
             sourceIndex,
@@ -845,7 +845,7 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
       };
       const parsed = observations.map((observation) => ({
         providerId: observation.source.id,
-        operatorId: observation.source.operatorId,
+        sourceId: observation.source.sourceId,
         evidence: parseSolanaUsdtTransferEvidence({
           clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
           mintMetadata: mintMetadata[sources.indexOf(observation.source)],
