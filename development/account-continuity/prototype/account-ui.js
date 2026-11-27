@@ -28,6 +28,7 @@
   var memberNameCheckTimer = null;
   var availableMemberName = "";
   var selectedPrimaryWalletId = "";
+  var selectedPrimaryNetwork = "";
   var primaryWalletCatalogue = [];
   var primaryWalletCatalogueReady = false;
   var primaryWalletCataloguePromise = null;
