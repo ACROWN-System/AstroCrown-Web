@@ -207,6 +207,21 @@ WHEN NEW.payment_kind='QUALIFYING_PAYMENT'
            CASE CAST(json_extract(j.value,'$.tranche') AS INTEGER)
              WHEN 1 THEN 30 WHEN 2 THEN 25 WHEN 3 THEN 20 WHEN 4 THEN 15 WHEN 5 THEN 10 ELSE -1 END
          OR CAST(json_extract(j.value,'$.multiplierDenominator') AS INTEGER) != 1
+         OR CAST(json_extract(j.value,'$.principalStartBaseUnits') AS INTEGER) !=
+           CAST(NEW.settled_principal_start_base_units AS INTEGER) +
+           COALESCE((
+             SELECT SUM(CAST(json_extract(previous.value,'$.qualifyingPrincipalBaseUnits') AS INTEGER))
+             FROM json_each(NEW.settled_tier_breakdown_json) previous
+             WHERE CAST(previous.key AS INTEGER)<CAST(j.key AS INTEGER)
+           ),0)
+         OR CAST(json_extract(j.value,'$.tranche') AS INTEGER) !=
+           CAST(CAST(json_extract(j.value,'$.principalStartBaseUnits') AS INTEGER)/10000000000 AS INTEGER)+1
+         OR CAST(json_extract(j.value,'$.qualifyingPrincipalBaseUnits') AS INTEGER) >
+           CAST(json_extract(j.value,'$.tranche') AS INTEGER)*10000000000 -
+           CAST(json_extract(j.value,'$.principalStartBaseUnits') AS INTEGER)
+         OR CAST(json_extract(j.value,'$.allowanceBaseUnits') AS INTEGER) !=
+           CAST(json_extract(j.value,'$.qualifyingPrincipalBaseUnits') AS INTEGER)*
+           CAST(json_extract(j.value,'$.multiplierNumerator') AS INTEGER)
      )
  )
 BEGIN SELECT RAISE(ABORT, 'Genesis qualifying payment would exceed or mismatch the reserved global principal or allowance balance'); END;
