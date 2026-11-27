@@ -967,7 +967,14 @@ async function scanSolana(db, sources, treasuryAddress, env) {
     processedAccounts += 1;
   }
   if (bootstrapping) await setCursor(db, "solana", "__monitor_initialized__", "1");
-  return { initialized: bootstrapping, receipts, tokenAccounts: tokenAccounts[0].length, processedAccounts };
+  return {
+    initialized: bootstrapping,
+    receipts,
+    qualifyingPaymentsSettled,
+    allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
+    tokenAccounts: currentTreasuryTokenAccounts.length,
+    processedAccounts
+  };
 }
 
 async function retryPendingGenesisPaymentSettlements(db, env) {
