@@ -709,7 +709,8 @@
         '<button class="account-secondary" type="button" id="account-passkey-signin"' +
           (browserPreviewMode ? ' disabled' : '') + '>Continue with legacy passkey</button>' +
         '<p class="account-signin-recovery"><button class="account-text-button" type="button" id="account-recovery-start">Recover a legacy passkey account</button></p>' +
-      '</details>';
+      '</details>' +
+      '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
   }
 
   function renderCreate() {
