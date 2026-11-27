@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS genesis_treasury_receipts (
   transfer_index INTEGER NOT NULL CHECK (transfer_index >= 0),
   inclusion_reference TEXT NOT NULL,
   finality_status TEXT NOT NULL CHECK (finality_status IN ('FINALIZED', 'SOLIDIFIED')),
-  verification_method TEXT NOT NULL CHECK (verification_method = 'TWO_INDEPENDENT_RPC_OPERATORS'),
+  verification_method TEXT NOT NULL CHECK (verification_method = 'TWO_INDEPENDENT_RPC_SOURCES'),
   rpc_provider_ids_json TEXT NOT NULL,
   rpc_operator_ids_json TEXT NOT NULL,
   evidence_digest TEXT NOT NULL CHECK (length(evidence_digest) = 64),
