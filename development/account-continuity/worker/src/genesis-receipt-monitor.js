@@ -247,8 +247,10 @@ async function persistVerifiedReceipt(db, reconciled, env) {
     "SELECT receipt_id FROM genesis_treasury_receipts WHERE network=? AND transaction_hash=? AND transfer_index=?"
   ).bind(network, evidence.transactionId, evidence.transferIndex).first();
   if (!stored) fail("The independently verified receipt could not be retrieved after persistence.");
-  const settlement = await settleGenesisPaymentReceipt(db, env, stored.receipt_id);
-  return { receiptId: stored.receipt_id, settlement };
+  // Receipt ingestion is separate from entitlement settlement. The monitor
+  // settles all eligible receipts only after every network scan has completed,
+  // in one global verified-receipt order.
+  return { receiptId: stored.receipt_id };
 }
 
 async function getCursor(db, network, scopeKey) {
