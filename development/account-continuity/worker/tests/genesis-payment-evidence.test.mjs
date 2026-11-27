@@ -303,6 +303,41 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
   assert.equal(firstTransfer.amountBaseUnits, "1000000");
   assert.equal(secondTransfer.amountBaseUnits, "2000000");
 
+  // A later outgoing transfer can reduce the treasury account's net delta
+  // without changing the fact that the earlier incoming transfer occurred.
+  const roundTrip = structuredClone(transaction);
+  const recipient = encodeBase58(new Uint8Array(32).fill(9));
+  const recipientTokenAccount = encodeBase58(new Uint8Array(32).fill(8));
+  roundTrip.transaction.message.accountKeys.push(recipientTokenAccount, recipient);
+  roundTrip.transaction.message.instructions.push({
+    programId: GENESIS_USDT_ASSETS.solana.tokenProgramId,
+    parsed: {
+      type: "transferChecked",
+      info: {
+        source: destinationTokenAccount,
+        destination: recipientTokenAccount,
+        mint,
+        authority: treasury,
+        tokenAmount: { amount: "600000", decimals: 6 },
+      },
+    },
+  });
+  roundTrip.meta.preTokenBalances.push(
+    { accountIndex: 2, mint, owner: treasury, uiTokenAmount: { amount: "100", decimals: 6 } },
+  );
+  roundTrip.meta.postTokenBalances[1].uiTokenAmount.amount = "400100";
+  roundTrip.meta.postTokenBalances.push(
+    { accountIndex: 5, mint, owner: recipient, uiTokenAmount: { amount: "600000", decimals: 6 } },
+  );
+  const inboundDespiteSameTransactionOutflow = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: roundTrip,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 1 },
+  });
+  assert.equal(inboundDespiteSameTransactionOutflow.amountBaseUnits, "1000000");
+
   const inflatedTransfer = structuredClone(transaction);
   inflatedTransfer.transaction.message.instructions.push(structuredClone(transaction.transaction.message.instructions[1]));
   assert.throws(() => parseSolanaUsdtTransferEvidence({
