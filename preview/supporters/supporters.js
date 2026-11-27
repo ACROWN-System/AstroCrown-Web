@@ -1029,6 +1029,27 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     genesisPaymentWallet.disabled = !supporterMember || !network || eligible.length === 0;
   }
 
+  function instructionsFromGenesisPaymentIntent(intent) {
+    if (!intent) return null;
+    var labels = {
+      ethereum: "USDT · Ethereum (ERC-20)",
+      tron: "USDT · TRON (TRC-20)",
+      solana: "USDT · Solana (SPL)"
+    };
+    return {
+      asset: "USDT",
+      label: intent.label || labels[intent.network] || "USDT",
+      network: intent.network,
+      amount: intent.amount,
+      receivingAddress: intent.receivingAddress,
+      tokenIdentifier: intent.tokenIdentifier,
+      expiresAt: intent.expiresAt,
+      networkFeePolicy: "The registered wallet owner pays the network fee separately using the network's native fee asset/resources. It is not deducted from the USDT principal.",
+      paymentMethod: "MANUAL_EXACT_AMOUNT_TRANSFER",
+      walletTransactionSubmitted: false
+    };
+  }
+
   function renderGenesisPaymentInstructions(intent, instructions, qualification) {
     currentGenesisPaymentIntent = intent || null;
     currentGenesisPaymentInstructions = instructions || null;
@@ -1082,18 +1103,15 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       intent = profile.paymentIntents.find(function (item) { return item.status === "OPEN"; }) || null;
     }
     if (intent) {
-      if (currentGenesisPaymentIntent && currentGenesisPaymentIntent.paymentIntentId === intent.paymentIntentId &&
-          currentGenesisPaymentInstructions) {
-        renderGenesisPaymentInstructions(intent, currentGenesisPaymentInstructions, null);
-      } else {
-        currentGenesisPaymentIntent = intent;
-        if (genesisPaymentInstructions) genesisPaymentInstructions.hidden = true;
-        setGenesisPaymentFeedback(
-          "An exact USDT payment intent is already open for this Genesis profile. Refresh its details through the payment-intents service; do not create a second payment.",
-          "open"
-        );
-        if (genesisPaymentCreate) genesisPaymentCreate.disabled = true;
-      }
+      var rememberedInstructions = currentGenesisPaymentIntent &&
+        currentGenesisPaymentIntent.paymentIntentId === intent.paymentIntentId
+        ? currentGenesisPaymentInstructions
+        : null;
+      renderGenesisPaymentInstructions(
+        intent,
+        rememberedInstructions || instructionsFromGenesisPaymentIntent(intent),
+        null
+      );
     } else {
       renderGenesisPaymentInstructions(null, null, null);
     }
@@ -1264,6 +1282,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         : "Primary wallet verified. Its unique display name is reserved. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
     }
     updateSupporterActionButtons();
+    renderGenesisPaymentPanel(data);
     refreshGenesisDirectory();
     refreshGenesisTreasuryReceipts();
   }
@@ -1594,6 +1613,22 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   if (linkWalletButton) linkWalletButton.addEventListener("click", runSupporterWalletLink);
   if (logoutButton) logoutButton.addEventListener("click", runSupporterLogout);
   if (saveNameButton) saveNameButton.addEventListener("click", saveGenesisDisplayName);
+  if (genesisPaymentForm) genesisPaymentForm.addEventListener("submit", requestGenesisPaymentIntent);
+  if (genesisPaymentNetwork) genesisPaymentNetwork.addEventListener("change", function () {
+    populateGenesisPaymentWalletOptions();
+    renderGenesisPaymentPanel(supporterMember);
+  });
+  if (genesisPaymentWallet) genesisPaymentWallet.addEventListener("change", function () {
+    renderGenesisPaymentPanel(supporterMember);
+  });
+  if (genesisPaymentAmount) genesisPaymentAmount.addEventListener("input", function () {
+    renderGenesisPaymentPanel(supporterMember);
+  });
+  if (genesisPaymentTerms) genesisPaymentTerms.addEventListener("change", function () {
+    renderGenesisPaymentPanel(supporterMember);
+  });
+  if (genesisPaymentCancel) genesisPaymentCancel.addEventListener("click", cancelGenesisPaymentIntent);
+  if (genesisPaymentCopyAddress) genesisPaymentCopyAddress.addEventListener("click", copyGenesisReceivingAddress);
 
   async function refreshProgrammeStatus() {
     var statusElement = document.getElementById("supporter-runtime-status");
