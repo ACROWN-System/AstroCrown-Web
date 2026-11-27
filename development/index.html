@@ -1682,15 +1682,15 @@
         try {
           var output = context.createGain();
           // Keep the overall level deliberately restrained for a financial interface.
-          output.gain.setValueAtTime(0.30, context.currentTime);
+          output.gain.setValueAtTime(0.62, context.currentTime);
           output.connect(context.destination);
 
           if (phase === "push") {
             // A soft, dry tick: brief and slightly lower in register.
-            addPrecisionClick(context, output, 0.012, 0.006, 0, 1380);
+            addPrecisionClick(context, output, 0.035, 0.010, 0, 1550);
           } else {
             // A similarly quiet tack, a touch brighter to distinguish release.
-            addPrecisionClick(context, output, 0.010, 0.0065, 0, 1760);
+            addPrecisionClick(context, output, 0.032, 0.011, 0, 1900);
           }
 
           window.setTimeout(function () {
