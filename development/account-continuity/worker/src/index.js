@@ -451,7 +451,7 @@ function createPrimaryWalletSignInMessage(config, address, chainId, challengeId,
     "Request ID: " + challengeId,
   ].join("\n");
 }
-async function verifyAdminSiweSignature(message, signature, expectedAddress) {
+async function verifyEvmPersonalSignature(message, signature, expectedAddress) {
   if (typeof message !== "string" || !message || message.length > 8192 ||
       typeof signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(signature)) {
     throw fail(401, "The administrator wallet signature is invalid.");
@@ -656,7 +656,7 @@ async function verifyAdminWalletEnrollment(db, env, request, payload) {
     throw fail(409, "The wallet challenge or administrator session changed. Begin enrollment again.");
   }
 
-  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+  await verifyEvmPersonalSignature(payload.message, payload.signature, address);
   const walletId = hex(bytes(16));
   const auditId = hex(bytes(16));
   const createdAt = new Date().toISOString();
@@ -793,7 +793,7 @@ async function verifyAdminWalletChallenge(db, env, request, payload, config) {
     throw fail(409, "The administrator wallet or account session changed. Start a fresh verification.");
   }
 
-  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+  await verifyEvmPersonalSignature(payload.message, payload.signature, address);
   const auditId = hex(bytes(16));
   const createdAt = new Date().toISOString();
   const statements = [
@@ -1720,7 +1720,7 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
   if (Number(consumed?.meta?.changes || 0) !== 1) {
     throw fail(409, "This wallet sign-in request has already been used. Start again.");
   }
-  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+  await verifyEvmPersonalSignature(payload.message, payload.signature, address);
 
   const identity = await db.prepare(
     "SELECT a.account_id FROM auth_primary_wallets w " +
@@ -2209,7 +2209,8 @@ export {
   validateEvmChainId,
   createAdminSiweMessage,
   createPrimaryWalletSignInMessage,
-  verifyAdminSiweSignature,
+  verifyEvmPersonalSignature,
+  verifyEvmPersonalSignature as verifyAdminSiweSignature,
   diagnostics,
 };
 export default {
