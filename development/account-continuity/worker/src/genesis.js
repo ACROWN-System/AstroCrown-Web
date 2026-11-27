@@ -1,4 +1,5 @@
 import { normalizeWalletAddress, verifyWalletSignature } from "./wallet-proof.js";
+import { publicGenesisTreasuryReceipts } from "./genesis-receipt-monitor.js";
 import { availableProgrammeAllowance, isGenesisRegistrationOpen } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 
 const COOKIE = "acrown_genesis_wallet";
@@ -439,6 +440,15 @@ export async function handleGenesisWalletApi(request, env, config) {
       const identity = await currentIdentity(db, request);
       const checked = await nameAvailability(db, name, identity?.identity_id || null);
       return response(200, { available: checked.available, displayName: checked.name, message: checked.available ? "Display name available." : "Display name is already in use." });
+    }
+    if (url.pathname === "/api/genesis/treasury-receipts" && request.method === "GET") {
+      await rateLimit(db, env, request, "public-treasury-receipts", 120, 3600);
+      return response(200, {
+        items: await publicGenesisTreasuryReceipts(db),
+        publicReceiptRegister: true,
+        operationalSource: "ASTROCROWN_RECEIVING_WALLET_MONITOR",
+        explorerPurpose: "COMMUNITY_VERIFICATION_ONLY",
+      });
     }
     if (url.pathname === "/api/genesis/directory" && request.method === "GET") {
       await rateLimit(db, env, request, "public-directory", 120, 3600);
