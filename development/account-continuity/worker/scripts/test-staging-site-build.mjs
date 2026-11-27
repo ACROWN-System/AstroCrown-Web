@@ -199,7 +199,7 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("USDT · TRON (TRC-20)"));
   assert.ok(js.includes("USDT · Solana (SPL)"));
   assert.ok(js.includes("No live receipt claims are being displayed"));
-  assert.ok(js.includes("receipt explorer origin"));
+  assert.ok(js.includes("explorer.origin !== network.origin"));
 
   assert.ok(js.includes("/api/genesis/identity/challenge"));
   assert.ok(js.includes("/api/genesis/identity/verify"));
