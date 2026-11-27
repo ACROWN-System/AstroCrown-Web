@@ -52,10 +52,16 @@ test("new D1 identity is persisted exclusively before database setup continues",
   assert.match(deployScript, /Do not retry database creation/);
 });
 
-test("remote smoke checks are not represented as full account qualification", () => {
+test("remote wallet-only smoke checks are not represented as full account qualification", () => {
   assert.match(deployScript, /REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED/);
   assert.match(deployScript, /not full remote account qualification/);
-  assert.match(deployScript, /actual stored COSE algorithm is -48/);
+  assert.match(deployScript, /primary-wallet challenge/);
+  assert.match(deployScript, /wallet-only sign-in entry point/);
+  assert.match(deployScript, /same authenticated AstroCrown account session/);
+  assert.match(deployScript, /retired passkey endpoint is still reachable/);
+  assert.match(deployScript, /both consents/);
+  assert.match(deployScript, /optional secondary-address linking/);
+  assert.doesNotMatch(deployScript, /ML-DSA|COSE algorithm|legacy passkey compatibility|one-time recovery key/);
 });
 
 test("public Genesis deployment smoke check matches the canonical disabled-payment API fields", async () => {
