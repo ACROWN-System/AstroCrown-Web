@@ -1174,7 +1174,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     var currentGate = networks[genesisPaymentNetwork && genesisPaymentNetwork.value];
     var canCreate = Boolean(enabled && currentGate && currentGate.enabled === true &&
       supporterMember && !intent && genesisPaymentWallet && genesisPaymentWallet.value &&
-      genesisPaymentAmount && /^[0-9]+(?:\\.[0-9]{1,6})?$/.test(genesisPaymentAmount.value.trim()) &&
+      genesisPaymentAmount && /^[0-9]+(?:\.[0-9]{1,6})?$/.test(genesisPaymentAmount.value.trim()) &&
       genesisPaymentTerms && genesisPaymentTerms.checked === true);
     if (genesisPaymentAmount) genesisPaymentAmount.disabled = !enabled || Boolean(intent);
     if (genesisPaymentTerms) genesisPaymentTerms.disabled = !enabled || Boolean(intent);
