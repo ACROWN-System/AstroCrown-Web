@@ -142,6 +142,11 @@ WHEN NOT (
 )
 BEGIN SELECT RAISE(ABORT, 'Genesis payment intent status transition is invalid'); END;
 
+CREATE TRIGGER IF NOT EXISTS genesis_payment_intent_expiry_guard
+BEFORE UPDATE OF status ON genesis_payment_intents
+WHEN OLD.status='OPEN' AND NEW.status='EXPIRED' AND OLD.expires_at>unixepoch()
+BEGIN SELECT RAISE(ABORT, 'A Genesis payment intent cannot expire before its deadline'); END;
+
 CREATE TRIGGER IF NOT EXISTS genesis_payment_intent_release_principal
 AFTER UPDATE OF status ON genesis_payment_intents
 WHEN OLD.status='OPEN' AND NEW.status IN ('CANCELLED', 'EXPIRED')
