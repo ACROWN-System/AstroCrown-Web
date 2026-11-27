@@ -24,7 +24,7 @@ test("staging artifact replaces the visual-preview notice with live public-test 
   assert.match(html, /AstroCrown is live for public testing/);
   assert.match(html, /live, publicly accessible AstroCrown test environment/);
   assert.match(html, /not the production commercial service/);
-  assert.match(html, /temporary test accounts/);
+  assert.match(html, /temporary staging test accounts/);
   assert.match(html, /may be reset or deleted at any time/);
 
   assert.match(html, /Default-to-public rule/);
