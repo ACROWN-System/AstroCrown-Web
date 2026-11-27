@@ -66,7 +66,7 @@ test("qualifying-payment multiplier produces a shared USDT-denominated purchase 
 });
 
 test("the proposed five global USDT tranches calculate exact allowance, including boundary crossings", () => {
-  assert.equal(GENESIS_QUALIFYING_RULES_VERSION, "GENESIS-USDT-50K-1M-TIERS-V1-PROPOSED");
+  assert.equal(GENESIS_QUALIFYING_RULES_VERSION, "GENESIS-USDT-50K-1M-TIERS-V1");
   assert.equal(GENESIS_QUALIFYING_PRINCIPAL_CAP_BASE_UNITS, "50000000000");
   assert.equal(GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS, "1000000000000");
 
