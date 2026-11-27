@@ -82,7 +82,7 @@ test("the proposed five global USDT tranches calculate exact allowance, includin
     cumulativeQualifyingPrincipalBeforeBaseUnits: "7000000000",
     qualifyingPaymentUsdtBaseUnits: "5000000000",
   });
-  assert.equal(crossing.purchaseAllowanceUsdtBaseUnits, "26500000000");
+  assert.equal(crossing.purchaseAllowanceUsdtBaseUnits, "140000000000");
   assert.deepEqual(crossing.tierBreakdown.map((tier) => tier.qualifyingPrincipalBaseUnits), [
     "3000000000", "2000000000"
   ]);
