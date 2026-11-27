@@ -17,6 +17,7 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   const noticeCss = await readPublic("page-entry/page-entry-notice.css");
   const registry = JSON.parse(await readPublic("page-entry/feature-status.json"));
   const workerSource = await readFile(resolve(workerRoot, "src", "index.js"), "utf8");
+  const genesisWorkerSource = await readFile(resolve(workerRoot, "src", "genesis.js"), "utf8");
   const walletAssurance = await readPublic("account-continuity/prototype/wallet-identity-assurance.html");
   const accountUi = await readPublic("account-continuity/prototype/account-ui.js");
 
@@ -259,8 +260,9 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("requestGenesisPaymentIntent"));
   assert.ok(js.includes("Cancellation available after expiry and monitor reconciliation"));
   assert.ok(js.includes("Do not cancel an intent after sending USDT"));
-  assert.ok(js.includes("A payment intent cannot be cancelled before its expiry."));
-  assert.ok(js.includes("recent healthy scan of Ethereum, TRON and Solana"));
+  assert.ok(genesisWorkerSource.includes("A payment intent cannot be cancelled before its expiry."));
+  assert.ok(genesisWorkerSource.includes("recent healthy scan of Ethereum, TRON and Solana"));
+  assert.ok(genesisWorkerSource.includes("A matching on-chain USDT receipt has already been recorded"));
   assert.ok(js.includes("renderGenesisPaymentPanel"));
   assert.ok(js.includes("MANUAL_EXACT_AMOUNT_TRANSFER"));
   assert.ok(js.includes("walletTransactionSubmitted"));
