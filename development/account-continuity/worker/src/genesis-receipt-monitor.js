@@ -82,7 +82,8 @@ export function prepareGenesisRpcPair(env, network) {
     if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{2,63}$/.test(operatorId)) {
       fail(network + " RPC " + id + " must have a stable configured operator identifier.");
     }
-    return Object.freeze({ id: slot.toLowerCase(), url: url.toString(), origin: url.origin, operatorId });
+    const apiKey = network === "tron" ? String(env[prefix + id + "_API_KEY"] || "").trim() : "";
+    return Object.freeze({ id: slot.toLowerCase(), url: url.toString(), origin: url.origin, operatorId, apiKey });
   });
   if (sources[0].origin === sources[1].origin || sources[0].operatorId === sources[1].operatorId) {
     fail(network + " RPC sources must use different HTTPS origins and independently identified operators.");
@@ -90,13 +91,13 @@ export function prepareGenesisRpcPair(env, network) {
   return Object.freeze(sources);
 }
 
-async function postJson(url, payload, label) {
+async function postJson(url, payload, label, extraHeaders = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15_000);
   try {
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept": "application/json", ...extraHeaders },
       body: JSON.stringify(payload),
       signal: controller.signal,
       redirect: "error",
@@ -128,8 +129,10 @@ async function jsonRpc(source, method, params = []) {
 }
 
 async function tronRpc(source, method, body = {}) {
-  const root = source.url.replace(/\/+$/, "");
-  const payload = await postJson(root + "/walletsolidity/" + method, body, source.id + " TRON SolidityNode " + method);
+  const endpoint = new URL(source.url);
+  endpoint.pathname = endpoint.pathname.replace(/\\/+$/, "") + "/walletsolidity/" + method;
+  const headers = source.apiKey ? { "TRON-PRO-API-KEY": source.apiKey } : {};
+  const payload = await postJson(endpoint.toString(), body, source.id + " TRON SolidityNode " + method, headers);
   if (!payload || payload.Error || payload.error) fail(source.id + " TRON SolidityNode " + method + " reported an error.");
   return payload;
 }
