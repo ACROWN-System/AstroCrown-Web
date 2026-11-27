@@ -400,7 +400,7 @@ async function expireStaleGenesisPaymentIntents(db, now = Math.floor(Date.now() 
       "AND r.source_wallet_address_id=i.source_wallet_address_id " +
       "AND r.network=i.network AND r.asset_identifier=i.asset_identifier " +
       "AND r.treasury_address=i.treasury_address AND r.amount_base_units=i.amount_base_units " +
-      "AND r.verified_at>=i.created_at AND r.verified_at<=i.expires_at" +
+      "AND r.occurred_at>=i.created_at AND r.occurred_at<=i.expires_at" +
     ")"
   ).bind(now).run();
 }
