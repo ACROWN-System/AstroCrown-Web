@@ -10,7 +10,11 @@ import {
   isWithinProgrammeWindow,
   calculateUsdtPurchaseAllowance,
   availableProgrammeAllowance,
-  consumeProgrammeAllowance
+  consumeProgrammeAllowance,
+  GENESIS_QUALIFYING_RULES_VERSION,
+  GENESIS_QUALIFYING_PRINCIPAL_CAP_BASE_UNITS,
+  GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS,
+  calculateGenesisTieredPurchaseAllowance
 } from "../shared/entitlement-rules.mjs";
 
 test("new primary-wallet registration freezes exactly 24 hours before scheduled ACROWN launch and never reopens", () => {
@@ -59,6 +63,59 @@ test("qualifying-payment multiplier produces a shared USDT-denominated purchase 
     multiplierNumerator: "25",
     multiplierDenominator: "1"
   }), "31250000");
+});
+
+test("the proposed five global USDT tranches calculate exact allowance, including boundary crossings", () => {
+  assert.equal(GENESIS_QUALIFYING_RULES_VERSION, "GENESIS-USDT-50K-1M-TIERS-V1-PROPOSED");
+  assert.equal(GENESIS_QUALIFYING_PRINCIPAL_CAP_BASE_UNITS, "50000000000");
+  assert.equal(GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS, "1000000000000");
+
+  const first = calculateGenesisTieredPurchaseAllowance({
+    cumulativeQualifyingPrincipalBeforeBaseUnits: "0",
+    qualifyingPaymentUsdtBaseUnits: "1000000000",
+  });
+  assert.equal(first.purchaseAllowanceUsdtBaseUnits, "30000000000");
+  assert.equal(first.tierBreakdown.length, 1);
+  assert.equal(first.tierBreakdown[0].multiplierNumerator, "30");
+
+  const crossing = calculateGenesisTieredPurchaseAllowance({
+    cumulativeQualifyingPrincipalBeforeBaseUnits: "7000000000",
+    qualifyingPaymentUsdtBaseUnits: "5000000000",
+  });
+  assert.equal(crossing.purchaseAllowanceUsdtBaseUnits, "26500000000");
+  assert.deepEqual(crossing.tierBreakdown.map((tier) => tier.qualifyingPrincipalBaseUnits), [
+    "3000000000", "2000000000"
+  ]);
+  assert.deepEqual(crossing.tierBreakdown.map((tier) => tier.multiplierNumerator), ["30", "25"]);
+  assert.equal(crossing.cumulativeQualifyingPrincipalAfterBaseUnits, "12000000000");
+  assert.equal(crossing.activationStatus, "PROPOSED_RULES_NOT_ACTIVATED");
+});
+
+test("the complete proposed USDT 50,000 principal target yields exactly USDT 1,000,000 allowance", () => {
+  const result = calculateGenesisTieredPurchaseAllowance({
+    cumulativeQualifyingPrincipalBeforeBaseUnits: "0",
+    qualifyingPaymentUsdtBaseUnits: "50000000000",
+  });
+  assert.equal(result.purchaseAllowanceUsdtBaseUnits, "1000000000000");
+  assert.deepEqual(result.tierBreakdown.map((tier) => tier.multiplierNumerator), ["30", "25", "20", "15", "10"]);
+  assert.deepEqual(result.tierBreakdown.map((tier) => tier.qualifyingPrincipalBaseUnits), [
+    "10000000000", "10000000000", "10000000000", "10000000000", "10000000000"
+  ]);
+});
+
+test("proposed global tranche arithmetic rejects zero, noncanonical, over-target and stale principal inputs", () => {
+  assert.throws(() => calculateGenesisTieredPurchaseAllowance({
+    cumulativeQualifyingPrincipalBeforeBaseUnits: "0", qualifyingPaymentUsdtBaseUnits: "0"
+  }), /greater than zero/);
+  assert.throws(() => calculateGenesisTieredPurchaseAllowance({
+    cumulativeQualifyingPrincipalBeforeBaseUnits: "01", qualifyingPaymentUsdtBaseUnits: "1"
+  }), /canonical integer/);
+  assert.throws(() => calculateGenesisTieredPurchaseAllowance({
+    cumulativeQualifyingPrincipalBeforeBaseUnits: "49999999999", qualifyingPaymentUsdtBaseUnits: "2"
+  }), /50,000/);
+  assert.throws(() => calculateGenesisTieredPurchaseAllowance({
+    cumulativeQualifyingPrincipalBeforeBaseUnits: "50000000001", qualifyingPaymentUsdtBaseUnits: "1"
+  }), /50,000/);
 });
 
 test("available allowance is one programme-wide pool, reduced by reservations and completed purchases", () => {
