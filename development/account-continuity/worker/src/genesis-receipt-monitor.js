@@ -325,7 +325,9 @@ async function scanEthereum(db, sources, treasuryAddress) {
       fail("Ethereum USDT Transfer log is malformed.");
     }
     const sender = "0x" + String(log.topics[1]).slice(-40).toLowerCase();
-    const amount = exactPositiveInteger(log.data, "Ethereum USDT transfer amount").toString();
+    const amountValue = quantity(log.data, "Ethereum USDT transfer amount");
+    if (amountValue === 0n) continue;
+    const amount = amountValue.toString();
     const transferIndex = toSafeNumber(log.logIndex, "Ethereum log index");
     const expected = {
       transactionId: log.transactionHash,
@@ -486,7 +488,7 @@ export function normalizeTronBlockReceiptPage(receipts, blockHeight, expectedTra
   return byId;
 }
 
-async function extractTronUsdtCandidates(info, tokenHex, treasuryHex) {
+async function extractTronUsdtCandidates(info, tokenHex, treasuryAddress) {
   if (!info || typeof info !== "object") fail("TRON block receipt entry is missing.");
   if (info.log === undefined || info.log === null) return [];
   if (!Array.isArray(info.log)) fail("TRON block receipt contains malformed event-log data.");
@@ -494,15 +496,22 @@ async function extractTronUsdtCandidates(info, tokenHex, treasuryHex) {
   for (let index = 0; index < info.log.length; index += 1) {
     const log = info.log[index];
     if (tronLogAddressHex(log && log.address) !== tokenHex) continue;
-    if (!Array.isArray(log.topics) || log.topics.length !== 3 ||
-        String(log.topics[0] || "").replace(/^0x/i, "").toLowerCase() !== GENESIS_USDT_ASSETS.tron.transferTopic) continue;
-    if (String(log.topics[2] || "").replace(/^0x/i, "").toLowerCase().slice(-40) !== treasuryHex) continue;
-    if (typeof log.data !== "string" || !/^(?:0x)?[0-9a-f]{64}$/i.test(log.data)) continue;
-    const amount = exactPositiveInteger("0x" + log.data.replace(/^0x/i, ""), "TRON USDT transfer amount");
+    if (!Array.isArray(log.topics) || log.topics.length === 0) {
+      fail("TRON USDT contract emitted malformed event topics.");
+    }
+    if (String(log.topics[0] || "").replace(/^0x/i, "").toLowerCase() !== GENESIS_USDT_ASSETS.tron.transferTopic) continue;
+    if (log.topics.length !== 3) fail("TRON USDT Transfer event has an invalid indexed-topic count.");
+    if (typeof log.data !== "string" || !/^(?:0x)?[0-9a-f]{64}$/i.test(log.data)) {
+      fail("TRON USDT Transfer event contains malformed amount data.");
+    }
     const senderAddress = await tronAddressFromTopic(log.topics[1], "TRON Transfer sender");
+    const recipientAddress = await tronAddressFromTopic(log.topics[2], "TRON Transfer recipient");
+    if (recipientAddress !== treasuryAddress) continue;
+    const amountValue = BigInt("0x" + log.data.replace(/^0x/i, ""));
+    if (amountValue === 0n) continue;
     candidates.push({
       senderAddress,
-      amountBaseUnits: amount.toString(),
+      amountBaseUnits: amountValue.toString(),
       transferIndex: index,
     });
   }
@@ -563,7 +572,7 @@ async function scanTron(db, sources, treasuryAddress) {
     for (const blockPage of blockPages) {
       for (const transactionId of blockPage.txIds) {
         const infos = sources.map((source, sourceIndex) => blockPage.receiptMaps[sourceIndex].get(transactionId));
-        const candidates = await Promise.all(infos.map((info) => extractTronUsdtCandidates(info, tokenHex, treasuryHex)));
+        const candidates = await Promise.all(infos.map((info) => extractTronUsdtCandidates(info, tokenHex, treasuryAddress)));
         if (JSON.stringify(candidates[0]) !== JSON.stringify(candidates[1])) {
           fail("TRON independent SolidityNodes disagree on incoming USDT Transfer event evidence.");
         }
