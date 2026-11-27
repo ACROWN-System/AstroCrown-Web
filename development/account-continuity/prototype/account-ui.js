@@ -421,13 +421,87 @@
       noticeText + '</p>';
   }
 
+  function selectedPrimaryWalletNetworkList() {
+    return primaryWalletCatalogue.find(function (wallet) {
+      return wallet.id === selectedPrimaryWalletId;
+    }) || null;
+  }
+
+  function renderPrimaryWalletBrandChoices() {
+    var brandIds = ["metamask", "trust-wallet", "okx-wallet", "bitget-wallet", "tokenpocket", "coin98"];
+    return '<section class="account-wallet-picker" aria-labelledby="account-wallet-picker-title">' +
+      '<div class="account-wallet-picker-heading"><span>01</span><div><strong id="account-wallet-picker-title">Choose your wallet</strong><small>Select the wallet application you actually use.</small></div></div>' +
+      '<div class="account-wallet-brand-grid">' +
+      brandIds.map(function (walletId) {
+        var presentation = primaryWalletBrandPresentation[walletId];
+        var detected = primaryWalletCatalogue.find(function (wallet) { return wallet.id === walletId; });
+        var networks = detected ? detected.networks : [];
+        var ambiguous = detected ? detected.ambiguousNetworks : [];
+        var selected = walletId === selectedPrimaryWalletId;
+        var availability = primaryWalletCatalogueReady
+          ? (networks.length ? networks.map(function (network) {
+              return network === "ethereum" ? "Ethereum" : network === "tron" ? "TRON" : "Solana";
+            }).join(" · ") + " detected" : "Not detected in this browser")
+          : "Checking browser";
+        return '<button type="button" class="account-wallet-brand-choice' + (selected ? ' is-selected' : '') +
+          '" data-primary-wallet="' + walletId + '" aria-pressed="' + (selected ? "true" : "false") + '">' +
+          '<span class="account-wallet-brand-logo"><span aria-hidden="true">' + escapeHtml(presentation.initials) + '</span>' +
+          '<img src="' + escapeHtml(presentation.logo) + '" alt="" aria-hidden="true" loading="lazy" referrerpolicy="no-referrer"></span>' +
+          '<span class="account-wallet-brand-copy"><strong>' + escapeHtml(presentation.name) + '</strong>' +
+          '<small>' + escapeHtml(availability) + '</small>' +
+          (ambiguous.length ? '<small class="account-wallet-warning">More than one provider detected for ' + escapeHtml(ambiguous.join(", ")) + '</small>' : '') +
+          '</span><span class="account-wallet-brand-check" aria-hidden="true">' + (selected ? '✓' : '') + '</span></button>';
+      }).join("") +
+      '</div>' +
+      (!primaryWalletCatalogueReady
+        ? '<p class="account-wallet-detection" role="status">Detecting supported wallets in this browser…</p>'
+        : '<p class="account-wallet-detection" role="status">' + (primaryWalletCatalogue.some(function (wallet) { return wallet.networks.length > 0; })
+          ? 'Choose a detected wallet. Your browser may expose different public addresses on different networks.'
+          : 'No supported wallet is currently detected. Install or unlock one of the listed wallet applications, then reload this page.') + '</p>') +
+      '</section>';
+  }
+
+  function renderPrimaryIdentityNetworkChoice() {
+    var wallet = selectedPrimaryWalletNetworkList();
+    var networks = wallet ? wallet.networks : [];
+    if (!networks.length) {
+      selectedPrimaryNetwork = "";
+      return '<label class="account-field" for="account-wallet-network">02 · Network used for identity proof' +
+        '<select id="account-wallet-network" name="network" disabled><option value="">No supported network detected for this wallet</option></select>' +
+        '</label><p class="account-wallet-network-note">The network is shown only to identify which public wallet address will prove account ownership. It is not a payment or currency selection.</p>';
+    }
+    if (networks.indexOf(selectedPrimaryNetwork) === -1) selectedPrimaryNetwork = networks[0];
+    var labels = {
+      ethereum: "Ethereum Mainnet · EIP-191 message",
+      tron: "TRON Mainnet · TIP-191 message",
+      solana: "Solana Mainnet · Ed25519 message"
+    };
+    var duplicate = wallet.ambiguousNetworks.indexOf(selectedPrimaryNetwork) >= 0;
+    return '<label class="account-field" for="account-wallet-network">02 · Network used for identity proof' +
+      '<select id="account-wallet-network" name="network">' +
+      networks.map(function (network) {
+        return '<option value="' + network + '"' + (network === selectedPrimaryNetwork ? ' selected' : '') + '>' +
+          labels[network] + '</option>';
+      }).join("") +
+      '</select></label>' +
+      '<p class="account-wallet-network-note">' + (duplicate
+        ? 'More than one ' + selectedPrimaryNetwork.toUpperCase() + ' provider was detected for this brand. Resolve the duplicate provider before signing.'
+        : 'This selects the network for your primary-wallet identity proof only. It is not a payment or currency selection.') + '</p>';
+  }
+
   function renderWalletPrimaryStatus() {
-    var enabled = accountState.walletAuthenticationAvailable === true;
+    if (!primaryWalletCatalogueReady) loadPrimaryWalletCatalogue();
+    var wallet = selectedPrimaryWalletNetworkList();
+    var networks = wallet ? wallet.networks : [];
+    var ambiguous = wallet && wallet.ambiguousNetworks.indexOf(selectedPrimaryNetwork || networks[0]) >= 0;
+    var selectedNetworkAvailable = Boolean(wallet && selectedPrimaryNetwork && networks.indexOf(selectedPrimaryNetwork) >= 0);
+    var enabled = accountState.walletAuthenticationAvailable === true &&
+      primaryWalletCatalogueReady && selectedNetworkAvailable && !ambiguous;
+    var networkControl = renderPrimaryIdentityNetworkChoice();
     var controls = mode === "create"
       ? '<form id="account-wallet-register-form" class="account-form" autocomplete="off">' +
-          '<label class="account-field" for="account-wallet-network">Primary identity network' +
-            '<select id="account-wallet-network" name="network"><option value="ethereum">Ethereum Mainnet</option><option value="tron">TRON Mainnet</option><option value="solana">Solana Mainnet</option></select>' +
-          '</label>' +
+          renderPrimaryWalletBrandChoices() +
+          networkControl +
           '<label class="account-field" for="account-wallet-referral">Referral ID (Optional)' +
             '<input id="account-wallet-referral" name="referralId" maxlength="64" autocomplete="off" placeholder="Enter referral ID...">' +
           '</label>' +
@@ -435,25 +509,32 @@
             '<input id="account-wallet-terms" type="checkbox" required>' +
             '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> and <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
           '</label>' +
-          '<button class="account-primary" type="submit" id="account-wallet-register"' + (enabled ? '' : ' disabled') + '>Create account with primary wallet</button>' +
+          '<button class="account-primary" type="submit" id="account-wallet-register"' + (enabled ? '' : ' disabled') + '>Create account with selected wallet</button>' +
         '</form>'
       : '<div class="account-form">' +
-          '<label class="account-field" for="account-wallet-network">Primary identity network' +
-            '<select id="account-wallet-network" name="network"><option value="ethereum">Ethereum Mainnet</option><option value="tron">TRON Mainnet</option><option value="solana">Solana Mainnet</option></select>' +
-          '</label>' +
-          '<button class="account-primary" type="button" id="account-wallet-auth" data-intent="login"' + (enabled ? '' : ' disabled') + '>Sign in with primary wallet</button>' +
+          renderPrimaryWalletBrandChoices() +
+          networkControl +
+          '<button class="account-primary" type="button" id="account-wallet-auth" data-intent="login"' + (enabled ? '' : ' disabled') + '>Sign in with selected wallet</button>' +
         '</div>';
     content.innerHTML = renderTabs(mode) + renderDevelopmentNotice() +
       controls +
-      '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
-      '<div class="account-provider-note"><strong>Your sovereignty comes with sovereign responsibilities.</strong><br>Your primary wallet is the sole identity and recovery anchor. Use the wallet provider’s own recovery process to restore the same wallet. AstroCrown will never request or store a seed phrase or private key.</div>' +
-      '<p class="account-provider-note">Wallet proof is an off-chain message signature only. It does not submit a transaction, approve a contract, transfer assets or pay gas. Only Ethereum Mainnet, TRON Mainnet and Solana Mainnet are currently supported by this qualification; Bitcoin support is not enabled.</p>' +
+      '<p class="account-signin-help"><a href="./account-continuity/prototype/wallet-identity-assurance.html" target="_blank" rel="noopener noreferrer">Why a primary wallet?</a></p>' +
+      '<div class="account-provider-note"><strong>Your primary wallet is your only account identity and recovery anchor.</strong><br>Restore access to the same wallet through that wallet provider’s own recovery process. Additional wallets cannot sign in to or recover this account. AstroCrown never requests or stores a seed phrase or private key.</div>' +
+      '<p class="account-provider-note">Wallet proof is an off-chain message signature only. It does not submit a transaction, approve a contract, transfer assets or pay gas. The selected network identifies the public address being verified; it is not a payment selection.</p>' +
       (!enabled
-        ? '<p class="account-dialog-description">Wallet-only account access is not enabled on this read-only preview. Account creation and sign-in require the qualified AstroCrown Worker.</p>'
-        : '<p class="account-dialog-description">This wallet-primary account implementation is a staging qualification candidate. Use a wallet containing no real assets and review every message before signing. No account service is approved for production.</p>') +
+        ? '<p class="account-dialog-description">' + (accountState.walletAuthenticationAvailable !== true
+            ? 'Wallet-only account access is not enabled on this read-only preview. Account creation and sign-in require the qualified AstroCrown Worker.'
+            : !primaryWalletCatalogueReady
+              ? 'Checking for supported wallet applications…'
+              : !selectedNetworkAvailable
+                ? 'Select a wallet application detected in this browser and one of its supported networks.'
+                : 'Resolve the duplicate provider for this wallet brand and network before continuing.') + '</p>'
+        : '<p class="account-dialog-description">The wallet provider will show the exact domain-bound message before signing. Review it carefully. No transaction, network fee, payment or token approval is requested.</p>') +
       '<p class="account-signin-help"><a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Test Terms &amp; Conditions</a> · <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Notice</a></p>';
+    content.querySelectorAll(".account-wallet-brand-choice img").forEach(function (image) {
+      image.addEventListener("error", function () { image.hidden = true; });
+    });
   }
-
   function renderSignIn() {
     mode = "signin";
     renderWalletPrimaryStatus();
