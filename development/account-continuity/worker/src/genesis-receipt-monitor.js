@@ -543,10 +543,8 @@ async function readTronSolidifiedBlock(sources, height) {
 }
 
 async function scanTron(db, sources, treasuryAddress) {
-  const [tokenHex, treasuryHex] = await Promise.all([
-    tronAddressPayload(GENESIS_USDT_ASSETS.tron.assetIdentifier, "Canonical TRON USDT contract"),
-    tronAddressPayload(treasuryAddress, "Configured TRON treasury"),
-  ]);
+  const tokenHex = await tronAddressPayload(GENESIS_USDT_ASSETS.tron.assetIdentifier, "Canonical TRON USDT contract");
+  await tronAddressPayload(treasuryAddress, "Configured TRON treasury");
   const metadata = await Promise.all(sources.map((source) => tronMetadata(source, treasuryAddress)));
   const heads = await Promise.all(sources.map(tronNowBlock));
   if (heads[0].number !== heads[1].number || heads[0].blockId !== heads[1].blockId) {
