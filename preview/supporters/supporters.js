@@ -878,7 +878,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     if (!wallet) {
       if (memberFeedback) setFeedback(memberFeedback,
-        "Connect your primary Ethereum, TRON or Solana mainnet wallet. Its signed message establishes the wallet identity automatically; there is no separate user registration.", "neutral");
+        "Choose your wallet brand, then connect its primary Ethereum, TRON or Solana mainnet address. The primary address signs an off-chain proof to create your Genesis wallet profile; linked addresses do not become login or recovery wallets.", "neutral");
     } else if (!wallet.mainnet) {
       var expected = wallet.network === "ethereum" ? "Ethereum Mainnet (chain ID 1)" :
         wallet.network === "tron" ? "TRON Mainnet" : "Solana Mainnet";
@@ -997,8 +997,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     updateSupporterActionButtons();
     refreshGenesisDirectory();
-  refreshGenesisTreasuryReceipts();
-  window.setInterval(refreshGenesisTreasuryReceipts, 60000);
+    refreshGenesisTreasuryReceipts();
   }
 
   async function refreshSupporterMember() {
@@ -1028,7 +1027,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         network: wallet.network, address: wallet.address
       });
       setFeedback(memberFeedback,
-        "Wallet identity challenge created. Sign the exact off-chain message in your primary wallet. No user profile or separate account is being registered.", "neutral");
+        "This creates your Genesis wallet profile, separate from the ordinary AstroCrown website account. Sign the exact domain-bound off-chain message in your selected primary wallet; no transaction or payment is requested.", "neutral");
       var signature = await signSupporterChallenge(wallet, challenge.message);
       var profile = await supporterApiPost("/api/genesis/identity/verify", {
         challengeId: challenge.challengeId, signature: signature
@@ -1369,6 +1368,8 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   updateSupporterActionButtons();
   refreshSupporterMember();
   refreshGenesisDirectory();
+  refreshGenesisTreasuryReceipts();
+  window.setInterval(refreshGenesisTreasuryReceipts, 60000);
 
   // Never call eth_sign, eth_sendTransaction, signAndSendTransaction,
   // signTransaction, signAndSendTransaction, signMessageV2, or any wallet payment method here.
