@@ -36,7 +36,14 @@ function canonicalPositiveInteger(value) {
  */
 export function genesisQualifyingPaymentGate(env, network, rpcPairReady = false) {
   const reasons = [];
-  if (!env || env.ENVIRONMENT !== "staging") reasons.push("The qualifying-payment service is not running in the isolated staging environment.");
+  const environment = env && env.ENVIRONMENT;
+  if (environment === "production") {
+    if (env.GENESIS_PRODUCTION_PAYMENTS_APPROVED !== "true") {
+      reasons.push("Production Genesis payment acceptance has not been separately approved.");
+    }
+  } else if (environment !== "staging") {
+    reasons.push("The qualifying-payment service must run in the isolated staging environment or an explicitly approved production environment.");
+  }
   if (env?.GENESIS_RECEIPT_MONITOR_ENABLED !== "true") reasons.push("The AstroCrown-owned receiving-wallet monitor is not enabled.");
   if (env?.GENESIS_QUALIFYING_PAYMENTS_ENABLED !== "true") reasons.push("Genesis qualifying-payment acceptance is disabled.");
   if (env?.GENESIS_QUALIFYING_RULES_APPROVED !== "true" ||
