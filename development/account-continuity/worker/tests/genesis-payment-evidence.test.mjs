@@ -322,9 +322,6 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
       },
     },
   });
-  roundTrip.meta.preTokenBalances.push(
-    { accountIndex: 2, mint, owner: treasury, uiTokenAmount: { amount: "100", decimals: 6 } },
-  );
   roundTrip.meta.postTokenBalances[1].uiTokenAmount.amount = "400100";
   roundTrip.meta.postTokenBalances.push(
     { accountIndex: 5, mint, owner: recipient, uiTokenAmount: { amount: "600000", decimals: 6 } },
