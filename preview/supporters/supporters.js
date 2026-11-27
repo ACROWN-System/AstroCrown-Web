@@ -1191,9 +1191,11 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
           field.append(title, content);
           meta.append(field);
         }
+        addReceiptField("USDT contract / mint", String(item.tokenIdentifier || "Not supplied"));
         addReceiptField("Sending wallet", item.senderAddress);
         addReceiptField("AstroCrown receiving wallet", item.receivingAddress);
         addReceiptField("Transaction hash / signature", item.transactionHash);
+        addReceiptField("Block / slot inclusion", typeof item.inclusionReference === "string" ? item.inclusionReference : JSON.stringify(item.inclusionReference || {}));
         addReceiptField("Transfer index · finality", String(item.transferIndex) + " · " + String(item.finalityStatus || "VERIFIED"));
         if (typeof item.verifiedAt === "string") {
           var verifiedDate = new Date(item.verifiedAt);
