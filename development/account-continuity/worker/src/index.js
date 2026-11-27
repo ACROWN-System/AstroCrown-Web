@@ -1379,6 +1379,11 @@ export default {
         console.info("[AstroCrown] Genesis treasury receipt monitor cycle", JSON.stringify({
           status: result.status,
           receiptsRecorded: result.receiptsRecorded,
+          networks: {
+            ethereum: result.networks?.ethereum?.status || "NOT_RUN",
+            tron: result.networks?.tron?.status || "NOT_RUN",
+            solana: result.networks?.solana?.status || "NOT_RUN",
+          },
           paymentCreditsApplied: 0,
           entitlementChanges: 0,
         }));
