@@ -495,7 +495,63 @@
               <span id="supporter-member-wallet-list">No additional network addresses linked.</span>
             </div>
           </section>
-          <p class="fine-print">A multi-chain wallet exposes different public addresses on Ethereum, TRON and Solana. During Genesis registration, the owner may connect the same wallet application on each supported network and confirm the addresses to include in one primary wallet profile. Each address must independently sign a fresh, domain-bound ownership challenge before it is accepted; merely appearing in the same application, sharing a brand name or being displayed by provider metadata is not proof. A registered address may originate a qualifying payment only on its own network. The payment sender must match that pre-verified address, so Etherscan, TronScan or Solscan can independently show the registered sender, official treasury, token and amount. Linked addresses cannot authenticate, recover, rename or administer the Genesis identity. The primary wallet alone authorizes Genesis account actions. Genesis stores only public addresses, unique display names, proof metadata and session digests. AstroCrown never receives private keys or recovery phrases. Qualifying payments and floor-price purchases remain disabled.</p>
+          <p class="fine-print">A multi-chain wallet exposes different public addresses on Ethereum, TRON and Solana. During Genesis registration, the owner may connect the same wallet application on each supported network and confirm the addresses to include in one primary wallet profile. Each address must independently sign a fresh, domain-bound ownership challenge before it is accepted; merely appearing in the same application, sharing a brand name or being displayed by provider metadata is not proof. A registered address may originate a qualifying payment only on its own network. The payment sender must match that pre-verified address, so Etherscan, TronScan or Solscan can independently show the registered sender, official treasury, token and amount. Linked addresses cannot authenticate, recover, rename or administer the Genesis identity. The primary wallet alone authorizes Genesis account actions. Genesis stores only public addresses, unique display names, proof metadata and session digests. AstroCrown never receives private keys or recovery phrases. Qualifying payments remain unavailable until the rules, terms, treasury-control proofs and receiving-wallet monitoring have all been explicitly approved and enabled.</p>
+        </section>
+
+        <section class="panel genesis-payment-panel" aria-labelledby="genesis-payment-intent-title">
+          <div class="dashboard-panel-head">
+            <div>
+              <span class="scenario-tag">USDT · Qualifying payment</span>
+              <h3 id="genesis-payment-intent-title" style="margin-top:12px">Request exact payment instructions</h3>
+            </div>
+            <span class="dashboard-state pending-state" id="genesis-payment-acceptance-state">Not open</span>
+          </div>
+          <p class="panel-intro" id="genesis-payment-acceptance-summary">Genesis qualifying payments are not open. Do not send USDT. When every published approval and network-verification gate is satisfied, this section will allow the registered primary-wallet profile to request an exact, time-limited USDT payment intent.</p>
+          <form id="genesis-payment-intent-form" class="genesis-payment-intent-form" autocomplete="off">
+            <label class="field" for="genesis-payment-network">01 · Select the network for your USDT payment
+              <select id="genesis-payment-network" name="network" disabled>
+                <option value="">USDT payment acceptance is closed</option>
+                <option value="ethereum">USDT · Ethereum (ERC-20)</option>
+                <option value="tron">USDT · TRON (TRC-20)</option>
+                <option value="solana">USDT · Solana (SPL)</option>
+              </select>
+            </label>
+            <label class="field" for="genesis-payment-source-wallet">02 · Select your already-verified payment address
+              <select id="genesis-payment-source-wallet" name="walletAddressId" disabled>
+                <option value="">Connect to your Genesis wallet profile first</option>
+              </select>
+            </label>
+            <label class="field" for="genesis-payment-amount">03 · Exact USDT principal amount
+              <input id="genesis-payment-amount" name="amount" type="text" inputmode="decimal" autocomplete="off" maxlength="32" placeholder="e.g. 1000.00" disabled>
+              <small>Six decimal places maximum. Do not add the network fee to the USDT amount.</small>
+            </label>
+            <label class="account-consent" for="genesis-payment-terms-accepted">
+              <input id="genesis-payment-terms-accepted" type="checkbox" disabled>
+              <span>I have read and accept the currently approved Genesis qualifying-payment terms and its displayed version. <a href="../account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> · <a href="../account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>
+            </label>
+            <button class="primary-button" id="genesis-payment-intent-create" type="submit" disabled>Create exact USDT payment instructions</button>
+          </form>
+          <div class="genesis-payment-feedback" id="genesis-payment-intent-feedback" role="status" aria-live="polite">Payments closed · Do not send USDT. Wallet registration and ownership proofs do not require a payment or network fee.</div>
+          <div class="genesis-payment-instructions" id="genesis-payment-instructions" hidden>
+            <div class="ecosystem-heading">
+              <strong>Exact USDT payment instructions</strong>
+              <span class="ecosystem-tag" id="genesis-payment-intent-expiry">Time-limited</span>
+            </div>
+            <div class="receipt-meta">
+              <div><b>Asset · network</b><span id="genesis-payment-instruction-network">USDT</span></div>
+              <div><b>Exact principal</b><span id="genesis-payment-instruction-amount">—</span></div>
+              <div><b>Canonical USDT token identifier</b><span id="genesis-payment-instruction-token">—</span></div>
+              <div><b>Verified sending wallet</b><span id="genesis-payment-instruction-sender">—</span></div>
+              <div><b>AstroCrown receiving wallet</b><span id="genesis-payment-instruction-address">—</span></div>
+              <div><b>Proposed global purchase allowance</b><span id="genesis-payment-instruction-allowance">—</span></div>
+            </div>
+            <div class="receipt-actions">
+              <small id="genesis-payment-instruction-fees">Network fee is paid separately by the registered wallet owner.</small>
+              <button type="button" class="secondary-button" id="genesis-payment-copy-address">Copy receiving address</button>
+            </div>
+            <p class="receipt-disclaimer">Do not send a different token, a different amount or funds on another network. This website does not submit the transfer. Confirm the address and token identifier in your wallet before sending. The proposed allowance is not credited until AstroCrown independently verifies the exact receipt and settles the intent.</p>
+            <button type="button" class="secondary-button" id="genesis-payment-intent-cancel">Cancel unsubmitted payment intent</button>
+          </div>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
