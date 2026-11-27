@@ -131,7 +131,9 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /DEVELOPMENT PREVIEW/);
   assert.match(html, /USDT QUALIFYING PAYMENTS NOT OPEN/);
   assert.match(html, /DO NOT SEND FUNDS/);
-  assert.match(html, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/);
+  assert.match(html, /one payment asset: USDT/);
+  assert.match(html, /Ethereum Mainnet \\(ERC-20\\), TRON Mainnet \\(TRC-20\\) or Solana Mainnet \\(SPL\\)/);
+  assert.doesNotMatch(html, /separate network-specific assets/);
   assert.match(html, /30×.*USDT 10,000.*25×.*20×.*15×.*10×/s);
   assert.match(html, /USDT 1,000,000.*USDT-denominated/s);
   assert.match(html, /registered wallet owner.*network fee.*separately/s);
