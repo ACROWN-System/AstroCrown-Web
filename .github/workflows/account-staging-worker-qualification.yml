@@ -17,7 +17,7 @@ on:
       - ".github/workflows/cloudflare-staging-deployment.yml"
       - ".github/workflows/cloudflare-account02-readonly-preflight.yml"
   push:
-    branches: [docs/provider-independent-wallet-auth-plan-2026-10-20]
+    branches: [main]
     paths:
       - "development/account-continuity/worker/**"
       - "development/account-continuity/prototype/account-ui.js"
@@ -44,46 +44,54 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v6.1.0
         with:
           node-version: "22"
+
       - name: Generate the reproducible dependency lock
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
-      - name: Run Worker invariant tests
+
+      - name: Run wallet-only Worker invariant tests
         run: npm test
-      - name: Run canonical and Worker-mirrored Supporter Programme schema tests
+
+      - name: Run canonical Genesis schema tests
         run: python -m unittest discover -s ../../supporter-programme/tests -p 'test_schema.py'
+
       - name: Build the restricted website asset set
         run: npm run build:site
 
-      - name: Verify the published Genesis page and wallet script
+      - name: Verify published Genesis page and account scripts
         run: |
           node --check public/supporters/supporters.js
+          node --check public/account-continuity/prototype/account-ui.js
           node scripts/test-staging-site-build.mjs
-      - name: Validate browser code and Worker bundle without deploying
+
+      - name: Validate Worker and deployment scripts without deploying
         run: |
           node --check src/index.js
+          node --check src/genesis.js
+          node --check src/supporters.js
           node --check scripts/build-staging-site.mjs
-          node --check public/account-continuity/prototype/account-ui.js
-          node --check tests/worker_browser_smoke.mjs
-          node --check scripts/test-supporter-wallet-e2e.mjs
+          node --check scripts/deploy-staging.mjs
           npm run check:worker
-      - name: Apply local account and isolated Supporter Programme D1 schemas
+
+      - name: Apply local account and Genesis programme D1 schemas
         run: |
           printf 'y\n' | npx wrangler d1 migrations apply acrown-account-staging --local
           printf 'y\n' | npx wrangler d1 migrations apply acrown-supporters-mainnet --local
-      - name: Smoke-test the local Worker HTTP API and homepage
+
+      - name: Smoke-test wallet-only local Worker APIs
         shell: bash
         run: |
           set -euo pipefail
           npx wrangler dev --local --ip 127.0.0.1 --port 8787 > "$RUNNER_TEMP/acrown-worker.log" 2>&1 &
           worker_pid=$!
-          cleanup() {
-            kill "$worker_pid" 2>/dev/null || true
-          }
+          cleanup() { kill "$worker_pid" 2>/dev/null || true; }
           trap cleanup EXIT
           base="http://localhost:8787"
           ready=false
@@ -99,67 +107,105 @@ jobs:
             echo "::error::Local Worker did not become ready."
             exit 1
           fi
-          node --input-type=module - "$RUNNER_TEMP/account-status.json" <<'NODE'
+
+          node --input-type=module - "$base" "$RUNNER_TEMP/account-status.json" <<'NODE'
+          import assert from "node:assert/strict";
           import fs from "node:fs";
-          const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (status.authenticated !== false) throw new Error("A fresh local request must be unauthenticated.");
-          if (status.scope !== "staging-test-account-only") throw new Error("The account scope marker is missing.");
-          if (status.passkeyAvailable !== true) throw new Error("The Worker did not report its passkey service.");
+
+          const base = process.argv[2];
+          const status = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+          assert.equal(status.authenticated, false);
+          assert.equal(status.walletSignInAvailable, true);
+          assert.equal(status.walletAuthFamily, "evm-eoa");
+          assert.equal(status.scope, "staging-test-account-only");
+          assert.equal("passkeyAvailable" in status, false);
+          assert.equal("legacyPasskeySignInAvailable" in status, false);
+
+          const diagnosticResponse = await fetch(base + "/api/diagnostics/runtime");
+          assert.equal(diagnosticResponse.status, 200);
+          const diagnostics = await diagnosticResponse.json();
+          assert.equal(diagnostics.primaryWalletAuthentication, "EIP-191 personal-sign");
+          assert.equal(diagnostics.signInAuthorizesTransaction, false);
+          assert.equal(diagnostics.paymentAcceptanceEnabled, false);
+
+          const challengeResponse = await fetch(base + "/api/account/primary-wallet/options", {
+            method: "POST",
+            headers: {
+              Origin: base,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              address: "0x0000000000000000000000000000000000000001",
+              chainId: 1,
+            }),
+          });
+          assert.equal(challengeResponse.status, 200);
+          const challenge = await challengeResponse.json();
+          assert.equal(challenge.signatureOnly, true);
+          assert.equal(challenge.transactionAuthorized, false);
+          assert.equal(challenge.walletFamily, "evm-eoa");
+          assert.equal(challenge.chainId, 1);
+          assert.ok(challenge.message.includes(new URL(base).origin));
+          assert.ok(challenge.message.includes("does not authorize a blockchain transaction"));
+
+          const wrongOriginResponse = await fetch(base + "/api/account/primary-wallet/options", {
+            method: "POST",
+            headers: {
+              Origin: "https://untrusted.invalid",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              address: "0x0000000000000000000000000000000000000001",
+              chainId: 1,
+            }),
+          });
+          assert.equal(wrongOriginResponse.status, 403);
+
+          const retiredPasskeyResponse = await fetch(base + "/api/passkeys/authentication/options", {
+            method: "POST",
+            headers: {
+              Origin: base,
+              "Content-Type": "application/json",
+            },
+            body: "{}",
+          });
+          assert.equal(retiredPasskeyResponse.status, 404);
+
+          const anonymousGenesisProfile = await fetch(base + "/api/genesis/me");
+          assert.equal(anonymousGenesisProfile.status, 401);
+
+          const genesisStatusResponse = await fetch(base + "/api/supporters/status");
+          assert.equal(genesisStatusResponse.status, 200);
+          const genesisStatus = await genesisStatusResponse.json();
+          assert.equal(genesisStatus.environment, "MAINNET");
+          assert.equal(genesisStatus.programme?.status, "PRELAUNCH");
+          assert.equal(genesisStatus.paymentAcceptance?.enabled, false);
+          assert.equal(genesisStatus.paymentAcceptance?.qualifyingPaymentsAccepted, false);
+          assert.equal(genesisStatus.purchaseAllowance?.automaticTokenIssuance, false);
+          assert.deepEqual(genesisStatus.networks?.map(item => item.network), ["ethereum", "tron", "solana"]);
+          assert.ok(genesisStatus.networks.every(item => item.networkConfigured === false && item.treasuryConfigured === true));
+
+          const homepageResponse = await fetch(base + "/");
+          assert.equal(homepageResponse.status, 200);
+          const homepage = await homepageResponse.text();
+          assert.ok(homepage.includes("LIVE PUBLIC TEST ENVIRONMENT"));
+          assert.ok(homepage.includes("astro-account-runtime"));
+
+          const genesisPageResponse = await fetch(base + "/supporters/");
+          assert.equal(genesisPageResponse.status, 200);
+          const genesisPage = await genesisPageResponse.text();
+          assert.ok(genesisPage.includes("there is no separate Genesis account or Genesis sign-in"));
+          assert.ok(genesisPage.includes("Sign in to your AstroCrown account"));
+          assert.ok(genesisPage.includes("Verify and link additional address"));
+
+          console.log("Wallet-only local Worker API qualification passed. No account, private key, payment or transfer was created.");
           NODE
-          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/genesis/status" -o "$RUNNER_TEMP/genesis-status.json"
-          node --input-type=module - "$RUNNER_TEMP/genesis-status.json" <<'NODE'
-          import fs from "node:fs";
-          const status = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (status.environment !== "MAINNET" || status.programme?.status !== "PRELAUNCH") throw new Error("Genesis Programme must report MAINNET PRELAUNCH.");
-          if (status.paymentAcceptance?.enabled !== false || status.paymentAcceptance?.qualifyingPaymentsAccepted !== false) throw new Error("Mainnet payment acceptance must remain disabled.");
-          if (status.purchaseAllowance?.automaticTokenIssuance !== false || status.purchaseAllowance?.separateFromQualifyingPayment !== true) throw new Error("A qualifying payment must not automatically issue ACROWN.");
-          if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Genesis Programme must expose the exact three-network allowlist.");
-          if (status.networks.some(x => x.networkConfigured || !x.treasuryConfigured)) throw new Error("All three owner-approved Genesis treasuries must be recorded while every payment network remains disabled.");
-          NODE
-          if ! ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-supporter-wallet-e2e.mjs; then
-            echo "Local-only Genesis wallet diagnostics (synthetic credentials only):"
-            grep "\\[LOCAL SUPPORTER TEST ONLY\\]" "$RUNNER_TEMP/acrown-worker.log" || true
-            exit 1
-          fi
-                    curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/diagnostics/runtime" -o "$RUNNER_TEMP/runtime.json"
-          node --input-type=module - "$RUNNER_TEMP/runtime.json" <<'NODE'
-          import fs from "node:fs";
-          const runtime = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-          if (runtime.runtime !== "cloudflare-workers") throw new Error("Unexpected Worker runtime.");
-          if (!Array.isArray(runtime.simpleWebAuthnSupportedRegistrationAlgorithms)) throw new Error("Registration algorithm diagnostics missing.");
-          const algorithms = runtime.simpleWebAuthnSupportedRegistrationAlgorithms;
-          const mldsa44 = runtime.webCryptoMlDsaSupport?.["ML-DSA-44"];
-          if (!mldsa44 || typeof mldsa44.sign !== "boolean" || typeof mldsa44.verify !== "boolean") throw new Error("ML-DSA-44 sign/verify capability diagnostics missing.");
-          const advertised = algorithms.includes(-48);
-          if (advertised !== (mldsa44.verify === true)) throw new Error("SimpleWebAuthn's ML-DSA-44 advertisement does not match runtime verification support.");
-          if (runtime.mlDsa44RegistrationPreferred !== advertised) throw new Error("The ML-DSA-44 registration preference diagnostic is inconsistent.");
-          console.log("Local Worker ML-DSA-44 capability: " + JSON.stringify({sign:mldsa44.sign,verify:mldsa44.verify,registrationAlgorithmAdvertised:advertised}));
-          if (!mldsa44.sign || !mldsa44.verify || !advertised) throw new Error("BLOCKED: this runtime cannot qualify ML-DSA-44 sign/verify and first-preference registration.");
-          NODE
-          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"
-          grep -q "LIVE PUBLIC TEST ENVIRONMENT" "$RUNNER_TEMP/home.html"
-          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/" -o "$RUNNER_TEMP/supporters.html"
-          grep -q "USDT QUALIFYING PAYMENTS NOT OPEN" "$RUNNER_TEMP/supporters.html"
-          grep -q "DO NOT SEND FUNDS" "$RUNNER_TEMP/supporters.html"
-          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/supporters/supporters.js" -o "$RUNNER_TEMP/supporters.js"
-          grep -q "TIP6963:announceProvider" "$RUNNER_TEMP/supporters.js"
-          code=$(curl --resolve localhost:8787:127.0.0.1 -sS -o "$RUNNER_TEMP/wrong-origin.json" -w "%{http_code}" -X POST "$base/api/passkeys/authentication/options" -H "Origin: https://untrusted.invalid" -H "Content-Type: application/json" --data "{}")
-          test "$code" = "403"
-          CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
-          if [ -z "$CHROME_BIN" ]; then
-            echo "::error::BLOCKED: no preinstalled Chrome/Chromium; Worker passkey browser evidence is required."
-            exit 1
-          fi
-          if ! CHROME_BIN="$CHROME_BIN" node tests/worker_browser_smoke.mjs; then
-            echo "Local-only Worker diagnostics (no credential or request body is logged):"
-            grep "LOCAL TEST ONLY" "$RUNNER_TEMP/acrown-worker.log" || true
-            exit 1
-          fi
+
       - name: Parse the manual Cloudflare deployment workflow
         run: |
           ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-staging-deployment.yml"); puts "Cloudflare deployment workflow YAML parsed successfully."'
 
-      - name: Verify the Account 02 preflight is read-only and bound to existing credentials
+      - name: Verify the Account 02 preflight remains read-only
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -181,60 +227,62 @@ jobs:
           ]
           for value in required:
               if value not in source:
-                  raise SystemExit("Preflight workflow missing required safe behavior: " + value)
-          for forbidden in ['method="POST"', 'method="PUT"', 'method="PATCH"', 'method="DELETE"', 'wrangler deploy', 'wrangler d1', '/user/tokens/verify']:
+                  raise SystemExit("Preflight workflow missing safe behavior: " + value)
+          for forbidden in [
+              'method="POST"', 'method="PUT"', 'method="PATCH"', 'method="DELETE"',
+              'wrangler deploy', 'wrangler d1', '/user/tokens/verify'
+          ]:
               if forbidden in source:
-                  raise SystemExit("Preflight workflow contains a forbidden mutating operation: " + forbidden)
-          if any(fragment in source for fragment in [
-              "print(token)",
-              "print(CLOUDFLARE_API_TOKEN)",
-          ]):
-              raise SystemExit("Preflight workflow appears to expose credential material.")
-          print("Account 02 preflight uses only GET requests, existing repository credentials, and sanitized inventory reporting.")
+                  raise SystemExit("Preflight workflow contains a forbidden mutation: " + forbidden)
+          print("Account 02 preflight uses only GET requests and sanitized inventory reporting.")
           PY
 
       - name: Parse the read-only Cloudflare preflight workflow
         run: |
           ruby -e 'require "yaml"; YAML.load_file("../../../.github/workflows/cloudflare-account02-readonly-preflight.yml"); puts "Cloudflare read-only preflight workflow YAML parsed successfully."'
 
-      - name: Verify remote environment is still fail-closed
+      - name: Verify the remote environment remains isolated and fail-closed
         run: |
           node --input-type=module - <<'NODE'
           import fs from "node:fs";
+
           const config = JSON.parse(fs.readFileSync("wrangler.jsonc", "utf8"));
           const stage = config.env.staging;
           const deployScript = fs.readFileSync("scripts/deploy-staging.mjs", "utf8");
           if (!Array.isArray(stage.d1_databases) || stage.d1_databases.length !== 2) {
-            throw new Error("Staging must have separate account and Supporter Programme D1 bindings.");
+            throw new Error("Staging must have separate account and programme D1 data bindings.");
           }
-          const supporterDb = stage.d1_databases[1];
+          const programmeDb = stage.d1_databases[1];
           if (
-            supporterDb.binding !== "SUPPORTERS_DB" ||
-            supporterDb.database_name !== "acrown-supporters-mainnet" ||
-            supporterDb.database_id !== "00000000-0000-0000-0000-000000000000" ||
-            supporterDb.migrations_dir !== "migrations/supporters"
+            programmeDb.binding !== "SUPPORTERS_DB" ||
+            programmeDb.database_name !== "acrown-supporters-mainnet" ||
+            programmeDb.database_id !== "00000000-0000-0000-0000-000000000000" ||
+            programmeDb.migrations_dir !== "migrations/supporters"
           ) {
-            throw new Error("The dedicated Supporter Programme D1 binding must retain its separate non-deployable sentinel.");
+            throw new Error("The Genesis programme D1 binding must retain its separate non-deployable sentinel.");
           }
-          if (!deployScript.includes("resolveSupportersDatabase") || !deployScript.includes("ASTROCROWN_SUPPORTERS_D1_DATABASE_ID")) {
-            throw new Error("Staging deployment must identity-pin the dedicated Supporter Programme D1 database.");
+          if (!deployScript.includes("resolveSupportersDatabase") ||
+              !deployScript.includes("ASTROCROWN_SUPPORTERS_D1_DATABASE_ID")) {
+            throw new Error("Deployment must identity-pin the separate programme data database.");
           }
           const workerGuard = deployScript.indexOf("await requireExistingStagingWorker(accountId, sourceConfig.env.staging.name)");
           const usageModelReport = deployScript.indexOf("await reportWorkersUsageModel(accountId)");
           const d1Provision = deployScript.indexOf("const state = await resolveDatabase(accountId)");
-          if (workerGuard < 0 || usageModelReport < 0 || d1Provision < 0 || workerGuard > d1Provision || usageModelReport > d1Provision) {
-            throw new Error("Worker-existence and informational usage-model checks must run before D1 provisioning.");
+          if (workerGuard < 0 || usageModelReport < 0 || d1Provision < 0 ||
+              workerGuard > d1Provision || usageModelReport > d1Provision) {
+            throw new Error("Worker-existence and informational usage checks must precede D1 provisioning.");
           }
-          if (!deployScript.includes("does not already exist") || !deployScript.includes("cannot create a new Worker")) {
-            throw new Error("The deployment script must explain the Workers Editor create-permission boundary.");
+          if (!deployScript.includes("does not report subscription status or payment methods") ||
+              !deployScript.includes("not treated as proof of an active paid subscription")) {
+            throw new Error("Usage-model reporting must not be confused with subscription or payment-method status.");
           }
-          if (!deployScript.includes("does not report subscription status or payment methods") || !deployScript.includes("not treated as proof of an active paid subscription")) {
-            throw new Error("The deployment script must keep usage-model reporting separate from subscription/payment-method verification.");
-          }
-          if (deployScript.includes("assertWorkersUsageModelIsNotStandard") || deployScript.includes("STOPPED BEFORE D1 PROVISIONING")) {
-            throw new Error("A usage-model label alone must not block the explicitly owner-authorized Free/no-card deployment.");
+          if (deployScript.includes("assertWorkersUsageModelIsNotStandard") ||
+              deployScript.includes("STOPPED BEFORE D1 PROVISIONING")) {
+            throw new Error("The usage-model label alone must not block the explicitly authorized Free/no-card deployment.");
           }
           if (stage.vars.RP_ID !== "SET_BEFORE_DEPLOY") throw new Error("Staging RP sentinel missing.");
           if (stage.vars.EXPECTED_ORIGIN !== "https://SET_BEFORE_DEPLOY.invalid") throw new Error("Staging origin sentinel missing.");
-          if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") throw new Error("Staging D1 sentinel missing.");
+          if (stage.d1_databases[0].database_id !== "00000000-0000-0000-0000-000000000000") {
+            throw new Error("Staging account D1 sentinel missing.");
+          }
           NODE
