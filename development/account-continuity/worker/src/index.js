@@ -454,16 +454,16 @@ function createPrimaryWalletSignInMessage(config, address, chainId, challengeId,
 async function verifyEvmPersonalSignature(message, signature, expectedAddress) {
   if (typeof message !== "string" || !message || message.length > 8192 ||
       typeof signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(signature)) {
-    throw fail(401, "The administrator wallet signature is invalid.");
+    throw fail(401, "The EVM wallet signature is invalid.");
   }
   let recovered;
   try {
     recovered = normalizeEvmAddress(await recoverMessageAddress({ message, signature }));
   } catch {
-    throw fail(401, "The administrator wallet signature could not be verified.");
+    throw fail(401, "The EVM wallet signature could not be verified.");
   }
   if (recovered.toLowerCase() !== expectedAddress.toLowerCase()) {
-    throw fail(401, "The signature was not produced by the proposed administrator wallet.");
+    throw fail(401, "The signature was not produced by the expected EVM wallet.");
   }
   return recovered;
 }
