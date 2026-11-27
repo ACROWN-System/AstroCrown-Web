@@ -1058,7 +1058,12 @@ async function retryPendingGenesisPaymentSettlements(db, env, settlementCutoff) 
 }
 
 export async function runGenesisReceiptMonitor(env) {
-  if (!env || env.ENVIRONMENT !== "staging" || env.GENESIS_RECEIPT_MONITOR_ENABLED !== "true") {
+  const stagingApproved = env && env.ENVIRONMENT === "staging";
+  const productionApproved = env && env.ENVIRONMENT === "production" &&
+    env.GENESIS_PRODUCTION_RECEIPT_MONITOR_APPROVED === "true" &&
+    env.GENESIS_PRODUCTION_RECEIPT_MONITOR_CRON_VERIFIED === "true";
+  if ((!stagingApproved && !productionApproved) ||
+      env.GENESIS_RECEIPT_MONITOR_ENABLED !== "true") {
     return { status: "DISABLED", receiptsRecorded: 0 };
   }
   const db = env.SUPPORTERS_DB;
