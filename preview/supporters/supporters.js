@@ -1063,7 +1063,10 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     var intentExpired = intent.status === "OPEN" && Date.now() >= new Date(intent.expiresAt).getTime();
     if (genesisPaymentCancel) {
       genesisPaymentCancel.hidden = intent.status !== "OPEN";
-      genesisPaymentCancel.textContent = intentExpired ? "Cancel expired intent and release reservation" : "Cancel unsubmitted payment intent";
+      genesisPaymentCancel.disabled = intent.status !== "OPEN" || !intentExpired;
+      genesisPaymentCancel.textContent = intentExpired
+        ? "Request safe cancellation after all-chain reconciliation"
+        : "Cancellation available after expiry and monitor reconciliation";
     }
     if (genesisPaymentIntentExpiry) {
       genesisPaymentIntentExpiry.textContent = intentExpired
@@ -1232,6 +1235,15 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
 
   async function cancelGenesisPaymentIntent() {
     if (!currentGenesisPaymentIntent || currentGenesisPaymentIntent.status !== "OPEN") return;
+    if (Date.now() < new Date(currentGenesisPaymentIntent.expiresAt).getTime()) {
+      setGenesisPaymentFeedback("Cancellation is unavailable before expiry. Do not cancel an intent after sending USDT.", "blocked");
+      return;
+    }
+    if (!window.confirm(
+      "Cancel this expired intent only if you did not send the exact USDT payment. " +
+      "AstroCrown will first verify that Ethereum, TRON and Solana are scanned beyond the deadline and that no matching receipt exists. " +
+      "A matching receipt will keep the reservation open for settlement. Continue?"
+    )) return;
     if (genesisPaymentCancel) genesisPaymentCancel.disabled = true;
     try {
       await supporterApiPost("/api/genesis/payment-intents/cancel", {
@@ -1241,7 +1253,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       currentGenesisPaymentInstructions = null;
       if (supporterMember) supporterMember.paymentIntent = null;
       await refreshSupporterMember();
-      setGenesisPaymentFeedback("The unsubmitted payment intent was cancelled. Its global principal reservation has been released.", "blocked");
+      setGenesisPaymentFeedback("The expired intent was safely cancelled after the all-chain monitor passed its deadline and found no matching receipt. Its global principal reservation has been released.", "blocked");
     } catch (error) {
       setGenesisPaymentFeedback(error && error.message ? error.message : "The payment intent could not be cancelled.", "blocked");
     } finally {
