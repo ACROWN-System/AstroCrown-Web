@@ -69,6 +69,8 @@ jobs:
       - name: Validate browser code and Worker bundle without deploying
         run: |
           node --check src/index.js
+          node --check src/genesis-receipt-monitor.js
+          node --check src/genesis-payment-evidence.js
           node --check scripts/build-staging-site.mjs
           node --check public/account-continuity/prototype/account-ui.js
           node --check public/page-entry/page-entry-notice.js
@@ -119,6 +121,17 @@ jobs:
           if (status.purchaseAllowance?.automaticTokenIssuance !== false || status.purchaseAllowance?.separateFromQualifyingPayment !== true) throw new Error("A qualifying payment must not automatically issue ACROWN.");
           if (status.networks?.map(x => x.network).join(",") !== "ethereum,tron,solana") throw new Error("Genesis Programme must expose the exact three-network allowlist.");
           if (status.networks.some(x => x.networkConfigured || !x.treasuryConfigured)) throw new Error("All three owner-approved Genesis treasuries must be recorded while every payment network remains disabled.");
+          NODE
+          curl --resolve localhost:8787:127.0.0.1 -fsS "$base/api/genesis/treasury-receipts" -o "$RUNNER_TEMP/genesis-treasury-receipts.json"
+          node --input-type=module - "$RUNNER_TEMP/genesis-treasury-receipts.json" <<'NODE'
+          import fs from "node:fs";
+          const payload = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+          if (payload.publicReceiptRegister !== true || !Array.isArray(payload.items)) {
+            throw new Error("Public Genesis treasury receipt endpoint must return a structured read-only receipt register.");
+          }
+          if (payload.items.some(item => item.creditApplied !== false || "identityId" in item || "sourceWalletAddressId" in item)) {
+            throw new Error("Public treasury receipts must not imply credits or expose internal identity record identifiers.");
+          }
           NODE
           ASTROCROWN_LOCAL_WORKER_ORIGIN="$base" node scripts/test-primary-wallet-auth-e2e.mjs
                     curl --resolve localhost:8787:127.0.0.1 -fsS "$base/" -o "$RUNNER_TEMP/home.html"

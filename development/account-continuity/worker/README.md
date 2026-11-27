@@ -39,6 +39,40 @@ Administrator privileges remain separate from ordinary account identity. A prima
 
 Community is a future consumer of the authoritative ordinary-account member-name field. Community feeds, replies and member lists are not prerequisites for ordinary account registration, sign-in or profile management.
 
+## AstroCrown-owned USDT treasury receipt monitor
+
+The Worker now has a read-only chain-monitoring path for incoming USDT to the three canonical Genesis receiving wallets. It is an AstroCrown-owned backend component; it does not use a hosted payment processor or call a public explorer to decide whether a receipt exists.
+
+**Operational data flow**
+
+- Ethereum Mainnet: scan canonical ERC-20 USDT Transfer logs directed to the configured treasury, then verify the transaction receipt, canonical inclusion block and finalized head.
+- TRON Mainnet: scan blocks and transaction receipts from the TRON SolidityNode (solidified) view; verify the canonical TRC-20 USDT Transfer event and six-decimal token metadata.
+- Solana Mainnet Beta: discover the treasury owner's canonical USDT SPL token accounts, follow finalized signatures and verify parsed token instructions, source/destination token-account owners and exact token-balance deltas.
+- Every candidate is checked against two configured RPC node sources on distinct HTTPS origins with distinct node/source identifiers. Both may be self-operated by AstroCrown on separate node instances; they must not be two aliases of the same backend. A mismatch, unavailable source, wrong chain, wrong token, wrong recipient, incomplete finality or malformed evidence stops that network's cursor from advancing.
+- Sender attribution is a separate internal lookup against an already verified Genesis primary/payment wallet address. Receipts from unregistered senders are still recorded as `UNMATCHED`; they do not silently become member payments.
+- The append-only `genesis_treasury_receipts` register is for operational treasury history and reconciliation. It is deliberately separate from `genesis_public_payments`, programme allowance events, membership badges and purchases. The monitor never inserts a Genesis payment, credits an allowance, awards a badge, issues ACROWN or changes an entitlement.
+
+**Public transparency data flow**
+
+- `GET /api/genesis/treasury-receipts` returns verified receipt evidence for the public website.
+- Each item identifies the single asset as USDT, then labels its network and standard (for example `USDT · TRON (TRC-20)`), amount, sender, receiving address, transaction hash, transfer/event index, inclusion reference and chain-specific finality.
+- The response includes a direct Etherscan, TronScan or Solscan transaction link. The website's link is for community inspection only; the backend never queries the explorer.
+- Internal identity IDs, wallet-record IDs and RPC endpoint credentials are not exposed through the public projection.
+
+**Runtime guard and RPC configuration**
+
+- A five-minute Cron trigger is configured only for the `staging` environment. The scheduled handler is a no-op unless `ENVIRONMENT=staging` and `GENESIS_RECEIPT_MONITOR_ENABLED=true`.
+- The feature flag is intentionally absent from `wrangler.jsonc`; it is disabled by default. Payment acceptance remains independently disabled in the Genesis programme status. Turning on receipt observation does not open payment acceptance or entitlement processing.
+- Configure each RPC URL as a Worker secret and each source identifier as a non-secret Worker variable. All URLs must use HTTPS, have different origins and identify distinct node instances/data sources. AstroCrown may operate both itself; separate third-party payment processors are not involved:
+  - Ethereum: `GENESIS_ETHEREUM_RPC_A_URL`, `GENESIS_ETHEREUM_RPC_A_SOURCE_ID`, `GENESIS_ETHEREUM_RPC_B_URL`, `GENESIS_ETHEREUM_RPC_B_SOURCE_ID`.
+  - TRON SolidityNode base URLs: `GENESIS_TRON_RPC_A_URL`, `GENESIS_TRON_RPC_A_SOURCE_ID`, `GENESIS_TRON_RPC_B_URL`, `GENESIS_TRON_RPC_B_SOURCE_ID`. Optional API keys are configured as Worker secrets `GENESIS_TRON_RPC_A_API_KEY` and `GENESIS_TRON_RPC_B_API_KEY`; they are sent only as the `TRON-PRO-API-KEY` request header and are never stored or logged.
+  - Solana: `GENESIS_SOLANA_RPC_A_URL`, `GENESIS_SOLANA_RPC_A_SOURCE_ID`, `GENESIS_SOLANA_RPC_B_URL`, `GENESIS_SOLANA_RPC_B_SOURCE_ID`.
+- Provider URLs and API keys must never be committed to the repository, returned by the API, or written to logs. When AstroCrown operates both nodes, keep their node instances, storage and synchronization paths separate rather than reverse-proxying one node through two URLs. Do not use two endpoints operated by the same provider and label them as independent.
+- Cursor initialization records the chain head/signature observed when the monitor is first enabled; it does not automatically publish old wallet history as newly observed receipts. Newly discovered Solana treasury token accounts are scanned from their first observed signatures. This initialization needs no test payment and no first customer payment: it establishes the current chain positions, after which the monitor waits for and records the first incoming receipt. Initialize and verify the monitor before activating any real payment instructions.
+- Ethereum scans at most 500 finalized blocks per cycle. TRON scans at most 150 solidified blocks per cycle and obtains each block's complete receipt page through the native `walletsolidity/gettransactioninfobyblocknum` method; every receipt is cross-checked against the complete block transaction list from both SolidityNodes. Solana scans at most one 1,000-signature page per treasury token account per cycle. Backlogs resume from persisted cursors; failed blocks/pages are retried without advancing past the failure.
+
+This monitor provides **receipt evidence**, not identity proof about a real-world person and not a complete forensic provenance trail for previously transferred funds. The on-chain sender address is the immediate token-transfer source. Genesis payment acceptance, customer entitlements and public programme claims remain separate policy decisions.
+
 ## Local qualification
 
 The GitHub-hosted `.github/workflows/account-staging-worker-qualification.yml` workflow:
