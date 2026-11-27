@@ -2,6 +2,25 @@ import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet
 import { GENESIS_QUALIFYING_RULES_VERSION } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 import { genesisQualifyingPaymentGate } from "../../../supporter-programme/shared/genesis-payment-policy.mjs";
 
+function rpcPairConfigured(env, network) {
+  const prefix = "GENESIS_" + network.toUpperCase() + "_RPC_";
+  try {
+    const endpoints = ["A", "B"].map((slot) => {
+      const url = new URL(String(env[prefix + slot + "_URL"] || ""));
+      const sourceId = String(env[prefix + slot + "_SOURCE_ID"] || "").trim();
+      if (url.protocol !== "https:" || url.username || url.password || url.hash ||
+          !/^[A-Za-z0-9][A-Za-z0-9._:-]{2,63}$/.test(sourceId)) {
+        throw new Error("Invalid RPC source.");
+      }
+      return { origin: url.origin, sourceId };
+    });
+    return endpoints[0].origin !== endpoints[1].origin &&
+      endpoints[0].sourceId !== endpoints[1].sourceId;
+  } catch {
+    return false;
+  }
+}
+
 function sameAddress(network, supplied, canonical) {
   return network === "ethereum"
     ? String(supplied || "").toLowerCase() === String(canonical || "").toLowerCase()
@@ -107,7 +126,7 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
     return { status: "UNMATCHED_RECEIPT" };
   }
 
-  const gate = await genesisPaymentActivationGate(db, env, receipt.network, true);
+  const gate = await genesisPaymentActivationGate(db, env, receipt.network, rpcPairConfigured(env, receipt.network));
   if (!gate.enabled) return { status: "PAYMENT_ACCEPTANCE_CLOSED" };
 
   const intents = await db.prepare(
@@ -136,9 +155,9 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
   const insert = await db.prepare(
     "INSERT INTO genesis_public_payments(" +
     "payment_record_id,identity_id,source_wallet_address_id,payment_kind,network,asset_identifier," +
-    "amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,rules_version," +
+    "amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,receipt_finality_status,rules_version," +
     "explorer_reference,confirmed_at,public_visible,payment_intent_id,receipt_id,allowance_credit_usdt_base_units" +
-    ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   ).bind(
     paymentRecordId,
     receipt.identity_id,
@@ -151,6 +170,7 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
     receipt.transaction_hash,
     String(receipt.transfer_index),
     "FINALIZED",
+    receipt.finality_status,
     intent.rules_version,
     link,
     Number(receipt.verified_at),
