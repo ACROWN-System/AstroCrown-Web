@@ -1644,37 +1644,15 @@
         }
       }
 
-      function addTone(context, destination, frequency, endingFrequency, wave, peak, duration, offset, cutoff) {
-        var start = context.currentTime + (offset || 0);
-        var oscillator = context.createOscillator();
-        var filter = context.createBiquadFilter();
-        var envelope = context.createGain();
-
-        oscillator.type = wave;
-        oscillator.frequency.setValueAtTime(frequency, start);
-        oscillator.frequency.exponentialRampToValueAtTime(Math.max(20, endingFrequency), start + duration);
-
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(cutoff || 1700, start);
-        filter.Q.value = 0.55;
-
-        envelope.gain.setValueAtTime(0.0001, start);
-        envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + 0.0025);
-        envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-
-        oscillator.connect(filter);
-        filter.connect(envelope);
-        envelope.connect(destination);
-        oscillator.start(start);
-        oscillator.stop(start + duration + 0.006);
-      }
-
-      function addSoftClick(context, destination, peak, duration, offset, highpass) {
+      // Short, band-limited transients give a quiet instrument-like tick/tack.
+      // No pitched body, low thud, spring resonance or lingering tail is added.
+      function addPrecisionClick(context, destination, peak, duration, offset, centerFrequency) {
         var sampleCount = Math.max(8, Math.floor(context.sampleRate * duration));
         var buffer = context.createBuffer(1, sampleCount, context.sampleRate);
         var samples = buffer.getChannelData(0);
         for (var i = 0; i < sampleCount; i += 1) {
-          samples[i] = (Math.random() * 2 - 1) * (1 - i / sampleCount);
+          var decay = 1 - i / sampleCount;
+          samples[i] = (Math.random() * 2 - 1) * decay * decay;
         }
 
         var source = context.createBufferSource();
@@ -1683,18 +1661,18 @@
         var start = context.currentTime + (offset || 0);
 
         source.buffer = buffer;
-        filter.type = "highpass";
-        filter.frequency.setValueAtTime(highpass || 850, start);
-        filter.Q.value = 0.65;
+        filter.type = "bandpass";
+        filter.frequency.setValueAtTime(centerFrequency, start);
+        filter.Q.value = 0.8;
         envelope.gain.setValueAtTime(0.0001, start);
-        envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + 0.0015);
+        envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), start + 0.0008);
         envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
 
         source.connect(filter);
         filter.connect(envelope);
         envelope.connect(destination);
         source.start(start);
-        source.stop(start + duration + 0.004);
+        source.stop(start + duration + 0.002);
       }
 
       function playMechanicalSound(phase) {
@@ -1703,23 +1681,21 @@
 
         try {
           var output = context.createGain();
-          output.gain.setValueAtTime(0.78, context.currentTime);
+          // Keep the overall level deliberately restrained for a financial interface.
+          output.gain.setValueAtTime(0.30, context.currentTime);
           output.connect(context.destination);
 
           if (phase === "push") {
-            // Muted low switch travel with a short, soft contact tick.
-            addTone(context, output, 158, 108, "triangle", 0.040, 0.058, 0, 1150);
-            addSoftClick(context, output, 0.012, 0.010, 0.001, 1050);
+            // A soft, dry tick: brief and slightly lower in register.
+            addPrecisionClick(context, output, 0.012, 0.006, 0, 1380);
           } else {
-            // A light spring-return click followed by a restrained mechanical settle.
-            addSoftClick(context, output, 0.015, 0.012, 0, 1150);
-            addTone(context, output, 690, 455, "triangle", 0.025, 0.036, 0.002, 1750);
-            addTone(context, output, 148, 105, "sine", 0.025, 0.047, 0.006, 650);
+            // A similarly quiet tack, a touch brighter to distinguish release.
+            addPrecisionClick(context, output, 0.010, 0.0065, 0, 1760);
           }
 
           window.setTimeout(function () {
             try { output.disconnect(); } catch (error) {}
-          }, 140);
+          }, 40);
         } catch (error) {
           // Feedback is non-essential; a browser audio restriction must never block a control.
         }
