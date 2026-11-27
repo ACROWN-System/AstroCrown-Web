@@ -29,6 +29,7 @@ The product memory links to those sources. It must not copy them into a second c
 | `capabilities.json` | Capability and service proposals, value, repeat use, distribution, risks and acceptance criteria |
 | `decisions.json` | Accepted/proposed/rejected decisions, alternatives, rationale, consequences and supersession |
 | `research.json` | Dated external research sources and the exact claims each source supports |
+| [Auditory–Visual Interaction Feedback Research Memorandum](ASTROCROWN-AUDITORY-VISUAL-INTERACTION-FEEDBACK-RESEARCH-2026-11-27.md) | Dated research synthesis explaining the AstroCrown design rationale, supporting evidence, limitations, potential human-performance and financial pathways, and a proposed validation experiment; not an independent audit or proof of profit improvement |
 | `roadmap.json` | Ordered work packages, dependencies, entry gates, exit criteria and blockers |
 | `validate.py` | Deterministic standard-library validator |
 | `tests/` | Positive and negative regression tests for the records and validator |
