@@ -10,7 +10,7 @@ export const REGISTRATION_FREEZE_SECONDS = 24 * 60 * 60;
 // Explicitly PROPOSED owner-directed schedule. Payment activation requires a
 // separately recorded approval of this exact version; merely importing this
 // arithmetic never opens a payment route.
-export const GENESIS_QUALIFYING_RULES_VERSION = "GENESIS-USDT-50K-1M-TIERS-V1-PROPOSED";
+export const GENESIS_QUALIFYING_RULES_VERSION = "GENESIS-USDT-50K-1M-TIERS-V1";
 export const GENESIS_QUALIFYING_PRINCIPAL_CAP_BASE_UNITS = "50000000000";
 export const GENESIS_QUALIFYING_ALLOWANCE_CAP_BASE_UNITS = "1000000000000";
 export const GENESIS_QUALIFYING_TIERS = Object.freeze([
