@@ -759,8 +759,8 @@ export async function handleGenesisWalletApi(request, env, config) {
       await expireStaleGenesisPaymentIntents(db, now);
       const result = await db.prepare(
         "UPDATE genesis_payment_intents SET status='CANCELLED' " +
-        "WHERE payment_intent_id=? AND identity_id=? AND status='OPEN' AND expires_at>?"
-      ).bind(intentId, identity.identity_id, now).run();
+        "WHERE payment_intent_id=? AND identity_id=? AND status='OPEN'"
+      ).bind(intentId, identity.identity_id).run();
       if (Number(result.meta?.changes || 0) !== 1) throw error(409, "This qualifying-payment intent is no longer open or does not belong to this Genesis identity.");
       return response(200, { cancelled: true, paymentIntentId: intentId });
     }
