@@ -58,6 +58,16 @@ test("remote smoke checks are not represented as full account qualification", ()
   assert.match(deployScript, /actual stored COSE algorithm is -48/);
 });
 
+test("public Genesis deployment smoke check matches the canonical disabled-payment API fields", async () => {
+  const supportersPath = new URL("../src/supporters.js", import.meta.url);
+  const supportersSource = await readFile(supportersPath, "utf8");
+  assert.match(deployScript, /paymentAcceptance\?\.enabled !== false/);
+  assert.match(deployScript, /paymentAcceptance\?\.qualifyingPaymentsAccepted !== false/);
+  assert.match(supportersSource, /qualifyingPaymentsAccepted:\\s*false/);
+  assert.match(supportersSource, /enabled:\\s*false/);
+  assert.doesNotMatch(deployScript, /paymentAcceptance\?\.contributionsAccepted/);
+});
+
 
 test("GitHub-hosted public staging requires a protected HMAC key and no shared Basic Auth secret", () => {
   assert.ok(deployScript.includes('if (process.env.GITHUB_ACTIONS === "true") {'));
