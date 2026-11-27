@@ -329,7 +329,7 @@ async function getOrCreateIdentity(db, accountIdentity) {
         ).bind(identityId, "ethereum", address.address, address.normalized, name.name, name.normalized, avatar, now, now),
         db.prepare(
           "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,wallet_role," +
-          "ownership_verified_at,proof_method,created_at) VALUES(?,?, 'ethereum',?,?,?,'PRIMARY',?,'EIP-191',?)"
+          "ownership_verified_at,proof_method,created_at) VALUES(?,?, 'ethereum',?,?,'PRIMARY',?,'EIP-191',?)"
         ).bind(randomId("gwa"), identityId, address.address, address.normalized, now, now)
       ]);
       const created = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identityId).first();
