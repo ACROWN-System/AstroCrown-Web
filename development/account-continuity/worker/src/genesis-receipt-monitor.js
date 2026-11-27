@@ -83,7 +83,7 @@ export function prepareGenesisRpcPair(env, network) {
       fail(network + " RPC " + id + " must have a stable configured operator identifier.");
     }
     const apiKey = network === "tron" ? String(env[prefix + id + "_API_KEY"] || "").trim() : "";
-    if (apiKey.length > 4096 || /[\\r\\n]/.test(apiKey)) fail(network + " RPC " + id + " API key is invalid.");
+    if (apiKey.length > 4096 || apiKey.includes(String.fromCharCode(10)) || apiKey.includes(String.fromCharCode(13))) fail(network + " RPC " + id + " API key is invalid.");
     return Object.freeze({ id: slot.toLowerCase(), url: url.toString(), origin: url.origin, operatorId, apiKey });
   });
   if (sources[0].origin === sources[1].origin || sources[0].operatorId === sources[1].operatorId) {
@@ -131,7 +131,7 @@ async function jsonRpc(source, method, params = []) {
 
 async function tronRpc(source, method, body = {}) {
   const endpoint = new URL(source.url);
-  endpoint.pathname = endpoint.pathname.replace(/\\/+$/, "") + "/walletsolidity/" + method;
+  endpoint.pathname = endpoint.pathname.replace(/\/+$/, "") + "/walletsolidity/" + method;
   const headers = source.apiKey ? { "TRON-PRO-API-KEY": source.apiKey } : {};
   const payload = await postJson(endpoint.toString(), body, source.id + " TRON SolidityNode " + method, headers);
   if (!payload || payload.Error || payload.error) fail(source.id + " TRON SolidityNode " + method + " reported an error.");
