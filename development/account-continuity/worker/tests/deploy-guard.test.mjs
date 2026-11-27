@@ -63,8 +63,8 @@ test("public Genesis deployment smoke check matches the canonical disabled-payme
   const supportersSource = await readFile(supportersPath, "utf8");
   assert.match(deployScript, /paymentAcceptance\?\.enabled !== false/);
   assert.match(deployScript, /paymentAcceptance\?\.qualifyingPaymentsAccepted !== false/);
-  assert.match(supportersSource, /qualifyingPaymentsAccepted:\\s*false/);
-  assert.match(supportersSource, /enabled:\\s*false/);
+  assert.match(supportersSource, /qualifyingPaymentsAccepted:\s*false/);
+  assert.match(supportersSource, /enabled:\s*false/);
   assert.doesNotMatch(deployScript, /paymentAcceptance\?\.contributionsAccepted/);
 });
 
