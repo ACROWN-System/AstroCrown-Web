@@ -164,6 +164,11 @@ function requireTransactionId(expected, network) {
   return solanaSignature(value, "Expected Solana transaction signature");
 }
 
+function requestedTransferIndex(expected, label) {
+  if (!expected || expected.transferIndex === undefined || expected.transferIndex === null) return null;
+  return nonNegativeIndex(expected.transferIndex, 0, label);
+}
+
 function canonicalEvidence(network, transactionId, sender, treasury, amount, transferIndex, inclusion, finalityStatus) {
   return Object.freeze({
     network,
@@ -215,6 +220,7 @@ export function parseEthereumUsdtTransferEvidence({ chainId, tokenMetadata, rece
   const sender = evmAddress(expected.senderAddress, "Expected Ethereum sender");
   const treasury = evmAddress(expected.treasuryAddress, "Expected Ethereum treasury");
   const amount = expectedAmount(expected);
+  const requestedIndex = requestedTransferIndex(expected, "Expected Ethereum log index");
   if (!Array.isArray(receipt.logs)) fail("Ethereum receipt logs are missing.");
   const matches = [];
   receipt.logs.forEach((log, index) => {
@@ -224,10 +230,10 @@ export function parseEthereumUsdtTransferEvidence({ chainId, tokenMetadata, rece
     const from = evmTopicAddress(log.topics[1], "Ethereum Transfer sender topic");
     const to = evmTopicAddress(log.topics[2], "Ethereum Transfer recipient topic");
     const value = BigInt(log.data);
-    if (from === sender && to === treasury && value === amount) {
-      matches.push({
-        transferIndex: nonNegativeIndex(log.logIndex, index, "Ethereum log index"),
-      });
+    const transferIndex = nonNegativeIndex(log.logIndex, index, "Ethereum log index");
+    if ((requestedIndex === null || transferIndex === requestedIndex) &&
+        from === sender && to === treasury && value === amount) {
+      matches.push({ transferIndex });
     }
   });
   if (matches.length !== 1) fail("Ethereum receipt must contain exactly one matching canonical USDT Transfer event.");
@@ -259,6 +265,7 @@ export async function parseTronUsdtTransferEvidence({ networkTag, receiptSource,
   const senderHex = await tronPayloadHex(expected.senderAddress, "Expected TRON sender");
   const treasuryHex = await tronPayloadHex(expected.treasuryAddress, "Expected TRON treasury");
   const amount = expectedAmount(expected);
+  const requestedIndex = requestedTransferIndex(expected, "Expected TRON event index");
   if (!Array.isArray(transactionInfo.log)) fail("TRON receipt event logs are missing.");
   const matches = [];
   for (let index = 0; index < transactionInfo.log.length; index += 1) {
@@ -269,7 +276,8 @@ export async function parseTronUsdtTransferEvidence({ networkTag, receiptSource,
     const from = tronIndexedAddress(log.topics[1], "TRON Transfer sender topic");
     const to = tronIndexedAddress(log.topics[2], "TRON Transfer recipient topic");
     const value = BigInt("0x" + log.data.replace(/^0x/i, ""));
-    if (from === senderHex && to === treasuryHex && value === amount) matches.push({ transferIndex: index });
+    if ((requestedIndex === null || index === requestedIndex) &&
+        from === senderHex && to === treasuryHex && value === amount) matches.push({ transferIndex: index });
   }
   if (matches.length !== 1) fail("TRON solidified receipt must contain exactly one matching canonical USDT Transfer event.");
   return canonicalEvidence(
@@ -355,6 +363,7 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
   const sender = solanaAddress(expected.senderAddress, "Expected Solana sender");
   const treasury = solanaAddress(expected.treasuryAddress, "Expected Solana treasury");
   const amount = expectedAmount(expected);
+  const requestedIndex = requestedTransferIndex(expected, "Expected Solana instruction index");
   const mint = GENESIS_USDT_ASSETS.solana.assetIdentifier;
   const outer = transaction.transaction.message.instructions;
   if (!Array.isArray(outer)) fail("Solana parsed top-level instructions are missing.");
@@ -384,7 +393,8 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     if (!destinationOwners.length || destinationOwners.some((owner) => owner !== treasury)) continue;
     const sourceDelta = sourceBefore.amount - sourceAfter.amount;
     const destinationDelta = destinationAfter.amount - destinationBefore.amount;
-    if (transfer.amount === amount && sourceDelta === amount && destinationDelta === amount) {
+    if ((requestedIndex === null || instructionOrdinal === requestedIndex) &&
+        transfer.amount === amount && sourceDelta === amount && destinationDelta === amount) {
       matches.push({ transferIndex: instructionOrdinal });
     }
   }
