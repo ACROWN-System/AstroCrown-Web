@@ -11,6 +11,8 @@ import {
   createSolanaProviderAdapter,
   discoverDirectSolanaWallets,
   isSolanaMainnet,
+  discoverPrimaryWalletProviders,
+  selectedPrimaryWalletProvider,
 } from "../../../../preview/supporters/wallet-provider-adapters.mjs";
 
 const MAINNET_HASH = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
@@ -22,6 +24,50 @@ test("the Genesis adapter registry covers all six wallet candidates", () => {
     "bitget-wallet", "coin98", "metamask", "okx-wallet", "tokenpocket", "trust-wallet",
   ]);
   assert.equal(walletDisplayName("coin98"), "Coin98");
+});
+
+test("brand-first primary-wallet discovery groups detected EVM, TRON and Solana providers by wallet brand", () => {
+  const metamask = { isMetaMask: true, request: async () => [] };
+  const trust = { isTrustWallet: true, request: async () => [] };
+  const bitgetEvm = { request: async () => [] };
+  const bitgetTron = { request: async () => [] };
+  const bitgetTronWeb = { trx: { signMessageV2: async () => "0x" + "1".repeat(130) } };
+  const bitgetSolana = {
+    connect: async () => ({ publicKey }),
+    signMessage: async () => signature,
+    getGenesisHash: async () => MAINNET_HASH,
+  };
+  const win = {
+    ethereum: { providers: [metamask, trust] },
+    bitkeep: {
+      ethereum: bitgetEvm,
+      tronLink: bitgetTron,
+      tronWeb: bitgetTronWeb,
+      solana: bitgetSolana,
+    },
+  };
+  const catalogue = discoverPrimaryWalletProviders(win);
+  const meta = catalogue.find((wallet) => wallet.id === "metamask");
+  const trustWallet = catalogue.find((wallet) => wallet.id === "trust-wallet");
+  const bitget = catalogue.find((wallet) => wallet.id === "bitget-wallet");
+
+  assert.deepEqual(meta.networks, ["ethereum"]);
+  assert.deepEqual(trustWallet.networks, ["ethereum"]);
+  assert.deepEqual(bitget.networks, ["ethereum", "tron", "solana"]);
+  assert.equal(selectedPrimaryWalletProvider(catalogue, "bitget-wallet", "ethereum").provider, bitgetEvm);
+  assert.equal(selectedPrimaryWalletProvider(catalogue, "bitget-wallet", "tron").provider, bitgetTron);
+  assert.equal(selectedPrimaryWalletProvider(catalogue, "bitget-wallet", "solana").adapter.provider, bitgetSolana);
+  assert.equal(selectedPrimaryWalletProvider(catalogue, "metamask", "tron"), null);
+});
+
+test("brand-first primary-wallet discovery fails closed on duplicate providers for the same brand and network", () => {
+  const first = { isMetaMask: true, request: async () => [] };
+  const second = { isMetaMask: true, request: async () => [] };
+  const catalogue = discoverPrimaryWalletProviders({ ethereum: { providers: [first, second] } });
+  const metamask = catalogue.find((wallet) => wallet.id === "metamask");
+  assert.deepEqual(metamask.networks, ["ethereum"]);
+  assert.deepEqual(metamask.ambiguousNetworks, ["ethereum"]);
+  assert.equal(selectedPrimaryWalletProvider(catalogue, "metamask", "ethereum"), null);
 });
 
 test("EVM personal_sign encodes the exact UTF-8 message bytes as 0x-prefixed hex", () => {

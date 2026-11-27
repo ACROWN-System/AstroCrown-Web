@@ -17,13 +17,13 @@ Wallet qualification is not a three-chain API completeness contest.
 
 ## Implemented automated tests
 
-The preview has provider adapters for EVM, TRON and Solana discovery. Synthetic Node tests cover documented provider namespaces, EVM message payload encoding, Solana message-signature normalization, account continuity, mainnet identification where exposed, and deliberate rejection of signatures that do not match the connected address.
+The ordinary account and Genesis member screens present wallet brands and logos first, then show only the identity-proof networks detected for the selected provider. Wallet provider adapters cover EVM, TRON and Solana discovery. Synthetic Node tests cover documented provider namespaces, EVM message payload encoding, Solana message-signature normalization, brand-to-provider binding, duplicate-provider rejection, account continuity, mainnet identification where exposed, and rejection of signatures that do not match the connected address. Five branded wallet SVGs are locally hosted from a pinned MIT-licensed Web3 Icons revision; Bitget uses its current official brand-kit logomark.
 
 | Function | Current automated coverage | What this proves |
 |---|---|---|
 | Primary identity | EVM and Solana provider adapters plus server-side challenge verification tests | Our code handles the documented provider shapes; synthetic signatures are accepted only for the matching address and challenge |
 | TRON payment route | TRON provider discovery and account display adapters | Provider discovery only; wallet native transfer UX still requires live app confirmation |
-| Payment detection | Separate deterministic Ethereum, TRON and Solana evidence parsers and RPC evidence reconciliation tests | Exact synthetic chain evidence can be accepted/rejected; this is not a live RPC client |
+| Payment detection | Deterministic Ethereum, TRON and Solana evidence parsers, independent-source reconciliation, live RPC monitor modules, cursor/backlog handling and chain-finality checks | Synthetic evidence tests qualify parsing; the live RPC path is implemented but has not been tested against owner-configured node instances |
 | Solana delivery | Solana address/provider discovery and signature-verification foundations | A recipient can be identified and ownership-proven in tests; SPL ACROWN delivery remains unimplemented |
 
 Automated tests use synthetic providers, keys and chain responses. They do not execute installed vendor wallet binaries or move funds.
@@ -54,18 +54,24 @@ MetaMask is outside this five-wallet test wave, not generally incompatible. It m
 
 ## Implementation boundary for registered payment addresses
 
-Already implemented:
-- primary wallet identity, off-chain challenge/signature verification, session and name management;
-- optional signed wallet-link challenges for PAYMENT and Solana DELIVERY addresses;
-- immutable payment/public-record schema, wallet-bound entitlement and badge gates;
-- deterministic read-only Ethereum, TRON and Solana USDT evidence parsers;
-- normalized two-operator evidence reconciliation tests;
-- offline ACS floor-purchase arithmetic and tests.
+Implemented in code and covered by local fixtures/schema tests:
+- primary wallet identity, off-chain challenge/signature verification, sessions and unique display names;
+- signed wallet-link challenges for additional same-profile PAYMENT and Solana DELIVERY addresses;
+- wallet-brand-first account and Genesis selectors, local wallet logos, detected-network filtering and duplicate-provider fail-closed behaviour;
+- versioned Genesis terms acceptance and a draft-only terms status page;
+- exact six-decimal USDT payment-intent creation, per-profile open-intent limit, global principal-capacity reservation, expiry display and owner cancellation;
+- Ethereum, TRON SolidityNode and Solana finalized RPC scanners with two-source evidence reconciliation, immutable receipt records, chain occurrence timestamps, finality and backlog-safe retry;
+- receipt-to-intent matching, settlement-order final tier calculation, shared allowance accounting, append-only allowance events and Genesis Member badge activation;
+- local D1 migration parity and end-to-end qualifying-payment trigger tests.
 
-Not yet implemented:
-- server-created payment-intent endpoint and its persistent lifecycle;
-- live RPC clients and the qualified two-operator provider registry;
-- entitlement-credit writer and the full append-only payment-to-entitlement workflow;
+Not yet production-qualified or enabled:
+- physical installed-wallet/browser/device testing for each release route;
+- owner-configured live RPC node operation and independent source-operator review;
+- remote Cloudflare staging D1 migration and end-to-end settlement against real mainnet observations;
+- approved final Genesis payment terms, verified treasury custody and explicit network activation;
+- ACS floor-price purchase, ACROWN inventory delivery, Solana token-transfer signing and actual token receipt.
+
+No real funds, wallet transaction, payment activation, remote entitlement credit, remote migration or remote deployment is permitted by this qualification branch.
 
 
 **Adopted rule:** the D1 payment table and trigger require a pre-registered PAYMENT address linked to the same primary identity and network. This is the permanent Genesis policy, not a temporary limitation. No one-time unlinked-source payment path will be built. If an app cannot sign a TRON address-link challenge, that address cannot be used for TRON Genesis payments, although the same app may still qualify for Ethereum or Solana if those addresses pass their own proof and payment checks.
@@ -78,7 +84,7 @@ Genesis accepts three payment rails, each with its own parser:
 - TRON Mainnet USDT TRC-20: canonical contract, exact Transfer event, source and treasury, exact amount, successful execution and SolidityNode solidified receipt.
 - Solana Mainnet USDT SPL: canonical mint/program, finalized transaction, source/destination token-account owners, exact transfer instruction and debit/credit deltas.
 
-The existing deterministic parsers and two-operator reconciliation function are read-only. A future live service must obtain the evidence through at least two separately operated and qualified RPC providers, bind it to a server-created payment intent, and prevent duplicate credit using network + transaction ID + transfer/event/instruction index. A wallet's UI, callback or submitted hash is never authoritative.
+The Worker includes live network-specific RPC monitor paths that call the deterministic parsers and two-source reconciliation, bind receipts to a server-created payment intent and use the unique network + transaction + transfer/event/instruction index to prevent duplicate credit. The monitor waits until all three chains are caught up to their finalized/solidified heads and then settles only receipts older than the minimum cross-network head-time watermark, ordered by on-chain occurrence time. A wallet UI, callback or submitted hash is never authoritative. Source-operator independence and live-node reliability remain manual release qualifications; distinct URLs/source IDs alone do not prove independent operation.
 
 A qualifying payment adds capacity to the shared Genesis-programme-wide USDT purchase-allowance pool; it does not create a wallet-bound or personal allowance and does not itself buy or issue ACROWN. Any eligible pre-freeze registered wallet may later draw from the remaining shared pool for a separate ACS pure-floor purchase, followed by Solana delivery.
 

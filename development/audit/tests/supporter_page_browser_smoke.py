@@ -41,7 +41,7 @@ SOLANA_ADDRESSES = {
 }
 EXPECTED_EVM = ["MetaMask", "Trust Wallet", "Bitget Wallet", "TokenPocket", "Coin98", "OKX Wallet"]
 EXPECTED_SOLANA = ["MetaMask", "Trust Wallet", "Bitget Wallet", "OKX Wallet", "Coin98", "TokenPocket"]
-EXPECTED_TRON = ["Bitget Wallet", "TokenPocket", "OKX Wallet", "Trust Wallet", "TronLink"]
+EXPECTED_TRON = ["Bitget Wallet", "TokenPocket", "OKX Wallet", "Trust Wallet"]
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
@@ -313,40 +313,79 @@ def main() -> int:
                     arg=address_id
                 )
 
-            page.wait_for_function("""() =>
-              !document.querySelector("#supporter-evm-wallet-choice").disabled &&
-              !document.querySelector("#supporter-tron-wallet-choice").disabled &&
-              !document.querySelector("#supporter-wallet-choice").disabled
-            """)
-            evm_labels = option_labels("#supporter-evm-wallet-choice")
-            record("all six EVM candidate providers are discovered",
-                   all(name in evm_labels for name in EXPECTED_EVM), evm_labels)
-            for name in EXPECTED_EVM:
-                connect_and_clear(
+            brand_matrix = [
+                {"id":"metamask", "name":"MetaMask", "networks":["ethereum", "solana"]},
+                {"id":"trust-wallet", "name":"Trust Wallet", "networks":["ethereum", "tron", "solana"]},
+                {"id":"okx-wallet", "name":"OKX Wallet", "networks":["ethereum", "tron", "solana"]},
+                {"id":"bitget-wallet", "name":"Bitget Wallet", "networks":["ethereum", "tron", "solana"]},
+                {"id":"tokenpocket", "name":"TokenPocket", "networks":["ethereum", "tron", "solana"]},
+                {"id":"coin98", "name":"Coin98", "networks":["ethereum", "solana"]},
+            ]
+            network_controls = {
+                "ethereum": (
                     "#supporter-evm-wallet-choice", "#supporter-evm-wallet-connect",
-                    "#supporter-evm-wallet-clear", "#supporter-evm-wallet-address",
-                    name, EVM_ADDRESS, "EVM public-account connection: " + name
-                )
-
-            tron_labels = option_labels("#supporter-tron-wallet-choice")
-            record("supported direct and announced TRON providers are discovered",
-                   all(name in tron_labels for name in EXPECTED_TRON), tron_labels)
-            for name in EXPECTED_TRON:
-                connect_and_clear(
+                    "#supporter-evm-wallet-clear", "#supporter-evm-wallet-address"
+                ),
+                "tron": (
                     "#supporter-tron-wallet-choice", "#supporter-tron-wallet-connect",
-                    "#supporter-tron-wallet-clear", "#supporter-tron-wallet-address",
-                    name, TRON_ADDRESSES[name], "TRON public-account connection: " + name
+                    "#supporter-tron-wallet-clear", "#supporter-tron-wallet-address"
+                ),
+                "solana": (
+                    "#supporter-wallet-choice", "#supporter-wallet-connect",
+                    "#supporter-wallet-clear", "#supporter-wallet-address"
+                ),
+            }
+            expected_addresses = {
+                "ethereum": {brand["name"]: EVM_ADDRESS for brand in brand_matrix},
+                "tron": TRON_ADDRESSES,
+                "solana": SOLANA_ADDRESSES,
+            }
+
+            page.wait_for_function("""() =>
+              document.querySelectorAll("[data-genesis-wallet-brand]").length === 6 &&
+              document.querySelectorAll('[data-genesis-wallet-brand][aria-pressed="true"]').length === 1
+            """)
+            brand_count = page.locator("[data-genesis-wallet-brand]").count()
+            record("the six supported wallet brands are presented", brand_count == len(brand_matrix),
+                   {"count":brand_count})
+
+            for brand in brand_matrix:
+                brand_selector = '[data-genesis-wallet-brand="' + brand["id"] + '"]'
+                page.locator(brand_selector).click()
+                page.wait_for_function(
+                    """(walletId) => {
+                      const cards = Array.from(document.querySelectorAll("[data-genesis-wallet-brand]"));
+                      return cards.length === 6 &&
+                        cards.filter((item) => item.getAttribute("aria-pressed") === "true").length === 1 &&
+                        cards.some((item) => item.dataset.genesisWalletBrand === walletId &&
+                          item.getAttribute("aria-pressed") === "true");
+                    }""",
+                    arg=brand["id"]
                 )
 
-            solana_labels = option_labels("#supporter-wallet-choice")
-            record("all six Solana candidate providers are discovered",
-                   all(name in solana_labels for name in EXPECTED_SOLANA), solana_labels)
-            for name in EXPECTED_SOLANA:
-                connect_and_clear(
-                    "#supporter-wallet-choice", "#supporter-wallet-connect",
-                    "#supporter-wallet-clear", "#supporter-wallet-address",
-                    name, SOLANA_ADDRESSES[name], "Solana public-account connection: " + name
-                )
+                for network, control in network_controls.items():
+                    select_id, connect_id, clear_id, address_id = control
+                    expected = network in brand["networks"]
+                    select = page.locator(select_id)
+                    enabled = not select.is_disabled()
+                    record(
+                        brand["name"] + " " + network.upper() + " availability follows the selected brand",
+                        enabled == expected,
+                        {"wallet":brand["name"], "network":network, "enabled":enabled, "expected":expected}
+                    )
+                    labels = option_labels(select_id)
+                    expected_labels = [brand["name"]] if expected else []
+                    record(
+                        brand["name"] + " " + network.upper() + " exposes only its own detected provider",
+                        labels == expected_labels,
+                        {"wallet":brand["name"], "network":network, "options":labels}
+                    )
+                    if expected:
+                        connect_and_clear(
+                            select_id, connect_id, clear_id, address_id,
+                            brand["name"], expected_addresses[network][brand["name"]],
+                            network.upper() + " public-account connection: " + brand["name"]
+                        )
 
             wallet_calls = page.evaluate("window.__walletCalls")
             forbidden_calls = page.evaluate("window.__forbiddenWalletCalls")

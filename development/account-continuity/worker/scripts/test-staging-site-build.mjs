@@ -31,13 +31,28 @@ test("Worker staging build publishes shared page-notice assets and injects the m
   assert.match(walletAssurance, /name="astro-page-id" content="account"/);
   assert.match(walletAssurance, /Current status: FOR DEVELOPMENT · READ ONLY/);
   assert.match(accountUi, /function renderWalletPrimaryStatus\(\)/);
-  assert.match(accountUi, /Sign in with primary wallet/);
-  assert.match(accountUi, /Create account with primary wallet/);
+  assert.match(accountUi, /Sign in with selected wallet/);
+  assert.match(accountUi, /Create account with selected wallet/);
   assert.match(accountUi, /finishPrimaryWalletAuthentication/);
-  assert.match(accountUi, /EIP-1193 wallet/);
+  assert.match(accountUi, /discoverPrimaryWalletProviders/);
+  assert.match(accountUi, /selectedPrimaryWalletId/);
+  assert.match(accountUi, /selectedPrimaryNetwork/);
+  assert.match(accountUi, /Choose your wallet/);
+  assert.match(accountUi, /Network used for identity proof/);
+  assert.match(accountUi, /This selects the network for your primary-wallet identity proof only/);
+  for (const walletName of ["MetaMask", "Trust Wallet", "OKX Wallet", "Bitget Wallet", "TokenPocket", "Coin98"]) {
+    assert.ok(accountUi.includes(walletName), "Ordinary account brand picker must show " + walletName);
+  }
+  assert.match(accountUi, /account-wallet-brand-choice/);
+  for (const walletLogo of ["metamask", "trust", "okx", "tokenpocket", "coin98"]) {
+    assert.ok(accountUi.includes("/assets/wallet-logos/" + walletLogo + ".svg"), "Account selector must use local " + walletLogo + " logo");
+  }
+  assert.match(accountUi, /duplicate provider/);
+  assert.match(accountUi, /selectedPrimaryWalletProvider/);
+  assert.match(accountUi, /The selected wallet does not expose exactly one compatible/);
   assert.match(accountUi, /Solana Mainnet/);
   assert.match(accountUi, /astrocrown:admin-dashboard-visible/);
-  assert.match(accountUi, /Why wallet\?/);
+  assert.match(accountUi, /Why a primary wallet\?/);
   assert.match(accountUi, /typeof workerStagingMode/);
   assert.match(noticeScript, /Before you continue/);
   assert.match(noticeScript, /async function isAcknowledged/);
@@ -119,9 +134,15 @@ test("Worker staging build publishes shared page-notice assets and injects the m
 
 test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
+  await access(resolve(publicRoot, "supporters/genesis-terms.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
   await access(resolve(publicRoot, "supporters/wallet-provider-adapters.mjs"));
   await access(resolve(publicRoot, "assets/genesis-member-dna.svg"));
+  for (const walletLogo of ["metamask", "trust", "okx", "tokenpocket", "coin98"]) {
+    const logoPath = "assets/wallet-logos/" + walletLogo + ".svg";
+    await access(resolve(publicRoot, logoPath));
+    assert.match(await readPublic(logoPath), /^<svg/);
+  }
   const homepage = await readPublic("index.html");
   assert.match(homepage, /href="\.\/supporters\/">Genesis Programme/);
 });
@@ -131,7 +152,9 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /DEVELOPMENT PREVIEW/);
   assert.match(html, /USDT QUALIFYING PAYMENTS NOT OPEN/);
   assert.match(html, /DO NOT SEND FUNDS/);
-  assert.match(html, /Ethereum \(ERC-20\), Tron \(TRC-20\) and Solana \(SPL\)/);
+  assert.match(html, /one payment asset: USDT/);
+  assert.match(html, /Ethereum Mainnet \(ERC-20\), TRON Mainnet \(TRC-20\) or Solana Mainnet \(SPL\)/);
+  assert.doesNotMatch(html, /separate network-specific assets/);
   assert.match(html, /30×.*USDT 10,000.*25×.*20×.*15×.*10×/s);
   assert.match(html, /USDT 1,000,000.*USDT-denominated/s);
   assert.match(html, /registered wallet owner.*network fee.*separately/s);
@@ -160,6 +183,19 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /Any eligible identity registered before the permanent cutoff may purchase any amount up to the entire remaining pool/);
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
+  assert.match(html, /id="genesis-wallet-brand-grid"/);
+  for (const walletLogo of ["metamask", "trust", "okx", "tokenpocket", "coin98"]) {
+    assert.ok(html.includes("../assets/wallet-logos/" + walletLogo + ".svg"), "Genesis selector must use local " + walletLogo + " logo");
+  }
+  assert.match(html, /Choose your wallet application/);
+  assert.match(html, /Wallet brand first/);
+  assert.match(html, /Ethereum Mainnet identity address/);
+  assert.match(html, /TRON Mainnet identity address/);
+  assert.match(html, /Solana Mainnet identity address/);
+  for (const walletId of ["metamask", "trust-wallet", "okx-wallet", "bitget-wallet", "tokenpocket", "coin98"]) {
+    assert.ok(html.includes('data-genesis-wallet-brand="' + walletId + '"'), "Genesis brand selector must include " + walletId);
+  }
+  assert.doesNotMatch(html, /No separate user account is created/);
   assert.match(html, /id="supporter-runtime-status"/);
   assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
   assert.match(html, /The primary wallet is the sole Genesis identity, login authority and recovery anchor/);
@@ -173,16 +209,36 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /Explorer links expose the full wallet address and associated public transaction history/);
   assert.match(html, /A random display name is generated when the primary wallet is first verified/);
   assert.match(html, /Never share your seed phrase or private key/);
+  assert.match(html, /id="genesis-public-treasury-receipts"/);
+  assert.match(html, /Verified incoming USDT treasury receipts/);
+  assert.match(html, /id="genesis-payment-intent-form"/);
+  assert.match(html, /id="genesis-payment-network"/);
+  assert.match(html, /id="genesis-payment-source-wallet"/);
+  assert.match(html, /id="genesis-payment-amount"/);
+  assert.match(html, /id="genesis-payment-terms-accepted"/);
+  assert.match(html, /id="genesis-payment-intent-create" type="submit" disabled/);
+  assert.match(html, /id="genesis-payment-instructions" hidden/);
+  assert.match(html, /Payments closed · Do not send USDT/);
+  assert.match(html, /Create exact USDT payment instructions/);
+  assert.match(html, /Cancel unsubmitted payment intent/);
+  assert.match(html, /community inspection/);
 });
 
 test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
   const js = await readPublic("supporters/supporters.js");
+  const genesisWorkerSource = await readFile(resolve(workerRoot, "src", "genesis.js"), "utf8");
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
   assert.match(js, /wallet-standard:app-ready/);
   assert.match(js, /discoverDirectEvmProviders/);
   assert.match(js, /discoverDirectTronProviders/);
   assert.match(js, /discoverDirectSolanaWallets/);
+  assert.match(js, /selectedGenesisWalletBrand/);
+  assert.match(js, /genesis-wallet-brand-grid/);
+  assert.match(js, /This wallet has no Ethereum provider detected/);
+  assert.match(js, /This wallet has no TRON provider detected/);
+  assert.match(js, /This wallet has no Solana provider detected/);
+  assert.match(js, /This creates your Genesis wallet profile/);
   assert.match(js, /eth_requestAccounts/);
   assert.match(js, /standard:connect/);
   assert.match(js, /personal_sign/);
@@ -191,6 +247,29 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
   assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
   assert.ok(js.includes("/api/genesis/status"));
+  assert.ok(js.includes("/api/genesis/treasury-receipts"));
+  assert.ok(js.includes("USDT · Ethereum (ERC-20)"));
+  assert.ok(js.includes("USDT · TRON (TRC-20)"));
+  assert.ok(js.includes("USDT · Solana (SPL)"));
+  assert.ok(js.includes("USDT contract / mint"));
+  assert.ok(js.includes("Block / slot inclusion"));
+  assert.ok(js.includes("No live receipt claims are being displayed"));
+  assert.ok(js.includes("explorer.origin !== network.origin"));
+  assert.ok(js.includes("/api/genesis/payment-intents"));
+  assert.ok(js.includes("/api/genesis/payment-intents/cancel"));
+  assert.ok(js.includes("requestGenesisPaymentIntent"));
+  assert.ok(js.includes("Cancellation available after expiry and monitor reconciliation"));
+  assert.ok(js.includes("Do not cancel an intent after sending USDT"));
+  assert.ok(genesisWorkerSource.includes("A payment intent cannot be cancelled before its expiry."));
+  assert.ok(genesisWorkerSource.includes("recent healthy scan of Ethereum, TRON and Solana"));
+  assert.ok(genesisWorkerSource.includes("A matching on-chain USDT receipt has already been recorded"));
+  assert.ok(js.includes("renderGenesisPaymentPanel"));
+  assert.ok(js.includes("MANUAL_EXACT_AMOUNT_TRANSFER"));
+  assert.ok(js.includes("walletTransactionSubmitted"));
+  assert.ok(js.includes("creditApplied === true"));
+  assert.ok(js.includes("Qualifying payment independently reconciled"));
+  assert.ok(js.includes("The registered wallet owner pays the network fee separately"));
+
   assert.ok(js.includes("/api/genesis/identity/challenge"));
   assert.ok(js.includes("/api/genesis/identity/verify"));
   assert.ok(js.includes("/api/genesis/display-name/challenge"));

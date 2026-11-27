@@ -3,6 +3,7 @@ import { genesisProgrammeStatusResponse } from "./genesis-status.js";
 import { handleGenesisWalletApi } from "./genesis.js";
 import { issuePrimaryWalletChallenge, verifyPrimaryWalletChallenge, isQualifiedAccountRuntime, isLoopbackDevelopmentOrigin } from "./wallet-auth.js";
 import { createDefaultMemberName, normalizeMemberName } from "./member-name.js";
+import { runGenesisReceiptMonitor } from "./genesis-receipt-monitor.js";
 
 const SESSION_COOKIE = "acrown_account_session";
 const ADMIN_CHALLENGE_SECONDS = 300;
@@ -1342,6 +1343,7 @@ export default {
           pathname !== "/api/staging/page-acknowledge" &&
           pathname !== "/api/genesis/status" &&
           pathname !== "/api/genesis/directory" &&
+          pathname !== "/api/genesis/treasury-receipts" &&
           !(await hasStagingAcknowledgement(request, env))
         ) {
           return json(428, { error: "Acknowledge the current AstroCrown public-staging safety notice before using account services." });
@@ -1369,5 +1371,29 @@ export default {
       const code = Number(error?.status) || 500;
       return json(code, { error: code < 500 ? error.message : "The staging account service encountered an unexpected error." });
     }
+  },
+  async scheduled(_controller, env, ctx) {
+    if (!env || env.ENVIRONMENT !== "staging" || env.GENESIS_RECEIPT_MONITOR_ENABLED !== "true") return;
+    const task = runGenesisReceiptMonitor(env)
+      .then((result) => {
+        console.info("[AstroCrown] Genesis treasury receipt monitor cycle", JSON.stringify({
+          status: result.status,
+          receiptsRecorded: result.receiptsRecorded,
+          networks: {
+            ethereum: result.networks?.ethereum?.status || "NOT_RUN",
+            tron: result.networks?.tron?.status || "NOT_RUN",
+            solana: result.networks?.solana?.status || "NOT_RUN",
+          },
+          qualifyingPaymentsSettled: result.qualifyingPaymentsSettled || 0,
+          allowanceCreditAppliedUsdtBaseUnits: result.allowanceCreditAppliedUsdtBaseUnits || "0",
+          paymentCreditsApplied: result.paymentCreditsApplied || 0,
+          entitlementChanges: result.entitlementChanges || 0,
+        }));
+      })
+      .catch(() => {
+        console.error("[AstroCrown] Genesis treasury receipt monitor cycle failed safely; failed network cursors remain unchanged.");
+      });
+    if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(task);
+    else await task;
   },
 };

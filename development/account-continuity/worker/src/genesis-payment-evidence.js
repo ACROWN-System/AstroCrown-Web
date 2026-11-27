@@ -72,7 +72,9 @@ function evmAddress(value, label) {
 }
 
 function evmTopicAddress(value, label) {
-  if (typeof value !== "string" || !/^0x[0-9a-f]{64}$/i.test(value)) fail(label + " is not a valid indexed EVM address.");
+  if (typeof value !== "string" || !/^0x[0-9a-f]{64}$/i.test(value) || !/^0{24}$/i.test(value.slice(2, 26))) {
+    fail(label + " is not a valid 20-byte indexed EVM address with canonical zero padding.");
+  }
   return "0x" + value.slice(-40).toLowerCase();
 }
 
@@ -135,7 +137,9 @@ function tronLogAddress(value, label) {
 function tronIndexedAddress(value, label) {
   if (typeof value !== "string") fail(label + " is missing.");
   const normalized = value.replace(/^0x/i, "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(normalized)) fail(label + " is not a 32-byte indexed TRON address.");
+  if (!/^[0-9a-f]{64}$/.test(normalized) || !/^0{24}/.test(normalized)) {
+    fail(label + " is not a canonical 20-byte indexed TRON address with zero padding.");
+  }
   return normalized.slice(-40);
 }
 
@@ -162,6 +166,11 @@ function requireTransactionId(expected, network) {
   if (network === "ethereum") return ethereumHash(value, "Expected transaction hash");
   if (network === "tron") return tronHash(value, "Expected transaction id");
   return solanaSignature(value, "Expected Solana transaction signature");
+}
+
+function requestedTransferIndex(expected, label) {
+  if (!expected || expected.transferIndex === undefined || expected.transferIndex === null) return null;
+  return nonNegativeIndex(expected.transferIndex, 0, label);
 }
 
 function canonicalEvidence(network, transactionId, sender, treasury, amount, transferIndex, inclusion, finalityStatus) {
@@ -215,6 +224,7 @@ export function parseEthereumUsdtTransferEvidence({ chainId, tokenMetadata, rece
   const sender = evmAddress(expected.senderAddress, "Expected Ethereum sender");
   const treasury = evmAddress(expected.treasuryAddress, "Expected Ethereum treasury");
   const amount = expectedAmount(expected);
+  const requestedIndex = requestedTransferIndex(expected, "Expected Ethereum log index");
   if (!Array.isArray(receipt.logs)) fail("Ethereum receipt logs are missing.");
   const matches = [];
   receipt.logs.forEach((log, index) => {
@@ -224,10 +234,10 @@ export function parseEthereumUsdtTransferEvidence({ chainId, tokenMetadata, rece
     const from = evmTopicAddress(log.topics[1], "Ethereum Transfer sender topic");
     const to = evmTopicAddress(log.topics[2], "Ethereum Transfer recipient topic");
     const value = BigInt(log.data);
-    if (from === sender && to === treasury && value === amount) {
-      matches.push({
-        transferIndex: nonNegativeIndex(log.logIndex, index, "Ethereum log index"),
-      });
+    const transferIndex = nonNegativeIndex(log.logIndex, index, "Ethereum log index");
+    if ((requestedIndex === null || transferIndex === requestedIndex) &&
+        from === sender && to === treasury && value === amount) {
+      matches.push({ transferIndex });
     }
   });
   if (matches.length !== 1) fail("Ethereum receipt must contain exactly one matching canonical USDT Transfer event.");
@@ -259,6 +269,7 @@ export async function parseTronUsdtTransferEvidence({ networkTag, receiptSource,
   const senderHex = await tronPayloadHex(expected.senderAddress, "Expected TRON sender");
   const treasuryHex = await tronPayloadHex(expected.treasuryAddress, "Expected TRON treasury");
   const amount = expectedAmount(expected);
+  const requestedIndex = requestedTransferIndex(expected, "Expected TRON event index");
   if (!Array.isArray(transactionInfo.log)) fail("TRON receipt event logs are missing.");
   const matches = [];
   for (let index = 0; index < transactionInfo.log.length; index += 1) {
@@ -269,7 +280,8 @@ export async function parseTronUsdtTransferEvidence({ networkTag, receiptSource,
     const from = tronIndexedAddress(log.topics[1], "TRON Transfer sender topic");
     const to = tronIndexedAddress(log.topics[2], "TRON Transfer recipient topic");
     const value = BigInt("0x" + log.data.replace(/^0x/i, ""));
-    if (from === senderHex && to === treasuryHex && value === amount) matches.push({ transferIndex: index });
+    if ((requestedIndex === null || index === requestedIndex) &&
+        from === senderHex && to === treasuryHex && value === amount) matches.push({ transferIndex: index });
   }
   if (matches.length !== 1) fail("TRON solidified receipt must contain exactly one matching canonical USDT Transfer event.");
   return canonicalEvidence(
@@ -355,6 +367,7 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
   const sender = solanaAddress(expected.senderAddress, "Expected Solana sender");
   const treasury = solanaAddress(expected.treasuryAddress, "Expected Solana treasury");
   const amount = expectedAmount(expected);
+  const requestedIndex = requestedTransferIndex(expected, "Expected Solana instruction index");
   const mint = GENESIS_USDT_ASSETS.solana.assetIdentifier;
   const outer = transaction.transaction.message.instructions;
   if (!Array.isArray(outer)) fail("Solana parsed top-level instructions are missing.");
@@ -366,11 +379,12 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     if (inner && Array.isArray(inner.instructions)) orderedInstructions.push(...inner.instructions);
   }
   const matches = [];
+  const transfers = [];
+  const expectedAccountDeltas = new Map();
   for (let instructionOrdinal = 0; instructionOrdinal < orderedInstructions.length; instructionOrdinal += 1) {
     const instruction = orderedInstructions[instructionOrdinal];
     const transfer = solanaInstructionTransfer(instruction);
-    if (!transfer) continue;
-    if (transfer.mint && transfer.mint !== mint) continue;
+    if (!transfer || (transfer.mint && transfer.mint !== mint)) continue;
     const sourceIndex = keys.indexOf(transfer.sourceTokenAccount);
     const destinationIndex = keys.indexOf(transfer.destinationTokenAccount);
     if (sourceIndex < 0 || destinationIndex < 0) continue;
@@ -380,12 +394,44 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     const destinationAfter = solanaTokenBalance(postBalances, destinationIndex, mint, "Solana destination");
     const sourceOwners = [sourceBefore.owner, sourceAfter.owner].filter(Boolean);
     const destinationOwners = [destinationBefore.owner, destinationAfter.owner].filter(Boolean);
-    if (!sourceOwners.length || sourceOwners.some((owner) => owner !== sender)) continue;
-    if (!destinationOwners.length || destinationOwners.some((owner) => owner !== treasury)) continue;
-    const sourceDelta = sourceBefore.amount - sourceAfter.amount;
-    const destinationDelta = destinationAfter.amount - destinationBefore.amount;
-    if (transfer.amount === amount && sourceDelta === amount && destinationDelta === amount) {
-      matches.push({ transferIndex: instructionOrdinal });
+    if (!sourceOwners.length || !destinationOwners.length) continue;
+    if (sourceOwners.some((owner) => owner !== sourceOwners[0]) ||
+        destinationOwners.some((owner) => owner !== destinationOwners[0])) {
+      fail("Solana token-account owner changed within one transaction.");
+    }
+    const sourceOwner = sourceOwners[0];
+    const destinationOwner = destinationOwners[0];
+    transfers.push({
+      instructionOrdinal,
+      sourceIndex,
+      destinationIndex,
+      sourceOwner,
+      destinationOwner,
+      amount: transfer.amount,
+    });
+    if (sourceIndex !== destinationIndex) {
+      expectedAccountDeltas.set(sourceIndex, (expectedAccountDeltas.get(sourceIndex) || 0n) - transfer.amount);
+      expectedAccountDeltas.set(destinationIndex, (expectedAccountDeltas.get(destinationIndex) || 0n) + transfer.amount);
+    }
+  }
+
+  // Reconcile every discovered canonical USDT transfer instruction as a group.
+  // This handles multiple transfers touching the same token account in one
+  // transaction without treating one aggregate balance delta as several receipts.
+  for (const [accountIndex, expectedDelta] of expectedAccountDeltas) {
+    const before = solanaTokenBalance(preBalances, accountIndex, mint, "Solana token account before transfer");
+    const after = solanaTokenBalance(postBalances, accountIndex, mint, "Solana token account after transfer");
+    if (after.amount - before.amount !== expectedDelta) {
+      fail("Solana token-account balance deltas do not reconcile to the transaction's canonical USDT transfer instructions.");
+    }
+  }
+
+  for (const transfer of transfers) {
+    if (transfer.instructionOrdinal !== requestedIndex && requestedIndex !== null) continue;
+    if (transfer.sourceOwner === sender && transfer.destinationOwner === treasury &&
+        transfer.destinationIndex !== transfer.sourceIndex &&
+        transfer.amount === amount) {
+      matches.push({ transferIndex: transfer.instructionOrdinal });
     }
   }
   if (matches.length !== 1) fail("Solana finalized transaction must contain exactly one matching USDT transfer instruction with matching owner and balance deltas.");
@@ -416,28 +462,28 @@ function evidenceCore(evidence) {
 }
 
 /**
- * Require two or more genuinely distinct configured RPC operators to agree on
- * the same normalized transfer. This is evidence reconciliation only: it never
+ * Require two or more distinctly identified RPC node sources to agree on
+ * the same normalized transfer. Sources may be self-operated; this is evidence reconciliation only: it never
  * inserts a contribution, credits an allowance or updates a payment state.
  */
 export function reconcileGenesisRpcEvidence({ network, observations, expected }) {
   if (!Object.prototype.hasOwnProperty.call(GENESIS_USDT_ASSETS, network)) fail("Unsupported Genesis payment network.");
   if (!Array.isArray(observations) || observations.length < 2) fail("At least two independent RPC observations are required.");
   const providerIds = new Set();
-  const operatorIds = new Set();
+  const sourceIds = new Set();
   const cores = [];
   for (const observation of observations) {
     if (!observation || typeof observation.providerId !== "string" || !observation.providerId.trim()) {
       fail("Every RPC observation must identify its configured provider.");
     }
-    if (!observation.operatorId || typeof observation.operatorId !== "string") {
-      fail("Every RPC observation must identify its independently qualified operator.");
+    if (!observation.sourceId || typeof observation.sourceId !== "string") {
+      fail("Every RPC observation must identify its configured RPC source.");
     }
-    if (providerIds.has(observation.providerId) || operatorIds.has(observation.operatorId)) {
-      fail("RPC observations must come from distinct providers and independently qualified operators.");
+    if (providerIds.has(observation.providerId) || sourceIds.has(observation.sourceId)) {
+      fail("RPC observations must come from distinct providers and distinct configured sources.");
     }
     providerIds.add(observation.providerId);
-    operatorIds.add(observation.operatorId);
+    sourceIds.add(observation.sourceId);
     const core = evidenceCore(observation.evidence);
     if (core.network !== network) fail("An RPC observation belongs to a different network.");
     cores.push(core);
@@ -490,7 +536,7 @@ export function reconcileGenesisRpcEvidence({ network, observations, expected })
     providerAgreement: Object.freeze({
       agreeingSources: observations.length,
       providerIds: Object.freeze(Array.from(providerIds)),
-      operatorIds: Object.freeze(Array.from(operatorIds)),
+      sourceIds: Object.freeze(Array.from(sourceIds)),
     }),
   });
 }

@@ -111,19 +111,29 @@ test("Ethereum parser rejects wrong chain, failed receipt, wrong token, wrong se
     receipt: { ...ethereumFixture().receipt, logs: [{
       ...ethereumFixture().receipt.logs[0], address: "0x" + "11".repeat(20),
     }] },
-  })), /exactly one matching/);
+  })), /exactly one matching canonical USDT Transfer event/);
   assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
     finalityBlock: { tag: "latest", number: "0x500" },
   })), /safe\/finalized/);
   assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
     blockAtReceiptHeight: { number: "0x100", hash: "0x" + "ee".repeat(32) },
   })), /not canonical/);
-  assert.throws(() => parseEthereumUsdtTransferEvidence(ethereumFixture({
+  const repeated = ethereumFixture({
     receipt: { ...ethereumFixture().receipt, logs: [
       ...ethereumFixture().receipt.logs,
       { ...ethereumFixture().receipt.logs[0], logIndex: "0x5" },
     ] },
-  })), /exactly one matching/);
+  });
+  assert.throws(() => parseEthereumUsdtTransferEvidence(repeated), /exactly one matching/);
+  const selected = parseEthereumUsdtTransferEvidence({
+    ...repeated,
+    expected: { ...ETH_EXPECTED, transferIndex: 4 },
+  });
+  assert.equal(selected.transferIndex, 4);
+  assert.throws(() => parseEthereumUsdtTransferEvidence({
+    ...repeated,
+    expected: { ...ETH_EXPECTED, transferIndex: 99 },
+  }), /exactly one matching/);
 });
 
 test("TRON parser requires a checksummed Mainnet address and a SolidityNode solidified receipt", async () => {
@@ -159,6 +169,22 @@ test("TRON parser requires a checksummed Mainnet address and a SolidityNode soli
   assert.equal(evidence.finalityStatus, "SOLIDIFIED");
   assert.equal(evidence.amountBaseUnits, "1000000");
   assert.equal(evidence.transferIndex, 0);
+  const repeatedInfo = { ...info, log: [...info.log, { ...info.log[0] }] };
+  const selected = await parseTronUsdtTransferEvidence({
+    networkTag: "TRON_MAINNET",
+    receiptSource: "SOLIDITY_NODE",
+    tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 },
+    transactionInfo: repeatedInfo,
+    expected: { ...expected, transferIndex: 1 },
+  });
+  assert.equal(selected.transferIndex, 1);
+  await assert.rejects(() => parseTronUsdtTransferEvidence({
+    networkTag: "TRON_MAINNET",
+    receiptSource: "SOLIDITY_NODE",
+    tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 },
+    transactionInfo: repeatedInfo,
+    expected,
+  }), /exactly one matching/);
   await assert.rejects(() => parseTronUsdtTransferEvidence({
     networkTag: "TRON_MAINNET", receiptSource: "FULL_NODE", tokenMetadata: { networkTag: "TRON_MAINNET", contractAddress: GENESIS_USDT_ASSETS.tron.assetIdentifier, decimals: 6 }, transactionInfo: info, expected,
   }), /SolidityNode/);
@@ -235,6 +261,89 @@ test("Solana parser ties a finalized USDT instruction to source/destination wall
   assert.equal(evidence.amountBaseUnits, "1000000");
   assert.equal(evidence.transferIndex, 1);
   assert.deepEqual(evidence.inclusion, { slot: "987654" });
+  const selected = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint: GENESIS_USDT_ASSETS.solana.assetIdentifier, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 1 },
+  });
+  assert.equal(selected.transferIndex, 1);
+
+  const multiTransfer = structuredClone(transaction);
+  multiTransfer.transaction.message.instructions.push({
+    programId: GENESIS_USDT_ASSETS.solana.tokenProgramId,
+    parsed: {
+      type: "transferChecked",
+      info: {
+        source: sourceTokenAccount,
+        destination: destinationTokenAccount,
+        mint,
+        authority: sender,
+        tokenAmount: { amount: "2000000", decimals: 6 },
+      },
+    },
+  });
+  multiTransfer.meta.postTokenBalances[0].uiTokenAmount.amount = "7000000";
+  multiTransfer.meta.postTokenBalances[1].uiTokenAmount.amount = "3000100";
+  const firstTransfer = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: multiTransfer,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 1 },
+  });
+  const secondTransfer = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: multiTransfer,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, amountBaseUnits: "2000000", transferIndex: 2 },
+  });
+  assert.equal(firstTransfer.amountBaseUnits, "1000000");
+  assert.equal(secondTransfer.amountBaseUnits, "2000000");
+
+  // A later outgoing transfer can reduce the treasury account's net delta
+  // without changing the fact that the earlier incoming transfer occurred.
+  const roundTrip = structuredClone(transaction);
+  const recipient = encodeBase58(new Uint8Array(32).fill(9));
+  const recipientTokenAccount = encodeBase58(new Uint8Array(32).fill(8));
+  roundTrip.transaction.message.accountKeys.push(recipientTokenAccount, recipient);
+  roundTrip.transaction.message.instructions.push({
+    programId: GENESIS_USDT_ASSETS.solana.tokenProgramId,
+    parsed: {
+      type: "transferChecked",
+      info: {
+        source: destinationTokenAccount,
+        destination: recipientTokenAccount,
+        mint,
+        authority: treasury,
+        tokenAmount: { amount: "600000", decimals: 6 },
+      },
+    },
+  });
+  roundTrip.meta.postTokenBalances[1].uiTokenAmount.amount = "400100";
+  roundTrip.meta.postTokenBalances.push(
+    { accountIndex: 5, mint, owner: recipient, uiTokenAmount: { amount: "600000", decimals: 6 } },
+  );
+  const inboundDespiteSameTransactionOutflow = parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: roundTrip,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 1 },
+  });
+  assert.equal(inboundDespiteSameTransactionOutflow.amountBaseUnits, "1000000");
+
+  const inflatedTransfer = structuredClone(transaction);
+  inflatedTransfer.transaction.message.instructions.push(structuredClone(transaction.transaction.message.instructions[1]));
+  assert.throws(() => parseSolanaUsdtTransferEvidence({
+    clusterGenesisHash: GENESIS_USDT_ASSETS.solana.clusterGenesisHash,
+    transaction: inflatedTransfer,
+    signatureStatus: { err: null, confirmationStatus: "finalized" },
+    mintMetadata: { mint, programOwner: GENESIS_USDT_ASSETS.solana.tokenProgramId, decimals: 6 },
+    expected: { ...expected, transferIndex: 2 },
+  }), /balance deltas do not reconcile/);
 });
 
 test("Solana parser rejects wrong cluster, non-finalized status, failed transactions and mismatched token deltas", () => {
@@ -285,7 +394,7 @@ test("Solana parser rejects wrong cluster, non-finalized status, failed transact
   assert.throws(() => parse({ transaction: { ...tx, meta: { ...tx.meta, postTokenBalances: [
     tx.meta.postTokenBalances[0],
     { ...tx.meta.postTokenBalances[1], uiTokenAmount: { amount: "999999", decimals: 6 } },
-  ] } } }), /exactly one matching/);
+  ] } } }), /balance deltas do not reconcile/);
 });
 
 test("RPC reconciliation requires two distinct operators and identical normalized evidence, and never credits", () => {
@@ -294,8 +403,8 @@ test("RPC reconciliation requires two distinct operators and identical normalize
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence },
     ],
   });
   assert.equal(result.status, "RPC_EVIDENCE_AGREES_FINALIZED_TRANSFER");
@@ -305,32 +414,32 @@ test("RPC reconciliation requires two distinct operators and identical normalize
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "same-operator", evidence },
-      { providerId: "rpc-b", operatorId: "same-operator", evidence },
+      { providerId: "rpc-a", sourceId: "same-source", evidence },
+      { providerId: "rpc-b", sourceId: "same-source", evidence },
     ],
-  }), /distinct providers and independently qualified operators/);
+  }), /distinct providers and distinct configured sources/);
   assert.throws(() => reconcileGenesisRpcEvidence({
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, transferIndex: 9 } },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence: { ...evidence, transferIndex: 9 } },
     ],
   }), /disagree/);
   assert.throws(() => reconcileGenesisRpcEvidence({
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence: { ...evidence, assetIdentifier: "0x" + "11".repeat(20) } },
     ],
   }), /canonical network, token identifier/);
   assert.throws(() => reconcileGenesisRpcEvidence({
     network: "ethereum",
     expected: ETH_EXPECTED,
     observations: [
-      { providerId: "rpc-a", operatorId: "operator-a", evidence: { ...evidence, finalityStatus: "LATEST" } },
-      { providerId: "rpc-b", operatorId: "operator-b", evidence: { ...evidence, finalityStatus: "LATEST" } },
+      { providerId: "rpc-a", sourceId: "operator-a", evidence: { ...evidence, finalityStatus: "LATEST" } },
+      { providerId: "rpc-b", sourceId: "operator-b", evidence: { ...evidence, finalityStatus: "LATEST" } },
     ],
   }), /chain-specific finality/);
 });
