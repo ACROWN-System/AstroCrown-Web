@@ -144,8 +144,8 @@ export async function settleGenesisPaymentReceipt(db, env, receiptId) {
     receipt.asset_identifier,
     receipt.treasury_address,
     receipt.amount_base_units,
-    receipt.verified_at,
-    receipt.verified_at
+    receipt.occurred_at,
+    receipt.occurred_at
   ).all();
   const matches = intents.results || [];
   if (!matches.length) return { status: "NO_MATCHING_OPEN_INTENT" };
