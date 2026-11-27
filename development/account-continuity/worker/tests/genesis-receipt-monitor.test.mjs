@@ -60,7 +60,7 @@ test("RPC source configuration requires HTTPS, distinct origins and distinct ope
     ...rpcEnvironment(),
     GENESIS_ETHEREUM_RPC_B_SOURCE_ID: "operator-a",
   };
-  assert.throws(() => prepareGenesisRpcPair(sameOperator, "ethereum"), /independently identified operators/);
+  assert.throws(() => prepareGenesisRpcPair(sameOperator, "ethereum"), /different HTTPS origins and distinct node\/source identifiers/);
 
   const insecure = {
     ...rpcEnvironment(),
