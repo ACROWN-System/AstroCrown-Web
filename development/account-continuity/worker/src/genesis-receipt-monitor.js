@@ -80,14 +80,14 @@ export function prepareGenesisRpcPair(env, network) {
     const url = normalizeRpcUrl(env[prefix + id + "_URL"], network + " RPC " + id);
     const operatorId = String(env[prefix + id + "_OPERATOR_ID"] || "").trim();
     if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{2,63}$/.test(operatorId)) {
-      fail(network + " RPC " + id + " must have a stable configured operator identifier.");
+      fail(network + " RPC " + id + " must have a stable configured node/operator identifier.");
     }
     const apiKey = network === "tron" ? String(env[prefix + id + "_API_KEY"] || "").trim() : "";
     if (apiKey.length > 4096 || apiKey.includes(String.fromCharCode(10)) || apiKey.includes(String.fromCharCode(13))) fail(network + " RPC " + id + " API key is invalid.");
     return Object.freeze({ id: slot.toLowerCase(), url: url.toString(), origin: url.origin, operatorId, apiKey });
   });
   if (sources[0].origin === sources[1].origin || sources[0].operatorId === sources[1].operatorId) {
-    fail(network + " RPC sources must use different HTTPS origins and independently identified operators.");
+    fail(network + " RPC sources must use different HTTPS origins and distinct node/operator identifiers.");
   }
   return Object.freeze(sources);
 }
@@ -202,7 +202,7 @@ async function persistVerifiedReceipt(db, reconciled) {
   const evidenceJson = JSON.stringify({
     evidence,
     verification: {
-      method: "TWO_INDEPENDENT_RPC_OPERATORS",
+      method: "TWO_INDEPENDENT_RPC_SOURCES",
       providers: reconciled.providerAgreement.providerIds,
       operators: reconciled.providerAgreement.operatorIds,
     },
@@ -229,7 +229,7 @@ async function persistVerifiedReceipt(db, reconciled) {
     evidence.transferIndex,
     JSON.stringify(evidence.inclusion),
     evidence.finalityStatus,
-    "TWO_INDEPENDENT_RPC_OPERATORS",
+    "TWO_INDEPENDENT_RPC_SOURCES",
     JSON.stringify(reconciled.providerAgreement.providerIds),
     JSON.stringify(reconciled.providerAgreement.operatorIds),
     digest,
@@ -985,7 +985,7 @@ export async function publicGenesisTreasuryReceipts(db, limit = 100) {
       inclusionReference: row.inclusion_reference,
       finalityStatus: row.finality_status,
       verifiedAt: new Date(Number(row.verified_at) * 1000).toISOString(),
-      verification: "TWO_INDEPENDENT_RPC_OPERATORS",
+      verification: "TWO_INDEPENDENT_RPC_SOURCES",
       explorerUrl: link,
       creditApplied: false,
     };
