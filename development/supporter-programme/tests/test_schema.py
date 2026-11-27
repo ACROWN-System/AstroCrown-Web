@@ -314,9 +314,11 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
              'TWO_INDEPENDENT_RPC_SOURCES', '["rpc-a","rpc-b"]', '["source-a","source-b"]', 'e' * 64,
              '{"creditApplied":false}', 'MATCHED', identity_id, wallet_id, 1, 1050, 1055, 1100),
         )
-        settled_tiers = '[{"tranche":1,"principalStartBaseUnits":"0","principalEndBaseUnits":"1000000000",'
+        settled_tiers = (
+            '[{"tranche":1,"principalStartBaseUnits":"0","principalEndBaseUnits":"1000000000",'
             '"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"30",'
             '"multiplierDenominator":"1","allowanceBaseUnits":"30000000000"}]'
+        )
         self.db.execute(
             'INSERT INTO genesis_public_payments(payment_record_id,identity_id,source_wallet_address_id,payment_kind,'
             'network,asset_identifier,amount_base_units,amount_display,transaction_hash,transfer_index,finality_status,'
