@@ -470,20 +470,20 @@ export function reconcileGenesisRpcEvidence({ network, observations, expected })
   if (!Object.prototype.hasOwnProperty.call(GENESIS_USDT_ASSETS, network)) fail("Unsupported Genesis payment network.");
   if (!Array.isArray(observations) || observations.length < 2) fail("At least two independent RPC observations are required.");
   const providerIds = new Set();
-  const operatorIds = new Set();
+  const sourceIds = new Set();
   const cores = [];
   for (const observation of observations) {
     if (!observation || typeof observation.providerId !== "string" || !observation.providerId.trim()) {
       fail("Every RPC observation must identify its configured provider.");
     }
-    if (!observation.operatorId || typeof observation.operatorId !== "string") {
+    if (!observation.sourceId || typeof observation.sourceId !== "string") {
       fail("Every RPC observation must identify its independently qualified operator.");
     }
-    if (providerIds.has(observation.providerId) || operatorIds.has(observation.operatorId)) {
+    if (providerIds.has(observation.providerId) || sourceIds.has(observation.sourceId)) {
       fail("RPC observations must come from distinct providers and independently qualified operators.");
     }
     providerIds.add(observation.providerId);
-    operatorIds.add(observation.operatorId);
+    sourceIds.add(observation.sourceId);
     const core = evidenceCore(observation.evidence);
     if (core.network !== network) fail("An RPC observation belongs to a different network.");
     cores.push(core);
@@ -536,7 +536,7 @@ export function reconcileGenesisRpcEvidence({ network, observations, expected })
     providerAgreement: Object.freeze({
       agreeingSources: observations.length,
       providerIds: Object.freeze(Array.from(providerIds)),
-      operatorIds: Object.freeze(Array.from(operatorIds)),
+      sourceIds: Object.freeze(Array.from(sourceIds)),
     }),
   });
 }
