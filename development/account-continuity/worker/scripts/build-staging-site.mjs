@@ -174,6 +174,11 @@ const genesisProgrammeFiles = [
   ["preview/supporters/supporters.js", "supporters/supporters.js"],
   ["preview/supporters/wallet-provider-adapters.mjs", "supporters/wallet-provider-adapters.mjs"],
   ["preview/assets/genesis-member-dna.svg", "assets/genesis-member-dna.svg"],
+  ["preview/assets/wallet-logos/metamask.svg", "assets/wallet-logos/metamask.svg"],
+  ["preview/assets/wallet-logos/trust.svg", "assets/wallet-logos/trust.svg"],
+  ["preview/assets/wallet-logos/okx.svg", "assets/wallet-logos/okx.svg"],
+  ["preview/assets/wallet-logos/tokenpocket.svg", "assets/wallet-logos/tokenpocket.svg"],
+  ["preview/assets/wallet-logos/coin98.svg", "assets/wallet-logos/coin98.svg"],
 ];
 for (const [sourcePath, destinationPath] of genesisProgrammeFiles) {
   const source = join(repoRoot, sourcePath);
