@@ -1059,6 +1059,49 @@ async function retryPendingGenesisPaymentSettlements(db, env, settlementCutoff) 
   };
 }
 
+/**
+ * Persist the monitor heartbeat and cross-chain scan watermark. HEALTHY is
+ * derived only when all three independent scanners report a caught-up cycle.
+ */
+export async function persistGenesisMonitorHealth(db, cycle) {
+  if (!db || !cycle || !Number.isSafeInteger(cycle.cycleStartedAt)) {
+    throw new TypeError("A Genesis monitor database and exact cycle-start timestamp are required.");
+  }
+  if (cycle.phase === "RUNNING") {
+    return db.prepare(
+      "UPDATE genesis_treasury_monitor_health SET status='RUNNING',last_cycle_started_at=?,updated_at=? WHERE singleton=1"
+    ).bind(cycle.cycleStartedAt, cycle.cycleStartedAt).run();
+  }
+  if (!Number.isSafeInteger(cycle.cycleCompletedAt)) {
+    throw new TypeError("A completed Genesis monitor cycle requires an exact completion timestamp.");
+  }
+  const networks = [cycle.ethereum, cycle.tron, cycle.solana];
+  const caughtUp = networks.map((network) =>
+    network && network.status === "SCANNED" && network.caughtUp === true
+  );
+  const status = caughtUp.every(Boolean) ? "HEALTHY" : "DEGRADED";
+  const occurredAt = (network) =>
+    Number.isSafeInteger(network && network.headOccurredAt) && network.headOccurredAt > 0
+      ? network.headOccurredAt : null;
+  return db.prepare(
+    "UPDATE genesis_treasury_monitor_health SET status=?,last_cycle_completed_at=?," +
+    "ethereum_caught_up=?,tron_caught_up=?,solana_caught_up=?," +
+    "ethereum_head_occurred_at=?,tron_head_occurred_at=?,solana_head_occurred_at=?," +
+    "settlement_queue_deferred=?,updated_at=? WHERE singleton=1"
+  ).bind(
+    status,
+    cycle.cycleCompletedAt,
+    caughtUp[0] ? 1 : 0,
+    caughtUp[1] ? 1 : 0,
+    caughtUp[2] ? 1 : 0,
+    occurredAt(cycle.ethereum),
+    occurredAt(cycle.tron),
+    occurredAt(cycle.solana),
+    cycle.settlementQueueDeferred === true ? 1 : 0,
+    cycle.cycleCompletedAt
+  ).run();
+}
+
 export async function runGenesisReceiptMonitor(env) {
   const stagingApproved = env && env.ENVIRONMENT === "staging";
   const productionApproved = env && env.ENVIRONMENT === "production" &&
@@ -1071,9 +1114,7 @@ export async function runGenesisReceiptMonitor(env) {
   const db = env.SUPPORTERS_DB;
   if (!db) fail("the isolated Genesis database is not bound.");
   const cycleStartedAt = Math.floor(Date.now() / 1000);
-  await db.prepare(
-    "UPDATE genesis_treasury_monitor_health SET status='RUNNING',last_cycle_started_at=?,updated_at=? WHERE singleton=1"
-  ).bind(cycleStartedAt, cycleStartedAt).run();
+  await persistGenesisMonitorHealth(db, { phase: "RUNNING", cycleStartedAt });
   for (const network of ["ethereum", "tron", "solana"]) {
     const configuredAsset = MAINNET_USDT_CONFIG[network];
     const canonicalAsset = GENESIS_USDT_ASSETS[network];
@@ -1121,24 +1162,15 @@ export async function runGenesisReceiptMonitor(env) {
   const qualifyingPaymentsSettled = retryResult.qualifyingPaymentsSettled;
   const allowanceCreditApplied = BigInt(retryResult.allowanceCreditAppliedUsdtBaseUnits || "0");
   const cycleCompletedAt = Math.floor(Date.now() / 1000);
-  const monitorStatus = scansComplete ? "HEALTHY" : "DEGRADED";
-  await db.prepare(
-    "UPDATE genesis_treasury_monitor_health SET status=?,last_cycle_completed_at=?," +
-    "ethereum_caught_up=?,tron_caught_up=?,solana_caught_up=?," +
-    "ethereum_head_occurred_at=?,tron_head_occurred_at=?,solana_head_occurred_at=?," +
-    "settlement_queue_deferred=?,updated_at=? WHERE singleton=1"
-  ).bind(
-    monitorStatus,
+  await persistGenesisMonitorHealth(db, {
+    phase: "COMPLETED",
+    cycleStartedAt,
     cycleCompletedAt,
-    ethereum.status === "SCANNED" && ethereum.caughtUp === true ? 1 : 0,
-    tron.status === "SCANNED" && tron.caughtUp === true ? 1 : 0,
-    solana.status === "SCANNED" && solana.caughtUp === true ? 1 : 0,
-    Number.isSafeInteger(ethereum.headOccurredAt) ? ethereum.headOccurredAt : null,
-    Number.isSafeInteger(tron.headOccurredAt) ? tron.headOccurredAt : null,
-    Number.isSafeInteger(solana.headOccurredAt) ? solana.headOccurredAt : null,
-    retryResult.settlementQueueDeferred ? 1 : 0,
-    cycleCompletedAt
-  ).run();
+    ethereum,
+    tron,
+    solana,
+    settlementQueueDeferred: retryResult.settlementQueueDeferred,
+  });
   return {
     status: [ethereum, tron, solana].every((network) => network.status === "SCANNED") ? "SCANNED" : "PARTIAL",
     receiptsRecorded: ethereum.receipts + tron.receipts + solana.receipts,
