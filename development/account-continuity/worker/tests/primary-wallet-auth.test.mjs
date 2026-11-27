@@ -100,17 +100,55 @@ test("primary-wallet API verifies one-use challenges and never treats a wallet c
   assert.match(worker, /walletAccountCreated/);
 });
 
-test("login popup explains wallet identity, self-custody recovery and the limited legacy path", async () => {
+test("wallet-first account popup requires explicit recovery and legal consent", async () => {
   const ui = await readFile(
     new URL("../../prototype/account-ui.js", import.meta.url),
     "utf8",
   );
   assert.match(ui, /Sign in with wallet/);
-  assert.match(ui, /Why wallet\?/);
+  assert.match(ui, /New to AstroCrown\?/);
+  assert.match(ui, /Create an account/);
+  assert.match(ui, /Already have an account\?/);
   assert.match(ui, /Lost your wallet\?/);
-  assert.match(ui, /we cannot retrieve, reset or recreate a lost wallet/i);
   assert.match(ui, /same wallet and address/i);
   assert.match(ui, /Never enter or send your seed phrase or private key/i);
-  assert.match(ui, /Existing legacy passkey test accounts/);
+  assert.match(ui, /account-wallet-loss-accepted/);
+  assert.match(ui, /account-wallet-terms-accepted/);
+  assert.match(ui, /walletLossAcknowledged/);
+  assert.match(ui, /termsAccepted/);
+  assert.match(ui, /eip6963:requestProvider/);
+  assert.match(ui, /wallet_requestPermissions/);
+  assert.match(ui, /Choose the wallet address for this AstroCrown account/);
   assert.match(ui, /Create account with wallet/);
+  assert.doesNotMatch(ui, /Existing legacy passkey test accounts|Continue with legacy passkey|Recover a legacy passkey account|passkey authentication/i);
+});
+
+test("server stores both versioned consent acknowledgements and does not retain passkey authentication", async () => {
+  const worker = await readFile(new URL("../src/index.js", import.meta.url), "utf8");
+  assert.match(worker, /walletLossAcknowledged !== true/);
+  assert.match(worker, /walletLossNoticeVersion !== WALLET_LOSS_NOTICE_VERSION/);
+  assert.match(worker, /termsAccepted !== true/);
+  assert.match(worker, /termsVersion !== TERMS_VERSION/);
+  assert.match(worker, /wallet_loss_notice_version/);
+  assert.match(worker, /wallet_loss_accepted_at/);
+  assert.match(worker, /transactionAuthorized: false/);
+  assert.doesNotMatch(worker, /auth_passkeys|auth_recovery_keys|authenticated_credential_id|generateRegistrationOptions|\/api\/passkeys\//);
+  const migration = await readFile(
+    new URL("../migrations/0007_wallet-only-account-and-consent.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(migration, /ALTER TABLE auth_accounts ADD COLUMN wallet_loss_notice_version/);
+  assert.match(migration, /ALTER TABLE auth_accounts ADD COLUMN wallet_loss_accepted_at/);
+  assert.match(migration, /DROP TABLE IF EXISTS auth_passkeys/);
+  assert.match(migration, /DROP TABLE IF EXISTS auth_recovery_keys/);
+  assert.match(migration, /auth_admin_governance_audit/);
+});
+
+test("Genesis profile routes require the same authenticated AstroCrown primary-wallet account", async () => {
+  const worker = await readFile(new URL("../src/index.js", import.meta.url), "utf8");
+  const genesis = await readFile(new URL("../src/genesis.js", import.meta.url), "utf8");
+  assert.match(worker, /handleGenesisWalletApi\(request, env, config, account && primaryWallet/);
+  assert.match(genesis, /handleGenesisWalletApi\(request, env, config, accountIdentity = null\)/);
+  assert.match(genesis, /identityId = accountIdentity\.accountId/);
+  assert.doesNotMatch(genesis, /genesis_wallet_sessions|requestCookie|\/api\/genesis\/identity\//);
 });
