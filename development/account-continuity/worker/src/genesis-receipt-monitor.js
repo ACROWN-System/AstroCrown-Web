@@ -326,6 +326,8 @@ async function scanEthereum(db, sources, treasuryAddress, env) {
   const right = logPages[1].map(ethereumLogIdentity);
   if (JSON.stringify(left) !== JSON.stringify(right)) fail("Ethereum independent RPC sources disagree on incoming USDT Transfer logs.");
   let receipts = 0;
+  let qualifyingPaymentsSettled = 0;
+  let allowanceCreditApplied = 0n;
   for (let index = 0; index < logPages[0].length; index += 1) {
     const log = logPages[0][index];
     if (!log || log.removed) fail("Ethereum log was removed or malformed.");
@@ -361,11 +363,21 @@ async function scanEthereum(db, sources, treasuryAddress, env) {
       return { providerId: source.id, sourceId: source.sourceId, evidence };
     }));
     const reconciled = reconcileGenesisRpcEvidence({ network: "ethereum", observations, expected });
-    await persistVerifiedReceipt(db, reconciled, env);
+    const persisted = await persistVerifiedReceipt(db, reconciled, env);
     receipts += 1;
+    if (persisted.settlement?.status === "CONFIRMED") {
+      qualifyingPaymentsSettled += 1;
+      allowanceCreditApplied += BigInt(persisted.settlement.allowanceCreditUsdtBaseUnits || "0");
+    }
   }
   await setCursor(db, "ethereum", "mainnet", to.toString());
-  return { initialized: false, receipts, scannedThrough: to.toString() };
+  return {
+    initialized: false,
+    receipts,
+    qualifyingPaymentsSettled,
+    allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
+    scannedThrough: to.toString()
+  };
 }
 
 const BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -567,6 +579,8 @@ async function scanTron(db, sources, treasuryAddress, env) {
   if (heads[0].number <= previous) return { initialized: false, receipts: 0, scannedThrough: String(previous) };
   const end = Math.min(heads[0].number, previous + TRON_BLOCK_BATCH);
   let receiptsRecorded = 0;
+  let qualifyingPaymentsSettled = 0;
+  let allowanceCreditApplied = 0n;
   for (let batchStart = previous + 1; batchStart <= end; batchStart += TRON_BLOCK_READ_CONCURRENCY) {
     const heights = Array.from(
       { length: Math.min(TRON_BLOCK_READ_CONCURRENCY, end - batchStart + 1) },
@@ -613,14 +627,24 @@ async function scanTron(db, sources, treasuryAddress, env) {
             delete observation.sourceIndex;
           }
           const reconciled = reconcileGenesisRpcEvidence({ network: "tron", observations, expected });
-          await persistVerifiedReceipt(db, reconciled, env);
+          const persisted = await persistVerifiedReceipt(db, reconciled, env);
           receiptsRecorded += 1;
+          if (persisted.settlement?.status === "CONFIRMED") {
+            qualifyingPaymentsSettled += 1;
+            allowanceCreditApplied += BigInt(persisted.settlement.allowanceCreditUsdtBaseUnits || "0");
+          }
         }
       }
     }
   }
   await setCursor(db, "tron", "mainnet", String(end));
-  return { initialized: false, receipts: receiptsRecorded, scannedThrough: String(end) };
+  return {
+    initialized: false,
+    receipts: receiptsRecorded,
+    qualifyingPaymentsSettled,
+    allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
+    scannedThrough: String(end)
+  };
 }
 
 async function solanaMintMetadata(source) {
@@ -821,6 +845,8 @@ async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenA
 
 async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, rows, pendingLatest, pendingUntil, currentTreasuryTokenAccounts, env) {
   let receipts = 0;
+  let qualifyingPaymentsSettled = 0;
+  let allowanceCreditApplied = 0n;
   for (const row of rows) {
     if (row.err !== null) continue;
     const observations = await Promise.all(sources.map(async (source) => {
@@ -863,8 +889,12 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
         }),
       }));
       const reconciled = reconcileGenesisRpcEvidence({ network: "solana", observations: parsed, expected });
-      await persistVerifiedReceipt(db, reconciled, env);
+      const persisted = await persistVerifiedReceipt(db, reconciled, env);
       receipts += 1;
+      if (persisted.settlement?.status === "CONFIRMED") {
+        qualifyingPaymentsSettled += 1;
+        allowanceCreditApplied += BigInt(persisted.settlement.allowanceCreditUsdtBaseUnits || "0");
+      }
     }
   }
 
@@ -874,7 +904,14 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
   } else {
     await setCursor(db, "solana", tokenAccount, pendingLatest || (cursor && cursor.cursor_value) || "", null, null, null);
   }
-  return { receipts, nextCursor: pendingLatest, morePages: Boolean(nextBefore), initialized: !cursor };
+  return {
+    receipts,
+    qualifyingPaymentsSettled,
+    allowanceCreditAppliedUsdtBaseUnits: allowanceCreditApplied.toString(),
+    nextCursor: pendingLatest,
+    morePages: Boolean(nextBefore),
+    initialized: !cursor
+  };
 }
 
 async function scanSolana(db, sources, treasuryAddress, env) {
@@ -890,6 +927,8 @@ async function scanSolana(db, sources, treasuryAddress, env) {
     fail("Solana independent RPC sources disagree on the treasury USDT token accounts.");
   }
   let receipts = 0;
+  let qualifyingPaymentsSettled = 0;
+  let allowanceCreditApplied = 0n;
   let processedAccounts = 0;
   const monitorCursor = await getCursor(db, "solana", "__monitor_initialized__");
   const bootstrapping = !monitorCursor;
@@ -923,6 +962,8 @@ async function scanSolana(db, sources, treasuryAddress, env) {
       db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts, env
     );
     receipts += result.receipts;
+    qualifyingPaymentsSettled += result.qualifyingPaymentsSettled || 0;
+    allowanceCreditApplied += BigInt(result.allowanceCreditAppliedUsdtBaseUnits || "0");
     processedAccounts += 1;
   }
   if (bootstrapping) await setCursor(db, "solana", "__monitor_initialized__", "1");
