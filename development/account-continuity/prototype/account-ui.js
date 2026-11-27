@@ -703,7 +703,7 @@
         '<p>Use the wallet provider’s own recovery process or a backup you created offline to restore the <strong>same wallet and address</strong>. If you permanently lose access to that wallet and every way of restoring it, access to the associated AstroCrown account is permanently lost. AstroCrown staff and administrators cannot bypass wallet proof or move the account to a different wallet.</p>' +
         '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
       '</details>' +
-      '<details class="account-legacy-auth">' +
+      '<details class="account-legacy-auth"' + (workerStagingMode ? '' : ' open') + '>' +
         '<summary id="account-legacy-passkey-summary">Existing legacy passkey test accounts</summary>' +
         '<p class="account-provider-note">This access path is retained only for older staging test accounts created before wallet-first identity was implemented.</p>' +
         '<button class="account-secondary" type="button" id="account-passkey-signin"' +
@@ -713,8 +713,22 @@
   }
 
   function renderCreate() {
-    var legacyPasskeyCreate = workerStagingMode ? "" : 
-      "      '<details class=\"account-legacy-auth\" id=\"account-legacy-passkey-create\">' +\n        '<summary id=\"account-legacy-passkey-create-summary\">Create an older passkey test account (legacy only)</summary>' +\n        '<p class=\"account-provider-note\">This is retained for automated testing and older development records. New AstroCrown accounts should use a primary wallet.</p>' +\n        '<form id=\"account-create-form\" class=\"account-form\" autocomplete=\"off\">' +\n          '<label class=\"account-field\" for=\"account-referral-id\">Referral ID (Optional)' +\n            '<input id=\"account-referral-id\" name=\"referralId\" type=\"text\" autocomplete=\"off\" maxlength=\"64\" autocapitalize=\"characters\" spellcheck=\"false\" placeholder=\"Enter referral ID...\">' +\n          '</label>' +\n          '<label class=\"account-consent account-terms-consent\" for=\"account-terms-accepted\">' +\n            '<input id=\"account-terms-accepted\" name=\"termsAccepted\" type=\"checkbox\" required>' +\n            '<span>By proceeding, you agree to AstroCrown’s <a href=\"./account-continuity/prototype/terms-of-use.html\" target=\"_blank\" rel=\"noopener noreferrer\">Terms of Use</a> &amp; <a href=\"./account-continuity/prototype/privacy-policy.html\" target=\"_blank\" rel=\"noopener noreferrer\">Privacy Policy</a>.</span>' +\n          '</label>' +\n          '<p class=\"account-provider-note\">Legacy WebAuthn passkey registration for a pre-wallet test path. Do not create a new legacy account for ordinary use.</p>' +\n          '<button class=\"account-secondary\" type=\"submit\"' + (browserPreviewMode ? ' disabled' : '') + '>Create legacy passkey test account</button>' +\n        '</form>' +\n      '</details>';";
+    var legacyPasskeyCreate = workerStagingMode ? "" :
+      '<details class="account-legacy-auth" id="account-legacy-passkey-create" open>' +
+        '<summary id="account-legacy-passkey-create-summary">Create an older passkey test account (legacy only)</summary>' +
+        '<p class="account-provider-note">This is retained for automated testing and older development records. New AstroCrown accounts should use a primary wallet.</p>' +
+        '<form id="account-create-form" class="account-form" autocomplete="off">' +
+          '<label class="account-field" for="account-referral-id">Referral ID (Optional)' +
+            '<input id="account-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
+          '</label>' +
+          '<label class="account-consent account-terms-consent" for="account-terms-accepted">' +
+            '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
+            '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
+          '</label>' +
+          '<p class="account-provider-note">Legacy WebAuthn passkey registration for a pre-wallet test path. Do not create a new legacy account for ordinary use.</p>' +
+          '<button class="account-secondary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create legacy passkey test account</button>' +
+        '</form>' +
+      '</details>';
     content.innerHTML = renderTabs("create") + renderDevelopmentNotice() +
       '<p class="account-dialog-description">Your primary wallet is your AstroCrown identity. Sign a short, one-time message to create your account. No transaction or token approval is requested.</p>' +
       '<form id="account-wallet-create-form" class="account-form" autocomplete="off">' +
