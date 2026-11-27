@@ -39,6 +39,17 @@ test("RPC source configuration requires HTTPS, distinct origins and distinct ope
   assert.equal(pair[1].operatorId, "operator-b");
   assert.notEqual(pair[0].origin, pair[1].origin);
 
+  const tronPair = prepareGenesisRpcPair({
+    ...rpcEnvironment("tron"),
+    GENESIS_TRON_RPC_A_API_KEY: "test-tron-key",
+  }, "tron");
+  assert.equal(tronPair[0].apiKey, "test-tron-key");
+  assert.equal(tronPair[1].apiKey, "");
+  assert.throws(() => prepareGenesisRpcPair({
+    ...rpcEnvironment("tron"),
+    GENESIS_TRON_RPC_A_API_KEY: "invalid" + String.fromCharCode(10) + "key",
+  }, "tron"), /API key is invalid/);
+
   const sameOrigin = {
     ...rpcEnvironment(),
     GENESIS_ETHEREUM_RPC_B_URL: "https://rpc-a.example.test/second-path",
