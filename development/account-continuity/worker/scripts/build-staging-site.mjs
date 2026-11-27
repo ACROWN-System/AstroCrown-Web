@@ -107,8 +107,8 @@ for (const relativePath of allowlist) {
     await writeFile(destination, html, "utf8");
   } else if (relativePath.endsWith("/account-ui.js")) {
     let js = await readFile(source, "utf8");
-    const original = '  var liveTestMode = queryParams.get("account-live-test") === "1" &&\\n    window.location.protocol === "https:" && liveTestHost;\\n  var browserPreviewMode = forceBrowserDemo ||\\n    (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);';
-    const revised = '  var liveTestMode = queryParams.get("account-live-test") === "1" &&\\n    window.location.protocol === "https:" && liveTestHost;\\n  var runtimeMarker = document.querySelector(\\'meta[name="astro-account-runtime"]\\');\\n  var workerStagingMode = Boolean(runtimeMarker && runtimeMarker.content === "worker-staging" &&\\n    window.location.protocol === "https:");\\n  var browserPreviewMode = forceBrowserDemo ||\\n    (!liveTestMode && !workerStagingMode && loopbackHosts.indexOf(window.location.hostname) === -1);';
+    const original = '  var liveTestMode = queryParams.get("account-live-test") === "1" &&\n    window.location.protocol === "https:" && liveTestHost;\n  var browserPreviewMode = forceBrowserDemo ||\n    (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);';
+    const revised = '  var liveTestMode = queryParams.get("account-live-test") === "1" &&\n    window.location.protocol === "https:" && liveTestHost;\n  var runtimeMarker = document.querySelector(\'meta[name="astro-account-runtime"]\');\n  var workerStagingMode = Boolean(runtimeMarker && runtimeMarker.content === "worker-staging" &&\n    window.location.protocol === "https:");\n  var browserPreviewMode = forceBrowserDemo ||\n    (!liveTestMode && !workerStagingMode && loopbackHosts.indexOf(window.location.hostname) === -1);';
     if (!js.includes(original)) {
       throw new Error("Account UI runtime guard changed; refusing to publish without review.");
     }
