@@ -57,7 +57,7 @@ test("remote wallet-only smoke checks are not represented as full account qualif
   assert.match(deployScript, /not full remote account qualification/);
   assert.match(deployScript, /primary-wallet challenge/);
   assert.match(deployScript, /wallet-only sign-in entry point/);
-  assert.match(deployScript, /same authenticated AstroCrown account session/);
+  assert.match(deployScript, /existing AstroCrown account session/);
   assert.match(deployScript, /retired passkey endpoint is still reachable/);
   assert.match(deployScript, /both consents/);
   assert.match(deployScript, /optional secondary-address linking/);
