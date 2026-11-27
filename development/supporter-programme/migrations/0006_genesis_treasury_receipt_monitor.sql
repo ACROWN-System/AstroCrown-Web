@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS genesis_treasury_receipts (
   finality_status TEXT NOT NULL CHECK (finality_status IN ('FINALIZED', 'SOLIDIFIED')),
   verification_method TEXT NOT NULL CHECK (verification_method = 'TWO_INDEPENDENT_RPC_SOURCES'),
   rpc_provider_ids_json TEXT NOT NULL,
-  rpc_operator_ids_json TEXT NOT NULL,
+  rpc_source_ids_json TEXT NOT NULL,
   evidence_digest TEXT NOT NULL CHECK (length(evidence_digest) = 64),
   evidence_json TEXT NOT NULL,
   attribution_status TEXT NOT NULL CHECK (attribution_status IN ('MATCHED', 'UNMATCHED', 'AMBIGUOUS')),
