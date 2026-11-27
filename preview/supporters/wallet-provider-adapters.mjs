@@ -332,6 +332,97 @@ export function discoverDirectSolanaWallets(win) {
   return unique.map((entry) => createSolanaProviderAdapter(entry)).filter(Boolean);
 }
 
+
+const WALLET_NETWORK_ORDER = Object.freeze(["ethereum", "tron", "solana"]);
+
+export const PRIMARY_WALLET_BRANDS = Object.freeze([
+  Object.freeze({ id: "metamask", name: WALLET_NAMES.metamask }),
+  Object.freeze({ id: "trust-wallet", name: WALLET_NAMES["trust-wallet"] }),
+  Object.freeze({ id: "okx-wallet", name: WALLET_NAMES["okx-wallet"] }),
+  Object.freeze({ id: "bitget-wallet", name: WALLET_NAMES["bitget-wallet"] }),
+  Object.freeze({ id: "tokenpocket", name: WALLET_NAMES.tokenpocket }),
+  Object.freeze({ id: "coin98", name: WALLET_NAMES.coin98 }),
+]);
+
+function injectedEvmCandidates(win) {
+  const candidates = [];
+  const injected = win && win.ethereum;
+  if (injected && Array.isArray(injected.providers)) {
+    injected.providers.forEach((provider) => candidates.push(provider));
+  } else if (injected && typeof injected.request === "function") {
+    candidates.push(injected);
+  }
+  discoverDirectEvmProviders(win).forEach((entry) => candidates.push(entry.provider));
+  return uniqueEntries(candidates.map((provider) => ({
+    provider,
+    walletId: identifyWalletCandidate({
+      name: provider && (provider.name || provider.walletName) || "",
+      rdns: provider && provider.rdns || "",
+    }, provider || {}),
+  }))).filter((entry) => entry.walletId && typeof entry.provider.request === "function");
+}
+
+/**
+ * Build one wallet-brand-first provider catalogue for account authentication and
+ * Genesis profile proofs. The catalogue reports only providers actually detected
+ * in this browser; a brand label never substitutes for network/address proof.
+ */
+export function discoverPrimaryWalletProviders(win) {
+  const byId = new Map(PRIMARY_WALLET_BRANDS.map((brand) => [
+    brand.id,
+    { ...brand, networks: { ethereum: [], tron: [], solana: [] } },
+  ]));
+
+  const add = (network, walletId, provider, metadata = {}) => {
+    if (!walletId || !byId.has(walletId) || !provider) return;
+    const list = byId.get(walletId).networks[network];
+    if (list.some((entry) => entry.provider === provider)) return;
+    list.push({
+      walletId,
+      network,
+      provider,
+      ...metadata,
+    });
+  };
+
+  injectedEvmCandidates(win).forEach((entry) => {
+    add("ethereum", entry.walletId, entry.provider);
+  });
+  discoverDirectTronProviders(win).forEach((entry) => {
+    add("tron", entry.walletId, entry.provider, {
+      tronWeb: entry.tronWeb,
+      connectMethod: entry.connectMethod,
+    });
+  });
+  discoverDirectSolanaWallets(win).forEach((entry) => {
+    add("solana", entry.genesisWalletId, entry, { adapter: entry });
+  });
+
+  return PRIMARY_WALLET_BRANDS.map((brand) => {
+    const detected = byId.get(brand.id);
+    const networks = WALLET_NETWORK_ORDER.filter((network) => detected.networks[network].length > 0);
+    return Object.freeze({
+      id: detected.id,
+      name: detected.name,
+      networks: Object.freeze(networks),
+      providers: Object.freeze({
+        ethereum: Object.freeze(detected.networks.ethereum.slice()),
+        tron: Object.freeze(detected.networks.tron.slice()),
+        solana: Object.freeze(detected.networks.solana.slice()),
+      }),
+      ambiguousNetworks: Object.freeze(WALLET_NETWORK_ORDER.filter((network) => detected.networks[network].length > 1)),
+    });
+  });
+}
+
+export function selectedPrimaryWalletProvider(catalogue, walletId, network) {
+  if (!Array.isArray(catalogue) || !WALLET_NETWORK_ORDER.includes(network)) return null;
+  const brand = catalogue.find((entry) => entry.id === walletId);
+  if (!brand || !Array.isArray(brand.networks) || !brand.networks.includes(network)) return null;
+  const providers = brand.providers && brand.providers[network];
+  return Array.isArray(providers) && providers.length === 1 ? providers[0] : null;
+}
+
 export function isSolanaMainnet(account) {
   return Boolean(account && Array.isArray(account.chains) &&
     account.chains.some((chain) => chain === "solana:mainnet" || chain === "solana:mainnet-beta"));
