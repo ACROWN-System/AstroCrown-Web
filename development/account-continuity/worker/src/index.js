@@ -1151,7 +1151,7 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
           "INSERT INTO auth_primary_wallets(wallet_id,account_id,address,chain_id,created_at,active,proof_type) VALUES(?,?,?,?,?,1,'eip191-personal-sign')"
         ).bind(walletId, accountPrimaryId, address, Number(challenge.chain_id), created),
         db.prepare(
-          "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+          "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,?,?)"
         ).bind(tokenHash, accountPrimaryId, sessionRef, now, expires),
         db.prepare(
           "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'account_created_with_primary_wallet',?,'wallet_signature_verified=true;transaction_authorized=false')"
@@ -1178,7 +1178,7 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
   const timestamp = new Date().toISOString();
   await db.batch([
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,?,?)"
     ).bind(tokenHash, identity.account_id, sessionRef, now, expires),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'primary_wallet_sign_in',?,'wallet_signature_verified=true;transaction_authorized=false')"
