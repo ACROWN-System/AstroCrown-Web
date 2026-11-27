@@ -1149,8 +1149,8 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         if (!network || item.asset !== "USDT" ||
             typeof item.transactionHash !== "string" || !network.hash.test(item.transactionHash) ||
             typeof item.amount !== "string" || !/^[0-9]+(?:\.[0-9]{1,6})?$/.test(item.amount) ||
-            typeof item.senderAddress !== "string" || typeof item.receivingAddress !== "string") {
-          return;
+            typeof item.senderAddress !== "string" || !item.senderAddress || item.senderAddress.length > 128 ||
+            typeof item.receivingAddress !== "string" || !item.receivingAddress || item.receivingAddress.length > 128) {
         }
         var expectedPath = item.network === "ethereum"
           ? "/tx/" + item.transactionHash
@@ -1162,8 +1162,9 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
           explorer = new URL(item.explorerUrl);
         } catch (_) {
           return;
-        }
-        if (explorer.origin !== network.origin || explorer.pathname + explorer.hash !== expectedPath) return;
+        if (explorer.protocol !== "https:" || explorer.username || explorer.password ||
+            explorer.search || explorer.origin !== network.origin ||
+            explorer.pathname + explorer.hash !== expectedPath) return;
 
         var row = document.createElement("article");
         row.className = "receipt-row";
@@ -1192,11 +1193,15 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         addReceiptField("AstroCrown receiving wallet", item.receivingAddress);
         addReceiptField("Transaction hash / signature", item.transactionHash);
         addReceiptField("Transfer index · finality", String(item.transferIndex) + " · " + String(item.finalityStatus || "VERIFIED"));
+        if (typeof item.verifiedAt === "string") {
+          var verifiedDate = new Date(item.verifiedAt);
+          if (!Number.isNaN(verifiedDate.getTime())) addReceiptField("Verified at (UTC)", verifiedDate.toISOString().replace("T", " ").replace(".000Z", " UTC"));
+        }
 
         var actions = document.createElement("div");
         actions.className = "receipt-actions";
         var status = document.createElement("small");
-        status.textContent = "Independently checked by two RPC operators · Receipt only; no entitlement implied";
+        status.textContent = "Two separately configured RPC sources agree · Receipt only; no entitlement implied";
         var link = document.createElement("a");
         link.href = explorer.toString();
         link.target = "_blank";
