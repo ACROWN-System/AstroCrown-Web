@@ -47,6 +47,17 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   var supporterMember = null;
   var purchaseInactivityInterval = null;
   var lastConnectedNetwork = null;
+  var selectedGenesisWalletBrand = "";
+  var genesisWalletBrandGrid = document.getElementById("genesis-wallet-brand-grid");
+  var genesisWalletBrandState = document.getElementById("genesis-wallet-brand-state");
+  var genesisWalletBrandPresentation = {
+    metamask: { name: "MetaMask", logo: "https://www.web3icons.com/svgs/wallets/branded/metamask.svg?v=4.0.58", initials: "MM" },
+    "trust-wallet": { name: "Trust Wallet", logo: "https://www.web3icons.com/svgs/wallets/branded/trust.svg?v=4.0.58", initials: "TW" },
+    "okx-wallet": { name: "OKX Wallet", logo: "https://www.web3icons.com/svgs/wallets/branded/okx.svg?v=4.0.58", initials: "OKX" },
+    "bitget-wallet": { name: "Bitget Wallet", logo: "https://web3.bitget.com/bgwactivity-static/_next/static/media/Bitget-Wallet-Logomark.07wqb3-5_b2ml.svg", initials: "BG" },
+    tokenpocket: { name: "TokenPocket", logo: "https://www.web3icons.com/svgs/wallets/branded/token-pocket.svg?v=4.0.58", initials: "TP" },
+    coin98: { name: "Coin98", logo: "https://www.web3icons.com/svgs/wallets/branded/coin98.svg?v=4.0.58", initials: "C98" }
+  };
 
   if (!solanaSelect || !evmSelect || !tronSelect || !pseudonymInput) return;
 
@@ -146,24 +157,28 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   function renderEvmChoices() {
     var previous = evmSelect.value;
     evmSelect.textContent = "";
+    var visible = Array.from(evmProviders.entries()).filter(function (entry) {
+      return selectedGenesisWalletBrand && entry[1].walletId === selectedGenesisWalletBrand;
+    });
     var placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = evmProviders.size ? "Select an EVM wallet" : "No EVM browser wallet detected";
+    placeholder.textContent = !selectedGenesisWalletBrand
+      ? "Choose your wallet brand first"
+      : visible.length ? "Select the " + (visible[0][1].name || "wallet") + " Ethereum account"
+        : "This wallet has no Ethereum provider detected";
     evmSelect.appendChild(placeholder);
-
-    evmProviders.forEach(function (entry, id) {
+    visible.forEach(function (entry) {
       var option = document.createElement("option");
-      option.value = id;
-      option.textContent = entry.name;
+      option.value = entry[0];
+      option.textContent = entry[1].name;
       evmSelect.appendChild(option);
     });
-
-    if (previous && evmProviders.has(previous)) evmSelect.value = previous;
-    evmSelect.disabled = evmProviders.size === 0;
-    evmConnectButton.disabled = evmProviders.size === 0 || Boolean(connectedEvm);
+    if (previous && visible.some(function (entry) { return entry[0] === previous; })) evmSelect.value = previous;
+    evmSelect.disabled = !selectedGenesisWalletBrand || visible.length === 0;
+    evmConnectButton.disabled = evmSelect.disabled || Boolean(connectedEvm);
     evmClearButton.disabled = !connectedEvm;
+    updateGenesisWalletBrandCards();
   }
-
   function updateConnectedEvmAccount(accounts) {
     if (!connectedEvm) return;
     var account = Array.isArray(accounts) ? accounts.find(validEvmAddress) : null;
@@ -247,6 +262,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     evmProviders.set(id, entry);
     evmProviderIds.set(provider, id);
     bindEvmEvents(entry);
+    if (!selectedGenesisWalletBrand && walletId) selectedGenesisWalletBrand = walletId;
     renderEvmChoices();
   }
 
@@ -356,24 +372,28 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   function renderSolanaChoices() {
     var previous = solanaSelect.value;
     solanaSelect.textContent = "";
+    var visible = Array.from(solanaWallets.entries()).filter(function (entry) {
+      return selectedGenesisWalletBrand && entry[1].walletId === selectedGenesisWalletBrand;
+    });
     var option = document.createElement("option");
     option.value = "";
-    option.textContent = solanaWallets.size ? "Select a Solana wallet" : "No Solana browser wallet detected";
+    option.textContent = !selectedGenesisWalletBrand
+      ? "Choose your wallet brand first"
+      : visible.length ? "Select the " + visible[0][1].name + " Solana account"
+        : "This wallet has no Solana provider detected";
     solanaSelect.appendChild(option);
-
-    solanaWallets.forEach(function (wallet, id) {
+    visible.forEach(function (entry) {
       var item = document.createElement("option");
-      item.value = id;
-      item.textContent = wallet.name;
+      item.value = entry[0];
+      item.textContent = entry[1].name;
       solanaSelect.appendChild(item);
     });
-
-    if (previous && solanaWallets.has(previous)) solanaSelect.value = previous;
-    solanaSelect.disabled = solanaWallets.size === 0;
-    solanaConnectButton.disabled = solanaWallets.size === 0 || Boolean(connectedSolanaAccount);
+    if (previous && visible.some(function (entry) { return entry[0] === previous; })) solanaSelect.value = previous;
+    solanaSelect.disabled = !selectedGenesisWalletBrand || visible.length === 0;
+    solanaConnectButton.disabled = solanaSelect.disabled || Boolean(connectedSolanaAccount);
     solanaClearButton.disabled = !connectedSolanaAccount;
+    updateGenesisWalletBrandCards();
   }
-
   function clearSolanaConnection(callWalletDisconnect) {
     var wallet = connectedSolana && connectedSolana.wallet;
     if (callWalletDisconnect && wallet && wallet.features &&
@@ -408,8 +428,11 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       });
       if (duplicate) return;
       var id = "solana-" + (++nextSolanaWalletId);
-      solanaWallets.set(id, wallet);
+      var walletId = wallet.genesisWalletId || identifyWalletCandidate({ name: wallet.name || "" }, wallet.provider || {});
+      if (!walletId) return;
+      solanaWallets.set(id, { wallet: wallet, walletId: walletId, name: walletDisplayName(walletId) });
       registeredIds.push(id);
+      if (!selectedGenesisWalletBrand) selectedGenesisWalletBrand = walletId;
     });
 
     renderSolanaChoices();
@@ -534,22 +557,28 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   function renderTronChoices() {
     var previous = tronSelect.value;
     tronSelect.textContent = "";
+    var visible = Array.from(tronWallets.entries()).filter(function (entry) {
+      return selectedGenesisWalletBrand && entry[1].walletId === selectedGenesisWalletBrand;
+    });
     var option = document.createElement("option");
     option.value = "";
-    option.textContent = tronWallets.size ? "Select a TRON wallet" : "No compatible TRON wallet detected";
+    option.textContent = !selectedGenesisWalletBrand
+      ? "Choose your wallet brand first"
+      : visible.length ? "Select the " + visible[0][1].name + " TRON account"
+        : "This wallet has no TRON provider detected";
     tronSelect.appendChild(option);
-    tronWallets.forEach(function (wallet, id) {
+    visible.forEach(function (entry) {
       var item = document.createElement("option");
-      item.value = id;
-      item.textContent = wallet.name;
+      item.value = entry[0];
+      item.textContent = entry[1].name;
       tronSelect.appendChild(item);
     });
-    if (previous && tronWallets.has(previous)) tronSelect.value = previous;
-    tronSelect.disabled = tronWallets.size === 0;
-    tronConnectButton.disabled = tronWallets.size === 0 || Boolean(connectedTronAddress);
+    if (previous && visible.some(function (entry) { return entry[0] === previous; })) tronSelect.value = previous;
+    tronSelect.disabled = !selectedGenesisWalletBrand || visible.length === 0;
+    tronConnectButton.disabled = tronSelect.disabled || Boolean(connectedTronAddress);
     tronClearButton.disabled = !connectedTronAddress;
+    updateGenesisWalletBrandCards();
   }
-
   function registerTronProvider(info, provider, options) {
     options = options || {};
     if (!supportedTronProvider(provider)) return;
@@ -569,6 +598,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       tronWeb: options.tronWeb || provider.tronWeb || null,
       connectMethod: options.connectMethod || "eth_requestAccounts"
     });
+    if (!selectedGenesisWalletBrand && walletId) selectedGenesisWalletBrand = walletId;
     renderTronChoices();
 
     if (typeof provider.on === "function") {
