@@ -78,7 +78,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "25000000", "25", "0x1111111111111111111111111111111111111111",
             "0xbbb77071149a5F113Df15E78c58518917afa950A", "0x" + "a" * 64, 0,
             '{"blockNumber":"123","blockHash":"0x' + "b" * 64 + '"}', "FINALIZED",
-            "TWO_INDEPENDENT_RPC_OPERATORS", '["a","b"]', '["operator-a","operator-b"]',
+            "TWO_INDEPENDENT_RPC_SOURCES", '["a","b"]', '["operator-a","operator-b"]',
             "a" * 64, '{"creditApplied":false}', "UNMATCHED", None, None, 1, 100, 100,
         )
         sql = (
