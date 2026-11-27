@@ -758,7 +758,7 @@
       roleManagementCard +=
         '<section class="account-dashboard-card account-admin-role-management">' +
           '<h2>Appoint an administrator</h2>' +
-          '<p>Grant the role to an existing AstroCrown user account. The target keeps the same User dashboard and must enrol a wallet they personally control. Use the account identifier shown in that member\'s User dashboard; it is a reference only, not an authenticator. No email, wallet address, passkey credential ID, password or private key is requested.</p>' +
+          '<p>Grant the role to an existing AstroCrown user account. The target keeps the same User dashboard and must enrol a wallet they personally control. Use the account identifier shown in that member\'s User dashboard; it is a reference only, not an authenticator. No email address, password or private key is requested.</p>' +
           '<label class="account-admin-role-field" for="admin-role-grant-account-identifier">Existing member account identifier<input id="admin-role-grant-account-identifier" type="text" maxlength="13" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-…" required></label>' +
           '<label class="account-admin-role-field" for="admin-role-grant-reason">Reason for appointment<input id="admin-role-grant-reason" type="text" maxlength="500" minlength="12" required></label>' +
           (permissionChoices
@@ -1264,12 +1264,7 @@
     });
   }
   closeButton.addEventListener("click", closeDialog);
-  dialog.addEventListener("cancel", function (event) {
-    if (mode === "success" && successKind !== "signin" && !recoveryKeyAcknowledged) {
-      event.preventDefault();
-      showFeedback("Save the one-time offline recovery key and confirm before closing this screen.", "error");
-    }
-  });
+  dialog.addEventListener("cancel", function () {});
   dialog.addEventListener("close", function () {
     showFeedback("", "");
     if (focusBeforeOpen && typeof focusBeforeOpen.focus === "function") focusBeforeOpen.focus();
