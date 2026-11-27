@@ -1257,7 +1257,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         Array.isArray(payload.networks) &&
         payload.networks.length === 3;
       if (!prelaunch) throw new Error("The programme status could not be qualified.");
-      statusElement.textContent = "Programme service connected · PRELAUNCH · Ethereum, Tron and Solana USDT intake is disabled. Do not send funds.";
+      statusElement.textContent = "Programme service connected · PRELAUNCH · USDT intake is disabled on Ethereum (ERC-20), TRON (TRC-20) and Solana (SPL). Do not send funds.";
       statusElement.dataset.state = "closed";
     } catch (_) {
       statusElement.textContent = "Programme service status unavailable · Qualifying payments remain closed. Do not send funds.";
