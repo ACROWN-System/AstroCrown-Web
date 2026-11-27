@@ -755,12 +755,62 @@ export async function handleGenesisWalletApi(request, env, config) {
       const intentId = String(payload.paymentIntentId || "");
       if (!/^gpi_[A-Za-z0-9_-]{20,40}$/.test(intentId)) throw error(400, "The payment intent identifier is invalid.");
       const now = Math.floor(Date.now() / 1000);
-      await expireStaleGenesisPaymentIntents(db, now);
+      const intent = await db.prepare(
+        "SELECT payment_intent_id,identity_id,source_wallet_address_id,network,asset_identifier,treasury_address," +
+        "amount_base_units,created_at,expires_at FROM genesis_payment_intents " +
+        "WHERE payment_intent_id=? AND identity_id=? AND status='OPEN'"
+      ).bind(intentId, identity.identity_id).first();
+      if (!intent) throw error(409, "This qualifying-payment intent is no longer open or does not belong to this Genesis identity.");
+      if (now < Number(intent.expires_at)) {
+        throw error(409, "A payment intent cannot be cancelled before its expiry. Do not cancel an intent after sending USDT.");
+      }
+
+      const monitorHealth = await db.prepare(
+        "SELECT status,last_cycle_completed_at,ethereum_caught_up,tron_caught_up,solana_caught_up," +
+        "ethereum_head_occurred_at,tron_head_occurred_at,solana_head_occurred_at,settlement_queue_deferred " +
+        "FROM genesis_treasury_monitor_health WHERE singleton=1"
+      ).first();
+      const headsPastExpiry = monitorHealth &&
+        Number(monitorHealth.ethereum_head_occurred_at) > Number(intent.expires_at) &&
+        Number(monitorHealth.tron_head_occurred_at) > Number(intent.expires_at) &&
+        Number(monitorHealth.solana_head_occurred_at) > Number(intent.expires_at);
+      const monitorHealthy = monitorHealth &&
+        monitorHealth.status === "HEALTHY" &&
+        Number.isSafeInteger(Number(monitorHealth.last_cycle_completed_at)) &&
+        now - Number(monitorHealth.last_cycle_completed_at) >= 0 &&
+        now - Number(monitorHealth.last_cycle_completed_at) <= 900 &&
+        Number(monitorHealth.ethereum_caught_up) === 1 &&
+        Number(monitorHealth.tron_caught_up) === 1 &&
+        Number(monitorHealth.solana_caught_up) === 1 &&
+        Number(monitorHealth.settlement_queue_deferred) === 0 &&
+        headsPastExpiry;
+      if (!monitorHealthy) {
+        throw error(409, "The payment reservation cannot yet be released. AstroCrown must first complete a recent healthy scan of Ethereum, TRON and Solana beyond this intent's expiry.");
+      }
+
+      const matchingReceipt = await db.prepare(
+        "SELECT receipt_id FROM genesis_treasury_receipts WHERE attribution_status='MATCHED' " +
+        "AND identity_id=? AND source_wallet_address_id=? AND network=? AND asset_identifier=? " +
+        "AND treasury_address=? AND amount_base_units=? AND occurred_at>=? AND occurred_at<=? LIMIT 1"
+      ).bind(
+        intent.identity_id,
+        intent.source_wallet_address_id,
+        intent.network,
+        intent.asset_identifier,
+        intent.treasury_address,
+        intent.amount_base_units,
+        intent.created_at,
+        intent.expires_at
+      ).first();
+      if (matchingReceipt) {
+        throw error(409, "A matching on-chain USDT receipt has already been recorded. Keep the intent open while AstroCrown completes independent settlement; do not cancel it.");
+      }
+
       const result = await db.prepare(
         "UPDATE genesis_payment_intents SET status='CANCELLED' " +
         "WHERE payment_intent_id=? AND identity_id=? AND status='OPEN'"
       ).bind(intentId, identity.identity_id).run();
-      if (Number(result.meta?.changes || 0) !== 1) throw error(409, "This qualifying-payment intent is no longer open or does not belong to this Genesis identity.");
+      if (Number(result.meta?.changes || 0) !== 1) throw error(409, "This qualifying-payment intent changed while cancellation was being checked. Refresh the Genesis profile.");
       return response(200, { cancelled: true, paymentIntentId: intentId });
     }
 
