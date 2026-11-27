@@ -60,7 +60,7 @@ test("remote wallet-only smoke checks are not represented as full account qualif
   assert.match(deployScript, /existing AstroCrown account session/);
   assert.match(deployScript, /retired passkey endpoint is still reachable/);
   assert.match(deployScript, /both consents/);
-  assert.match(deployScript, /optional secondary-address linking/);
+  assert.match(deployScript, /optional secondary-wallet linking/);
   assert.doesNotMatch(deployScript, /ML-DSA|COSE algorithm|legacy passkey compatibility|one-time recovery key/);
 });
 
