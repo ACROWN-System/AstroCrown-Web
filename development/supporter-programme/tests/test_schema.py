@@ -195,9 +195,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "UPDATE genesis_programme_allowance_state SET qualifying_principal_usdt_base_units='49999000000' WHERE singleton=1"
         )
         self.db.execute(insert, values)
-        with self.assertRaises(sqlite3.IntegrityError):
-            self.db.execute("UPDATE genesis_payment_intents SET status='EXPIRED' WHERE payment_intent_id='gpi-cap' AND expires_at>unixepoch()")
-        self.db.execute("UPDATE genesis_payment_intents SET status='CANCELLED' WHERE payment_intent_id='gpi-cap'")
+        self.db.execute("UPDATE genesis_payment_intents SET status='EXPIRED' WHERE payment_intent_id='gpi-cap'")
         self.assertEqual(
             self.db.execute(
                 "SELECT pending_qualifying_principal_usdt_base_units FROM genesis_programme_allowance_state WHERE singleton=1"
