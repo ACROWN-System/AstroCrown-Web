@@ -241,7 +241,7 @@ async function activeAccount(db, request) {
 }
 async function summary(db, account) {
   const now = Math.floor(Date.now() / 1000);
-  const [counts, algorithmRows, role, permissions, wallets, walletHistory, notice] = await Promise.all([
+  const [counts, algorithmRows, role, permissions, wallets, walletHistory, notice, primaryWallet] = await Promise.all([
     db.prepare(
       "SELECT " +
       "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) AS passkey_count, " +
@@ -267,6 +267,9 @@ async function summary(db, account) {
     db.prepare(
       "SELECT notice_id,reason,created_at FROM auth_admin_revocation_notices " +
       "WHERE account_id = ? AND acknowledged_at IS NULL ORDER BY created_at DESC,notice_id DESC LIMIT 1"
+    ).bind(account.account_id).first(),
+    db.prepare(
+      "SELECT address,chain_id,created_at FROM auth_primary_wallets WHERE account_id = ? AND active = 1 LIMIT 1"
     ).bind(account.account_id).first(),
   ]);
   const passkeyAlgorithmIds = (algorithmRows.results || []).map((row) => Number(row.credential_alg));
@@ -296,7 +299,13 @@ async function summary(db, account) {
     authenticated: true,
     email: null,
     accountIdentifier: account.account_identifier,
-    authMethod: "webauthn",
+    authMethod: primaryWallet ? "wallet" : "webauthn",
+    primaryIdentityWallet: primaryWallet ? {
+      address: primaryWallet.address,
+      chainId: Number(primaryWallet.chain_id),
+      createdAt: primaryWallet.created_at,
+      family: "evm-eoa",
+    } : null,
     passkeyCount: Number(counts.passkey_count || 0),
     postQuantumPasskeyCount: Number(counts.pq_count || 0),
     passkeyAlgorithmIds,
@@ -315,7 +324,8 @@ async function summary(db, account) {
     passwordResetAvailable: false,
     sessionExpiresAt: new Date(Number(account.expires_at) * 1000).toISOString(),
     activeSessionCount: Number(counts.session_count || 0),
-    securityManagementAvailable: true,
+    securityManagementAvailable: !primaryWallet,
+    walletSignInAvailable: true,
     scope: "staging-test-account-only",
     role: roleAssigned ? "admin" : "user",
     adminRoleAssigned: roleAssigned,
@@ -414,6 +424,23 @@ function createAdminSiweMessage(config, address, chainId, challengeId, nonce, is
     address,
     "",
     statement,
+    "",
+    "URI: " + config.origin,
+    "Version: 1",
+    "Chain ID: " + String(chainId),
+    "Nonce: " + nonce,
+    "Issued At: " + issuedAt,
+    "Expiration Time: " + expiresAt,
+    "Request ID: " + challengeId,
+  ].join("\n");
+}
+function createPrimaryWalletSignInMessage(config, address, chainId, challengeId, nonce, issuedAt, expiresAt) {
+  const origin = new URL(config.origin);
+  return [
+    origin.protocol.replace(/:$/, "") + "://" + origin.host + " wants you to sign in with your Ethereum account:",
+    address,
+    "",
+    "AstroCrown primary identity wallet sign-in. This off-chain signature authenticates your account only. It does not authorize a blockchain transaction, token approval, asset transfer or spending.",
     "",
     "URI: " + config.origin,
     "Version: 1",
@@ -1627,6 +1654,155 @@ async function verifiedPasskey(response, challenge, config, excluded = []) {
     backedUp: Boolean(result.registrationInfo.credentialBackedUp),
   };
 }
+async function issuePrimaryWalletAuthenticationChallenge(db, env, request, payload, config) {
+  if (Object.keys(payload).length !== 2 ||
+      !Object.prototype.hasOwnProperty.call(payload, "address") ||
+      !Object.prototype.hasOwnProperty.call(payload, "chainId")) {
+    throw fail(400, "Only the connected EVM wallet address and chain ID are accepted.");
+  }
+  const address = normalizeEvmAddress(payload.address);
+  const chainId = validateEvmChainId(payload.chainId);
+  await rateLimit(db, env, request, "primary-wallet-auth-options", "wallet-sign-in", 20, 300);
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + CHALLENGE_SECONDS;
+  const challengeId = b64u(bytes(24));
+  const nonce = hex(bytes(16));
+  const issuedAt = new Date(now * 1000).toISOString();
+  const expiresAt = new Date(expires * 1000).toISOString();
+  const message = createPrimaryWalletSignInMessage(
+    config, address, chainId, challengeId, nonce, issuedAt, expiresAt
+  );
+  await db.prepare(
+    "DELETE FROM auth_primary_wallet_challenges WHERE expires_at <= ? OR (used_at IS NOT NULL AND created_at < ?)"
+  ).bind(now, now - 86400).run();
+  await db.prepare(
+    "INSERT INTO auth_primary_wallet_challenges(challenge_id,address,chain_id,message,created_at,expires_at) VALUES(?,?,?,?,?,?)"
+  ).bind(challengeId, address, chainId, message, now, expires).run();
+  return json(200, {
+    challengeId,
+    message,
+    address,
+    chainId,
+    expiresAt,
+    signatureOnly: true,
+    transactionAuthorized: false,
+    walletFamily: "evm-eoa",
+  });
+}
+
+async function verifyPrimaryWalletAuthentication(db, env, request, payload, config) {
+  const allowed = new Set([
+    "challengeId", "message", "signature", "createAccount",
+    "termsAccepted", "termsVersion", "referralId",
+  ]);
+  if (Object.keys(payload).some((key) => !allowed.has(key)) ||
+      typeof payload.challengeId !== "string" ||
+      !/^[A-Za-z0-9_-]{24,64}$/.test(payload.challengeId) ||
+      typeof payload.message !== "string" ||
+      typeof payload.signature !== "string" ||
+      typeof payload.createAccount !== "boolean") {
+    throw fail(400, "The primary-wallet sign-in response is incomplete or contains unsupported fields.");
+  }
+  await rateLimit(db, env, request, "primary-wallet-auth-verify", "wallet-sign-in", 12, 300);
+  const now = Math.floor(Date.now() / 1000);
+  const challenge = await db.prepare(
+    "SELECT * FROM auth_primary_wallet_challenges WHERE challenge_id = ? AND used_at IS NULL AND expires_at > ?"
+  ).bind(payload.challengeId, now).first();
+  if (!challenge || payload.message !== challenge.message) {
+    throw fail(401, "The wallet sign-in request is missing, expired, already used or does not match the issued message.");
+  }
+  const address = normalizeEvmAddress(challenge.address);
+  const marker = b64u(bytes(18));
+  const consumed = await db.prepare(
+    "UPDATE auth_primary_wallet_challenges SET used_at = ? " +
+    "WHERE challenge_id = ? AND used_at IS NULL AND expires_at > ? AND message = ?"
+  ).bind(marker, payload.challengeId, now, payload.message).run();
+  if (Number(consumed?.meta?.changes || 0) !== 1) {
+    throw fail(409, "This wallet sign-in request has already been used. Start again.");
+  }
+  await verifyAdminSiweSignature(payload.message, payload.signature, address);
+
+  const identity = await db.prepare(
+    "SELECT a.account_id FROM auth_primary_wallets w " +
+    "JOIN auth_accounts a ON a.account_id = w.account_id " +
+    "WHERE w.address = ? COLLATE NOCASE AND w.active = 1"
+  ).bind(address).first();
+
+  let accountRecord;
+  let walletAccountCreated = false;
+  if (!identity) {
+    if (payload.createAccount !== true) {
+      throw fail(404, "No AstroCrown account is linked to this wallet yet. Choose Sign Up to create one.");
+    }
+    if (payload.termsAccepted !== true || payload.termsVersion !== TERMS_VERSION) {
+      throw fail(400, "Accept the current Terms of Use and Privacy Policy before creating an account.");
+    }
+    const referral = payload.referralId == null ? "" : String(payload.referralId).trim();
+    if (referral && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(referral)) {
+      throw fail(400, "Enter a valid Referral ID or leave the field blank.");
+    }
+    const accountIdentifier = "AC-" + hex(bytes(5)).toUpperCase();
+    const accountPrimaryId = b64u(bytes(16));
+    const userHandle = b64u(bytes(16));
+    const walletId = hex(bytes(16));
+    const token = b64u(bytes(32));
+    const tokenHash = await hashText(token);
+    const sessionRef = hex(bytes(16));
+    const created = new Date().toISOString();
+    const expires = now + SESSION_SECONDS;
+    try {
+      await db.batch([
+        db.prepare(
+          "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
+          "VALUES(?,?,?,?,'person',?,?,?,'user')"
+        ).bind(accountPrimaryId, accountIdentifier, userHandle, created, referral, TERMS_VERSION, created),
+        db.prepare(
+          "INSERT INTO auth_primary_wallets(wallet_id,account_id,address,chain_id,created_at,active,proof_type) VALUES(?,?,?,?,?,1,'eip191-personal-sign')"
+        ).bind(walletId, accountPrimaryId, address, Number(challenge.chain_id), created),
+        db.prepare(
+          "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+        ).bind(tokenHash, accountPrimaryId, sessionRef, now, expires),
+        db.prepare(
+          "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'account_created_with_primary_wallet',?,'wallet_signature_verified=true;transaction_authorized=false')"
+        ).bind(b64u(bytes(16)), accountPrimaryId, created),
+      ]);
+    } catch {
+      throw fail(409, "This wallet could not be registered as a new AstroCrown identity. It may already be linked to an account; try signing in again.");
+    }
+    const syntheticRequest = new Request(config.origin, {
+      headers: { Cookie: SESSION_COOKIE + "=" + token },
+    });
+    accountRecord = await activeAccount(db, syntheticRequest);
+    if (!accountRecord) throw fail(500, "The new wallet account session could not be initialized.");
+    const result = await summary(db, accountRecord);
+    result.walletAccountCreated = true;
+    result.message = "Your AstroCrown account was created with your primary wallet. AstroCrown never receives your wallet's private key or recovery phrase.";
+    return json(200, result, { "Set-Cookie": sessionCookie(token, new URL(config.origin)) });
+  }
+
+  const token = b64u(bytes(32));
+  const tokenHash = await hashText(token);
+  const sessionRef = hex(bytes(16));
+  const expires = now + SESSION_SECONDS;
+  const timestamp = new Date().toISOString();
+  await db.batch([
+    db.prepare(
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+    ).bind(tokenHash, identity.account_id, sessionRef, now, expires),
+    db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'primary_wallet_sign_in',?,'wallet_signature_verified=true;transaction_authorized=false')"
+    ).bind(b64u(bytes(16)), identity.account_id, timestamp),
+  ]);
+  accountRecord = await activeAccount(db, new Request(config.origin, {
+    headers: { Cookie: SESSION_COOKIE + "=" + token },
+  }));
+  if (!accountRecord) throw fail(401, "Wallet sign-in could not be completed. Start again.");
+  const result = await summary(db, accountRecord);
+  result.walletAccountCreated = false;
+  result.message = "You are signed in to AstroCrown with your primary identity wallet.";
+  return json(200, result, { "Set-Cookie": sessionCookie(token, new URL(config.origin)) });
+}
+
 async function issueRegistration(db, env, request, payload, config) {
   if (Object.keys(payload).some((key) => !["termsAccepted", "termsVersion", "referralId"].includes(key))) throw fail(400, "The passkey registration request contains unsupported fields.");
   if (payload.termsAccepted !== true || payload.termsVersion !== TERMS_VERSION) throw fail(400, "Accept the current staging Terms and Privacy acknowledgement before registration.");
@@ -1925,7 +2101,9 @@ async function status(db, request) {
     authenticated: false, avatarId: "person", role: "user", adminRoleAssigned: false,
     adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
     admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
-    passkeyAvailable: true, emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
+    passkeyAvailable: true, legacyPasskeySignInAvailable: true,
+    walletSignInAvailable: true, walletAuthFamily: "evm-eoa",
+    emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
     mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
     activeSessionCount: 0, securityManagementAvailable: false, scope: "staging-test-account-only",
   });
@@ -1955,6 +2133,10 @@ async function api(request, env, config) {
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
+  if (url.pathname === "/api/account/primary-wallet/options" && request.method === "POST") {
+    const payload = await bodyJson(request);
+    return issuePrimaryWalletAuthenticationChallenge(db, env, request, payload, config);
+  }
   if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
   if (url.pathname === "/api/admin/wallet-options" && request.method === "GET") return adminWalletOptions(db, request);
@@ -1972,6 +2154,9 @@ async function api(request, env, config) {
   if (url.pathname === "/api/staging/acknowledge") {
     await rateLimit(db, env, request, "staging-notice-acknowledgement", "public", 60, 3600);
     return createStagingAcknowledgement(env, payload, config);
+  }
+  if (url.pathname === "/api/account/primary-wallet/verify") {
+    return verifyPrimaryWalletAuthentication(db, env, request, payload, config);
   }
   if (url.pathname === "/api/admin/wallet-enrollment-challenge") return issueAdminWalletEnrollmentChallenge(db, env, request, payload, config);
   if (url.pathname === "/api/admin/wallet-enrollment-verify") return verifyAdminWalletEnrollment(db, env, request, payload);
@@ -2023,6 +2208,7 @@ export {
   normalizeEvmAddress,
   validateEvmChainId,
   createAdminSiweMessage,
+  createPrimaryWalletSignInMessage,
   verifyAdminSiweSignature,
   diagnostics,
 };
