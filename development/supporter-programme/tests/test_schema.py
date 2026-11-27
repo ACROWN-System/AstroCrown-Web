@@ -146,7 +146,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "0xbbb77071149a5F113Df15E78c58518917afa950A",
             "1000000000", "1000", "0", "1000000000", "30000000000",
             '[{"tranche":1,"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"30","allowanceBaseUnits":"30000000000"}]',
-            "GENESIS-USDT-50K-1M-TIERS-V1-PROPOSED", "GENESIS-TERMS-V1", "OPEN", 100, 200,
+            "GENESIS-USDT-50K-1M-TIERS-V1", "GENESIS-TERMS-V1", "OPEN", 100, 200,
         )
         self.db.execute(insert, values)
         state = self.db.execute(
@@ -189,7 +189,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             "0xbbb77071149a5F113Df15E78c58518917afa950A",
             "1000000000", "1000", "49999000000", "50000000000", "10000000000",
             '[{"tranche":5,"qualifyingPrincipalBaseUnits":"1000000000","multiplierNumerator":"10","allowanceBaseUnits":"10000000000"}]',
-            "GENESIS-USDT-50K-1M-TIERS-V1-PROPOSED", "GENESIS-TERMS-V1", "OPEN", 100, 101,
+            "GENESIS-USDT-50K-1M-TIERS-V1", "GENESIS-TERMS-V1", "OPEN", 100, 101,
         )
         self.db.execute(
             "UPDATE genesis_programme_allowance_state SET qualifying_principal_usdt_base_units='49999000000' WHERE singleton=1"
