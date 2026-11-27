@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS genesis_treasury_receipts (
   identity_id TEXT REFERENCES genesis_wallet_identities(identity_id),
   source_wallet_address_id TEXT REFERENCES genesis_wallet_addresses(wallet_address_id),
   public_visible INTEGER NOT NULL DEFAULT 1 CHECK (public_visible IN (0, 1)),
+  occurred_at INTEGER NOT NULL DEFAULT 0,
   observed_at INTEGER NOT NULL,
   verified_at INTEGER NOT NULL,
   CHECK (
