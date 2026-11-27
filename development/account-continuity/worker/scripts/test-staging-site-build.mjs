@@ -48,7 +48,8 @@ test("Worker staging build publishes shared page-notice assets and injects the m
     assert.ok(accountUi.includes("/assets/wallet-logos/" + walletLogo + ".svg"), "Account selector must use local " + walletLogo + " logo");
   }
   assert.match(accountUi, /duplicate provider/);
-  assert.match(accountUi, /EIP-1193 wallet/);
+  assert.match(accountUi, /selectedPrimaryWalletProvider/);
+  assert.match(accountUi, /The selected wallet does not expose exactly one compatible/);
   assert.match(accountUi, /Solana Mainnet/);
   assert.match(accountUi, /astrocrown:admin-dashboard-visible/);
   assert.match(accountUi, /Why wallet\?/);
@@ -152,7 +153,7 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /USDT QUALIFYING PAYMENTS NOT OPEN/);
   assert.match(html, /DO NOT SEND FUNDS/);
   assert.match(html, /one payment asset: USDT/);
-  assert.match(html, /Ethereum Mainnet \\(ERC-20\\), TRON Mainnet \\(TRC-20\\) or Solana Mainnet \\(SPL\\)/);
+  assert.match(html, /Ethereum Mainnet \(ERC-20\), TRON Mainnet \(TRC-20\) or Solana Mainnet \(SPL\)/);
   assert.doesNotMatch(html, /separate network-specific assets/);
   assert.match(html, /30×.*USDT 10,000.*25×.*20×.*15×.*10×/s);
   assert.match(html, /USDT 1,000,000.*USDT-denominated/s);
