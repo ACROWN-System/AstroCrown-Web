@@ -1590,7 +1590,10 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
         var actions = document.createElement("div");
         actions.className = "receipt-actions";
         var status = document.createElement("small");
-        status.textContent = "Two separately configured RPC sources agree · Receipt only; no entitlement implied";
+        status.textContent = item.creditApplied === true
+          ? "Qualifying payment independently reconciled · Genesis entitlement recorded" +
+            (item.qualifyingPaymentRecordId ? " · " + item.qualifyingPaymentRecordId : "")
+          : "Two separately configured RPC sources agree · Treasury receipt only; no qualifying payment intent matched";
         var link = document.createElement("a");
         link.href = explorer.toString();
         link.target = "_blank";
