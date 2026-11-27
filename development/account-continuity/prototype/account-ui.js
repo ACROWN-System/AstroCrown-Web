@@ -163,7 +163,7 @@
   function setBusy(value) {
     busy = value;
     [content, dashboardContent, adminDashboardContent, communicationsContent].filter(Boolean).forEach(function (container) {
-      Array.prototype.forEach.call(container.querySelectorAll("button, input"), function (element) {
+      Array.prototype.forEach.call(container.querySelectorAll("button, input, select"), function (element) {
         if (element.dataset.keepEnabled === "true") return;
         element.disabled = value || element.dataset.originalDisabled === "true";
       });
@@ -329,17 +329,19 @@
       if (requestedAddress && accounts.some(function (address) { return address.toLowerCase() === requestedAddress.toLowerCase(); })) {
         accountSelect.value = requestedAddress;
       }
-      if (accountField) accountField.hidden = accounts.length < 2;
-      if (accounts.length > 1 && !accountSelect.value) {
+      if (accountField) accountField.hidden = false;
+      if (!accountSelect.value || !accounts.some(function (address) {
+        return address.toLowerCase() === accountSelect.value.toLowerCase();
+      })) {
         selectedWalletAddress = "";
-        throw new Error("Your wallet returned more than one address. Choose the address you want as your AstroCrown primary identity, then continue.");
+        throw new Error(accounts.length > 1
+          ? "Choose the wallet address you want as your AstroCrown primary identity, then continue."
+          : "Confirm that this is the wallet address you want as your AstroCrown primary identity, then continue.");
       }
     }
-    var address = accountSelect && accountSelect.value ? accountSelect.value
-      : selectedWalletAddress && accounts.find(function (item) { return item.toLowerCase() === selectedWalletAddress.toLowerCase(); })
-        ? selectedWalletAddress : accounts[0];
-    if (accounts.length > 1 && (!accountSelect || !accountSelect.value)) {
-      throw new Error("Choose the wallet address for this AstroCrown account.");
+    var address = accountSelect.value;
+    if (!address || !accounts.some(function (item) { return item.toLowerCase() === address.toLowerCase(); })) {
+      throw new Error("Choose the exact wallet address for this AstroCrown account.");
     }
     selectedWalletAddress = address;
     var chainHex = await provider.request({ method: "eth_chainId" });
