@@ -33,6 +33,18 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.db.executescript(GENESIS_QUALIFYING_INTENT_MIGRATION.read_text(encoding="utf-8"))
         self.db.executescript(MONITOR_HEALTH_MIGRATION.read_text(encoding="utf-8"))
 
+    def _set_monitor_healthy_after(self, timestamp):
+        self.db.execute(
+            "UPDATE genesis_treasury_monitor_health SET status='HEALTHY',"
+            "last_cycle_started_at=unixepoch()-1,last_cycle_completed_at=unixepoch(),"
+            "ethereum_caught_up=1,tron_caught_up=1,solana_caught_up=1,"
+            "ethereum_head_occurred_at=MAX(unixepoch(),?),"
+            "tron_head_occurred_at=MAX(unixepoch(),?),"
+            "solana_head_occurred_at=MAX(unixepoch(),?),"
+            "settlement_queue_deferred=0,updated_at=unixepoch() WHERE singleton=1",
+            (timestamp + 1, timestamp + 1, timestamp + 1),
+        )
+
     def tearDown(self):
         self.db.close()
 
@@ -188,6 +200,9 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         self.assertEqual(state, ("0", "1000000000", "0"))
         with self.assertRaises(sqlite3.IntegrityError):
             self.db.execute(insert, ("gpi-two",) + values[1:])
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "recent all-chain monitor watermark"):
+            self.db.execute("UPDATE genesis_payment_intents SET status='CANCELLED' WHERE payment_intent_id='gpi-one'")
+        self._set_monitor_healthy_after(200)
         self.db.execute("UPDATE genesis_payment_intents SET status='CANCELLED' WHERE payment_intent_id='gpi-one'")
         state = self.db.execute(
             "SELECT qualifying_principal_usdt_base_units,pending_qualifying_principal_usdt_base_units,"
@@ -245,6 +260,7 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
             ).fetchall(),
             [(wallets[0][0], "0", "1000000000"), (wallets[1][0], "1000000000", "2000000000")],
         )
+        self._set_monitor_healthy_after(200)
         self.db.execute("UPDATE genesis_payment_intents SET status='CANCELLED' WHERE payment_intent_id='gpi-concurrent-a'")
         self.assertEqual(
             self.db.execute(
@@ -318,6 +334,9 @@ class GenesisProgrammeSchemaSmokeTests(unittest.TestCase):
         with self.assertRaisesRegex(sqlite3.IntegrityError, "global USDT 50,000 principal reservation"):
             self.db.execute(insert, over_values)
 
+        with self.assertRaisesRegex(sqlite3.IntegrityError, "all-chain monitor watermark"):
+            self.db.execute("UPDATE genesis_payment_intents SET status='EXPIRED' WHERE payment_intent_id='gpi-cap'")
+        self._set_monitor_healthy_after(101)
         self.db.execute("UPDATE genesis_payment_intents SET status='EXPIRED' WHERE payment_intent_id='gpi-cap'")
         self.assertEqual(
             self.db.execute(
