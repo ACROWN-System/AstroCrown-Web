@@ -1,4 +1,5 @@
 import { MAINNET_USDT_CONFIG } from "../../../supporter-programme/shared/mainnet-config.mjs";
+import { settleGenesisPaymentReceipt } from "./genesis-payment-operations.js";
 import {
   GENESIS_USDT_ASSETS,
   parseEthereumUsdtTransferEvidence,
@@ -190,7 +191,7 @@ async function attributeSender(db, network, senderAddress) {
   };
 }
 
-async function persistVerifiedReceipt(db, reconciled) {
+async function persistVerifiedReceipt(db, reconciled, env) {
   if (!reconciled || reconciled.creditApplied !== false ||
       reconciled.status !== "RPC_EVIDENCE_AGREES_FINALIZED_TRANSFER") {
     fail("Only non-crediting, reconciled chain evidence can be recorded.");
@@ -241,6 +242,13 @@ async function persistVerifiedReceipt(db, reconciled) {
     now,
     now,
   ).run();
+
+  const stored = await db.prepare(
+    "SELECT receipt_id FROM genesis_treasury_receipts WHERE network=? AND transaction_hash=? AND transfer_index=?"
+  ).bind(network, evidence.transactionId, evidence.transferIndex).first();
+  if (!stored) fail("The independently verified receipt could not be retrieved after persistence.");
+  const settlement = await settleGenesisPaymentReceipt(db, env, stored.receipt_id);
+  return { receiptId: stored.receipt_id, settlement };
 }
 
 async function getCursor(db, network, scopeKey) {
@@ -289,7 +297,7 @@ async function ethereumMetadata(source) {
   return { contractAddress: GENESIS_USDT_ASSETS.ethereum.assetIdentifier, chainId: 1, decimals: 6 };
 }
 
-async function scanEthereum(db, sources, treasuryAddress) {
+async function scanEthereum(db, sources, treasuryAddress, env) {
   const metadata = await Promise.all(sources.map(ethereumMetadata));
   const finalized = await Promise.all(sources.map((source) => jsonRpc(source, "eth_getBlockByNumber", ["finalized", false])));
   if (!finalized[0] || !finalized[1] ||
@@ -353,7 +361,7 @@ async function scanEthereum(db, sources, treasuryAddress) {
       return { providerId: source.id, sourceId: source.sourceId, evidence };
     }));
     const reconciled = reconcileGenesisRpcEvidence({ network: "ethereum", observations, expected });
-    await persistVerifiedReceipt(db, reconciled);
+    await persistVerifiedReceipt(db, reconciled, env);
     receipts += 1;
   }
   await setCursor(db, "ethereum", "mainnet", to.toString());
@@ -542,7 +550,7 @@ async function readTronSolidifiedBlock(sources, height) {
   return { height, txIds: txIds[0], receiptMaps };
 }
 
-async function scanTron(db, sources, treasuryAddress) {
+async function scanTron(db, sources, treasuryAddress, env) {
   const tokenHex = await tronAddressPayload(GENESIS_USDT_ASSETS.tron.assetIdentifier, "Canonical TRON USDT contract");
   await tronAddressPayload(treasuryAddress, "Configured TRON treasury");
   const metadata = await Promise.all(sources.map((source) => tronMetadata(source, treasuryAddress)));
@@ -772,7 +780,7 @@ async function solanaSignatures(source, tokenAccount, options) {
   });
 }
 
-async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts) {
+async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts, env) {
   let pageOptions = {};
   let pendingLatest = null;
   let pendingUntil = null;
@@ -793,7 +801,7 @@ async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenA
     pendingUntil = cursor && cursor.cursor_value ? cursor.cursor_value : null;
     return await processSolanaSignaturePage(
       db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor,
-      rows, pendingLatest, pendingUntil, currentTreasuryTokenAccounts,
+      rows, pendingLatest, pendingUntil, currentTreasuryTokenAccounts, env,
     );
   }
 
@@ -807,11 +815,11 @@ async function scanSolanaPage(db, sources, mintMetadata, treasuryAddress, tokenA
   }
   return await processSolanaSignaturePage(
     db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor,
-    pages[0], pendingLatest, pendingUntil, currentTreasuryTokenAccounts,
+    pages[0], pendingLatest, pendingUntil, currentTreasuryTokenAccounts, env,
   );
 }
 
-async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, rows, pendingLatest, pendingUntil, currentTreasuryTokenAccounts) {
+async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, rows, pendingLatest, pendingUntil, currentTreasuryTokenAccounts, env) {
   let receipts = 0;
   for (const row of rows) {
     if (row.err !== null) continue;
@@ -869,7 +877,7 @@ async function processSolanaSignaturePage(db, sources, mintMetadata, treasuryAdd
   return { receipts, nextCursor: pendingLatest, morePages: Boolean(nextBefore), initialized: !cursor };
 }
 
-async function scanSolana(db, sources, treasuryAddress) {
+async function scanSolana(db, sources, treasuryAddress, env) {
   const [genesisHashes, mintMetadata] = await Promise.all([
     Promise.all(sources.map((source) => jsonRpc(source, "getGenesisHash"))),
     Promise.all(sources.map(solanaMintMetadata)),
@@ -912,7 +920,7 @@ async function scanSolana(db, sources, treasuryAddress) {
       continue;
     }
     const result = await scanSolanaPage(
-      db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts
+      db, sources, mintMetadata, treasuryAddress, tokenAccount, cursor, currentTreasuryTokenAccounts, env
     );
     receipts += result.receipts;
     processedAccounts += 1;
@@ -945,9 +953,9 @@ export async function runGenesisReceiptMonitor(env) {
     solana: MAINNET_USDT_CONFIG.solana.treasuryAddress,
   };
   const networkTasks = [
-    () => scanEthereum(db, config("ethereum"), treasury.ethereum),
-    () => scanTron(db, config("tron"), treasury.tron),
-    () => scanSolana(db, config("solana"), treasury.solana),
+    () => scanEthereum(db, config("ethereum"), treasury.ethereum, env),
+    () => scanTron(db, config("tron"), treasury.tron, env),
+    () => scanSolana(db, config("solana"), treasury.solana, env),
   ];
   const [ethereum, tron, solana] = await Promise.all(networkTasks.map(async (run) => {
     try {
