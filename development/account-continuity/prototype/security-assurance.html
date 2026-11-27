@@ -3,153 +3,106 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex,nofollow">
-  <meta name="referrer" content="no-referrer">
-  <title>Wallet identity and security assurance · AstroCrown</title>
+  <meta name="theme-color" content="#081426">
+  <title>AstroCrown | Wallet Identity &amp; Transaction Safety</title>
   <style>
-    :root { color-scheme:dark; --gold:#ffd700; --ink:#f2f5fb; --muted:#aab8cb; --line:rgba(153,178,213,.22); }
+    :root { color-scheme: dark; --bg:#071321; --panel:#0c1c2f; --line:#263b54; --text:#edf3fb; --muted:#a9b9cc; --gold:#f2d57b; --blue:#9bc8ef; }
     * { box-sizing:border-box; }
-    body { margin:0; min-height:100vh; background:radial-gradient(ellipse at 15% 0%,rgba(22,52,90,.35),transparent 32rem),linear-gradient(145deg,#071322,#030811 70%); color:var(--ink); font:14px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
-    main { width:min(940px,calc(100% - 28px)); margin:40px auto 70px; }
-    .topline { height:3px; border-radius:9px; background:linear-gradient(90deg,transparent,var(--gold) 18%,#7b6a21 62%,transparent); margin-bottom:24px; }
-    .eyebrow { color:#d7c46a; font-size:11px; letter-spacing:.12em; font-weight:800; text-transform:uppercase; }
-    h1 { margin:8px 0 10px; font-size:clamp(27px,5vw,42px); line-height:1.12; letter-spacing:-.04em; }
-    h2 { margin:0 0 9px; font-size:17px; }
-    p { color:var(--muted); margin:8px 0 12px; }
-    .status { border:1px solid rgba(255,210,74,.38); background:rgba(255,210,74,.065); border-radius:12px; padding:14px 16px; margin:22px 0; color:#ecdca5; }
-    .status p { margin:5px 0 0; }
-    .grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-top:18px; }
-    section { border:1px solid var(--line); border-radius:13px; padding:18px; background:linear-gradient(145deg,rgba(15,31,52,.9),rgba(5,12,23,.94)); }
-    ul { color:var(--muted); padding-left:20px; margin:8px 0 0; }
-    li { margin:6px 0; }
-    strong { color:#e7edf6; }
-    a { color:#ffe58a; text-underline-offset:3px; }
-    a:focus-visible { outline:2px solid var(--gold); outline-offset:4px; border-radius:3px; }
-    .footer { margin-top:22px; padding-top:17px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:14px; justify-content:space-between; }
-    @media(max-width:640px) { main { margin-top:24px; } .grid { grid-template-columns:1fr; } section { padding:15px; } }
+    body { margin:0; background:radial-gradient(ellipse at 50% 0%,#132b45 0,#071321 58%); color:var(--text); font:15px/1.7 system-ui,-apple-system,Segoe UI,sans-serif; }
+    main { width:min(920px,calc(100% - 32px)); margin:42px auto 64px; }
+    .eyebrow { color:var(--gold); text-transform:uppercase; letter-spacing:.16em; font-size:11px; font-weight:800; }
+    h1 { margin:8px 0 10px; font-size:clamp(30px,5vw,44px); line-height:1.12; }
+    h2 { margin:0 0 10px; color:var(--gold); font-size:19px; }
+    p { margin:8px 0 12px; color:var(--muted); }
+    strong { color:var(--text); }
+    a { color:var(--blue); text-decoration:underline; text-underline-offset:3px; }
+    section,.status { margin-top:18px; padding:20px 22px; border:1px solid var(--line); border-radius:14px; background:linear-gradient(145deg,rgba(15,34,55,.96),rgba(8,23,39,.96)); }
+    ul,ol { margin:8px 0 0; padding-left:22px; color:var(--muted); }
+    li { margin:7px 0; }
+    .status { border-color:rgba(242,213,123,.42); }
+    .status strong { color:var(--gold); }
+    .status p { margin-bottom:0; }
+    .actions { display:flex; flex-wrap:wrap; gap:14px; margin-top:24px; }
+    @media(max-width:620px) { main{margin:26px auto 42px} section,.status{padding:16px} }
   </style>
 </head>
 <body>
   <main>
-    <div class="topline"></div>
     <div class="eyebrow">AstroCrown · Account access</div>
-    <h1>Why wallet sign-in?</h1>
-    <p>AstroCrown uses one primary identity wallet to establish account ownership. This page explains what the wallet proves, what AstroCrown can and cannot see, how recovery works, and which wallet types are currently supported. It is separate from the Terms of Use and Privacy Policy.</p>
-
-    <section>
-      <h2>Why use a primary identity wallet?</h2>
-      <p><strong>Your wallet is your account identity.</strong> AstroCrown asks the wallet to sign a fresh, short-lived message that is bound to this exact website origin, wallet address, network and one-time challenge. The server verifies that signature before creating a session or a new account.</p>
-      <ul>
-        <li>No email address, phone number, password, SMS code or third-party identity provider is required for this sign-in method.</li>
-        <li>AstroCrown receives the public wallet address and network identifier. The wallet's private key and seed/recovery words remain under your control and are never sent to AstroCrown.</li>
-        <li>The sign-in message is signed off-chain. It is not broadcast to a blockchain, does not cost gas, does not move assets and does not grant token approvals or spending permission.</li>
-        <li>The server creates a random, short-lived challenge and accepts it only once. It checks the exact message and recovers the signing EVM address before issuing an ordinary account session.</li>
-        <li>The primary identity wallet is distinct from any auxiliary wallet you may connect later for a specific transaction. Connecting a transaction wallet does not make it another account identity.</li>
-      </ul>
-      <p><strong>Privacy is pseudonymous, not anonymous.</strong> You do not need to provide an email or phone number for this authentication, but the public wallet address is visible to AstroCrown and may be linked by anyone to public blockchain activity associated with that address. Choose a wallet with an appropriate privacy posture.</p>
-    </section>ion>
+    <h1>Wallet identity &amp; transaction safety</h1>
+    <p>AstroCrown uses one primary wallet as the identity and recovery anchor for each ordinary user account. This page explains what that means, what the wallet signature does, how account recovery works and the safeguards required before payment or automation features are enabled.</p>
 
     <div class="status">
-      <strong>Status: wallet-first account authentication is implemented in the staging code; staging deployment and remote qualification are separate release steps.</strong>
-      <p>The first wallet adapter supports EVM externally owned accounts using EIP-1193 account access and EIP-191 personal-sign. This is a staging implementation, not production authentication, an independent security audit, a certification or a guarantee against account loss. Use only a disposable test wallet with no valuable assets until the live staging path has been verified. Never enter a seed phrase or private key on this site.</p>
+      <strong>Current staging status: wallet sign-in only. Payments and automated spending are disabled.</strong>
+      <p>The staging environment is public and temporary. Use a disposable wallet with no valuable assets and invented account details. Do not use a production wallet or real funds.</p>
     </div>
+
     <section>
-      <h2>Primary wallet sign-in: current implementation boundary</h2>
+      <h2>One AstroCrown account, one primary identity wallet</h2>
       <ul>
-        <li>The browser obtains the selected public address and chain ID from an injected EVM wallet provider. The server then issues a random, origin-bound, expiring challenge.</li>
-        <li>The wallet signs the exact challenge using EIP-191 personal-sign. The server verifies the signer address, one-time challenge, expiry and exact message before it creates a new session.</li>
-        <li>One primary wallet address can be associated with only one AstroCrown account. A different address cannot sign in to that account merely because a user knows its account identifier.</li>
-        <li>The database stores the public address, chain identifier, account linkage, timestamps and session hashes. It does not store a wallet private key, mnemonic, seed phrase or wallet recovery secret.</li>
-        <li>Initial scope is EVM externally owned accounts (EOAs). Smart-contract wallets requiring EIP-1271 validation and non-EVM wallets on Solana, TRON or Bitcoin are not yet qualified by this implementation.</li>
-        <li>Older passkey-created staging accounts remain available through a clearly labelled legacy access path. This does not make passkeys the primary identity method for new wallet accounts.</li>
+        <li>The primary wallet address is the account identity. It is not an email address, password or separate Genesis account.</li>
+        <li>AstroCrown offers wallet-provider selection and, where a provider exposes several addresses, asks you to choose the address for your account. The browser may ask you to approve access to that public address.</li>
+        <li>Genesis membership, public profile, badge and programme entitlements belong to this same AstroCrown account. Genesis does not create a second login or independent recovery system.</li>
+        <li>Additional Ethereum, TRON or Solana addresses may be linked later for a specific supported programme function. Each additional address must prove control with its own fresh, off-chain message signature. It does not become another account identity.</li>
       </ul>
     </section>
 
-    <div class="grid">
-      <section>
-        <h2>Legacy passkey controls retained for older test accounts</h2>
-        <ul>
-          <li>WebAuthn passkey registration uses discoverable credentials (resident keys), required user verification and attestation preference "none".</li>
-          <li>Discoverable passkey sign-in does not require an email address, password or account identifier to be submitted to the login endpoint.</li>
-          <li>The maintained WebAuthn relying-party library validates client data, challenge, RP ID hash, origin, user presence, user verification and the authenticator signature. The application stores the credential ID, public key, signature counter and lifecycle metadata; no passkey private key is sent to or stored by AstroCrown.</li>
-          <li>Registration and authentication challenges are generated randomly, bound to one ceremony, stored server-side, expire and are atomically marked used. Replay and stale concurrent credential updates are rejected.</li>
-          <li>Account IDs are independent of email and wallet addresses. New passkey accounts use a local random account identifier and default to the ordinary user role; a passkey cannot grant administrator authority.</li>
-          <li>Initial registration generates a 256-bit random one-time recovery key. The readable key is returned once; the database stores a 16-byte salt and 32-byte SHA-256 verifier only. The key is not written to application logs or the audit detail.</li>
-          <li>Recovery verifies the account identifier and unused recovery key, requires a new WebAuthn registration ceremony, consumes the old key, disables all previously registered passkeys, revokes all existing sessions, issues a replacement key and records a security audit event.</li>
-          <li>Recovery attempts and account-creation/sign-in attempts use persistent SQLite-backed rate limits. Invalid/expired/reused challenges and failed recovery proofs are rejected.</li>
-          <li>Session tokens are random; SQLite stores their hashes. Local cookies are HttpOnly and SameSite=Strict. These HTTP localhost cookie settings are not a production HTTPS configuration.</li>
-          <li>The server binds only to loopback and checks the canonical localhost Host/Origin. Request bodies are bounded. Responses are no-store and use basic security headers and a Content Security Policy.</li>
-          <li>Account registration/sign-in/recovery does not invoke an email or SMS provider, a paid identity provider, a third-party authentication API or a blockchain transaction.</li>
-          <li>The server offers experimental ML-DSA-65, ML-DSA-44 and ML-DSA-87 registration algorithms before classical fallbacks. It passes the same allow-list to its registration verifier and records the algorithm actually encoded in each new credential.</li>
-          <li>The User dashboard counts only active credentials whose stored algorithm is recorded as ML-DSA. An advertised option or a classical fallback is not counted as a post-quantum passkey.</li>
-          <li>Administrator role/permission checks and the EVM/SIWE administrator step-up remain separate from ordinary passkey authentication. Role appointment and revocation target an existing member by the public AC- account identifier shown in the User dashboard; the identifier is not an authenticator. Email is not required. Wallet connection alone never creates a user account or administrator role.</li>
-        </ul>
-      </section>
+    <section>
+      <h2>What signing in asks your wallet to do</h2>
+      <ul>
+        <li>AstroCrown requests the public address and network identifier from the wallet provider, then issues a short-lived, single-use challenge bound to this website origin and the selected address.</li>
+        <li>The wallet signs a readable EIP-191 personal message. The server verifies that the signature belongs to the selected externally owned EVM account before creating a session.</li>
+        <li>This is an off-chain message signature. It is not broadcast to a blockchain, does not require gas, and does not authorize a transaction, token approval, transfer, payment or spending permission.</li>
+        <li>During account creation, AstroCrown separately records your acceptance of the Terms of Use and Privacy Policy and your acknowledgement of the wallet-loss warning. The server checks both acknowledgements; the browser checkbox alone is not treated as proof.</li>
+      </ul>
+      <p><strong>AstroCrown never receives or stores your wallet private key, seed phrase, mnemonic or recovery words.</strong> Never enter or send them to AstroCrown, its staff, support personnel, NOVA or anyone else.</p>
+    </section>
 
-      <section>
-        <h2>Not implemented or not production-qualified</h2>
-        <ul>
-          <li>Production HTTPS hosting, RP ID/origin configuration for the public site, durable shared database, secret management, backup/restore, deployment monitoring and operational incident response.</li>
-          <li>User-facing enrollment/revocation of multiple passkeys, device/session management and passkey-confirmed reauthentication for every sensitive action.</li>
-          <li>Additional wallet families and smart-contract wallet verification. The current primary identity adapter supports EVM externally owned accounts using EIP-191 personal-sign; EIP-1271, Solana, TRON and Bitcoin primary-wallet authentication are not yet implemented or qualified.</li>
-          <li>Recovery after the primary wallet and every backup/recovery route controlled by the user's wallet provider have been lost. AstroCrown does not possess the wallet's secret material and provides no staff, administrator, email or SMS override; the associated account may be permanently unrecoverable.</li>
-          <li>Client-side/end-to-end encryption that prevents application/database operators from reading plaintext account data. WebAuthn authentication alone does not provide this data-confidentiality property.</li>
-          <li>Production owner/admin governance, production role management, external security operations, all-admin-wallet-loss Imperial HSIAN recovery, and production account support.</li>
-          <li>Independent penetration testing, independent security review, formal ASVS verification, external certification, approved production Terms/Privacy, and production privacy/data retention/export/deletion procedures.</li>
-          <li>Synced passkeys may use the user's platform credential-sync provider. Device-bound credentials or a compatible FIDO2 hardware key are alternatives where supported; hardware key purchase is not required by this local prototype.</li>
-          <li>The ML-DSA WebAuthn/CTAP mapping is an active IETF Internet-Draft. Its requested COSE identifiers are marked TBD in that draft. This local profile is experimental; cross-browser, platform-authenticator, credential-sync, roaming-key and FIDO-certified interoperability have not been demonstrated. Classical fallback remains enabled.</li>
-          <li>Auxiliary transaction-wallet connections, multi-chain primary-identity adapters and Astro-Wallet integration remain separate future work. Auxiliary wallets will not become alternate account identities or recovery keys.</li>
-        </ul>
-      </section>
+    <section>
+      <h2>Wallet loss and account recovery</h2>
+      <p>Your primary wallet is your AstroCrown identity. To recover access, use the wallet provider’s own recovery process or an offline backup you created to restore the <strong>same wallet and address</strong>.</p>
+      <p>If you permanently lose access to that wallet and every way of restoring it, access to the associated AstroCrown account is permanently lost. AstroCrown staff and administrators cannot reset the wallet, recreate its secret words, bypass wallet proof or move the account to a different address.</p>
+    </section>
 
-      <section>
-        <h2>Assurance and certification preparation</h2>
-        <p>AstroCrown now preserves a scoped benchmark specification and a roadmap for future membership, testing, certification and permitted logo use. These are preparation records, not third-party endorsement, certification or a paid application.</p>
-        <ul>
-          <li><a href="../AUTHENTICATION-ASSURANCE-BENCHMARK.md">Authentication Assurance Benchmark</a> — test domains, hard gates, maturity levels and evidence template.</li>
-          <li><a href="../CERTIFICATION-AND-RECOGNITION-ROADMAP.md">Certification and Recognition Roadmap</a> — FIDO membership tiers, fee snapshot, trademark rules, $0 preparation and future readiness gates.</li>
-        </ul>
-        <p>No FIDO membership, FIDO Certified product, independent audit, OpenSSF badge, NIST AAL designation or third-party approval is currently claimed.</p>
-      </section>
+    <section>
+      <h2>Payment confirmation: separate from sign-in</h2>
+      <p>Wallet sign-in is not permission to spend. When payment functionality is eventually enabled, each payment must be presented for a separate review and confirmation in the wallet. The confirmation must clearly identify:</p>
+      <ul>
+        <li>The asset or token and its contract or mint identity.</li>
+        <li>The exact amount and any network or service fees.</li>
+        <li>The blockchain network and the destination address or contract.</li>
+        <li>The action being authorized, including any token allowance or contract interaction.</li>
+      </ul>
+      <p>Normal sign-in and address linking must never grant unlimited token approval or standing payment authority. Where a payment requires an allowance, the default design is a separate, explicit approval limited to the amount and purpose that the user has reviewed.</p>
+    </section>
 
-      <section>
-        <h2>What the automated tests mean</h2>
-        <p>The local Python suite exercises WebAuthn option generation, RP/origin requirements, registration and authentication challenge handling, replay rejection, credential persistence, user-handle matching, recovery-key storage and rotation, one-time consumption, passkey replacement, session revocation, and ordinary/admin separation. Some server endpoint tests deliberately mock the cryptographic library verdict so they can isolate database and lifecycle behavior; they do not simulate forged real-world signatures as accepted proofs.</p>
+    <section>
+      <h2>Future automated trading or payment tools</h2>
+      <p>An automated tool or trading bot must not inherit spending authority from ordinary account sign-in. Any future delegation must be a separate, optional authorization with clear controls, including:</p>
+      <ul>
+        <li>Explicit opt-in and a plain-language explanation of what the tool can do.</li>
+        <li>Allowed assets, networks, destinations and contract functions.</li>
+        <li>Per-transaction and cumulative spending limits, with no unlimited allowance.</li>
+        <li>A short, visible expiry, a simple revocation mechanism and an audit trail.</li>
+        <li>Clear notifications and a way to review or stop the authorization.</li>
+      </ul>
+      <p><strong>No automated spending authorization is active in AstroCrown staging.</strong></p>
+    </section>
 
-        <p><strong>Latest exact-head development verification — all five tracked workflows passed on commit <code>3bdf9040ee966229578585c442383c4a6fa58ba5</code> (2026-11-04):</strong>
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686773935" target="_blank" rel="noopener noreferrer">Local Account Continuity Prototype Tests</a>,
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686773913" target="_blank" rel="noopener noreferrer">Local Wallet Authentication Prototype Tests</a>,
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686772813" target="_blank" rel="noopener noreferrer">NOVA RSI Engine CI</a>,
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686773811" target="_blank" rel="noopener noreferrer">NOVA RSI CodeQL</a> and
-          <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41686772991" target="_blank" rel="noopener noreferrer">External Review Pipeline CI</a>.
-          All five workflow jobs completed successfully. The account workflow includes the local API/account suite, static security-boundary checks and headless Chrome virtual-authenticator journey. This is automated local-prototype evidence only.
-        </p>
-        <p>These results apply to the named development commit only. They are not clause-by-clause ASVS verification, a production release, cross-device ML-DSA interoperability, an independent security audit, FIDO certification or formal assurance level. See the <a href="../../audit/Active/2026-11-03-OWASP-ASVS-5.0.0-Account-Assurance-Mapping.md">preliminary OWASP ASVS 5.0.0 account assurance mapping</a> for the scope, partial controls and unresolved gaps.</p>
-        <p>These checks apply to the development prototype and the named exact commit only. They are not a production release, cross-device ML-DSA interoperability result, independent security audit, FIDO certification or formal assurance level.</p>
-        <p>The headless Chrome test uses a browser virtual authenticator to exercise real WebAuthn registration, discoverable sign-in and the recovery/replacement ceremony in the local environment. A virtual-authenticator CI pass is evidence for that tested browser path, not proof of universal device/browser compatibility.</p>
-        <p>Exact-head CI evidence: all five tracked workflows passed on branch commit <code>8509b64086a09ac3cfc7eea82977c27e8e6a2fd8</code> (run completion: 2026-11-02 UTC / 2026-11-03 India time): <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360712" target="_blank" rel="noopener noreferrer">Local Account Continuity</a>, <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360765" target="_blank" rel="noopener noreferrer">External Review Pipeline</a>, <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360796" target="_blank" rel="noopener noreferrer">Local Wallet Authentication</a>, <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360753" target="_blank" rel="noopener noreferrer">NOVA RSI Engine CI</a> and <a href="https://github.com/ACROWN-System/AstroCrown-Web/actions/runs/41530360846" target="_blank" rel="noopener noreferrer">NOVA RSI CodeQL</a>. CodeQL reported no new alerts in the code changed by this pull request. These results apply to this exact development commit only.</p>
-        <p>A passing test suite does not prove that every control is present, does not replace an independent review and does not make a local loopback prototype production-ready.</p>
-      </section>
+    <section>
+      <h2>Privacy and implementation limits</h2>
+      <ul>
+        <li>A public wallet address is pseudonymous, not anonymous. It may be linked to public blockchain activity by anyone.</li>
+        <li>The current primary-account sign-in path supports EVM externally owned accounts. Contract-wallet signature verification and non-EVM primary account sign-in are not qualified by this release.</li>
+        <li>Additional network addresses for Genesis purposes require their own ownership proof and remain subordinate to the same AstroCrown primary account.</li>
+        <li>Staging is not the production commercial service and is not a guarantee of continuous availability or permanent test-account retention.</li>
+      </ul>
+    </section>
 
-      <section>
-        <h2>Standards and design references</h2>
-        <ul>
-          <li><a href="https://www.w3.org/TR/2026/REC-webauthn-3-20260825/" target="_blank" rel="noopener noreferrer">W3C WebAuthn Level 3</a> — public-key browser authentication API.</li>
-          <li><a href="https://cheatsheetseries.owasp.org/cheatsheets/Passkey_Security_Cheat_Sheet.html" target="_blank" rel="noopener noreferrer">OWASP Passkey Security Cheat Sheet</a> — relying-party implementation, origins, credential lifecycle and recovery.</li>
-          <li><a href="https://csrc.nist.gov/pubs/sp/800/63/B/4/final" target="_blank" rel="noopener noreferrer">NIST SP 800-63B-4</a> — authenticator management and recovery guidance. AstroCrown's 128-bit minimum recovery-key target is a project-selected margin; NIST's saved recovery-code minimum is 64 bits.</li>
-          <li><a href="https://owasp.org/www-project-application-security-verification-standard/" target="_blank" rel="noopener noreferrer">OWASP ASVS 5.0.0</a> — broader application security verification baseline.</li>
-          <li><a href="../../audit/Active/2026-11-03-OWASP-ASVS-5.0.0-Account-Assurance-Mapping.md">AstroCrown account ASVS 5.0.0 evidence map</a> — preliminary selected-family mapping; no verification level or conformance claim.</li>
-          <li><a href="https://csrc.nist.gov/pubs/fips/204/final" target="_blank" rel="noopener noreferrer">NIST FIPS 204</a> — finalized ML-DSA signature standard.</li>
-          <li><a href="https://datatracker.ietf.org/doc/html/draft-vitap-ml-dsa-webauthn-05" target="_blank" rel="noopener noreferrer">IETF ML-DSA for Web Authentication draft 05</a> — active experimental WebAuthn mapping; not a final standard.</li>
-          <li><a href="https://github.com/duo-labs/py_webauthn/releases/tag/v3.0.1" target="_blank" rel="noopener noreferrer">py_webauthn v3.0.1 release</a> — relying-party implementation reference.</li>
-        </ul>
-        <p>These are engineering references. Their use is not certification, automatic conformance or independent security review. WebAuthn and passkey material on this page documents the retained legacy test-account path, not the primary sign-in method for new wallet accounts.</p>
-      </section>
-    </div>
-
-    <div class="footer">
-      <a href="../../index.html">Return to the development homepage</a>
-      <span>Evidence scope: EVM primary-wallet staging implementation plus legacy passkey tests · Not a certification or security guarantee</span>
+    <div class="actions">
+      <a href="/account-continuity/prototype/terms-of-use.html">Terms of Use</a>
+      <a href="/account-continuity/prototype/privacy-policy.html">Privacy Policy</a>
+      <a href="/">Return to AstroCrown</a>
     </div>
   </main>
 </body>
