@@ -994,8 +994,10 @@ async function scanSolana(db, sources, treasuryAddress, env) {
         await setCursor(db, "solana", tokenAccount, initialCursor);
       } else {
         // A token account created after monitoring began may hold the first new receipt.
-        // An empty cursor intentionally causes its first observed signatures to be scanned.
+        // An empty cursor intentionally causes its first observed signatures to be scanned
+        // on the next cycle; do not settle globally until that first page is processed.
         await setCursor(db, "solana", tokenAccount, "");
+        caughtUp = false;
       }
       processedAccounts += 1;
       continue;
