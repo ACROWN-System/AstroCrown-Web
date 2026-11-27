@@ -69,6 +69,9 @@ ALTER TABLE genesis_public_payments
   ADD COLUMN allowance_credit_usdt_base_units TEXT NOT NULL DEFAULT '0'
   CHECK (length(allowance_credit_usdt_base_units) > 0
     AND allowance_credit_usdt_base_units NOT GLOB '*[^0-9]*');
+ALTER TABLE genesis_public_payments
+  ADD COLUMN receipt_finality_status TEXT NOT NULL DEFAULT 'FINALIZED'
+  CHECK (receipt_finality_status IN ('FINALIZED', 'SOLIDIFIED'));
 
 -- The proposed allowance cap remains a rules value, not a live activation switch.
 UPDATE genesis_programme_allowance_state
@@ -203,7 +206,7 @@ WHEN NEW.payment_kind='QUALIFYING_PAYMENT'
      AND r.identity_id=NEW.identity_id
      AND r.source_wallet_address_id=NEW.source_wallet_address_id
      AND r.verification_method='TWO_INDEPENDENT_RPC_SOURCES'
-     AND r.finality_status IN ('FINALIZED', 'SOLIDIFIED')
+     AND r.finality_status=NEW.receipt_finality_status
      AND r.verified_at<=NEW.confirmed_at
      AND w.network=NEW.network
      AND w.wallet_role IN ('PRIMARY', 'PAYMENT', 'PAYMENT_AND_DELIVERY')
