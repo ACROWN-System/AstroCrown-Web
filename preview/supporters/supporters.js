@@ -1151,6 +1151,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
             typeof item.amount !== "string" || !/^[0-9]+(?:\.[0-9]{1,6})?$/.test(item.amount) ||
             typeof item.senderAddress !== "string" || !item.senderAddress || item.senderAddress.length > 128 ||
             typeof item.receivingAddress !== "string" || !item.receivingAddress || item.receivingAddress.length > 128) {
+          return;
         }
         var expectedPath = item.network === "ethereum"
           ? "/tx/" + item.transactionHash
@@ -1162,6 +1163,8 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
           explorer = new URL(item.explorerUrl);
         } catch (_) {
           return;
+          return;
+        }
         if (explorer.protocol !== "https:" || explorer.username || explorer.password ||
             explorer.search || explorer.origin !== network.origin ||
             explorer.pathname + explorer.hash !== expectedPath) return;
