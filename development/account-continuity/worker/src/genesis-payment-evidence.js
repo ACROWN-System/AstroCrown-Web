@@ -375,11 +375,12 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     if (inner && Array.isArray(inner.instructions)) orderedInstructions.push(...inner.instructions);
   }
   const matches = [];
+  const transfers = [];
+  const expectedAccountDeltas = new Map();
   for (let instructionOrdinal = 0; instructionOrdinal < orderedInstructions.length; instructionOrdinal += 1) {
     const instruction = orderedInstructions[instructionOrdinal];
     const transfer = solanaInstructionTransfer(instruction);
-    if (!transfer) continue;
-    if (transfer.mint && transfer.mint !== mint) continue;
+    if (!transfer || (transfer.mint && transfer.mint !== mint)) continue;
     const sourceIndex = keys.indexOf(transfer.sourceTokenAccount);
     const destinationIndex = keys.indexOf(transfer.destinationTokenAccount);
     if (sourceIndex < 0 || destinationIndex < 0) continue;
@@ -389,20 +390,46 @@ export function parseSolanaUsdtTransferEvidence({ clusterGenesisHash, mintMetada
     const destinationAfter = solanaTokenBalance(postBalances, destinationIndex, mint, "Solana destination");
     const sourceOwners = [sourceBefore.owner, sourceAfter.owner].filter(Boolean);
     const destinationOwners = [destinationBefore.owner, destinationAfter.owner].filter(Boolean);
-    if (!sourceOwners.length || sourceOwners.some((owner) => owner !== sender)) continue;
-    if (!destinationOwners.length || destinationOwners.some((owner) => owner !== treasury)) continue;
-    const sourceDelta = sourceBefore.amount - sourceAfter.amount;
-    const destinationDelta = destinationAfter.amount - destinationBefore.amount;
-    // Multiple canonical SPL transfers in one transaction can aggregate into
-    // the same token-account balance delta. The requested instruction ordinal
-    // isolates this transfer; the before/after balances corroborate that its
-    // amount was covered by the successful transaction.
-    if ((requestedIndex === null || instructionOrdinal === requestedIndex) &&
-        transfer.amount === amount && sourceDelta >= amount && destinationDelta >= amount) {
-      matches.push({ transferIndex: instructionOrdinal });
+    if (!sourceOwners.length || !destinationOwners.length) continue;
+    if (sourceOwners.some((owner) => owner !== sourceOwners[0]) ||
+        destinationOwners.some((owner) => owner !== destinationOwners[0])) {
+      fail("Solana token-account owner changed within one transaction.");
+    }
+    const sourceOwner = sourceOwners[0];
+    const destinationOwner = destinationOwners[0];
+    transfers.push({
+      instructionOrdinal,
+      sourceIndex,
+      destinationIndex,
+      sourceOwner,
+      destinationOwner,
+      amount: transfer.amount,
+    });
+    if (sourceIndex !== destinationIndex) {
+      expectedAccountDeltas.set(sourceIndex, (expectedAccountDeltas.get(sourceIndex) || 0n) - transfer.amount);
+      expectedAccountDeltas.set(destinationIndex, (expectedAccountDeltas.get(destinationIndex) || 0n) + transfer.amount);
     }
   }
-  if (matches.length !== 1) fail("Solana finalized transaction must contain exactly one matching USDT transfer instruction with matching owner and balance deltas.");
+
+  // Reconcile every discovered canonical USDT transfer instruction as a group.
+  // This handles multiple transfers touching the same token account in one
+  // transaction without treating one aggregate balance delta as several receipts.
+  for (const [accountIndex, expectedDelta] of expectedAccountDeltas) {
+    const before = solanaTokenBalance(preBalances, accountIndex, mint, "Solana token account before transfer");
+    const after = solanaTokenBalance(postBalances, accountIndex, mint, "Solana token account after transfer");
+    if (after.amount - before.amount !== expectedDelta) {
+      fail("Solana token-account balance deltas do not reconcile to the transaction's canonical USDT transfer instructions.");
+    }
+  }
+
+  for (const transfer of transfers) {
+    if (transfer.instructionOrdinal !== requestedIndex && requestedIndex !== null) continue;
+    if (transfer.sourceOwner === sender && transfer.destinationOwner === treasury &&
+        transfer.destinationIndex !== transfer.sourceIndex &&
+        transfer.amount === amount) {
+      matches.push({ transferIndex: transfer.instructionOrdinal });
+    }
+  }  if (matches.length !== 1) fail("Solana finalized transaction must contain exactly one matching USDT transfer instruction with matching owner and balance deltas.");
   return canonicalEvidence(
     "solana", transactionId, sender, treasury, amount, matches[0].transferIndex,
     { slot: slot.toString() }, "FINALIZED"
