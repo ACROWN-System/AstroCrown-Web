@@ -1163,7 +1163,6 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
           explorer = new URL(item.explorerUrl);
         } catch (_) {
           return;
-          return;
         }
         if (explorer.protocol !== "https:" || explorer.username || explorer.password ||
             explorer.search || explorer.origin !== network.origin ||
