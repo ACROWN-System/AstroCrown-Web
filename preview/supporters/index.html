@@ -410,30 +410,28 @@
               <strong id="genesis-wallet-verification-heading">Wallet identity and linked network addresses</strong>
               <span class="ecosystem-tag" id="supporter-member-mode">Staging service required</span>
             </div>
-            <p class="panel-intro">Connect the primary wallet once to establish the Genesis identity. Then connect the same wallet application on Ethereum, TRON or Solana and register each address you intend to use. The primary wallet session authorizes the profile change; the address being added signs its own domain-bound off-chain proof solely to demonstrate control of that address. The added address does not receive Genesis login or account authority.</p>
+            <p class="panel-intro">Your Genesis profile, display name, membership status and programme entitlements belong to your existing AstroCrown account. Sign in to AstroCrown with your primary identity wallet; there is no separate Genesis account or Genesis sign-in. The same primary wallet is automatically recorded as your Ethereum identity and can be used for future supported payments. You may optionally link additional network addresses for payments or Solana ACROWN delivery. Each additional address must independently prove control with a fresh off-chain message signature.</p>
+            <div class="wallet-actions">
+              <a class="primary-button" id="supporter-account-login" href="/" hidden>Sign in to your AstroCrown account</a>
+              <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link additional address</button>
+            </div>
             <div class="field">
-              <label for="supporter-wallet-purpose">Purpose of this network address</label>
+              <label for="supporter-wallet-purpose">Purpose of this additional network address</label>
               <select id="supporter-wallet-purpose">
-                <option value="PAYMENT">Registered payment address</option>
+                <option value="PAYMENT">Additional payment address</option>
                 <option value="DELIVERY">Solana ACROWN delivery address</option>
                 <option value="PAYMENT_AND_DELIVERY">Solana payment and ACROWN delivery address</option>
               </select>
-              <small>Payment addresses are registered separately for their own network. A delivery address must be Solana. The primary wallet remains the only Genesis authority; the connected address signs only its own ownership proof.</small>
+              <small>Your primary sign-in wallet is already part of this account. Only add another address when you intend to use it for a supported programme function. A delivery address must be Solana. The linked address proves control of itself only and never becomes an account login or spending authorization.</small>
             </div>
-            <div class="wallet-actions">
-              <button class="primary-button" id="supporter-register-wallet" type="button" disabled>Continue with this primary wallet</button>
-              <button class="secondary-button" id="supporter-login-wallet" type="button" hidden disabled>Legacy sign-in unavailable</button>
-              <button class="secondary-button" id="supporter-link-wallet" type="button" disabled>Verify and link address</button>
-              <button class="secondary-button" id="supporter-logout" type="button" disabled>Disconnect wallet session</button>
-            </div>
-            <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Connect your primary Ethereum, TRON or Solana mainnet wallet. A signed off-chain proof establishes its wallet identity; no separate user account is created.</div>
+            <div class="wallet-feedback" id="supporter-member-feedback" role="status" aria-live="polite">Sign in to AstroCrown with your primary wallet. Your Genesis profile and entitlements will appear here under the same account; no separate Genesis account is needed.</div>
             <div class="wallet-address-card">
               <span class="side-label">Primary wallet identity</span>
               <strong id="supporter-member-summary">Not signed in</strong>
               <span id="supporter-member-wallet-list">No additional network addresses linked.</span>
             </div>
           </section>
-          <p class="fine-print">A multi-chain wallet exposes different public addresses on Ethereum, TRON and Solana. During Genesis registration, the owner may connect the same wallet application on each supported network and confirm the addresses to include in one primary wallet profile. Each address must independently sign a fresh, domain-bound ownership challenge before it is accepted; merely appearing in the same application, sharing a brand name or being displayed by provider metadata is not proof. A registered address may originate a qualifying payment only on its own network. The payment sender must match that pre-verified address, so Etherscan, TronScan or Solscan can independently show the registered sender, official treasury, token and amount. Linked addresses cannot authenticate, recover, rename or administer the Genesis identity. The primary wallet alone authorizes Genesis account actions. Genesis stores only public addresses, unique display names, proof metadata and session digests. AstroCrown never receives private keys or recovery phrases. Qualifying payments and floor-price purchases remain disabled.</p>
+          <p class="fine-print">A multichain wallet application may expose different public addresses on Ethereum, TRON and Solana. Your AstroCrown primary wallet is the account identity and is already attached to the Genesis profile. Additional addresses are optional: each must independently sign a fresh, domain-bound message proving control. They cannot sign in, recover, rename or administer your AstroCrown account. When payments are eventually enabled, a payment must originate from a pre-verified address on its own network and be shown with its exact asset, amount, network and destination before you confirm the transaction in your wallet. Sign-in and address-link signatures never authorize transfers, token approvals or gas expenditure. No unlimited or automated spending permission is active. Any future trading bot or automated payment tool must require a separate, explicit, narrowly capped, time-limited and revocable authorization. Qualifying payment and floor-price purchase acceptance remain disabled.</p>
         </section>
 
         <section class="panel entitlement-panel" aria-labelledby="entitlement-title">
