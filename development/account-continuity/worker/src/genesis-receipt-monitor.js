@@ -403,7 +403,9 @@ async function tronAddressPayload(address, label) {
 
 async function tronAddressFromTopic(topic, label) {
   const normalized = String(topic || "").replace(/^0x/i, "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(normalized)) fail(label + " topic is malformed.");
+  if (!/^[0-9a-f]{64}$/.test(normalized) || !/^0{24}/.test(normalized)) {
+    fail(label + " topic is malformed or has non-zero address padding.");
+  }
   const hex = normalized.slice(-40);
   const payload = new Uint8Array([0x41, ...hex.match(/../g).map((part) => parseInt(part, 16))]);
   const checksum = (await doubleSha256(payload)).slice(0, 4);
@@ -480,7 +482,9 @@ export function normalizeTronBlockReceiptPage(receipts, blockHeight, expectedTra
 }
 
 async function extractTronUsdtCandidates(info, tokenHex, treasuryHex) {
-  if (!info || !Array.isArray(info.log)) return [];
+  if (!info || typeof info !== "object") fail("TRON block receipt entry is missing.");
+  if (info.log === undefined || info.log === null) return [];
+  if (!Array.isArray(info.log)) fail("TRON block receipt contains malformed event-log data.");
   const candidates = [];
   for (let index = 0; index < info.log.length; index += 1) {
     const log = info.log[index];
