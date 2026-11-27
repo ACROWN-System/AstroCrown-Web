@@ -44,6 +44,9 @@ test("Worker staging build publishes shared page-notice assets and injects the m
     assert.ok(accountUi.includes(walletName), "Ordinary account brand picker must show " + walletName);
   }
   assert.match(accountUi, /account-wallet-brand-choice/);
+  for (const walletLogo of ["metamask", "trust", "okx", "tokenpocket", "coin98"]) {
+    assert.ok(accountUi.includes("/assets/wallet-logos/" + walletLogo + ".svg"), "Account selector must use local " + walletLogo + " logo");
+  }
   assert.match(accountUi, /duplicate provider/);
   assert.match(accountUi, /EIP-1193 wallet/);
   assert.match(accountUi, /Solana Mainnet/);
@@ -130,9 +133,15 @@ test("Worker staging build publishes shared page-notice assets and injects the m
 
 test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
+  await access(resolve(publicRoot, "supporters/genesis-terms.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
   await access(resolve(publicRoot, "supporters/wallet-provider-adapters.mjs"));
   await access(resolve(publicRoot, "assets/genesis-member-dna.svg"));
+  for (const walletLogo of ["metamask", "trust", "okx", "tokenpocket", "coin98"]) {
+    const logoPath = "assets/wallet-logos/" + walletLogo + ".svg";
+    await access(resolve(publicRoot, logoPath));
+    assert.match(await readPublic(logoPath), /^<svg/);
+  }
   const homepage = await readPublic("index.html");
   assert.match(homepage, /href="\.\/supporters\/">Genesis Programme/);
 });
@@ -174,6 +183,9 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="genesis-wallet-brand-grid"/);
+  for (const walletLogo of ["metamask", "trust", "okx", "tokenpocket", "coin98"]) {
+    assert.ok(html.includes("../assets/wallet-logos/" + walletLogo + ".svg"), "Genesis selector must use local " + walletLogo + " logo");
+  }
   assert.match(html, /Choose your wallet application/);
   assert.match(html, /Wallet brand first/);
   assert.match(html, /Ethereum Mainnet identity address/);
