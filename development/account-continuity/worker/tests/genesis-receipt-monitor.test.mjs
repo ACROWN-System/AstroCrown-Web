@@ -7,6 +7,7 @@ import {
   prepareGenesisRpcPair,
   normalizeTronBlockReceiptPage,
   publicGenesisTreasuryReceipts,
+  persistGenesisMonitorHealth,
   runGenesisReceiptMonitor,
 } from "../src/genesis-receipt-monitor.js";
 
@@ -21,6 +22,81 @@ function rpcEnvironment(network = "ethereum") {
     [prefix + "B_SOURCE_ID"]: "operator-b",
   };
 }
+
+test("monitor health is RUNNING only during a cycle and HEALTHY only when all networks are caught up", async () => {
+  const writes = [];
+  const db = {
+    prepare(sql) {
+      return {
+        bind(...values) {
+          return {
+            run: async () => {
+              writes.push({ sql, values });
+              return { success: true, meta: { changes: 1 } };
+            },
+          };
+        },
+      };
+    },
+  };
+
+  await persistGenesisMonitorHealth(db, {
+    phase: "RUNNING",
+    cycleStartedAt: 100,
+  });
+  assert.match(writes[0].sql, /status='RUNNING'/);
+  assert.deepEqual(writes[0].values, [100, 100]);
+
+  const caughtUp = {
+    status: "SCANNED",
+    caughtUp: true,
+    headOccurredAt: 90,
+  };
+  await persistGenesisMonitorHealth(db, {
+    phase: "COMPLETED",
+    cycleStartedAt: 100,
+    cycleCompletedAt: 110,
+    ethereum: caughtUp,
+    tron: { ...caughtUp, headOccurredAt: 91 },
+    solana: { ...caughtUp, headOccurredAt: 92 },
+    settlementQueueDeferred: false,
+  });
+  assert.match(writes[1].sql, /status=\?/);
+  assert.deepEqual(writes[1].values, [
+    "HEALTHY", 110, 1, 1, 1, 90, 91, 92, 0, 110,
+  ]);
+
+  await persistGenesisMonitorHealth(db, {
+    phase: "COMPLETED",
+    cycleStartedAt: 110,
+    cycleCompletedAt: 120,
+    ethereum: caughtUp,
+    tron: caughtUp,
+    solana: { ...caughtUp, caughtUp: false },
+    settlementQueueDeferred: true,
+  });
+  assert.deepEqual(writes[2].values, [
+    "DEGRADED", 120, 1, 1, 0, 90, 90, 90, 1, 120,
+  ]);
+});
+
+test("monitor health writer rejects missing databases and incomplete cycle timestamps", async () => {
+  await assert.rejects(
+    () => persistGenesisMonitorHealth(null, { phase: "RUNNING", cycleStartedAt: 1 }),
+    /database and exact cycle-start timestamp/
+  );
+  const db = { prepare: () => ({ bind: () => ({ run: async () => ({ success: true }) }) }) };
+  await assert.rejects(
+    () => persistGenesisMonitorHealth(db, {
+      phase: "COMPLETED",
+      cycleStartedAt: 1,
+      ethereum: { status: "SCANNED", caughtUp: true },
+      tron: { status: "SCANNED", caughtUp: true },
+      solana: { status: "SCANNED", caughtUp: true },
+    }),
+    /exact completion timestamp/
+  );
+});
 
 test("USDT amount formatting uses exact six-decimal integer arithmetic", () => {
   assert.equal(formatUsdtAmount("1"), "0.000001");
