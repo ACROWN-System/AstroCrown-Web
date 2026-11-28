@@ -25,8 +25,6 @@
   var pendingAdminWalletMessage = null;
   var accountResultDialog = null;
   var linkedWalletCandidate = null;
-  var ownerDisconnectHandling = false;
-  var observedOwnerWalletProviders = new WeakSet();
   var termsVersion = "development-terms-2026-10-31-v0.3";
   var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v2";
   var discoveredWalletProviders = [];
@@ -790,6 +788,9 @@
       window.location.pathname + window.location.search + "#account"
     );
     await showAccountDashboard();
+    if (created && !accountState.authenticated) {
+      throw new Error("The account-creation response was received, but the new account session could not be confirmed. Sign in with the same designated owner wallet to check the account before attempting creation again.");
+    }
     if (created) {
       showAccountResultDialog(
         "success",
@@ -1408,9 +1409,20 @@
       });
       await finishPrimaryWalletAuthentication(result, result.walletAccountCreated === true);
     } catch (error) {
-      var creationFailure = error.message || "Wallet account creation could not be completed. No account was created unless the server confirms otherwise.";
+      var recoveredStatus = await refreshStatus();
+      var expectedOwnerAddress = selectedWalletAddress || "";
+      if (recoveredStatus.authenticated === true &&
+          recoveredStatus.primaryIdentityWallet &&
+          typeof recoveredStatus.primaryIdentityWallet.address === "string" &&
+          expectedOwnerAddress &&
+          recoveredStatus.primaryIdentityWallet.address.toLowerCase() === expectedOwnerAddress.toLowerCase()) {
+        await finishPrimaryWalletAuthentication(recoveredStatus, true);
+        return;
+      }
+      var creationFailure = "AstroCrown could not confirm that account creation and the account session completed. Before trying again, sign in with the same designated owner wallet to check whether the account was created. A lost network response does not prove that the server failed to receive the request. " +
+        (error.message || "");
       showFeedback(creationFailure, "error");
-      showAccountResultDialog("error", "AstroCrown account creation unsuccessful", creationFailure);
+      showAccountResultDialog("error", "Account creation could not be confirmed", creationFailure);
     } finally {
       setBusy(false);
     }
