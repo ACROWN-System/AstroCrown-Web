@@ -118,3 +118,19 @@ test("staging Wrangler environment explicitly selects public mode and keeps loca
   assert.equal(config.vars.ENVIRONMENT, "local");
   assert.equal(config.env.staging.d1_databases[0].database_id, "00000000-0000-0000-0000-000000000000");
 });
+
+
+test("deployment diagnostics enforce the immutable owner-wallet no-recovery policy", async () => {
+  const runtimePath = new URL("../src/index.js", import.meta.url);
+  const accountUiPath = new URL("../../prototype/account-ui.js", import.meta.url);
+  const [runtimeSource, accountUi] = await Promise.all([
+    readFile(runtimePath, "utf8"),
+    readFile(accountUiPath, "utf8"),
+  ]);
+  const expectedPolicy = "none; losing the permanent owner wallet permanently ends account access; only the same owner wallet can sign in";
+  assert.ok(runtimeSource.includes('accountRecovery: "' + expectedPolicy + '"'));
+  assert.ok(deployScript.includes('diagnostics.accountRecovery !== "' + expectedPolicy + '"'));
+  assert.match(deployScript, /AstroCrown provides no account-recovery path/);
+  assert.doesNotMatch(accountUi, /recovery anchor/i);
+  assert.match(accountUi, /permanent owner and identity authority/i);
+});
