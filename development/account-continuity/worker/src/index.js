@@ -10,7 +10,7 @@ const STAGING_NOTICE_VERSION = "2026-11-08-public-test-v1";
 const STAGING_ACK_COOKIE = "acrown_staging_notice_ack";
 const STAGING_ACK_SECONDS = 12 * 60 * 60;
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
-const WALLET_LOSS_NOTICE_VERSION = "wallet-loss-warning-2026-11-28-v1";
+const WALLET_LOSS_NOTICE_VERSION = "wallet-loss-warning-2026-11-28-v2";
 const AVATARS = ["person", "crown", "star", "moon", "orbit", "shield"];
 const ADMIN_PERMISSION_NAMES = ["admin.roles.grant", "admin.roles.revoke"];
 
@@ -1353,6 +1353,12 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
     "JOIN auth_accounts a ON a.account_id = w.account_id " +
     "WHERE w.address = ? COLLATE NOCASE AND w.active = 1"
   ).bind(address).first();
+  const linkedIdentity = await db.prepare(
+    "SELECT account_id FROM auth_linked_wallets WHERE address = ? COLLATE NOCASE AND active = 1 LIMIT 1"
+  ).bind(address).first();
+  if (linkedIdentity && (!identity || linkedIdentity.account_id !== identity.account_id)) {
+    throw fail(409, "This wallet is linked as an additional wallet and cannot be used to sign in or create another AstroCrown account. Sign in with its permanent owner wallet first.");
+  }
 
   let accountRecord;
   let walletAccountCreated = false;
@@ -1560,6 +1566,7 @@ export {
   validateEvmChainId,
   createAdminSiweMessage,
   createPrimaryWalletSignInMessage,
+  createAdditionalWalletLinkMessage,
   verifyEvmPersonalSignature,
   verifyEvmPersonalSignature as verifyAdminSiweSignature,
   diagnostics,
