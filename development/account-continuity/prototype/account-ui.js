@@ -25,6 +25,8 @@
   var pendingAdminWalletMessage = null;
   var accountResultDialog = null;
   var linkedWalletCandidate = null;
+  var ownerDisconnectHandling = false;
+  var observedOwnerWalletProviders = new WeakSet();
   var termsVersion = "development-terms-2026-10-31-v0.3";
   var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v2";
   var discoveredWalletProviders = [];
@@ -466,7 +468,29 @@
         // An inaccessible provider is skipped; no permission prompt is triggered here.
       }
     }
-    throw new Error("AstroCrown could not find your designated owner wallet among the connected browser wallets. Reconnect the same owner wallet first; an additional wallet cannot replace it.");
+    // Linking is an explicit user action. If the original owner provider is known
+    // from this session but its read permission was revoked, ask only that provider
+    // for a fresh connection instead of prompting every detected wallet.
+    if (selectedWalletProvider && typeof selectedWalletProvider.request === "function") {
+      try {
+        var ownerAccounts = await selectedWalletProvider.request({ method: "eth_requestAccounts" });
+        if (Array.isArray(ownerAccounts) && ownerAccounts.some(function (address) {
+          return typeof address === "string" && address.toLowerCase() === ownerAddress.toLowerCase();
+        })) {
+          var ownerEntry = discoveredWalletProviders.find(function (candidate) {
+            return candidate.provider === selectedWalletProvider;
+          }) || {
+            id: "owner-session-provider",
+            provider: selectedWalletProvider,
+            info: { name: "Original owner wallet" }
+          };
+          return { entry: ownerEntry, address: ownerAddress };
+        }
+      } catch (_error) {
+        // The owner provider declined or could not grant the requested connection.
+      }
+    }
+    throw new Error("AstroCrown could not find your designated owner wallet. Reconnect the same owner wallet when prompted; an additional wallet cannot replace it.");
   }
 
   async function signWalletLinkMessage(provider, address, message) {
@@ -562,6 +586,18 @@
     showLinkedWalletFeedback("Review the same wallet-capability authorization message in your owner wallet and additional wallet. No transaction or spending permission is requested.", "info");
     var ownerSignature = await signWalletLinkMessage(owner.entry.provider, owner.address, challenge.message);
     var walletSignature = await signWalletLinkMessage(entry.provider, address, challenge.message);
+    var ownerAccountsAfterSign = await owner.entry.provider.request({ method: "eth_accounts" });
+    var targetAccountsAfterSign = await entry.provider.request({ method: "eth_accounts" });
+    var targetChainAfterSign = await entry.provider.request({ method: "eth_chainId" });
+    var targetChainIdAfterSign = typeof targetChainAfterSign === "string" && /^0x[0-9a-f]+$/i.test(targetChainAfterSign)
+      ? Number.parseInt(targetChainAfterSign, 16) : NaN;
+    if (!Array.isArray(ownerAccountsAfterSign) || !ownerAccountsAfterSign.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === owner.address.toLowerCase();
+    }) || !Array.isArray(targetAccountsAfterSign) || !targetAccountsAfterSign.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === address.toLowerCase();
+    }) || targetChainIdAfterSign !== candidate.chainId) {
+      throw new Error("A wallet account or network changed during signing. The authorization was not submitted; restart the linking process.");
+    }
     var verified = await requestJson("/api/account/wallet-links/verify", {
       challengeId: challenge.challengeId,
       message: challenge.message,
@@ -602,6 +638,12 @@
     }
     showLinkedWalletFeedback("Confirm the unlinking request with your permanent owner wallet. This revokes AstroCrown permissions only; it is not a blockchain transaction.", "info");
     var ownerSignature = await signWalletLinkMessage(owner.entry.provider, owner.address, challenge.message);
+    var ownerAccountsAfterSign = await owner.entry.provider.request({ method: "eth_accounts" });
+    if (!Array.isArray(ownerAccountsAfterSign) || !ownerAccountsAfterSign.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === owner.address.toLowerCase();
+    })) {
+      throw new Error("The permanent owner wallet changed during signing. The unlink authorization was not submitted.");
+    }
     var verified = await requestJson("/api/account/wallet-links/verify", {
       challengeId: challenge.challengeId,
       message: challenge.message,
