@@ -1427,6 +1427,19 @@
     }
   });
 
+  dashboardContent.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "account-linked-wallet-provider") {
+      linkedWalletCandidate = null;
+      var addressField = document.getElementById("account-linked-wallet-address-field");
+      var addressSelect = document.getElementById("account-linked-wallet-address");
+      if (addressField) addressField.hidden = true;
+      if (addressSelect) addressSelect.innerHTML = '<option value="">Connect the selected wallet first</option>';
+      var consent = document.getElementById("account-linked-wallet-permission");
+      if (consent) consent.checked = false;
+      showLinkedWalletFeedback("Provider selection changed. Connect the selected wallet again before choosing an address.", "info");
+    }
+  });
+
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
@@ -1436,6 +1449,52 @@
     }
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
+      return;
+    }
+    if (button.id === "account-linked-wallet-refresh") {
+      setBusy(true);
+      try {
+        await discoverAdditionalWalletProviders();
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "Wallet discovery could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "account-linked-wallet-connect") {
+      setBusy(true);
+      try {
+        await connectAdditionalWalletForSelection();
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "The additional wallet could not be connected.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "account-linked-wallet-link") {
+      setBusy(true);
+      try {
+        await linkAdditionalWallet();
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "The additional wallet could not be linked.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.dataset.linkedWalletUnlink === "true") {
+      var linkedAddress = button.dataset.walletAddress || "";
+      var linkedChainId = Number(button.dataset.walletChainId);
+      setBusy(true);
+      try {
+        await unlinkAdditionalWallet(linkedAddress, linkedChainId);
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "The additional wallet could not be unlinked.", "error");
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "acknowledge-admin-revocation") {
@@ -1488,6 +1547,11 @@
       return;
     }
     if (button.id !== "account-signout") return;
+    if (!window.confirm(
+      "Disconnect your permanent owner wallet from this AstroCrown session and log out? " +
+      "Your account will remain bound to this exact owner wallet. To sign in again, you must reconnect and authenticate with the same owner wallet. " +
+      "Additional linked wallets cannot replace it or restore account access. This only ends your AstroCrown session; it does not delete your account or change the browser wallet’s permissions for other websites."
+    )) return;
     setBusy(true);
     try {
       await requestJson("/api/account/logout", {});
