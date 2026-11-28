@@ -64,6 +64,15 @@ test("remote wallet-only smoke checks are not represented as full account qualif
   assert.doesNotMatch(deployScript, /ML-DSA|COSE algorithm|legacy passkey compatibility|one-time recovery key/);
 });
 
+test("remote diagnostics smoke check enforces immutable owner-wallet access with no recovery path", async () => {
+  const workerPath = new URL("../src/index.js", import.meta.url);
+  const workerSource = await readFile(workerPath, "utf8");
+  const expectedPolicy = "none; losing the permanent owner wallet permanently ends account access; only the same owner wallet can sign in";
+  assert.ok(workerSource.includes('accountRecovery: "' + expectedPolicy + '"'));
+  assert.ok(deployScript.includes('diagnostics.accountRecovery !== "' + expectedPolicy + '"'));
+  assert.equal(deployScript.includes("restore the same primary wallet through the wallet provider or the owner's offline backup"), false);
+});
+
 test("public Genesis deployment smoke check matches the canonical disabled-payment API fields", async () => {
   const supportersPath = new URL("../src/supporters.js", import.meta.url);
   const supportersSource = await readFile(supportersPath, "utf8");
