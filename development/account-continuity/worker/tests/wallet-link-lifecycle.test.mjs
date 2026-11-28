@@ -132,7 +132,7 @@ test("account creation opens the account dashboard and reports success or failur
   assert.match(finish, /"#account"/);
   assert.match(finish, /await showAccountDashboard\(\)/);
   assert.match(finish, /showAccountResultDialog\("success"/);
-  assert.match(ui, /showAccountResultDialog\("error", "AstroCrown account creation unsuccessful"/);
+  assert.match(ui, /showAccountResultDialog\("error", "Account creation could not be confirmed"/);
   assert.match(ui, /className = "account-result-dialog"/);
   assert.match(ui, /AstroCrown account created successfully/);
   assert.match(ui, /No alternative account recovery/);
