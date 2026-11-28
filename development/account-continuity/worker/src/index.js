@@ -1442,7 +1442,7 @@ async function diagnostics() {
   return {
     runtime: "cloudflare-workers",
     primaryWalletAuthentication: "EIP-191 personal-sign",
-    accountRecovery: "restore the same primary wallet through the wallet provider or the owner's offline backup",
+    accountRecovery: "none; losing the permanent owner wallet permanently ends account access; only the same owner wallet can sign in",
     signInAuthorizesTransaction: false,
     paymentAcceptanceEnabled: false,
   };
