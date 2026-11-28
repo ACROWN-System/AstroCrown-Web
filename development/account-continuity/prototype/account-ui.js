@@ -476,7 +476,7 @@
       '<h3 class="account-wallet-picker-heading">Choose your wallet</h3>' +
       '<button class="account-wallet-card account-wallet-card-featured" type="button" disabled aria-disabled="true">' +
         '<span class="account-wallet-logo account-wallet-logo-astro" aria-hidden="true">A</span>' +
-        '<span class="account-wallet-card-copy"><strong>AstroCrown Wallet</strong><small>First-party wallet · Coming soon</small></span>' +
+        '<span class="account-wallet-card-copy"><strong>AstroWallet</strong><small>First-party wallet · Coming soon</small></span>' +
         '<span class="account-wallet-coming-soon">Coming soon</span>' +
       '</button>' +
       '<div class="account-wallet-provider-grid" id="account-wallet-provider-grid" role="group" aria-label="Detected compatible browser wallets">' +
