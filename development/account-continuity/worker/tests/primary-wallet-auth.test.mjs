@@ -118,6 +118,9 @@ test("wallet-first account popup requires explicit recovery and legal consent", 
   assert.match(ui, /termsAccepted/);
   assert.match(ui, /eip6963:requestProvider/);
   assert.match(ui, /wallet_requestPermissions/);
+  assert.match(ui, /permissionError\.code !== -32601 && permissionError\.code !== 4200/);
+  assert.match(ui, /provider\.request\(\{ method: "eth_accounts" \}\)/);
+  assert.match(ui, /provider\.request\(\{ method: "eth_requestAccounts" \}\)/);
   assert.match(ui, /Choose the exact wallet address for this AstroCrown account/);
   assert.match(ui, /Confirm that this is the wallet address you want as your AstroCrown primary identity/);
   assert.match(ui, /accountField.hidden = false/);
