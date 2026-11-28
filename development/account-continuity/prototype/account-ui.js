@@ -274,7 +274,7 @@
           logo.className = "account-wallet-logo";
           logo.setAttribute("aria-hidden", "true");
           var icon = entry.info && typeof entry.info.icon === "string" ? entry.info.icon : "";
-          if (/^data:image\/(?:png|jpeg|webp|svg\+xml);base64,/i.test(icon)) {
+          if (/^data:image\/(?:png|jpeg|webp|svg\+xml)(?:;base64)?,/i.test(icon)) {
             var image = document.createElement("img");
             image.src = icon;
             image.alt = "";
