@@ -1,10 +1,10 @@
 # AstroCrown Brand Language and Terminology Governance
 
 **Document ID:** ACW-BRAND-TERM-001  
-**Version:** 0.1.2  
+**Version:** 0.1.3  
 **Status:** PROPOSED INTERNAL GUIDE — pending review of the canonical NOVA terminology governance change.  
 **Applies to:** AstroCrown public website copy, UI labels, product/service descriptions, documentation, announcements, public relations, partner materials, metadata and future localization.  
-**Canonical semantics:** NOVA's Terminology Governance Standard and Canonical Terminology Register, once approved and merged into the designated source-of-truth branch.
+**Canonical semantics:** NOVA's merged Terminology Governance Standard and Canonical Terminology Register are the shared source of truth for cross-ecosystem concepts.
 
 ## 1. Purpose
 
@@ -24,7 +24,7 @@ Use the following source hierarchy:
 
 If two sources conflict, do not silently pick the version that sounds better. Record the conflict, identify the affected terms/pages and source revisions, mark the public-use decision BLOCKED where material, and obtain an authorized resolution.
 
-The NOVA canonical links below refer to proposed paths and become live source-of-truth links only when the dependent NOVA change is merged:
+The merged NOVA main-branch documents below are the canonical source of truth:
 - [Terminology Governance Standard](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/TERMINOLOGY-GOVERNANCE-STANDARD.md)
 - [Canonical Terminology Register](https://github.com/ACROWN-System/NOVA/blob/main/NOVA/CANONICAL-TERMINOLOGY-REGISTER.md)
 
@@ -34,8 +34,8 @@ Use the preferred spelling, capitalization, acronym expansion and scope note fro
 
 - **AstroCrown:** the brand/ecosystem name. Do not use the name alone as proof of a legal entity status, service availability, asset right or guarantee.
 - **NOVA:** the evolving, AI-agnostic operational ecosystem and architectural framework. Do not revive an obsolete acronym expansion as the current definition.
-- **HSIAN:** the adopted project term *Human–Super Intelligence Agentic Network*. Its public repository rollout is pending the HSIAN rename/integration pull requests; until they merge, existing main-branch files may still contain the previous designation.
-- **Super Intelligence:** a project-defined term and capability horizon, not a certification that a particular current model meets an established scientific threshold for superintelligence.
+- **HSIAN:** *Human–Superintelligence Alignment Network*. Use the current expansion recorded in NOVA's Canonical Terminology Register.
+- **Superintelligence:** a project-defined term and capability horizon.
 - **Cognitive extension:** describes a functional or theoretical arrangement of person-plus-tools in a task-solving process; it does not automatically prove measured enhancement or neuroplasticity.
 - **Cognitive prosthesis:** use only with the functional-analogy qualifier where needed. Do not imply a medical implant or literal neural merger unless separately evidenced.
 - **ACROWN token:** use the canonical technical token name and applicable specification. Do not infer legal classification, asset backing, guaranteed reserves, investment rights or service availability from a brand name or ticker.
@@ -170,3 +170,6 @@ The cross-repository terminology system is still in draft. The initial lexicon i
 
 - **2026-10-17 / v0.1.1:** Make provider discovery and accreditation checks dependent on the internal readiness gate; update the guide to distinguish readiness from certificate availability. No certification claim is made.
 - **2026-10-17 / v0.1.2:** Clarify the immutable boundary for all backup/archive directories, regardless of capitalization.
+
+
+- **2026-11-28 / v0.1.3:** Updated the HSIAN expansion to Human–Superintelligence Alignment Network and aligned the dependent guide with the merged NOVA canonical terminology sources.
