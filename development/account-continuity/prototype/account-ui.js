@@ -322,10 +322,10 @@
   function selectedWalletProviderFromForm() {
     var select = document.getElementById("account-wallet-provider");
     var id = select ? select.value : "";
-    var entry = discoveredWalletProviders.find(function (candidate) { return candidate.id === id; });
-    if (!entry && discoveredWalletProviders.length === 1) entry = discoveredWalletProviders[0];
+    var entry = id ? discoveredWalletProviders.find(function (candidate) { return candidate.id === id; }) : null;
     if (!entry || !entry.provider || typeof entry.provider.request !== "function") {
-      throw new Error("Choose one of the detected wallet providers before continuing.");
+      selectedWalletProvider = null;
+      throw new Error("Select a detected wallet card before continuing. AstroCrown will not choose a provider for you.");
     }
     selectedWalletProvider = entry.provider;
     return selectedWalletProvider;
