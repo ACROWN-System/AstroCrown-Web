@@ -518,7 +518,7 @@ async function smokeTest(origin) {
   const diagnostics = await diagnosticsResponse.json();
   if (
     diagnostics.primaryWalletAuthentication !== "EIP-191 personal-sign" ||
-    diagnostics.accountRecovery !== "restore the same primary wallet through the wallet provider or the owner's offline backup" ||
+    diagnostics.accountRecovery !== "none; losing the permanent owner wallet permanently ends account access; only the same owner wallet can sign in" ||
     diagnostics.signInAuthorizesTransaction !== false ||
     diagnostics.paymentAcceptanceEnabled !== false
   ) fail("Remote Worker diagnostics do not match the wallet-only, non-spending authentication policy.");
@@ -682,7 +682,7 @@ async function main() {
   console.log("");
   console.log("This is only initial deployment smoke evidence, not full remote account qualification.");
   console.log("A real remote browser must still prove new account creation with both consents, repeat sign-in, sign-out, wrong-wallet rejection, same-account Genesis profile access and optional secondary-wallet linking.");
-  console.log("Use synthetic data only. Wallet-account recovery requires restoring the same primary wallet through the owner’s wallet provider or offline backup. No passkey or recovery-key account path remains.");
+  console.log("Use synthetic data only. AstroCrown provides no account-recovery path. Losing access to the immutable owner wallet permanently means losing access to the account. Additional wallets cannot restore access. No passkey or recovery-key account path remains.");
   console.log("This script does not enable billing, add a payment method, deploy production, or delete resources after a failed run.");
   console.log("Record three-pass cleanup and the provider's retention quarantine before closing this staging environment.");
 }
