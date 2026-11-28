@@ -81,7 +81,7 @@ test("unlink revokes only AstroCrown permission and re-link requires fresh walle
   assert.match(worker, /additional_wallet_linked/);
   assert.match(worker, /additional_wallet_unlinked/);
   assert.match(worker, /may be linked again later with fresh wallet proofs and authorization/i);
-  assert.match(worker, /additional_wallets WHERE address = \? COLLATE NOCASE AND active = 1/);
+  assert.match(worker, /auth_linked_wallets WHERE address = \? COLLATE NOCASE AND active = 1/);
 });
 
 test("an additional wallet cannot become an alternate owner or sign-in identity", async () => {
