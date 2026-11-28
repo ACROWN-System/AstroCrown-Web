@@ -127,3 +127,21 @@ test("staging Wrangler environment explicitly selects public mode and keeps loca
   assert.equal(config.vars.ENVIRONMENT, "local");
   assert.equal(config.env.staging.d1_databases[0].database_id, "00000000-0000-0000-0000-000000000000");
 });
+
+
+test("account creation and deployment copy consistently communicate immutable owner-wallet access", async () => {
+  const accountUiPath = new URL("../../prototype/account-ui.js", import.meta.url);
+  const readmePath = new URL("../README.md", import.meta.url);
+  const [accountUi, readme] = await Promise.all([
+    readFile(accountUiPath, "utf8"),
+    readFile(readmePath, "utf8"),
+  ]);
+  assert.doesNotMatch(accountUi, /recovery anchor/i);
+  assert.match(accountUi, /permanent owner and identity authority/i);
+  assert.match(accountUi, /If you permanently lose access to this exact wallet, you permanently lose access to your AstroCrown account/);
+  assert.match(readme, /## Immutable owner-wallet lifecycle/);
+  assert.match(readme, /AstroCrown provides no account-recovery process or alternate route back into the account/);
+  assert.match(readme, /acknowledgement of the owner-wallet-loss notice/);
+  assert.match(deployScript, /AstroCrown provides no account-recovery path/);
+  assert.doesNotMatch(deployScript, /Wallet-account recovery requires restoring the same primary wallet/);
+});

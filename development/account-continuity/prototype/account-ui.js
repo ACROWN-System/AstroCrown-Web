@@ -892,7 +892,7 @@
     var address = wallet && typeof wallet.address === "string" ? wallet.address : "";
     var network = wallet && Number.isSafeInteger(Number(wallet.chainId)) ? "EVM chain " + Number(wallet.chainId) : "EVM wallet";
     var message = created
-      ? "Your AstroCrown account has been created with the primary wallet you selected. That same wallet is your account identity, recovery anchor and the wallet used to authorize future account actions."
+      ? "Your AstroCrown account has been created with the primary wallet you selected. That same wallet is the permanent owner and identity authority for your account and is required to authorize future account actions."
       : "You are signed in to AstroCrown with your primary identity wallet.";
     content.innerHTML =
       '<div class="account-success-panel">' +
