@@ -303,7 +303,7 @@
         params: [{ eth_accounts: {} }]
       });
     } catch (permissionError) {
-      if (!permissionError || permissionError.code !== -32601) throw permissionError;
+      if (!permissionError || (permissionError.code !== -32601 && permissionError.code !== 4200)) throw permissionError;
       granted = null;
     }
     var accounts = await provider.request({ method: "eth_accounts" });
