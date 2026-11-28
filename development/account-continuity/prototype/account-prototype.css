@@ -768,3 +768,33 @@
   color:#ffe48a;
   font-size:11px;
 }
+
+
+/* Visual wallet chooser: first-party AstroCrown entry stays pinned above discovered providers. */
+.account-wallet-picker { display:grid;gap:10px;margin:4px 0 12px; }
+.account-wallet-picker-heading { margin:0 0 2px;color:#e8eef8;font-size:12px;font-weight:800; }
+.account-wallet-provider-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px; }
+.account-wallet-card {
+  display:flex;align-items:center;gap:10px;min-width:0;min-height:66px;padding:10px;
+  border:1px solid rgba(153,178,213,.24);border-radius:10px;background:rgba(9,23,40,.86);
+  color:#edf3fb;text-align:left;cursor:pointer;transition:border-color .15s,background .15s,transform .15s;
+}
+.account-wallet-card:hover { border-color:rgba(255,215,0,.48);background:rgba(255,215,0,.045); }
+.account-wallet-card[aria-pressed="true"] { border-color:#ffd700;background:rgba(255,215,0,.095);box-shadow:inset 0 0 0 1px rgba(255,215,0,.18); }
+.account-wallet-card:focus-visible { outline:2px solid #ffd700;outline-offset:3px; }
+.account-wallet-card:disabled { cursor:default;opacity:1; }
+.account-wallet-card-featured { border-color:rgba(255,215,0,.42);background:linear-gradient(110deg,rgba(255,215,0,.085),rgba(10,25,43,.94)); }
+.account-wallet-logo {
+  display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;overflow:hidden;
+  border:1px solid rgba(153,178,213,.2);border-radius:10px;background:#f4f6fa;color:#152238;
+  font-size:17px;font-weight:900;
+}
+.account-wallet-logo img { display:block;width:100%;height:100%;object-fit:contain;padding:4px; }
+.account-wallet-logo-astro { border-color:rgba(255,215,0,.55);background:#172d4b;color:#ffd700;font-size:22px; }
+.account-wallet-card-copy { display:grid;gap:3px;min-width:0; }
+.account-wallet-card-copy strong { overflow:hidden;color:#f1f5fb;font-size:11px;text-overflow:ellipsis;white-space:nowrap; }
+.account-wallet-card-copy small { color:#94a5bb;font-size:9px;line-height:1.35; }
+.account-wallet-coming-soon { margin-left:auto;color:#f0d783;font-size:8px;font-weight:800;text-align:right; }
+.account-wallet-discovery-state { grid-column:1/-1;margin:0;padding:13px;border:1px dashed rgba(153,178,213,.24);border-radius:9px;color:#9cacc1;font-size:10px;line-height:1.5; }
+.account-wallet-provider-native { position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important; }
+@media(max-width:420px) { .account-wallet-provider-grid { grid-template-columns:1fr; } }
