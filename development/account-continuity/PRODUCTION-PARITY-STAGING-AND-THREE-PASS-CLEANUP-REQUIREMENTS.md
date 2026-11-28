@@ -2,7 +2,9 @@
 
 **Decision date:** 2026-11-04  
 **Status:** OWNER-ACCEPTED ARCHITECTURAL DIRECTION / HOSTING RUNTIME NOT YET QUALIFIED  
-**Scope:** AstroCrown public website and passkey-first account subsystem
+**Scope:** AstroCrown public website and wallet-only account subsystem
+
+> **Authentication update — 28 November 2026:** the old passkey-first and temporary HTTPS passkey-tunnel implementation has been removed. The governing account requirements are [Wallet-Only Account Identity and Transaction Safety Requirements](WALLET-ONLY-ACCOUNT-AND-TRANSACTION-SAFETY-REQUIREMENTS.md). Staging now qualifies the Cloudflare Worker wallet-only runtime; no local passkey authentication server or separate Genesis sign-in is retained. The production-parity principles in this document remain applicable, but passkey-specific implementation details below are historical and non-normative.
 
 ## 1. Accepted architectural direction
 

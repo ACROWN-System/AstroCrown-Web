@@ -19,23 +19,25 @@
   var activeCommunicationsSection = "alerts";
   var mode = "signin";
   var successKind = "signup";
-  var recoveryKeyAcknowledged = false;
   var accountState = { authenticated: false };
-  var accountSecurityData = null;
-  var accountSecurityPendingPasskeyOptions = null;
-  var securityRecoveryKeyPending = false;
   var focusBeforeOpen = null;
   var busy = false;
   var pendingAdminWalletMessage = null;
   var termsVersion = "development-terms-2026-10-31-v0.3";
-  var loopbackHosts = ["localhost", "127.0.0.1", "::1"];
+  var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v1";
+  var discoveredWalletProviders = [];
+  var selectedWalletProvider = null;
+  var selectedWalletAddress = "";
   var queryParams = new URLSearchParams(window.location.search);
   var forceBrowserDemo = queryParams.get("account-preview-demo") === "1";
-  var liveTestHost = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.trycloudflare\.com$/i.test(window.location.hostname);
-  var liveTestMode = queryParams.get("account-live-test") === "1" &&
-    window.location.protocol === "https:" && liveTestHost;
-  var browserPreviewMode = forceBrowserDemo ||
-    (!liveTestMode && loopbackHosts.indexOf(window.location.hostname) === -1);
+  var runtimeMarker = document.querySelector('meta[name="astro-account-runtime"]');
+  var workerStagingMode = Boolean(
+    runtimeMarker && runtimeMarker.content === "worker-staging" &&
+    window.location.protocol === "https:"
+  );
+  // Only the explicitly marked Cloudflare staging Worker may authenticate.
+  // Local files, localhost pages and generic previews remain read-only demos.
+  var browserPreviewMode = forceBrowserDemo || !workerStagingMode;
   // Built-in glyphs only: no user-uploaded image, remote URL or third-party asset.
   // The server independently validates the selected identifier.
   var avatarOptions = {
@@ -102,382 +104,6 @@
     feedback.classList.toggle("is-visible", Boolean(message));
   }
 
-  function base64urlToArrayBuffer(value) {
-    if (typeof value !== "string" || !/^[A-Za-z0-9_-]+$/.test(value)) {
-      throw new Error("The passkey service returned an invalid challenge or credential identifier.");
-    }
-    var padded = value.replace(/-/g, "+").replace(/_/g, "/");
-    while (padded.length % 4) padded += "=";
-    var binary;
-    try { binary = atob(padded); }
-    catch (_error) { throw new Error("The passkey service returned invalid encoded data."); }
-    var bytes = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    return bytes.buffer;
-  }
-
-  function arrayBufferToBase64url(buffer) {
-    var bytes = new Uint8Array(buffer);
-    var binary = "";
-    for (var i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-  }
-
-  function webauthnOptionsFromJson(value) {
-    var publicKey = Object.assign({}, value);
-    publicKey.challenge = base64urlToArrayBuffer(publicKey.challenge);
-    if (publicKey.user && typeof publicKey.user.id === "string") {
-      publicKey.user = Object.assign({}, publicKey.user, {
-        id: base64urlToArrayBuffer(publicKey.user.id)
-      });
-    }
-    ["excludeCredentials", "allowCredentials"].forEach(function (name) {
-      if (Array.isArray(publicKey[name])) {
-        publicKey[name] = publicKey[name].map(function (item) {
-          return Object.assign({}, item, { id: base64urlToArrayBuffer(item.id) });
-        });
-      }
-    });
-    return publicKey;
-  }
-
-  function serializeWebAuthnCredential(credential, registration) {
-    if (!credential || !credential.response) {
-      throw new Error("The authenticator returned an incomplete passkey response.");
-    }
-    if (typeof credential.toJSON === "function") return credential.toJSON();
-    var response = credential.response;
-    var serialized = {
-      id: credential.id,
-      rawId: arrayBufferToBase64url(credential.rawId),
-      type: credential.type,
-      response: {
-        clientDataJSON: arrayBufferToBase64url(response.clientDataJSON)
-      },
-      clientExtensionResults: typeof credential.getClientExtensionResults === "function"
-        ? credential.getClientExtensionResults() : {}
-    };
-    if (credential.authenticatorAttachment) {
-      serialized.authenticatorAttachment = credential.authenticatorAttachment;
-    }
-    if (registration) {
-      serialized.response.attestationObject = arrayBufferToBase64url(response.attestationObject);
-      if (typeof response.getTransports === "function") {
-        serialized.response.transports = response.getTransports();
-      }
-    } else {
-      serialized.response.authenticatorData = arrayBufferToBase64url(response.authenticatorData);
-      serialized.response.signature = arrayBufferToBase64url(response.signature);
-      serialized.response.userHandle = response.userHandle
-        ? arrayBufferToBase64url(response.userHandle) : null;
-    }
-    return serialized;
-  }
-
-  function ensurePasskeyContext() {
-    if (browserPreviewMode) {
-      throw new Error("This hosted HTML preview cannot create real accounts or passkeys. Start the local AstroCrown account server and open http://localhost:8766/ to test authentication.");
-    }
-    if (!window.isSecureContext || !navigator.credentials ||
-        typeof navigator.credentials.create !== "function" ||
-        typeof navigator.credentials.get !== "function" ||
-        typeof PublicKeyCredential === "undefined") {
-      throw new Error("This browser does not expose WebAuthn in a supported secure context. Use a current browser on localhost or the approved HTTPS site.");
-    }
-  }
-
-
-  async function requestSecurityStepUp(purpose) {
-    ensurePasskeyContext();
-    var options = await requestJson("/api/account/security/step-up/options", { purpose: purpose });
-    var credential;
-    try {
-      credential = await navigator.credentials.get({
-        publicKey: webauthnOptionsFromJson(options.publicKey)
-      });
-    } catch (error) {
-      if (error && error.name === "NotAllowedError") {
-        throw new Error("Passkey verification was cancelled. No security change was made.");
-      }
-      throw new Error("The browser could not verify your passkey. No security change was made.");
-    }
-    if (!credential) throw new Error("Passkey verification was cancelled. No security change was made.");
-    var verified = await requestJson("/api/account/security/step-up/verify", {
-      challengeId: options.challengeId,
-      credential: serializeWebAuthnCredential(credential, false)
-    });
-    if (verified.purpose !== purpose || typeof verified.stepUpToken !== "string") {
-      throw new Error("The server did not return the expected one-use security authorization.");
-    }
-    return verified.stepUpToken;
-  }
-
-  async function prepareAnotherPasskey(label) {
-    var stepUpToken = await requestSecurityStepUp("manage-passkeys");
-    var options = await requestJson("/api/account/security/passkeys/add/options", {
-      stepUpToken: stepUpToken,
-      label: label
-    });
-    return {
-      challengeId: options.challengeId,
-      publicKey: options.publicKey,
-      label: label,
-      expiresInSeconds: Number(options.expiresInSeconds || 120)
-    };
-  }
-
-  async function createPreparedPasskey() {
-    if (!accountSecurityPendingPasskeyOptions) {
-      throw new Error("Start the additional passkey verification again.");
-    }
-    ensurePasskeyContext();
-    var pending = accountSecurityPendingPasskeyOptions;
-    var creation;
-    try {
-      // Call WebAuthn immediately inside the user's second click; no network
-      // request or other await is allowed before navigator.credentials.create.
-      creation = navigator.credentials.create({
-        publicKey: webauthnOptionsFromJson(pending.publicKey)
-      });
-    } catch (error) {
-      throw new Error("The browser could not start the additional passkey ceremony. No credential was added.");
-    }
-    var credential;
-    try {
-      credential = await creation;
-    } catch (error) {
-      if (error && error.name === "NotAllowedError") {
-        throw new Error("Additional passkey creation was cancelled or expired. No credential was added. Start again.");
-      }
-      throw new Error("The browser could not create the additional passkey. No credential was added.");
-    }
-    if (!credential) throw new Error("Additional passkey creation was cancelled. No credential was added.");
-    return requestJson("/api/account/security/passkeys/add/verify", {
-      challengeId: pending.challengeId,
-      credential: serializeWebAuthnCredential(credential, true)
-    });
-  }
-
-  async function renameAccountPasskey(passkeyRef, label) {
-    var stepUpToken = await requestSecurityStepUp("manage-passkeys");
-    return requestJson("/api/account/security/passkeys/rename", {
-      stepUpToken: stepUpToken,
-      passkeyRef: passkeyRef,
-      label: label
-    });
-  }
-
-  async function revokeAccountPasskey(passkeyRef) {
-    var stepUpToken = await requestSecurityStepUp("manage-passkeys");
-    return requestJson("/api/account/security/passkeys/revoke", {
-      stepUpToken: stepUpToken,
-      passkeyRef: passkeyRef
-    });
-  }
-
-  async function revokeAccountSession(sessionRef) {
-    var stepUpToken = await requestSecurityStepUp("manage-sessions");
-    return requestJson("/api/account/security/sessions/revoke", {
-      stepUpToken: stepUpToken,
-      sessionRef: sessionRef
-    });
-  }
-
-  async function revokeOtherAccountSessions() {
-    var stepUpToken = await requestSecurityStepUp("manage-sessions");
-    return requestJson("/api/account/security/sessions/revoke", {
-      stepUpToken: stepUpToken,
-      revokeOthers: true
-    });
-  }
-
-  async function rotateOfflineRecoveryKey() {
-    var stepUpToken = await requestSecurityStepUp("rotate-recovery-key");
-    return requestJson("/api/account/security/recovery/rotate", {
-      stepUpToken: stepUpToken
-    });
-  }
-
-  function securityDateLabel(value) {
-    if (!value) return "Not recorded";
-    var date = new Date(value);
-    return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleString();
-  }
-
-  function renderSecurityPanel(data) {
-    var panel = document.getElementById("account-security-panel");
-    if (!panel) return;
-    var oneTimeKey = data && typeof data.oneTimeRecoveryKey === "string"
-      ? data.oneTimeRecoveryKey : null;
-    var safeData = Object.assign({}, data || {});
-    delete safeData.oneTimeRecoveryKey;
-    delete safeData.message;
-    accountSecurityData = safeData;
-    var passkeys = Array.isArray(safeData.passkeys) ? safeData.passkeys : [];
-    var sessions = Array.isArray(safeData.sessions) ? safeData.sessions : [];
-    var passkeyMarkup = passkeys.length ? passkeys.map(function (item) {
-      var ref = escapeHtml(item.passkeyRef || "");
-      var algorithm = Number(item.algorithm);
-      var algorithmLabel = algorithm === -48 ? "ML-DSA-44 · COSE -48"
-        : algorithm === -49 ? "ML-DSA-65 · COSE -49"
-          : algorithm === -50 ? "ML-DSA-87 · COSE -50"
-            : "COSE algorithm " + String(algorithm);
-      return '<article class="account-security-item">' +
-        '<div class="account-security-item-heading"><strong>' + escapeHtml(item.label || "Passkey") + '</strong>' +
-        '<span>' + (item.postQuantum === true ? "Post-quantum credential algorithm" : "Credential algorithm recorded") + '</span></div>' +
-        '<p>Added: ' + escapeHtml(securityDateLabel(item.createdAt)) + '</p>' +
-        '<p>Last used: ' + escapeHtml(securityDateLabel(item.lastUsedAt)) + '</p>' +
-        '<p>' + escapeHtml(algorithmLabel) + ' · Authenticator: ' + escapeHtml(item.deviceType || "unknown") +
-        ' · Backup state: ' + (item.backedUp === true ? "reported backed up" : "not reported backed up") + '</p>' +
-        '<label class="account-security-label-field">Passkey name' +
-        '<input type="text" maxlength="40" value="' + escapeHtml(item.label || "Passkey") +
-        '" data-passkey-label-input="' + ref + '"></label>' +
-        '<div class="account-security-item-actions">' +
-        '<button class="account-secondary" type="button" data-security-action="rename-passkey" data-passkey-ref="' + ref + '">Save name</button>' +
-        '<button class="account-secondary" type="button" data-security-action="revoke-passkey" data-passkey-ref="' + ref +
-        '"' + (passkeys.length <= 1 ? ' disabled data-original-disabled="true"' : "") + '>Revoke passkey</button>' +
-        '</div></article>';
-    }).join("") : '<p>No active passkeys were returned by the account service.</p>';
-    var sessionMarkup = sessions.length ? sessions.map(function (item) {
-      var ref = escapeHtml(item.sessionRef || "");
-      return '<article class="account-security-item">' +
-        '<strong>' + (item.isCurrent === true ? "Current browser session" : "Other sign-in session") + '</strong>' +
-        '<p>Started: ' + escapeHtml(securityDateLabel(item.createdAt)) + '</p>' +
-        '<p>Expires: ' + escapeHtml(securityDateLabel(item.expiresAt)) + '</p>' +
-        (item.isCurrent === true ? '<span class="account-dashboard-status">This session remains active</span>' :
-          '<button class="account-secondary" type="button" data-security-action="revoke-session" data-session-ref="' + ref + '">Revoke this session</button>') +
-        '</article>';
-    }).join("") : '<p>No active sign-in sessions were returned by the account service.</p>';
-    panel.innerHTML =
-      '<div class="account-security-panel-heading"><h3>Passkeys</h3><p>Private keys remain with your authenticators. Names are labels you control; AstroCrown does not need a device fingerprint.</p></div>' +
-      '<div class="account-security-list">' + passkeyMarkup + '</div>' +
-      '<div class="account-security-add">' +
-        '<label class="account-security-label-field">Name for the additional passkey' +
-        '<input id="account-security-new-passkey-label" type="text" maxlength="40" value="Additional passkey"></label>' +
-        '<button class="account-primary" type="button" id="account-security-add-passkey">Verify existing passkey</button>' +
-        '<div id="account-security-pending-passkey" class="account-security-pending-passkey" hidden>' +
-          '<p>Your existing passkey was verified. Select the next button to open your authenticator and create the additional passkey.</p>' +
-          '<button class="account-primary" type="button" id="account-security-create-passkey">Continue to create passkey</button>' +
-          '<button class="account-secondary" type="button" id="account-security-cancel-passkey">Cancel</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="account-security-panel-heading"><h3>Sign-in sessions</h3><p>Only session creation and expiry are shown. No IP address, location or device fingerprint is collected for this list.</p></div>' +
-      '<div class="account-security-list">' + sessionMarkup + '</div>' +
-      '<button class="account-secondary" type="button" id="account-security-revoke-others"' +
-        (sessions.filter(function (item) { return item.isCurrent !== true; }).length === 0 ? ' disabled data-original-disabled="true"' : "") +
-        '>Sign out all other sessions</button>' +
-      '<div class="account-security-panel-heading"><h3>Offline recovery key</h3><p>' +
-        (safeData.activeRecoveryKey === true ? "One unused recovery key is active." : "No unused recovery key is currently registered.") +
-        ' Replacing it requires a fresh passkey verification. The new key is shown once.</p></div>' +
-      '<button class="account-secondary" type="button" id="account-security-rotate-recovery-key">Replace offline recovery key</button>' +
-      '<div id="account-security-recovery-output" class="account-security-recovery-output" hidden></div>' +
-      '<p id="account-security-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
-      '<p class="account-security-note">Each sensitive change requires a fresh passkey assertion. The authorization is short-lived, bound to this signed-in session, and accepted once.</p>';
-    panel.hidden = false;
-    if (oneTimeKey) {
-      securityRecoveryKeyPending = true;
-      var output = document.getElementById("account-security-recovery-output");
-      if (output) {
-        output.hidden = false;
-        output.innerHTML =
-          '<strong>Save this new recovery key offline now.</strong>' +
-          '<p>The previous key has been invalidated. This replacement will not be displayed again after you close or acknowledge this notice.</p>' +
-          '<textarea id="account-security-recovery-key-value" rows="2" readonly spellcheck="false">' + escapeHtml(oneTimeKey) + '</textarea>' +
-          '<div class="account-security-item-actions">' +
-          '<button class="account-secondary" type="button" data-security-action="copy-recovery-key">Copy recovery key</button>' +
-          '<button class="account-primary" type="button" data-security-action="acknowledge-recovery-key">I have saved it offline</button>' +
-          '</div>';
-      }
-    }
-  }
-
-  async function registerWithPasskey(payload) {
-    ensurePasskeyContext();
-    var options = await requestJson("/api/passkeys/register/options", payload);
-    var credential;
-    try {
-      credential = await navigator.credentials.create({
-        publicKey: webauthnOptionsFromJson(options.publicKey)
-      });
-    } catch (error) {
-      if (error && error.name === "NotAllowedError") {
-        throw new Error("Passkey creation was cancelled or not completed. No account was created.");
-      }
-      throw new Error("The browser could not create a passkey. No account was created.");
-    }
-    if (!credential) throw new Error("Passkey creation was cancelled. No account was created.");
-    return requestJson("/api/passkeys/register/verify", {
-      challengeId: options.challengeId,
-      credential: serializeWebAuthnCredential(credential, true)
-    });
-  }
-
-  async function signInWithPasskey() {
-    ensurePasskeyContext();
-    var options = await requestJson("/api/passkeys/authentication/options", {});
-    var credential;
-    try {
-      credential = await navigator.credentials.get({
-        publicKey: webauthnOptionsFromJson(options.publicKey)
-      });
-    } catch (error) {
-      if (error && error.name === "NotAllowedError") {
-        throw new Error("Passkey sign-in was cancelled or not completed.");
-      }
-      throw new Error("The browser could not complete passkey sign-in.");
-    }
-    if (!credential) throw new Error("Passkey sign-in was cancelled.");
-    return requestJson("/api/passkeys/authentication/verify", {
-      challengeId: options.challengeId,
-      credential: serializeWebAuthnCredential(credential, false)
-    });
-  }
-
-  async function recoverWithPasskey(payload) {
-    ensurePasskeyContext();
-    var options = await requestJson("/api/account/recovery/options", payload);
-    var credential;
-    try {
-      credential = await navigator.credentials.create({
-        publicKey: webauthnOptionsFromJson(options.publicKey)
-      });
-    } catch (error) {
-      if (error && error.name === "NotAllowedError") {
-        throw new Error("Passkey replacement was cancelled. The recovery key has not been consumed.");
-      }
-      throw new Error("The browser could not create the replacement passkey. The recovery key has not been consumed.");
-    }
-    if (!credential) {
-      throw new Error("Passkey replacement was cancelled. The recovery key has not been consumed.");
-    }
-    return requestJson("/api/account/recovery/complete", {
-      challengeId: options.challengeId,
-      credential: serializeWebAuthnCredential(credential, true)
-    });
-  }
-
-  async function finishPasskeyAuthentication(result, kind) {
-    accountState = result;
-    successKind = kind;
-    recoveryKeyAcknowledged = false;
-    syncAccountButton();
-
-    // A returning member's first authenticated page is the shared User
-    // dashboard. Only new registration/recovery pauses for the one-time
-    // offline recovery-key acknowledgement below.
-    if (kind === "signin") {
-      mode = "signin";
-      if (dialog.open) closeDialog();
-      navigateToAccount();
-      return;
-    }
-
-    mode = "success";
-    render();
-    var successAction = document.getElementById("open-account-hub");
-    if (successAction) successAction.focus();
-  }
-
   async function requestJson(path, payload) {
     if (browserPreviewMode) return browserPreviewRequest(path, payload || {});
     var response;
@@ -522,7 +148,6 @@
         adminWalletAuthenticated: false,
         adminSessionAuthorized: false,
         admin: false,
-        passkeyAvailable: false,
         activeSessionCount: 0,
         scope: "hosted-preview-no-authentication"
       };
@@ -531,22 +156,16 @@
       return { authenticated: false, message: "No account session exists in this hosted preview." };
     }
     throw new Error(
-      "The hosted HTML preview is a read-only interface demonstration. It cannot create accounts, store credentials or perform passkey authentication. Use the local loopback server for real WebAuthn tests."
+      "The hosted HTML preview is read-only. Wallet authentication requires the official AstroCrown staging Worker."
     );
   }
 
   function setBusy(value) {
     busy = value;
     [content, dashboardContent, adminDashboardContent, communicationsContent].filter(Boolean).forEach(function (container) {
-      Array.prototype.forEach.call(container.querySelectorAll("button, input"), function (element) {
+      Array.prototype.forEach.call(container.querySelectorAll("button, input, select"), function (element) {
         if (element.dataset.keepEnabled === "true") return;
-        var recoveryAcknowledgementPending =
-          element.id === "open-account-hub" &&
-          (successKind === "signup" || successKind === "recovery") &&
-          !recoveryKeyAcknowledged;
-        element.disabled = value ||
-          element.dataset.originalDisabled === "true" ||
-          recoveryAcknowledgementPending;
+        element.disabled = value || element.dataset.originalDisabled === "true";
       });
     });
   }
@@ -591,20 +210,140 @@
       '</svg><span>Log In</span>';
   }
 
-  async function authenticateWithPrimaryWallet(createAccount, referralId) {
+  function walletProviderLabel(entry) {
+    var name = entry && entry.info && typeof entry.info.name === "string" ? entry.info.name.trim() : "Browser wallet";
+    var rdns = entry && entry.info && typeof entry.info.rdns === "string" ? entry.info.rdns : "";
+    return { name: name || "Browser wallet", rdns: rdns };
+  }
+
+  async function refreshWalletProviderChoices() {
+    var providerSelects = [
+      document.getElementById("account-wallet-provider")
+    ].filter(Boolean);
+    if (!providerSelects.length || browserPreviewMode) return;
+    discoveredWalletProviders = [];
+    var announced = new Map();
+    function onAnnounce(event) {
+      var detail = event && event.detail;
+      if (!detail || !detail.provider || !detail.info || typeof detail.info.uuid !== "string") return;
+      announced.set(detail.info.uuid, { id: detail.info.uuid, provider: detail.provider, info: detail.info });
+    }
+    window.addEventListener("eip6963:announceProvider", onAnnounce);
+    try {
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+      await new Promise(function (resolve) { window.setTimeout(resolve, 350); });
+    } finally {
+      window.removeEventListener("eip6963:announceProvider", onAnnounce);
+    }
+    discoveredWalletProviders = Array.from(announced.values());
+    if (!discoveredWalletProviders.length && window.ethereum && Array.isArray(window.ethereum.providers)) {
+      discoveredWalletProviders = window.ethereum.providers.map(function (provider, index) {
+        return {
+          id: "injected-" + index,
+          provider: provider,
+          info: { name: provider.isMetaMask ? "MetaMask" : provider.isRabby ? "Rabby" : "Browser wallet " + (index + 1), rdns: "" }
+        };
+      });
+    }
+    if (!discoveredWalletProviders.length && window.ethereum && typeof window.ethereum.request === "function") {
+      discoveredWalletProviders = [{
+        id: "injected-default",
+        provider: window.ethereum,
+        info: { name: window.ethereum.isMetaMask ? "MetaMask" : "Injected wallet", rdns: "" }
+      }];
+    }
+    providerSelects.forEach(function (select) {
+      var previous = select.value;
+      select.innerHTML = '<option value="">Select a wallet provider…</option>';
+      discoveredWalletProviders.forEach(function (entry) {
+        var label = walletProviderLabel(entry);
+        var option = document.createElement("option");
+        option.value = entry.id;
+        option.textContent = label.name;
+        select.appendChild(option);
+      });
+      if (previous && discoveredWalletProviders.some(function (entry) { return entry.id === previous; })) {
+        select.value = previous;
+      } else if (discoveredWalletProviders.length === 1) {
+        select.value = discoveredWalletProviders[0].id;
+        selectedWalletProvider = discoveredWalletProviders[0].provider;
+      } else {
+        selectedWalletProvider = null;
+      }
+      var help = document.getElementById("account-wallet-selection-help");
+      if (help && !discoveredWalletProviders.length) {
+        help.textContent = "No compatible EVM wallet was detected. Install or enable a wallet that supports EIP-1193 and EIP-191 message signing, then reopen this window.";
+      } else if (help && discoveredWalletProviders.length > 1) {
+        help.textContent = "Choose the wallet provider you want to use. AstroCrown will not select a provider or wallet address for you.";
+      }
+    });
+  }
+
+  function selectedWalletProviderFromForm() {
+    var select = document.getElementById("account-wallet-provider");
+    var id = select ? select.value : "";
+    var entry = discoveredWalletProviders.find(function (candidate) { return candidate.id === id; });
+    if (!entry && discoveredWalletProviders.length === 1) entry = discoveredWalletProviders[0];
+    if (!entry || !entry.provider || typeof entry.provider.request !== "function") {
+      throw new Error("Choose one of the detected wallet providers before continuing.");
+    }
+    selectedWalletProvider = entry.provider;
+    return selectedWalletProvider;
+  }
+
+  async function authenticateWithPrimaryWallet(createAccount, referralId, consent) {
     if (browserPreviewMode) {
       throw new Error("Wallet authentication is not available in the read-only hosted preview.");
     }
-    var provider = window.ethereum;
-    if (!provider || typeof provider.request !== "function") {
-      throw new Error("No compatible EVM browser wallet was detected. Install or unlock a wallet that supports EIP-1193 and EIP-191 message signing.");
+    var provider = selectedWalletProviderFromForm();
+    var granted;
+    try {
+      granted = await provider.request({
+        method: "wallet_requestPermissions",
+        params: [{ eth_accounts: {} }]
+      });
+    } catch (permissionError) {
+      if (!permissionError || (permissionError.code !== -32601 && permissionError.code !== 4200)) throw permissionError;
+      granted = null;
     }
-    var accounts = await provider.request({ method: "eth_requestAccounts" });
-    if (!Array.isArray(accounts) || typeof accounts[0] !== "string" ||
-        !/^0x[0-9a-f]{40}$/i.test(accounts[0])) {
-      throw new Error("The wallet did not return a valid EVM account.");
+    var accounts = await provider.request({ method: "eth_accounts" });
+    if (!Array.isArray(accounts) || !accounts.length ||
+        accounts.some(function (item) { return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item); })) {
+      accounts = await provider.request({ method: "eth_requestAccounts" });
     }
-    var address = accounts[0];
+    if (!Array.isArray(accounts) || !accounts.length ||
+        accounts.some(function (item) { return typeof item !== "string" || !/^0x[0-9a-f]{40}$/i.test(item); })) {
+      throw new Error("The selected wallet did not return a valid EVM account.");
+    }
+    var accountSelect = document.getElementById("account-wallet-account");
+    var accountField = accountSelect ? accountSelect.closest("label") : null;
+    var requestedAddress = accountSelect ? accountSelect.value : "";
+    if (accountSelect) {
+      accountSelect.innerHTML = '<option value="">Choose an address…</option>';
+      accounts.forEach(function (address) {
+        var option = document.createElement("option");
+        option.value = address;
+        option.textContent = address.slice(0, 8) + "…" + address.slice(-6);
+        accountSelect.appendChild(option);
+      });
+      if (requestedAddress && accounts.some(function (address) { return address.toLowerCase() === requestedAddress.toLowerCase(); })) {
+        accountSelect.value = requestedAddress;
+      }
+      if (accountField) accountField.hidden = false;
+      if (!accountSelect.value || !accounts.some(function (address) {
+        return address.toLowerCase() === accountSelect.value.toLowerCase();
+      })) {
+        selectedWalletAddress = "";
+        throw new Error(accounts.length > 1
+          ? "Choose the wallet address you want as your AstroCrown primary identity, then continue."
+          : "Confirm that this is the wallet address you want as your AstroCrown primary identity, then continue.");
+      }
+    }
+    var address = accountSelect.value;
+    if (!address || !accounts.some(function (item) { return item.toLowerCase() === address.toLowerCase(); })) {
+      throw new Error("Choose the exact wallet address for this AstroCrown account.");
+    }
+    selectedWalletAddress = address;
     var chainHex = await provider.request({ method: "eth_chainId" });
     var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
       ? Number.parseInt(chainHex, 16) : NaN;
@@ -631,7 +370,7 @@
       throw new Error("The selected wallet or network changed during sign-in. Start again with the intended primary wallet.");
     }
 
-    showFeedback("Review the message in your wallet. This is an off-chain signature only; it cannot move assets or approve a contract.", "info");
+    showFeedback("Review the message in your wallet. This is an off-chain signature only; it cannot move assets, approve a contract or authorize a payment.", "info");
     var messageHex = "0x" + Array.prototype.map.call(
       new TextEncoder().encode(challenge.message),
       function (byte) { return byte.toString(16).padStart(2, "0"); }
@@ -643,23 +382,25 @@
     if (typeof signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(signature)) {
       throw new Error("The wallet did not return a valid EIP-191 signature.");
     }
-    return requestJson("/api/account/primary-wallet/verify", {
+    var requestPayload = {
       challengeId: challenge.challengeId,
       message: challenge.message,
       signature: signature,
-      createAccount: createAccount === true,
-      ...(createAccount === true ? {
-        termsAccepted: true,
-        termsVersion: termsVersion,
-        referralId: referralId || ""
-      } : {})
-    });
+      createAccount: createAccount === true
+    };
+    if (createAccount === true) {
+      requestPayload.termsAccepted = consent && consent.termsAccepted === true;
+      requestPayload.termsVersion = termsVersion;
+      requestPayload.walletLossAcknowledged = consent && consent.walletLossAcknowledged === true;
+      requestPayload.walletLossNoticeVersion = walletLossNoticeVersion;
+      requestPayload.referralId = referralId || "";
+    }
+    return requestJson("/api/account/primary-wallet/verify", requestPayload);
   }
 
   function finishPrimaryWalletAuthentication(result, created) {
     accountState = result;
     successKind = created ? "signup" : "signin";
-    recoveryKeyAcknowledged = true;
     syncAccountButton();
     if (!created) {
       mode = "signin";
@@ -690,12 +431,25 @@
       noticeText + '</p>';
   }
 
+  function walletProviderMarkup() {
+    return '<label class="account-field" for="account-wallet-provider">Choose your wallet provider' +
+      '<select id="account-wallet-provider" name="walletProvider" required>' +
+        '<option value="">Detecting installed wallets…</option>' +
+      '</select></label>' +
+      '<label class="account-field account-wallet-account-field" for="account-wallet-account" hidden>Choose the wallet address for this AstroCrown account' +
+      '<select id="account-wallet-account" name="walletAccount"><option value="">Connect your wallet first</option></select>' +
+      '</label>' +
+      '<p class="account-provider-note" id="account-wallet-selection-help">AstroCrown will ask your chosen wallet for permission to view the account you select. It will not choose an address on your behalf.</p>';
+  }
+
   function renderSignIn() {
     content.innerHTML = renderTabs("signin") + renderDevelopmentNotice() +
       '<div class="account-form">' +
+        walletProviderMarkup() +
         '<button class="account-primary" type="button" id="account-wallet-signin"' +
           (browserPreviewMode ? ' disabled' : '') + '>Sign in with wallet</button>' +
-        '<p class="account-signin-help"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet?</a></p>' +
+        '<p class="account-signin-help">New to AstroCrown? <button class="account-text-button" type="button" data-account-mode="create">Create an account</button></p>' +
+        '<p class="account-signin-help"><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet sign-in?</a></p>' +
       '</div>' +
       '<details class="account-wallet-recovery-explainer">' +
         '<summary>Lost your wallet?</summary>' +
@@ -703,150 +457,88 @@
         '<p>Use the wallet provider’s own recovery process or a backup you created offline to restore the <strong>same wallet and address</strong>. If you permanently lose access to that wallet and every way of restoring it, access to the associated AstroCrown account is permanently lost. AstroCrown staff and administrators cannot bypass wallet proof or move the account to a different wallet.</p>' +
         '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
       '</details>' +
-      '<details class="account-legacy-auth"' + (workerStagingMode ? '' : ' open') + '>' +
-        '<summary id="account-legacy-passkey-summary">Existing legacy passkey test accounts</summary>' +
-        '<p class="account-provider-note">This access path is retained only for older staging test accounts created before wallet-first identity was implemented.</p>' +
-        '<button class="account-secondary" type="button" id="account-passkey-signin"' +
-          (browserPreviewMode ? ' disabled' : '') + '>Continue with legacy passkey</button>' +
-        '<p class="account-signin-recovery"><button class="account-text-button" type="button" id="account-recovery-start">Recover a legacy passkey account</button></p>' +
-      '</details>' +
-      '<p class="account-signin-feedback"><a href="./account-continuity/prototype/cases.html">Feedback, grievances &amp; case access</a></p>';
+      '<p class="account-signin-feedback">Feedback and case access are not enabled in this staging qualification.</p>';
+    refreshWalletProviderChoices();
   }
 
   function renderCreate() {
-    var legacyPasskeyCreate = workerStagingMode ? "" :
-      '<details class="account-legacy-auth" id="account-legacy-passkey-create" open>' +
-        '<summary id="account-legacy-passkey-create-summary">Create an older passkey test account (legacy only)</summary>' +
-        '<p class="account-provider-note">This is retained for automated testing and older development records. New AstroCrown accounts should use a primary wallet.</p>' +
-        '<form id="account-create-form" class="account-form" autocomplete="off">' +
-          '<label class="account-field" for="account-referral-id">Referral ID (Optional)' +
-            '<input id="account-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
-          '</label>' +
-          '<label class="account-consent account-terms-consent" for="account-terms-accepted">' +
-            '<input id="account-terms-accepted" name="termsAccepted" type="checkbox" required>' +
-            '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
-          '</label>' +
-          '<p class="account-provider-note">Legacy WebAuthn passkey registration for a pre-wallet test path. Do not create a new legacy account for ordinary use.</p>' +
-          '<button class="account-secondary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create legacy passkey test account</button>' +
-        '</form>' +
-      '</details>';
     content.innerHTML = renderTabs("create") + renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Your primary wallet is your AstroCrown identity. Sign a short, one-time message to create your account. No transaction or token approval is requested.</p>' +
+      '<p class="account-dialog-description">Create one AstroCrown account using the wallet that will be your primary identity. Your Genesis Programme status and any future entitlements will belong to this same account. No transaction or token approval is requested to sign in or create an account.</p>' +
       '<form id="account-wallet-create-form" class="account-form" autocomplete="off">' +
+        walletProviderMarkup() +
         '<label class="account-field" for="account-wallet-referral-id">Referral ID (Optional)' +
           '<input id="account-wallet-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
-        '<label class="account-consent account-terms-consent" for="account-wallet-terms-accepted">' +
-          '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
-          '<span>By proceeding, you agree to AstroCrown’s <a href="./account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> &amp; <a href="./account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
-        '</label>' +
-        '<p class="account-provider-note">Initial support: Ethereum-compatible EVM wallets that provide EIP-1193 account access and EIP-191 message signing. Other wallet families and smart-contract wallets are not yet qualified.</p>' +
+        '<section class="account-wallet-consent-panel" aria-labelledby="account-wallet-consent-heading">' +
+          '<h3 id="account-wallet-consent-heading">Please read before creating your account</h3>' +
+          '<p><strong>Your primary wallet is your AstroCrown identity.</strong> AstroCrown never receives or stores your wallet private key, seed phrase or recovery words. Restore the same wallet and address using your wallet provider or your own offline backup. If you permanently lose that wallet and every way to restore it, access to this AstroCrown account is permanently lost. AstroCrown staff and administrators cannot reset the wallet identity or move it to another address.</p>' +
+          '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
+          '<label class="account-consent account-required-consent" for="account-wallet-loss-accepted">' +
+            '<input id="account-wallet-loss-accepted" name="walletLossAcknowledged" type="checkbox" required>' +
+            '<span>I have read and understood the wallet-loss and recovery warning above. I understand that losing access to my primary wallet and all of its backups means losing access to my AstroCrown account.</span>' +
+          '</label>' +
+          '<label class="account-consent account-required-consent" for="account-wallet-terms-accepted">' +
+            '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
+            '<span>I have read, understood and agree to AstroCrown’s <a href="/account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> and <a href="/account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</span>' +
+          '</label>' +
+        '</section>' +
+        '<p class="account-provider-note">Connecting only requests access to the address you choose. Account creation requires an off-chain personal-message signature. It does not send a transaction, approve a token, transfer funds or authorize future payments.</p>' +
         '<button class="account-primary" type="submit"' + (browserPreviewMode ? ' disabled' : '') + '>Create account with wallet</button>' +
+        '<p class="account-signin-help">Already have an account? <button class="account-text-button" type="button" data-account-mode="signin">Log in</button></p>' +
       '</form>' +
-      legacyPasskeyCreate +
-      '<p class="account-security-assurance"><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet identity?</a></p>';
-  }
-
-  function renderRecover() {
-    content.innerHTML = renderDevelopmentNotice() +
-      '<p class="account-dialog-description">Your offline recovery key is a one-time backup for regaining access if you lose your passkey. Enter your account identifier and the currently valid unused key you saved to register a replacement passkey.</p>' +
-      '<form id="account-recovery-form" class="account-form" autocomplete="off">' +
-        '<label class="account-field" for="account-recovery-identifier">Account identifier' +
-          '<input id="account-recovery-identifier" name="accountIdentifier" type="text" required maxlength="32" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-...">' +
-        '</label>' +
-        '<label class="account-field" for="account-recovery-secret">Offline recovery key' +
-          '<input id="account-recovery-secret" name="recoveryKey" type="text" inputmode="text" required maxlength="64" autocomplete="off" spellcheck="false" placeholder="ACR1-...">' +
-        '</label>' +
-        '<p class="account-provider-note">The key is accepted once. After successful recovery, all previous passkeys and sessions are revoked and a new recovery key is issued for you to save offline.</p>' +
-        '<button class="account-primary" type="submit" ' + (browserPreviewMode ? 'disabled' : '') + '>Verify recovery key and replace passkey</button>' +
-        '<button class="account-text-button" type="button" data-account-mode="signin">Back to sign in</button>' +
-      '</form>';
+      '<p class="account-security-assurance"><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">How wallet identity and transaction safety work</a></p>';
+    refreshWalletProviderChoices();
   }
 
   function renderSuccess() {
     var created = successKind === "signup";
-    var recovered = successKind === "recovery";
-    var walletCreated = created && accountState && accountState.authMethod === "wallet";
-    var needsRecoveryKeyAcknowledgement = (created || recovered) && !walletCreated;
-    var heading = created
-      ? (walletCreated ? "Your wallet account is ready" : "Your legacy passkey account is ready")
-      : recovered ? "Your legacy account has been recovered"
-      : "You're signed in";
+    var wallet = accountState && accountState.primaryIdentityWallet;
+    var address = wallet && typeof wallet.address === "string" ? wallet.address : "";
+    var network = wallet && Number.isSafeInteger(Number(wallet.chainId)) ? "EVM chain " + Number(wallet.chainId) : "EVM wallet";
     var message = created
-      ? (walletCreated
-          ? "Your AstroCrown account is linked to the primary wallet address you just verified. Your wallet keeps its private key and recovery words; AstroCrown stores the public address and verifies future sign-in messages."
-          : "Your legacy test account was created using a passkey. Its authenticator keeps the private key.")
-      : recovered
-        ? "Legacy passkey recovery succeeded. Your previous passkeys and sessions were revoked and the old recovery key was consumed."
-        : (accountState && accountState.authMethod === "wallet"
-            ? "You are signed in to AstroCrown with your primary identity wallet."
-            : "You are signed in to AstroCrown with a legacy passkey account.");
-    var persistenceNote = "You can close this window without signing out. The local server keeps your session until it expires or you sign out.";
-    var recoveryKey = accountState && typeof accountState.oneTimeRecoveryKey === "string"
-      ? accountState.oneTimeRecoveryKey : "";
+      ? "Your AstroCrown account has been created with the primary wallet you selected. That same wallet is your account identity, recovery anchor and the wallet used to authorize future account actions."
+      : "You are signed in to AstroCrown with your primary identity wallet.";
     content.innerHTML =
       '<div class="account-success-panel">' +
         '<div class="account-success-mark" aria-hidden="true">✓</div>' +
-        '<h3 class="account-success-heading">' + escapeHtml(heading) + '</h3>' +
+        '<h3 class="account-success-heading">' + (created ? "Your wallet account is ready" : "You’re signed in") + '</h3>' +
         '<p class="account-success-copy">' + escapeHtml(message) + '</p>' +
-        (needsRecoveryKeyAcknowledgement
-          ? '<section class="account-recovery-key-panel">' +
-              '<h3>Save your account identifier and offline recovery key</h3>' +
-              '<p>Keep both items offline and separate from your passkey device. The account identifier is not a secret; the recovery key is a secret and can be used to replace your passkey.</p>' +
-              '<label class="account-field" for="account-one-time-account-identifier">Account identifier' +
-                '<input id="account-one-time-account-identifier" type="text" readonly spellcheck="false" autocomplete="off" value="' + escapeHtml(accountState.accountIdentifier || "") + '">' +
-              '</label>' +
-              '<button class="account-secondary" type="button" id="copy-account-identifier">Copy account identifier</button>' +
-              '<label class="account-field" for="account-one-time-recovery-key">One-time recovery key' +
-                '<input id="account-one-time-recovery-key" type="text" readonly spellcheck="false" autocomplete="off" value="' + escapeHtml(recoveryKey) + '">' +
-              '</label>' +
-              '<button class="account-secondary" type="button" id="copy-account-recovery-key">Copy recovery key</button>' +
-              '<label class="account-consent account-recovery-key-ack" for="account-recovery-key-saved">' +
-                '<input id="account-recovery-key-saved" type="checkbox">' +
-                '<span>I have saved this recovery key somewhere secure and offline.</span>' +
-              '</label>' +
-              '<p class="account-provider-note">Do not share this key with AstroCrown staff, administrators, NOVA or anyone else. It will not be shown again.</p>' +
-            '</section>'
-          : '') +
-        '<button class="account-primary" type="button" id="open-account-hub"' +
-          (needsRecoveryKeyAcknowledgement ? ' disabled' : '') + '>Open your dashboard</button>' +
-        '<p class="account-success-small">' + escapeHtml(persistenceNote) + '</p>' +
+        (address ? '<section class="account-wallet-success-identity"><span>Primary identity wallet · ' + escapeHtml(network) + '</span><strong>' + escapeHtml(address) + '</strong></section>' : '') +
+        '<p class="account-success-small">Your wallet remains under your control. The sign-in signature did not submit a transaction, approve a token or authorize spending. Genesis status and entitlements will appear under this same AstroCrown account.</p>' +
+        '<button class="account-primary" type="button" id="open-account-hub">Open your AstroCrown account</button>' +
       '</div>';
   }
 
   function renderAccountDashboard() {
     if (!accountState || !accountState.authenticated) return;
-    var identifier = escapeHtml(accountState.accountIdentifier || "AstroCrown member");
+    var identifier = escapeHtml(accountState.accountIdentifier || "AstroCrown account");
     var referral = accountState.referralId
       ? escapeHtml(accountState.referralId) + ' <span class="account-muted-inline">(unverified; no reward is applied)</span>'
-      : 'Not supplied';
-    var activeSessionCount = Math.max(1, Number(accountState.activeSessionCount || 1));
-    var passkeyCount = Math.max(0, Number(accountState.passkeyCount || 0));
-    var postQuantumPasskeyCount = Math.max(0, Number(accountState.postQuantumPasskeyCount || 0));
+      : "Not supplied";
+    var primaryWallet = accountState.primaryIdentityWallet || {};
+    var primaryAddress = typeof primaryWallet.address === "string" ? primaryWallet.address : "";
+    var chainId = Number(primaryWallet.chainId || 0);
     var communicationCounts = accountState.communicationsUnreadCounts || {};
     var unreadCommunicationCount = Math.max(0, Number(communicationCounts.alerts || 0)) +
       Math.max(0, Number(communicationCounts.messages || 0));
-    var adminCard = '';
+    var adminCard = "";
     if (accountState.adminRoleAssigned === true) {
       var walletCount = Number(accountState.adminWalletCount || 0);
       var adminSessionVerified = accountState.adminSessionAuthorized === true;
       var adminWalletRecoveryRequired = accountState.adminWalletRecoveryRequired === true;
       var adminAccessStatus = adminSessionVerified
-        ? "Wallet verified for this session"
+        ? "Administrator wallet verified for this session"
         : adminWalletRecoveryRequired
-          ? "Owner-authorized wallet recovery required"
-          : walletCount > 0
-            ? "Wallet verification required"
-            : "No administrator wallet enrolled";
+          ? "Owner-authorized administrator wallet recovery required"
+          : walletCount > 0 ? "Additional administrator wallet verification required" : "No administrator wallet enrolled";
       var adminAccessDescription = adminSessionVerified
-        ? "The server currently confirms a wallet-verified administrator session. Continue through the administrator access dialog to open the separate administrator dashboard."
+        ? "The server confirms a fresh signature from an enrolled administrator wallet. Administrator actions remain separate from ordinary user activity."
         : adminWalletRecoveryRequired
-          ? "All previously enrolled administrator wallets are now inactive. Your ordinary passkey account and User dashboard remain available, but signing in with a passkey or connecting a new wallet cannot restore administrator access. A separate owner-authorized recovery review is required; this staging interface does not offer a self-service reset."
+          ? "All previously enrolled administrator wallets are inactive. Ordinary access through your primary account wallet remains available. Administrator authority requires a separate owner-authorized review; ordinary sign-in cannot bypass that control."
           : walletCount > 0
-            ? "This account has an administrator role assigned by the system. To continue, the server will recheck your account and ask you to choose one of the " +
-              escapeHtml(String(walletCount)) +
-              " registered administrator wallets, then review a one-time signature request. It is not a blockchain transaction."
-            : "This existing account has been granted the administrator role, but has not enrolled an administrator wallet yet. The user-selected backup wallet and administrator wallet remain separate purposes.";
+            ? "Administrator access requires a fresh signature from one of the " + escapeHtml(String(walletCount)) +
+              " separately enrolled administrator wallets. This is an off-chain proof, not a blockchain transaction."
+            : "This account has an administrator role, but an administrator wallet has not yet been enrolled.";
       adminCard =
         '<section class="account-dashboard-card account-admin-access-card">' +
           '<h2>Administrator access</h2>' +
@@ -854,14 +546,14 @@
           '<p>' + adminAccessDescription + '</p>' +
           '<div class="account-admin-access-actions">' +
             '<button class="account-primary" type="button" id="account-admin-wallet-access"' +
-              (adminWalletRecoveryRequired ? ' disabled title="Owner-authorized wallet recovery is required before administrator access can resume."' : '') +
-              '>' + (adminWalletRecoveryRequired ? 'Administrator recovery required' : 'Open administrator dashboard') + '</button>' +
+              (adminWalletRecoveryRequired ? ' disabled title="Owner-authorized administrator wallet recovery is required."' : '') +
+              '>' + (adminWalletRecoveryRequired ? "Administrator recovery required" : "Open administrator dashboard") + '</button>' +
             (adminSessionVerified ? '<button class="account-secondary" type="button" id="end-admin-access">End admin access</button>' : '') +
           '</div>' +
           '<p id="account-admin-access-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
         '</section>';
     }
-    var administratorRevocationNotice = '';
+    var administratorRevocationNotice = "";
     var revocationNotice = accountState.administratorRevocationNotice;
     if (revocationNotice && typeof revocationNotice.noticeId === "string") {
       administratorRevocationNotice =
@@ -875,42 +567,35 @@
         '</section>';
     }
     dashboardContent.innerHTML =
-      '<div class="account-dashboard-notice"><strong>Development User dashboard.</strong> This is the shared member workspace for ordinary users and administrators. Both use the same user-facing services and personal transaction rules; administrative work is handled in the separate Administrator dashboard. This local prototype tests account access and settings only. Transactions and the wider service catalog are not enabled. The passkey and recovery-key implementation remains a development prototype, not production authentication.</div>' +
+      '<div class="account-dashboard-notice"><strong>Wallet-first AstroCrown account.</strong> Your primary wallet is your identity and the way you recover access. Genesis programme status, profile, membership and entitlements belong to this same account. There is no separate Genesis account or Genesis sign-in. This is a public staging test environment; use synthetic data only.</div>' +
       '<div class="account-dashboard-welcome">' +
         '<div class="account-dashboard-avatar account-avatar-' + normalizeAvatarId(accountState.avatarId) + '" aria-hidden="true">' +
           avatarSvg(accountState.avatarId, "account-dashboard-avatar-svg") +
         '</div>' +
-        '<div class="account-dashboard-welcome-copy"><strong>' + identifier + '</strong><span>Signed in with passkey · local development account</span></div>' +
+        '<div class="account-dashboard-welcome-copy"><strong>' + identifier + '</strong><span>Signed in with your primary wallet · AstroCrown staging</span></div>' +
       '</div>' +
       '<div class="account-dashboard-grid">' +
-        '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-value">' + String(unreadCommunicationCount) + ' pending</p><p>Important account alerts and private in-app messages are kept in one place, with separate sections and acknowledgement/read status.</p><button class="account-primary" type="button" id="open-account-communications">Open communications</button></section>' +
-        '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and transactions belong to this User dashboard and remain subject to the same member rules for every account.</p><p>Transaction workflows and other service modules are not enabled in this account prototype.</p></section>' +
+        '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-status">Not enabled in this staging release</p><p>Private account communications are not part of this qualification. No email or SMS delivery is configured and no messages are sent.</p></section>' +
+        '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and future programme entitlements belong to this account.</p><p>Payments and other asset-moving workflows are not enabled in this staging environment.</p></section>' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Security &amp; sign-in</h2>' +
-          '<span class="account-dashboard-status">WebAuthn passkey authentication</span>' +
-          '<p class="account-dashboard-value">Registered passkeys: ' + String(passkeyCount) + '</p>' +
-          '<p class="account-dashboard-value">Post-quantum ML-DSA passkeys: ' + String(postQuantumPasskeyCount) + '</p>' +
-          '<p>' + (postQuantumPasskeyCount > 0
-            ? 'At least one active credential is recorded with an ML-DSA public-key algorithm. This confirms the credential type stored by this local prototype; it is not FIDO certification or a complete post-quantum security claim.'
-            : 'ML-DSA algorithms are offered first during registration. The current authenticator did not register an ML-DSA credential, or an older credential has no algorithm record. Existing passkeys remain usable through compatible algorithms.') + '</p>' +
-          '<p>The authenticator keeps your private key. AstroCrown verifies a fresh challenge using the registered public credential. No email, password, SMS or external identity provider is used for this account sign-in.</p>' +
-          '<p class="account-session-count">Active sign-in sessions: ' + String(activeSessionCount) + '.</p>' +
-          (accountState.securityManagementAvailable === true
-            ? '<p>Manage registered passkeys, sign-in sessions and the offline recovery key. Sensitive changes require a fresh passkey verification.</p><button class="account-primary" type="button" id="account-security-manage">Manage account security</button><div id="account-security-panel" class="account-security-panel" hidden></div>'
-            : '<p>Detailed passkey and session management is not available in this account backend yet. Do not rely on this prototype for real assets.</p>') +
-          '<p id="account-session-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
-          '<a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
-        '<section class="account-dashboard-card"><h2>Optional wallet backup</h2><p class="account-dashboard-value">Not required</p><p>A user-controlled wallet may be enrolled as an additional authenticator in a later implementation. Ordinary account access does not require a wallet, balance, deposit or blockchain transaction.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Account recovery</h2>' +
-          '<p class="account-dashboard-value">' + (accountState.recoveryKeyAvailable === true ? 'One-time offline recovery key is active' : 'No active recovery key is registered') + '</p>' +
-          '<p>Your recovery key is displayed only when first issued or replaced after recovery. AstroCrown stores only a salted one-way verifier. Keep the key and account identifier offline; loss of all passkeys and the key can mean permanent account loss.</p>' +
-          '</section>' +
+        '<section class="account-dashboard-card account-primary-wallet-card"><h2>Primary identity wallet</h2><span class="account-dashboard-status">Sole account identity and recovery anchor</span>' +
+          '<p class="account-dashboard-value">' + (primaryAddress ? escapeHtml(primaryAddress) : "Wallet address unavailable") + '</p>' +
+          '<p>Network: ' + (chainId > 0 ? "EVM chain ID " + String(chainId) : "Not reported") + '</p>' +
+          '<p>AstroCrown does not receive or store your private key, seed phrase or recovery words. Restore this same wallet and address using your wallet provider or your own offline backup. If every restoration path is lost, access to this account is permanently lost.</p>' +
+          '<p><strong>Never share your seed phrase or private key with AstroCrown, support staff, NOVA or anyone else.</strong></p>' +
+          '<a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        '<section class="account-dashboard-card account-payment-safety-card"><h2>Payment and transaction safety</h2>' +
+          '<span class="account-dashboard-status">Payments disabled in staging</span>' +
+          '<p>Signing in proves control of your primary wallet only. It cannot move assets, approve tokens, submit transactions or authorize spending.</p>' +
+          '<p>When payments are introduced, each payment must show the asset, amount, network and recipient and require a separate confirmation in your wallet. No unlimited token approval or standing spending permission is enabled by account sign-in.</p>' +
+          '<p>Any future automated trading or payment tool must use a separate, explicit, narrowly limited, expiring and revocable authorization. No automated spending authorization is active.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Terms &amp; consent</h2><p>Terms accepted: ' + escapeHtml(accountState.termsVersion || "Not reported") + '</p><p>Wallet-loss warning acknowledged: ' + (accountState.walletLossAcknowledged === true ? "Yes" : "Not recorded") + '</p><p>Your acceptance is recorded by the account service when the account is created.</p><a href="/account-continuity/prototype/terms-of-use.html" target="_blank" rel="noopener noreferrer">Terms of Use</a> · <a href="/account-continuity/prototype/privacy-policy.html" target="_blank" rel="noopener noreferrer">Privacy Policy</a></section>' +
         '<section class="account-dashboard-card"><h2>Referral ID</h2><p class="account-dashboard-value">' + referral + '</p><p>Referral values are not verified and do not trigger rewards or benefits in this prototype.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Account data</h2><p>Email address and phone number are not collected for account authentication. Terms acceptance is recorded by the local test backend.</p></section>' +
-        '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p>Submit a suggestion or grievance, follow case updates, or recover case access independently of your account.</p><a href="./account-continuity/prototype/cases.html">Open feedback &amp; case portal</a></section>' +
+        '<section class="account-dashboard-card"><h2>Account data</h2><p>The primary wallet address is public and may be associated with public blockchain activity. AstroCrown does not collect an email address, phone number or password for wallet authentication.</p></section>' +
+        '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p class="account-dashboard-status">Not enabled in this staging release</p><p>The feedback and case portal will be introduced as a separate, qualified service. It is not available from this test account.</p></section>' +
         adminCard +
       '</div>' +
-      '<div class="account-dashboard-actions"><p>Administrator functions remain separately gated. Your account passkey does not itself grant administrator privileges.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
+      '<div class="account-dashboard-actions"><p>Administrator functions remain separately gated. Your ordinary primary-wallet sign-in does not itself grant administrator privileges.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
     if (pendingAdminWalletMessage) {
       var walletNotice = document.createElement("p");
       walletNotice.className = "account-dashboard-notice";
@@ -1074,7 +759,7 @@
       roleManagementCard +=
         '<section class="account-dashboard-card account-admin-role-management">' +
           '<h2>Appoint an administrator</h2>' +
-          '<p>Grant the role to an existing AstroCrown user account. The target keeps the same User dashboard and must enrol a wallet they personally control. Use the account identifier shown in that member\'s User dashboard; it is a reference only, not an authenticator. No email, wallet address, passkey credential ID, password or private key is requested.</p>' +
+          '<p>Grant the role to an existing AstroCrown user account. The target keeps the same User dashboard and must enrol a wallet they personally control. Use the account identifier shown in that member\'s User dashboard; it is a reference only, not an authenticator. No email address, password or private key is requested.</p>' +
           '<label class="account-admin-role-field" for="admin-role-grant-account-identifier">Existing member account identifier<input id="admin-role-grant-account-identifier" type="text" maxlength="13" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="AC-…" required></label>' +
           '<label class="account-admin-role-field" for="admin-role-grant-reason">Reason for appointment<input id="admin-role-grant-reason" type="text" maxlength="500" minlength="12" required></label>' +
           (permissionChoices
@@ -1137,7 +822,7 @@
           enrollmentControl +
           '<p class="account-admin-wallet-warning">Enrollment ends the current administrator step-up. You must verify a registered wallet again before reopening this dashboard. Revoked wallet addresses cannot be enrolled again. Losing every enrolled wallet requires a separately authorized recovery process that is not yet implemented.</p>' +
           '<p id="admin-wallet-enrollment-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p></section>' +
-        '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, account-wide management, payments and all-wallet-loss recovery are not available in this console. Administrator appointment and revocation are shown separately only when the server confirms their corresponding permissions.</p><a href="./account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        '<section class="account-dashboard-card"><h2>Other operations</h2><p class="account-dashboard-value">Not enabled</p><p>Banner publishing, account-wide management, payments and all-wallet-loss recovery are not available in this console. Administrator appointment and revocation are shown separately only when the server confirms their corresponding permissions.</p><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
         roleManagementCard +
         communicationComposer +
       '</div>' +
@@ -1208,7 +893,6 @@
     showFeedback("", "");
     if (mode === "signin") renderSignIn();
     else if (mode === "create") renderCreate();
-    else if (mode === "recover") renderRecover();
     else if (mode === "success") renderSuccess();
     else renderSignIn();
     applyPreviewFormPrivacy();
@@ -1242,10 +926,6 @@
   }
 
   function closeDialog() {
-    if (mode === "success" && successKind !== "signin" && !recoveryKeyAcknowledged) {
-      showFeedback("Save the one-time offline recovery key and confirm before closing this screen.", "error");
-      return;
-    }
     if (typeof dialog.close === "function" && dialog.open) dialog.close();
     else dialog.removeAttribute("open");
   }
@@ -1263,94 +943,62 @@
   content.addEventListener("submit", async function (event) {
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
+    if (form.id !== "account-wallet-create-form") return;
     event.preventDefault();
     if (busy) return;
 
-    if (form.id === "account-wallet-create-form") {
-      var walletTermsInput = form.elements.namedItem("termsAccepted");
-      if (!(walletTermsInput && walletTermsInput.checked)) {
-        showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
-        if (walletTermsInput) walletTermsInput.focus();
-        return;
-      }
-      setBusy(true);
-      try {
-        var walletResult = await authenticateWithPrimaryWallet(true, formValue(form, "referralId"));
-        finishPrimaryWalletAuthentication(walletResult, walletResult.walletAccountCreated === true);
-      } catch (error) {
-        showFeedback(error.message || "Wallet account creation could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
+    var walletLossInput = form.elements.namedItem("walletLossAcknowledged");
+    var termsInput = form.elements.namedItem("termsAccepted");
+    if (!walletLossInput || !walletLossInput.checked) {
+      showFeedback("Read and confirm the wallet-loss and recovery warning before creating an account.", "error");
+      if (walletLossInput) walletLossInput.focus();
       return;
     }
-
-    if (form.id === "account-create-form") {
-      var termsInput = form.elements.namedItem("termsAccepted");
-      var termsAccepted = Boolean(termsInput && termsInput.checked);
-      if (!termsAccepted) {
-        showFeedback("Accept the Terms of Use and Privacy Policy to create an account.", "error");
-        if (termsInput) termsInput.focus();
-        return;
-      }
-      setBusy(true);
-      try {
-        var result = await registerWithPasskey({
-          referralId: formValue(form, "referralId"),
-          termsAccepted: true,
-          termsVersion: termsVersion
-        });
-        await finishPasskeyAuthentication(result, "signup");
-      } catch (error) {
-        showFeedback(error.message || "Passkey account creation could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
+    if (!termsInput || !termsInput.checked) {
+      showFeedback("Read and accept the Terms of Use and Privacy Policy before creating an account.", "error");
+      if (termsInput) termsInput.focus();
       return;
     }
-
-    if (form.id === "account-recovery-form") {
-      var accountIdentifier = formValue(form, "accountIdentifier").trim();
-      var recoveryKey = formValue(form, "recoveryKey").trim();
-      if (!accountIdentifier || !recoveryKey) {
-        showFeedback("Enter both your account identifier and offline recovery key.", "error");
-        return;
-      }
-      setBusy(true);
-      try {
-        var recovered = await recoverWithPasskey({
-          accountIdentifier: accountIdentifier,
-          recoveryKey: recoveryKey
-        });
-        await finishPasskeyAuthentication(recovered, "recovery");
-      } catch (error) {
-        showFeedback(error.message || "Account recovery could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
+    setBusy(true);
+    try {
+      var result = await authenticateWithPrimaryWallet(true, formValue(form, "referralId"), {
+        termsAccepted: termsInput.checked,
+        walletLossAcknowledged: walletLossInput.checked
+      });
+      finishPrimaryWalletAuthentication(result, result.walletAccountCreated === true);
+    } catch (error) {
+      showFeedback(error.message || "Wallet account creation could not be completed.", "error");
+    } finally {
+      setBusy(false);
     }
   });
 
   content.addEventListener("change", function (event) {
-    if (event.target && event.target.id === "account-recovery-key-saved") {
-      recoveryKeyAcknowledged = event.target.checked === true;
-      var openButton = document.getElementById("open-account-hub");
-      if (openButton) openButton.disabled = !recoveryKeyAcknowledged;
+    if (event.target && event.target.id === "account-wallet-provider") {
+      selectedWalletProvider = null;
+      selectedWalletAddress = "";
+      var accountField = document.getElementById("account-wallet-account");
+      var accountLabel = accountField ? accountField.closest("label") : null;
+      if (accountField) accountField.innerHTML = '<option value="">Connect your wallet first</option>';
+      if (accountLabel) accountLabel.hidden = true;
+    }
+    if (event.target && event.target.id === "account-wallet-account") {
+      selectedWalletAddress = event.target.value || "";
     }
   });
 
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (button.dataset.accountMode) {
+    if (button.dataset.accountMode === "signin" || button.dataset.accountMode === "create") {
       setMode(button.dataset.accountMode);
       return;
     }
     if (button.id === "account-wallet-signin") {
       setBusy(true);
       try {
-        var walletSignInResult = await authenticateWithPrimaryWallet(false, "");
-        finishPrimaryWalletAuthentication(walletSignInResult, false);
+        var result = await authenticateWithPrimaryWallet(false, "");
+        finishPrimaryWalletAuthentication(result, false);
       } catch (error) {
         showFeedback(error.message || "Wallet sign-in could not be completed.", "error");
       } finally {
@@ -1358,280 +1006,15 @@
       }
       return;
     }
-    if (button.id === "account-passkey-signin") {
-      setBusy(true);
-      try {
-        var signInResult = await signInWithPasskey();
-        await finishPasskeyAuthentication(signInResult, "signin");
-      } catch (error) {
-        showFeedback(error.message || "Passkey sign-in could not be completed.", "error");
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-recovery-start") {
-      setMode("recover");
-      var recoveryIdentifier = document.getElementById("account-recovery-identifier");
-      if (recoveryIdentifier) recoveryIdentifier.focus();
-      return;
-    }
-    if (button.id === "copy-account-identifier" || button.id === "copy-account-recovery-key") {
-      var isRecoveryKey = button.id === "copy-account-recovery-key";
-      var keyField = document.getElementById(
-        isRecoveryKey ? "account-one-time-recovery-key" : "account-one-time-account-identifier"
-      );
-      if (!keyField) return;
-      keyField.focus();
-      keyField.select();
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        try {
-          await navigator.clipboard.writeText(keyField.value);
-          showFeedback(
-            isRecoveryKey ? "Recovery key copied. Store it offline and do not share it."
-              : "Account identifier copied. Keep it with your offline recovery record.",
-            "success"
-          );
-        } catch (_error) {
-          showFeedback("The value is selected. Copy it manually and keep it offline.", "info");
-        }
-      } else {
-        showFeedback("The value is selected. Copy it manually and keep it offline.", "info");
-      }
-      return;
-    }
     if (button.id === "open-account-hub") {
-      if ((successKind === "signup" || successKind === "recovery") && !recoveryKeyAcknowledged) {
-        showFeedback("Confirm that you saved the offline recovery key before continuing.", "error");
-        return;
-      }
-      delete accountState.oneTimeRecoveryKey;
       closeDialog();
-      recoveryKeyAcknowledged = false;
       navigateToAccount();
-      return;
-    }
-    if (button.id === "account-signout") {
-      setBusy(true);
-      try {
-        await requestJson("/api/account/logout", {});
-        accountState = { authenticated: false };
-        await refreshStatus();
-        mode = "signin";
-        render();
-        showFeedback("Signed out of the development test account.", "success");
-      } catch (error) {
-        showFeedback(error.message, "error");
-      } finally {
-        setBusy(false);
-      }
     }
   });
 
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
-    if (securityRecoveryKeyPending && button.dataset.securityAction !== "copy-recovery-key" &&
-        button.dataset.securityAction !== "acknowledge-recovery-key") {
-      var pendingFeedback = document.getElementById("account-security-feedback");
-      if (pendingFeedback) pendingFeedback.textContent = "Save and acknowledge the one-time recovery key before making another security change.";
-      return;
-    }
-    if (button.id === "account-security-manage") {
-      var panel = document.getElementById("account-security-panel");
-      if (!panel) return;
-      panel.hidden = false;
-      panel.textContent = "Loading account security information…";
-      setBusy(true);
-      try {
-        var securityData = await requestJson("/api/account/security");
-        renderSecurityPanel(securityData);
-      } catch (error) {
-        panel.textContent = error.message || "Account security information could not be loaded.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-add-passkey") {
-      var newPasskeyLabel = document.getElementById("account-security-new-passkey-label");
-      var labelValue = newPasskeyLabel ? newPasskeyLabel.value.trim() : "";
-      if (!labelValue || labelValue.length > 40) {
-        var addFeedbackInvalid = document.getElementById("account-security-feedback");
-        if (addFeedbackInvalid) addFeedbackInvalid.textContent = "Enter a passkey name between 1 and 40 characters.";
-        return;
-      }
-      setBusy(true);
-      try {
-        accountSecurityPendingPasskeyOptions = await prepareAnotherPasskey(labelValue);
-        var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
-        if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = false;
-        var addFeedback = document.getElementById("account-security-feedback");
-        if (addFeedback) addFeedback.textContent = "Passkey step-up verified. Continue with the second button to open your authenticator.";
-      } catch (error) {
-        accountSecurityPendingPasskeyOptions = null;
-        var addErrorFeedback = document.getElementById("account-security-feedback");
-        if (addErrorFeedback) addErrorFeedback.textContent = error.message || "The additional passkey could not be prepared.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-create-passkey") {
-      setBusy(true);
-      try {
-        var addedPasskeyData = await createPreparedPasskey();
-        accountSecurityPendingPasskeyOptions = null;
-        renderSecurityPanel(addedPasskeyData);
-        var addFeedback = document.getElementById("account-security-feedback");
-        if (addFeedback) addFeedback.textContent = "The additional passkey was added to this account.";
-      } catch (error) {
-        var addErrorFeedback = document.getElementById("account-security-feedback");
-        if (addErrorFeedback) addErrorFeedback.textContent = error.message || "The additional passkey could not be added.";
-        accountSecurityPendingPasskeyOptions = null;
-        var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
-        if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = true;
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-cancel-passkey") {
-      accountSecurityPendingPasskeyOptions = null;
-      var pendingPasskeyPanel = document.getElementById("account-security-pending-passkey");
-      if (pendingPasskeyPanel) pendingPasskeyPanel.hidden = true;
-      var addFeedback = document.getElementById("account-security-feedback");
-      if (addFeedback) addFeedback.textContent = "Additional passkey registration cancelled. No credential was added.";
-      return;
-    }
-    if (button.id === "account-security-rotate-recovery-key") {
-      setBusy(true);
-      try {
-        var rotatedRecoveryData = await rotateOfflineRecoveryKey();
-        renderSecurityPanel(rotatedRecoveryData);
-      } catch (error) {
-        var rotateFeedback = document.getElementById("account-security-feedback");
-        if (rotateFeedback) rotateFeedback.textContent = error.message || "The offline recovery key could not be replaced.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.id === "account-security-revoke-others") {
-      if (!window.confirm("Sign out every other active session for this account? The current browser session will remain active.")) return;
-      setBusy(true);
-      try {
-        var sessionsResult = await revokeOtherAccountSessions();
-        renderSecurityPanel(sessionsResult);
-        var sessionFeedback = document.getElementById("account-security-feedback");
-        if (sessionFeedback) sessionFeedback.textContent = "Other active sessions have been revoked. This browser session remains active.";
-      } catch (error) {
-        var sessionErrorFeedback = document.getElementById("account-security-feedback");
-        if (sessionErrorFeedback) sessionErrorFeedback.textContent = error.message || "Other sessions could not be revoked.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "rename-passkey") {
-      var passkeyRef = button.dataset.passkeyRef;
-      var labelInput = dashboardContent.querySelector('input[data-passkey-label-input="' + passkeyRef + '"]');
-      var nextLabel = labelInput ? labelInput.value.trim() : "";
-      if (!nextLabel || nextLabel.length > 40) {
-        var renameInvalid = document.getElementById("account-security-feedback");
-        if (renameInvalid) renameInvalid.textContent = "Enter a passkey name between 1 and 40 characters.";
-        return;
-      }
-      setBusy(true);
-      try {
-        var renamed = await renameAccountPasskey(passkeyRef, nextLabel);
-        renderSecurityPanel(renamed);
-        var renameFeedback = document.getElementById("account-security-feedback");
-        if (renameFeedback) renameFeedback.textContent = "Passkey name updated.";
-      } catch (error) {
-        var renameError = document.getElementById("account-security-feedback");
-        if (renameError) renameError.textContent = error.message || "The passkey name could not be updated.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "revoke-passkey") {
-      if (!window.confirm("Revoke this passkey? It will no longer be able to sign in. Keep at least one usable passkey on the account.")) return;
-      setBusy(true);
-      try {
-        var revokedPasskey = await revokeAccountPasskey(button.dataset.passkeyRef);
-        if (revokedPasskey.sessionRevoked === true) {
-          securityRecoveryKeyPending = false;
-          accountSecurityData = null;
-          accountState = { authenticated: false };
-          await refreshStatus();
-          mode = "signin";
-          render();
-          showFeedback(
-            revokedPasskey.message || "The passkey was revoked and this session was ended. Sign in with another active passkey.",
-            "success"
-          );
-          return;
-        }
-        renderSecurityPanel(revokedPasskey);
-        var revokeFeedback = document.getElementById("account-security-feedback");
-        if (revokeFeedback) revokeFeedback.textContent = "The selected passkey was revoked. Sessions established by that passkey were also ended.";
-      } catch (error) {
-        var revokeError = document.getElementById("account-security-feedback");
-        if (revokeError) revokeError.textContent = error.message || "The passkey could not be revoked.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "revoke-session") {
-      if (!window.confirm("Sign out the selected session? This action cannot be undone.")) return;
-      setBusy(true);
-      try {
-        var revokedSession = await revokeAccountSession(button.dataset.sessionRef);
-        renderSecurityPanel(revokedSession);
-        var revokeSessionFeedback = document.getElementById("account-security-feedback");
-        if (revokeSessionFeedback) revokeSessionFeedback.textContent = "The selected other session was revoked.";
-      } catch (error) {
-        var revokeSessionError = document.getElementById("account-security-feedback");
-        if (revokeSessionError) revokeSessionError.textContent = error.message || "The session could not be revoked.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "copy-recovery-key") {
-      var recoveryKeyField = document.getElementById("account-security-recovery-key-value");
-      if (!recoveryKeyField) return;
-      recoveryKeyField.focus();
-      recoveryKeyField.select();
-      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-        try {
-          await navigator.clipboard.writeText(recoveryKeyField.value);
-          var copyFeedback = document.getElementById("account-security-feedback");
-          if (copyFeedback) copyFeedback.textContent = "Recovery key copied. Store it offline and do not share it.";
-        } catch (_error) {
-          var copyFallback = document.getElementById("account-security-feedback");
-          if (copyFallback) copyFallback.textContent = "The key is selected. Copy it manually and store it offline.";
-        }
-      } else {
-        var copyUnavailable = document.getElementById("account-security-feedback");
-        if (copyUnavailable) copyUnavailable.textContent = "The key is selected. Copy it manually and store it offline.";
-      }
-      return;
-    }
-    if (button.dataset.securityAction === "acknowledge-recovery-key") {
-      var output = document.getElementById("account-security-recovery-output");
-      var secretField = document.getElementById("account-security-recovery-key-value");
-      if (secretField) secretField.value = "";
-      if (output) {
-        output.textContent = "The replacement key has been acknowledged. AstroCrown will not display it again.";
-        output.setAttribute("role", "status");
-      }
-      securityRecoveryKeyPending = false;
-      return;
-    }
     if (button.id === "open-account-communications") {
       window.location.hash = "communications";
       return;
@@ -1644,9 +1027,7 @@
       var noticeId = button.getAttribute("data-notice-id");
       setBusy(true);
       try {
-        accountState = await requestJson("/api/account/administrator-notice/acknowledge", {
-          noticeId: noticeId
-        });
+        accountState = await requestJson("/api/account/administrator-notice/acknowledge", { noticeId: noticeId });
         syncAccountButton();
         renderAccountDashboard();
       } catch (error) {
@@ -1680,7 +1061,7 @@
         syncAccountButton();
         renderAccountDashboard();
         var avatarFeedback = document.getElementById("account-avatar-feedback");
-        if (avatarFeedback) avatarFeedback.textContent = "Avatar updated for this test account.";
+        if (avatarFeedback) avatarFeedback.textContent = "Avatar updated for this AstroCrown account.";
         var selectedAvatar = dashboardContent.querySelector('#account-avatar-picker [data-avatar-id="' + requestedAvatar + '"]');
         if (selectedAvatar) selectedAvatar.focus();
       } catch (error) {
@@ -1692,11 +1073,6 @@
       return;
     }
     if (button.id !== "account-signout") return;
-    if (securityRecoveryKeyPending) {
-      var saveKeyNotice = document.getElementById("account-security-feedback");
-      if (saveKeyNotice) saveKeyNotice.textContent = "Save and acknowledge the new recovery key before signing out.";
-      return;
-    }
     setBusy(true);
     try {
       await requestJson("/api/account/logout", {});
@@ -1714,69 +1090,6 @@
         notice.textContent = error.message || "Sign-out could not be completed.";
         message.prepend(notice);
       }
-    } finally {
-      setBusy(false);
-    }
-  });
-
-
-  communicationsContent.addEventListener("click", async function (event) {
-    var button = event.target.closest("button");
-    if (!button || busy) return;
-    if (button.dataset.communicationSection) {
-      var nextSection = button.dataset.communicationSection === "messages" ? "messages" : "alerts";
-      if (nextSection === activeCommunicationsSection) return;
-      activeCommunicationsSection = nextSection;
-      setBusy(true);
-      try {
-        await loadCommunicationsPage(activeCommunicationsSection, null, false);
-      } catch (error) {
-        var tabFeedback = document.getElementById("communications-feedback");
-        if (tabFeedback) tabFeedback.textContent =
-          error.message || "This communication section could not be loaded.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (button.dataset.communicationsLoadOlder === "true") {
-      var olderCursor = communicationsState.nextCursor;
-      if (!olderCursor) return;
-      setBusy(true);
-      try {
-        await loadCommunicationsPage(activeCommunicationsSection, olderCursor, true);
-      } catch (error) {
-        var olderFeedback = document.getElementById("communications-feedback");
-        if (olderFeedback) olderFeedback.textContent =
-          error.message || "Older communications could not be loaded.";
-      } finally {
-        setBusy(false);
-      }
-      return;
-    }
-    if (!button.dataset.communicationAction || !button.dataset.communicationId) return;
-    setBusy(true);
-    try {
-      var stateResult = await requestJson("/api/account/communications/state", {
-        communicationId: button.dataset.communicationId,
-        action: button.dataset.communicationAction
-      });
-      var changedItem = communicationsState.items.find(function (item) {
-        return item.communicationId === button.dataset.communicationId;
-      });
-      if (changedItem && button.dataset.communicationAction === "acknowledge") {
-        changedItem.acknowledgedAt = changedItem.acknowledgedAt || "acknowledged";
-      } else if (changedItem && button.dataset.communicationAction === "read") {
-        changedItem.readAt = changedItem.readAt || "read";
-      }
-      communicationsState.unreadCounts = stateResult.unreadCounts || communicationsState.unreadCounts;
-      accountState.communicationsUnreadCounts = communicationsState.unreadCounts;
-      syncAccountButton();
-      renderCommunicationsPage();
-    } catch (error) {
-      var communicationFeedback = document.getElementById("communications-feedback");
-      if (communicationFeedback) communicationFeedback.textContent =
-        error.message || "The communication state could not be updated.";
     } finally {
       setBusy(false);
     }
@@ -1952,12 +1265,6 @@
     });
   }
   closeButton.addEventListener("click", closeDialog);
-  dialog.addEventListener("cancel", function (event) {
-    if (mode === "success" && successKind !== "signin" && !recoveryKeyAcknowledged) {
-      event.preventDefault();
-      showFeedback("Save the one-time offline recovery key and confirm before closing this screen.", "error");
-    }
-  });
   dialog.addEventListener("close", function () {
     showFeedback("", "");
     if (focusBeforeOpen && typeof focusBeforeOpen.focus === "function") focusBeforeOpen.focus();

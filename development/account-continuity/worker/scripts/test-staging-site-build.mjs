@@ -10,16 +10,17 @@ async function readPublic(path) {
   return readFile(resolve(publicRoot, path), "utf8");
 }
 
-test("Worker staging build publishes the Genesis Programme at the shared origin", async () => {
+test("Worker staging build publishes the account and Genesis pages at the shared origin", async () => {
   await access(resolve(publicRoot, "supporters/index.html"));
   await access(resolve(publicRoot, "supporters/supporters.js"));
   await access(resolve(publicRoot, "supporters/wallet-provider-adapters.mjs"));
   await access(resolve(publicRoot, "assets/genesis-member-dna.svg"));
   const homepage = await readPublic("index.html");
   assert.match(homepage, /href="\.\/supporters\/">Genesis Programme/);
+  assert.match(homepage, /astro-account-runtime/);
 });
 
-test("published Genesis Programme states that qualifying payments are not open and shows wallet-first identity", async () => {
+test("published Genesis profile is part of the same AstroCrown account", async () => {
   const html = await readPublic("supporters/index.html");
   assert.match(html, /DEVELOPMENT PREVIEW/);
   assert.match(html, /USDT QUALIFYING PAYMENTS NOT OPEN/);
@@ -43,7 +44,6 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /shared programme-wide countdown starts at ACROWN launch/i);
   assert.match(html, /At official ACROWN launch, the Genesis Programme resumes for all identities registered before the cutoff/i);
   assert.match(html, /Members may continue purchasing remaining Genesis rights/i);
-  assert.match(html, /New Genesis primary-wallet registration remains permanently closed/i);
   assert.doesNotMatch(html, /After ACROWN launches and the qualified ACS floor-purchase facility is operational, only wallets registered/i);
   assert.match(html, /each completed, finalized purchase of remaining Genesis rights or ACROWN at the ACS floor price resets/i);
   assert.match(html, /id="genesis-public-purchase-inactivity-countdown"/i);
@@ -54,21 +54,30 @@ test("published Genesis Programme states that qualifying payments are not open a
   assert.match(html, /there is no personal per-wallet purchase cap/);
   assert.match(html, /id="supporter-tron-wallet-connect"/);
   assert.match(html, /id="supporter-runtime-status"/);
-  assert.match(html, /AstroCrown never receives private keys or recovery phrases/);
-  assert.match(html, /The primary wallet is the sole Genesis identity, login authority and recovery anchor/);
-  assert.match(html, /it does not own a personal share or cap/);
-  assert.match(html, /same wallet application on any additional supported network/);
-  assert.match(html, /Each address must independently sign a fresh, domain-bound ownership challenge/);
-  assert.match(html, /Linked addresses cannot authenticate, recover, rename or administer the Genesis identity/);
-  assert.match(html, /must originate from an address already verified and registered in your primary wallet profile/);
-  assert.match(html, /Genesis Member distinction/);
-  assert.match(html, /gold DNA Genesis Member badge/);
-  assert.match(html, /Explorer links expose the full wallet address and associated public transaction history/);
-  assert.match(html, /A random display name is generated when the primary wallet is first verified/);
-  assert.match(html, /Never share your seed phrase or private key/);
+
+  assert.match(html, /Your Genesis profile, display name, membership status and programme entitlements belong to your existing AstroCrown account/i);
+  assert.match(html, /there is no separate Genesis account or Genesis sign-in/i);
+  assert.match(html, /The same primary wallet is automatically recorded as your Ethereum identity/i);
+  assert.match(html, /You may optionally link additional network addresses/i);
+  assert.match(html, /Each additional address must independently prove control/i);
+  assert.match(html, /The linked address proves control of itself only and never becomes an account login or spending authorization/i);
+  assert.match(html, /a payment must originate from a pre-verified address on its own network/i);
+  assert.match(html, /exact asset, amount, network and destination/i);
+  assert.match(html, /requires a separate confirmation in your wallet/i);
+  assert.match(html, /No unlimited or automated spending permission is active/i);
+  assert.match(html, /separate, explicit, narrowly capped, time-limited and revocable authorization/i);
+  assert.match(html, /AstroCrown never receives private keys or recovery phrases/i);
+  assert.match(html, /Never share your seed phrase or private key/i);
+
+  assert.match(html, /id="supporter-account-login"/);
+  assert.match(html, /Sign in to your AstroCrown account/);
+  assert.match(html, /id="supporter-link-wallet"/);
+  assert.match(html, /Verify and link additional address/);
+  assert.match(html, /When does Genesis registration close\?/);
+  assert.doesNotMatch(html, /Continue with this primary wallet|Legacy sign-in unavailable|Disconnect wallet session|Create Genesis account|<(?:button|a)\b[^>]*>\s*Genesis registration\s*<\/(?:button|a)>/i);
 });
 
-test("staging supporter wallet script supports off-chain ownership proofs but no transaction submission", async () => {
+test("published Genesis script reads the existing AstroCrown session and only links optional addresses", async () => {
   const js = await readPublic("supporters/supporters.js");
   assert.match(js, /eip6963:announceProvider/);
   assert.match(js, /TIP6963:announceProvider/);
@@ -81,24 +90,24 @@ test("staging supporter wallet script supports off-chain ownership proofs but no
   assert.match(js, /personal_sign/);
   assert.match(js, /signMessageV2/);
   assert.match(js, /solana:signMessage/);
-  assert.ok(js.includes("function supporterRuntimeMarkerPresent()"));
-  assert.ok(js.includes("if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;"));
-  assert.ok(js.includes("/api/genesis/status"));
-  assert.ok(js.includes("/api/genesis/identity/challenge"));
-  assert.ok(js.includes("/api/genesis/identity/verify"));
-  assert.ok(js.includes("/api/genesis/display-name/challenge"));
-  assert.ok(js.includes("/api/genesis/wallet-link/challenge"));
-  assert.ok(!js.includes("/api/supporters/registration/"));
-  assert.ok(!js.includes("/api/supporters/login/"));
+  assert.match(js, /supporterRuntimeMarkerPresent/);
+  assert.match(js, /\/api\/genesis\/me/);
+  assert.match(js, /\/api\/genesis\/wallet-link\/challenge/);
+  assert.match(js, /\/api\/genesis\/wallet-link\/verify/);
+  assert.doesNotMatch(js, /\/api\/genesis\/identity\/|\/api\/genesis\/logout/);
+  assert.doesNotMatch(js, /\/api\/supporters\/registration\/|\/api\/supporters\/login\//);
+  assert.match(js, /The network address has been independently verified and added to your primary wallet profile/i);
   assert.match(js, /qualifying payments remain closed/i);
   assert.match(js, /window\.setInterval\(tick, 1000\)/);
   assert.match(js, /Latest global timer reset/);
   assert.match(js, /window\.setInterval\(refreshProgrammeStatus, 30000\)/);
-  assert.equal(js.includes('method: "eth_sign"'), false);
-  assert.equal(js.includes('method: "eth_signTypedData_v4"'), false);
-  assert.equal(js.includes('method: "eth_sendTransaction"'), false);
-  assert.equal(js.includes('method: "eth_sendRawTransaction"'), false);
-  assert.equal(js.includes('method: "wallet_sendCalls"'), false);
+  for (const method of [
+    "eth_sendTransaction",
+    "eth_sendRawTransaction",
+    "wallet_sendCalls",
+    "eth_sign",
+    "eth_signTypedData_v4",
+  ]) assert.equal(js.includes('method: "' + method + '"'), false, method + " must not be used by the Genesis page");
   assert.equal(js.includes(".signTransaction("), false);
   assert.equal(js.includes(".signAndSendTransaction("), false);
 });

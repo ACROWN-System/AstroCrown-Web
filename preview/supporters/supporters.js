@@ -29,10 +29,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
   var randomizeButton = document.getElementById("member-name-randomize");
   var memberProfileState = document.getElementById("member-profile-state");
   var memberMode = document.getElementById("supporter-member-mode");
-  var registerWalletButton = document.getElementById("supporter-register-wallet");
-  var loginWalletButton = document.getElementById("supporter-login-wallet");
   var linkWalletButton = document.getElementById("supporter-link-wallet");
-  var logoutButton = document.getElementById("supporter-logout");
   var walletPurposeSelect = document.getElementById("supporter-wallet-purpose");
   var memberFeedback = document.getElementById("supporter-member-feedback");
   var memberSummary = document.getElementById("supporter-member-summary");
@@ -743,15 +740,21 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     var wallet = activeConnectedWallet();
     var ready = Boolean(supporterRuntimeEnabled && wallet && wallet.mainnet && wallet.canSign !== false);
     if (memberMode) memberMode.textContent = supporterRuntimeEnabled ? "STAGING · PRELAUNCH" : "Standalone preview";
-    if (registerWalletButton) {
-      registerWalletButton.disabled = !ready || Boolean(supporterMember);
-      registerWalletButton.textContent = supporterMember ? "Primary wallet identity established" : "Continue with this primary wallet";
-    }
-    if (loginWalletButton) loginWalletButton.hidden = true;
-    if (linkWalletButton) linkWalletButton.disabled = !ready || !supporterMember;
-    if (logoutButton) {
-      logoutButton.disabled = !supporterRuntimeEnabled || !supporterMember;
-      logoutButton.textContent = "Disconnect wallet session";
+    var accountLoginLink = document.getElementById("supporter-account-login");
+    if (accountLoginLink) accountLoginLink.hidden = Boolean(supporterMember);
+    var connectedAddressAlreadyLinked = Boolean(
+      wallet && supporterMember && Array.isArray(supporterMember.wallets) &&
+      supporterMember.wallets.some(function (item) {
+        return item && item.network === wallet.network &&
+          typeof item.address === "string" &&
+          item.address.toLowerCase() === String(wallet.address || "").toLowerCase();
+      })
+    );
+    if (linkWalletButton) {
+      linkWalletButton.disabled = !ready || !supporterMember || connectedAddressAlreadyLinked;
+      linkWalletButton.textContent = connectedAddressAlreadyLinked
+        ? "This address is already linked"
+        : "Verify and link additional address";
     }
     if (walletPurposeSelect) walletPurposeSelect.disabled = !supporterRuntimeEnabled || !supporterMember;
     if (pseudonymInput) pseudonymInput.disabled = !supporterMember;
@@ -760,7 +763,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     if (memberProfileState) {
       memberProfileState.textContent = supporterMember
         ? (supporterMember.genesisMember && supporterMember.genesisMember.status === "ACTIVE" ? "Genesis Member" : "Wallet verified")
-        : (supporterRuntimeEnabled ? "Wallet not connected" : "Preview only");
+        : (supporterRuntimeEnabled ? "AstroCrown account not signed in" : "Preview only");
     }
     if (!supporterRuntimeEnabled) {
       if (memberFeedback) setFeedback(memberFeedback,
@@ -771,22 +774,22 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       if (memberSummary) memberSummary.textContent =
         supporterMember.walletIdentity.displayName + " · primary wallet identity";
       if (nameAvailability && nameAvailability.dataset.state !== "available") {
-        nameAvailability.textContent = "Your current name is reserved to this wallet.";
+        nameAvailability.textContent = "Your current name is reserved to this AstroCrown account.";
         nameAvailability.dataset.state = "available";
       }
       return;
     }
     if (!wallet) {
       if (memberFeedback) setFeedback(memberFeedback,
-        "Connect your primary Ethereum, TRON or Solana mainnet wallet. Its signed message establishes the wallet identity automatically; there is no separate user registration.", "neutral");
+        "Sign in to your AstroCrown account with its primary wallet. Your Genesis profile and any future programme entitlements are attached to that same account; no separate Genesis account or sign-in is needed.", "neutral");
     } else if (!wallet.mainnet) {
       var expected = wallet.network === "ethereum" ? "Ethereum Mainnet (chain ID 1)" :
         wallet.network === "tron" ? "TRON Mainnet" : "Solana Mainnet";
       if (memberFeedback) setFeedback(memberFeedback,
-        "The connected wallet is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
+        "The connected address is not reporting " + expected + ". Switch networks in the wallet, then reconnect. No signature has been requested.", "error");
     } else if (memberFeedback && memberFeedback.dataset.state === "neutral") {
       setFeedback(memberFeedback,
-        wallet.network.toUpperCase() + " mainnet wallet connected. Continue to prove control of this primary wallet with an off-chain message signature.", "neutral");
+        wallet.network.toUpperCase() + " mainnet address connected for display. Sign in to AstroCrown with your primary identity wallet first. You may then optionally link this as an additional payment or delivery address using a separate off-chain ownership signature. It does not become another login or authorize spending.", "neutral");
     }
   }
 
@@ -887,13 +890,13 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
     if (memberProfileState) memberProfileState.textContent = genesisMember ? "Genesis Member" : "Wallet verified";
     if (nameAvailability) {
-      nameAvailability.textContent = "Your current name is reserved exclusively to this wallet.";
+      nameAvailability.textContent = "Your current name is reserved exclusively to this AstroCrown account.";
       nameAvailability.dataset.state = "available";
     }
     if (memberFeedback) {
       setFeedback(memberFeedback, genesisMember
-        ? "Primary wallet verified. Genesis Member status and its gold DNA badge are active for this wallet."
-        : "Primary wallet verified. Its unique display name is reserved. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
+        ? "AstroCrown account primary wallet verified. Genesis Member status and its gold DNA badge belong to this same account."
+        : "AstroCrown account primary wallet verified. Its unique display name is reserved to this same account. Genesis Member status and the gold DNA badge are awarded only after the qualifying payment is independently verified. Payment acceptance remains disabled.", "connected");
     }
     updateSupporterActionButtons();
     refreshGenesisDirectory();
@@ -910,30 +913,10 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
       } else if (response.status !== 401) {
         var data = {};
         try { data = await response.json(); } catch (_) {}
-        setFeedback(memberFeedback, data.error || "The Genesis wallet identity could not be checked. Payment acceptance remains disabled.", "error");
+        setFeedback(memberFeedback, data.error || "The Genesis profile could not be checked. Payment acceptance remains disabled.", "error");
       }
     } catch (_) {
-      setFeedback(memberFeedback, "The Genesis wallet identity could not be checked. Payment acceptance remains disabled.", "error");
-    }
-  }
-
-  async function runSupporterRegistration() {
-    var wallet = activeConnectedWallet();
-    if (!supporterRuntimeMarkerPresent() || !wallet || !wallet.mainnet || supporterMember) return;
-    registerWalletButton.disabled = true;
-    try {
-      var challenge = await supporterApiPost("/api/genesis/identity/challenge", {
-        network: wallet.network, address: wallet.address
-      });
-      setFeedback(memberFeedback,
-        "Wallet identity challenge created. Sign the exact off-chain message in your primary wallet. No user profile or separate account is being registered.", "neutral");
-      var signature = await signSupporterChallenge(wallet, challenge.message);
-      var profile = await supporterApiPost("/api/genesis/identity/verify", {
-        challengeId: challenge.challengeId, signature: signature
-      });
-      applySupporterProfile(profile);
-    } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : String(error || "Wallet verification was not completed."), "error");
+      setFeedback(memberFeedback, "The Genesis profile could not be checked. Payment acceptance remains disabled.", "error");
     } finally {
       updateSupporterActionButtons();
     }
@@ -1038,24 +1021,6 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
   }
 
-  async function runSupporterLogout() {
-    if (!supporterMember) return;
-    logoutButton.disabled = true;
-    try {
-      await supporterApiPost("/api/genesis/logout", {});
-      supporterMember = null;
-      renderPurchaseInactivityTimer(null);
-      if (memberSummary) memberSummary.textContent = "No primary wallet session";
-      if (memberWalletList) memberWalletList.textContent = "No wallet identity currently connected.";
-      if (genesisBadgeImage) genesisBadgeImage.hidden = true;
-      setFeedback(memberFeedback, "Wallet session disconnected. The Genesis identity and all entitlements remain bound to the primary wallet; reconnect that wallet to access them.", "neutral");
-    } catch (error) {
-      setFeedback(memberFeedback, error && error.message ? error.message : "The wallet session could not be disconnected.", "error");
-    } finally {
-      updateSupporterActionButtons();
-    }
-  }
-
   async function refreshGenesisDirectory() {
     if (!publicDirectoryList) return;
     if (!supporterRuntimeMarkerPresent()) {
@@ -1106,9 +1071,7 @@ import { identifyWalletCandidate, walletDisplayName, discoverDirectEvmProviders,
     }
   }
 
-  if (registerWalletButton) registerWalletButton.addEventListener("click", runSupporterRegistration);
   if (linkWalletButton) linkWalletButton.addEventListener("click", runSupporterWalletLink);
-  if (logoutButton) logoutButton.addEventListener("click", runSupporterLogout);
   if (saveNameButton) saveNameButton.addEventListener("click", saveGenesisDisplayName);
 
   async function refreshProgrammeStatus() {

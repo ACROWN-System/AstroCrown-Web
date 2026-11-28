@@ -1,11 +1,3 @@
-import {
-  generateAuthenticationOptions,
-  generateRegistrationOptions,
-  getDefaultSupportedAlgorithmIDs,
-  verifyAuthenticationResponse,
-  verifyRegistrationResponse,
-} from "@simplewebauthn/server";
-import { decodeCredentialPublicKey } from "@simplewebauthn/server/helpers";
 import { getAddress, isAddress, recoverMessageAddress } from "viem";
 import { supporterStatusResponse } from "./supporters.js";
 import { handleGenesisWalletApi } from "./genesis.js";
@@ -18,8 +10,8 @@ const STAGING_NOTICE_VERSION = "2026-11-08-public-test-v1";
 const STAGING_ACK_COOKIE = "acrown_staging_notice_ack";
 const STAGING_ACK_SECONDS = 12 * 60 * 60;
 const TERMS_VERSION = "development-terms-2026-10-31-v0.3";
+const WALLET_LOSS_NOTICE_VERSION = "wallet-loss-warning-2026-11-28-v1";
 const AVATARS = ["person", "crown", "star", "moon", "orbit", "shield"];
-const PQ_ALGS = [-48, -49, -50];
 const ADMIN_PERMISSION_NAMES = ["admin.roles.grant", "admin.roles.revoke"];
 
 function secureHeaders(headers = new Headers()) {
@@ -82,10 +74,6 @@ function accountId(value) {
   const candidate = value.trim().toUpperCase();
   if (!/^AC-[A-F0-9]{10}$/.test(candidate)) throw fail(400, "Enter the AstroCrown account identifier shown after registration.");
   return candidate;
-}
-function recoveryKey(value) {
-  if (typeof value !== "string" || !/^ACR1-[A-Za-z0-9_-]{43}$/.test(value.trim())) throw fail(401, "Account recovery could not be started. Check the account identifier and recovery key.");
-  return value.trim();
 }
 function cookie(request, name) {
   const all = request.headers.get("Cookie") || "";
@@ -218,15 +206,6 @@ async function rateLimit(db, env, request, action, subject, maximum, seconds) {
   ).bind(b64u(bytes(16)), action, subjectHash, now, action, subjectHash, now - seconds, maximum).run();
   if (Number(result.meta?.changes || 0) !== 1) throw fail(429, "Too many attempts. Please try again later.");
 }
-async function createChallenge(db, item) {
-  await db.prepare(
-    "INSERT INTO auth_challenges(challenge_id, challenge, ceremony, account_id, account_identifier, user_handle, payload_json, created_at, expires_at) " +
-    "VALUES(?,?,?,?,?,?,?,?,?)"
-  ).bind(
-    item.id, item.challenge, item.ceremony, item.accountId || null, item.accountIdentifier || null,
-    item.userHandle || null, JSON.stringify(item.payload || {}), item.now, item.now + CHALLENGE_SECONDS
-  ).run();
-}
 async function activeAccount(db, request) {
   const token = cookie(request, SESSION_COOKIE);
   if (!token) return null;
@@ -241,38 +220,22 @@ async function activeAccount(db, request) {
 }
 async function summary(db, account) {
   const now = Math.floor(Date.now() / 1000);
-  const [counts, algorithmRows, role, permissions, wallets, walletHistory, notice, primaryWallet] = await Promise.all([
-    db.prepare(
-      "SELECT " +
-      "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) AS passkey_count, " +
-      "(SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1 AND credential_alg IN (-48,-49,-50)) AS pq_count, " +
-      "(SELECT COUNT(*) FROM auth_recovery_keys WHERE account_id = ? AND used_at IS NULL) AS recovery_count, " +
-      "(SELECT COUNT(*) FROM auth_sessions WHERE account_id = ? AND expires_at > ?) AS session_count"
-    ).bind(account.account_id, account.account_id, account.account_id, account.account_id, now).first(),
-    db.prepare(
-      "SELECT credential_alg FROM auth_passkeys WHERE account_id = ? AND active = 1 ORDER BY created_at, credential_id"
-    ).bind(account.account_id).all(),
-    db.prepare(
-      "SELECT granted_by_account_id,reason,created_at FROM auth_admin_roles WHERE account_id = ?"
-    ).bind(account.account_id).first(),
-    db.prepare(
-      "SELECT permission,can_delegate FROM auth_admin_permissions WHERE account_id = ? ORDER BY permission"
-    ).bind(account.account_id).all(),
-    db.prepare(
-      "SELECT address,chain_id FROM auth_admin_wallets WHERE account_id = ? AND active = 1 ORDER BY created_at,address"
-    ).bind(account.account_id).all(),
-    db.prepare(
-      "SELECT COUNT(*) AS history_count FROM auth_admin_wallets WHERE account_id = ?"
-    ).bind(account.account_id).first(),
-    db.prepare(
-      "SELECT notice_id,reason,created_at FROM auth_admin_revocation_notices " +
-      "WHERE account_id = ? AND acknowledged_at IS NULL ORDER BY created_at DESC,notice_id DESC LIMIT 1"
-    ).bind(account.account_id).first(),
-    db.prepare(
-      "SELECT address,chain_id,created_at FROM auth_primary_wallets WHERE account_id = ? AND active = 1 LIMIT 1"
-    ).bind(account.account_id).first(),
+  const [counts, role, permissions, wallets, walletHistory, notice, primaryWallet] = await Promise.all([
+    db.prepare("SELECT COUNT(*) AS session_count FROM auth_sessions WHERE account_id = ? AND expires_at > ?")
+      .bind(account.account_id, now).first(),
+    db.prepare("SELECT granted_by_account_id,reason,created_at FROM auth_admin_roles WHERE account_id = ?")
+      .bind(account.account_id).first(),
+    db.prepare("SELECT permission,can_delegate FROM auth_admin_permissions WHERE account_id = ? ORDER BY permission")
+      .bind(account.account_id).all(),
+    db.prepare("SELECT address,chain_id FROM auth_admin_wallets WHERE account_id = ? AND active = 1 ORDER BY created_at,address")
+      .bind(account.account_id).all(),
+    db.prepare("SELECT COUNT(*) AS history_count FROM auth_admin_wallets WHERE account_id = ?")
+      .bind(account.account_id).first(),
+    db.prepare("SELECT notice_id,reason,created_at FROM auth_admin_revocation_notices WHERE account_id = ? AND acknowledged_at IS NULL ORDER BY created_at DESC,notice_id DESC LIMIT 1")
+      .bind(account.account_id).first(),
+    db.prepare("SELECT address,chain_id,created_at FROM auth_primary_wallets WHERE account_id = ? AND active = 1 LIMIT 1")
+      .bind(account.account_id).first(),
   ]);
-  const passkeyAlgorithmIds = (algorithmRows.results || []).map((row) => Number(row.credential_alg));
   const activeWallets = wallets.results || [];
   const currentWallet = String(account.admin_wallet_address || "");
   const matchedWallet = activeWallets.find((wallet) =>
@@ -280,9 +243,7 @@ async function summary(db, account) {
   );
   const roleAssigned = Boolean(role);
   const adminWalletHistoryCount = Number(walletHistory?.history_count || 0);
-  const adminWalletRecoveryRequired = Boolean(
-    roleAssigned && activeWallets.length === 0 && adminWalletHistoryCount > 0
-  );
+  const adminWalletRecoveryRequired = Boolean(roleAssigned && activeWallets.length === 0 && adminWalletHistoryCount > 0);
   const adminWalletAuthenticated = Boolean(
     roleAssigned && matchedWallet &&
     Number(account.admin_authenticated_at || 0) > 0 &&
@@ -293,24 +254,18 @@ async function summary(db, account) {
   );
   const adminPermissions = (permissions.results || []).map((row) => row.permission);
   const adminDelegablePermissions = (permissions.results || [])
-    .filter((row) => Number(row.can_delegate) === 1)
-    .map((row) => row.permission);
+    .filter((row) => Number(row.can_delegate) === 1).map((row) => row.permission);
   return {
     authenticated: true,
     email: null,
     accountIdentifier: account.account_identifier,
-    authMethod: primaryWallet ? "wallet" : "webauthn",
+    authMethod: "wallet",
     primaryIdentityWallet: primaryWallet ? {
       address: primaryWallet.address,
       chainId: Number(primaryWallet.chain_id),
       createdAt: primaryWallet.created_at,
       family: "evm-eoa",
     } : null,
-    passkeyCount: Number(counts.passkey_count || 0),
-    postQuantumPasskeyCount: Number(counts.pq_count || 0),
-    passkeyAlgorithmIds,
-    mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
-    recoveryKeyAvailable: Number(counts.recovery_count || 0) > 0,
     createdAt: account.created_at,
     avatarId: account.avatar_id || "person",
     referralId: account.referral_id || "",
@@ -319,12 +274,14 @@ async function summary(db, account) {
     termsAccepted: Boolean(account.terms_accepted_at),
     termsVersion: account.terms_version,
     termsAcceptedAt: account.terms_accepted_at,
+    walletLossAcknowledged: Boolean(account.wallet_loss_accepted_at),
+    walletLossNoticeVersion: account.wallet_loss_notice_version || null,
+    walletLossAcknowledgedAt: account.wallet_loss_accepted_at || null,
     emailVerified: false,
     emailVerificationDeliveryAvailable: false,
     passwordResetAvailable: false,
     sessionExpiresAt: new Date(Number(account.expires_at) * 1000).toISOString(),
-    activeSessionCount: Number(counts.session_count || 0),
-    securityManagementAvailable: !primaryWallet,
+    activeSessionCount: Number(counts?.session_count || 0),
     walletSignInAvailable: true,
     scope: "staging-test-account-only",
     role: roleAssigned ? "admin" : "user",
@@ -338,9 +295,7 @@ async function summary(db, account) {
     adminSessionAuthorized: adminWalletAuthenticated,
     admin: adminWalletAuthenticated,
     adminWalletAddress: adminWalletAuthenticated ? matchedWallet.address : null,
-    adminSessionExpiresAt: adminWalletAuthenticated
-      ? new Date(Number(account.admin_expires_at) * 1000).toISOString()
-      : null,
+    adminSessionExpiresAt: adminWalletAuthenticated ? new Date(Number(account.admin_expires_at) * 1000).toISOString() : null,
     administratorRevocationNotice: notice ? {
       noticeId: notice.notice_id,
       reason: notice.reason,
@@ -532,7 +487,7 @@ async function issueAdminWalletEnrollmentChallenge(db, env, request, payload, co
   const historyCount = Number(countRow?.history_count || 0);
   if (activeCount >= 3) throw fail(409, "This administrator account already has three active wallets.");
   if (historyCount > 0 && activeCount === 0) {
-    throw fail(409, "All previously enrolled administrator wallets are inactive. A separate owner-authorized recovery review is required; ordinary passkey sign-in cannot register a replacement wallet.");
+    throw fail(409, "All previously enrolled administrator wallets are inactive. A separate owner-authorized recovery review is required; ordinary wallet sign-in cannot bypass administrator wallet recovery.");
   }
   const existing = await db.prepare(
     "SELECT account_id,active FROM auth_admin_wallets WHERE address = ? COLLATE NOCASE"
@@ -1087,573 +1042,6 @@ async function acknowledgeAdminRevocationNotice(db, request, payload) {
 }
 
 
-function validatePasskeyLabel(value) {
-  if (typeof value !== "string") throw fail(400, "Enter a name for this passkey.");
-  const label = value.normalize("NFKC").replace(/[\u0000-\u001F\u007F]/g, "").trim();
-  if (!label || label.length > 40) throw fail(400, "Passkey names must contain between 1 and 40 characters.");
-  return label;
-}
-function validatePasskeyRef(value) {
-  if (typeof value !== "string" || !/^[a-f0-9]{32}$/i.test(value)) {
-    throw fail(400, "The selected passkey reference is invalid.");
-  }
-  return value.toLowerCase();
-}
-function validateSessionRef(value) {
-  if (typeof value !== "string" || !/^[a-f0-9]{32}$/i.test(value)) {
-    throw fail(400, "The selected session reference is invalid.");
-  }
-  return value.toLowerCase();
-}
-async function securityStatus(db, request) {
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in to review your account security.");
-  const sessionToken = cookie(request, SESSION_COOKIE);
-  if (!sessionToken) throw fail(401, "Your account session is no longer active.");
-  const currentTokenHash = await hashText(sessionToken);
-  const now = Math.floor(Date.now() / 1000);
-  const [passkeys, sessions, recovery] = await Promise.all([
-    db.prepare(
-      "SELECT passkey_ref,display_label,credential_alg,device_type,backed_up,created_at,last_used_at " +
-      "FROM auth_passkeys WHERE account_id = ? AND active = 1 ORDER BY created_at,passkey_ref"
-    ).bind(account.account_id).all(),
-    db.prepare(
-      "SELECT session_ref,token_hash,created_at,expires_at FROM auth_sessions " +
-      "WHERE account_id = ? AND expires_at > ? ORDER BY created_at DESC,session_ref LIMIT 50"
-    ).bind(account.account_id, now).all(),
-    db.prepare(
-      "SELECT COUNT(*) AS active_count FROM auth_recovery_keys WHERE account_id = ? AND used_at IS NULL"
-    ).bind(account.account_id).first(),
-  ]);
-  return json(200, {
-    available: true,
-    passkeys: (passkeys.results || []).map((row) => ({
-      passkeyRef: row.passkey_ref,
-      label: row.display_label || "Passkey",
-      algorithm: Number(row.credential_alg),
-      postQuantum: PQ_ALGS.includes(Number(row.credential_alg)),
-      deviceType: row.device_type || "unknown",
-      backedUp: Boolean(row.backed_up),
-      createdAt: row.created_at,
-      lastUsedAt: row.last_used_at || null,
-    })),
-    sessions: (sessions.results || []).map((row) => ({
-      sessionRef: row.session_ref,
-      createdAt: new Date(Number(row.created_at) * 1000).toISOString(),
-      expiresAt: new Date(Number(row.expires_at) * 1000).toISOString(),
-      isCurrent: equalConstantTime(row.token_hash, currentTokenHash),
-    })),
-    activeRecoveryKey: Number(recovery?.active_count || 0) > 0,
-    activeSessionCount: (sessions.results || []).length,
-  });
-}
-async function findSecurityStepUp(db, account, request, rawToken, purpose) {
-  if (typeof rawToken !== "string" || !/^[A-Za-z0-9_-]{43}$/.test(rawToken)) {
-    throw fail(401, "Fresh passkey verification is required before this security change.");
-  }
-  const sessionToken = cookie(request, SESSION_COOKIE);
-  if (!sessionToken) throw fail(401, "Your account session is no longer active.");
-  const sessionHash = await hashText(sessionToken);
-  const tokenHash = await hashText(rawToken);
-  const now = Math.floor(Date.now() / 1000);
-  const row = await db.prepare(
-    "SELECT stepup_token_hash FROM auth_security_stepups " +
-    "WHERE stepup_token_hash = ? AND account_id = ? AND session_token_hash = ? " +
-    "AND purpose = ? AND used_at IS NULL AND expires_at > ? " +
-    "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-  ).bind(tokenHash, account.account_id, sessionHash, purpose, now, sessionHash, account.account_id, now).first();
-  if (!row) throw fail(401, "Fresh passkey verification is required before this security change. Start the verification again.");
-  return { tokenHash, sessionHash };
-}
-async function issueSecurityStepUp(db, env, request, payload, config) {
-  if (Object.keys(payload).length !== 1 || !["manage-passkeys", "manage-sessions", "rotate-recovery-key"].includes(payload.purpose)) {
-    throw fail(400, "Choose a supported account-security action.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before changing account security.");
-  const sessionToken = cookie(request, SESSION_COOKIE);
-  if (!sessionToken) throw fail(401, "Your account session is no longer active.");
-  const sessionHash = await hashText(sessionToken);
-  await rateLimit(db, env, request, "security-step-up-options", account.account_id, 10, 3600);
-  const challengeId = b64u(bytes(24));
-  const challenge = b64u(bytes(32));
-  const publicKey = await generateAuthenticationOptions({
-    rpID: config.rpId,
-    challenge,
-    timeout: 60000,
-    userVerification: "required",
-  });
-  const now = Math.floor(Date.now() / 1000);
-  await db.prepare(
-    "DELETE FROM auth_security_stepups WHERE expires_at <= ? OR (used_at IS NOT NULL AND created_at < ?)"
-  ).bind(now, now - 86400).run();
-  await createChallenge(db, {
-    id: challengeId,
-    challenge: publicKey.challenge,
-    ceremony: "authentication",
-    accountId: account.account_id,
-    accountIdentifier: account.account_identifier,
-    userHandle: account.user_handle,
-    payload: { flow: "security-step-up", purpose: payload.purpose, sessionHash },
-    now,
-  });
-  return json(200, { challengeId, publicKey, purpose: payload.purpose, expiresInSeconds: CHALLENGE_SECONDS });
-}
-async function verifySecurityStepUp(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["challengeId", "credential"].includes(key))) {
-    throw fail(400, "The passkey verification response contains unsupported fields.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before changing account security.");
-  const challengeId = String(payload.challengeId || "");
-  const response = payload.credential;
-  if (!/^[A-Za-z0-9_-]{24,64}$/.test(challengeId) || !response || typeof response !== "object") {
-    throw fail(400, "A valid passkey verification response is required.");
-  }
-  await rateLimit(db, env, request, "security-step-up-verify", account.account_id, 8, 300);
-  const now = Math.floor(Date.now() / 1000);
-  const challenge = await db.prepare(
-    "SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'authentication' " +
-    "AND account_id = ? AND used_at IS NULL AND expires_at > ?"
-  ).bind(challengeId, account.account_id, now).first();
-  if (!challenge) throw fail(410, "This security verification expired or was already used. Start again.");
-  const details = JSON.parse(challenge.payload_json || "{}");
-  const sessionToken = cookie(request, SESSION_COOKIE);
-  if (
-    details.flow !== "security-step-up" ||
-    !["manage-passkeys", "manage-sessions", "rotate-recovery-key"].includes(details.purpose) ||
-    !sessionToken ||
-    !equalConstantTime(String(details.sessionHash || ""), await hashText(sessionToken)) ||
-    challenge.user_handle !== account.user_handle
-  ) throw fail(401, "This passkey verification is not bound to your current account session.");
-  const credentialId = String(response.id || "");
-  const row = await db.prepare(
-    "SELECT p.* FROM auth_passkeys p WHERE p.credential_id = ? AND p.account_id = ? AND p.active = 1"
-  ).bind(credentialId, account.account_id).first();
-  if (!row || !response.response?.userHandle || !equalConstantTime(String(response.response.userHandle), account.user_handle)) {
-    throw fail(401, "Passkey verification could not be completed. Use an active passkey belonging to this account.");
-  }
-  let verified;
-  try {
-    verified = await verifyAuthenticationResponse({
-      response,
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: config.origin,
-      expectedRPID: config.rpId,
-      credential: {
-        id: row.credential_id,
-        publicKey: unb64u(row.public_key_b64),
-        counter: Number(row.sign_count || 0),
-        transports: JSON.parse(row.transports_json || "[]"),
-      },
-      requireUserVerification: true,
-    });
-  } catch {
-    throw fail(401, "Passkey verification could not be completed. Start again with an active passkey.");
-  }
-  if (!verified.verified || !verified.authenticationInfo.userVerified) {
-    throw fail(401, "Passkey verification could not be completed. Start again with an active passkey.");
-  }
-  const marker = b64u(bytes(18));
-  const rawGrant = b64u(bytes(32));
-  const grantHash = await hashText(rawGrant);
-  const timestamp = new Date().toISOString();
-  const sessionHash = await hashText(sessionToken);
-  const grantExpiry = now + 120;
-  const results = await db.batch([
-    db.prepare(
-      "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND account_id = ? " +
-      "AND ceremony = 'authentication' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(marker, challengeId, account.account_id, now, sessionHash, account.account_id, now),
-    db.prepare(
-      "UPDATE auth_passkeys SET sign_count = ?, last_used_at = ? WHERE credential_id = ? " +
-      "AND account_id = ? AND active = 1 AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(verified.authenticationInfo.newCounter, timestamp, credentialId, account.account_id, challengeId, marker),
-    db.prepare(
-      "INSERT INTO auth_security_stepups(stepup_token_hash,account_id,session_token_hash,purpose,created_at,expires_at) " +
-      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
-      "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE credential_id = ? AND account_id = ? AND active = 1 AND sign_count = ?) " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(grantHash, account.account_id, sessionHash, details.purpose, now, grantExpiry, challengeId, marker,
-      credentialId, account.account_id, verified.authenticationInfo.newCounter, sessionHash, account.account_id, now),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'security_step_up_verified',?,? WHERE EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ?)"
-    ).bind(b64u(bytes(16)), account.account_id, timestamp, "purpose=" + details.purpose, grantHash),
-  ]);
-  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[2]?.meta?.changes || 0) !== 1) {
-    throw fail(409, "Your account session or security verification changed. Start the security action again.");
-  }
-  return json(200, {
-    stepUpToken: rawGrant,
-    purpose: details.purpose,
-    expiresInSeconds: 120,
-    message: "Your passkey verified this security action. The authorization is short-lived and can be used once.",
-  });
-}
-async function addPasskeyOptions(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["stepUpToken", "label"].includes(key))) {
-    throw fail(400, "The additional passkey request contains unsupported fields.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before adding a passkey.");
-  const label = validatePasskeyLabel(payload.label);
-  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-passkeys");
-  await rateLimit(db, env, request, "passkey-add-options", account.account_id, 10, 3600);
-  const existing = await db.prepare(
-    "SELECT credential_id,transports_json FROM auth_passkeys WHERE account_id = ? AND active = 1"
-  ).bind(account.account_id).all();
-  const challengeId = b64u(bytes(24));
-  const challenge = b64u(bytes(32));
-  const publicKey = await generateRegistrationOptions({
-    rpName: config.rpName,
-    rpID: config.rpId,
-    userName: account.account_identifier,
-    userDisplayName: "AstroCrown Member",
-    userID: unb64u(account.user_handle),
-    challenge,
-    timeout: 60000,
-    attestationType: "none",
-    authenticatorSelection: { residentKey: "required", userVerification: "required" },
-    excludeCredentials: (existing.results || []).map((item) => ({
-      id: item.credential_id,
-      transports: JSON.parse(item.transports_json || "[]"),
-    })),
-    supportedAlgorithmIDs: getDefaultSupportedAlgorithmIDs(),
-  });
-  const now = Math.floor(Date.now() / 1000);
-  await createChallenge(db, {
-    id: challengeId,
-    challenge: publicKey.challenge,
-    ceremony: "registration",
-    accountId: account.account_id,
-    accountIdentifier: account.account_identifier,
-    userHandle: account.user_handle,
-    payload: { flow: "additional-passkey", label, sessionHash: grant.sessionHash, stepupTokenHash: grant.tokenHash },
-    now,
-  });
-  return json(200, { challengeId, publicKey, purpose: "add-account-passkey" });
-}
-async function addPasskeyVerify(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["challengeId", "credential"].includes(key))) {
-    throw fail(400, "The additional passkey response contains unsupported fields.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before adding a passkey.");
-  const challengeId = String(payload.challengeId || "");
-  if (!/^[A-Za-z0-9_-]{24,64}$/.test(challengeId) || !payload.credential || typeof payload.credential !== "object") {
-    throw fail(400, "A valid additional passkey response is required.");
-  }
-  await rateLimit(db, env, request, "passkey-add-verify", account.account_id, 8, 3600);
-  const now = Math.floor(Date.now() / 1000);
-  const challenge = await db.prepare(
-    "SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'registration' " +
-    "AND account_id = ? AND used_at IS NULL AND expires_at > ?"
-  ).bind(challengeId, account.account_id, now).first();
-  if (!challenge) throw fail(410, "This additional passkey request expired or was already used. Start again.");
-  const details = JSON.parse(challenge.payload_json || "{}");
-  const sessionToken = cookie(request, SESSION_COOKIE);
-  if (
-    details.flow !== "additional-passkey" ||
-    !sessionToken ||
-    !equalConstantTime(String(details.sessionHash || ""), await hashText(sessionToken)) ||
-    challenge.user_handle !== account.user_handle ||
-    challenge.account_identifier !== account.account_identifier
-  ) throw fail(401, "This passkey registration is not bound to your current account session.");
-  const grant = await db.prepare(
-    "SELECT stepup_token_hash FROM auth_security_stepups WHERE stepup_token_hash = ? " +
-    "AND account_id = ? AND session_token_hash = ? AND purpose = 'manage-passkeys' " +
-    "AND used_at IS NULL AND expires_at > ?"
-  ).bind(details.stepupTokenHash, account.account_id, details.sessionHash, now).first();
-  if (!grant) throw fail(401, "Fresh passkey verification is required. Start the add-passkey action again.");
-  const existing = await db.prepare(
-    "SELECT credential_id FROM auth_passkeys WHERE account_id = ? AND active = 1"
-  ).bind(account.account_id).all();
-  const credential = await verifiedPasskey(
-    payload.credential,
-    challenge,
-    config,
-    (existing.results || []).map((row) => row.credential_id)
-  );
-  const passkeyRef = hex(bytes(16));
-  const marker = b64u(bytes(18));
-  const timestamp = new Date().toISOString();
-  const results = await db.batch([
-    db.prepare(
-      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ?"
-    ).bind(marker, details.stepupTokenHash, account.account_id, details.sessionHash, now),
-    db.prepare(
-      "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND account_id = ? " +
-      "AND ceremony = 'registration' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?) " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(marker, challengeId, account.account_id, now, details.stepupTokenHash, marker, details.sessionHash, account.account_id, now),
-    db.prepare(
-      "INSERT INTO auth_passkeys(passkey_ref,display_label,credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
-      "SELECT ?,?,?,?,?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(passkeyRef, details.label, credential.id, account.account_id, credential.publicKey, credential.algorithm,
-      credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp),
-      timestamp, challengeId, marker),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'passkey_added',?,? WHERE EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1)"
-    ).bind(b64u(bytes(16)), account.account_id, timestamp, "passkey_ref=" + passkeyRef, passkeyRef, account.account_id),
-  ]);
-  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[2]?.meta?.changes || 0) !== 1) {
-    throw fail(409, "The passkey could not be added because the account security state changed. Start again.");
-  }
-  return await securityStatus(db, request);
-}
-async function renamePasskey(db, request, payload) {
-  if (Object.keys(payload).some((key) => !["stepUpToken", "passkeyRef", "label"].includes(key))) {
-    throw fail(400, "The passkey rename request contains unsupported fields.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before renaming a passkey.");
-  const passkeyRef = validatePasskeyRef(payload.passkeyRef);
-  const label = validatePasskeyLabel(payload.label);
-  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-passkeys");
-  const exists = await db.prepare(
-    "SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1"
-  ).bind(passkeyRef, account.account_id).first();
-  if (!exists) throw fail(404, "That active passkey could not be found.");
-  const marker = b64u(bytes(18));
-  const timestamp = new Date().toISOString();
-  const results = await db.batch([
-    db.prepare(
-      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, Math.floor(Date.now() / 1000),
-      grant.sessionHash, account.account_id, Math.floor(Date.now() / 1000)),
-    db.prepare(
-      "UPDATE auth_passkeys SET display_label = ? WHERE passkey_ref = ? AND account_id = ? AND active = 1 " +
-      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
-    ).bind(label, passkeyRef, account.account_id, grant.tokenHash, marker),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'passkey_label_changed',?,? WHERE EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND display_label = ?)"
-    ).bind(b64u(bytes(16)), account.account_id, timestamp, "passkey_ref=" + passkeyRef, passkeyRef, account.account_id, label),
-  ]);
-  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[1]?.meta?.changes || 0) !== 1) {
-    throw fail(409, "The passkey name could not be changed. Verify your passkey and try again.");
-  }
-  return await securityStatus(db, request);
-}
-async function revokePasskey(db, env, request, payload) {
-  if (Object.keys(payload).some((key) => !["stepUpToken", "passkeyRef"].includes(key))) {
-    throw fail(400, "The passkey revocation request contains unsupported fields.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before revoking a passkey.");
-  const passkeyRef = validatePasskeyRef(payload.passkeyRef);
-  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-passkeys");
-  const counts = await db.prepare(
-    "SELECT COUNT(*) AS active_count FROM auth_passkeys WHERE account_id = ? AND active = 1"
-  ).bind(account.account_id).first();
-  if (Number(counts?.active_count || 0) <= 1) {
-    throw fail(409, "The last active passkey cannot be removed here. Add another passkey or use account recovery first.");
-  }
-  const target = await db.prepare(
-    "SELECT credential_id FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 1"
-  ).bind(passkeyRef, account.account_id).first();
-  if (!target) throw fail(404, "That active passkey could not be found.");
-  const currentToken = cookie(request, SESSION_COOKIE);
-  if (!currentToken) throw fail(401, "Your account session is no longer active.");
-  const currentTokenHash = await hashText(currentToken);
-  const currentSession = await db.prepare(
-    "SELECT authenticated_credential_id FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?"
-  ).bind(currentTokenHash, account.account_id, Math.floor(Date.now() / 1000)).first();
-  if (!currentSession) throw fail(401, "Your account session is no longer active.");
-  const currentSessionWillBeRevoked = equalConstantTime(
-    String(currentSession.authenticated_credential_id || ""),
-    String(target.credential_id)
-  );
-  const marker = b64u(bytes(18));
-  const timestamp = new Date().toISOString();
-  const now = Math.floor(Date.now() / 1000);
-  const results = await db.batch([
-    db.prepare(
-      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'manage-passkeys' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now,
-      grant.sessionHash, account.account_id, now),
-    db.prepare(
-      "UPDATE auth_passkeys SET active = 0 WHERE passkey_ref = ? AND account_id = ? AND active = 1 " +
-      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?) " +
-      "AND (SELECT COUNT(*) FROM auth_passkeys WHERE account_id = ? AND active = 1) > 1"
-    ).bind(passkeyRef, account.account_id, grant.tokenHash, marker, account.account_id),
-    db.prepare(
-      "DELETE FROM auth_sessions WHERE account_id = ? AND authenticated_credential_id = ? " +
-      "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 0)"
-    ).bind(account.account_id, target.credential_id, passkeyRef, account.account_id),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'passkey_revoked',?,? WHERE EXISTS(SELECT 1 FROM auth_passkeys WHERE passkey_ref = ? AND account_id = ? AND active = 0)"
-    ).bind(b64u(bytes(16)), account.account_id, timestamp, "passkey_ref=" + passkeyRef, passkeyRef, account.account_id),
-  ]);
-  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[1]?.meta?.changes || 0) !== 1) {
-    throw fail(409, "The passkey could not be revoked. The account must retain at least one active passkey.");
-  }
-  if (currentSessionWillBeRevoked) {
-    return json(200, {
-      revoked: true,
-      sessionRevoked: true,
-      message: "The passkey was revoked, and this session was ended because that passkey originally authenticated it. Sign in again with another active passkey.",
-    }, { "Set-Cookie": clearCookie(new URL(request.url)) });
-  }
-  return await securityStatus(db, request);
-}
-async function revokeSessions(db, request, payload) {
-  if (Object.keys(payload).some((key) => !["stepUpToken", "sessionRef", "revokeOthers"].includes(key))) {
-    throw fail(400, "The session revocation request contains unsupported fields.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before managing sessions.");
-  const hasTarget = typeof payload.sessionRef === "string";
-  const revokeOthers = payload.revokeOthers === true;
-  if (hasTarget === revokeOthers || (payload.revokeOthers !== undefined && typeof payload.revokeOthers !== "boolean")) {
-    throw fail(400, "Choose one other session or explicitly choose to sign out all other sessions.");
-  }
-  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "manage-sessions");
-  const sessionToken = cookie(request, SESSION_COOKIE);
-  const currentHash = await hashText(sessionToken);
-  const now = Math.floor(Date.now() / 1000);
-  const targetRef = hasTarget ? validateSessionRef(payload.sessionRef) : null;
-  if (targetRef) {
-    const target = await db.prepare(
-      "SELECT token_hash FROM auth_sessions WHERE session_ref = ? AND account_id = ? AND expires_at > ?"
-    ).bind(targetRef, account.account_id, now).first();
-    if (!target) throw fail(404, "That active session could not be found.");
-    if (equalConstantTime(target.token_hash, currentHash)) {
-      throw fail(400, "The current session cannot be revoked from this screen. Use Sign out instead.");
-    }
-  }
-  const marker = b64u(bytes(18));
-  const timestamp = new Date().toISOString();
-  const deleteStatement = targetRef
-    ? db.prepare(
-      "DELETE FROM auth_sessions WHERE session_ref = ? AND account_id = ? AND token_hash <> ? AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
-    ).bind(targetRef, account.account_id, currentHash, now, grant.tokenHash, marker)
-    : db.prepare(
-      "DELETE FROM auth_sessions WHERE account_id = ? AND token_hash <> ? AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
-    ).bind(account.account_id, currentHash, now, grant.tokenHash, marker);
-  const results = await db.batch([
-    db.prepare(
-      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'manage-sessions' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now, grant.sessionHash, account.account_id, now),
-    deleteStatement,
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'account_sessions_revoked',?,? WHERE EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
-    ).bind(b64u(bytes(16)), account.account_id, timestamp,
-      targetRef ? "scope=selected-other-session" : "scope=all-other-sessions", grant.tokenHash, marker),
-  ]);
-  if (Number(results?.[0]?.meta?.changes || 0) !== 1) {
-    throw fail(409, "The session list could not be changed. Verify your passkey and try again.");
-  }
-  return await securityStatus(db, request);
-}
-async function rotateRecoveryKey(db, request, payload) {
-  if (Object.keys(payload).some((key) => key !== "stepUpToken")) {
-    throw fail(400, "The recovery-key rotation request contains unsupported fields.");
-  }
-  const account = await activeAccount(db, request);
-  if (!account) throw fail(401, "Sign in before replacing your recovery key.");
-  const grant = await findSecurityStepUp(db, account, request, payload.stepUpToken, "rotate-recovery-key");
-  const version = await db.prepare(
-    "SELECT COALESCE(MAX(key_version),0) AS latest_version FROM auth_recovery_keys WHERE account_id = ?"
-  ).bind(account.account_id).first();
-  const nextVersion = Number(version?.latest_version || 0) + 1;
-  const nextKey = await newRecoveryKey();
-  const marker = b64u(bytes(18));
-  const timestamp = new Date().toISOString();
-  const now = Math.floor(Date.now() / 1000);
-  const results = await db.batch([
-    db.prepare(
-      "UPDATE auth_security_stepups SET used_at = ? WHERE stepup_token_hash = ? AND account_id = ? " +
-      "AND session_token_hash = ? AND purpose = 'rotate-recovery-key' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ? AND account_id = ? AND expires_at > ?)"
-    ).bind(marker, grant.tokenHash, account.account_id, grant.sessionHash, now, grant.sessionHash, account.account_id, now),
-    db.prepare(
-      "UPDATE auth_recovery_keys SET used_at = ? WHERE account_id = ? AND used_at IS NULL " +
-      "AND EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
-    ).bind(timestamp, account.account_id, grant.tokenHash, marker),
-    db.prepare(
-      "INSERT INTO auth_recovery_keys(account_id,key_version,salt_b64,verifier_b64,created_at) " +
-      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_security_stepups WHERE stepup_token_hash = ? AND used_at = ?)"
-    ).bind(account.account_id, nextVersion, nextKey.salt, nextKey.verifier, timestamp, grant.tokenHash, marker),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'recovery_key_rotated',?,? WHERE EXISTS(SELECT 1 FROM auth_recovery_keys WHERE account_id = ? AND key_version = ?)"
-    ).bind(b64u(bytes(16)), account.account_id, timestamp, "new_recovery_key_version=" + nextVersion, account.account_id, nextVersion),
-  ]);
-  if (Number(results?.[0]?.meta?.changes || 0) !== 1 || Number(results?.[2]?.meta?.changes || 0) !== 1) {
-    throw fail(409, "The recovery key could not be replaced. Verify your passkey and try again.");
-  }
-  const result = await securityStatus(db, request);
-  const data = await result.json();
-  data.oneTimeRecoveryKey = nextKey.value;
-  data.recoveryKeyVersion = nextVersion;
-  data.message = "Your previous recovery key has been invalidated. Save this replacement key offline; it will not be displayed again.";
-  return json(200, data);
-}
-
-async function newRecoveryKey() {
-  const value = "ACR1-" + b64u(bytes(32));
-  const salt = bytes(16);
-  const text = new TextEncoder().encode(value);
-  const combined = new Uint8Array(salt.length + text.length);
-  combined.set(salt);
-  combined.set(text, salt.length);
-  return { value, salt: b64u(salt), verifier: await digest(combined) };
-}
-async function verifiedPasskey(response, challenge, config, excluded = []) {
-  let result;
-  try {
-    result = await verifyRegistrationResponse({
-      response,
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: config.origin,
-      expectedRPID: config.rpId,
-      requireUserPresence: true,
-      requireUserVerification: true,
-      supportedAlgorithmIDs: getDefaultSupportedAlgorithmIDs(),
-    });
-  } catch (error) {
-    if (config.localDiagnostics) {
-      const safeName = String(error?.name || "Error").slice(0, 80);
-      const safeMessage = String(error?.message || "No diagnostic message")
-        .replace(/[\\r\\n]+/g, " ")
-        .slice(0, 300);
-      throw fail(401, "LOCAL_TEST_WEBAUTHN_REJECTION [" + safeName + "]: " + safeMessage);
-    }
-    throw fail(401, "The passkey registration proof was not accepted. Start again.");
-  }
-  if (!result.verified || !result.registrationInfo?.credential) throw fail(401, "The passkey registration proof was not accepted. Start again.");
-  const credential = result.registrationInfo.credential;
-  if (!credential.id || excluded.includes(credential.id)) throw fail(409, "This passkey is already registered. Use another authenticator.");
-  let alg;
-  try { alg = Number(decodeCredentialPublicKey(credential.publicKey).get(3)); }
-  catch { throw fail(400, "The authenticator returned an unsupported credential public key."); }
-  if (!Number.isInteger(alg)) throw fail(400, "The authenticator returned an unsupported credential public key.");
-  return {
-    id: credential.id,
-    publicKey: b64u(credential.publicKey),
-    algorithm: alg,
-    counter: Number(credential.counter || 0),
-    transports: Array.isArray(credential.transports) ? credential.transports : [],
-    deviceType: result.registrationInfo.credentialDeviceType || "unknown",
-    backedUp: Boolean(result.registrationInfo.credentialBackedUp),
-  };
-}
 async function issuePrimaryWalletAuthenticationChallenge(db, env, request, payload, config) {
   if (Object.keys(payload).length !== 2 ||
       !Object.prototype.hasOwnProperty.call(payload, "address") ||
@@ -1693,7 +1081,7 @@ async function issuePrimaryWalletAuthenticationChallenge(db, env, request, paylo
 async function verifyPrimaryWalletAuthentication(db, env, request, payload, config) {
   const allowed = new Set([
     "challengeId", "message", "signature", "createAccount",
-    "termsAccepted", "termsVersion", "referralId",
+    "termsAccepted", "termsVersion", "walletLossAcknowledged", "walletLossNoticeVersion", "referralId",
   ]);
   if (Object.keys(payload).some((key) => !allowed.has(key)) ||
       typeof payload.challengeId !== "string" ||
@@ -1737,6 +1125,9 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
     if (payload.termsAccepted !== true || payload.termsVersion !== TERMS_VERSION) {
       throw fail(400, "Accept the current Terms of Use and Privacy Policy before creating an account.");
     }
+    if (payload.walletLossAcknowledged !== true || payload.walletLossNoticeVersion !== WALLET_LOSS_NOTICE_VERSION) {
+      throw fail(400, "Read and acknowledge the primary-wallet loss and recovery notice before creating an account.");
+    }
     const referral = payload.referralId == null ? "" : String(payload.referralId).trim();
     if (referral && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(referral)) {
       throw fail(400, "Enter a valid Referral ID or leave the field blank.");
@@ -1753,14 +1144,14 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
     try {
       await db.batch([
         db.prepare(
-          "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
-          "VALUES(?,?,?,?,'person',?,?,?,'user')"
-        ).bind(accountPrimaryId, accountIdentifier, userHandle, created, referral, TERMS_VERSION, created),
+          "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,wallet_loss_notice_version,wallet_loss_accepted_at,role) " +
+          "VALUES(?,?,?,?,'person',?,?,?,?,?,'user')"
+        ).bind(accountPrimaryId, accountIdentifier, userHandle, created, referral, TERMS_VERSION, created, WALLET_LOSS_NOTICE_VERSION, created),
         db.prepare(
           "INSERT INTO auth_primary_wallets(wallet_id,account_id,address,chain_id,created_at,active,proof_type) VALUES(?,?,?,?,?,1,'eip191-personal-sign')"
         ).bind(walletId, accountPrimaryId, address, Number(challenge.chain_id), created),
         db.prepare(
-          "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+          "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,?,?)"
         ).bind(tokenHash, accountPrimaryId, sessionRef, now, expires),
         db.prepare(
           "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'account_created_with_primary_wallet',?,'wallet_signature_verified=true;transaction_authorized=false')"
@@ -1787,7 +1178,7 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
   const timestamp = new Date().toISOString();
   await db.batch([
     db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) VALUES(?,?,?,NULL,?,?)"
+      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,created_at,expires_at) VALUES(?,?,?,?,?)"
     ).bind(tokenHash, identity.account_id, sessionRef, now, expires),
     db.prepare(
       "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'primary_wallet_sign_in',?,'wallet_signature_verified=true;transaction_authorized=false')"
@@ -1803,309 +1194,35 @@ async function verifyPrimaryWalletAuthentication(db, env, request, payload, conf
   return json(200, result, { "Set-Cookie": sessionCookie(token, new URL(config.origin)) });
 }
 
-async function issueRegistration(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["termsAccepted", "termsVersion", "referralId"].includes(key))) throw fail(400, "The passkey registration request contains unsupported fields.");
-  if (payload.termsAccepted !== true || payload.termsVersion !== TERMS_VERSION) throw fail(400, "Accept the current staging Terms and Privacy acknowledgement before registration.");
-  const referral = payload.referralId == null ? "" : String(payload.referralId).trim();
-  if (referral && !/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(referral)) throw fail(400, "Enter a valid Referral ID or leave the field blank.");
-  await rateLimit(db, env, request, "passkey-register-options", "registration", 5, 3600);
-  const identifier = "AC-" + hex(bytes(5)).toUpperCase();
-  const userHandle = b64u(bytes(16));
-  const challenge = b64u(bytes(32));
-  const challengeId = b64u(bytes(24));
-  const publicKey = await generateRegistrationOptions({
-    rpName: config.rpName,
-    rpID: config.rpId,
-    userName: identifier,
-    userDisplayName: "AstroCrown Member",
-    userID: unb64u(userHandle),
-    challenge,
-    timeout: 60000,
-    attestationType: "none",
-    authenticatorSelection: { residentKey: "required", userVerification: "required" },
-    supportedAlgorithmIDs: getDefaultSupportedAlgorithmIDs(),
-  });
-  const now = Math.floor(Date.now() / 1000);
-  await createChallenge(db, {
-    id: challengeId, challenge: publicKey.challenge, ceremony: "registration", accountId: identifier,
-    accountIdentifier: identifier, userHandle, payload: { referralId: referral, termsVersion: TERMS_VERSION }, now,
-  });
-  return json(200, { challengeId, publicKey });
-}
-async function verifyRegistration(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["challengeId", "credential"].includes(key))) throw fail(400, "The passkey registration response contains unsupported fields.");
-  const challengeId = String(payload.challengeId || "");
-  if (!/^[A-Za-z0-9_-]{24,64}$/.test(challengeId) || !payload.credential || typeof payload.credential !== "object") throw fail(400, "A valid passkey registration response is required.");
-  await rateLimit(db, env, request, "passkey-register-verify", "registration", 10, 3600);
-  const now = Math.floor(Date.now() / 1000);
-  const challenge = await db.prepare(
-    "SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'registration' AND used_at IS NULL AND expires_at > ?"
-  ).bind(challengeId, now).first();
-  if (!challenge) throw fail(410, "This passkey registration request expired or was already used. Start again.");
-  const credential = await verifiedPasskey(payload.credential, challenge, config);
-  const recovery = await newRecoveryKey();
-  const token = b64u(bytes(32));
-  const tokenHash = await hashText(token);
-  const created = new Date().toISOString();
-  const expires = now + SESSION_SECONDS;
-  const metadata = JSON.parse(challenge.payload_json || "{}");
-  const marker = b64u(bytes(18));
-  const passkeyRef = hex(bytes(16));
-  const sessionRef = hex(bytes(16));
-  const queries = [
-    db.prepare(
-      "INSERT INTO auth_accounts(account_id,account_identifier,user_handle,created_at,avatar_id,referral_id,terms_version,terms_accepted_at,role) " +
-      "SELECT ?,?,?,?,'person',?,?,?,'user' WHERE EXISTS " +
-      "(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'registration' AND used_at IS NULL AND expires_at > ?)"
-    ).bind(challenge.account_id, challenge.account_identifier, challenge.user_handle, created, metadata.referralId || "", TERMS_VERSION, created, challengeId, now),
-    db.prepare(
-      "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND used_at IS NULL AND EXISTS(SELECT 1 FROM auth_accounts WHERE account_id = ?)"
-    ).bind(marker, challengeId, challenge.account_id),
-    db.prepare(
-      "INSERT INTO auth_passkeys(passkey_ref,display_label,credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
-      "SELECT ?,?,?,?,?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(passkeyRef, "Primary passkey", credential.id, challenge.account_id, credential.publicKey, credential.algorithm, credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp), created, challengeId, marker),
-    db.prepare(
-      "INSERT INTO auth_recovery_keys(account_id,key_version,salt_b64,verifier_b64,created_at) " +
-      "SELECT ?,1,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(challenge.account_id, recovery.salt, recovery.verifier, created, challengeId, marker),
-    db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
-      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(tokenHash, challenge.account_id, sessionRef, credential.id, now, expires, challengeId, marker),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'account_created_with_passkey',?,'recovery_key_version=1' WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(b64u(bytes(16)), challenge.account_id, created, challengeId, marker),
-  ];
-  try { await db.batch(queries); } catch { throw fail(409, "This passkey or account could not be registered. Start again."); }
-  const account = await activeAccount(db, new Request(config.origin, { headers: { Cookie: SESSION_COOKIE + "=" + token } }));
-  if (!account) throw fail(500, "The staging account session could not be initialized.");
-  const result = await summary(db, account);
-  result.oneTimeRecoveryKey = recovery.value;
-  result.recoveryKeyVersion = 1;
-  result.message = "Your AstroCrown staging account has been created. Save the offline recovery key now; it will not be shown again.";
-  return json(200, result, { "Set-Cookie": sessionCookie(token, new URL(config.origin)) });
-}
-async function issueAuthentication(db, env, request, config) {
-  await rateLimit(db, env, request, "passkey-auth-options", "sign-in", 30, 3600);
-  const challengeId = b64u(bytes(24));
-  const challenge = b64u(bytes(32));
-  const publicKey = await generateAuthenticationOptions({
-    rpID: config.rpId, challenge, timeout: 60000, userVerification: "required",
-  });
-  const now = Math.floor(Date.now() / 1000);
-  await createChallenge(db, { id: challengeId, challenge: publicKey.challenge, ceremony: "authentication", now });
-  return json(200, { challengeId, publicKey });
-}
-async function verifyAuthentication(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["challengeId", "credential"].includes(key))) throw fail(400, "The passkey sign-in response contains unsupported fields.");
-  const challengeId = String(payload.challengeId || "");
-  const response = payload.credential;
-  if (!/^[A-Za-z0-9_-]{24,64}$/.test(challengeId) || !response || typeof response !== "object") throw fail(400, "The passkey sign-in response is incomplete.");
-  await rateLimit(db, env, request, "passkey-auth-verify", "sign-in", 10, 300);
-  const now = Math.floor(Date.now() / 1000);
-  const challenge = await db.prepare(
-    "SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'authentication' AND used_at IS NULL AND expires_at > ?"
-  ).bind(challengeId, now).first();
-  if (!challenge) throw fail(410, "This passkey sign-in request expired or was already used. Start again.");
-  const challengeDetails = JSON.parse(challenge.payload_json || "{}");
-  if (challengeDetails.flow === "security-step-up") {
-    throw fail(400, "This passkey challenge is reserved for an authenticated account-security action.");
-  }
-  const credentialId = String(response.id || "");
-  const row = await db.prepare(
-    "SELECT p.*,a.account_id,a.account_identifier,a.user_handle,a.created_at,a.avatar_id,a.referral_id,a.terms_version,a.terms_accepted_at,a.role " +
-    "FROM auth_passkeys p JOIN auth_accounts a ON a.account_id = p.account_id WHERE p.credential_id = ? AND p.active = 1 AND a.role = 'user'"
-  ).bind(credentialId).first();
-  if (!row) throw fail(401, "Passkey sign-in could not be completed. Check your authenticator and try again.");
-  if (!response.response?.userHandle || !equalConstantTime(String(response.response.userHandle), row.user_handle)) throw fail(401, "Passkey sign-in could not be completed. Check your authenticator and try again.");
-  let verified;
-  try {
-    verified = await verifyAuthenticationResponse({
-      response,
-      expectedChallenge: challenge.challenge,
-      expectedOrigin: config.origin,
-      expectedRPID: config.rpId,
-      credential: {
-        id: row.credential_id,
-        publicKey: unb64u(row.public_key_b64),
-        counter: Number(row.sign_count || 0),
-        transports: JSON.parse(row.transports_json || "[]"),
-      },
-      requireUserVerification: true,
-    });
-  } catch {
-    throw fail(401, "Passkey sign-in could not be completed. Check your authenticator and try again.");
-  }
-  if (!verified.verified || !verified.authenticationInfo.userVerified) throw fail(401, "Passkey sign-in could not be completed. Check your authenticator and try again.");
-  const marker = b64u(bytes(18));
-  const token = b64u(bytes(32));
-  const tokenHash = await hashText(token);
-  const sessionRef = hex(bytes(16));
-  const expires = now + SESSION_SECONDS;
-  const timestamp = new Date().toISOString();
-  const queries = [
-    db.prepare("UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND ceremony = 'authentication' AND used_at IS NULL AND expires_at > ?").bind(marker, challengeId, now),
-    db.prepare(
-      "UPDATE auth_passkeys SET sign_count = ?, last_used_at = ? WHERE credential_id = ? AND active = 1 " +
-      "AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(verified.authenticationInfo.newCounter, timestamp, credentialId, challengeId, marker),
-    db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
-      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?) " +
-      "AND EXISTS(SELECT 1 FROM auth_passkeys WHERE credential_id = ? AND active = 1 AND sign_count = ?)"
-    ).bind(tokenHash, row.account_id, sessionRef, credentialId, now, expires, challengeId, marker, credentialId, verified.authenticationInfo.newCounter),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'passkey_sign_in',?,'user_verified=true' WHERE EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ?)"
-    ).bind(b64u(bytes(16)), row.account_id, timestamp, tokenHash),
-  ];
-  await db.batch(queries);
-  const account = await activeAccount(db, new Request(config.origin, { headers: { Cookie: SESSION_COOKIE + "=" + token } }));
-  if (!account) throw fail(401, "Passkey sign-in could not be completed. Start again.");
-  const result = await summary(db, account);
-  result.message = "You are signed in to AstroCrown staging with your passkey.";
-  return json(200, result, { "Set-Cookie": sessionCookie(token, new URL(config.origin)) });
-}
-async function issueRecovery(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["accountIdentifier", "recoveryKey"].includes(key))) throw fail(400, "Enter your account identifier and offline recovery key.");
-  const identifier = accountId(payload.accountIdentifier);
-  const keyValue = recoveryKey(payload.recoveryKey);
-  await rateLimit(db, env, request, "account-recovery-ip", "recovery", 10, 3600);
-  await rateLimit(db, env, request, "account-recovery-account", identifier, 5, 3600);
-  const account = await db.prepare("SELECT account_id,user_handle FROM auth_accounts WHERE account_identifier = ? AND role = 'user'").bind(identifier).first();
-  const activeKey = account ? await db.prepare(
-    "SELECT key_version,salt_b64,verifier_b64 FROM auth_recovery_keys WHERE account_id = ? AND used_at IS NULL ORDER BY key_version DESC LIMIT 1"
-  ).bind(account.account_id).first() : null;
-  let valid = false;
-  if (account && activeKey) {
-    const salt = unb64u(activeKey.salt_b64);
-    const keyBytes = new TextEncoder().encode(keyValue);
-    const combined = new Uint8Array(salt.length + keyBytes.length);
-    combined.set(salt);
-    combined.set(keyBytes, salt.length);
-    valid = equalConstantTime(await digest(combined), activeKey.verifier_b64);
-  }
-  if (!valid) throw fail(401, "Account recovery could not be started. Check the account identifier and recovery key.");
-  const id = b64u(bytes(24));
-  const challenge = b64u(bytes(32));
-  const existing = await db.prepare("SELECT credential_id,transports_json FROM auth_passkeys WHERE account_id = ? AND active = 1").bind(account.account_id).all();
-  const publicKey = await generateRegistrationOptions({
-    rpName: config.rpName,
-    rpID: config.rpId,
-    userName: identifier,
-    userDisplayName: "AstroCrown Member",
-    userID: unb64u(account.user_handle),
-    challenge,
-    timeout: 60000,
-    attestationType: "none",
-    authenticatorSelection: { residentKey: "required", userVerification: "required" },
-    excludeCredentials: (existing.results || []).map((item) => ({ id: item.credential_id, transports: JSON.parse(item.transports_json || "[]") })),
-    supportedAlgorithmIDs: getDefaultSupportedAlgorithmIDs(),
-  });
-  const now = Math.floor(Date.now() / 1000);
-  await createChallenge(db, {
-    id, challenge: publicKey.challenge, ceremony: "recovery", accountId: account.account_id,
-    accountIdentifier: identifier, userHandle: account.user_handle,
-    payload: { keyVersion: Number(activeKey.key_version) }, now,
-  });
-  return json(200, { challengeId: id, publicKey, purpose: "replace-lost-passkey-using-one-time-recovery-key" });
-}
-async function completeRecovery(db, env, request, payload, config) {
-  if (Object.keys(payload).some((key) => !["challengeId", "credential"].includes(key))) throw fail(400, "The passkey recovery response is incomplete.");
-  const id = String(payload.challengeId || "");
-  if (!/^[A-Za-z0-9_-]{24,64}$/.test(id) || !payload.credential || typeof payload.credential !== "object") throw fail(400, "A valid replacement passkey response is required.");
-  await rateLimit(db, env, request, "account-recovery-complete", "recovery", 5, 3600);
-  const now = Math.floor(Date.now() / 1000);
-  const challenge = await db.prepare("SELECT * FROM auth_challenges WHERE challenge_id = ? AND ceremony = 'recovery' AND used_at IS NULL AND expires_at > ?").bind(id, now).first();
-  if (!challenge) throw fail(410, "This account recovery request expired or was already used. Start again.");
-  const challengePayload = JSON.parse(challenge.payload_json || "{}");
-  const key = await db.prepare("SELECT key_version FROM auth_recovery_keys WHERE account_id = ? AND key_version = ? AND used_at IS NULL")
-    .bind(challenge.account_id, Number(challengePayload.keyVersion)).first();
-  if (!key) throw fail(410, "This recovery request is no longer valid. Start again.");
-  const existing = await db.prepare("SELECT credential_id FROM auth_passkeys WHERE account_id = ? AND active = 1").bind(challenge.account_id).all();
-  const credential = await verifiedPasskey(payload.credential, challenge, config, (existing.results || []).map((r) => r.credential_id));
-  const nextKey = await newRecoveryKey();
-  const token = b64u(bytes(32));
-  const tokenHash = await hashText(token);
-  const marker = b64u(bytes(18));
-  const passkeyRef = hex(bytes(16));
-  const sessionRef = hex(bytes(16));
-  const timestamp = new Date().toISOString();
-  const expires = now + SESSION_SECONDS;
-  const nextVersion = Number(challengePayload.keyVersion) + 1;
-  const queries = [
-    db.prepare(
-      "UPDATE auth_challenges SET used_at = ? WHERE challenge_id = ? AND ceremony = 'recovery' AND used_at IS NULL AND expires_at > ? " +
-      "AND EXISTS(SELECT 1 FROM auth_recovery_keys WHERE account_id = ? AND key_version = ? AND used_at IS NULL)"
-    ).bind(marker, id, now, challenge.account_id, Number(challengePayload.keyVersion)),
-    db.prepare("UPDATE auth_passkeys SET active = 0 WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)").bind(challenge.account_id, id, marker),
-    db.prepare(
-      "INSERT INTO auth_passkeys(passkey_ref,display_label,credential_id,account_id,public_key_b64,credential_alg,sign_count,transports_json,device_type,backed_up,created_at,active) " +
-      "SELECT ?,?,?,?,?,?,?,?,?,?,?,1 WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(passkeyRef, "Recovery replacement passkey", credential.id, challenge.account_id, credential.publicKey, credential.algorithm, credential.counter, JSON.stringify(credential.transports), credential.deviceType, Number(credential.backedUp), timestamp, id, marker),
-    db.prepare(
-      "UPDATE auth_recovery_keys SET used_at = ? WHERE account_id = ? AND key_version = ? AND used_at IS NULL " +
-      "AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(timestamp, challenge.account_id, Number(challengePayload.keyVersion), id, marker),
-    db.prepare(
-      "INSERT INTO auth_recovery_keys(account_id,key_version,salt_b64,verifier_b64,created_at) " +
-      "SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(challenge.account_id, nextVersion, nextKey.salt, nextKey.verifier, timestamp, id, marker),
-    db.prepare("DELETE FROM auth_sessions WHERE account_id = ? AND EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)").bind(challenge.account_id, id, marker),
-    db.prepare(
-      "INSERT INTO auth_sessions(token_hash,account_id,session_ref,authenticated_credential_id,created_at,expires_at) " +
-      "SELECT ?,?,?,?,?,? WHERE EXISTS(SELECT 1 FROM auth_challenges WHERE challenge_id = ? AND used_at = ?)"
-    ).bind(tokenHash, challenge.account_id, sessionRef, credential.id, now, expires, id, marker),
-    db.prepare(
-      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) " +
-      "SELECT ?,?,'account_recovered_with_recovery_key',?,? WHERE EXISTS(SELECT 1 FROM auth_sessions WHERE token_hash = ?)"
-    ).bind(b64u(bytes(16)), challenge.account_id, timestamp, "previous_recovery_version=" + challengePayload.keyVersion + ";new_recovery_version=" + nextVersion, tokenHash),
-  ];
-  await db.batch(queries);
-  const account = await activeAccount(db, new Request(config.origin, { headers: { Cookie: SESSION_COOKIE + "=" + token } }));
-  if (!account) throw fail(410, "The recovery operation could not be completed. Start again.");
-  const result = await summary(db, account);
-  result.oneTimeRecoveryKey = nextKey.value;
-  result.recoveryKeyVersion = nextVersion;
-  result.recovered = true;
-  result.message = "Account recovery completed. Previous passkeys and sessions were revoked. Save your new offline recovery key now; the previous key has been consumed.";
-  return json(200, result, { "Set-Cookie": sessionCookie(token, new URL(config.origin)) });
-}
 async function diagnostics() {
-  const algorithms = getDefaultSupportedAlgorithmIDs().map(Number);
-  const cryptoSupport = {};
-  for (const name of ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]) {
-    let canSign = false;
-    let canVerify = false;
-    try { canSign = Boolean(globalThis.SubtleCrypto?.supports?.("sign", name)); } catch { canSign = false; }
-    try { canVerify = Boolean(globalThis.SubtleCrypto?.supports?.("verify", name)); } catch { canVerify = false; }
-    cryptoSupport[name] = { sign: canSign, verify: canVerify };
-  }
-  const mlDsa44Advertised = algorithms.includes(-48);
   return {
     runtime: "cloudflare-workers",
-    simpleWebAuthnSupportedRegistrationAlgorithms: algorithms,
-    webCryptoMlDsaSupport: cryptoSupport,
-    mlDsa44VerificationSupported: cryptoSupport["ML-DSA-44"].verify,
-    mlDsa44RegistrationPreferred: mlDsa44Advertised,
-    pqcRegistrationAlgorithmAdvertised: mlDsa44Advertised,
-    note: "SimpleWebAuthn offers ML-DSA-44 first when the runtime supports verification. A real authenticator must register a credential whose stored COSE alg is -48 and later complete a valid assertion before that account is counted as post-quantum.",
+    primaryWalletAuthentication: "EIP-191 personal-sign",
+    accountRecovery: "restore the same primary wallet through the wallet provider or the owner's offline backup",
+    signInAuthorizesTransaction: false,
+    paymentAcceptanceEnabled: false,
   };
 }
 async function status(db, request) {
   const account = await activeAccount(db, request);
   if (account) return json(200, await summary(db, account));
   return json(200, {
-    authenticated: false, avatarId: "person", role: "user", adminRoleAssigned: false,
-    adminWalletCount: 0, adminWalletAuthenticated: false, adminSessionAuthorized: false,
-    admin: false, adminWalletAddress: null, adminSessionExpiresAt: null,
-    passkeyAvailable: true, legacyPasskeySignInAvailable: true,
-    walletSignInAvailable: true, walletAuthFamily: "evm-eoa",
-    emailVerificationDeliveryAvailable: false, passwordResetAvailable: false,
-    mlDsaRegistrationAvailable: getDefaultSupportedAlgorithmIDs().map(Number).includes(-48),
-    activeSessionCount: 0, securityManagementAvailable: false, scope: "staging-test-account-only",
+    authenticated: false,
+    avatarId: "person",
+    role: "user",
+    adminRoleAssigned: false,
+    adminWalletCount: 0,
+    adminWalletAuthenticated: false,
+    adminSessionAuthorized: false,
+    admin: false,
+    adminWalletAddress: null,
+    adminSessionExpiresAt: null,
+    walletSignInAvailable: true,
+    walletAuthFamily: "evm-eoa",
+    emailVerificationDeliveryAvailable: false,
+    passwordResetAvailable: false,
+    activeSessionCount: 0,
+    scope: "staging-test-account-only",
   });
 }
 async function logout(db, request, config) {
@@ -2129,7 +1246,11 @@ async function api(request, env, config) {
   const url = new URL(request.url);
   const db = env.DB;
   if ((url.pathname === "/api/genesis/status" || url.pathname === "/api/supporters/status") && request.method === "GET") return supporterStatusResponse(env);
-  if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) return handleGenesisWalletApi(request, env, config);
+  if (url.pathname === "/api/genesis/directory" || url.pathname.startsWith("/api/genesis/")) {
+    const account = await activeAccount(db, request);
+    const primaryWallet = account ? await db.prepare("SELECT address,chain_id FROM auth_primary_wallets WHERE account_id=? AND active=1 LIMIT 1").bind(account.account_id).first() : null;
+    return handleGenesisWalletApi(request, env, config, account && primaryWallet ? { accountId: account.account_id, primaryWallet } : null);
+  }
   if (url.pathname.startsWith("/api/supporters/")) return json(410, { error: "Legacy member registration endpoints are retired. Genesis identity is established and recovered through the primary wallet only." });
   if (url.pathname === "/api/diagnostics/runtime" && request.method === "GET") return json(200, await diagnostics());
   if (url.pathname === "/api/account/status" && request.method === "GET") return status(db, request);
@@ -2137,7 +1258,6 @@ async function api(request, env, config) {
     const payload = await bodyJson(request);
     return issuePrimaryWalletAuthenticationChallenge(db, env, request, payload, config);
   }
-  if (url.pathname === "/api/account/security" && request.method === "GET") return securityStatus(db, request);
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
   if (url.pathname === "/api/admin/wallet-options" && request.method === "GET") return adminWalletOptions(db, request);
   if (url.pathname === "/api/admin/status" && request.method === "GET") {
@@ -2167,20 +1287,6 @@ async function api(request, env, config) {
   if (url.pathname === "/api/admin/roles/grant") return grantAdminRole(db, request, payload);
   if (url.pathname === "/api/admin/roles/revoke") return revokeAdminRole(db, request, payload);
   if (url.pathname === "/api/account/administrator-notice/acknowledge") return acknowledgeAdminRevocationNotice(db, request, payload);
-  if (url.pathname === "/api/account/security/step-up/options") return issueSecurityStepUp(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/step-up/verify") return verifySecurityStepUp(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/passkeys/add/options") return addPasskeyOptions(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/passkeys/add/verify") return addPasskeyVerify(db, env, request, payload, config);
-  if (url.pathname === "/api/account/security/passkeys/rename") return renamePasskey(db, request, payload);
-  if (url.pathname === "/api/account/security/passkeys/revoke") return revokePasskey(db, env, request, payload);
-  if (url.pathname === "/api/account/security/sessions/revoke") return revokeSessions(db, request, payload);
-  if (url.pathname === "/api/account/security/recovery/rotate") return rotateRecoveryKey(db, request, payload);
-  if (url.pathname === "/api/passkeys/register/options") return issueRegistration(db, env, request, payload, config);
-  if (url.pathname === "/api/passkeys/register/verify") return verifyRegistration(db, env, request, payload, config);
-  if (url.pathname === "/api/passkeys/authentication/options") return issueAuthentication(db, env, request, config);
-  if (url.pathname === "/api/passkeys/authentication/verify") return verifyAuthentication(db, env, request, payload, config);
-  if (url.pathname === "/api/account/recovery/options") return issueRecovery(db, env, request, payload, config);
-  if (url.pathname === "/api/account/recovery/complete") return completeRecovery(db, env, request, payload, config);
   if (url.pathname === "/api/account/logout") return logout(db, request, config);
   if (url.pathname === "/api/account/avatar") return avatar(db, request, payload);
   if (url.pathname === "/api/account/communications/page" || url.pathname === "/api/account/communications/state") return communications(db, request);
@@ -2199,7 +1305,6 @@ export {
   unb64u as fromBase64url,
   equalConstantTime,
   accountId as validateAccountIdentifier,
-  recoveryKey as validateRecoveryKey,
   validateAdminReason,
   validateAdminPermissions,
   gate,

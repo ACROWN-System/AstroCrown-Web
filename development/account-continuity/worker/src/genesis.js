@@ -1,8 +1,6 @@
 import { normalizeWalletAddress, verifyWalletSignature } from "./supporters.js";
 import { availableProgrammeAllowance, isGenesisRegistrationOpen } from "../../../supporter-programme/shared/entitlement-rules.mjs";
 
-const COOKIE = "acrown_genesis_wallet";
-const SESSION_SECONDS = 12 * 60 * 60;
 const CHALLENGE_SECONDS = 10 * 60;
 const MAX_BODY_BYTES = 16_384;
 const NETWORKS = new Set(["ethereum", "tron", "solana"]);
@@ -99,20 +97,6 @@ function randomDisplayName() {
   const noun = NOUNS[randomBytes(1)[0] % NOUNS.length];
   const number = (1000 + ((randomBytes(2)[0] * 256 + randomBytes(2)[1]) % 9000)).toString();
   return adjective + noun + " " + number;
-}
-
-function cookie(token, origin, maxAge = SESSION_SECONDS) {
-  const secure = new URL(origin).protocol === "https:" ? "; Secure" : "";
-  return COOKIE + "=" + token + "; Path=/api/genesis; Max-Age=" + maxAge + "; HttpOnly; SameSite=Strict" + secure;
-}
-
-function requestCookie(request) {
-  const all = request.headers.get("Cookie") || "";
-  for (const part of all.split(";")) {
-    const index = part.indexOf("=");
-    if (index >= 0 && part.slice(0, index).trim() === COOKIE) return part.slice(index + 1).trim();
-  }
-  return "";
 }
 
 async function readJson(request) {
@@ -234,29 +218,10 @@ async function authenticateSignature(challenge, signature) {
   if (!await verifyWalletSignature(challenge, signature)) throw error(401, "The wallet signature did not prove control of the requested address.");
 }
 
-async function createSession(db, identityId, origin) {
-  const token = base64url(randomBytes(32));
-  const now = Math.floor(Date.now() / 1000);
-  const expires = now + SESSION_SECONDS;
-  await db.prepare(
-    "INSERT INTO genesis_wallet_sessions(session_id,identity_id,secret_digest,created_at,expires_at,last_used_at) VALUES(?,?,?,?,?,?)"
-  ).bind(randomId("gws"), identityId, await digest(token), now, expires, now).run();
-  return cookie(token, origin);
-}
-
-async function currentIdentity(db, request) {
-  const token = requestCookie(request);
-  if (!token || token.length > 128) return null;
-  const tokenDigest = await digest(token);
-  const now = Math.floor(Date.now() / 1000);
-  const row = await db.prepare(
-    "SELECT i.*,s.session_id FROM genesis_wallet_sessions s JOIN genesis_wallet_identities i ON i.identity_id=s.identity_id " +
-    "WHERE s.secret_digest=? AND s.revoked_at IS NULL AND s.expires_at>? AND i.identity_status='ACTIVE' LIMIT 1"
-  ).bind(tokenDigest, now).first();
-  if (!row) return null;
-  await db.prepare("UPDATE genesis_wallet_sessions SET last_used_at=? WHERE session_id=? AND revoked_at IS NULL")
-    .bind(now, row.session_id).run();
-  return row;
+async function currentIdentity(db, accountIdentity) {
+  if (!accountIdentity || typeof accountIdentity.accountId !== "string" ||
+      !accountIdentity.primaryWallet || typeof accountIdentity.primaryWallet.address !== "string") return null;
+  return getOrCreateIdentity(db, accountIdentity);
 }
 
 async function identityProfile(db, identity) {
@@ -292,7 +257,7 @@ async function identityProfile(db, identity) {
   const windowRemainingSeconds = windowCloses ? Math.max(0, windowCloses - now) : null;
   return {
     walletIdentity: {
-      identityId: identity.identity_id,
+      accountId: identity.astro_account_id || null,
       primaryNetwork: identity.primary_network,
       primaryAddress: identity.primary_address,
       displayName: identity.display_name,
@@ -338,53 +303,84 @@ async function uniqueRandomName(db) {
   throw error(503, "A unique Genesis display name could not be allocated.");
 }
 
-async function getOrCreateIdentity(db, challenge) {
-  let identity = await db.prepare(
-    "SELECT * FROM genesis_wallet_identities WHERE primary_network=? AND primary_address_normalized=?"
-  ).bind(challenge.network, challenge.address_normalized).first();
-  if (identity) {
-    if (identity.identity_status !== "ACTIVE") throw error(403, "This Genesis wallet identity is suspended or retired.");
-    return identity;
+async function getOrCreateIdentity(db, accountIdentity) {
+  const address = await normalizeWalletAddress("ethereum", accountIdentity.primaryWallet.address);
+  const existing = await db.prepare(
+    "SELECT * FROM genesis_wallet_identities WHERE primary_network='ethereum' AND primary_address_normalized=?"
+  ).bind(address.normalized).first();
+  if (existing) {
+    if (existing.identity_status !== "ACTIVE") throw error(403, "The Genesis profile associated with this primary AstroCrown wallet is suspended or retired.");
+    if (existing.astro_account_id && existing.astro_account_id !== accountIdentity.accountId) {
+      throw error(409, "This primary wallet's Genesis profile is already bound to another AstroCrown account.");
+    }
+    if (!existing.astro_account_id) {
+      const competingProfile = await db.prepare(
+        "SELECT identity_id FROM genesis_wallet_identities WHERE astro_account_id=? AND identity_id!=? LIMIT 1"
+      ).bind(accountIdentity.accountId, existing.identity_id).first();
+      if (competingProfile) throw error(409, "This AstroCrown account is already bound to a different Genesis profile.");
+      const attached = await db.prepare(
+        "UPDATE genesis_wallet_identities SET astro_account_id=?,updated_at=? " +
+        "WHERE identity_id=? AND astro_account_id IS NULL"
+      ).bind(accountIdentity.accountId, Math.floor(Date.now() / 1000), existing.identity_id).run();
+      if (Number(attached.meta?.changes || 0) !== 1) {
+        const refreshed = await db.prepare(
+          "SELECT * FROM genesis_wallet_identities WHERE identity_id=?"
+        ).bind(existing.identity_id).first();
+        if (!refreshed || refreshed.astro_account_id !== accountIdentity.accountId) {
+          throw error(409, "This Genesis profile could not be bound exclusively to the signed-in AstroCrown account.");
+        }
+        return refreshed;
+      }
+      existing.astro_account_id = accountIdentity.accountId;
+    }
+    return existing;
   }
-
-  if (genesisRegistrationClosed(await loadGenesisProgrammeControl(db))) {
-    throw error(403, "New Genesis primary-wallet registration is permanently closed from the 24-hour pre-launch cutoff.");
-  }
-
   const linked = await db.prepare(
-    "SELECT identity_id,wallet_role FROM genesis_wallet_addresses WHERE network=? AND address_normalized=?"
-  ).bind(challenge.network, challenge.address_normalized).first();
-  if (linked) throw error(409, "This address is linked to a different primary wallet identity. Authenticate with that identity's primary wallet.");
-
+    "SELECT identity_id,wallet_role FROM genesis_wallet_addresses WHERE network='ethereum' AND address_normalized=?"
+  ).bind(address.normalized).first();
+  if (linked) throw error(409, "This primary wallet is already linked to another Genesis profile. It cannot be attached to a second AstroCrown account.");
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const name = await uniqueRandomName(db);
     const now = Math.floor(Date.now() / 1000);
-    const identityId = randomId("gid");
+    const identityId = accountIdentity.accountId;
     const avatar = AVATARS[randomBytes(1)[0] % AVATARS.length];
     try {
       await db.batch([
         db.prepare(
-          "INSERT INTO genesis_wallet_identities(identity_id,primary_network,primary_address,primary_address_normalized," +
-          "display_name,display_name_normalized,avatar_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?)"
-        ).bind(identityId, challenge.network, challenge.address, challenge.address_normalized, name.name, name.normalized, avatar, now, now),
+          "INSERT INTO genesis_wallet_identities(identity_id,astro_account_id,primary_network,primary_address,primary_address_normalized," +
+          "display_name,display_name_normalized,avatar_key,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?)"
+        ).bind(identityId, accountIdentity.accountId, "ethereum", address.address, address.normalized, name.name, name.normalized, avatar, now, now),
         db.prepare(
           "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,wallet_role," +
-          "ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,'PRIMARY',?,?,?)"
-        ).bind(randomId("gwa"), identityId, challenge.network, challenge.address, challenge.address_normalized, now, signatureMethod(challenge.network), now)
+          "ownership_verified_at,proof_method,created_at) VALUES(?,?, 'ethereum',?,?,'PRIMARY',?,'EIP-191',?)"
+        ).bind(randomId("gwa"), identityId, address.address, address.normalized, now, now)
       ]);
-      identity = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identityId).first();
-      if (identity) return identity;
+      const created = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identityId).first();
+      if (created) return created;
     } catch (cause) {
-      identity = await db.prepare(
-        "SELECT * FROM genesis_wallet_identities WHERE primary_network=? AND primary_address_normalized=?"
-      ).bind(challenge.network, challenge.address_normalized).first();
-      if (identity) return identity;
+      const duplicateAddress = await db.prepare(
+        "SELECT * FROM genesis_wallet_identities WHERE primary_network='ethereum' AND primary_address_normalized=?"
+      ).bind(address.normalized).first();
+      if (duplicateAddress) {
+        if (duplicateAddress.identity_status !== "ACTIVE") throw error(403, "The Genesis profile associated with this primary AstroCrown wallet is suspended or retired.");
+        if (duplicateAddress.astro_account_id && duplicateAddress.astro_account_id !== accountIdentity.accountId) {
+          throw error(409, "This primary wallet's Genesis profile is already bound to another AstroCrown account.");
+        }
+        if (!duplicateAddress.astro_account_id) {
+          const attached = await db.prepare(
+            "UPDATE genesis_wallet_identities SET astro_account_id=?,updated_at=? WHERE identity_id=? AND astro_account_id IS NULL"
+          ).bind(accountIdentity.accountId, Math.floor(Date.now() / 1000), duplicateAddress.identity_id).run();
+          if (Number(attached.meta?.changes || 0) !== 1) throw error(409, "This Genesis profile was attached to another AstroCrown account during registration.");
+          duplicateAddress.astro_account_id = accountIdentity.accountId;
+        }
+        return duplicateAddress;
+      }
       const detail = String(cause?.message || cause);
       if (/display_name_normalized|UNIQUE constraint/i.test(detail)) continue;
       throw cause;
     }
   }
-  throw error(503, "The wallet identity could not be established safely.");
+  throw error(503, "The Genesis profile could not be attached safely to the existing AstroCrown account.");
 }
 
 async function nameAvailability(db, name, identityId = null) {
@@ -407,7 +403,7 @@ async function directory(db) {
     "p.asset_identifier,p.transaction_hash,p.transfer_index,p.confirmed_at " +
     "FROM genesis_public_payments p JOIN genesis_wallet_identities i ON i.identity_id=p.identity_id " +
     "JOIN genesis_member_badges b ON b.identity_id=i.identity_id AND b.status='ACTIVE' " +
-    "WHERE p.public_visible=1 AND p.finality_status='FINALIZED' AND i.identity_status='ACTIVE' AND i.genesis_member_status='ACTIVE' " +
+    "WHERE p.public_visible=1 AND p.finality_status='FINALIZED' AND i.identity_status='ACTIVE' AND i.genesis_member_status='ACTIVE' AND i.astro_account_id IS NOT NULL " +
     "ORDER BY p.confirmed_at DESC LIMIT 200"
   ).all();
   return (rows.results || []).map((row) => ({
@@ -428,76 +424,48 @@ async function directory(db) {
 
 export { normalizeDisplayName, randomDisplayName, explorerUrl, createMessage };
 
-export async function handleGenesisWalletApi(request, env, config) {
+export async function handleGenesisWalletApi(request, env, config, accountIdentity = null) {
   const db = env?.SUPPORTERS_DB;
-  if (!db) return response(503, { error: "The isolated Genesis Programme service is not bound." });
+  if (!db) return response(503, { error: "The Genesis Programme service is not available." });
   const url = new URL(request.url);
   try {
     if (url.pathname === "/api/genesis/name-availability" && request.method === "GET") {
       await rateLimit(db, env, request, "name-availability", 60, 3600);
-      const name = url.searchParams.get("name") || "";
-      const identity = await currentIdentity(db, request);
-      const checked = await nameAvailability(db, name, identity?.identity_id || null);
-      return response(200, { available: checked.available, displayName: checked.name, message: checked.available ? "Display name available." : "Display name is already in use." });
+      const identity = await currentIdentity(db, accountIdentity);
+      const checked = await nameAvailability(db, url.searchParams.get("name") || "", identity?.identity_id || null);
+      return response(200, {
+        available: checked.available,
+        displayName: checked.name,
+        message: checked.available ? "Display name available." : "Display name is already in use."
+      });
     }
     if (url.pathname === "/api/genesis/directory" && request.method === "GET") {
       await rateLimit(db, env, request, "public-directory", 120, 3600);
       return response(200, { items: await directory(db), publicLedger: true });
     }
     if (url.pathname === "/api/genesis/me" && request.method === "GET") {
-      const identity = await currentIdentity(db, request);
-      if (!identity) return response(401, { error: "Connect and prove control of the primary wallet to access this Genesis wallet identity." });
+      const identity = await currentIdentity(db, accountIdentity);
+      if (!identity) return response(401, { error: "Sign in to your AstroCrown account with its primary wallet to view your Genesis profile." });
       return response(200, await identityProfile(db, identity));
     }
-    if (request.method !== "POST") return response(405, { error: "This Genesis wallet endpoint requires POST." });
+    if (request.method !== "POST") return response(405, { error: "This Genesis endpoint requires POST." });
+    if (!accountIdentity) throw error(401, "Sign in to your AstroCrown account with its primary wallet before changing Genesis profile or wallet details.");
     let expectedOrigin;
     try {
       expectedOrigin = new URL(config.origin).origin;
     } catch {
-      throw error(503, "The Genesis wallet service origin is not configured safely.");
+      throw error(503, "The Genesis service origin is not configured safely.");
     }
     if (request.headers.get("Origin") !== expectedOrigin) {
-      throw error(403, "Genesis wallet challenges and wallet changes are accepted only from the official AstroCrown origin.");
+      throw error(403, "Genesis wallet changes are accepted only from the official AstroCrown origin.");
     }
+    const identity = await currentIdentity(db, accountIdentity);
+    if (!identity) throw error(401, "Your AstroCrown primary-wallet session is no longer active.");
     const payload = await readJson(request);
-
-    if (url.pathname === "/api/genesis/identity/challenge") {
-      await rateLimit(db, env, request, "identity-challenge");
-      const network = String(payload.network || "").toLowerCase();
-      const normalized = await normalizeWalletAddress(network, payload.address);
-      const existing = await db.prepare(
-        "SELECT identity_id FROM genesis_wallet_identities WHERE primary_network=? AND primary_address_normalized=?"
-      ).bind(network, normalized.normalized).first();
-      const linked = await db.prepare(
-        "SELECT identity_id,wallet_role FROM genesis_wallet_addresses WHERE network=? AND address_normalized=?"
-      ).bind(network, normalized.normalized).first();
-      if (linked && !existing) throw error(409, "This address is already linked to a Genesis identity. Use the primary wallet for that identity.");
-      const control = await loadGenesisProgrammeControl(db);
-      if (!existing && genesisRegistrationClosed(control)) {
-        throw error(403, "New Genesis wallet registration is permanently closed from 24 hours before the scheduled ACROWN launch. Only a previously registered primary wallet may sign in.");
-      }
-      return response(200, await issueChallenge(db, config, {
-        identityId: existing?.identity_id || null, network, address: normalized.address, purpose: "IDENTIFY"
-      }));
-    }
-
-    if (url.pathname === "/api/genesis/identity/verify") {
-      await rateLimit(db, env, request, "identity-verify");
-      const challenge = await consumeChallenge(db, payload.challengeId, "IDENTIFY", config);
-      if (!challenge.identity_id && genesisRegistrationClosed(await loadGenesisProgrammeControl(db))) {
-        throw error(403, "This wallet was not registered before the permanent Genesis cutoff. New primary-wallet registration is closed.");
-      }
-      await authenticateSignature(challenge, payload.signature);
-      const identity = await getOrCreateIdentity(db, challenge);
-      const setCookie = await createSession(db, identity.identity_id, config.origin);
-      return response(200, await identityProfile(db, identity), { "Set-Cookie": setCookie });
-    }
 
     if (url.pathname === "/api/genesis/wallet-link/challenge") {
       assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "wallet-link-challenge");
-      const identity = await currentIdentity(db, request);
-      if (!identity) throw error(401, "Authenticate with the primary wallet before linking another network address.");
       const network = String(payload.network || "").toLowerCase();
       const role = String(payload.walletRole || "PAYMENT").toUpperCase();
       if (!["PAYMENT", "DELIVERY", "PAYMENT_AND_DELIVERY"].includes(role)) throw error(400, "Choose a supported wallet purpose.");
@@ -506,11 +474,11 @@ export async function handleGenesisWalletApi(request, env, config) {
       }
       const normalized = await normalizeWalletAddress(network, payload.address);
       if (network === identity.primary_network && normalized.normalized === identity.primary_address_normalized) {
-        throw error(409, "This is already the primary wallet for the Genesis identity.");
+        throw error(409, "This is already the primary identity wallet on your AstroCrown account.");
       }
       const owner = await db.prepare("SELECT identity_id FROM genesis_wallet_addresses WHERE network=? AND address_normalized=?")
         .bind(network, normalized.normalized).first();
-      if (owner) throw error(409, "This address is already linked to a Genesis wallet identity.");
+      if (owner) throw error(409, "This address is already linked to another AstroCrown primary-wallet account.");
       return response(200, await issueChallenge(db, config, {
         identityId: identity.identity_id, network, address: normalized.address, purpose: "LINK", walletRole: role
       }));
@@ -520,16 +488,14 @@ export async function handleGenesisWalletApi(request, env, config) {
       assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "wallet-link-verify");
       const challenge = await consumeChallenge(db, payload.challengeId, "LINK", config);
-      const identity = await currentIdentity(db, request);
-      if (!identity || identity.identity_id !== challenge.identity_id) throw error(401, "The primary wallet session no longer authorizes this wallet link.");
+      if (identity.identity_id !== challenge.identity_id) throw error(401, "This wallet-link challenge does not belong to the signed-in AstroCrown account.");
       await authenticateSignature(challenge, payload.signature);
       const now = Math.floor(Date.now() / 1000);
-      const proof = signatureMethod(challenge.network);
       await db.prepare(
         "INSERT INTO genesis_wallet_addresses(wallet_address_id,identity_id,network,address,address_normalized,wallet_role," +
         "ownership_verified_at,proof_method,created_at) VALUES(?,?,?,?,?,?,?,?,?)"
       ).bind(randomId("gwa"), identity.identity_id, challenge.network, challenge.address, challenge.address_normalized,
-        challenge.wallet_role, now, proof, now).run();
+        challenge.wallet_role, now, signatureMethod(challenge.network), now).run();
       const refreshed = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identity.identity_id).first();
       return response(200, await identityProfile(db, refreshed));
     }
@@ -537,8 +503,6 @@ export async function handleGenesisWalletApi(request, env, config) {
     if (url.pathname === "/api/genesis/display-name/challenge") {
       assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "display-name-challenge");
-      const identity = await currentIdentity(db, request);
-      if (!identity) throw error(401, "Authenticate with the primary wallet before changing its display name.");
       const checked = await nameAvailability(db, payload.displayName, identity.identity_id);
       if (!checked.available) throw error(409, "This display name is not available.");
       return response(200, await issueChallenge(db, config, {
@@ -554,11 +518,10 @@ export async function handleGenesisWalletApi(request, env, config) {
       assertGenesisProfileMutationsOpen(await loadGenesisProgrammeControl(db));
       await rateLimit(db, env, request, "display-name-verify");
       const challenge = await consumeChallenge(db, payload.challengeId, "RENAME", config);
-      const identity = await currentIdentity(db, request);
-      if (!identity || identity.identity_id !== challenge.identity_id ||
+      if (identity.identity_id !== challenge.identity_id ||
           identity.primary_network !== challenge.network ||
           identity.primary_address_normalized !== challenge.address_normalized) {
-        throw error(401, "The primary wallet session no longer authorizes this display-name change.");
+        throw error(401, "This display-name change is not associated with the signed-in AstroCrown primary wallet.");
       }
       await authenticateSignature(challenge, payload.signature);
       const name = normalizeDisplayName(challenge.requested_display_name);
@@ -571,27 +534,19 @@ export async function handleGenesisWalletApi(request, env, config) {
         ).bind(name.name, name.normalized, Math.floor(Date.now() / 1000), identity.identity_id, name.normalized, identity.identity_id).run();
       } catch (cause) {
         if (/unique constraint|display_name_normalized/i.test(String(cause?.message || cause))) {
-          throw error(409, "This display name has just been claimed by another wallet. Choose another name.");
+          throw error(409, "This display name has just been claimed by another account. Choose another name.");
         }
         throw cause;
       }
-      if (Number(updated.meta?.changes || 0) !== 1) throw error(409, "This display name has just been claimed by another wallet. Choose another name.");
+      if (Number(updated.meta?.changes || 0) !== 1) throw error(409, "This display name has just been claimed by another account. Choose another name.");
       const refreshed = await db.prepare("SELECT * FROM genesis_wallet_identities WHERE identity_id=?").bind(identity.identity_id).first();
       return response(200, await identityProfile(db, refreshed));
     }
 
-    if (url.pathname === "/api/genesis/logout") {
-      const token = requestCookie(request);
-      if (token) await db.prepare(
-        "UPDATE genesis_wallet_sessions SET revoked_at=? WHERE secret_digest=? AND revoked_at IS NULL"
-      ).bind(Math.floor(Date.now() / 1000), await digest(token)).run();
-      return response(200, { loggedOut: true }, { "Set-Cookie": cookie("", config.origin, 0) });
-    }
-
-    return response(404, { error: "The Genesis wallet endpoint does not exist." });
+    return response(404, { error: "The Genesis endpoint does not exist." });
   } catch (cause) {
     const status = Number(cause?.status) || 500;
-    if (status >= 500) return response(status, { error: "The Genesis wallet service could not complete this request safely." });
-    return response(status, { error: cause.message || "The Genesis wallet request was rejected." });
+    if (status >= 500) return response(status, { error: "The Genesis service could not complete this request safely." });
+    return response(status, { error: cause.message || "The Genesis request was rejected." });
   }
 }

@@ -5,7 +5,6 @@ import {
   fromBase64url,
   equalConstantTime,
   validateAccountIdentifier,
-  validateRecoveryKey,
 } from "../src/index.js";
 
 test("base64url round trip preserves bytes and omits padding", () => {
@@ -26,7 +25,3 @@ test("account IDs use the established opaque AC format", () => {
   assert.throws(() => validateAccountIdentifier("AC-123"));
 });
 
-test("recovery keys require the full versioned high-entropy format", () => {
-  assert.equal(validateRecoveryKey("ACR1-" + "a".repeat(43)), "ACR1-" + "a".repeat(43));
-  assert.throws(() => validateRecoveryKey("ACR1-short"));
-});

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildSupporterStatus, supporterStatusResponse, normalizeWalletAddress, createWalletMessage, verifyWalletSignature, base58Encode, handleSupporterApi } from "../src/supporters.js";
+import { readFile } from "node:fs/promises";
+import { buildSupporterStatus, supporterStatusResponse, normalizeWalletAddress, createWalletMessage, verifyWalletSignature, base58Encode } from "../src/supporters.js";
 import { privateKeyToAccount } from "viem/accounts";
 import { keccak256, toBytes } from "viem";
 import { generateKeyPairSync, webcrypto } from "node:crypto";
@@ -215,30 +216,9 @@ test("Solana wallet challenge verifies an Ed25519 off-chain signature", async ()
   assert.equal(await verifyWalletSignature(challengeFor({ network: "solana", address, message: altered }), signature), false);
 });
 
-test("Supporter API keeps all payment and transfer endpoints unavailable", async () => {
-  const db = { prepare() { throw new Error("Unsupported routes must not query the database."); } };
-  const env = { SUPPORTERS_DB: db, ENVIRONMENT: "staging" };
-  for (const pathname of [
-    "/api/supporters/contributions",
-    "/api/supporters/payment-intents",
-    "/api/supporters/transfers",
-    "/api/supporters/entitlements/credit",
-  ]) {
-    const response = await handleSupporterApi(
-      new Request("https://astrocrown.example" + pathname, { method: "GET" }),
-      env,
-      { origin: "https://astrocrown.example" },
-    );
-    assert.equal(response.status, 404);
-    assert.match((await response.json()).error, /does not exist/i);
-  }
-});
-
-test("Supporter current-member endpoint requires a verified session cookie", async () => {
-  const response = await handleSupporterApi(
-    new Request("https://astrocrown.example/api/supporters/me", { method: "GET" }),
-    { SUPPORTERS_DB: {}, ENVIRONMENT: "staging" },
-    { origin: "https://astrocrown.example" },
-  );
-  assert.equal(response.status, 401);
+test("separate Genesis member authentication handlers and session cookies are removed", async () => {
+  const source = await readFile(new URL("../src/supporters.js", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /handleSupporterApi|supporter_member_sessions|acrown_supporter_session|loginChallenge|registrationChallenge/);
+  const worker = await readFile(new URL("../src/index.js", import.meta.url), "utf8");
+  assert.match(worker, /Legacy member registration endpoints are retired/);
 });

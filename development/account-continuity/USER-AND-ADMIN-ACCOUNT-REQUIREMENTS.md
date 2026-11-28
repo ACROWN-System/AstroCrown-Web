@@ -2,13 +2,13 @@
 
 **Document ID:** ACW-ACCOUNT-REQ-001  
 **Date:** 2026-10-26  
-**Status:** HISTORICAL REQUIREMENTS / DEVELOPMENT-ONLY — PASSKEY-FIRST AUTHENTICATION SUPERSEDED FOR NEW ACCOUNTS  
+**Status:** HISTORICAL REQUIREMENTS / DEVELOPMENT-ONLY — WALLET-ONLY ACCOUNT SPECIFICATION IS AUTHORITATIVE  
 **Parent work:** [PR #141 — account entry and optional-wallet lab](https://github.com/ACROWN-System/AstroCrown-Web/pull/141)  
 **Legacy passkey reference:** [Passkey-First Account Authentication and Recovery Requirements](PASSKEY-FIRST-ACCOUNT-AUTHENTICATION-AND-RECOVERY-REQUIREMENTS.md). Apply only to older passkey accounts, not new wallet-first accounts.  
 **Long-term context:** [Account Continuity and Privacy-Preserving Access Roadmap](ACCOUNT-CONTINUITY-AND-PRIVACY-PRESERVING-ACCESS-ROADMAP.md)  
 **Administrative wallet architecture:** [NOVA Administrative Smart-Account and Transaction-Enforcement Specification](NOVA-ADMINISTRATIVE-SMART-ACCOUNT-SECURITY-SPEC.md)
 
-> **Authentication authority update — 28 November 2026:** the 18 November 2026 [Primary Identity and Auxiliary Transaction Wallet Architecture](PRIMARY-IDENTITY-AND-TRANSACTION-WALLET-ARCHITECTURE.md) supersedes this document's 3 November passkey-first account-authentication direction. New ordinary accounts use one primary identity wallet for sign-in and account ownership. This document remains relevant for dashboard, role, permission and administrative boundaries, and for the explicitly labelled legacy passkey accounts only. The old passkey recovery key must not be presented as a recovery method for a primary wallet account.
+> **Authentication authority update — 28 November 2026:** [Wallet-Only Account Identity and Transaction Safety Requirements](WALLET-ONLY-ACCOUNT-AND-TRANSACTION-SAFETY-REQUIREMENTS.md) is the authoritative ordinary-account specification. The passkey-first implementation and all legacy passkey access/recovery routes have been removed; there are no legacy user access paths to preserve in the active product. This document remains useful for dashboard, role, permission and administrator-governance boundaries.
 
 ## 1. Purpose
 

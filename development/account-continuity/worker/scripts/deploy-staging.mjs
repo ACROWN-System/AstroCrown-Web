@@ -452,18 +452,16 @@ async function smokeTest(origin) {
     !homepage.includes("openly available to anyone on the internet")
   ) fail("Public staging homepage is missing the live-environment marker or public safety notice.");
 
-  const publicSupportersStatus = await fetch(origin + "/api/supporters/status", { signal: AbortSignal.timeout(30000) });
-  if (publicSupportersStatus.status !== 200) {
-    fail("The read-only public Genesis Programme status endpoint must be available without account acknowledgement (HTTP " + publicSupportersStatus.status + ").");
+  const publicGenesisStatus = await fetch(origin + "/api/supporters/status", { signal: AbortSignal.timeout(30000) });
+  if (publicGenesisStatus.status !== 200) {
+    fail("The public Genesis Programme status endpoint must be available without account acknowledgement (HTTP " + publicGenesisStatus.status + ").");
   }
-  const publicSupportersPayload = await publicSupportersStatus.json();
+  const publicGenesisPayload = await publicGenesisStatus.json();
   if (
-    publicSupportersPayload.programme?.status !== "PRELAUNCH" ||
-    publicSupportersPayload.paymentAcceptance?.enabled !== false ||
-    publicSupportersPayload.paymentAcceptance?.qualifyingPaymentsAccepted !== false
-  ) {
-    fail("The public Genesis Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
-  }
+    publicGenesisPayload.programme?.status !== "PRELAUNCH" ||
+    publicGenesisPayload.paymentAcceptance?.enabled !== false ||
+    publicGenesisPayload.paymentAcceptance?.qualifyingPaymentsAccepted !== false
+  ) fail("The public Genesis Programme status endpoint must remain in PRELAUNCH with payment intake disabled.");
 
   const beforeAcknowledgement = await fetch(origin + "/api/account/status", { signal: AbortSignal.timeout(30000) });
   if (beforeAcknowledgement.status !== 428) {
@@ -472,10 +470,7 @@ async function smokeTest(origin) {
 
   const acknowledgement = await fetch(origin + "/api/staging/acknowledge", {
     method: "POST",
-    headers: {
-      Origin: origin,
-      "Content-Type": "application/json",
-    },
+    headers: { Origin: origin, "Content-Type": "application/json" },
     body: JSON.stringify({ noticeVersion: "2026-11-08-public-test-v1" }),
     signal: AbortSignal.timeout(30000),
   });
@@ -490,24 +485,18 @@ async function smokeTest(origin) {
   const statusResponse = await fetch(origin + "/api/account/status", { headers, signal: AbortSignal.timeout(30000) });
   if (statusResponse.status !== 200) fail("Remote staging account-status check after acknowledgement failed (HTTP " + statusResponse.status + ").");
   const status = await statusResponse.json();
-  if (status.authenticated !== false || status.passkeyAvailable !== true ||
-      status.walletSignInAvailable !== true || status.legacyPasskeySignInAvailable !== true ||
-      status.mlDsaRegistrationAvailable !== true) {
-    fail("Remote staging account-status response did not expose the wallet-first entry point and legacy compatibility status.");
+  if (status.authenticated !== false || status.walletSignInAvailable !== true || status.walletAuthFamily !== "evm-eoa") {
+    fail("Remote staging account-status response did not expose the wallet-only sign-in entry point.");
   }
   if (status.scope !== "staging-test-account-only") fail("Remote account status is missing the staging-only scope marker.");
+  if ("passkeyAvailable" in status || "legacyPasskeySignInAvailable" in status || "mlDsaRegistrationAvailable" in status) {
+    fail("Remote account status still advertises a retired passkey authentication path.");
+  }
 
   const walletChallengeResponse = await fetch(origin + "/api/account/primary-wallet/options", {
     method: "POST",
-    headers: {
-      ...headers,
-      Origin: origin,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      address: "0x0000000000000000000000000000000000000001",
-      chainId: 1,
-    }),
+    headers: { ...headers, Origin: origin, "Content-Type": "application/json" },
+    body: JSON.stringify({ address: "0x0000000000000000000000000000000000000001", chainId: 1 }),
     signal: AbortSignal.timeout(30000),
   });
   if (walletChallengeResponse.status !== 200) {
@@ -522,25 +511,25 @@ async function smokeTest(origin) {
     typeof walletChallenge.message !== "string" ||
     !walletChallenge.message.includes(origin) ||
     !walletChallenge.message.includes("does not authorize a blockchain transaction")
-  ) {
-    fail("Remote primary-wallet challenge was not correctly origin-bound or signature-only.");
-  }
+  ) fail("Remote primary-wallet challenge was not correctly origin-bound or signature-only.");
 
   const diagnosticsResponse = await fetch(origin + "/api/diagnostics/runtime", { headers, signal: AbortSignal.timeout(30000) });
   if (diagnosticsResponse.status !== 200) fail("Remote staging runtime-diagnostics check failed (HTTP " + diagnosticsResponse.status + ").");
   const diagnostics = await diagnosticsResponse.json();
-  const mldsa44 = diagnostics.webCryptoMlDsaSupport?.["ML-DSA-44"];
-  if (!mldsa44?.sign || !mldsa44?.verify || !diagnostics.simpleWebAuthnSupportedRegistrationAlgorithms?.includes(-48)) {
-    fail("Remote Worker does not support and advertise ML-DSA-44 as required. Keep staging closed and investigate; do not fall back silently.");
+  if (
+    diagnostics.primaryWalletAuthentication !== "EIP-191 personal-sign" ||
+    diagnostics.accountRecovery !== "restore the same primary wallet through the wallet provider or the owner's offline backup" ||
+    diagnostics.signInAuthorizesTransaction !== false ||
+    diagnostics.paymentAcceptanceEnabled !== false
+  ) fail("Remote Worker diagnostics do not match the wallet-only, non-spending authentication policy.");
+
+  const anonymousGenesisProfile = await fetch(origin + "/api/genesis/me", { headers, signal: AbortSignal.timeout(30000) });
+  if (anonymousGenesisProfile.status !== 401) {
+    fail("Genesis profile access must require the existing AstroCrown account session, not an independent Genesis login.");
   }
 
-  const supportersResponse = await fetch(origin + "/api/supporters/status", {
-    headers,
-    signal: AbortSignal.timeout(30000),
-  });
-  if (supportersResponse.status !== 200) {
-    fail("The isolated Genesis Programme status endpoint failed (HTTP " + supportersResponse.status + ").");
-  }
+  const supportersResponse = await fetch(origin + "/api/supporters/status", { headers, signal: AbortSignal.timeout(30000) });
+  if (supportersResponse.status !== 200) fail("The isolated Genesis Programme status endpoint failed (HTTP " + supportersResponse.status + ").");
   const supporters = await supportersResponse.json();
   if (
     supporters.environment !== "MAINNET" ||
@@ -551,20 +540,25 @@ async function smokeTest(origin) {
     !Array.isArray(supporters.networks) ||
     supporters.networks.map((item) => item.network).join(",") !== "ethereum,tron,solana" ||
     supporters.networks.some((item) => item.networkConfigured !== false || item.treasuryConfigured !== true)
-  ) {
-    fail("The isolated Genesis Programme status must report three-network PRELAUNCH with all payment intake disabled.");
-  }
+  ) fail("The isolated Genesis Programme status must report three-network PRELAUNCH with all payment intake disabled.");
 
-  const negative = await fetch(origin + "/api/passkeys/authentication/options", {
+  const removedPasskeyRoute = await fetch(origin + "/api/passkeys/authentication/options", {
     method: "POST",
-    headers: {
-      Origin: "https://untrusted.invalid",
-      "Content-Type": "application/json",
-    },
+    headers: { ...headers, Origin: origin, "Content-Type": "application/json" },
     body: "{}",
     signal: AbortSignal.timeout(30000),
   });
-  if (negative.status !== 403) fail("Remote staging did not reject a wrong-Origin account request with HTTP 403.");
+  if (removedPasskeyRoute.status !== 404) {
+    fail("The retired passkey endpoint is still reachable; wallet-only account migration is incomplete.");
+  }
+
+  const wrongOrigin = await fetch(origin + "/api/account/primary-wallet/options", {
+    method: "POST",
+    headers: { ...headers, Origin: "https://untrusted.invalid", "Content-Type": "application/json" },
+    body: JSON.stringify({ address: "0x0000000000000000000000000000000000000001", chainId: 1 }),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (wrongOrigin.status !== 403) fail("Remote staging did not reject a wrong-Origin wallet challenge request with HTTP 403.");
   return { status, diagnostics, supporters };
 }
 
@@ -672,27 +666,23 @@ async function main() {
   console.log("Installing the staging-only rate-limit and acknowledgement-signing key.");
   await setSecret("RATE_LIMIT_HMAC_KEY", rateLimitKey);
 
-  console.log("Checking public homepage access, notice acknowledgement, wallet-first challenge, legacy passkey compatibility, ML-DSA-44 and wrong-Origin rejection.");
+  console.log("Checking public homepage access, notice acknowledgement, wallet-first challenge, same-account Genesis access, retired passkey-route removal and wrong-Origin rejection.");
   const evidence = await smokeTest(configInfo.origin);
 
   console.log("");
   console.log("REMOTE STAGING DEPLOYED — INITIAL SMOKE CHECKS PASSED");
   console.log("Staging URL: " + configInfo.origin + "/");
   console.log("Access mode: public live test environment; visitors see the mandatory safety notice before account services.");
-  console.log("Account API: server-enforced staging acknowledgement and per-IP wallet, legacy-passkey and recovery rate limits are active.");
+  console.log("Account API: server-enforced staging acknowledgement, wallet-only EIP-191 sign-in and per-IP wallet rate limits are active.");
   console.log("Account D1 database name: " + databaseName);
   console.log("Account D1 database ID: " + state.databaseId);
   console.log("Supporter Programme D1 database name: " + supportersDatabaseName);
   console.log("Supporter Programme D1 database ID: " + supportersState.databaseId);
   console.log("Supporter Programme status: PRELAUNCH; mainnet payment acceptance remains disabled.");
-  console.log("ML-DSA-44 sign: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].sign);
-  console.log("ML-DSA-44 verify: " + evidence.diagnostics.webCryptoMlDsaSupport["ML-DSA-44"].verify);
-  console.log("ML-DSA-44 algorithm -48 advertised first: " + evidence.diagnostics.pqcRegistrationAlgorithmAdvertised);
   console.log("");
   console.log("This is only initial deployment smoke evidence, not full remote account qualification.");
-  console.log("A real remote browser must still prove primary-wallet account creation, repeat sign-in, sign-out, wrong-wallet rejection and legacy passkey compatibility.");
-  console.log("Claim ML-DSA-44 for a remote credential only after the actual stored COSE algorithm is -48 and a later assertion verifies on this deployed Worker.");
-  console.log("Use synthetic data only. A one-time recovery key exists only for older legacy passkey test accounts; primary-wallet accounts are recovered only by restoring the same wallet through the user’s own backup/provider.");
+  console.log("A real remote browser must still prove new account creation with both consents, repeat sign-in, sign-out, wrong-wallet rejection, same-account Genesis profile access and optional secondary-wallet linking.");
+  console.log("Use synthetic data only. Wallet-account recovery requires restoring the same primary wallet through the owner’s wallet provider or offline backup. No passkey or recovery-key account path remains.");
   console.log("This script does not enable billing, add a payment method, deploy production, or delete resources after a failed run.");
   console.log("Record three-pass cleanup and the provider's retention quarantine before closing this staging environment.");
 }
