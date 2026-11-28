@@ -69,7 +69,7 @@ test("server requires owner proof for both actions and additional-wallet proof p
   assert.match(worker, /UPDATE auth_wallet_link_challenges SET used_at = \?/);
   assert.match(worker, /EXISTS\(SELECT 1 FROM auth_sessions/);
   assert.match(worker, /EXISTS\(SELECT 1 FROM auth_primary_wallets/);
-  assert.match(worker, /permissionScope: "wallet-capabilities-only"/);
+  assert.match(worker, /permissionScope: payload\.action === "link" \? "wallet-capabilities-only" : null/);
   assert.match(worker, /transactionAuthorized: false/);
   assert.match(worker, /spendingAuthorized: false/);
 });
@@ -131,7 +131,7 @@ test("account creation opens the account dashboard and reports success or failur
   assert.match(finish, /window\.history\.replaceState/);
   assert.match(finish, /"#account"/);
   assert.match(finish, /await showAccountDashboard\(\)/);
-  assert.match(finish, /showAccountResultDialog\("success"/);
+  assert.match(finish, /showAccountResultDialog\(\s*"success"/);
   assert.match(ui, /showAccountResultDialog\("error", "Account creation could not be confirmed"/);
   assert.match(ui, /className = "account-result-dialog"/);
   assert.match(ui, /AstroCrown account created successfully/);
