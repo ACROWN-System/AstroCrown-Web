@@ -23,8 +23,10 @@
   var focusBeforeOpen = null;
   var busy = false;
   var pendingAdminWalletMessage = null;
+  var accountResultDialog = null;
+  var linkedWalletCandidate = null;
   var termsVersion = "development-terms-2026-10-31-v0.3";
-  var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v1";
+  var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v2";
   var discoveredWalletProviders = [];
   var selectedWalletProvider = null;
   var selectedWalletAddress = "";
@@ -102,6 +104,55 @@
     feedback.textContent = message || "";
     feedback.dataset.kind = kind || "info";
     feedback.classList.toggle("is-visible", Boolean(message));
+  }
+
+  function showAccountResultDialog(kind, heading, message) {
+    if (!accountResultDialog) {
+      accountResultDialog = document.createElement("dialog");
+      accountResultDialog.className = "account-result-dialog";
+      accountResultDialog.setAttribute("aria-labelledby", "account-result-dialog-title");
+      accountResultDialog.setAttribute("aria-describedby", "account-result-dialog-message");
+      var shell = document.createElement("div");
+      shell.className = "account-result-dialog-shell";
+      var mark = document.createElement("span");
+      mark.className = "account-result-dialog-mark";
+      mark.setAttribute("aria-hidden", "true");
+      var title = document.createElement("h2");
+      title.id = "account-result-dialog-title";
+      var copy = document.createElement("p");
+      copy.id = "account-result-dialog-message";
+      var close = document.createElement("button");
+      close.type = "button";
+      close.className = "account-primary";
+      close.textContent = "Continue";
+      close.addEventListener("click", function () {
+        if (typeof accountResultDialog.close === "function") accountResultDialog.close();
+        else accountResultDialog.removeAttribute("open");
+      });
+      shell.appendChild(mark);
+      shell.appendChild(title);
+      shell.appendChild(copy);
+      shell.appendChild(close);
+      accountResultDialog.appendChild(shell);
+      accountResultDialog.addEventListener("click", function (event) {
+        if (event.target === accountResultDialog && accountResultDialog.dataset.kind === "error") {
+          if (typeof accountResultDialog.close === "function") accountResultDialog.close();
+          else accountResultDialog.removeAttribute("open");
+        }
+      });
+      document.body.appendChild(accountResultDialog);
+    }
+    accountResultDialog.dataset.kind = kind === "success" ? "success" : "error";
+    var resultMark = accountResultDialog.querySelector(".account-result-dialog-mark");
+    var resultTitle = document.getElementById("account-result-dialog-title");
+    var resultMessage = document.getElementById("account-result-dialog-message");
+    if (resultMark) resultMark.textContent = kind === "success" ? "✓" : "!";
+    if (resultTitle) resultTitle.textContent = heading || (kind === "success" ? "Account created successfully" : "Account creation failed");
+    if (resultMessage) resultMessage.textContent = message || "";
+    if (typeof accountResultDialog.showModal === "function" && !accountResultDialog.open) accountResultDialog.showModal();
+    else accountResultDialog.setAttribute("open", "open");
+    var action = accountResultDialog.querySelector("button");
+    if (action) action.focus();
   }
 
   async function requestJson(path, payload) {
@@ -231,7 +282,7 @@
     window.addEventListener("eip6963:announceProvider", onAnnounce);
     try {
       window.dispatchEvent(new Event("eip6963:requestProvider"));
-      await new Promise(function (resolve) { window.setTimeout(resolve, 350); });
+      await new Promise(function (resolve) { window.setTimeout(resolve, 1000); });
     } finally {
       window.removeEventListener("eip6963:announceProvider", onAnnounce);
     }
@@ -317,6 +368,293 @@
         help.textContent = "Select a detected wallet card. AstroCrown will not choose a provider or wallet address on your behalf.";
       }
     });
+  }
+
+
+  async function discoverAdditionalWalletProviders() {
+    var select = document.getElementById("account-linked-wallet-provider");
+    if (!select || browserPreviewMode) return;
+    discoveredWalletProviders = [];
+    var announced = new Map();
+    function onAnnounce(event) {
+      var detail = event && event.detail;
+      if (!detail || !detail.provider || typeof detail.provider.request !== "function" ||
+          !detail.info || typeof detail.info.uuid !== "string") return;
+      announced.set(detail.info.uuid, {
+        id: detail.info.uuid,
+        provider: detail.provider,
+        info: detail.info
+      });
+    }
+    window.addEventListener("eip6963:announceProvider", onAnnounce);
+    try {
+      window.dispatchEvent(new Event("eip6963:requestProvider"));
+      await new Promise(function (resolve) { window.setTimeout(resolve, 1000); });
+    } finally {
+      window.removeEventListener("eip6963:announceProvider", onAnnounce);
+    }
+    discoveredWalletProviders = Array.from(announced.values());
+    if (!discoveredWalletProviders.length && window.ethereum && Array.isArray(window.ethereum.providers)) {
+      discoveredWalletProviders = window.ethereum.providers.map(function (provider, index) {
+        return {
+          id: "injected-" + index,
+          provider: provider,
+          info: { name: provider.isMetaMask ? "MetaMask" : provider.isRabby ? "Rabby" : "Browser wallet " + (index + 1) }
+        };
+      });
+    }
+    if (!discoveredWalletProviders.length && window.ethereum && typeof window.ethereum.request === "function") {
+      discoveredWalletProviders = [{
+        id: "injected-default",
+        provider: window.ethereum,
+        info: { name: window.ethereum.isMetaMask ? "MetaMask" : "Injected wallet" }
+      }];
+    }
+    select.innerHTML = "";
+    var placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choose a detected EVM wallet…";
+    select.appendChild(placeholder);
+    discoveredWalletProviders.forEach(function (entry) {
+      var option = document.createElement("option");
+      option.value = entry.id;
+      option.textContent = walletProviderLabel(entry).name;
+      select.appendChild(option);
+    });
+    select.value = "";
+    linkedWalletCandidate = null;
+    var feedbackNode = document.getElementById("account-linked-wallet-feedback");
+    if (feedbackNode) {
+      feedbackNode.textContent = discoveredWalletProviders.length
+        ? "Wallets detected. Choose one, then explicitly connect it to inspect its available addresses."
+        : "No EVM browser wallet was detected. Other connection types are not enabled in this staging build.";
+      feedbackNode.dataset.kind = "info";
+    }
+  }
+
+  function selectedAdditionalWalletProvider() {
+    var select = document.getElementById("account-linked-wallet-provider");
+    var id = select ? select.value : "";
+    var entry = id ? discoveredWalletProviders.find(function (candidate) { return candidate.id === id; }) : null;
+    if (!entry || !entry.provider || typeof entry.provider.request !== "function") {
+      throw new Error("Choose a detected EVM browser wallet before connecting it.");
+    }
+    return entry;
+  }
+
+  function walletMessageHex(message) {
+    return "0x" + Array.prototype.map.call(
+      new TextEncoder().encode(message),
+      function (byte) { return byte.toString(16).padStart(2, "0"); }
+    ).join("");
+  }
+
+  async function findConnectedOwnerWalletProvider() {
+    var primary = accountState && accountState.primaryIdentityWallet;
+    var ownerAddress = primary && typeof primary.address === "string" ? primary.address : "";
+    if (!/^0x[0-9a-f]{40}$/i.test(ownerAddress)) {
+      throw new Error("The permanent owner wallet is not available in the current account session.");
+    }
+    for (var index = 0; index < discoveredWalletProviders.length; index += 1) {
+      var entry = discoveredWalletProviders[index];
+      try {
+        var accounts = await entry.provider.request({ method: "eth_accounts" });
+        if (Array.isArray(accounts) && accounts.some(function (address) {
+          return typeof address === "string" && address.toLowerCase() === ownerAddress.toLowerCase();
+        })) return { entry: entry, address: ownerAddress };
+      } catch (_error) {
+        // An inaccessible provider is skipped; no permission prompt is triggered here.
+      }
+    }
+    // Linking is an explicit user action. If the original owner provider is known
+    // from this session but its read permission was revoked, ask only that provider
+    // for a fresh connection instead of prompting every detected wallet.
+    if (selectedWalletProvider && typeof selectedWalletProvider.request === "function") {
+      try {
+        var ownerAccounts = await selectedWalletProvider.request({ method: "eth_requestAccounts" });
+        if (Array.isArray(ownerAccounts) && ownerAccounts.some(function (address) {
+          return typeof address === "string" && address.toLowerCase() === ownerAddress.toLowerCase();
+        })) {
+          var ownerEntry = discoveredWalletProviders.find(function (candidate) {
+            return candidate.provider === selectedWalletProvider;
+          }) || {
+            id: "owner-session-provider",
+            provider: selectedWalletProvider,
+            info: { name: "Original owner wallet" }
+          };
+          return { entry: ownerEntry, address: ownerAddress };
+        }
+      } catch (_error) {
+        // The owner provider declined or could not grant the requested connection.
+      }
+    }
+    throw new Error("AstroCrown could not find your designated owner wallet. Reconnect the same owner wallet when prompted; an additional wallet cannot replace it.");
+  }
+
+  async function signWalletLinkMessage(provider, address, message) {
+    var signature = await provider.request({
+      method: "personal_sign",
+      params: [walletMessageHex(message), address]
+    });
+    if (typeof signature !== "string" || !/^0x[0-9a-f]{130}$/i.test(signature)) {
+      throw new Error("The wallet did not return a valid EIP-191 authorization signature.");
+    }
+    return signature;
+  }
+
+  function showLinkedWalletFeedback(message, kind) {
+    var target = document.getElementById("account-linked-wallet-feedback");
+    if (target) {
+      target.textContent = message || "";
+      target.dataset.kind = kind || "info";
+    }
+  }
+
+  async function connectAdditionalWalletForSelection() {
+    var entry = selectedAdditionalWalletProvider();
+    var accounts = await entry.provider.request({ method: "eth_requestAccounts" });
+    if (!Array.isArray(accounts) || !accounts.length ||
+        accounts.some(function (address) { return typeof address !== "string" || !/^0x[0-9a-f]{40}$/i.test(address); })) {
+      throw new Error("The selected wallet did not return a valid EVM address.");
+    }
+    var chainHex = await entry.provider.request({ method: "eth_chainId" });
+    var chainId = typeof chainHex === "string" && /^0x[0-9a-f]+$/i.test(chainHex)
+      ? Number.parseInt(chainHex, 16) : NaN;
+    if (!Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Error("The selected wallet did not report a valid EVM network.");
+    }
+    var field = document.getElementById("account-linked-wallet-address-field");
+    var addressSelect = document.getElementById("account-linked-wallet-address");
+    if (!addressSelect || !field) throw new Error("The additional-wallet address selector is unavailable. Refresh the account page.");
+    addressSelect.innerHTML = "";
+    var placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Choose the exact address to link…";
+    addressSelect.appendChild(placeholder);
+    accounts.forEach(function (address) {
+      var option = document.createElement("option");
+      option.value = address;
+      option.textContent = address.slice(0, 8) + "…" + address.slice(-6);
+      addressSelect.appendChild(option);
+    });
+    addressSelect.value = "";
+    field.hidden = false;
+    linkedWalletCandidate = { id: entry.id, provider: entry.provider, chainId: chainId };
+    showLinkedWalletFeedback(
+      accounts.length + " address(es) detected on EVM chain " + chainId + ". Choose the exact address; no wallet is selected automatically.",
+      "info"
+    );
+  }
+
+  async function linkAdditionalWallet() {
+    var entry = selectedAdditionalWalletProvider();
+    var candidate = linkedWalletCandidate;
+    var addressSelect = document.getElementById("account-linked-wallet-address");
+    var consent = document.getElementById("account-linked-wallet-permission");
+    var address = addressSelect ? addressSelect.value : "";
+    if (!candidate || candidate.id !== entry.id || !address || !consent || !consent.checked) {
+      throw new Error("Connect the selected wallet, choose its exact address and authorize wallet-capabilities-only access before continuing.");
+    }
+    var primary = accountState && accountState.primaryIdentityWallet;
+    if (!primary || address.toLowerCase() === String(primary.address || "").toLowerCase()) {
+      throw new Error("The permanent owner wallet cannot be linked again as an additional wallet.");
+    }
+    var owner = await findConnectedOwnerWalletProvider();
+    var currentAccounts = await entry.provider.request({ method: "eth_accounts" });
+    var currentChainHex = await entry.provider.request({ method: "eth_chainId" });
+    var currentChainId = typeof currentChainHex === "string" && /^0x[0-9a-f]+$/i.test(currentChainHex)
+      ? Number.parseInt(currentChainHex, 16) : NaN;
+    if (!Array.isArray(currentAccounts) || !currentAccounts.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === address.toLowerCase();
+    }) || currentChainId !== candidate.chainId) {
+      throw new Error("The selected additional wallet, address or network changed. Connect it again and restart the linking process.");
+    }
+    var challenge = await requestJson("/api/account/wallet-links/options", {
+      action: "link",
+      address: address,
+      chainId: candidate.chainId
+    });
+    if (challenge.transactionAuthorized !== false || challenge.spendingAuthorized !== false ||
+        challenge.additionalWalletSignatureRequired !== true ||
+        challenge.ownerSignatureRequired !== true ||
+        challenge.ownerAddress.toLowerCase() !== owner.address.toLowerCase() ||
+        challenge.address.toLowerCase() !== address.toLowerCase()) {
+      throw new Error("The server returned an invalid additional-wallet authorization challenge. Nothing was linked.");
+    }
+    showLinkedWalletFeedback("Review the same wallet-capability authorization message in your owner wallet and additional wallet. No transaction or spending permission is requested.", "info");
+    var ownerSignature = await signWalletLinkMessage(owner.entry.provider, owner.address, challenge.message);
+    var walletSignature = await signWalletLinkMessage(entry.provider, address, challenge.message);
+    var ownerAccountsAfterSign = await owner.entry.provider.request({ method: "eth_accounts" });
+    var targetAccountsAfterSign = await entry.provider.request({ method: "eth_accounts" });
+    var targetChainAfterSign = await entry.provider.request({ method: "eth_chainId" });
+    var targetChainIdAfterSign = typeof targetChainAfterSign === "string" && /^0x[0-9a-f]+$/i.test(targetChainAfterSign)
+      ? Number.parseInt(targetChainAfterSign, 16) : NaN;
+    if (!Array.isArray(ownerAccountsAfterSign) || !ownerAccountsAfterSign.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === owner.address.toLowerCase();
+    }) || !Array.isArray(targetAccountsAfterSign) || !targetAccountsAfterSign.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === address.toLowerCase();
+    }) || targetChainIdAfterSign !== candidate.chainId) {
+      throw new Error("A wallet account or network changed during signing. The authorization was not submitted; restart the linking process.");
+    }
+    var verified = await requestJson("/api/account/wallet-links/verify", {
+      challengeId: challenge.challengeId,
+      message: challenge.message,
+      ownerSignature: ownerSignature,
+      walletSignature: walletSignature,
+      permissionAuthorized: true
+    });
+    if (verified.authenticated !== true || verified.primaryIdentityWallet.address.toLowerCase() !== primary.address.toLowerCase()) {
+      throw new Error("The server did not confirm the additional wallet under the same permanent owner account.");
+    }
+    accountState = verified;
+    syncAccountButton();
+    renderAccountDashboard();
+    await discoverAdditionalWalletProviders();
+    showLinkedWalletFeedback(verified.message || "The additional wallet was linked and its scoped permission was authorized.", "success");
+  }
+
+  async function unlinkAdditionalWallet(address, chainId) {
+    if (!/^0x[0-9a-f]{40}$/i.test(address) || !Number.isSafeInteger(chainId) || chainId <= 0) {
+      throw new Error("The selected additional wallet reference is invalid.");
+    }
+    if (!window.confirm(
+      "Unlink this additional wallet from your AstroCrown account? Its AstroCrown permissions will be revoked immediately. " +
+      "You may link it again later with fresh owner-wallet and additional-wallet signatures and new authorization. " +
+      "This does not automatically revoke any separate on-chain token or contract approvals."
+    )) return;
+    var owner = await findConnectedOwnerWalletProvider();
+    var challenge = await requestJson("/api/account/wallet-links/options", {
+      action: "unlink",
+      address: address,
+      chainId: chainId
+    });
+    if (challenge.transactionAuthorized !== false || challenge.spendingAuthorized !== false ||
+        challenge.additionalWalletSignatureRequired !== false ||
+        challenge.ownerSignatureRequired !== true ||
+        challenge.ownerAddress.toLowerCase() !== owner.address.toLowerCase()) {
+      throw new Error("The server returned an invalid wallet-unlink authorization challenge. Nothing was unlinked.");
+    }
+    showLinkedWalletFeedback("Confirm the unlinking request with your permanent owner wallet. This revokes AstroCrown permissions only; it is not a blockchain transaction.", "info");
+    var ownerSignature = await signWalletLinkMessage(owner.entry.provider, owner.address, challenge.message);
+    var ownerAccountsAfterSign = await owner.entry.provider.request({ method: "eth_accounts" });
+    if (!Array.isArray(ownerAccountsAfterSign) || !ownerAccountsAfterSign.some(function (item) {
+      return typeof item === "string" && item.toLowerCase() === owner.address.toLowerCase();
+    })) {
+      throw new Error("The permanent owner wallet changed during signing. The unlink authorization was not submitted.");
+    }
+    var verified = await requestJson("/api/account/wallet-links/verify", {
+      challengeId: challenge.challengeId,
+      message: challenge.message,
+      ownerSignature: ownerSignature
+    });
+    if (verified.authenticated !== true || verified.primaryIdentityWallet.address.toLowerCase() !== accountState.primaryIdentityWallet.address.toLowerCase()) {
+      throw new Error("The server did not confirm this unlink operation under the same owner account.");
+    }
+    accountState = verified;
+    syncAccountButton();
+    renderAccountDashboard();
+    await discoverAdditionalWalletProviders();
+    showLinkedWalletFeedback(verified.message || "The additional wallet was unlinked and its AstroCrown permission revoked.", "success");
   }
 
   function selectedWalletProviderFromForm() {
@@ -438,20 +776,28 @@
     return requestJson("/api/account/primary-wallet/verify", requestPayload);
   }
 
-  function finishPrimaryWalletAuthentication(result, created) {
+  async function finishPrimaryWalletAuthentication(result, created) {
     accountState = result;
     successKind = created ? "signup" : "signin";
+    mode = "signin";
     syncAccountButton();
-    if (!created) {
-      mode = "signin";
-      if (dialog.open) closeDialog();
-      navigateToAccount();
-      return;
+    if (dialog.open) closeDialog();
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + window.location.search + "#account"
+    );
+    await showAccountDashboard();
+    if (created && !accountState.authenticated) {
+      throw new Error("The account-creation response was received, but the new account session could not be confirmed. Sign in with the same designated owner wallet to check the account before attempting creation again.");
     }
-    mode = "success";
-    render();
-    var successAction = document.getElementById("open-account-hub");
-    if (successAction) successAction.focus();
+    if (created) {
+      showAccountResultDialog(
+        "success",
+        "AstroCrown account created successfully",
+        "Your account is now open. Your selected owner wallet is its permanent identity authority. Additional wallets may be linked later, but they cannot replace or recover the owner wallet."
+      );
+    }
   }
 
   function renderTabs(selected) {
@@ -502,9 +848,9 @@
         '<p class="account-signin-help"><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet sign-in?</a></p>' +
       '</div>' +
       '<details class="account-wallet-recovery-explainer">' +
-        '<summary>Lost your wallet?</summary>' +
-        '<p>Your primary wallet is your AstroCrown identity. AstroCrown never receives or stores its private keys, seed phrase or recovery words. This protects your control and privacy, but it also means we cannot retrieve, reset or recreate a lost wallet, its secret words or the account it identifies.</p>' +
-        '<p>Use the wallet provider’s own recovery process or a backup you created offline to restore the <strong>same wallet and address</strong>. If you permanently lose access to that wallet and every way of restoring it, access to the associated AstroCrown account is permanently lost. AstroCrown staff and administrators cannot bypass wallet proof or move the account to a different wallet.</p>' +
+        '<summary>No alternative account recovery</summary>' +
+        '<p>Your designated owner wallet is the immutable owner and identity authority for this AstroCrown account. AstroCrown provides no account recovery, owner-wallet replacement or ownership transfer. No administrator, support worker or additional linked wallet can restore or replace the owner wallet.</p>' +
+        '<p>If you permanently lose access to the exact owner wallet, you permanently lose access to the associated AstroCrown account. Only the wallet provider’s own backup and restoration mechanisms may help you regain access to that same wallet; this is not an AstroCrown account-recovery path.</p>' +
         '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
       '</details>' +
       '<p class="account-signin-feedback">Feedback and case access are not enabled in this staging qualification.</p>';
@@ -520,12 +866,12 @@
           '<input id="account-wallet-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
         '<section class="account-wallet-consent-panel" aria-labelledby="account-wallet-consent-heading">' +
-          '<h3 id="account-wallet-consent-heading">Please read before creating your account</h3>' +
-          '<p><strong>Your primary wallet is your AstroCrown identity.</strong> AstroCrown never receives or stores your wallet private key, seed phrase or recovery words. Restore the same wallet and address using your wallet provider or your own offline backup. If you permanently lose that wallet and every way to restore it, access to this AstroCrown account is permanently lost. AstroCrown staff and administrators cannot reset the wallet identity or move it to another address.</p>' +
+          '<h3 id="account-wallet-consent-heading">Permanent owner-wallet requirement</h3>' +
+          '<p><strong>Your designated owner wallet is the immutable owner and identity authority for this account.</strong> AstroCrown provides no account recovery, owner-wallet replacement or ownership transfer. If you permanently lose access to this exact wallet, you permanently lose access to your AstroCrown account. Additional wallets, administrators and support staff cannot restore or replace it. Preserve access using only the wallet provider’s own security and backup mechanisms.</p>' +
           '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
           '<label class="account-consent account-required-consent" for="account-wallet-loss-accepted">' +
             '<input id="account-wallet-loss-accepted" name="walletLossAcknowledged" type="checkbox" required>' +
-            '<span>I have read and understood the wallet-loss and recovery warning above. I understand that losing access to my primary wallet and all of its backups means losing access to my AstroCrown account.</span>' +
+            '<span>I understand that this owner wallet cannot be replaced, that AstroCrown has no alternative account recovery, and that losing access to this wallet means permanently losing access to my AstroCrown account.</span>' +
           '</label>' +
           '<label class="account-consent account-required-consent" for="account-wallet-terms-accepted">' +
             '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
@@ -559,6 +905,47 @@
       '</div>';
   }
 
+
+  function additionalWalletManagerMarkup(linkedWallets) {
+    var rows = linkedWallets.map(function (wallet) {
+      var address = typeof wallet.address === "string" ? wallet.address : "";
+      var chainId = Number(wallet.chainId);
+      return '<li class="account-linked-wallet-row">' +
+        '<div class="account-linked-wallet-identity"><strong>' + escapeHtml(address) + '</strong>' +
+          '<small>Ethereum / EVM · Chain ID ' + escapeHtml(String(chainId)) + ' · Wallet capability permission ' +
+          (wallet.permissionAuthorized === true ? "authorized" : "not authorized") + '</small></div>' +
+        '<button class="account-secondary" type="button" data-linked-wallet-unlink="true" data-wallet-address="' +
+          escapeHtml(address) + '" data-wallet-chain-id="' + escapeHtml(String(chainId)) + '">Unlink</button>' +
+      '</li>';
+    }).join("");
+    return '<section class="account-dashboard-card account-linked-wallets-card">' +
+      '<h2>Additional wallets</h2>' +
+      '<span class="account-dashboard-status">Optional · Never account owners</span>' +
+      '<p>Additional wallets can provide network-specific capabilities for this same AstroCrown account. They cannot sign in as, replace or recover your permanent owner wallet. Unlinking revokes AstroCrown permissions; the same wallet may be linked again later with fresh signatures and new authorization.</p>' +
+      (rows
+        ? '<ul class="account-linked-wallet-list">' + rows + '</ul>'
+        : '<p class="account-linked-wallet-empty">No additional wallets are currently linked.</p>') +
+      '<div class="account-linked-wallet-connect">' +
+        '<h3>Browser extensions</h3><p class="account-linked-wallet-network">Ethereum / EVM</p>' +
+        '<label class="account-admin-role-field" for="account-linked-wallet-provider">Detected EVM browser wallet' +
+          '<select id="account-linked-wallet-provider"><option value="">Detecting wallets…</option></select></label>' +
+        '<div class="account-linked-wallet-actions">' +
+          '<button class="account-secondary" type="button" id="account-linked-wallet-refresh">Refresh wallet list</button>' +
+          '<button class="account-secondary" type="button" id="account-linked-wallet-connect">Connect selected wallet</button>' +
+        '</div>' +
+        '<label class="account-admin-role-field" id="account-linked-wallet-address-field" for="account-linked-wallet-address" hidden>Exact address to link' +
+          '<select id="account-linked-wallet-address"><option value="">Connect a wallet first</option></select></label>' +
+        '<label class="account-linked-wallet-consent" for="account-linked-wallet-permission">' +
+          '<input id="account-linked-wallet-permission" type="checkbox">' +
+          '<span>I authorize this wallet for compatible AstroCrown account operations only. This does not authorize transactions, token approvals, transfers or spending. Each transaction requires its own authorization.</span>' +
+        '</label>' +
+        '<button class="account-primary" type="button" id="account-linked-wallet-link">Link and authorize additional wallet</button>' +
+        '<p id="account-linked-wallet-feedback" class="account-avatar-feedback" role="status" aria-live="polite"></p>' +
+      '</div>' +
+      '<p class="account-linked-wallet-limits">This release currently supports detected EVM browser-extension providers for additional-wallet linking. Bitcoin Core, Solana, mobile, desktop/full-node, hardware and QR/air-gapped connection adapters must be qualified separately before they can be offered here as operational options.</p>' +
+    '</section>';
+  }
+
   function renderAccountDashboard() {
     if (!accountState || !accountState.authenticated) return;
     var identifier = escapeHtml(accountState.accountIdentifier || "AstroCrown account");
@@ -568,6 +955,7 @@
     var primaryWallet = accountState.primaryIdentityWallet || {};
     var primaryAddress = typeof primaryWallet.address === "string" ? primaryWallet.address : "";
     var chainId = Number(primaryWallet.chainId || 0);
+    var linkedWallets = Array.isArray(accountState.linkedWallets) ? accountState.linkedWallets : [];
     var communicationCounts = accountState.communicationsUnreadCounts || {};
     var unreadCommunicationCount = Math.max(0, Number(communicationCounts.alerts || 0)) +
       Math.max(0, Number(communicationCounts.messages || 0));
@@ -628,12 +1016,13 @@
         '<section class="account-dashboard-card account-communications-card"><h2>Alerts &amp; Messages</h2><p class="account-dashboard-status">Not enabled in this staging release</p><p>Private account communications are not part of this qualification. No email or SMS delivery is configured and no messages are sent.</p></section>' +
         '<section class="account-dashboard-card account-user-services-card"><h2>AstroCrown services</h2><p class="account-dashboard-value">Shared member workspace</p><p>Regular users and administrators use the same user-facing AstroCrown services here. Personal activity and future programme entitlements belong to this account.</p><p>Payments and other asset-moving workflows are not enabled in this staging environment.</p></section>' +
         '<section class="account-dashboard-card account-profile-card"><h2>Profile &amp; avatar</h2><p class="account-dashboard-value">Account created: ' + escapeHtml(accountState.createdAt || "Recorded in test state") + '</p><p>Choose from built-in AstroCrown avatars. No image upload or external image service is used.</p><div id="account-avatar-picker" class="account-avatar-picker" role="group" aria-label="Choose account avatar">' + renderAvatarChoices(accountState.avatarId) + '</div><p id="account-avatar-feedback" class="account-avatar-feedback" role="status">Your selected avatar appears here and in the circular header control.</p></section>' +
-        '<section class="account-dashboard-card account-primary-wallet-card"><h2>Primary identity wallet</h2><span class="account-dashboard-status">Sole account identity and recovery anchor</span>' +
+        '<section class="account-dashboard-card account-primary-wallet-card"><h2>Primary identity wallet</h2><span class="account-dashboard-status">Immutable · Sole account owner</span>' +
           '<p class="account-dashboard-value">' + (primaryAddress ? escapeHtml(primaryAddress) : "Wallet address unavailable") + '</p>' +
           '<p>Network: ' + (chainId > 0 ? "EVM chain ID " + String(chainId) : "Not reported") + '</p>' +
-          '<p>AstroCrown does not receive or store your private key, seed phrase or recovery words. Restore this same wallet and address using your wallet provider or your own offline backup. If every restoration path is lost, access to this account is permanently lost.</p>' +
+          '<p>AstroCrown has no account recovery or owner-wallet replacement process. If you permanently lose access to this exact owner wallet, you permanently lose access to this AstroCrown account. Additional wallets, administrators and support staff cannot restore or replace it. Use only the wallet provider’s own backup tools to preserve this same wallet.</p>' +
           '<p><strong>Never share your seed phrase or private key with AstroCrown, support staff, NOVA or anyone else.</strong></p>' +
           '<a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Read security assurance</a></section>' +
+        additionalWalletManagerMarkup(linkedWallets) +
         '<section class="account-dashboard-card account-payment-safety-card"><h2>Payment and transaction safety</h2>' +
           '<span class="account-dashboard-status">Payments disabled in staging</span>' +
           '<p>Signing in proves control of your primary wallet only. It cannot move assets, approve tokens, submit transactions or authorize spending.</p>' +
@@ -645,7 +1034,7 @@
         '<section class="account-dashboard-card"><h2>Feedback &amp; case access</h2><p class="account-dashboard-status">Not enabled in this staging release</p><p>The feedback and case portal will be introduced as a separate, qualified service. It is not available from this test account.</p></section>' +
         adminCard +
       '</div>' +
-      '<div class="account-dashboard-actions"><p>Administrator functions remain separately gated. Your ordinary primary-wallet sign-in does not itself grant administrator privileges.</p><button class="account-secondary" type="button" id="account-signout">Sign out</button></div>';
+      '<div class="account-dashboard-actions"><p>Administrator functions remain separately gated. Your ordinary primary-wallet sign-in does not itself grant administrator privileges.</p><button class="account-secondary" type="button" id="account-signout">Disconnect owner wallet &amp; log out</button></div>';
     if (pendingAdminWalletMessage) {
       var walletNotice = document.createElement("p");
       walletNotice.className = "account-dashboard-notice";
@@ -686,6 +1075,9 @@
     if (communicationsPage) communicationsPage.hidden = true;
     dashboard.hidden = false;
     renderAccountDashboard();
+    discoverAdditionalWalletProviders().catch(function () {
+      showLinkedWalletFeedback("Additional-wallet discovery could not be completed. The owner account remains available; refresh the wallet list before linking another wallet.", "error");
+    });
     var dashboardTitle = document.getElementById("account-dashboard-title");
     if (dashboardTitle) dashboardTitle.focus();
   }
@@ -1015,9 +1407,22 @@
         termsAccepted: termsInput.checked,
         walletLossAcknowledged: walletLossInput.checked
       });
-      finishPrimaryWalletAuthentication(result, result.walletAccountCreated === true);
+      await finishPrimaryWalletAuthentication(result, result.walletAccountCreated === true);
     } catch (error) {
-      showFeedback(error.message || "Wallet account creation could not be completed.", "error");
+      var recoveredStatus = await refreshStatus();
+      var expectedOwnerAddress = selectedWalletAddress || "";
+      if (recoveredStatus.authenticated === true &&
+          recoveredStatus.primaryIdentityWallet &&
+          typeof recoveredStatus.primaryIdentityWallet.address === "string" &&
+          expectedOwnerAddress &&
+          recoveredStatus.primaryIdentityWallet.address.toLowerCase() === expectedOwnerAddress.toLowerCase()) {
+        await finishPrimaryWalletAuthentication(recoveredStatus, true);
+        return;
+      }
+      var creationFailure = "AstroCrown could not confirm that account creation and the account session completed. Before trying again, sign in with the same designated owner wallet to check whether the account was created. A lost network response does not prove that the server failed to receive the request. " +
+        (error.message || "");
+      showFeedback(creationFailure, "error");
+      showAccountResultDialog("error", "Account creation could not be confirmed", creationFailure);
     } finally {
       setBusy(false);
     }
@@ -1062,7 +1467,7 @@
       setBusy(true);
       try {
         var result = await authenticateWithPrimaryWallet(false, "");
-        finishPrimaryWalletAuthentication(result, false);
+        await finishPrimaryWalletAuthentication(result, false);
       } catch (error) {
         showFeedback(error.message || "Wallet sign-in could not be completed.", "error");
       } finally {
@@ -1076,6 +1481,19 @@
     }
   });
 
+  dashboardContent.addEventListener("change", function (event) {
+    if (event.target && event.target.id === "account-linked-wallet-provider") {
+      linkedWalletCandidate = null;
+      var addressField = document.getElementById("account-linked-wallet-address-field");
+      var addressSelect = document.getElementById("account-linked-wallet-address");
+      if (addressField) addressField.hidden = true;
+      if (addressSelect) addressSelect.innerHTML = '<option value="">Connect the selected wallet first</option>';
+      var consent = document.getElementById("account-linked-wallet-permission");
+      if (consent) consent.checked = false;
+      showLinkedWalletFeedback("Provider selection changed. Connect the selected wallet again before choosing an address.", "info");
+    }
+  });
+
   dashboardContent.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
@@ -1085,6 +1503,52 @@
     }
     if (button.id === "account-admin-wallet-access" || button.id === "open-admin-dashboard") {
       document.dispatchEvent(new CustomEvent("astrocrown:request-admin-wallet-access"));
+      return;
+    }
+    if (button.id === "account-linked-wallet-refresh") {
+      setBusy(true);
+      try {
+        await discoverAdditionalWalletProviders();
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "Wallet discovery could not be completed.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "account-linked-wallet-connect") {
+      setBusy(true);
+      try {
+        await connectAdditionalWalletForSelection();
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "The additional wallet could not be connected.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.id === "account-linked-wallet-link") {
+      setBusy(true);
+      try {
+        await linkAdditionalWallet();
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "The additional wallet could not be linked.", "error");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    if (button.dataset.linkedWalletUnlink === "true") {
+      var linkedAddress = button.dataset.walletAddress || "";
+      var linkedChainId = Number(button.dataset.walletChainId);
+      setBusy(true);
+      try {
+        await unlinkAdditionalWallet(linkedAddress, linkedChainId);
+      } catch (error) {
+        showLinkedWalletFeedback(error.message || "The additional wallet could not be unlinked.", "error");
+      } finally {
+        setBusy(false);
+      }
       return;
     }
     if (button.id === "acknowledge-admin-revocation") {
@@ -1137,6 +1601,11 @@
       return;
     }
     if (button.id !== "account-signout") return;
+    if (!window.confirm(
+      "Disconnect your permanent owner wallet from this AstroCrown session and log out? " +
+      "Your account will remain bound to this exact owner wallet. To sign in again, you must reconnect and authenticate with the same owner wallet. " +
+      "Additional linked wallets cannot replace it or restore account access. This only ends your AstroCrown session; it does not delete your account or change the browser wallet’s permissions for other websites."
+    )) return;
     setBusy(true);
     try {
       await requestJson("/api/account/logout", {});

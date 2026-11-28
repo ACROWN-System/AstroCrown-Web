@@ -100,7 +100,7 @@ test("primary-wallet API verifies one-use challenges and never treats a wallet c
   assert.match(worker, /walletAccountCreated/);
 });
 
-test("wallet-first account popup requires explicit recovery and legal consent", async () => {
+test("wallet-first account popup requires permanent owner-wallet acknowledgement and legal consent", async () => {
   const ui = await readFile(
     new URL("../../prototype/account-ui.js", import.meta.url),
     "utf8",
@@ -109,8 +109,9 @@ test("wallet-first account popup requires explicit recovery and legal consent", 
   assert.match(ui, /New to AstroCrown\?/);
   assert.match(ui, /Create an account/);
   assert.match(ui, /Already have an account\?/);
-  assert.match(ui, /Lost your wallet\?/);
-  assert.match(ui, /same wallet and address/i);
+  assert.match(ui, /No alternative account recovery/);
+  assert.match(ui, /exact owner wallet/i);
+  assert.match(ui, /AstroCrown provides no account recovery, owner-wallet replacement or ownership transfer/i);
   assert.match(ui, /Never enter or send your seed phrase or private key/i);
   assert.match(ui, /account-wallet-loss-accepted/);
   assert.match(ui, /account-wallet-terms-accepted/);

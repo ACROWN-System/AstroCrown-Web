@@ -4,8 +4,9 @@ This Worker implements the wallet-first account model for the AstroCrown public 
 
 ## Identity model
 
-- Each ordinary AstroCrown account has one primary EVM externally owned wallet identity.
-- The primary wallet is the sign-in identity and recovery anchor. The Worker stores only its public address, chain identifier, account linkage, timestamps and authentication metadata.
+- Each ordinary AstroCrown account has exactly one permanent, immutable primary EVM externally owned wallet identity. It is the sole account owner and sign-in authority; no owner-wallet replacement, ownership transfer, alternate recovery, or administrator override exists.
+- Losing access to the designated owner wallet permanently loses access to the AstroCrown account. The same owner wallet must be restored using the wallet software's own mechanisms, if possible; AstroCrown does not recover accounts. The Worker stores only its public address, chain identifier, account linkage, timestamps and authentication metadata.
+- Optional additional wallets are separate capability extensions. Their owner-authorized linking requires a fresh EIP-191 proof from both the permanent owner wallet and the additional wallet. The user also explicitly authorizes only the wallet-capabilities-only scope; no transaction, asset transfer, token approval, payment or spending authority is granted.
 - The browser discovers wallet providers using EIP-6963, with an EIP-1193 fallback. The user chooses a provider and, when more than one address is available, chooses the address to use. The application does not silently choose the first provider or account.
 - Account creation requires two independent server-verified acknowledgements: acceptance of the current Terms of Use and Privacy Policy, and acknowledgement of the wallet-loss/recovery notice. Their versions and timestamps are stored with the account.
 - Authentication uses a fresh, short-lived, single-use, origin-bound EIP-191 personal-sign challenge. A sign-in signature proves wallet control only. It does not authorize a blockchain transaction, token approval, transfer, payment or spending permission.
@@ -13,7 +14,9 @@ This Worker implements the wallet-first account model for the AstroCrown public 
 
 ## Recovery and account lifecycle
 
-Account access is recovered only by restoring the same primary wallet and address through the user's wallet provider or offline backup. If the wallet and all restoration paths are permanently lost, the account is unrecoverable by AstroCrown. Staff and administrators cannot bypass wallet proof or migrate an account to another address.
+There is no AstroCrown account-recovery, owner-wallet replacement or ownership-transfer process. If the designated owner wallet is lost, account access is permanently lost. Additional wallets cannot sign in, recover access, become owners or replace the owner wallet. Disconnecting the owner wallet is a session logout only: the server deletes the current session and clears its cookie while preserving the immutable owner-wallet record.
+
+Additional linked EVM wallets can be unlinked at any time. Unlinking sets the wallet inactive and clears its AstroCrown permission authorization. The same wallet may be linked again later, but only after fresh owner-wallet and additional-wallet signatures over a new one-use challenge and fresh explicit wallet-capabilities authorization. Previous permissions do not reactivate. An unlink does not revoke external on-chain token approvals or smart-contract permissions; those require their own on-chain revocation transactions.
 
 The wallet-only schema migration adds versioned wallet-loss acknowledgement fields, expires sessions for obsolete non-wallet accounts, deletes disposable passkey-only test accounts that are not tied to immutable governance audit records, and removes the obsolete passkey/recovery-key authentication tables and routes. Immutable governance audit references are retained rather than silently deleted.
 
@@ -37,8 +40,9 @@ Any future bot or automated payment integration must be separately and explicitl
 
 - `POST /api/account/primary-wallet/options`: issue an origin-bound, one-use EIP-191 challenge.
 - `POST /api/account/primary-wallet/verify`: verify the signature, establish a session, and, for new account creation, require both current consent acknowledgements.
-- `GET /api/account/status`: return the authenticated account state and public primary-wallet identity.
-- `POST /api/account/logout`: revoke the current account session.
+- `GET /api/account/status`: return the authenticated account state, immutable owner-wallet identity and currently active linked wallets.
+- `POST /api/account/wallet-links/options` and `/verify`: link or unlink an additional EVM wallet using a one-use challenge, owner signature, and (for linking) the additional-wallet signature plus fresh explicit capability authorization. Unlinking revokes AstroCrown permission; later relinking requires fresh proofs and authorization.
+- `POST /api/account/logout`: revoke the current account session without changing or deleting the immutable owner-wallet association.
 - `GET /api/genesis/me`: resolve the Genesis profile using the current AstroCrown account session. It does not authenticate a separate Genesis identity.
 - `POST /api/genesis/wallet-link/challenge` and `/verify`: link an additional programme address using a separate off-chain ownership proof.
 - `GET /api/supporters/status`: return the public read-only programme status. It never enables a payment or transfer.
@@ -62,7 +66,10 @@ A successful deployment smoke check is not a full browser qualification. A real 
 3. Repeat sign-in with the same wallet.
 4. Sign-out and rejection of a different wallet.
 5. Genesis profile access within the same AstroCrown account.
-6. Optional additional-address linking without creating another account.
-7. No transaction or token approval requested during sign-in or address linking.
+6. Link an optional additional EVM browser wallet only after the immutable owner and additional wallet both sign a fresh capability-scoped challenge.
+7. Unlink an additional wallet with owner authorization, confirm its capability permission is revoked, and relink it only after fresh proofs and explicit authorization.
+8. Reject attempts to use an actively linked additional wallet as a second AstroCrown account owner.
+9. Confirm owner-wallet logout ends the session while preserving the owner association.
+10. No transaction or token approval is requested during sign-in, linking or unlinking.
 
 Use synthetic account details and a disposable wallet with no valuable assets. Do not enable real payment features or production access from this staging environment.
