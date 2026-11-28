@@ -254,27 +254,67 @@
     }
     providerSelects.forEach(function (select) {
       var previous = select.value;
-      select.innerHTML = '<option value="">Select a wallet provider…</option>';
+      var grid = document.getElementById("account-wallet-provider-grid");
+      var discoveryState = document.getElementById("account-wallet-discovery-state");
+      select.innerHTML = '<option value="">Select a detected wallet…</option>';
+      if (grid) grid.innerHTML = "";
       discoveredWalletProviders.forEach(function (entry) {
         var label = walletProviderLabel(entry);
         var option = document.createElement("option");
         option.value = entry.id;
         option.textContent = label.name;
         select.appendChild(option);
+        if (grid) {
+          var card = document.createElement("button");
+          card.type = "button";
+          card.className = "account-wallet-card";
+          card.dataset.walletProviderId = entry.id;
+          card.setAttribute("aria-pressed", "false");
+          var logo = document.createElement("span");
+          logo.className = "account-wallet-logo";
+          logo.setAttribute("aria-hidden", "true");
+          var icon = entry.info && typeof entry.info.icon === "string" ? entry.info.icon : "";
+          if (/^data:image\\/(?:png|jpeg|webp|svg\\+xml);base64,/i.test(icon)) {
+            var image = document.createElement("img");
+            image.src = icon;
+            image.alt = "";
+            image.referrerPolicy = "no-referrer";
+            logo.appendChild(image);
+          } else {
+            logo.textContent = label.name.slice(0, 1).toUpperCase();
+            logo.classList.add("account-wallet-logo-fallback");
+          }
+          var copy = document.createElement("span");
+          copy.className = "account-wallet-card-copy";
+          var name = document.createElement("strong");
+          name.textContent = label.name;
+          var detail = document.createElement("small");
+          detail.textContent = "Detected in this browser";
+          copy.appendChild(name);
+          copy.appendChild(detail);
+          card.appendChild(logo);
+          card.appendChild(copy);
+          grid.appendChild(card);
+        }
       });
       if (previous && discoveredWalletProviders.some(function (entry) { return entry.id === previous; })) {
         select.value = previous;
-      } else if (discoveredWalletProviders.length === 1) {
-        select.value = discoveredWalletProviders[0].id;
-        selectedWalletProvider = discoveredWalletProviders[0].provider;
       } else {
+        select.value = "";
         selectedWalletProvider = null;
       }
+      if (grid && !discoveredWalletProviders.length && discoveryState) {
+        discoveryState.textContent = "No compatible EVM wallet was detected in this browser. Install or enable an EIP-1193 wallet, then reopen this window.";
+      } else if (discoveryState) {
+        discoveryState.remove();
+      }
+      if (grid && select.value) {
+        var selectedCard = grid.querySelector('[data-wallet-provider-id="' + CSS.escape(select.value) + '"]');
+        if (selectedCard) selectedCard.setAttribute("aria-pressed", "true");
+      }
       var help = document.getElementById("account-wallet-selection-help");
-      if (help && !discoveredWalletProviders.length) {
-        help.textContent = "No compatible EVM wallet was detected. Install or enable a wallet that supports EIP-1193 and EIP-191 message signing, then reopen this window.";
-      } else if (help && discoveredWalletProviders.length > 1) {
-        help.textContent = "Choose the wallet provider you want to use. AstroCrown will not select a provider or wallet address for you.";
+      if (help && discoveredWalletProviders.length) {
+        help.textContent = "Select a detected wallet card. AstroCrown will not choose a provider or wallet address on your behalf.";
       }
     });
   }
@@ -432,14 +472,24 @@
   }
 
   function walletProviderMarkup() {
-    return '<label class="account-field" for="account-wallet-provider">Choose your wallet provider' +
-      '<select id="account-wallet-provider" name="walletProvider" required>' +
-        '<option value="">Detecting installed wallets…</option>' +
-      '</select></label>' +
+    return '<section class="account-wallet-picker" aria-label="Choose your wallet provider">' +
+      '<h3 class="account-wallet-picker-heading">Choose your wallet</h3>' +
+      '<button class="account-wallet-card account-wallet-card-featured" type="button" disabled aria-disabled="true">' +
+        '<span class="account-wallet-logo account-wallet-logo-astro" aria-hidden="true">A</span>' +
+        '<span class="account-wallet-card-copy"><strong>AstroCrown Wallet</strong><small>First-party wallet · Coming soon</small></span>' +
+        '<span class="account-wallet-coming-soon">Coming soon</span>' +
+      '</button>' +
+      '<div class="account-wallet-provider-grid" id="account-wallet-provider-grid" role="group" aria-label="Detected compatible browser wallets">' +
+        '<p class="account-wallet-discovery-state" id="account-wallet-discovery-state">Detecting compatible wallets…</p>' +
+      '</div>' +
+      '<select id="account-wallet-provider" name="walletProvider" required aria-label="Selected wallet provider" class="account-wallet-provider-native">' +
+        '<option value="">Select a detected wallet…</option>' +
+      '</select>' +
+      '</section>' +
       '<label class="account-field account-wallet-account-field" for="account-wallet-account" hidden>Choose the wallet address for this AstroCrown account' +
       '<select id="account-wallet-account" name="walletAccount"><option value="">Connect your wallet first</option></select>' +
       '</label>' +
-      '<p class="account-provider-note" id="account-wallet-selection-help">AstroCrown will ask your chosen wallet for permission to view the account you select. It will not choose an address on your behalf.</p>';
+      '<p class="account-provider-note" id="account-wallet-selection-help">Choose one of the detected wallets. AstroCrown will ask permission to view accounts only after you select a wallet and continue.</p>';
   }
 
   function renderSignIn() {
@@ -975,12 +1025,18 @@
 
   content.addEventListener("change", function (event) {
     if (event.target && event.target.id === "account-wallet-provider") {
-      selectedWalletProvider = null;
       selectedWalletAddress = "";
+      var selectedId = event.target.value;
+      var selectedEntry = discoveredWalletProviders.find(function (entry) { return entry.id === selectedId; });
+      selectedWalletProvider = selectedEntry ? selectedEntry.provider : null;
       var accountField = document.getElementById("account-wallet-account");
       var accountLabel = accountField ? accountField.closest("label") : null;
       if (accountField) accountField.innerHTML = '<option value="">Connect your wallet first</option>';
       if (accountLabel) accountLabel.hidden = true;
+      var grid = document.getElementById("account-wallet-provider-grid");
+      if (grid) Array.prototype.forEach.call(grid.querySelectorAll("[data-wallet-provider-id]"), function (card) {
+        card.setAttribute("aria-pressed", card.dataset.walletProviderId === selectedId ? "true" : "false");
+      });
     }
     if (event.target && event.target.id === "account-wallet-account") {
       selectedWalletAddress = event.target.value || "";
@@ -990,6 +1046,14 @@
   content.addEventListener("click", async function (event) {
     var button = event.target.closest("button");
     if (!button || busy) return;
+    if (button.dataset.walletProviderId) {
+      var providerSelect = document.getElementById("account-wallet-provider");
+      if (providerSelect) {
+        providerSelect.value = button.dataset.walletProviderId;
+        providerSelect.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return;
+    }
     if (button.dataset.accountMode === "signin" || button.dataset.accountMode === "create") {
       setMode(button.dataset.accountMode);
       return;
