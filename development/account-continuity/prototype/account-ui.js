@@ -135,7 +135,7 @@
       shell.appendChild(close);
       accountResultDialog.appendChild(shell);
       accountResultDialog.addEventListener("click", function (event) {
-        if (event.target === accountResultDialog && kind === "error") {
+        if (event.target === accountResultDialog && accountResultDialog.dataset.kind === "error") {
           if (typeof accountResultDialog.close === "function") accountResultDialog.close();
           else accountResultDialog.removeAttribute("open");
         }
@@ -805,9 +805,9 @@
         '<p class="account-signin-help"><a href="/account-continuity/prototype/security-assurance.html" target="_blank" rel="noopener noreferrer">Why wallet sign-in?</a></p>' +
       '</div>' +
       '<details class="account-wallet-recovery-explainer">' +
-        '<summary>Lost your wallet?</summary>' +
-        '<p>Your primary wallet is your AstroCrown identity. AstroCrown never receives or stores its private keys, seed phrase or recovery words. This protects your control and privacy, but it also means we cannot retrieve, reset or recreate a lost wallet, its secret words or the account it identifies.</p>' +
-        '<p>Use the wallet provider’s own recovery process or a backup you created offline to restore the <strong>same wallet and address</strong>. If you permanently lose access to that wallet and every way of restoring it, access to the associated AstroCrown account is permanently lost. AstroCrown staff and administrators cannot bypass wallet proof or move the account to a different wallet.</p>' +
+        '<summary>No alternative account recovery</summary>' +
+        '<p>Your designated owner wallet is the immutable owner and identity authority for this AstroCrown account. AstroCrown provides no account recovery, owner-wallet replacement or ownership transfer. No administrator, support worker or additional linked wallet can restore or replace the owner wallet.</p>' +
+        '<p>If you permanently lose access to the exact owner wallet, you permanently lose access to the associated AstroCrown account. Only the wallet provider’s own backup and restoration mechanisms may help you regain access to that same wallet; this is not an AstroCrown account-recovery path.</p>' +
         '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
       '</details>' +
       '<p class="account-signin-feedback">Feedback and case access are not enabled in this staging qualification.</p>';
@@ -823,12 +823,12 @@
           '<input id="account-wallet-referral-id" name="referralId" type="text" autocomplete="off" maxlength="64" autocapitalize="characters" spellcheck="false" placeholder="Enter referral ID...">' +
         '</label>' +
         '<section class="account-wallet-consent-panel" aria-labelledby="account-wallet-consent-heading">' +
-          '<h3 id="account-wallet-consent-heading">Please read before creating your account</h3>' +
-          '<p><strong>Your primary wallet is your AstroCrown identity.</strong> AstroCrown never receives or stores your wallet private key, seed phrase or recovery words. Restore the same wallet and address using your wallet provider or your own offline backup. If you permanently lose that wallet and every way to restore it, access to this AstroCrown account is permanently lost. AstroCrown staff and administrators cannot reset the wallet identity or move it to another address.</p>' +
+          '<h3 id="account-wallet-consent-heading">Permanent owner-wallet requirement</h3>' +
+          '<p><strong>Your designated owner wallet is the immutable owner and identity authority for this account.</strong> AstroCrown provides no account recovery, owner-wallet replacement or ownership transfer. If you permanently lose access to this exact wallet, you permanently lose access to your AstroCrown account. Additional wallets, administrators and support staff cannot restore or replace it. Preserve access using only the wallet provider’s own security and backup mechanisms.</p>' +
           '<p><strong>Never enter or send your seed phrase or private key to AstroCrown, support staff, NOVA or anyone else.</strong> We will never ask you for it.</p>' +
           '<label class="account-consent account-required-consent" for="account-wallet-loss-accepted">' +
             '<input id="account-wallet-loss-accepted" name="walletLossAcknowledged" type="checkbox" required>' +
-            '<span>I have read and understood the wallet-loss and recovery warning above. I understand that losing access to my primary wallet and all of its backups means losing access to my AstroCrown account.</span>' +
+            '<span>I understand that this owner wallet cannot be replaced, that AstroCrown has no alternative account recovery, and that losing access to this wallet means permanently losing access to my AstroCrown account.</span>' +
           '</label>' +
           '<label class="account-consent account-required-consent" for="account-wallet-terms-accepted">' +
             '<input id="account-wallet-terms-accepted" name="termsAccepted" type="checkbox" required>' +
@@ -1364,9 +1364,11 @@
         termsAccepted: termsInput.checked,
         walletLossAcknowledged: walletLossInput.checked
       });
-      finishPrimaryWalletAuthentication(result, result.walletAccountCreated === true);
+      await finishPrimaryWalletAuthentication(result, result.walletAccountCreated === true);
     } catch (error) {
-      showFeedback(error.message || "Wallet account creation could not be completed.", "error");
+      var creationFailure = error.message || "Wallet account creation could not be completed. No account was created unless the server confirms otherwise.";
+      showFeedback(creationFailure, "error");
+      showAccountResultDialog("error", "AstroCrown account creation unsuccessful", creationFailure);
     } finally {
       setBusy(false);
     }
@@ -1411,7 +1413,7 @@
       setBusy(true);
       try {
         var result = await authenticateWithPrimaryWallet(false, "");
-        finishPrimaryWalletAuthentication(result, false);
+        await finishPrimaryWalletAuthentication(result, false);
       } catch (error) {
         showFeedback(error.message || "Wallet sign-in could not be completed.", "error");
       } finally {
