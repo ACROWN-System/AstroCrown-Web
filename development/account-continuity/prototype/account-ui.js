@@ -23,8 +23,10 @@
   var focusBeforeOpen = null;
   var busy = false;
   var pendingAdminWalletMessage = null;
+  var accountResultDialog = null;
+  var linkedWalletCandidate = null;
   var termsVersion = "development-terms-2026-10-31-v0.3";
-  var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v1";
+  var walletLossNoticeVersion = "wallet-loss-warning-2026-11-28-v2";
   var discoveredWalletProviders = [];
   var selectedWalletProvider = null;
   var selectedWalletAddress = "";
@@ -102,6 +104,55 @@
     feedback.textContent = message || "";
     feedback.dataset.kind = kind || "info";
     feedback.classList.toggle("is-visible", Boolean(message));
+  }
+
+  function showAccountResultDialog(kind, heading, message) {
+    if (!accountResultDialog) {
+      accountResultDialog = document.createElement("dialog");
+      accountResultDialog.className = "account-result-dialog";
+      accountResultDialog.setAttribute("aria-labelledby", "account-result-dialog-title");
+      accountResultDialog.setAttribute("aria-describedby", "account-result-dialog-message");
+      var shell = document.createElement("div");
+      shell.className = "account-result-dialog-shell";
+      var mark = document.createElement("span");
+      mark.className = "account-result-dialog-mark";
+      mark.setAttribute("aria-hidden", "true");
+      var title = document.createElement("h2");
+      title.id = "account-result-dialog-title";
+      var copy = document.createElement("p");
+      copy.id = "account-result-dialog-message";
+      var close = document.createElement("button");
+      close.type = "button";
+      close.className = "account-primary";
+      close.textContent = "Continue";
+      close.addEventListener("click", function () {
+        if (typeof accountResultDialog.close === "function") accountResultDialog.close();
+        else accountResultDialog.removeAttribute("open");
+      });
+      shell.appendChild(mark);
+      shell.appendChild(title);
+      shell.appendChild(copy);
+      shell.appendChild(close);
+      accountResultDialog.appendChild(shell);
+      accountResultDialog.addEventListener("click", function (event) {
+        if (event.target === accountResultDialog && kind === "error") {
+          if (typeof accountResultDialog.close === "function") accountResultDialog.close();
+          else accountResultDialog.removeAttribute("open");
+        }
+      });
+      document.body.appendChild(accountResultDialog);
+    }
+    accountResultDialog.dataset.kind = kind === "success" ? "success" : "error";
+    var resultMark = accountResultDialog.querySelector(".account-result-dialog-mark");
+    var resultTitle = document.getElementById("account-result-dialog-title");
+    var resultMessage = document.getElementById("account-result-dialog-message");
+    if (resultMark) resultMark.textContent = kind === "success" ? "✓" : "!";
+    if (resultTitle) resultTitle.textContent = heading || (kind === "success" ? "Account created successfully" : "Account creation failed");
+    if (resultMessage) resultMessage.textContent = message || "";
+    if (typeof accountResultDialog.showModal === "function" && !accountResultDialog.open) accountResultDialog.showModal();
+    else accountResultDialog.setAttribute("open", "open");
+    var action = accountResultDialog.querySelector("button");
+    if (action) action.focus();
   }
 
   async function requestJson(path, payload) {
