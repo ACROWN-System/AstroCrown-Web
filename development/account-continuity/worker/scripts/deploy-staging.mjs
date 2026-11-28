@@ -518,7 +518,7 @@ async function smokeTest(origin) {
   const diagnostics = await diagnosticsResponse.json();
   if (
     diagnostics.primaryWalletAuthentication !== "EIP-191 personal-sign" ||
-    diagnostics.accountRecovery !== "restore the same primary wallet through the wallet provider or the owner's offline backup" ||
+    diagnostics.accountRecovery !== "none; losing the permanent owner wallet permanently ends account access; only the same owner wallet can sign in" ||
     diagnostics.signInAuthorizesTransaction !== false ||
     diagnostics.paymentAcceptanceEnabled !== false
   ) fail("Remote Worker diagnostics do not match the wallet-only, non-spending authentication policy.");
