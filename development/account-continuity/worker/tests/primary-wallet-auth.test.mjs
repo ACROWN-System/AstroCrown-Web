@@ -117,6 +117,14 @@ test("wallet-first account popup requires explicit recovery and legal consent", 
   assert.match(ui, /walletLossAcknowledged/);
   assert.match(ui, /termsAccepted/);
   assert.match(ui, /eip6963:requestProvider/);
+  assert.match(ui, /AstroWallet/);
+  assert.match(ui, /account-wallet-provider-grid/);
+  assert.match(ui, /data-wallet-provider-id/);
+  assert.match(ui, /entry\.info\.icon/);
+  assert.match(ui, /data:image\\\\\//);
+  assert.match(ui, /Coming soon/);
+  assert.match(ui, /card\.setAttribute\("aria-pressed"/);
+  assert.match(ui, /No provider or wallet address is selected/);
   assert.match(ui, /wallet_requestPermissions/);
   assert.match(ui, /permissionError\.code !== -32601 && permissionError\.code !== 4200/);
   assert.match(ui, /provider\.request\(\{ method: "eth_accounts" \}\)/);
