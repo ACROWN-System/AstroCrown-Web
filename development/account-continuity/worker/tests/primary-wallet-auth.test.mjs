@@ -120,11 +120,11 @@ test("wallet-first account popup requires explicit recovery and legal consent", 
   const providerSelectionEnd = ui.indexOf("\n  async function authenticateWithPrimaryWallet", providerSelectionStart);
   assert.ok(providerSelectionStart >= 0 && providerSelectionEnd > providerSelectionStart, "selected-wallet provider guard must exist");
   const providerSelection = ui.slice(providerSelectionStart, providerSelectionEnd);
-  assert.match(providerSelection, /var entry = id \\? discoveredWalletProviders\\.find/);
-  assert.match(providerSelection, /Select a detected wallet card before continuing/);
-  assert.doesNotMatch(providerSelection, /discoveredWalletProviders\\.length === 1/);
-  assert.match(ui, /select\\.value = ""/);
-  assert.match(ui, /providerSelect\\.dispatchEvent\\(new Event\\("change", \\{ bubbles: true \\}\\)\\)/);
+  assert.ok(providerSelection.includes("var entry = id ? discoveredWalletProviders.find"));
+  assert.ok(providerSelection.includes("Select a detected wallet card before continuing"));
+  assert.ok(!providerSelection.includes("discoveredWalletProviders.length === 1"));
+  assert.ok(ui.includes('select.value = ""'));
+  assert.ok(ui.includes('providerSelect.dispatchEvent(new Event("change", { bubbles: true }))'));
   assert.match(ui, /eip6963:requestProvider/);
   assert.match(ui, /AstroWallet/);
   assert.match(ui, /account-wallet-provider-grid/);
