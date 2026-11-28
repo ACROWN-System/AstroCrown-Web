@@ -5,14 +5,14 @@ This Worker implements the wallet-first account model for the AstroCrown public 
 ## Identity model
 
 - Each ordinary AstroCrown account has exactly one permanent, immutable primary EVM externally owned wallet identity. It is the sole account owner and sign-in authority; no owner-wallet replacement, ownership transfer, alternate recovery, or administrator override exists.
-- Losing access to the designated owner wallet permanently loses access to the AstroCrown account. The same owner wallet must be restored using the wallet software's own mechanisms, if possible; AstroCrown does not recover accounts. The Worker stores only its public address, chain identifier, account linkage, timestamps and authentication metadata.
+- Losing access to the designated owner wallet permanently loses access to the AstroCrown account. AstroCrown provides no account-recovery process or alternate route back into the account. If the user independently regains control of the exact same wallet through that wallet's own software or backups, they may sign in normally; AstroCrown does not restore or recover the account. The Worker stores only its public address, chain identifier, account linkage, timestamps and authentication metadata.
 - Optional additional wallets are separate capability extensions. Their owner-authorized linking requires a fresh EIP-191 proof from both the permanent owner wallet and the additional wallet. The user also explicitly authorizes only the wallet-capabilities-only scope; no transaction, asset transfer, token approval, payment or spending authority is granted.
 - The browser discovers wallet providers using EIP-6963, with an EIP-1193 fallback. The user chooses a provider and, when more than one address is available, chooses the address to use. The application does not silently choose the first provider or account.
-- Account creation requires two independent server-verified acknowledgements: acceptance of the current Terms of Use and Privacy Policy, and acknowledgement of the wallet-loss/recovery notice. Their versions and timestamps are stored with the account.
+- Account creation requires two independent server-verified acknowledgements: acceptance of the current Terms of Use and Privacy Policy, and acknowledgement of the owner-wallet-loss acknowledgement. Their versions and timestamps are stored with the account.
 - Authentication uses a fresh, short-lived, single-use, origin-bound EIP-191 personal-sign challenge. A sign-in signature proves wallet control only. It does not authorize a blockchain transaction, token approval, transfer, payment or spending permission.
 - AstroCrown never requests or stores a wallet private key, seed phrase, mnemonic or recovery words.
 
-## Recovery and account lifecycle
+## Immutable owner-wallet lifecycle
 
 There is no AstroCrown account-recovery, owner-wallet replacement or ownership-transfer process. If the designated owner wallet is lost, account access is permanently lost. Additional wallets cannot sign in, recover access, become owners or replace the owner wallet. Disconnecting the owner wallet is a session logout only: the server deletes the current session and clears its cookie while preserving the immutable owner-wallet record.
 
