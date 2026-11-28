@@ -116,6 +116,13 @@ test("wallet-first account popup requires explicit recovery and legal consent", 
   assert.match(ui, /account-wallet-terms-accepted/);
   assert.match(ui, /walletLossAcknowledged/);
   assert.match(ui, /termsAccepted/);
+  const providerSelection = ui.match(/function selectedWalletProviderFromForm\(\) \{([\\s\\S]*?)\\n  \}/);
+  assert.ok(providerSelection, "selected-wallet provider guard must exist");
+  assert.match(providerSelection[1], /var entry = id \? discoveredWalletProviders\.find/);
+  assert.match(providerSelection[1], /Select a detected wallet card before continuing/);
+  assert.doesNotMatch(providerSelection[1], /discoveredWalletProviders\.length === 1/);
+  assert.match(ui, /select\.value = \"\"/);
+  assert.match(ui, /providerSelect\.dispatchEvent\(new Event\(\"change\", \{ bubbles: true \}\)\)/);
   assert.match(ui, /eip6963:requestProvider/);
   assert.match(ui, /AstroWallet/);
   assert.match(ui, /account-wallet-provider-grid/);
