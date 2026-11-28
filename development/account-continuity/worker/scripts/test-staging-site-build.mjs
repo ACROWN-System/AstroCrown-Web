@@ -74,7 +74,7 @@ test("published Genesis profile is part of the same AstroCrown account", async (
   assert.match(html, /id="supporter-link-wallet"/);
   assert.match(html, /Verify and link additional address/);
   assert.match(html, /When does Genesis registration close\?/);
-  assert.doesNotMatch(html, /Continue with this primary wallet|Legacy sign-in unavailable|Disconnect wallet session|Create Genesis account|<(?:button|a)\\b[^>]*>\\s*Genesis registration\\s*<\\/(?:button|a)>/i);
+  assert.doesNotMatch(html, /Continue with this primary wallet|Legacy sign-in unavailable|Disconnect wallet session|Create Genesis account|<(?:button|a)\b[^>]*>\s*Genesis registration\s*<\/(?:button|a)>/i);
 });
 
 test("published Genesis script reads the existing AstroCrown session and only links optional addresses", async () => {
