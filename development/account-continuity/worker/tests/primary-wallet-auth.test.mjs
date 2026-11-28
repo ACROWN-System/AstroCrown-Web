@@ -122,6 +122,7 @@ test("wallet-first account popup requires explicit recovery and legal consent", 
   assert.match(ui, /data-wallet-provider-id/);
   assert.match(ui, /entry\.info\.icon/);
   assert.ok(ui.includes("data:image\\/"));
+  assert.match(ui, /\(\?:;base64\)\?/);
   assert.match(ui, /Coming soon/);
   assert.match(ui, /card\.setAttribute\("aria-pressed"/);
   assert.match(ui, /will not choose a provider or wallet address/);
