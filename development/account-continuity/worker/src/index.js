@@ -220,7 +220,7 @@ async function activeAccount(db, request) {
 }
 async function summary(db, account) {
   const now = Math.floor(Date.now() / 1000);
-  const [counts, role, permissions, wallets, walletHistory, notice, primaryWallet] = await Promise.all([
+  const [counts, role, permissions, wallets, walletHistory, notice, primaryWallet, linkedWalletRows] = await Promise.all([
     db.prepare("SELECT COUNT(*) AS session_count FROM auth_sessions WHERE account_id = ? AND expires_at > ?")
       .bind(account.account_id, now).first(),
     db.prepare("SELECT granted_by_account_id,reason,created_at FROM auth_admin_roles WHERE account_id = ?")
@@ -235,6 +235,8 @@ async function summary(db, account) {
       .bind(account.account_id).first(),
     db.prepare("SELECT address,chain_id,created_at FROM auth_primary_wallets WHERE account_id = ? AND active = 1 LIMIT 1")
       .bind(account.account_id).first(),
+    db.prepare("SELECT link_id,address,chain_id,family,linked_at,permission_authorized_at FROM auth_linked_wallets WHERE account_id = ? AND active = 1 ORDER BY linked_at,address")
+      .bind(account.account_id).all(),
   ]);
   const activeWallets = wallets.results || [];
   const currentWallet = String(account.admin_wallet_address || "");
@@ -265,7 +267,18 @@ async function summary(db, account) {
       chainId: Number(primaryWallet.chain_id),
       createdAt: primaryWallet.created_at,
       family: "evm-eoa",
+      immutable: true,
     } : null,
+    linkedWallets: (linkedWalletRows.results || []).map((wallet) => ({
+      linkId: wallet.link_id,
+      address: wallet.address,
+      chainId: Number(wallet.chain_id),
+      family: wallet.family,
+      linkedAt: wallet.linked_at,
+      permissionAuthorized: Boolean(wallet.permission_authorized_at),
+      permissionScope: wallet.permission_authorized_at ? "wallet-capabilities-only" : null,
+      transactionAuthorized: false,
+    })),
     createdAt: account.created_at,
     avatarId: account.avatar_id || "person",
     referralId: account.referral_id || "",
@@ -1042,6 +1055,231 @@ async function acknowledgeAdminRevocationNotice(db, request, payload) {
 }
 
 
+
+function createAdditionalWalletLinkMessage(config, accountIdentifier, ownerAddress, ownerChainId, address, chainId, action, challengeId, nonce, issuedAt, expiresAt) {
+  const host = new URL(config.origin).host;
+  const verb = action === "link" ? "link" : "unlink";
+  return [
+    host + " requests your authorization to " + verb + " an additional wallet for AstroCrown.",
+    "",
+    "AstroCrown account: " + accountIdentifier,
+    "Permanent owner wallet: " + ownerAddress,
+    "Owner network chain ID: " + ownerChainId,
+    "Additional wallet: " + address,
+    "Additional wallet chain ID: " + chainId,
+    "Requested action: " + action,
+    "Permission scope: wallet capabilities for explicitly initiated account operations only.",
+    "This message does not authorize a blockchain transaction, token approval, transfer, payment or spending permission.",
+    "Challenge ID: " + challengeId,
+    "Nonce: " + nonce,
+    "Issued At: " + issuedAt,
+    "Expiration Time: " + expiresAt,
+  ].join("\n");
+}
+
+async function issueAdditionalWalletLinkChallenge(db, env, request, payload, config) {
+  const keys = Object.keys(payload).sort();
+  if (keys.length !== 3 || keys.join(",") !== "action,address,chainId" ||
+      !["link", "unlink"].includes(payload.action)) {
+    throw fail(400, "Provide only the requested wallet action, EVM address and chain ID.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in with your permanent owner wallet before managing additional wallets.");
+  const owner = await db.prepare(
+    "SELECT address,chain_id FROM auth_primary_wallets WHERE account_id = ? AND active = 1 LIMIT 1"
+  ).bind(account.account_id).first();
+  if (!owner) throw fail(403, "This account has no active owner wallet. Additional wallets cannot replace account ownership.");
+  const address = normalizeEvmAddress(payload.address);
+  const chainId = validateEvmChainId(payload.chainId);
+  const ownerAddress = normalizeEvmAddress(owner.address);
+  const ownerChainId = validateEvmChainId(Number(owner.chain_id));
+  if (address.toLowerCase() === ownerAddress.toLowerCase()) {
+    throw fail(400, "The permanent owner wallet cannot be linked or unlinked as an additional wallet.");
+  }
+  await rateLimit(
+    db, env, request,
+    payload.action === "link" ? "additional-wallet-link-options" : "additional-wallet-unlink-options",
+    account.account_id, 8, 300,
+  );
+  if (payload.action === "link") {
+    const primaryCollision = await db.prepare(
+      "SELECT account_id FROM auth_primary_wallets WHERE address = ? COLLATE NOCASE AND active = 1 LIMIT 1"
+    ).bind(address).first();
+    if (primaryCollision) throw fail(409, "That address is already an immutable owner wallet and cannot be linked as an additional wallet.");
+    const linked = await db.prepare(
+      "SELECT account_id FROM auth_linked_wallets WHERE address = ? COLLATE NOCASE AND active = 1 LIMIT 1"
+    ).bind(address).first();
+    if (linked) throw fail(409, linked.account_id === account.account_id
+      ? "This wallet is already linked to your account."
+      : "This wallet is actively linked to another AstroCrown account.");
+  } else {
+    const linked = await db.prepare(
+      "SELECT link_id FROM auth_linked_wallets WHERE account_id = ? AND address = ? COLLATE NOCASE AND chain_id = ? AND active = 1 LIMIT 1"
+    ).bind(account.account_id, address, chainId).first();
+    if (!linked) throw fail(404, "That additional wallet is not currently linked to this account.");
+  }
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  const now = Math.floor(Date.now() / 1000);
+  const expires = now + CHALLENGE_SECONDS;
+  const challengeId = b64u(bytes(24));
+  const nonce = hex(bytes(16));
+  const issuedAt = new Date(now * 1000).toISOString();
+  const expiresAt = new Date(expires * 1000).toISOString();
+  const message = createAdditionalWalletLinkMessage(
+    config, account.account_identifier, ownerAddress, ownerChainId,
+    address, chainId, payload.action, challengeId, nonce, issuedAt, expiresAt,
+  );
+  await db.prepare(
+    "DELETE FROM auth_wallet_link_challenges WHERE expires_at <= ? OR (used_at IS NOT NULL AND created_at < ?)"
+  ).bind(now, now - 86400).run();
+  await db.prepare(
+    "INSERT INTO auth_wallet_link_challenges(challenge_id,account_id,session_token_hash,action,owner_address,owner_chain_id,address,chain_id,message,created_at,expires_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)"
+  ).bind(
+    challengeId, account.account_id, await hashText(token), payload.action,
+    ownerAddress, ownerChainId, address, chainId, message, now, expires,
+  ).run();
+  return json(200, {
+    challengeId,
+    message,
+    action: payload.action,
+    ownerAddress,
+    ownerChainId,
+    address,
+    chainId,
+    expiresAt,
+    ownerSignatureRequired: true,
+    additionalWalletSignatureRequired: payload.action === "link",
+    permissionScope: payload.action === "link" ? "wallet-capabilities-only" : null,
+    transactionAuthorized: false,
+    spendingAuthorized: false,
+  });
+}
+
+async function verifyAdditionalWalletLink(db, env, request, payload) {
+  const allowed = new Set(["challengeId", "message", "ownerSignature", "walletSignature", "permissionAuthorized"]);
+  if (Object.keys(payload).some((key) => !allowed.has(key)) ||
+      typeof payload.challengeId !== "string" ||
+      !/^[A-Za-z0-9_-]{24,64}$/.test(payload.challengeId) ||
+      typeof payload.message !== "string" ||
+      typeof payload.ownerSignature !== "string") {
+    throw fail(400, "The additional-wallet authorization response is incomplete or contains unsupported fields.");
+  }
+  const account = await activeAccount(db, request);
+  if (!account) throw fail(401, "Sign in with your permanent owner wallet before managing additional wallets.");
+  const token = cookie(request, SESSION_COOKIE);
+  if (!token) throw fail(401, "The ordinary account session is no longer active.");
+  const tokenHash = await hashText(token);
+  const now = Math.floor(Date.now() / 1000);
+  const challenge = await db.prepare(
+    "SELECT * FROM auth_wallet_link_challenges WHERE challenge_id = ? AND account_id = ? AND session_token_hash = ? AND used_at IS NULL AND expires_at > ?"
+  ).bind(payload.challengeId, account.account_id, tokenHash, now).first();
+  if (!challenge || payload.message !== challenge.message) {
+    throw fail(401, "The additional-wallet authorization is missing, expired, already used or does not match the issued message.");
+  }
+  const owner = await db.prepare(
+    "SELECT address,chain_id FROM auth_primary_wallets WHERE account_id = ? AND active = 1 LIMIT 1"
+  ).bind(account.account_id).first();
+  if (!owner ||
+      normalizeEvmAddress(owner.address).toLowerCase() !== String(challenge.owner_address).toLowerCase() ||
+      Number(owner.chain_id) !== Number(challenge.owner_chain_id)) {
+    throw fail(409, "The permanent owner-wallet identity changed or is unavailable. No owner-wallet replacement is permitted.");
+  }
+  if (challenge.action === "link") {
+    if (Object.keys(payload).length !== 5 || typeof payload.walletSignature !== "string" ||
+        payload.permissionAuthorized !== true) {
+      throw fail(400, "Linking requires a fresh signature from the additional wallet and explicit authorization for wallet capabilities.");
+    }
+  } else if (challenge.action === "unlink") {
+    if (Object.keys(payload).length !== 3 || payload.walletSignature !== undefined || payload.permissionAuthorized !== undefined) {
+      throw fail(400, "Unlinking requires only the permanent owner-wallet signature.");
+    }
+    const linked = await db.prepare(
+      "SELECT link_id FROM auth_linked_wallets WHERE account_id = ? AND address = ? COLLATE NOCASE AND chain_id = ? AND active = 1 LIMIT 1"
+    ).bind(account.account_id, challenge.address, Number(challenge.chain_id)).first();
+    if (!linked) throw fail(409, "The additional wallet is no longer linked. Refresh the account and try again.");
+  } else {
+    throw fail(400, "The additional-wallet challenge action is invalid.");
+  }
+  const marker = b64u(bytes(18));
+  const consumed = await db.prepare(
+    "UPDATE auth_wallet_link_challenges SET used_at = ? " +
+    "WHERE challenge_id = ? AND account_id = ? AND session_token_hash = ? AND action = ? " +
+    "AND used_at IS NULL AND expires_at > ? AND message = ? " +
+    "AND EXISTS(SELECT 1 FROM auth_sessions s WHERE s.token_hash = ? AND s.account_id = ? AND s.expires_at > ?) " +
+    "AND EXISTS(SELECT 1 FROM auth_primary_wallets w WHERE w.account_id = ? AND w.address = ? COLLATE NOCASE AND w.chain_id = ? AND w.active = 1)"
+  ).bind(
+    marker, challenge.challenge_id, account.account_id, tokenHash, challenge.action,
+    now, payload.message, tokenHash, account.account_id, now,
+    account.account_id, challenge.owner_address, Number(challenge.owner_chain_id),
+  ).run();
+  if (Number(consumed?.meta?.changes || 0) !== 1) {
+    throw fail(409, "The account session or owner-wallet authorization changed. Start a fresh wallet-management action.");
+  }
+  const ownerAddress = normalizeEvmAddress(challenge.owner_address);
+  const address = normalizeEvmAddress(challenge.address);
+  await verifyEvmPersonalSignature(payload.message, payload.ownerSignature, ownerAddress);
+  const timestamp = new Date().toISOString();
+  if (challenge.action === "link") {
+    await verifyEvmPersonalSignature(payload.message, payload.walletSignature, address);
+    const primaryCollision = await db.prepare(
+      "SELECT account_id FROM auth_primary_wallets WHERE address = ? COLLATE NOCASE AND active = 1 LIMIT 1"
+    ).bind(address).first();
+    if (primaryCollision) throw fail(409, "That address is an immutable owner wallet and cannot be added as a secondary wallet.");
+    const activeCollision = await db.prepare(
+      "SELECT account_id FROM auth_linked_wallets WHERE address = ? COLLATE NOCASE AND active = 1 LIMIT 1"
+    ).bind(address).first();
+    if (activeCollision) throw fail(409, "That wallet became linked while this request was being verified. Refresh the account and try again.");
+    const previous = await db.prepare(
+      "SELECT link_id,active FROM auth_linked_wallets WHERE account_id = ? AND address = ? COLLATE NOCASE LIMIT 1"
+    ).bind(account.account_id, address).first();
+    if (previous && Number(previous.active) === 1) {
+      throw fail(409, "This wallet is already linked to your account.");
+    }
+    if (previous) {
+      const reactivated = await db.prepare(
+        "UPDATE auth_linked_wallets SET chain_id = ?,family = 'evm-eoa',linked_at = ?,active = 1,revoked_at = NULL,permission_authorized_at = ? " +
+        "WHERE link_id = ? AND account_id = ? AND active = 0 " +
+        "AND NOT EXISTS(SELECT 1 FROM auth_linked_wallets w WHERE w.address = ? COLLATE NOCASE AND w.active = 1) " +
+        "AND NOT EXISTS(SELECT 1 FROM auth_primary_wallets p WHERE p.address = ? COLLATE NOCASE AND p.active = 1)"
+      ).bind(Number(challenge.chain_id), timestamp, timestamp, previous.link_id, account.account_id, address, address).run();
+      if (Number(reactivated?.meta?.changes || 0) !== 1) {
+        throw fail(409, "The wallet could not be relinked because its authorization state changed. Refresh and try again.");
+      }
+    } else {
+      await db.prepare(
+        "INSERT INTO auth_linked_wallets(link_id,account_id,address,chain_id,family,linked_at,active,permission_scope,permission_authorized_at) VALUES(?,?,?,?,'evm-eoa',?,1,'wallet-capabilities-only',?)"
+      ).bind(hex(bytes(16)), account.account_id, address, Number(challenge.chain_id), timestamp, timestamp).run();
+    }
+    await db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'additional_wallet_linked',?,'owner_signature_verified=true;additional_wallet_signature_verified=true;permission_scope=wallet-capabilities-only;transaction_authorized=false')"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp).run();
+  } else {
+    const revoked = await db.prepare(
+      "UPDATE auth_linked_wallets SET active = 0,revoked_at = ?,permission_authorized_at = NULL " +
+      "WHERE account_id = ? AND address = ? COLLATE NOCASE AND chain_id = ? AND active = 1"
+    ).bind(timestamp, account.account_id, address, Number(challenge.chain_id)).run();
+    if (Number(revoked?.meta?.changes || 0) !== 1) {
+      throw fail(409, "The additional wallet could not be unlinked because its state changed. Refresh and try again.");
+    }
+    await db.prepare(
+      "INSERT INTO auth_security_audit(audit_id,account_id,event_type,created_at,detail) VALUES(?,?,'additional_wallet_unlinked',?,'owner_signature_verified=true;wallet_capabilities_permission_revoked=true;transaction_authorized=false')"
+    ).bind(b64u(bytes(16)), account.account_id, timestamp).run();
+  }
+  const refreshed = await activeAccount(db, new Request(request.url, {
+    headers: { Cookie: SESSION_COOKIE + "=" + token },
+  }));
+  if (!refreshed) throw fail(401, "The account session ended before the wallet update could be confirmed.");
+  const result = await summary(db, refreshed);
+  result.additionalWalletAction = challenge.action;
+  result.transactionAuthorized = false;
+  result.spendingAuthorized = false;
+  result.message = challenge.action === "link"
+    ? "The additional wallet was linked and its wallet-capabilities permission was freshly authorized. Transactions and spending still require separate approval."
+    : "The additional wallet was unlinked and its AstroCrown permission was revoked. It may be linked again later with fresh wallet proofs and authorization.";
+  return json(200, result);
+}
+
 async function issuePrimaryWalletAuthenticationChallenge(db, env, request, payload, config) {
   if (Object.keys(payload).length !== 2 ||
       !Object.prototype.hasOwnProperty.call(payload, "address") ||
@@ -1257,6 +1495,14 @@ async function api(request, env, config) {
   if (url.pathname === "/api/account/primary-wallet/options" && request.method === "POST") {
     const payload = await bodyJson(request);
     return issuePrimaryWalletAuthenticationChallenge(db, env, request, payload, config);
+  }
+  if (url.pathname === "/api/account/wallet-links/options" && request.method === "POST") {
+    const payload = await bodyJson(request);
+    return issueAdditionalWalletLinkChallenge(db, env, request, payload, config);
+  }
+  if (url.pathname === "/api/account/wallet-links/verify" && request.method === "POST") {
+    const payload = await bodyJson(request);
+    return verifyAdditionalWalletLink(db, env, request, payload);
   }
   if (url.pathname === "/api/account/communications" && request.method === "GET") return communications(db, request);
   if (url.pathname === "/api/admin/wallet-options" && request.method === "GET") return adminWalletOptions(db, request);
